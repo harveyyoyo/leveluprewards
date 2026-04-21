@@ -8,6 +8,7 @@ export type SoundEffect =
   | 'success'
   | 'error'
   | 'click'
+  | 'hover'
   | 'swoosh'
   | 'redeem';
 
@@ -60,6 +61,10 @@ const createSynth = () => {
     switch (sound) {
       case 'click':
         playNote(800, now, 0.08, 'square', 0.05);
+        break;
+
+      case 'hover':
+        playNote(1200, now, 0.03, 'sine', 0.02); // High pitch, short, quiet tick
         break;
 
       case 'login':

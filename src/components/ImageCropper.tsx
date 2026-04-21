@@ -21,7 +21,10 @@ interface ImageCropperProps {
     imageSrc: string;
     onCropComplete: (croppedImageBlob: Blob) => void;
     onCancel: () => void;
+    onSkip?: () => void;
     aspectRatio?: number;
+    circularCrop?: boolean;
+    freeform?: boolean;
 }
 
 const createImage = (url: string): Promise<HTMLImageElement> =>
@@ -103,7 +106,7 @@ async function getCroppedImg(
 
     if (width <= MAX_DIMENSION && height <= MAX_DIMENSION) {
         return new Promise((resolve) => {
-            croppedCanvas.toBlob((file) => resolve(file), 'image/jpeg', 0.9);
+            croppedCanvas.toBlob((file) => resolve(file), 'image/png');
         });
     }
 
@@ -134,14 +137,15 @@ async function getCroppedImg(
             } else {
                 reject(new Error('Canvas to Blob conversion failed'));
             }
-        }, 'image/jpeg', 0.9);
+        }, 'image/png');
     });
 }
 
-export function ImageCropper({ imageSrc, onCropComplete, onCancel, aspectRatio = 1 }: ImageCropperProps) {
+export function ImageCropper({ imageSrc, onCropComplete, onCancel, onSkip, aspectRatio, circularCrop = false, freeform = false }: ImageCropperProps) {
     const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
     const [zoom, setZoom] = useState(1);
     const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
+    const [currentAspect, setCurrentAspect] = useState<number | undefined>(aspectRatio ?? (freeform ? 1 : undefined));
 
     const onCropCompleteHandler = useCallback((croppedArea: Area, croppedAreaPixels: Area) => {
         setCroppedAreaPixels(croppedAreaPixels);
@@ -172,14 +176,24 @@ export function ImageCropper({ imageSrc, onCropComplete, onCancel, aspectRatio =
                         image={imageSrc}
                         crop={crop}
                         zoom={zoom}
-                        aspect={aspectRatio}
+                        aspect={currentAspect}
+                        cropShape={circularCrop ? "round" : "rect"}
+                        showGrid={!circularCrop}
                         onCropChange={setCrop}
                         onCropComplete={onCropCompleteHandler}
                         onZoomChange={setZoom}
                         restrictPosition={false}
                     />
                 </div>
-                <div className="py-4">
+                {freeform && (
+                    <div className="flex justify-center gap-2 pt-2">
+                        <Button variant={currentAspect === 1 ? 'default' : 'outline'} size="sm" onClick={() => setCurrentAspect(1)}>Square</Button>
+                        <Button variant={currentAspect === 4/3 ? 'default' : 'outline'} size="sm" onClick={() => setCurrentAspect(4/3)}>4:3 Landscape</Button>
+                        <Button variant={currentAspect === 16/9 ? 'default' : 'outline'} size="sm" onClick={() => setCurrentAspect(16/9)}>16:9 Wide</Button>
+                        <Button variant={currentAspect === 3/1 ? 'default' : 'outline'} size="sm" onClick={() => setCurrentAspect(3/1)}>3:1 Banner</Button>
+                    </div>
+                )}
+                <div className="py-2">
                     <div className="text-sm font-medium mb-2">Zoom</div>
                     <Slider
                         value={[zoom]}
@@ -189,9 +203,12 @@ export function ImageCropper({ imageSrc, onCropComplete, onCancel, aspectRatio =
                         onValueChange={(vals: number[]) => setZoom(vals[0])}
                     />
                 </div>
-                <DialogFooter>
+                <DialogFooter className="flex justify-between sm:justify-between w-full">
                     <Button variant="outline" onClick={onCancel}>Cancel</Button>
-                    <Button onClick={handleSave}>Apply Crop</Button>
+                    <div className="flex gap-2">
+                        {onSkip && <Button variant="secondary" onClick={onSkip}>Skip Cropping</Button>}
+                        <Button onClick={handleSave}>Apply Crop</Button>
+                    </div>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

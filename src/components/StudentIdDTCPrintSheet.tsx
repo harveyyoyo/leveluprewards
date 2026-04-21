@@ -1,37 +1,22 @@
 'use client';
 
-import { useMemo, useEffect } from 'react';
+import { useMemo } from 'react';
 import type { Student, Class } from '@/lib/types';
 import { StudentIdCard } from './StudentIdCard';
 import { useSettings } from './providers/SettingsProvider';
-import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+
 import { APP_NAME, APP_TAGLINE } from '@/lib/app-branding';
 
 interface StudentIdDTCPrintSheetProps {
   students: Student[];
   classes: Class[];
   schoolId: string | null;
-  onReady: () => void;
+  appConfig: { appLogoUrl?: string; appName?: string; appTagline?: string } | null;
+  schoolData: { name?: string; logoUrl?: string } | null;
 }
 
-export function StudentIdDTCPrintSheet({ students, classes, schoolId, onReady }: StudentIdDTCPrintSheetProps) {
+export function StudentIdDTCPrintSheet({ students, classes, schoolId, appConfig, schoolData }: StudentIdDTCPrintSheetProps) {
   const { settings } = useSettings();
-  const firestore = useFirestore();
-  const appConfigRef = useMemoFirebase(() => (firestore ? doc(firestore, 'appConfig', 'global') : null), [firestore]);
-  const schoolDocRef = useMemoFirebase(() => (firestore && schoolId ? doc(firestore, 'schools', schoolId) : null), [firestore, schoolId]);
-  const { data: appConfig, isLoading: isAppConfigLoading } = useDoc<{ appLogoUrl?: string; appName?: string; appTagline?: string }>(appConfigRef);
-  const { data: schoolData, isLoading: isSchoolLoading } = useDoc<{ name?: string; logoUrl?: string }>(schoolDocRef);
-
-  // Trigger print dialog only after the async configurations have finished loading
-  useEffect(() => {
-    if (!isAppConfigLoading && !isSchoolLoading) {
-      const t = setTimeout(() => {
-        onReady();
-      }, 100);
-      return () => clearTimeout(t);
-    }
-  }, [isAppConfigLoading, isSchoolLoading, onReady]);
 
   const classMap = useMemo(() => {
     if (!classes) return new Map<string, string>();
@@ -109,10 +94,7 @@ export function StudentIdDTCPrintSheet({ students, classes, schoolId, onReady }:
             border-radius: 0 !important;
           }
 
-          /* Hide everything else */
-          body > *:not(#student-id-dtc-print-wrapper) {
-            display: none !important;
-          }
+          /* global.css already hides #screen-view, .no-print, etc. */
         }
       `}} />
       {students.map((s) => (

@@ -13,9 +13,13 @@ import { useRouter } from 'next/navigation';
 import { useFirebase } from '@/firebase';
 import { httpsCallable } from 'firebase/functions';
 import { doc, getDocFromServer, onSnapshot } from 'firebase/firestore';
+import { getReadableErrorMessage } from '@/lib/errorMessage';
 
 export type SyncStatus = 'synced' | 'syncing' | 'offline' | 'error';
 export type LoginState = 'loggedOut' | 'school' | 'developer' | 'student' | 'teacher' | 'admin';
+
+/** Use `result.ok` for success; on failure `result.message` is user-facing (network vs wrong passcode). */
+export type LoginResult = { ok: true } | { ok: false; message: string };
 
 interface AuthContextType {
     isInitialized: boolean;
@@ -31,7 +35,7 @@ interface AuthContextType {
     login: (
         type: LoginState,
         credentials: { schoolId?: string; passcode?: string; username?: string; teacherName?: string; teacherDocId?: string; }
-    ) => Promise<boolean>;
+    ) => Promise<LoginResult>;
     logout: () => void;
     setUserName: (name: string | null) => void;
     isKioskLocked: boolean;
@@ -57,9 +61,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { isUserLoading, functions, firestore, auth } = useFirebase();
     const router = useRouter();
 
+    /** Firestore often reports `fromCache` while offline; use the browser network API too. */
+    const networkOnlineRef = useRef(
+        typeof window !== 'undefined' ? window.navigator.onLine : true
+    );
+
     useEffect(() => {
         setIsMounted(true);
     }, []);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+
+        const onNet = () => {
+            const online = window.navigator.onLine;
+            networkOnlineRef.current = online;
+            if (!online) {
+                setSyncStatus('offline');
+            } else {
+                setSyncStatus((s) => (s === 'offline' || s === 'error' ? 'syncing' : s));
+            }
+        };
+
+        onNet();
+        window.addEventListener('online', onNet);
+        window.addEventListener('offline', onNet);
+        return () => {
+            window.removeEventListener('online', onNet);
+            window.removeEventListener('offline', onNet);
+        };
+    }, [firestore]);
 
     useEffect(() => {
         if (!isMounted || isUserLoading || !firestore || !auth) {
@@ -171,6 +202,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             metadataRef,
             { includeMetadataChanges: true },
             (snapshot) => {
+                if (typeof navigator !== 'undefined' && !navigator.onLine) {
+                    setSyncStatus('offline');
+                    return;
+                }
+                if (!networkOnlineRef.current) {
+                    setSyncStatus('offline');
+                    return;
+                }
                 const isFromCache = snapshot.metadata.fromCache;
                 if (isFromCache) {
                     setSyncStatus('syncing');
@@ -191,7 +230,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         async (
             type: LoginState,
             credentials: { schoolId?: string; passcode?: string; username?: string; teacherName?: string; teacherDocId?: string; }
-        ): Promise<boolean> => {
+        ): Promise<LoginResult> => {
             if (type === 'developer') {
                 try {
                     const res = await fetch('/api/auth/dev-login', {
@@ -213,10 +252,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         setUserId('developer');
                         localStorage.setItem('loginState', 'developer');
                         localStorage.setItem('userName', 'Developer');
-                        return true;
+                        return { ok: true };
                     }
+                    return { ok: false, message: 'Incorrect developer passcode.' };
                 } catch (e) {
-                    console.error("Developer login error", e);
+                    console.error('Developer login error', e);
+                    return { ok: false, message: getReadableErrorMessage(e, 'Incorrect developer passcode.') };
                 }
             } else if (type === 'student' && credentials.schoolId) {
                 // Student/Public access just needs a valid school ID. No real auth.
@@ -229,7 +270,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 localStorage.setItem('loginState', 'student');
                 localStorage.setItem('schoolId', lowerSchoolId);
                 localStorage.removeItem('userName');
-                return true;
+                return { ok: true };
             } else if ((type === 'school' || type === 'admin') && credentials.schoolId && auth.currentUser) {
                 const lowerSchoolId = credentials.schoolId.trim().toLowerCase();
                 try {
@@ -268,10 +309,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     localStorage.setItem('loginState', 'admin');
                     localStorage.setItem('schoolId', lowerSchoolId);
                     localStorage.setItem('userName', 'Admin');
-                    return true;
+                    return { ok: true };
                 } catch (e) {
-                    console.error("Admin login error", e);
-                    return false;
+                    console.error('Admin login error', e);
+                    return {
+                        ok: false,
+                        message: getReadableErrorMessage(e, 'Invalid School ID or passcode.'),
+                    };
                 }
             } else if (type === 'teacher' && credentials.schoolId && auth.currentUser) {
                 const lowerSchoolId = credentials.schoolId.trim().toLowerCase();
@@ -315,13 +359,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     localStorage.setItem('loginState', 'teacher');
                     localStorage.setItem('schoolId', lowerSchoolId);
                     localStorage.setItem('userName', name);
-                    return true;
+                    return { ok: true };
                 } catch (e) {
-                    console.error("Teacher login error", e);
-                    return false;
+                    console.error('Teacher login error', e);
+                    return {
+                        ok: false,
+                        message: getReadableErrorMessage(e, 'Invalid teacher name or passcode.'),
+                    };
                 }
             }
-            return false;
+            if ((type === 'school' || type === 'admin' || type === 'teacher') && !auth.currentUser) {
+                return {
+                    ok: false,
+                    message:
+                        'Still connecting to the server. Check your internet connection, wait a moment, and try again.',
+                };
+            }
+            return {
+                ok: false,
+                message: 'Could not sign in. Check your internet connection and try again.',
+            };
         },
         [functions, firestore, auth]
     );
@@ -338,7 +395,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (loginState === 'admin' || loginState === 'teacher') {
             localStorage.setItem('loginState', 'student');
             setLoginState('student');
-            router.push('/portal');
+            router.push(schoolId ? `/${schoolId}/portal` : '/portal');
         } else {
             localStorage.removeItem('loginState');
             localStorage.removeItem('schoolId');
@@ -346,7 +403,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setSchoolId(null);
             router.push('/');
         }
-    }, [loginState, router]);
+    }, [loginState, router, schoolId]);
 
     const value = useMemo(
         () => ({

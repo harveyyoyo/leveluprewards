@@ -1,48 +1,43 @@
 import { test, expect } from '@playwright/test';
 
-test('login and navigate to portal and student pages', async ({ page }) => {
-    page.on('console', msg => console.log(`BROWSER MSG: ${msg.text()}`));
-    page.on('pageerror', error => console.log(`BROWSER ERROR: ${error.message}`));
+const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000';
+const SAMPLE_SCHOOL_ID = 'schoolabc';
 
-    // Go to login page
-    console.log("Navigating to home page...");
-    await page.goto('http://localhost:3000/');
+test('demo login lands on the portal and navigates to the student kiosk', async ({ page }) => {
+    page.on('console', (msg) => console.log(`BROWSER MSG: ${msg.text()}`));
+    page.on('pageerror', (error) => console.log(`BROWSER ERROR: ${error.message}`));
 
-    // Wait for and click School ABC
-    console.log("Clicking School ABC demo login...");
-    const schoolAbcBtn = page.locator('text=School ABC');
-    await schoolAbcBtn.waitFor({ state: 'visible', timeout: 10000 });
-    await schoolAbcBtn.click();
+    console.log('Navigating to login page...');
+    await page.goto(`${BASE_URL}/`);
 
-    // Verify it goes to portal and stays there
-    console.log("Waiting for portal...");
+    // The sample login buttons were renamed to "Demo: School ABC" / "Demo: Yeshiva"
+    // and authed school sessions now route under `/<schoolId>/portal`.
+    console.log('Clicking Demo: School ABC...');
+    const demoButton = page.getByRole('button', { name: /demo: school abc/i });
+    await demoButton.waitFor({ state: 'visible', timeout: 10_000 });
+    await demoButton.click();
+
+    console.log('Waiting for portal...');
     try {
-        await page.waitForURL('http://localhost:3000/portal', { timeout: 15000 });
+        await page.waitForURL(`${BASE_URL}/${SAMPLE_SCHOOL_ID}/portal`, { timeout: 15_000 });
     } catch (e) {
         await page.screenshot({ path: 'auth_test_failure.png', fullPage: true });
-        console.log("Saved auth_test_failure.png");
+        console.log('Saved auth_test_failure.png');
         throw e;
     }
 
-    console.log("Successfully reached Portal page!");
+    console.log('Reached portal — verifying it stays there.');
+    await page.waitForTimeout(1_500);
+    expect(page.url()).toBe(`${BASE_URL}/${SAMPLE_SCHOOL_ID}/portal`);
 
-    // Verify it doesn't get kicked out to '/'
-    await page.waitForTimeout(2000);
-    expect(page.url()).toBe('http://localhost:3000/portal');
+    console.log('Clicking Student Kiosk tile...');
+    const kioskTile = page.getByRole('link', { name: /student kiosk/i }).first();
+    await kioskTile.waitFor({ state: 'visible', timeout: 10_000 });
+    await kioskTile.click();
 
-    // Click on Student Portal
-    console.log("Clicking Student Portal...");
-    const studentPortalBtn = page.locator('text=Student Portal').first();
-    await studentPortalBtn.waitFor({ state: 'visible', timeout: 10000 });
-    await studentPortalBtn.click();
+    console.log('Waiting for student page...');
+    await page.waitForURL(`${BASE_URL}/${SAMPLE_SCHOOL_ID}/student`, { timeout: 10_000 });
+    expect(page.url()).toBe(`${BASE_URL}/${SAMPLE_SCHOOL_ID}/student`);
 
-    // Verify it goes to student and stays there
-    console.log("Waiting for student page...");
-    await page.waitForURL('http://localhost:3000/student', { timeout: 10000 });
-    console.log("Successfully reached Student Portal page!");
-
-    await page.waitForTimeout(2000);
-    expect(page.url()).toBe('http://localhost:3000/student');
-
-    console.log("Test passed!");
+    console.log('Test passed!');
 });

@@ -9,7 +9,15 @@ There are three main portals to access the system, plus a few special pages.
 ### 1. Login
 
 *   **School Login:** To access any school-specific portal (Student, Teacher, Admin), you'll first need to log in using your school's unique **School ID** and **Passcode**.
-*   **Developer Login:** This is for system administrators to manage all school instances.
+*   **Developer Login:** For system administrators to manage all school instances (global branding, sample schools, etc.). It is **off by default** in the UI for safety.
+
+    **Local development:** Running `next dev` shows **“Developer? Click here”** automatically (no env flag needed for the UI).
+
+    **Production or preview (Vercel, etc.):** `NEXT_PUBLIC_*` variables are fixed when the app is **built**. Set `NEXT_PUBLIC_ENABLE_DEV_LOGIN=true` in the host’s environment and trigger a **new build**. Setting it only at runtime will not update the client bundle.
+
+    **Passcode:** Copy [`.env.example`](.env.example) to `.env.local` and set `DEV_PASSCODE`. The developer passcode you type on the login page must match this value (validated by `/api/auth/dev-login`).
+
+    For Cloud Functions that verify the developer passcode (e.g. `addDeveloperMe`), set the `DEV_PASSCODE` environment variable on the function runtime, or the legacy `dev.passcode` entry from `firebase functions:config`, to the same secret as in `.env.local`.
 
 ### 2. Portals
 
@@ -47,6 +55,20 @@ Once you've logged into a school, you can choose from several portals:
     *   View a leaderboard of the top all-time point earners in the school.
 
 That's it! It's designed to be simple and intuitive. Enjoy building a positive and rewarding environment at your school!
+
+## Deploying (Firebase Hosting + Next.js SSR)
+
+1. **Node version:** Use **Node 22** locally (matches `engines` and Firebase’s SSR runtime). With [nvm](https://github.com/nvm-sh/nvm): `nvm use` (see `.nvmrc`).
+2. **Google Cloud:** Enable the **Compute Engine API** once for the Firebase/GCP project ([console link](https://console.developers.google.com/apis/api/compute.googleapis.com/overview) — pick your project). Without it, SSR deploys can fail when the CLI resolves default compute settings.
+3. **PowerShell:** Quote comma-separated targets:
+   ```bash
+   npm run deploy
+   ```
+   or:
+   ```bash
+   firebase deploy --only "hosting,functions"
+   ```
+4. **Large upload failures:** The SSR bundle is uploaded to Cloud Storage. If `Failed to make request to ... storage.googleapis.com` appears, retry on a stable network (avoid strict proxies/VPN); the app uses `output: 'standalone'` and tracing excludes to keep the package as small as possible.
 
 ## License
 

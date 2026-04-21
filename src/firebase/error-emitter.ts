@@ -1,5 +1,5 @@
 'use client';
-import { FirestorePermissionError } from '@/firebase/errors';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 /**
  * Defines the shape of all possible events and their corresponding payload types.
@@ -62,3 +62,16 @@ function createEventEmitter<T extends Record<string, any>>() {
 
 // Create and export a singleton instance of the emitter, typed with our AppEvents interface.
 export const errorEmitter = createEventEmitter<AppEvents>();
+
+/** Emit global permission-error only for Firestore permission-denied; log other failures. */
+export function reportFirestorePermissionError(caught: unknown, context: SecurityRuleContext): void {
+  const code =
+    typeof caught === 'object' && caught !== null && 'code' in caught
+      ? String((caught as { code: string }).code)
+      : '';
+  if (code === 'permission-denied') {
+    errorEmitter.emit('permission-error', new FirestorePermissionError(context));
+    return;
+  }
+  console.warn('[Firestore]', code || '(no code)', caught);
+}

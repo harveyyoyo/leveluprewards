@@ -60,6 +60,12 @@ export interface StudentTheme {
   backgroundStyle?: string | null;
   /** Optional global font scale (1 = default, 1.1 = slightly larger). */
   fontScale?: number;
+  /** Optional letter-spacing override for printed text (stored in `em`). */
+  fontTracking?: number;
+  /** Optional font style override. */
+  fontStyle?: 'normal' | 'italic';
+  /** Optional font weight override. */
+  fontWeight?: number;
 }
 
 export interface Student {
@@ -69,6 +75,8 @@ export interface Student {
   lastName: string;
   nickname?: string;
   photoUrl?: string;
+  /** When the student record was created (ms since epoch). */
+  createdAt?: number;
   points: number;
   lifetimePoints?: number;
   classId?: string;
@@ -105,8 +113,20 @@ export interface Prize {
   points: number;
   icon: string;
   inStock: boolean;
+  /** Optional quantity on hand. Omit for unlimited. When set, listing requires count above zero; redeem decrements until empty. */
+  stockCount?: number;
+  /** When true, after redemption the shop offers to print a redeem ticket. Default is off when unset. */
+  offerPrintTicketOnRedeem?: boolean;
   addedBy?: string;
+  /**
+   * When set, only these teachers' students see the prize (union with `teacherId` if present for legacy data).
+   * Omit or empty = school-wide for teacher visibility rules.
+   */
+  teacherIds?: string[];
+  /** @deprecated Prefer `teacherIds` (single id can be represented as a one-element array). */
   teacherId?: string;
+  /** When a teacher created this prize in the teacher UI; used for delete vs "remove from me" rules. */
+  createdByTeacherId?: string;
   classId?: string;
 }
 
@@ -146,7 +166,7 @@ export interface Badge {
   enabled?: boolean;
 }
 
-/** Schedule slot for class sign-in (e.g. Period 1, 2). Times in "HH:mm" 24h format. */
+/** Schedule slot for attendance periods (e.g. Period 1, 2). Times in "HH:mm" 24h format. */
 export interface AttendanceScheduleSlot {
   id: string;
   label: string;
@@ -154,7 +174,7 @@ export interface AttendanceScheduleSlot {
   endTime: string;
 }
 
-/** Attendance (class sign-in) configuration.
+/** Attendance configuration (kiosk sign-in, periods, rewards).
  *  Historically this was per-school; with per-teacher attendance, `teacherId`
  *  can be used to scope a config to a specific teacher.
  */
@@ -164,8 +184,15 @@ export interface AttendanceSettings {
   onTimeWindowMinutes: number;
   /** If set and non-empty, only students in these classes get attendance points. Empty = all classes. */
   enabledClassIds?: string[];
-  /** Optional mapping of classId -> schedule slot id (period) for that class. */
+  /** Legacy mapping of classId -> schedule slot id (period) for that class (applies to all days). */
   classPeriodAssignments?: Record<string, string>;
+  /**
+   * Optional day-specific mapping of classId -> schedule slot id (period) for that class.
+   * - Keys are day-of-week: "sun" | "mon" | "tue" | "wed" | "thu" | "fri" | "sat"
+   * - Special key "all" provides a fallback for all days.
+   * - Use value "__none__" to explicitly say "use whatever period is active now" for that day/class.
+   */
+  classPeriodAssignmentsByDay?: Record<string, Record<string, string>>;
   categoryId?: string;
   schedule: AttendanceScheduleSlot[];
   /** Optional owner for per-teacher attendance configuration. */
@@ -185,6 +212,35 @@ export interface AttendanceLogEntry {
   sessionId?: string;
    /** Optional owning teacher when using per-teacher attendance configs. */
   teacherId?: string;
+}
+
+export type RecordClassSignInReason =
+  | 'recorded'
+  | 'duplicate_same_session'
+  | 'class_not_in_enabled_list';
+
+export interface RecordClassSignInResult {
+  pointsAwarded: number;
+  onTime: boolean;
+  periodLabel?: string;
+  reason: RecordClassSignInReason;
+}
+
+export type AttendanceKioskReason =
+  | RecordClassSignInReason
+  | 'student_not_found'
+  | 'no_attendance_configuration'
+  | 'no_periods_for_school_legacy'
+  | 'callable_failed';
+
+export interface AttendanceKioskSignInResult {
+  pointsAwarded: number;
+  onTime: boolean;
+  periodLabel?: string | null;
+  reason: AttendanceKioskReason;
+  usedServer: boolean;
+  serverTimeMs?: number;
+  source?: 'reward_rule' | 'teacher_legacy' | 'school_legacy';
 }
 
 export interface BackupInfo {

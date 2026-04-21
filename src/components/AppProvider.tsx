@@ -6,7 +6,7 @@ import React, {
   useCallback,
   useMemo,
 } from 'react';
-import type { Student, Class, Coupon, Teacher, Prize, Category, HistoryItem, Achievement, Badge, AttendanceSettings, AttendanceLogEntry } from '@/lib/types';
+import type { Student, Class, Coupon, Teacher, Prize, Category, HistoryItem, Achievement, Badge, AttendanceSettings, AttendanceLogEntry, RecordClassSignInResult } from '@/lib/types';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
@@ -31,13 +31,13 @@ import {
   setTeacherAttendanceConfig as dbSetTeacherAttendanceConfig,
   listTeacherAttendanceLog as dbListTeacherAttendanceLog,
 } from '@/lib/db';
-import { AuthProvider, useAuth } from './providers/AuthProvider';
+import { AuthProvider, useAuth, type LoginResult } from './providers/AuthProvider';
 import { PrintProvider, usePrint } from './providers/PrintProvider';
 import { BackupProvider, useBackup } from './providers/BackupProvider';
 import { SettingsProvider, useSettings } from './providers/SettingsProvider';
 
 // Re-export types from AuthProvider for backward compatibility
-export type { SyncStatus, LoginState } from './providers/AuthProvider';
+export type { SyncStatus, LoginState, LoginResult } from './providers/AuthProvider';
 
 interface AppContextType {
   // ... existing types
@@ -53,7 +53,7 @@ interface AppContextType {
   teacherDocId: string | null;
   schoolId: string | null;
   syncStatus: 'synced' | 'syncing' | 'offline' | 'error';
-  login: (type: 'school' | 'developer' | 'student' | 'teacher' | 'admin', credentials: { schoolId?: string; passcode?: string; username?: string; teacherName?: string; teacherDocId?: string }) => Promise<boolean>;
+  login: (type: 'school' | 'developer' | 'student' | 'teacher' | 'admin', credentials: { schoolId?: string; passcode?: string; username?: string; teacherName?: string; teacherDocId?: string }) => Promise<LoginResult>;
   logout: () => void;
   setUserName: (name: string | null) => void;
   isKioskLocked: boolean;
@@ -61,6 +61,8 @@ interface AppContextType {
   // Print
   setCouponsToPrint: (coupons: Coupon[]) => void;
   setStudentsToPrint: (data: { students: Student[], classes: Class[], printerType?: 'dtc4500e' }) => void;
+  setPrizeTicketsToPrint: (tickets: import('@/components/PrizeRedeemTicketPrintSheet').PrizeRedeemTicket[]) => void;
+  printPrizeTickets: (tickets: import('@/components/PrizeRedeemTicketPrintSheet').PrizeRedeemTicket[]) => void;
   // CRUD
   addStudent: (student: Omit<Student, 'id' | 'points' | 'lifetimePoints'>) => Promise<void>;
   updateStudent: (student: Student) => Promise<void>;
@@ -80,7 +82,7 @@ interface AppContextType {
   awardPoints: (studentId: string, points: number, description: string) => Promise<{ success: boolean; message: string; bonusTotal?: number }>;
   awardPointsToMultipleStudents: (studentIds: string[], points: number, description: string) => Promise<{ success: boolean; message: string; count: number }>;
   deductPointsFromMultipleStudents: (studentIds: string[], points: number, reason: string) => Promise<{ success: boolean; message: string; count: number; }>;
-  redeemPrize: (studentId: string, prize: Prize, quantity: number) => Promise<void>;
+  redeemPrize: (studentId: string, prize: Prize, quantity: number) => Promise<{ activityId: string; redeemedAt: number; totalCost: number }>;
   addPrize: (prize: Omit<Prize, 'id'>) => Promise<void>;
   updatePrize: (prize: Prize) => Promise<void>;
   deletePrize: (prizeId: string) => Promise<void>;
@@ -106,7 +108,7 @@ interface AppContextType {
   purgeStudentProgress: (studentId: string) => Promise<void>;
   getAttendanceConfig: () => Promise<AttendanceSettings | null>;
   setAttendanceConfig: (settings: AttendanceSettings) => Promise<void>;
-  recordClassSignIn: (studentId: string, student: Student, config: AttendanceSettings) => Promise<{ pointsAwarded: number; onTime: boolean; periodLabel?: string }>;
+  recordClassSignIn: (studentId: string, student: Student, config: AttendanceSettings) => Promise<RecordClassSignInResult>;
   listAttendanceLog: (limitCount?: number) => Promise<AttendanceLogEntry[]>;
   // Per-teacher attendance helpers
   getTeacherAttendanceConfig: (teacherId: string) => Promise<AttendanceSettings | null>;
@@ -148,7 +150,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
 
   const { settings } = useSettings();
 
-  // CRUD wrappers — delegate straight to db.ts — delegate straight to db.ts
+  // CRUD wrappers — delegate straight to db.ts
   const addStudent_ = useCallback((s: Omit<Student, 'id' | 'points' | 'lifetimePoints'>) => {
     if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
     return dbAddStudent(firestore, schoolId, s);
@@ -370,9 +372,11 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
   }), [
     authCtx, printCtx, backupCtx,
     addStudent_, updateStudent_, deleteStudent_,
-    addClass_, deleteClass_, addTeacher_, updateTeacher_, deleteTeacher_,
-    addCategory_, updateCategory_, deleteCategory_, addCoupons_,
-    redeemCoupon_, awardPoints_, awardPointsToMultipleStudents_, deductPointsFromMultipleStudents_,
+    addClass_, updateClass_, deleteClass_,
+    addTeacher_, updateTeacher_, deleteTeacher_,
+    addCategory_, updateCategory_, deleteCategory_,
+    addCoupons_, redeemCoupon_, deleteCoupon_,
+    awardPoints_, awardPointsToMultipleStudents_, deductPointsFromMultipleStudents_,
     redeemPrize_, addPrize_, updatePrize_, deletePrize_,
     uploadStudents_,
     togglePrizeFulfillment_,

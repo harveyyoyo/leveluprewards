@@ -28,6 +28,16 @@ export function useBarcodeScanner(
     const codeReaderRef = useRef(new BrowserMultiFormatReader());
     const streamRef = useRef<MediaStream | null>(null);
 
+    // Consumers typically pass inline arrows, so stash the latest callbacks in
+    // refs. This keeps `startScanning` stable — otherwise the `useEffect` below
+    // would tear down and re-init the camera stream on every parent render.
+    const onScanRef = useRef(onScan);
+    const onErrorRef = useRef(onError);
+    useEffect(() => {
+        onScanRef.current = onScan;
+        onErrorRef.current = onError;
+    }, [onScan, onError]);
+
     const stopScanning = useCallback(() => {
         if (streamRef.current) {
             streamRef.current.getTracks().forEach(track => track.stop());
@@ -82,7 +92,7 @@ export function useBarcodeScanner(
                             await videoRef.current.play();
                             codeReaderRef.current.decodeFromVideoElement(videoRef.current, (result, error) => {
                                 if (result) {
-                                    onScan(result.getText());
+                                    onScanRef.current(result.getText());
                                 }
                                 if (error && error.name !== 'NotFoundException') {
                                     console.error('Barcode scan error:', error);
@@ -98,9 +108,9 @@ export function useBarcodeScanner(
         } catch (err: any) {
             console.error('Camera initialization error:', err);
             setHasCameraPermission(false);
-            onError?.(err.message || 'Could not access the camera. Please check permissions.');
+            onErrorRef.current?.(err.message || 'Could not access the camera. Please check permissions.');
         }
-    }, [onScan, onError]);
+    }, []);
 
     useEffect(() => {
         if (!isActive) {

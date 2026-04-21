@@ -33,9 +33,9 @@ export default function PublicSchoolPage() {
 
                 if (snap.exists()) {
                     // Automatically log them in as a student
-                    await login('student', { schoolId });
-                    if (!cancelled) {
-                        router.push('/portal');
+                    const loginResult = await login('student', { schoolId });
+                    if (!cancelled && loginResult.ok) {
+                        router.push(`/${schoolId}/portal`);
                     }
                 } else {
                     setNotFound(true);

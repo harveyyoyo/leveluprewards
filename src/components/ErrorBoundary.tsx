@@ -4,6 +4,7 @@ import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { getReadableErrorMessage } from '@/lib/errorMessage';
 
 interface Props {
     children?: ReactNode;
@@ -54,9 +55,12 @@ export class ErrorBoundary extends Component<Props, State> {
                         </CardHeader>
                         <CardContent className="space-y-4 text-center">
                             {this.state.error && (
-                                <div className="bg-muted p-3 rounded-md text-xs text-left overflow-auto max-h-32 text-muted-foreground font-mono">
-                                    {this.state.error.message}
-                                </div>
+                                <p className="text-sm text-muted-foreground leading-relaxed">
+                                    {getReadableErrorMessage(
+                                        this.state.error,
+                                        'Something went wrong. Please try again.',
+                                    )}
+                                </p>
                             )}
                             <Button onClick={this.handleReset} className="w-full font-bold" variant="outline">
                                 <RefreshCw className="mr-2 h-4 w-4" /> Try Again

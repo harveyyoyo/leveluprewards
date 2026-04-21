@@ -8,6 +8,7 @@ import "./globals.css";
 export const metadata = {
   title: 'levelUp EDU',
   description: 'LevelUp rewards hub',
+  manifest: '/manifest.json',
 };
 
 export default function RootLayout({
@@ -19,7 +20,6 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <meta name="theme-color" content="#13a58d" />
-        <link rel="manifest" href="/manifest.json" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="levelUp EDU" />
@@ -30,20 +30,31 @@ export default function RootLayout({
           crossOrigin="anonymous"
         />
         <link
-          href="https://fonts.googleapis.com/css2?family=Ubuntu:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400;1,500;1,700&family=Source+Code+Pro:wght@400;600&family=Libre+Barcode+39&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Ubuntu:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400;1,500;1,700&family=Source+Code+Pro:wght@400;600&family=Libre+Barcode+39&family=Fraunces:wght@600;700;800&family=DM+Sans:wght@500;600;700;800&display=swap"
           rel="stylesheet"
         />
       </head>
       <body className="font-sans antialiased bg-background text-foreground transition-colors duration-500 min-h-screen" suppressHydrationWarning>
-        <ErrorBoundary name="RootFirebaseProvider">
-          <FirebaseClientProvider>
-            <AppProvider>
-              <LayoutClientWrapper>
-                {children}
-              </LayoutClientWrapper>
-            </AppProvider>
-          </FirebaseClientProvider>
-        </ErrorBoundary>
+        {/*
+          Stable portal target for AnimatedSiteBackground. App Router does not use #__next
+          (hydrateRoot attaches to document), so a dedicated host avoids wrong insertBefore/prepend.
+        */}
+        <div
+          id="arcade-backdrop-host"
+          className="arcade-animated-site-bg no-print pointer-events-none fixed inset-0 overflow-hidden min-h-0"
+          aria-hidden
+        />
+        <div data-app-view-root className="min-h-screen">
+          <ErrorBoundary name="RootFirebaseProvider">
+            <FirebaseClientProvider>
+              <AppProvider>
+                <LayoutClientWrapper>
+                  {children}
+                </LayoutClientWrapper>
+              </AppProvider>
+            </FirebaseClientProvider>
+          </ErrorBoundary>
+        </div>
       </body>
     </html>
   );

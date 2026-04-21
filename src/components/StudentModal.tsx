@@ -1,4 +1,4 @@
-import { ChangeEvent, useEffect, useState } from 'react';
+import { ChangeEvent, useEffect, useMemo, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -19,7 +19,7 @@ import {
 import { useAppContext } from '@/components/AppProvider';
 import { useToast } from '@/hooks/use-toast';
 import type { Student, Class, Teacher, StudentTheme } from '@/lib/types';
-import { useFirestore, useFunctions } from '@/firebase';
+import { useFirestore, useFunctions, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useSettings } from '@/components/providers/SettingsProvider';
@@ -27,8 +27,15 @@ import { ScrollArea } from './ui/scroll-area';
 import { Checkbox } from './ui/checkbox';
 import { getStudentNickname } from '@/lib/utils';
 import { httpsCallable } from 'firebase/functions';
-import { ThemeGeneratorModal } from './ThemeGeneratorModal';
+import dynamic from 'next/dynamic';
 import { Wand2, Trash2 } from 'lucide-react';
+
+// ~31 KB modal used only when an admin opens the theme generator; ship it on
+// demand to keep the StudentModal itself lean.
+const ThemeGeneratorModal = dynamic(
+    () => import('./ThemeGeneratorModal').then((m) => m.ThemeGeneratorModal),
+    { ssr: false },
+);
 import { ImageCropper } from './ImageCropper';
 
 interface StudentModalProps {
@@ -57,10 +64,45 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
   const [theme, setTheme] = useState<StudentTheme | undefined>(undefined);
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
+  const [localPhotoUrl, setLocalPhotoUrl] = useState<string>('');
   const { toast } = useToast();
   const playSound = useArcadeSound();
 
   const isEditing = !!student;
+
+  const schoolDocRef = useMemoFirebase(
+    () => (firestore && schoolId ? doc(firestore, 'schools', schoolId) : null),
+    [firestore, schoolId]
+  );
+  const appConfigDocRef = useMemoFirebase(
+    () => (firestore ? doc(firestore, 'appConfig', 'global') : null),
+    [firestore]
+  );
+  const { data: schoolDocForCards } = useDoc<{ name?: string; logoUrl?: string }>(schoolDocRef);
+  const { data: appConfigForCards } = useDoc<{ appLogoUrl?: string; appName?: string; appTagline?: string }>(
+    appConfigDocRef
+  );
+
+  const themeClassLabel = useMemo(() => {
+    if (classId === 'none') return 'Unassigned';
+    return allClasses.find((c) => c.id === classId)?.name ?? 'Unassigned';
+  }, [classId, allClasses]);
+
+  const themePreviewStudent = useMemo((): Student => {
+    const pts = parseInt(points, 10);
+    return {
+      id: student?.id ?? 'new-student-preview',
+      firstName: firstName.trim() || 'Student',
+      lastName: lastName.trim() || '',
+      middleName: middleName.trim() || undefined,
+      nickname: nickname.trim() || undefined,
+      nfcId: nfcId.trim() || '00000000',
+      points: Number.isFinite(pts) ? pts : 0,
+      lifetimePoints: student?.lifetimePoints ?? 0,
+      photoUrl: (localPhotoUrl || student?.photoUrl || '').trim() || undefined,
+      classId: classId === 'none' ? undefined : classId,
+    };
+  }, [student, firstName, lastName, middleName, nickname, nfcId, points, localPhotoUrl, classId]);
 
   useEffect(() => {
     if (isOpen) {
@@ -74,6 +116,7 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
         setClassId(student.classId || 'none');
         setSelectedTeacherIds(student.teacherIds || []);
         setTheme(student.theme);
+        setLocalPhotoUrl(student.photoUrl || '');
       } else { // Create mode
         setFirstName('');
         setMiddleName('');
@@ -84,6 +127,7 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
         setClassId('none');
         setSelectedTeacherIds([]);
         setTheme(undefined);
+        setLocalPhotoUrl('');
       }
     }
   }, [student, isOpen]);
@@ -158,6 +202,7 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
 
       if (!res.data?.photoUrl) throw new Error('No photo URL returned');
       await updateStudent({ ...student, photoUrl: res.data.photoUrl });
+      setLocalPhotoUrl(res.data.photoUrl);
       playSound('success');
       toast({ title: 'Profile photo updated!' });
     } catch (err: any) {
@@ -178,6 +223,7 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
     try {
       setIsPhotoUploading(true);
       await updateStudent({ ...student, photoUrl: '' });
+      setLocalPhotoUrl('');
       playSound('success');
       toast({ title: 'Profile photo removed' });
     } catch (err: any) {
@@ -238,6 +284,7 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
         nfcId,
         teacherIds: selectedTeacherIds,
         theme,
+        photoUrl: localPhotoUrl,
       };
       await updateStudent(updatedStudent);
       playSound('success');
@@ -275,14 +322,14 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
               <div className="flex items-center gap-3">
                 <div className="relative group">
                   <div className="h-12 w-12 rounded-full overflow-hidden bg-muted border border-border/60 flex items-center justify-center text-xs font-semibold text-muted-foreground">
-                    {student?.photoUrl ? (
+                    {localPhotoUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={student.photoUrl} alt="Student profile" className={settings.photoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />
+                      <img src={localPhotoUrl} alt="Student profile" className={settings.photoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />
                     ) : (
                       <span>{(firstName[0] || '')}{(lastName[0] || '')}</span>
                     )}
                   </div>
-                  {student?.photoUrl && (
+                  {localPhotoUrl && (
                     <button
                       onClick={handleRemovePhoto}
                       className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -421,7 +468,13 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
         <ThemeGeneratorModal
           isOpen={isThemeModalOpen}
           onOpenChange={setIsThemeModalOpen}
-          studentName={firstName || 'Student'}
+          previewStudent={themePreviewStudent}
+          schoolName={schoolDocForCards?.name?.trim() || schoolId?.replace(/_/g, ' ') || 'School'}
+          classLabel={themeClassLabel}
+          schoolLogoUrl={schoolDocForCards?.logoUrl ?? null}
+          appLogoUrl={appConfigForCards?.appLogoUrl ?? null}
+          appName={appConfigForCards?.appName?.trim() || undefined}
+          appTagline={appConfigForCards?.appTagline?.trim() || undefined}
           currentTheme={theme}
           onSave={(newTheme) => {
             setTheme(newTheme);

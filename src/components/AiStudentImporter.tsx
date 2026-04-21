@@ -10,6 +10,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Class, Student } from '@/lib/types';
 import { useSettings } from './providers/SettingsProvider';
 import { cn } from '@/lib/utils';
+import { useAuthFetch } from '@/lib/authFetch';
+import { useAppContext } from './AppProvider';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 
@@ -26,6 +28,8 @@ export function AiStudentImporter({ classes, onSaveAll }: AiStudentImporterProps
     const [isSaving, setIsSaving] = useState(false);
     const { toast } = useToast();
     const { settings } = useSettings();
+    const authFetch = useAuthFetch();
+    const { schoolId } = useAppContext();
     const isGraphic = settings.graphicMode === 'graphics';
 
     const handleParse = async () => {
@@ -33,13 +37,13 @@ export function AiStudentImporter({ classes, onSaveAll }: AiStudentImporterProps
         setIsParsing(true);
         try {
             const classNames = classes.map(c => c.name);
-            const res = await fetch('/api/parse-students', {
+            const res = await authFetch('/api/parse-students', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     prompt: rawText, 
                     model: localStorage.getItem('arcade_ai_model') || 'gemini-2.5-flash',
-                    classNames
+                    classNames,
+                    schoolId,
                 })
             });
             if (!res.ok) throw new Error('Failed to parse students');

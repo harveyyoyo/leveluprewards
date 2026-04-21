@@ -1,13 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import OpenAI from 'openai';
+import { guardAiRoute } from '@/lib/apiAuth';
+
+const MAX_PROMPT_LENGTH = 20000; // rosters can be long; keep generous but bounded
 
 export async function POST(req: NextRequest) {
+    const guard = await guardAiRoute(req, { maxBodyBytes: 64 * 1024, requireSchoolStaff: true });
+    if (!guard.ok) return guard.response;
+
     try {
-        const { prompt, model = 'gemini-2.5-flash', classNames = [] } = await req.json();
+        const payload = guard.value.body as { prompt?: unknown; model?: unknown; classNames?: unknown };
+        const prompt = typeof payload.prompt === 'string' ? payload.prompt : '';
+        const model = typeof payload.model === 'string' && payload.model
+            ? payload.model
+            : 'gemini-2.5-flash';
+        const classNames = Array.isArray(payload.classNames)
+            ? (payload.classNames.filter((c) => typeof c === 'string') as string[])
+            : [];
 
         if (!prompt) {
             return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
+        }
+        if (prompt.length > MAX_PROMPT_LENGTH) {
+            return NextResponse.json({ error: 'Roster text is too long.' }, { status: 413 });
         }
 
         const classContext = classNames.length > 0 

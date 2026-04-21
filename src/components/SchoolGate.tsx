@@ -16,7 +16,7 @@ export function SchoolGate({ children }: { children: React.ReactNode }) {
 
   if (!isInitialized) return <div className="min-h-screen bg-background flex items-center justify-center">Loading...</div>;
 
-  if (!schoolId || !['student', 'teacher', 'admin', 'school'].includes(loginState)) return null;
+  if (!schoolId || !['student', 'teacher', 'admin', 'school', 'developer'].includes(loginState)) return null;
 
   return <>{children}</>;
 }

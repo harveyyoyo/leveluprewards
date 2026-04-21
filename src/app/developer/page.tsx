@@ -4,9 +4,9 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirestore, useFirebase, useCollection, useMemoFirebase, useFunctions } from '@/firebase';
-import { collection, doc, getDoc, setDoc, query, getDocs, orderBy, limit } from 'firebase/firestore';
+import { collection, doc, getDoc, setDoc, query, getDocs, orderBy, limit, getCountFromServer } from 'firebase/firestore';
 import {
-  Plus, Trash2, Server, Pencil, Database, Download, Upload, ShieldCheck, LifeBuoy, RefreshCw, Link2, Check, Loader2, Image as ImageIcon,
+  Plus, Trash2, Pencil, Database, Download, Upload, ShieldCheck, LifeBuoy, RefreshCw, Link2, Check, Loader2, Image as ImageIcon, Sparkles, Server, FolderGit2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -25,6 +25,8 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
@@ -34,6 +36,8 @@ import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { Helper } from '@/components/ui/helper';
 import { httpsCallable } from 'firebase/functions';
+import { ANIMATED_BACKGROUND_STYLES, type AnimatedBackgroundStyle } from '@/lib/animatedBackdrop';
+import { ImageCropper } from '@/components/ImageCropper';
 
 interface SchoolInfo {
   id: string;
@@ -51,6 +55,63 @@ interface SchoolStats {
   totalPointsAwarded: number;
 }
 
+
+const formatBytes = (bytes: number) => {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+};
+
+function SchoolListItemStats({ schoolId }: { schoolId: string }) {
+  const [stats, setStats] = useState<{students: number, teachers: number, sizeBytes?: number} | null>(null);
+  const firestore = useFirestore();
+
+  useEffect(() => {
+    if (!firestore || !schoolId) return;
+    const fetchStats = async () => {
+      try {
+        const studentSnap = await getCountFromServer(collection(firestore, 'schools', schoolId, 'students'));
+        const teacherSnap = await getCountFromServer(collection(firestore, 'schools', schoolId, 'teachers'));
+        
+        let sizeBytes: number | undefined;
+        const backupsColRef = collection(firestore, 'schools', schoolId, 'backups');
+        const backupSnap = await getDocs(query(backupsColRef, orderBy('createdAt', 'desc'), limit(1)));
+        if (!backupSnap.empty) {
+          sizeBytes = backupSnap.docs[0].data()?.sizeBytes;
+        }
+
+        setStats({
+          students: studentSnap.data().count,
+          teachers: teacherSnap.data().count,
+          sizeBytes
+        });
+      } catch (error) {
+        console.error("Error fetching list stats:", error);
+      }
+    };
+    fetchStats();
+  }, [firestore, schoolId]);
+
+  if (!stats) return <div className="text-xs text-muted-foreground mt-1 h-5 animate-pulse flex items-center bg-slate-100 rounded px-2 w-32">Loading stats...</div>;
+
+  return (
+    <div className="text-xs text-muted-foreground mt-1 flex flex-wrap items-center gap-1.5">
+      <span className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded font-medium border">{stats.students} students</span>
+      <span className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded font-medium border">{stats.teachers} teachers</span>
+      {stats.sizeBytes !== undefined ? (
+        <span className="bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 px-1.5 py-0.5 rounded font-medium border border-indigo-200 dark:border-indigo-800" title="Based on last backup">
+          Database size: ~{formatBytes(stats.sizeBytes)}
+        </span>
+      ) : (
+        <span className="bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 px-1.5 py-0.5 rounded font-medium border border-amber-200 dark:border-amber-800" title="Based on last backup">
+          Database size: Unknown (No backup)
+        </span>
+      )}
+    </div>
+  );
+}
 
 function SchoolStatsModal({ school, isOpen, onOpenChange }: { school: SchoolInfo | null, isOpen: boolean, onOpenChange: (open: boolean) => void }) {
   const [stats, setStats] = useState<SchoolStats | null>(null);
@@ -150,7 +211,7 @@ export default function DeveloperPage() {
   const {
     loginState, isInitialized, isUserLoading, createSchool, deleteSchool, updateSchool,
     devCreateBackup, devRestoreFromBackup, devDownloadBackup, devBackupAllSchools,
-    devVerifyBackup, devMigrateSchoolData, devResetSampleSchool
+    devVerifyBackup, devMigrateSchoolData, devResetSampleSchool, userId
   } = useAppContext();
   const firestore = useFirestore();
   const functions = useFunctions();
@@ -181,6 +242,7 @@ export default function DeveloperPage() {
   const [appLogoUrl, setAppLogoUrl] = useState<string | null>(null);
   const [appLogoHistory, setAppLogoHistory] = useState<string[]>([]);
   const [isAppLogoUploading, setIsAppLogoUploading] = useState(false);
+  const [cropLogoSrc, setCropLogoSrc] = useState<string | null>(null);
   const appLogoInputRef = useRef<HTMLInputElement | null>(null);
 
   const schoolsQuery = useMemoFirebase(() => (loginState === 'developer' && !isUserLoading) ? collection(firestore, 'schools') : null, [loginState, firestore, isUserLoading]);
@@ -289,25 +351,23 @@ export default function DeveloperPage() {
       return;
     }
 
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCropLogoSrc(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+  const uploadProcessedLogo = async (imageBase64: string, contentType: string) => {
+    if (!functions) return;
     try {
       setIsAppLogoUploading(true);
       toast({ title: 'Uploading app logo…', description: 'Please wait.' });
 
-      const imageBase64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const result = reader.result as string;
-          const base64 = result.includes(',') ? result.split(',')[1] : result;
-          resolve(base64 || '');
-        };
-        reader.onerror = () => reject(reader.error);
-        reader.readAsDataURL(file);
-      });
-
       const uploadLogo = httpsCallable<{ imageBase64: string; contentType: string }, { logoUrl: string }>(functions, 'uploadAppLogo');
       const res = await uploadLogo({
         imageBase64,
-        contentType: file.type,
+        contentType,
       });
 
       const data = res.data;
@@ -325,10 +385,10 @@ export default function DeveloperPage() {
       const err = error as { code?: string; message?: string; details?: unknown };
       const code = err?.code ?? '';
       const message = String(err?.message ?? '');
-      let description = message;
-      if (!description && err?.details) {
+      let description = message || 'Could not save the logo. Try again or use a smaller image.';
+      if (err?.details) {
         try {
-          description = typeof err.details === 'string' ? err.details : JSON.stringify(err.details);
+          description += ' ' + (typeof err.details === 'string' ? err.details : JSON.stringify(err.details));
         } catch {
           // ignore
         }
@@ -339,8 +399,6 @@ export default function DeveloperPage() {
         description = 'You need developer access to update the app logo.';
       } else if (code === 'functions/invalid-argument') {
         description = message || 'Invalid image. Use PNG, JPG, or WebP under 5MB.';
-      } else if (!message || message === 'undefined') {
-        description = 'Could not save the logo. Try again or use a smaller image.';
       }
       toast({
         variant: 'destructive',
@@ -349,8 +407,37 @@ export default function DeveloperPage() {
       });
     } finally {
       setIsAppLogoUploading(false);
-      e.target.value = '';
     }
+  };
+
+  const handleSkipCrop = async () => {
+    const src = cropLogoSrc;
+    setCropLogoSrc(null);
+    if (!src) return;
+    
+    const base64 = src.includes(',') ? src.split(',')[1] : src;
+    const typeIndicator = src.substring(0, 30);
+    const contentType = typeIndicator.includes('image/png') ? 'image/png' : typeIndicator.includes('image/webp') ? 'image/webp' : 'image/jpeg';
+    
+    await uploadProcessedLogo(base64, contentType);
+  };
+
+  const handleCropComplete = async (croppedBlob: Blob) => {
+    setCropLogoSrc(null);
+
+    const imageBase64 = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        const base64 = result.includes(',') ? result.split(',')[1] : result;
+        resolve(base64 || '');
+      };
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(croppedBlob);
+    });
+
+    await uploadProcessedLogo(imageBase64, croppedBlob.type || 'image/jpeg');
+
   };
 
   const handleFindLatestBackup = async () => {
@@ -486,13 +573,7 @@ export default function DeveloperPage() {
     });
   }
 
-  const formatBytes = (bytes: number) => {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-  };
+  // Removed redefined formatBytes to avoid duplication
 
   const getSchoolUrl = (id: string) => {
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
@@ -521,17 +602,7 @@ export default function DeveloperPage() {
 
   return (
     <TooltipProvider>
-      <div className="space-y-6">
-        <Card className="bg-card border-b-4 border-slate-700 dark:border-slate-500 p-6 shadow-lg flex justify-between items-center">
-          <Helper content="This page is for system administrators. It allows you to manage all school instances, create backups, and perform system-wide operations.">
-            <div>
-              <h2 className="text-2xl font-bold flex items-center gap-2 font-headline">
-                <Server /> Developer Mode
-              </h2>
-              <p className="text-slate-400 text-sm">Manage all school databases.</p>
-            </div>
-          </Helper>
-        </Card>
+      <div className="space-y-6 px-4 sm:px-6 lg:px-8 pb-8 pt-2">
 
         <Card>
           <CardHeader>
@@ -631,6 +702,15 @@ export default function DeveloperPage() {
                 className="hidden"
                 onChange={handleAppLogoUpload}
               />
+              {cropLogoSrc && (
+                <ImageCropper
+                  imageSrc={cropLogoSrc}
+                  onCropComplete={handleCropComplete}
+                  onCancel={() => setCropLogoSrc(null)}
+                  onSkip={handleSkipCrop}
+                  freeform={true}
+                />
+              )}
             </div>
           </CardHeader>
         </Card>
@@ -736,6 +816,46 @@ export default function DeveloperPage() {
 
         <Card>
           <CardHeader>
+            <Helper content="Manage your Firebase project, including deployments, rollbacks, and Cloud Functions.">
+              <CardTitle className="flex items-center gap-2">
+                <Server className="w-5 h-5 text-indigo-500" />
+                App Management & Rollbacks
+              </CardTitle>
+            </Helper>
+            <CardDescription>Quick links to the Firebase Console for system-level administration.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 sm:grid-cols-2">
+            <div className="flex flex-col justify-between bg-secondary p-4 rounded-lg border">
+              <div>
+                <h3 className="font-bold flex items-center gap-2"><FolderGit2 className="w-5 h-5"/>Hosting & Deployments</h3>
+                <p className="text-sm text-muted-foreground mt-1">View deployment history, and instantly roll back to an earlier version of the app if something goes wrong.</p>
+              </div>
+              <Button
+                variant="secondary"
+                className="mt-4"
+                onClick={() => window.open('https://console.firebase.google.com/project/studio-1273073612-71183/hosting/sites/studio-1273073612-71183', '_blank')}
+              >
+                Open Firebase Hosting
+              </Button>
+            </div>
+            <div className="flex flex-col justify-between bg-secondary p-4 rounded-lg border">
+              <div>
+                <h3 className="font-bold flex items-center gap-2"><ShieldCheck className="w-5 h-5"/>Main Console</h3>
+                <p className="text-sm text-muted-foreground mt-1">Direct link to your Firebase project overview for managing databases, auth, and other config.</p>
+              </div>
+              <Button
+                variant="secondary"
+                className="mt-4"
+                onClick={() => window.open('https://console.firebase.google.com/project/studio-1273073612-71183/overview', '_blank')}
+              >
+                Open Firebase Console
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
             <Helper content="This is a list of all separate school databases in the system. You can create new schools or manage existing ones from here.">
               <CardTitle className="flex items-center justify-between">
                 <span>School Instances</span>
@@ -752,8 +872,9 @@ export default function DeveloperPage() {
                 {allSchools && [...allSchools].sort((a, b) => a.id.localeCompare(b.id)).map((school) => (
                   <li key={school.id} className="flex flex-wrap gap-2 justify-between items-center bg-secondary p-3 rounded-lg border">
                     <div onClick={() => setStatsSchool(school)} className="flex-grow cursor-pointer rounded -m-2 p-2 transition-colors hover:bg-slate-200 dark:hover:bg-slate-700">
-                      <p className="font-bold font-code break-all">{school.id}</p>
-                      <p className="text-sm text-muted-foreground">{school.name}</p>
+                      <p className="font-bold font-code break-all text-lg">{school.id}</p>
+                      <p className="text-sm font-medium">{school.name}</p>
+                      <SchoolListItemStats schoolId={school.id} />
                       <button
                         onClick={(e) => { e.stopPropagation(); handleCopyUrl(school.id); }}
                         className="mt-1 flex items-center gap-1.5 text-xs text-primary hover:underline font-medium"
@@ -848,45 +969,56 @@ export default function DeveloperPage() {
 
         <Dialog open={isCreateSchoolDialogOpen} onOpenChange={setIsCreateSchoolDialogOpen}>
           <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create New School</DialogTitle>
-              <DialogDescription>
-                Enter the new school's details below. The ID should be short and contain no spaces.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="space-y-1">
-                <Label htmlFor="new-school-id">School ID</Label>
-                <Input
-                  id="new-school-id"
-                  placeholder="e.g., 'washington_hs'"
-                  value={newSchoolId}
-                  onChange={(e) => setNewSchoolId(e.target.value.trim().toLowerCase().replace(/[^a-z0-9_]/g, ''))}
-                />
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                void handleCreateSchool();
+              }}
+            >
+              <DialogHeader>
+                <DialogTitle>Create New School</DialogTitle>
+                <DialogDescription>
+                  Enter the new school's details below. The ID should be short and contain no spaces.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="space-y-1">
+                  <Label htmlFor="new-school-id">School ID</Label>
+                  <Input
+                    id="new-school-id"
+                    placeholder="e.g., 'washington_hs'"
+                    value={newSchoolId}
+                    onChange={(e) => setNewSchoolId(e.target.value.trim().toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="new-school-name">School Name</Label>
+                  <Input
+                    id="new-school-name"
+                    placeholder="e.g., Washington High School"
+                    value={newSchoolName}
+                    onChange={(e) => setNewSchoolName(e.target.value)}
+                    autoComplete="organization"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="new-school-passcode">Passcode</Label>
+                  <Input
+                    id="new-school-passcode"
+                    type="password"
+                    placeholder="(Leave blank to auto-generate)"
+                    value={newSchoolPasscode}
+                    onChange={(e) => setNewSchoolPasscode(e.target.value)}
+                    autoComplete="new-password"
+                  />
+                </div>
               </div>
-              <div className="space-y-1">
-                <Label htmlFor="new-school-name">School Name</Label>
-                <Input
-                  id="new-school-name"
-                  placeholder="e.g., Washington High School"
-                  value={newSchoolName}
-                  onChange={(e) => setNewSchoolName(e.target.value)}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="new-school-passcode">Passcode</Label>
-                <Input
-                  id="new-school-passcode"
-                  placeholder="(Leave blank to auto-generate)"
-                  value={newSchoolPasscode}
-                  onChange={(e) => setNewSchoolPasscode(e.target.value)}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="secondary" onClick={() => setIsCreateSchoolDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleCreateSchool}>Create School</Button>
-            </DialogFooter>
+              <DialogFooter>
+                <Button type="button" variant="secondary" onClick={() => setIsCreateSchoolDialogOpen(false)}>Cancel</Button>
+                <Button type="submit">Create School</Button>
+              </DialogFooter>
+            </form>
           </DialogContent>
         </Dialog>
 
@@ -927,37 +1059,46 @@ export default function DeveloperPage() {
 
         <Dialog open={!!editingSchool} onOpenChange={handleCloseEditModal}>
           <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Edit School: <span className="font-code">{editingSchool?.id}</span></DialogTitle>
-              <DialogDescription>
-                Update the school's name or set a new passcode. Leaving the passcode field blank will not change it.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="edit-school-name" className="text-right">Name</Label>
-                <Input
-                  id="edit-school-name"
-                  value={editingSchoolName}
-                  onChange={(e) => setEditingSchoolName(e.target.value)}
-                  className="col-span-3"
-                />
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                void handleUpdateSchool();
+              }}
+            >
+              <DialogHeader>
+                <DialogTitle>Edit School: <span className="font-code">{editingSchool?.id}</span></DialogTitle>
+                <DialogDescription>
+                  Update the school's name or set a new passcode. Leaving the passcode field blank will not change it.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="edit-school-name" className="text-right">Name</Label>
+                  <Input
+                    id="edit-school-name"
+                    value={editingSchoolName}
+                    onChange={(e) => setEditingSchoolName(e.target.value)}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="new-passcode" className="text-right">New Passcode</Label>
+                  <Input
+                    id="new-passcode"
+                    type="password"
+                    value={editingPasscode}
+                    placeholder="(Leave blank to keep unchanged)"
+                    onChange={(e) => setEditingPasscode(e.target.value)}
+                    className="col-span-3"
+                    autoComplete="new-password"
+                  />
+                </div>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="new-passcode" className="text-right">New Passcode</Label>
-                <Input
-                  id="new-passcode"
-                  value={editingPasscode}
-                  placeholder="(Leave blank to keep unchanged)"
-                  onChange={(e) => setEditingPasscode(e.target.value)}
-                  className="col-span-3"
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="secondary" onClick={handleCloseEditModal}>Cancel</Button>
-              <Button onClick={handleUpdateSchool}>Save Changes</Button>
-            </DialogFooter>
+              <DialogFooter>
+                <Button type="button" variant="secondary" onClick={handleCloseEditModal}>Cancel</Button>
+                <Button type="submit">Save Changes</Button>
+              </DialogFooter>
+            </form>
           </DialogContent>
         </Dialog>
 

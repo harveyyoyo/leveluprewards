@@ -1,17 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import OpenAI from 'openai';
-
+import { guardAiRoute } from '@/lib/apiAuth';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 const defaultOpenAI = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || '' });
 
+const MAX_PROMPT_LENGTH = 10000;
+
 export async function POST(req: NextRequest) {
+    const guard = await guardAiRoute(req, { requireSchoolStaff: true });
+    if (!guard.ok) return guard.response;
+
     try {
-        const { prompt, model = 'gemini-2.5-flash' } = await req.json();
+        const payload = guard.value.body as { prompt?: unknown; model?: unknown };
+        const prompt = typeof payload.prompt === 'string' ? payload.prompt : '';
+        const model = typeof payload.model === 'string' && payload.model
+            ? payload.model
+            : 'gemini-2.5-flash';
 
         if (!prompt) {
             return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
+        }
+        if (prompt.length > MAX_PROMPT_LENGTH) {
+            return NextResponse.json({ error: 'Schedule text is too long.' }, { status: 413 });
         }
 
         const systemInstruction = `You are a scheduling assistant. Your task is to parse a raw text schedule into a structured array of JSON class objects.

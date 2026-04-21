@@ -1,6 +1,7 @@
 
 
-import { useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
 import {
     Dialog,
@@ -15,15 +16,23 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
     Settings, Volume2, VolumeX, Monitor, Smartphone, ChevronRight,
     Bell, Shield, Moon, Sun, ArrowLeft, Palette, Zap, Trophy,
     BarChart3, MessageSquare, ShoppingBag, ShieldCheck, Star,
     Users, Database, Printer, LayoutDashboard, History, HelpCircle,
-    Cpu, Award, Clock
+    Cpu, Award, Clock, Sparkles, Trash2, RotateCcw,
 } from 'lucide-react';
-import { useSettings, colorSchemes, type ColorScheme } from '../providers/SettingsProvider';
+import { useSettings, colorSchemes, type ColorScheme, type AppearancePreviewSettings } from '../providers/SettingsProvider';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
+import { cn } from '@/lib/utils';
+import {
+    ANIMATED_BACKGROUND_STYLES,
+    type AnimatedBackgroundStyle,
+    normalizeAnimatedBackgroundStyle,
+    resolveAnimatedBackgroundStyle,
+} from '@/lib/animatedBackdrop';
 
 type SettingsView = 'main' | 'features';
 
@@ -64,11 +73,99 @@ function FeatureRow({ id, label, desc, icon, settings, onToggle, isImplemented =
 }
 
 export function SettingsModal() {
-    const { loginState } = useAppContext();
+    const pathname = usePathname();
+    const { loginState, schoolId } = useAppContext();
+    const isLoginPage = pathname === '/' || pathname.startsWith('/s/');
+    // Settings are school-dependent; never show on public/login pages.
+    if (isLoginPage || loginState === 'loggedOut' || (!schoolId && loginState !== 'developer')) {
+        return null;
+    }
     const isAdmin = loginState === 'admin' || loginState === 'developer';
-    const { settings, updateSettings } = useSettings();
+    const {
+        settings,
+        visualSettings,
+        appearancePreview,
+        setAppearancePreview,
+        hasAppearancePreview,
+        discardAppearancePreview,
+        updateSettings,
+    } = useSettings();
     const playSound = useArcadeSound();
     const [view, setView] = useState<SettingsView>('main');
+
+    const previewAppearance = useCallback(
+        (patch: AppearancePreviewSettings) => {
+            setAppearancePreview((prev) => ({ ...(prev ?? {}), ...patch }));
+            if (settings.soundEnabled) playSound('click');
+        },
+        [setAppearancePreview, settings.soundEnabled, playSound],
+    );
+
+    const applyAppearance = useCallback(() => {
+        if (!appearancePreview || Object.keys(appearancePreview).length === 0) return;
+        const patch = { ...appearancePreview };
+        if (patch.animatedBackgroundStyle !== undefined) {
+            patch.animatedBackgroundStyle = normalizeAnimatedBackgroundStyle(patch.animatedBackgroundStyle);
+        }
+        updateSettings(patch);
+        setAppearancePreview(null);
+        if (settings.soundEnabled) playSound('click');
+    }, [appearancePreview, updateSettings, setAppearancePreview, settings.soundEnabled, playSound]);
+
+    const discardAppearance = useCallback(() => {
+        discardAppearancePreview();
+        if (settings.soundEnabled) playSound('click');
+    }, [discardAppearancePreview, settings.soundEnabled, playSound]);
+
+    const hiddenBgSet = useMemo(
+        () => new Set(settings.hiddenAnimatedBackgroundIds),
+        [settings.hiddenAnimatedBackgroundIds],
+    );
+    const visibleBgCount = ANIMATED_BACKGROUND_STYLES.length - hiddenBgSet.size;
+    const visibleBgStyles = useMemo(
+        () => ANIMATED_BACKGROUND_STYLES.filter((s) => !hiddenBgSet.has(s.id)),
+        [hiddenBgSet],
+    );
+    const effectiveBgStyle = resolveAnimatedBackgroundStyle(
+        normalizeAnimatedBackgroundStyle(settings.animatedBackgroundStyle),
+        settings.hiddenAnimatedBackgroundIds,
+    );
+
+    const hideBackgroundStyle = useCallback(
+        (id: AnimatedBackgroundStyle) => {
+            if (hiddenBgSet.has(id) || visibleBgCount <= 1) return;
+            const nextHidden = [...settings.hiddenAnimatedBackgroundIds, id];
+            const nextStyle = resolveAnimatedBackgroundStyle(
+                normalizeAnimatedBackgroundStyle(settings.animatedBackgroundStyle),
+                nextHidden,
+            );
+            updateSettings({
+                hiddenAnimatedBackgroundIds: nextHidden,
+                animatedBackgroundStyle: nextStyle,
+            });
+            if (settings.soundEnabled) playSound('click');
+        },
+        [
+            hiddenBgSet,
+            visibleBgCount,
+            settings.hiddenAnimatedBackgroundIds,
+            settings.animatedBackgroundStyle,
+            settings.soundEnabled,
+            updateSettings,
+            playSound,
+        ],
+    );
+
+    const restoreBackgroundStyle = useCallback(
+        (id: AnimatedBackgroundStyle) => {
+            if (!hiddenBgSet.has(id)) return;
+            updateSettings({
+                hiddenAnimatedBackgroundIds: settings.hiddenAnimatedBackgroundIds.filter((x) => x !== id),
+            });
+            if (settings.soundEnabled) playSound('click');
+        },
+        [hiddenBgSet, settings.hiddenAnimatedBackgroundIds, settings.soundEnabled, updateSettings, playSound],
+    );
 
     const handleToggle = (key: string, value: any) => {
         updateSettings({ [key]: value } as any);
@@ -80,13 +177,21 @@ export function SettingsModal() {
     const viewTitle = view === 'main' ? 'Interface Settings' : 'Features';
 
     return (
-        <Dialog onOpenChange={(open) => { if (!open) setView('main'); }}>
+        <Dialog onOpenChange={(open) => {
+            if (!open) {
+                discardAppearancePreview();
+                setView('main');
+            }
+        }}>
             <DialogTrigger asChild>
                 <Button variant="ghost" size="icon" className="hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl group relative z-50">
                     <Settings className="w-5 h-5 text-slate-600 dark:text-slate-300 group-hover:rotate-45 transition-transform duration-300" />
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-2xl rounded-2xl p-0 overflow-hidden border border-slate-200 dark:bg-slate-900 dark:border-slate-800 flex flex-col max-h-[90vh]">
+            <DialogContent
+                overlayClassName="bg-transparent"
+                className="sm:max-w-2xl rounded-2xl p-0 overflow-hidden border border-slate-200 dark:bg-slate-900 dark:border-slate-800 flex flex-col max-h-[90vh] shadow-2xl"
+            >
                 {/* Header */}
                 <div className="px-6 pt-6 pb-4 border-b border-slate-100 dark:border-slate-800">
                     <DialogHeader>
@@ -106,52 +211,128 @@ export function SettingsModal() {
                 <div key={view} className="px-6 py-4 overflow-y-auto flex-1 min-h-0 flex flex-col pb-24">
                     {view === 'main' && (
                         <>
-                            {/* Graphic Mode */}
+                            {/* Arcade Mode (Graphics) is permanently enabled; toggle removed. */}
+
+                            {/* Color Scheme */}
                             <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 mb-4 border border-slate-100 dark:border-slate-800">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className={`p-2 rounded-lg ${settings.graphicMode === 'graphics' ? 'bg-blue-100 text-blue-600' : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400'}`}>
-                                            <Monitor className="w-5 h-5" />
+                                <div className="flex items-center gap-3 mb-3">
+                                    <div className="p-2 rounded-lg bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400">
+                                        <Palette className="w-5 h-5" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <Label htmlFor="settings-color-scheme" className="font-bold text-foreground text-base">Color Scheme</Label>
+                                        <p className="text-xs text-muted-foreground mt-0.5">App colors and gradients</p>
+                                    </div>
+                                </div>
+                                <Select
+                                    value={settings.colorScheme}
+                                    onValueChange={(v) => handleToggle('colorScheme', v as ColorScheme)}
+                                >
+                                    <SelectTrigger id="settings-color-scheme" className="w-full h-12 rounded-xl border-slate-200 dark:border-slate-700 bg-background text-left font-semibold">
+                                        <SelectValue placeholder="Choose a color scheme" />
+                                    </SelectTrigger>
+                                    <SelectContent className="max-h-[min(320px,60vh)]">
+                                        {(Object.keys(colorSchemes) as ColorScheme[]).map((key) => (
+                                            <SelectItem key={key} value={key} className="cursor-pointer">
+                                                <span className="flex items-center gap-2">
+                                                    <span className={cn('w-3.5 h-3.5 rounded-full shrink-0 ring-1 ring-black/10 dark:ring-white/20', colorSchemes[key].swatch)} />
+                                                    <span>{colorSchemes[key].label}</span>
+                                                </span>
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            {/* Animated background */}
+                            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 mb-4 border border-slate-100 dark:border-slate-800">
+                                <div className="flex items-start justify-between gap-4 mb-3">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <div className="p-2 rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 shrink-0">
+                                            <Sparkles className="w-5 h-5" />
                                         </div>
-                                        <div>
-                                            <h4 className="font-bold text-foreground">Arcade Mode</h4>
-                                            <p className="text-xs text-muted-foreground mt-0.5">Gamified UI with special effects</p>
+                                        <div className="min-w-0">
+                                            <h4 className="font-bold text-foreground">Animated background</h4>
+                                            <p className="text-xs text-muted-foreground mt-0.5">Backdrop behind pages; header uses a soft gradient so it stays readable.</p>
                                         </div>
                                     </div>
                                     <Switch
-                                        checked={settings.graphicMode === 'graphics'}
-                                        onCheckedChange={(checked) => handleToggle('graphicMode', checked ? 'graphics' : 'classic')}
-                                        className="data-[state=checked]:bg-blue-600 scale-110"
+                                        checked={settings.enableAnimatedBackground}
+                                        onCheckedChange={(checked) => handleToggle('enableAnimatedBackground', checked)}
+                                        className="data-[state=checked]:bg-amber-500 shrink-0 scale-110"
                                     />
                                 </div>
-                            </div>
-
-                            {/* Color Scheme */}
-                            {settings.graphicMode === 'classic' && (
-                                <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 mb-4 border border-slate-100 dark:border-slate-800">
-                                    <div className="flex items-center gap-3 mb-3">
-                                        <div className="p-2 rounded-lg bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400">
-                                            <Palette className="w-5 h-5" />
-                                        </div>
+                                {settings.enableAnimatedBackground && (
+                                    <div className="space-y-3 pt-1 border-t border-slate-100 dark:border-slate-800/80">
+                                        <Label htmlFor="settings-animated-bg-style" className="text-xs font-semibold text-muted-foreground">Background style</Label>
+                                        <Select
+                                            value={effectiveBgStyle}
+                                            onValueChange={(v) => handleToggle('animatedBackgroundStyle', v as AnimatedBackgroundStyle)}
+                                            disabled={!settings.enableAnimatedBackground}
+                                        >
+                                            <SelectTrigger id="settings-animated-bg-style" className="w-full h-12 rounded-xl border-slate-200 dark:border-slate-700 bg-background text-left">
+                                                <SelectValue placeholder="Choose a style" />
+                                            </SelectTrigger>
+                                            <SelectContent className="max-h-[min(280px,50vh)]">
+                                                {visibleBgStyles.map((s) => (
+                                                    <SelectItem key={s.id} value={s.id} className="cursor-pointer py-2.5">
+                                                        <div className="flex flex-col gap-0.5 text-left">
+                                                            <span className="font-semibold text-sm">{s.label}</span>
+                                                            <span className="text-xs text-muted-foreground font-normal leading-snug">{s.description}</span>
+                                                        </div>
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                         <div>
-                                            <h4 className="font-bold text-foreground">Color Scheme</h4>
-                                            <p className="text-xs text-muted-foreground mt-0.5">Classic mode colors</p>
+                                            <p className="text-xs font-semibold text-muted-foreground mb-2">Background library</p>
+                                            <p className="text-[11px] text-muted-foreground mb-2 leading-snug">
+                                                Remove styles you don’t want in the picker. Restore anytime. At least one style stays available.
+                                            </p>
+                                            <div className="max-h-[min(220px,40vh)] overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-800 bg-background/50">
+                                                {ANIMATED_BACKGROUND_STYLES.map((s) => {
+                                                    const isHidden = hiddenBgSet.has(s.id);
+                                                    return (
+                                                        <div
+                                                            key={s.id}
+                                                            className="flex items-start gap-2 px-2 py-2 sm:px-3 sm:py-2.5"
+                                                        >
+                                                            <div className="min-w-0 flex-1">
+                                                                <p className="text-sm font-medium leading-tight">{s.label}</p>
+                                                                <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2">{s.description}</p>
+                                                            </div>
+                                                            {isHidden ? (
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    className="shrink-0 h-8 gap-1 text-xs"
+                                                                    onClick={() => restoreBackgroundStyle(s.id)}
+                                                                >
+                                                                    <RotateCcw className="h-3.5 w-3.5" />
+                                                                    Restore
+                                                                </Button>
+                                                            ) : (
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="shrink-0 h-8 w-8 text-muted-foreground hover:text-destructive"
+                                                                    disabled={visibleBgCount <= 1}
+                                                                    onClick={() => hideBackgroundStyle(s.id)}
+                                                                    aria-label={`Remove ${s.label} from list`}
+                                                                >
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </Button>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        {(Object.keys(colorSchemes) as ColorScheme[]).map((key) => (
-                                            <button
-                                                key={key}
-                                                onClick={() => handleToggle('colorScheme', key)}
-                                                className={`flex items-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition-all border ${settings.colorScheme === key ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 ring-1 ring-blue-500' : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
-                                            >
-                                                <span className={`w-4 h-4 rounded-full ${colorSchemes[key].swatch} shrink-0`} />
-                                                {colorSchemes[key].label}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
+                                )}
+                            </div>
 
                             {/* Dark Mode */}
                             <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 mb-4 border border-slate-100 dark:border-slate-800">
@@ -318,9 +499,9 @@ export function SettingsModal() {
                             <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
                                 <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><Clock className="w-3.5 h-3.5" /> Attendance</p>
                                 <FeatureRow
-                                    id="enableClassSignIn"
-                                    label="Class Sign-In"
-                                    desc="Use student kiosk login as class attendance. Optional punctuality points and schedules can be configured in Admin → Attendance."
+                                    id="enableAttendance"
+                                    label="Attendance"
+                                    desc="Record attendance when students sign in at the kiosk. Configure periods and rewards in Admin → Attendance. When off, the Teacher portal Attendance tab is hidden."
                                     icon={<Clock className="w-5 h-5" />}
                                     settings={settings}
                                     onToggle={handleToggle}
@@ -336,6 +517,16 @@ export function SettingsModal() {
                                     label="Student Home Portal"
                                     desc="Let students log in from home to see their points, recent activity, and which prizes they can afford."
                                     icon={<Smartphone className="w-5 h-5" />}
+                                    settings={settings}
+                                    onToggle={handleToggle}
+                                    isImplemented={true}
+                                    isAdmin={isAdmin}
+                                />
+                                <FeatureRow
+                                    id="enableFaceLogin"
+                                    label="Face Login (Optional)"
+                                    desc="Adds a Face tab to the student kiosk. Students can opt in to train their face so they can sign in faster on any computer."
+                                    icon={<Shield className="w-5 h-5" />}
                                     settings={settings}
                                     onToggle={handleToggle}
                                     isImplemented={true}

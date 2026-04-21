@@ -1,29 +1,34 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
 import type { Coupon } from '@/lib/types';
-import { useSettings } from './providers/SettingsProvider';
-import { cn } from '@/lib/utils';
-import { APP_NAME } from '@/lib/app-branding';
 import { Coupon as CouponComponent } from '@/components/Coupon';
 
 interface PrintSheetProps {
   coupons: Coupon[];
   schoolId: string | null;
+  schoolName?: string | null;
 }
 
-export function PrintSheet({ coupons, schoolId }: PrintSheetProps) {
-  const { settings } = useSettings();
-
+export function PrintSheet({ coupons, schoolId, schoolName }: PrintSheetProps) {
   if (coupons.length === 0) {
     return null;
   }
 
+  // Chunk coupons into pages of 12
+  const pages = [];
+  for (let i = 0; i < coupons.length; i += 12) {
+    pages.push(coupons.slice(i, i + 12));
+  }
+
   return (
     <div id="print-container">
-      {coupons.map((c, index) => (
-        <div key={`${c.code}-${index}`} className="print-coupon-wrapper">
-          <CouponComponent coupon={c} schoolId={schoolId} />
+      {pages.map((pageCoupons, pageIndex) => (
+        <div key={`page-${pageIndex}`} className="print-container-page">
+          {pageCoupons.map((c, index) => (
+            <div key={`${c.code}-${index}`} className="print-coupon-wrapper coupon-print-match-wrapper">
+              <CouponComponent coupon={c} schoolId={schoolId} schoolName={schoolName} />
+            </div>
+          ))}
         </div>
       ))}
     </div>

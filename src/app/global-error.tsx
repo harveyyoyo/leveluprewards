@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { getReadableErrorMessage } from '@/lib/errorMessage';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { AlertCircle } from 'lucide-react';
@@ -40,8 +41,11 @@ export default function GlobalError({
                     <AlertCircle className="w-10 h-10 text-destructive" />
                 </div>
                 <CardTitle className="text-2xl mt-4">Application Error</CardTitle>
-                <CardDescription>
-                    Something went wrong. You can try to recover by clicking the button below.
+                <CardDescription className="text-base leading-relaxed">
+                    {getReadableErrorMessage(
+                        error,
+                        'Something went wrong. You can try to recover by clicking the button below.',
+                    )}
                 </CardDescription>
                 </CardHeader>
                 <CardContent>
