@@ -1,7 +1,8 @@
 
-import * as functions from "firebase-functions";
+import * as functions from "firebase-functions/v1";
 import * as admin from "firebase-admin";
 import * as crypto from "crypto";
+import { signInAttendance } from "./signInAttendance";
 
 admin.initializeApp();
 
@@ -290,22 +291,6 @@ exports.backupAllSchools = functions
       "permission-denied",
       "backupAllSchools is disabled."
     );
-
-    const schoolsSnap = await admin.firestore().collection("schools").get();
-    const results: Array<{ schoolId: string; success: boolean; error?: string }> = [];
-
-    for (const schoolDoc of schoolsSnap.docs) {
-      const result = await performFullBackup(schoolDoc.id, "manual");
-      results.push({ schoolId: schoolDoc.id, success: result.success, error: result.error });
-    }
-
-    const failed = results.filter((r) => !r.success);
-    return {
-      total: results.length,
-      succeeded: results.length - failed.length,
-      failed: failed.length,
-      failures: failed,
-    };
   });
 
 // ========================================================================
@@ -529,7 +514,7 @@ exports.addDeveloperMe = functions.https.onCall(
     if (typeof data.passcode !== "string" || data.passcode.length === 0) {
       throw new functions.https.HttpsError("invalid-argument", "passcode is required.");
     }
-    const devPasscode = process.env.DEV_PASSCODE ?? (functions.config().dev as any)?.passcode;
+    const devPasscode = process.env.DEV_PASSCODE;
     if (!devPasscode || data.passcode !== devPasscode) {
       throw new functions.https.HttpsError("permission-denied", "Invalid developer passcode.");
     }
@@ -581,12 +566,24 @@ exports.setAttendanceConfig = functions.https.onCall(
           }))
         : [];
 
+      // Coerce strings → numbers so values that come through form inputs
+      // without explicit `valueAsNumber` don't silently flatten to 0.
+      const toFiniteNumber = (v: unknown, fallback: number): number => {
+        const n = typeof v === "number" ? v : typeof v === "string" ? Number(v) : NaN;
+        return Number.isFinite(n) ? n : fallback;
+      };
       const payload: Record<string, unknown> = {
-        pointsForSignIn: typeof config.pointsForSignIn === "number" ? config.pointsForSignIn : 0,
-        pointsForOnTime: typeof config.pointsForOnTime === "number" ? config.pointsForOnTime : 0,
-        onTimeWindowMinutes: typeof config.onTimeWindowMinutes === "number" ? config.onTimeWindowMinutes : 15,
+        pointsForSignIn: toFiniteNumber(config.pointsForSignIn, 1),
+        pointsForOnTime: toFiniteNumber(config.pointsForOnTime, 5),
+        onTimeWindowMinutes: toFiniteNumber(config.onTimeWindowMinutes, 5),
         schedule,
       };
+      if (config.classPeriodAssignments && typeof config.classPeriodAssignments === "object") {
+        payload.classPeriodAssignments = config.classPeriodAssignments;
+      }
+      if (config.classPeriodAssignmentsByDay && typeof config.classPeriodAssignmentsByDay === "object") {
+        payload.classPeriodAssignmentsByDay = config.classPeriodAssignmentsByDay;
+      }
       if (Array.isArray(config.enabledClassIds) && config.enabledClassIds.length > 0) {
         payload.enabledClassIds = config.enabledClassIds;
       }
@@ -712,6 +709,14 @@ exports.uploadAppLogo = functions.https.onCall(
     try {
       requireAuth(context);
 
+      // Only developers may modify the global app logo.
+      if (!(await isDeveloper(context))) {
+        throw new functions.https.HttpsError(
+          "permission-denied",
+          "Developer access required to upload the app logo."
+        );
+      }
+
       if (typeof data.imageBase64 !== "string" || data.imageBase64.length === 0) {
         throw new functions.https.HttpsError("invalid-argument", "imageBase64 is required.");
       }
@@ -797,6 +802,15 @@ exports.setAppLogoUrl = functions.https.onCall(
   async (data: any, context: functions.https.CallableContext) => {
     try {
       requireAuth(context);
+
+      // Only developers may modify the global app logo URL.
+      if (!(await isDeveloper(context))) {
+        throw new functions.https.HttpsError(
+          "permission-denied",
+          "Developer access required to set the app logo URL."
+        );
+      }
+
       const url = typeof data?.url === "string" ? data.url.trim() : "";
       if (!url) {
         throw new functions.https.HttpsError("invalid-argument", "url is required.");
@@ -941,15 +955,20 @@ exports.verifyTeacherPasscode = functions.https.onCall(
 );
 
 // ========================================================================
-// Migration functions (unchanged from original)
+// Migration functions — consolidated into a single generic helper.
+// The exported callable names are unchanged for backward compatibility.
 // ========================================================================
 
-exports.migrateStudentsToSubcollection = functions.https.onCall(async (data, context) => {
-  const schoolId = data.schoolId;
-
+async function migrateCollectionToSubcollection(
+  schoolId: string,
+  collectionName: string,
+  flagField: string,
+  context: functions.https.CallableContext
+): Promise<{ success: boolean; message: string }> {
   await requireSchoolAdmin(schoolId, context);
 
-  const schoolDocRef = admin.firestore().collection("schools").doc(schoolId);
+  const db = admin.firestore();
+  const schoolDocRef = db.collection("schools").doc(schoolId);
 
   try {
     const schoolSnap = await schoolDocRef.get();
@@ -958,282 +977,188 @@ exports.migrateStudentsToSubcollection = functions.https.onCall(async (data, con
     }
 
     const schoolData = schoolSnap.data()!;
+    const capitalizedName = collectionName.charAt(0).toUpperCase() + collectionName.slice(1);
 
-    if (schoolData.hasMigratedStudents) {
-      return { success: true, message: "Students have already been migrated." };
+    if (schoolData[flagField]) {
+      return { success: true, message: `${capitalizedName} have already been migrated.` };
     }
 
-    const students = schoolData.students || [];
-    if (students.length === 0) {
-      await schoolDocRef.update({ hasMigratedStudents: true });
-      return { success: true, message: "No students to migrate." };
+    const items = schoolData[collectionName] || [];
+    if (items.length === 0) {
+      await schoolDocRef.update({ [flagField]: true });
+      return { success: true, message: `No ${collectionName} to migrate.` };
     }
 
+    const BATCH_LIMIT = 499;
+    for (let i = 0; i < items.length; i += BATCH_LIMIT) {
+      const batch = db.batch();
+      const chunk = items.slice(i, i + BATCH_LIMIT);
+      const subRef = schoolDocRef.collection(collectionName);
 
-    const batch = admin.firestore().batch();
-    const studentsCollectionRef = schoolDocRef.collection("students");
+      chunk.forEach((item: any) => {
+        batch.set(subRef.doc(item.id), item);
+      });
 
-    students.forEach((student: any) => {
-      const studentDocRef = studentsCollectionRef.doc(student.id);
-      batch.set(studentDocRef, student);
-    });
+      // On the last chunk, also update the flag and remove the inline array.
+      if (i + BATCH_LIMIT >= items.length) {
+        batch.update(schoolDocRef, {
+          [flagField]: true,
+          [collectionName]: admin.firestore.FieldValue.delete(),
+        });
+      }
 
-    batch.update(schoolDocRef, { hasMigratedStudents: true, students: admin.firestore.FieldValue.delete() });
+      await batch.commit();
+    }
 
-    await batch.commit();
-
-    return { success: true, message: `Migrated ${students.length} students.` };
-
+    return { success: true, message: `Migrated ${items.length} ${collectionName}.` };
   } catch (error) {
-    console.error("Migration failed:", error);
+    console.error(`Migration of ${collectionName} failed:`, error);
+    if (error instanceof functions.https.HttpsError) throw error;
     throw new functions.https.HttpsError(
       "internal",
       "An unexpected error occurred during migration."
     );
   }
-});
+}
 
-exports.migrateClassesToSubcollection = functions.https.onCall(async (data, context) => {
-  const schoolId = data.schoolId;
+const MIGRATION_MAP: Record<string, { collection: string; flag: string }> = {
+  migrateStudentsToSubcollection:    { collection: "students",    flag: "hasMigratedStudents" },
+  migrateClassesToSubcollection:     { collection: "classes",     flag: "hasMigratedClasses" },
+  migrateTeachersToSubcollection:    { collection: "teachers",    flag: "hasMigratedTeachers" },
+  migratePrizesToSubcollection:      { collection: "prizes",      flag: "hasMigratedPrizes" },
+  migrateCouponsToSubcollection:     { collection: "coupons",     flag: "hasMigratedCoupons" },
+  migrateCategoriesToSubcollection:  { collection: "categories",  flag: "hasMigratedCategories" },
+};
 
-  await requireSchoolAdmin(schoolId, context);
+for (const [fnName, { collection: col, flag }] of Object.entries(MIGRATION_MAP)) {
+  exports[fnName] = functions.https.onCall(async (data: any, context: functions.https.CallableContext) => {
+    return migrateCollectionToSubcollection(data.schoolId, col, flag, context);
+  });
+}
 
-  const schoolDocRef = admin.firestore().collection("schools").doc(schoolId);
+// ========================================================================
+// Face login (convenience-grade): enroll + match descriptors
+// - Requires Firebase Auth (anonymous OK)
+// - Stores only face descriptors (embeddings), not images
+// ========================================================================
 
-  try {
-    const schoolSnap = await schoolDocRef.get();
-    if (!schoolSnap.exists) {
-      throw new functions.https.HttpsError("not-found", "School not found.");
-    }
+type FaceDescriptor = number[];
 
-    const schoolData = schoolSnap.data()!;
-
-    if (schoolData.hasMigratedClasses) {
-      return { success: true, message: "Classes have already been migrated." };
-    }
-
-    const classes = schoolData.classes || [];
-    if (classes.length === 0) {
-      await schoolDocRef.update({ hasMigratedClasses: true });
-      return { success: true, message: "No classes to migrate." };
-    }
-
-
-    const batch = admin.firestore().batch();
-    const classesCollectionRef = schoolDocRef.collection("classes");
-
-    classes.forEach((c: any) => {
-      const classDocRef = classesCollectionRef.doc(c.id);
-      batch.set(classDocRef, c);
-    });
-
-    batch.update(schoolDocRef, { hasMigratedClasses: true, classes: admin.firestore.FieldValue.delete() });
-
-    await batch.commit();
-
-    return { success: true, message: `Migrated ${classes.length} classes.` };
-
-  } catch (error) {
-    console.error("Migration failed:", error);
-    throw new functions.https.HttpsError(
-      "internal",
-      "An unexpected error occurred during migration."
-    );
+function requireDescriptor(value: unknown, name: string): asserts value is FaceDescriptor {
+  if (!Array.isArray(value) || value.length !== 128) {
+    throw new functions.https.HttpsError("invalid-argument", `${name} must be a 128-length number array.`);
   }
-});
-
-exports.migrateTeachersToSubcollection = functions.https.onCall(async (data, context) => {
-  const schoolId = data.schoolId;
-
-  await requireSchoolAdmin(schoolId, context);
-
-  const schoolDocRef = admin.firestore().collection("schools").doc(schoolId);
-
-  try {
-    const schoolSnap = await schoolDocRef.get();
-    if (!schoolSnap.exists) {
-      throw new functions.https.HttpsError("not-found", "School not found.");
+  for (const n of value) {
+    if (typeof n !== "number" || !Number.isFinite(n)) {
+      throw new functions.https.HttpsError("invalid-argument", `${name} must contain only finite numbers.`);
     }
-
-    const schoolData = schoolSnap.data()!;
-
-    if (schoolData.hasMigratedTeachers) {
-      return { success: true, message: "Teachers have already been migrated." };
-    }
-
-    const teachers = schoolData.teachers || [];
-    if (teachers.length === 0) {
-      await schoolDocRef.update({ hasMigratedTeachers: true });
-      return { success: true, message: "No teachers to migrate." };
-    }
-
-
-    const batch = admin.firestore().batch();
-    const teachersCollectionRef = schoolDocRef.collection("teachers");
-
-    teachers.forEach((t: any) => {
-      const teacherDocRef = teachersCollectionRef.doc(t.id);
-      batch.set(teacherDocRef, t);
-    });
-
-    batch.update(schoolDocRef, { hasMigratedTeachers: true, teachers: admin.firestore.FieldValue.delete() });
-
-    await batch.commit();
-
-    return { success: true, message: `Migrated ${teachers.length} teachers.` };
-
-  } catch (error) {
-    console.error("Migration failed:", error);
-    throw new functions.https.HttpsError(
-      "internal",
-      "An unexpected error occurred during migration."
-    );
   }
-});
+}
 
-exports.migratePrizesToSubcollection = functions.https.onCall(async (data, context) => {
-  const schoolId = data.schoolId;
-
-  await requireSchoolAdmin(schoolId, context);
-
-  const schoolDocRef = admin.firestore().collection("schools").doc(schoolId);
-
-  try {
-    const schoolSnap = await schoolDocRef.get();
-    if (!schoolSnap.exists) {
-      throw new functions.https.HttpsError("not-found", "School not found.");
-    }
-
-    const schoolData = schoolSnap.data()!;
-
-    if (schoolData.hasMigratedPrizes) {
-      return { success: true, message: "Prizes have already been migrated." };
-    }
-
-    const prizes = schoolData.prizes || [];
-    if (prizes.length === 0) {
-      await schoolDocRef.update({ hasMigratedPrizes: true });
-      return { success: true, message: "No prizes to migrate." };
-    }
-
-
-    const batch = admin.firestore().batch();
-    const prizesCollectionRef = schoolDocRef.collection("prizes");
-
-    prizes.forEach((p: any) => {
-      const prizeDocRef = prizesCollectionRef.doc(p.id);
-      batch.set(prizeDocRef, p);
-    });
-
-    batch.update(schoolDocRef, { hasMigratedPrizes: true, prizes: admin.firestore.FieldValue.delete() });
-
-    await batch.commit();
-
-    return { success: true, message: `Migrated ${prizes.length} prizes.` };
-
-  } catch (error) {
-    console.error("Migration failed:", error);
-    throw new functions.https.HttpsError(
-      "internal",
-      "An unexpected error occurred during migration."
-    );
+function cosineSimilarity(a: FaceDescriptor, b: FaceDescriptor): number {
+  let dot = 0;
+  let na = 0;
+  let nb = 0;
+  for (let i = 0; i < a.length; i++) {
+    const x = a[i];
+    const y = b[i];
+    dot += x * y;
+    na += x * x;
+    nb += y * y;
   }
-});
+  const denom = Math.sqrt(na) * Math.sqrt(nb);
+  if (!denom) return 0;
+  return dot / denom;
+}
 
-exports.migrateCouponsToSubcollection = functions.https.onCall(async (data, context) => {
-  const schoolId = data.schoolId;
+exports.enrollStudentFace = functions.https.onCall(
+  async (data: any, context: functions.https.CallableContext) => {
+    requireAuth(context);
+    requireString(data.schoolId, "schoolId");
+    requireString(data.studentId, "studentId");
+    requireDescriptor(data.descriptor, "descriptor");
 
-  await requireSchoolAdmin(schoolId, context);
+    const schoolId = String(data.schoolId).trim().toLowerCase();
+    const studentId = String(data.studentId).trim();
+    const descriptor = data.descriptor as FaceDescriptor;
 
-  const schoolDocRef = admin.firestore().collection("schools").doc(schoolId);
+    const db = admin.firestore();
+    const ref = db.collection("schools").doc(schoolId).collection("faceAuth").doc(studentId);
+    const snap = await ref.get();
 
-  try {
-    const schoolSnap = await schoolDocRef.get();
-    if (!schoolSnap.exists) {
-      throw new functions.https.HttpsError("not-found", "School not found.");
-    }
+    const prev = snap.exists ? snap.data() : null;
+    const prevDescriptors = Array.isArray(prev?.descriptors) ? (prev!.descriptors as FaceDescriptor[]) : [];
+    const nextDescriptors = [...prevDescriptors, descriptor].slice(-3); // keep last 3
 
-    const schoolData = schoolSnap.data()!;
-
-    if (schoolData.hasMigratedCoupons) {
-      return { success: true, message: "Coupons have already been migrated." };
-    }
-
-    const coupons = schoolData.coupons || [];
-    if (coupons.length === 0) {
-      await schoolDocRef.update({ hasMigratedCoupons: true });
-      return { success: true, message: "No coupons to migrate." };
-    }
-
-
-    const batch = admin.firestore().batch();
-    const couponsCollectionRef = schoolDocRef.collection("coupons");
-
-    coupons.forEach((c: any) => {
-      const couponDocRef = couponsCollectionRef.doc(c.id);
-      batch.set(couponDocRef, c);
-    });
-
-    batch.update(schoolDocRef, { hasMigratedCoupons: true, coupons: admin.firestore.FieldValue.delete() });
-
-    await batch.commit();
-
-    return { success: true, message: `Migrated ${coupons.length} coupons.` };
-
-  } catch (error) {
-    console.error("Migration failed:", error);
-    throw new functions.https.HttpsError(
-      "internal",
-      "An unexpected error occurred during migration."
+    await ref.set(
+      {
+        enabled: true,
+        descriptors: nextDescriptors,
+        updatedAt: Date.now(),
+      },
+      { merge: true }
     );
+
+    return { success: true, count: nextDescriptors.length };
   }
-});
+);
 
-exports.migrateCategoriesToSubcollection = functions.https.onCall(async (data, context) => {
-  const schoolId = data.schoolId;
+exports.deleteStudentFace = functions.https.onCall(
+  async (data: any, context: functions.https.CallableContext) => {
+    requireAuth(context);
+    requireString(data.schoolId, "schoolId");
+    requireString(data.studentId, "studentId");
+    const schoolId = String(data.schoolId).trim().toLowerCase();
+    const studentId = String(data.studentId).trim();
 
-  await requireSchoolAdmin(schoolId, context);
-
-  const schoolDocRef = admin.firestore().collection("schools").doc(schoolId);
-
-  try {
-    const schoolSnap = await schoolDocRef.get();
-    if (!schoolSnap.exists) {
-      throw new functions.https.HttpsError("not-found", "School not found.");
-    }
-
-    const schoolData = schoolSnap.data()!;
-
-    if (schoolData.hasMigratedCategories) {
-      return { success: true, message: "Categories have already been migrated." };
-    }
-
-    const categories = schoolData.categories || [];
-    if (categories.length === 0) {
-      await schoolDocRef.update({ hasMigratedCategories: true });
-      return { success: true, message: "No categories to migrate." };
-    }
-
-
-    const batch = admin.firestore().batch();
-    const categoriesCollectionRef = schoolDocRef.collection("categories");
-
-    categories.forEach((c: any) => {
-      const categoryDocRef = categoriesCollectionRef.doc(c.id);
-      batch.set(categoryDocRef, c);
-    });
-
-    batch.update(schoolDocRef, { hasMigratedCategories: true, categories: admin.firestore.FieldValue.delete() });
-
-    await batch.commit();
-
-    return { success: true, message: `Migrated ${categories.length} categories.` };
-
-  } catch (error) {
-    console.error("Migration failed:", error);
-    throw new functions.https.HttpsError(
-      "internal",
-      "An unexpected error occurred during migration."
-    );
+    const db = admin.firestore();
+    const ref = db.collection("schools").doc(schoolId).collection("faceAuth").doc(studentId);
+    await ref.set({ enabled: false, descriptors: [], updatedAt: Date.now() }, { merge: true });
+    return { success: true };
   }
-});
+);
+
+exports.matchStudentFace = functions
+  .runWith({ timeoutSeconds: 30, memory: "256MB" })
+  .https.onCall(async (data: any, context: functions.https.CallableContext) => {
+    requireAuth(context);
+    requireString(data.schoolId, "schoolId");
+    requireDescriptor(data.descriptor, "descriptor");
+    const schoolId = String(data.schoolId).trim().toLowerCase();
+    const descriptor = data.descriptor as FaceDescriptor;
+
+    const db = admin.firestore();
+    const snap = await db
+      .collection("schools")
+      .doc(schoolId)
+      .collection("faceAuth")
+      .where("enabled", "==", true)
+      .limit(500)
+      .get();
+
+    let bestStudentId = "";
+    let bestScore = -1;
+
+    for (const doc of snap.docs) {
+      const d = doc.data();
+      const list = Array.isArray(d.descriptors) ? (d.descriptors as FaceDescriptor[]) : [];
+      for (const cand of list) {
+        if (!Array.isArray(cand) || cand.length !== 128) continue;
+        const score = cosineSimilarity(descriptor, cand);
+        if (score > bestScore) {
+          bestScore = score;
+          bestStudentId = doc.id;
+        }
+      }
+    }
+
+    // Conservative threshold for "convenience-grade" matching.
+    // Higher = fewer false positives, more fallbacks.
+    const threshold = 0.55;
+    if (!bestStudentId || bestScore < threshold) {
+      return { studentId: null, confidence: bestScore };
+    }
+    return { studentId: bestStudentId, confidence: bestScore };
+  });
+
+exports.signInAttendance = signInAttendance;
