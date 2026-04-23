@@ -1,0 +1,60 @@
+---
+description: Student theme colors must always be contrast-normalized before use
+globs: src/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Student Theme Contrast
+
+Custom per-student themes (`StudentTheme` in `src/lib/types.ts`) are AI- or
+teacher-generated and are **not trusted** to have readable contrast. Every
+place that consumes a student theme must run it through
+`normalizeStudentTheme` from `@/lib/themeContrast` first.
+
+## Rules
+
+1. **Never read `student.theme.*` directly for rendering.** Compute an
+   `activeTheme` once per component and read from that.
+
+   ```tsx
+   // ❌ BAD - unclamped AI colors
+   <div style={{ color: student.theme?.text, background: student.theme?.background }} />
+
+   // ✅ GOOD - WCAG-clamped at the boundary
+   const activeTheme = normalizeStudentTheme(student.theme);
+   <div style={activeTheme ? { color: 'var(--theme-text)', backgroundColor: 'var(--theme-bg)' } : undefined} />
+   ```
+
+2. **Don't mix global theme tokens with custom themes.** Inside a
+   surface that uses `var(--theme-card)` / `var(--theme-bg)`, avoid
+   `text-foreground`, `text-muted-foreground`, `bg-emerald-100`,
+   `text-slate-800 dark:text-white`, hardcoded `text-white`, etc. —
+   those resolve to the *global* palette and can be invisible on a
+   themed background. Gate those classes behind `!activeTheme` and
+   fall back to `var(--theme-text)` / neutral translucent colors when
+   themed.
+
+3. **For text on `--theme-primary` (buttons, badges), use
+   `primaryForegroundFor(activeTheme)`** instead of hardcoded
+   `text-white` or ad-hoc `getContrastColor` calls. Expose it as
+   `--theme-primary-foreground` on the wrapper when multiple children
+   need it.
+
+4. **Persistence boundaries must normalize too.** Any code path that
+   *saves* a `StudentTheme` (modals, API routes that return a theme)
+   must run `normalizeStudentTheme` before `onSave` / the response, so
+   bad palettes can't be stored in Firestore.
+
+## When to skip normalization
+
+- Non-color fields (`emoji`, `fontFamily`, `fontScale`) — the
+  normalizer passes these through unchanged, so reading them from
+  either `student.theme` or `activeTheme` is equivalent.
+- Print sheets hard-coded to black-on-white (`PrizeRedeemTicketPrintSheet`,
+  `Coupon` body) — those intentionally ignore the student theme.
+
+## Tests
+
+Contrast math + the normalizer are covered in
+`src/lib/themeContrast.test.ts`. If you extend the normalizer, add a
+test case there first.
