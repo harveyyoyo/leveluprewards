@@ -13,7 +13,7 @@ export function AdminCouponsTab({
 }: {
   availableCoupons: Coupon[];
   redeemedCoupons: Coupon[];
-  getStudentName: (id: string) => string;
+  getStudentName: (id?: string) => string;
 }) {
   return (
     <Card className="border-t-4 border-destructive shadow-md">
@@ -68,7 +68,7 @@ export function AdminCouponsTab({
                         {coupon.category} / by {coupon.teacher}
                       </p>
                       <p>
-                        Used by {getStudentName(coupon.usedBy)} on{' '}
+                        Used by {getStudentName(coupon.usedBy || '')} on{' '}
                         {coupon.usedAt ? new Date(coupon.usedAt).toLocaleDateString() : 'N/A'}
                       </p>
                     </div>
