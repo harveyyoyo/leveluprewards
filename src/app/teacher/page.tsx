@@ -1,6 +1,6 @@
 
 'use client';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAppContext } from '@/components/AppProvider';
@@ -46,7 +46,7 @@ function RecentRedemptions({ schoolId, students, classes, teacherId }: { schoolI
     const { toast } = useToast();
 
     const classMap = useMemo(() => new Map(classes.map(c => [c.id, c.name])), [classes]);
-    const getClassName = (classId: string) => classMap.get(classId) || 'Unassigned';
+    const getClassName = useCallback((classId: string) => classMap.get(classId) || 'Unassigned', [classMap]);
 
     const handleFulfillmentToggle = async (studentId: string, activityId: string, fulfilled: boolean) => {
         try {
@@ -104,7 +104,7 @@ function RecentRedemptions({ schoolId, students, classes, teacherId }: { schoolI
         };
 
         fetchRedemptions();
-    }, [students, schoolId, firestore, classMap]);
+    }, [students, schoolId, firestore, getClassName]);
 
     const filteredRedemptions = useMemo(() => {
         if (filterType === 'all') return redemptions;
@@ -521,7 +521,7 @@ function TeacherAttendancePanel({
         return () => {
             cancelled = true;
         };
-    }, [schoolId, teacherId, getConfig]);
+    }, [schoolId, teacherId, getConfig, toast]);
 
     const handleSave = async () => {
         if (!config) return;
@@ -548,6 +548,16 @@ function TeacherAttendancePanel({
         }
     };
 
+    const firestore = useFirestore();
+    const rewardsQuery = useMemoFirebase(
+        () => (schoolId && teacherId ? collection(firestore, 'schools', schoolId, 'teachers', teacherId, 'attendanceRewards') : null),
+        [firestore, schoolId, teacherId]
+    );
+
+    const myClasses = useMemo(() => (classes || []).filter((c) => c.primaryTeacherId === teacherId), [classes, teacherId]);
+    const claimableClasses = useMemo(() => (classes || []).filter((c) => !c.primaryTeacherId), [classes]);
+    const punctualityCategory = useMemo(() => categories.find(c => c.name?.toLowerCase() === 'punctuality'), [categories]);
+
     if (loading || !config) {
         return <Skeleton className="h-40 w-full rounded-2xl" />;
     }
@@ -563,16 +573,6 @@ function TeacherAttendancePanel({
             toast({ variant: 'destructive', title: 'Failed to create class', description: (e as Error).message });
         }
     };
-
-    const firestore = useFirestore();
-    const myClasses = (classes || []).filter((c) => c.primaryTeacherId === teacherId);
-    const claimableClasses = (classes || []).filter((c) => !c.primaryTeacherId);
-    const punctualityCategory = categories.find(c => c.name?.toLowerCase() === 'punctuality');
-
-    const rewardsQuery = useMemoFirebase(
-        () => (schoolId && teacherId ? collection(firestore, 'schools', schoolId, 'teachers', teacherId, 'attendanceRewards') : null),
-        [firestore, schoolId, teacherId]
-    );
 
     const setEnabledForClass = (classId: string, enabled: boolean) => {
         const prev = config.enabledClassIds;
@@ -916,7 +916,7 @@ function TeacherAttendanceRewardsPanel({
   const { toast } = useToast();
 
   // Teacher chooses from classes created in the school (admin-managed list).
-  const availableClasses = classes || [];
+  const availableClasses = useMemo(() => classes || [], [classes]);
   const punctualityCategory = categories.find((c) => (c.name || '').toLowerCase() === 'punctuality');
 
   const rewardsQuery = useMemoFirebase(

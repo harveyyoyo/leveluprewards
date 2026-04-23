@@ -49,10 +49,6 @@ export function StudentIdPrintSheet({ students, classes, schoolId, onReady }: St
   const appTagline = appConfig?.appTagline?.trim() ?? APP_TAGLINE;
   const appLogoUrl = appConfig?.appLogoUrl || null;
 
-  if (students.length === 0) {
-    return null;
-  }
-
   // Chunk students into groups of 8 (since Avery 25395 has 8 labels per page)
   const studentChunks = useMemo(() => {
     const chunks = [];
@@ -61,6 +57,10 @@ export function StudentIdPrintSheet({ students, classes, schoolId, onReady }: St
     }
     return chunks;
   }, [students]);
+
+  if (students.length === 0) {
+    return null;
+  }
 
   return (
     <div id="student-id-print-wrapper">
