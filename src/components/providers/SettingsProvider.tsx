@@ -46,20 +46,29 @@ interface Settings {
     enableMultiAdmin: boolean;
     enableStudentPortal: boolean;
     enableClassSignIn: boolean;
+    /** Back-compat alias used by some pages/components. */
+    enableAttendance: boolean;
     // Guidance
     enableHelperMode: boolean;
     showIntroWizard?: boolean;
     // Workflow
     enableTeacherBudgets: boolean;
     legacyMode: boolean;
+    enableAnimatedBackground: boolean;
+    calmMode?: boolean;
     // Image display: how logos and photos are fitted in their boxes
     logoDisplayMode: 'contain' | 'cover';
     photoDisplayMode: 'contain' | 'cover';
+    // Visuals
+    animatedBackgroundStyle: string;
+    hiddenAnimatedBackgroundIds: string[];
 }
 
 interface SettingsContextType {
     settings: Settings;
     updateSettings: (updates: Partial<Settings>) => void;
+    /** True once settings have been loaded from storage. */
+    isLoaded: boolean;
 }
 
 const colorSchemes: Record<ColorScheme, { bg: string; card: string; accent: string; border: string; label: string; swatch: string }> = {
@@ -104,12 +113,17 @@ const defaultSettings: Settings = {
     enableMultiAdmin: false,
     enableStudentPortal: false,
     enableClassSignIn: false,
+    enableAttendance: false,
     enableHelperMode: true,
     showIntroWizard: false,
     enableTeacherBudgets: false,
     legacyMode: false,
+    enableAnimatedBackground: true,
+    calmMode: false,
     logoDisplayMode: 'contain',
     photoDisplayMode: 'cover',
+    animatedBackgroundStyle: 'arcade',
+    hiddenAnimatedBackgroundIds: [],
 };
 
 export { colorSchemes };
@@ -136,6 +150,13 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                 const parsed = JSON.parse(saved);
                 if (parsed.graphicMode === 'arcade') {
                     parsed.graphicMode = 'graphics';
+                }
+                // Back-compat: some code uses enableAttendance, some uses enableClassSignIn.
+                if (typeof parsed.enableAttendance !== 'boolean' && typeof parsed.enableClassSignIn === 'boolean') {
+                    parsed.enableAttendance = parsed.enableClassSignIn;
+                }
+                if (typeof parsed.enableClassSignIn !== 'boolean' && typeof parsed.enableAttendance === 'boolean') {
+                    parsed.enableClassSignIn = parsed.enableAttendance;
                 }
                 setSettings({ ...defaultSettings, ...parsed });
             } catch (e) {
@@ -198,7 +219,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     }, [settings.legacyMode, isLoaded]);
 
     return (
-        <SettingsContext.Provider value={{ settings, updateSettings }}>
+        <SettingsContext.Provider value={{ settings, updateSettings, isLoaded }}>
             {children}
         </SettingsContext.Provider>
     );

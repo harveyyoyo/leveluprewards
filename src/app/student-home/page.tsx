@@ -152,10 +152,6 @@ function StudentHomeDashboardInner({
     const categoriesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'categories') : null, [firestore, schoolId]);
     const { data: categories, isLoading: categoriesLoading } = useCollection<Category>(categoriesQuery);
 
-    if (studentLoading || !student || !schoolId) {
-        return <div className="min-h-screen bg-background flex items-center justify-center">Loading...</div>
-    }
-
     // Celebrate on login if new badges / bonus milestones were earned since last time this student opened the portal.
     useEffect(() => {
         if (!student || !schoolId) return;
@@ -192,6 +188,10 @@ function StudentHomeDashboardInner({
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [student?.id, schoolId]);
+
+    if (studentLoading || !student || !schoolId) {
+        return <div className="min-h-screen bg-background flex items-center justify-center">Loading...</div>
+    }
 
     const themeFont = student.theme?.fontFamily;
     const fontScale = student.theme?.fontScale ?? 1;

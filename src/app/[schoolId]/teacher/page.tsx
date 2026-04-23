@@ -125,7 +125,7 @@ function RecentRedemptions({ schoolId, students, classes, teacherId }: { schoolI
     }, [redemptions, filterType, teacherId]);
 
     return (
-        <Card className="md:col-span-2 border-t-4 border-chart-3 shadow-lg">
+        <Card className="md:col-span-2 border-t-8 border-chart-3 shadow-lg">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <div className="space-y-1">
                     <CardTitle className="flex items-center gap-2 text-xl font-black">
@@ -245,8 +245,6 @@ function TeacherPrizeManager({
                 prize={null}
                 teachers={teachersForPrizeModal}
                 allClasses={classes || []}
-                prizeSource="teacher"
-                actingTeacherId={teacherId}
             />
         </>
     );
@@ -272,7 +270,7 @@ function MyCoupons({ schoolId, teacherName, students }: { schoolId: string; teac
     const redeemed = myCoupons.filter(c => c.used);
   
     return (
-      <Card className="md:col-span-2 border-t-4 border-primary shadow-lg">
+      <Card className="md:col-span-2 border-t-8 border-primary shadow-lg">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <div className="space-y-1">
             <CardTitle className="flex items-center gap-2 text-xl font-black">
@@ -306,25 +304,49 @@ function MyCoupons({ schoolId, teacherName, students }: { schoolId: string; teac
               ) : <p className="p-8 text-center text-sm text-muted-foreground">No available coupons created by you.</p>}
             </ScrollArea>
           </div>
-          <div>
-            <h3 className="text-lg font-semibold mb-4">Redeemed ({redeemed.length})</h3>
-            <ScrollArea className="h-72 border rounded-lg bg-background/50">
-              {isLoading ? <div className="p-8 text-center text-sm text-muted-foreground">Loading coupons...</div> : redeemed.length > 0 ? (
+          <div className="space-y-4">
+            <h3 className="text-base font-bold text-foreground/80 uppercase tracking-widest pl-1">Available ({available.length})</h3>
+            <ScrollArea className="h-72 border border-border/60 rounded-xl bg-background/50 backdrop-blur-sm">
+              {isLoading ? <div className="p-8 text-center text-sm text-muted-foreground">Loading coupons...</div> : available.length > 0 ? (
                 <ul className="p-3 space-y-2">
-                  {redeemed.map(coupon => (
-                    <li key={coupon.id} className="p-3 bg-card rounded-lg border opacity-60">
-                      <div className="flex justify-between items-center font-bold">
-                        <span className="font-code text-muted-foreground line-through">{coupon.code}</span>
-                        <span>{coupon.value} pts</span>
+                  {available.map(coupon => (
+                    <li key={coupon.id} className="p-4 bg-card rounded-xl border border-border/40 shadow-sm transition-all hover:shadow-md hover:border-primary/20 group">
+                      <div className="flex justify-between items-center">
+                        <span className="font-mono text-xs font-black bg-primary/10 text-primary px-2.5 py-1 rounded-md tracking-wider group-hover:bg-primary/20 transition-colors uppercase">{coupon.code}</span>
+                        <span className="font-bold text-foreground">{coupon.value} pts</span>
                       </div>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        <p>{coupon.category}</p>
-                        <p>Used by {coupon.usedBy ? getStudentName(coupon.usedBy) : 'Unknown'} on {coupon.usedAt ? new Date(coupon.usedAt).toLocaleDateString() : 'N/A'}</p>
+                      <div className="text-[11px] font-medium text-muted-foreground mt-3 flex items-center justify-between">
+                        <p className="bg-muted px-2 py-0.5 rounded-sm">{coupon.category}</p>
+                        <p className="opacity-70">{new Date(coupon.createdAt).toLocaleDateString()}</p>
                       </div>
                     </li>
                   ))}
                 </ul>
-              ) : <p className="p-8 text-center text-sm text-muted-foreground">No redeemed coupons yet.</p>}
+              ) : <p className="p-8 text-center text-sm text-muted-foreground font-medium italic">No available coupons created by you.</p>}
+            </ScrollArea>
+          </div>
+          <div className="space-y-4">
+            <h3 className="text-base font-bold text-foreground/60 uppercase tracking-widest pl-1">Redeemed ({redeemed.length})</h3>
+            <ScrollArea className="h-72 border border-border/40 rounded-xl bg-background/40">
+              {isLoading ? <div className="p-8 text-center text-sm text-muted-foreground">Loading coupons...</div> : redeemed.length > 0 ? (
+                <ul className="p-3 space-y-2">
+                  {redeemed.map(coupon => (
+                    <li key={coupon.id} className="p-4 bg-card/60 rounded-xl border border-dashed border-border/60 grayscale-[0.5] opacity-70">
+                      <div className="flex justify-between items-center grayscale">
+                        <span className="font-mono text-xs font-black bg-muted text-muted-foreground px-2.5 py-1 rounded-md tracking-wider line-through uppercase">{coupon.code}</span>
+                        <span className="font-bold text-muted-foreground">{coupon.value} pts</span>
+                      </div>
+                      <div className="text-[11px] font-medium text-muted-foreground mt-3">
+                        <div className="flex justify-between items-center mb-1">
+                           <span className="bg-muted/50 px-1.5 py-0.5 rounded-sm">{coupon.category}</span>
+                           <span className="opacity-70">{coupon.usedAt ? new Date(coupon.usedAt).toLocaleDateString() : 'N/A'}</span>
+                        </div>
+                        <p className="text-[10px] font-bold text-foreground/60">Using as: {coupon.usedBy ? getStudentName(coupon.usedBy) : 'Unknown'}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : <p className="p-8 text-center text-sm text-muted-foreground font-medium italic">No redeemed coupons yet.</p>}
             </ScrollArea>
           </div>
         </CardContent>
@@ -1592,7 +1614,7 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
                                 <div className="flex justify-center">
 
                         <Card className={cn(
-                            "w-full max-w-6xl border-t-4 transition-all duration-500 hover:shadow-2xl hover:-translate-y-1",
+                            "w-full max-w-6xl border-t-8 transition-all duration-500 hover:shadow-2xl hover:-translate-y-1",
                             isGraphic
                                 ? 'bg-card/60 backdrop-blur-2xl border-chart-1 shadow-[0_20px_50px_rgba(0,0,0,0.1)]'
                                 : 'bg-white border-chart-1 shadow-lg'
@@ -1706,7 +1728,7 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
                             <TabsContent value="award" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                                 <div className="flex justify-center">
                                   <Card className={cn(
-                                    "w-full max-w-6xl border-t-4 transition-all duration-500 hover:shadow-2xl hover:-translate-y-1",
+                                    "w-full max-w-6xl border-t-8 transition-all duration-500 hover:shadow-2xl hover:-translate-y-1",
                                     isGraphic ? 'bg-card/60 backdrop-blur-2xl border-chart-2 shadow-[0_20px_50px_rgba(0,0,0,0.1)]' : 'bg-white border-chart-2 shadow-lg'
                                   )}>
                                     <CardHeader className="p-4 md:p-6">
@@ -1849,7 +1871,7 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                     <Card className={cn(
-                                        "md:col-span-2 border-t-4 transition-all duration-500 hover:shadow-2xl hover:-translate-y-1",
+                                        "md:col-span-2 border-t-8 transition-all duration-500 hover:shadow-2xl hover:-translate-y-1",
                                         isGraphic
                                             ? 'bg-card/60 backdrop-blur-2xl border-primary shadow-[0_20px_50px_rgba(0,0,0,0.1)]'
                                             : 'bg-white border-primary shadow-lg'
@@ -1910,7 +1932,7 @@ function TeacherPrinterSkeleton() {
     return (
         <div className="max-w-full mx-auto px-4 md:px-6 -mt-6 animate-pulse">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <Card className="border-t-4 border-primary">
+                <Card className="border-t-8 border-primary">
                     <CardHeader>
                         <Skeleton className="h-6 w-32" />
                         <Skeleton className="h-4 w-48" />
@@ -1919,7 +1941,7 @@ function TeacherPrinterSkeleton() {
                         <Skeleton className="h-48 w-full rounded-xl" />
                     </CardContent>
                 </Card>
-                <Card className="border-t-4 border-chart-2">
+                <Card className="border-t-8 border-chart-2">
                     <CardHeader>
                         <Skeleton className="h-6 w-32" />
                         <Skeleton className="h-4 w-48" />
@@ -1984,12 +2006,12 @@ export default function TeacherPage() {
             teacherName: teacher?.name,
             teacherDocId: teacher?.id
         });
-        if (result.ok) {
+        if (result) {
             playSound('login');
             toast({ title: 'Logged in successfully.' });
         } else {
             playSound('error');
-            toast({ variant: 'destructive', title: 'Login failed', description: result.message });
+            toast({ variant: 'destructive', title: 'Login failed', description: 'Check your passcode and try again.' });
             setPasscode(''); // Clear passcode on fail
         }
     };

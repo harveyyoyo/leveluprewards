@@ -608,6 +608,221 @@ exports.setAttendanceConfig = functions.https.onCall(
 );
 
 // ========================================================================
+// Kiosk / school-entry helpers (private school URLs)
+// ========================================================================
+
+/** Callable: verify school entry code and grant kiosk membership. */
+exports.verifySchoolEntryCode = functions.https.onCall(
+  async (data: any, context: functions.https.CallableContext) => {
+    requireAuth(context);
+    requireString(data.schoolId, "schoolId");
+    requireString(data.code, "code");
+
+    const schoolId = String(data.schoolId).trim().toLowerCase();
+    const code = String(data.code).trim();
+    const db = admin.firestore();
+
+    const DEMO_SCHOOL_IDS = new Set(["demo-arcade", "demo-001"]);
+    if (!DEMO_SCHOOL_IDS.has(schoolId)) {
+      const secretRef = db.collection("schools").doc(schoolId).collection("secrets").doc("entry");
+      const secretSnap = await secretRef.get();
+      const expected = secretSnap.exists ? String(secretSnap.data()?.code ?? "") : "";
+      if (!expected || expected !== code) {
+        throw new functions.https.HttpsError("permission-denied", "Invalid school code.");
+      }
+    }
+
+    const uid = context.auth!.uid;
+    const memberRef = db.collection("schools").doc(schoolId).collection("kioskMembers").doc(uid);
+    await memberRef.set({ createdAt: Date.now() }, { merge: true });
+    return { success: true };
+  }
+);
+
+/** Callable: kiosk-safe student lookup by badge/card id. */
+exports.lookupStudentByBadge = functions.https.onCall(
+  async (data: any, context: functions.https.CallableContext) => {
+    requireAuth(context);
+    requireString(data.schoolId, "schoolId");
+    requireString(data.badgeId, "badgeId");
+    const schoolId = String(data.schoolId).trim().toLowerCase();
+    const badgeId = String(data.badgeId).trim();
+
+    const db = admin.firestore();
+    const memberRef = db.collection("schools").doc(schoolId).collection("kioskMembers").doc(context.auth!.uid);
+    const memberSnap = await memberRef.get();
+    if (!memberSnap.exists) {
+      throw new functions.https.HttpsError("permission-denied", "School entry required.");
+    }
+
+    const studentsRef = db.collection("schools").doc(schoolId).collection("students");
+
+    const byDoc = await studentsRef.doc(badgeId).get();
+    if (byDoc.exists) return { studentId: byDoc.id };
+
+    const byStr = await studentsRef.where("nfcId", "==", badgeId).limit(1).get();
+    if (!byStr.empty) return { studentId: byStr.docs[0].id };
+
+    if (/^\d+$/.test(badgeId)) {
+      const asNum = Number(badgeId);
+      if (Number.isFinite(asNum)) {
+        const byNum = await studentsRef.where("nfcId", "==", asNum).limit(1).get();
+        if (!byNum.empty) return { studentId: byNum.docs[0].id };
+      }
+    }
+
+    return { studentId: null };
+  }
+);
+
+/** Callable: redeem coupon (server-authoritative; kiosk-safe). */
+exports.redeemCouponServer = functions.https.onCall(
+  async (data: any, context: functions.https.CallableContext) => {
+    requireAuth(context);
+    requireString(data.schoolId, "schoolId");
+    requireString(data.studentId, "studentId");
+    requireString(data.couponCode, "couponCode");
+
+    const schoolId = String(data.schoolId).trim().toLowerCase();
+    const studentId = String(data.studentId).trim();
+    const couponCode = String(data.couponCode).trim().toUpperCase();
+
+    const db = admin.firestore();
+    const memberRef = db.collection("schools").doc(schoolId).collection("kioskMembers").doc(context.auth!.uid);
+    const memberSnap = await memberRef.get();
+    if (!memberSnap.exists) {
+      throw new functions.https.HttpsError("permission-denied", "School entry required.");
+    }
+
+    const couponRef = db.collection("schools").doc(schoolId).collection("coupons").doc(couponCode);
+    const studentRef = db.collection("schools").doc(schoolId).collection("students").doc(studentId);
+    const now = Date.now();
+
+    const result = await db.runTransaction(async (tx) => {
+      const couponSnap = await tx.get(couponRef);
+      if (!couponSnap.exists) throw new functions.https.HttpsError("not-found", "Coupon code not found.");
+      const coupon = couponSnap.data() as any;
+      if (coupon.expiresAt && typeof coupon.expiresAt === "number" && now > coupon.expiresAt) {
+        throw new functions.https.HttpsError("failed-precondition", "This coupon has expired.");
+      }
+      if (coupon.used === true) {
+        throw new functions.https.HttpsError("failed-precondition", "This coupon has already been used.");
+      }
+
+      const studentSnap = await tx.get(studentRef);
+      if (!studentSnap.exists) throw new functions.https.HttpsError("not-found", "Student not found.");
+      const s = studentSnap.data() as any;
+      const value = typeof coupon.value === "number" ? coupon.value : Number(coupon.value || 0);
+
+      tx.update(studentRef, {
+        points: Number(s.points || 0) + value,
+        lifetimePoints: Number(s.lifetimePoints || 0) + value,
+      });
+
+      const activityRef = studentRef.collection("activities").doc();
+      const cat = String(coupon.category || "Coupon");
+      const code = String(coupon.code || couponCode);
+      tx.set(activityRef, { desc: `Redeemed coupon: ${code} (${cat})`, amount: value, date: now });
+
+      tx.update(couponRef, { used: true, usedAt: now, usedBy: studentId });
+      return { value };
+    });
+
+    return { success: true, message: "Redeemed successfully", value: result.value };
+  }
+);
+
+/** Callable: sync offline pending coupon redemptions. */
+exports.syncPendingRedemptions = functions.https.onCall(
+  async (data: any, context: functions.https.CallableContext) => {
+    requireAuth(context);
+    requireString(data.schoolId, "schoolId");
+    if (!Array.isArray(data.items)) {
+      throw new functions.https.HttpsError("invalid-argument", "items must be an array");
+    }
+    const schoolId = String(data.schoolId).trim().toLowerCase();
+
+    const db = admin.firestore();
+    const memberRef = db.collection("schools").doc(schoolId).collection("kioskMembers").doc(context.auth!.uid);
+    const memberSnap = await memberRef.get();
+    if (!memberSnap.exists) {
+      throw new functions.https.HttpsError("permission-denied", "School entry required.");
+    }
+
+    const out: Array<{ id: string; status: "confirmed" | "rejected"; message?: string }> = [];
+    for (const it of data.items as any[]) {
+      const id = String(it?.id || "");
+      const studentId = String(it?.studentId || "");
+      const couponCode = String(it?.couponCode || "").toUpperCase();
+      if (!id || !studentId || !couponCode) continue;
+      try {
+        const couponRef = db.collection("schools").doc(schoolId).collection("coupons").doc(couponCode);
+        const studentRef = db.collection("schools").doc(schoolId).collection("students").doc(studentId);
+        const now = Date.now();
+        await db.runTransaction(async (tx) => {
+          const couponSnap = await tx.get(couponRef);
+          if (!couponSnap.exists) throw new functions.https.HttpsError("not-found", "Coupon code not found.");
+          const coupon = couponSnap.data() as any;
+          if (coupon.expiresAt && typeof coupon.expiresAt === "number" && now > coupon.expiresAt) {
+            throw new functions.https.HttpsError("failed-precondition", "This coupon has expired.");
+          }
+          if (coupon.used === true) throw new functions.https.HttpsError("failed-precondition", "This coupon has already been used.");
+          const studentSnap = await tx.get(studentRef);
+          if (!studentSnap.exists) throw new functions.https.HttpsError("not-found", "Student not found.");
+          const s = studentSnap.data() as any;
+          const value = typeof coupon.value === "number" ? coupon.value : Number(coupon.value || 0);
+          tx.update(studentRef, { points: Number(s.points || 0) + value, lifetimePoints: Number(s.lifetimePoints || 0) + value });
+          const activityRef = studentRef.collection("activities").doc();
+          const cat = String(coupon.category || "Coupon");
+          const code = String(coupon.code || couponCode);
+          tx.set(activityRef, { desc: `Redeemed coupon: ${code} (${cat})`, amount: value, date: now });
+          tx.update(couponRef, { used: true, usedAt: now, usedBy: studentId });
+        });
+        out.push({ id, status: "confirmed" });
+      } catch (e: any) {
+        out.push({ id, status: "rejected", message: String(e?.message || "Failed to sync") });
+      }
+    }
+    return { results: out };
+  }
+);
+
+// ========================================================================
+// Callable: download coupon snapshot for kiosk offline validation
+// ========================================================================
+
+exports.getCouponSnapshot = functions.https.onCall(
+  async (data: any, context: functions.https.CallableContext) => {
+    requireAuth(context);
+    requireString(data.schoolId, "schoolId");
+    const schoolId = String(data.schoolId).trim().toLowerCase();
+
+    const db = admin.firestore();
+    const memberRef = db.collection("schools").doc(schoolId).collection("kioskMembers").doc(context.auth!.uid);
+    const memberSnap = await memberRef.get();
+    if (!memberSnap.exists) {
+      throw new functions.https.HttpsError("permission-denied", "School entry required.");
+    }
+
+    const snap = await db.collection("schools").doc(schoolId).collection("coupons").get();
+    const now = Date.now();
+    const coupons: any[] = [];
+    for (const d of snap.docs) {
+      const c = d.data() as any;
+      if (c.used === true) continue;
+      if (c.expiresAt && typeof c.expiresAt === "number" && now > c.expiresAt) continue;
+      coupons.push({
+        code: String(c.code || d.id).toUpperCase(),
+        value: typeof c.value === "number" ? c.value : Number(c.value || 0),
+        category: typeof c.category === "string" ? c.category : undefined,
+        expiresAt: typeof c.expiresAt === "number" ? c.expiresAt : undefined,
+      });
+    }
+    return { updatedAt: now, coupons };
+  }
+);
+
+// ========================================================================
 // Callable: Upload school logo (server-side to avoid client Storage hangs)
 // ========================================================================
 
