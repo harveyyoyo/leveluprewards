@@ -8,6 +8,7 @@ export type SoundEffect =
   | 'success'
   | 'error'
   | 'click'
+  | 'hover'
   | 'swoosh'
   | 'redeem';
 
@@ -58,6 +59,10 @@ const createSynth = () => {
     const now = audioCtx.currentTime;
 
     switch (sound) {
+      case 'hover':
+        playNote(1200, now, 0.04, 'square', 0.02);
+        break;
+
       case 'click':
         playNote(800, now, 0.08, 'square', 0.05);
         break;

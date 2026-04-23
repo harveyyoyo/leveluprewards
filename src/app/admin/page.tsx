@@ -197,7 +197,7 @@ function AdminDashboardInner() {
       }
     });
     return out;
-  }, [schoolData?.logoUrl, schoolData?.logoHistory, logoPreviewUrl]);
+  }, [schoolData, logoPreviewUrl]);
 
   const [newClassName, setNewClassName] = useState('');
   const [newTeacherName, setNewTeacherName] = useState('');
@@ -303,15 +303,14 @@ function AdminDashboardInner() {
     else setSelectedStudentIds(new Set(filteredStudents.map((s) => s.id)));
   };
 
-  const defaultAttendanceConfig: AttendanceSettings = {
-    pointsForSignIn: 1,
-    pointsForOnTime: 1,
-    onTimeWindowMinutes: 15,
-    schedule: [],
-  };
-
   useEffect(() => {
     if (!settings.enableClassSignIn || !schoolId || !getAttendanceConfig) return;
+    const defaultAttendanceConfig: AttendanceSettings = {
+      pointsForSignIn: 1,
+      pointsForOnTime: 1,
+      onTimeWindowMinutes: 15,
+      schedule: [],
+    };
     getAttendanceConfig()
       .then((c) => {
         setAttendanceConfigState(c ?? defaultAttendanceConfig);
