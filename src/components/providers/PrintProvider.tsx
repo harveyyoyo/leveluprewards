@@ -13,12 +13,14 @@ import type { Coupon, Student, Class } from '@/lib/types';
 import { PrintSheet } from '@/components/PrintSheet';
 import { StudentIdPrintSheet } from '@/components/StudentIdPrintSheet';
 import { StudentIdDTCPrintSheet } from '@/components/StudentIdDTCPrintSheet';
+import { PrizeRedeemTicketPrintSheet, PrizeRedeemTicket } from '@/components/PrizeRedeemTicketPrintSheet';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useAuth } from './AuthProvider';
 
 interface PrintContextType {
     setCouponsToPrint: (coupons: Coupon[]) => void;
     setStudentsToPrint: (data: { students: Student[]; classes: Class[]; printerType?: 'dtc4500e' }) => void;
+    printPrizeTickets: (tickets: PrizeRedeemTicket[]) => void;
 }
 
 const PrintContext = createContext<PrintContextType | null>(null);
@@ -26,6 +28,7 @@ const PrintContext = createContext<PrintContextType | null>(null);
 export function PrintProvider({ children }: { children: React.ReactNode }) {
     const [couponsToPrint, setCouponsToPrint] = useState<Coupon[]>([]);
     const [printData, setPrintData] = useState<{ students: Student[]; classes: Class[]; printerType?: 'dtc4500e' } | null>(null);
+    const [prizeTicketsToPrint, setPrizeTicketsToPrint] = useState<PrizeRedeemTicket[]>([]);
     const playSound = useArcadeSound();
     const { schoolId } = useAuth();
 
@@ -59,8 +62,27 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
         }
     }, [printData, playSound]);
 
+    const prizePrintTriggered = useRef(false);
+    useEffect(() => {
+        if (prizeTicketsToPrint.length > 0 && !prizePrintTriggered.current) {
+            prizePrintTriggered.current = true;
+            const afterPrint = () => {
+                setPrizeTicketsToPrint([]);
+                prizePrintTriggered.current = false;
+                window.removeEventListener('afterprint', afterPrint);
+            };
+            window.addEventListener('afterprint', afterPrint);
+            playSound('swoosh');
+            window.print();
+        }
+    }, [prizeTicketsToPrint, playSound]);
+
     const value = useMemo(
-        () => ({ setCouponsToPrint, setStudentsToPrint: setPrintData }),
+        () => ({ 
+            setCouponsToPrint, 
+            setStudentsToPrint: setPrintData,
+            printPrizeTickets: setPrizeTicketsToPrint
+        }),
         []
     );
 
@@ -70,6 +92,7 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
             {couponsToPrint.length > 0 && <PrintSheet coupons={couponsToPrint} schoolId={schoolId} />}
             {printData && printData.students.length > 0 && printData.printerType !== 'dtc4500e' && <StudentIdPrintSheet students={printData.students} classes={printData.classes} schoolId={schoolId} onReady={triggerStudentPrint} />}
             {printData && printData.students.length > 0 && printData.printerType === 'dtc4500e' && <StudentIdDTCPrintSheet students={printData.students} classes={printData.classes} schoolId={schoolId} onReady={triggerStudentPrint} />}
+            {prizeTicketsToPrint.length > 0 && <PrizeRedeemTicketPrintSheet tickets={prizeTicketsToPrint} />}
         </PrintContext.Provider>
     );
 }

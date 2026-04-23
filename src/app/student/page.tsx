@@ -308,7 +308,7 @@ function StudentDashboardInner({
     };
 
     resolveConfigAndSignIn();
-  }, [settings.enableClassSignIn, student, classes, periods, teacherRewards, getAttendanceConfig, getTeacherAttendanceConfig, recordClassSignIn, toast]);
+  }, [settings.enableClassSignIn, student, classes, periods, teacherRewards, getAttendanceConfig, getTeacherAttendanceConfig, recordClassSignIn, toast, playSound]);
 
   const resetTimer = useCallback(() => {
     if (!isKioskLocked) {
@@ -765,7 +765,7 @@ export default function StudentLoginPage() {
       setLogoutPasscode('');
       setIsLogoutDialogOpen(false);
     }
-  }, [schoolId, functions, logoutPasscode, activeStudentId, playSound, router, toast]);
+  }, [schoolId, functions, logoutPasscode, activeStudentId, playSound, router, toast, setActiveStudentId]);
 
   if (!isInitialized || !['student', 'teacher', 'admin', 'school'].includes(loginState)) {
     return <div className="min-h-screen flex items-center justify-center p-8 bg-background">
