@@ -6,13 +6,14 @@ import React, {
   useCallback,
   useMemo,
 } from 'react';
-import type { Student, Class, Coupon, Teacher, Prize, Category, HistoryItem, Achievement, Badge, AttendanceSettings, AttendanceLogEntry } from '@/lib/types';
+import type { Student, Class, Coupon, Teacher, Prize, Category, HistoryItem, Achievement, Badge, AttendanceSettings, AttendanceLogEntry, RecordClassSignInResult } from '@/lib/types';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { reportFirestorePermissionError } from '@/firebase/error-emitter';
 import { collection } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import {
   addCategory as dbAddCategory, deleteCategory as dbDeleteCategory, updateCategory as dbUpdateCategory,
-  addCoupons as dbAddCoupons, redeemCoupon as dbRedeemCoupon, deleteCoupon as dbDeleteCoupon,
+  addCoupons as dbAddCoupons, deleteCoupon as dbDeleteCoupon,
   redeemPrize as dbRedeemPrize, addPrize as dbAddPrize,
   updatePrize as dbUpdatePrize, deletePrize as dbDeletePrize,
   addStudent as dbAddStudent, updateStudent as dbUpdateStudent,
@@ -35,6 +36,8 @@ import { AuthProvider, useAuth } from './providers/AuthProvider';
 import { PrintProvider, usePrint } from './providers/PrintProvider';
 import { BackupProvider, useBackup } from './providers/BackupProvider';
 import { SettingsProvider, useSettings } from './providers/SettingsProvider';
+import { addPendingCouponRedemption, listPendingCouponRedemptions, updatePendingCouponRedemptions } from '@/lib/pendingSync';
+import { couponIsKnownAndValidOffline, saveCouponSnapshot } from '@/lib/couponCache';
 
 // Re-export types from AuthProvider for backward compatibility
 export type { SyncStatus, LoginState } from './providers/AuthProvider';
@@ -61,6 +64,7 @@ interface AppContextType {
   // Print
   setCouponsToPrint: (coupons: Coupon[]) => void;
   setStudentsToPrint: (data: { students: Student[], classes: Class[], printerType?: 'dtc4500e' }) => void;
+  printPrizeTickets: (tickets: any[]) => void;
   // CRUD
   addStudent: (student: Omit<Student, 'id' | 'points' | 'lifetimePoints'>) => Promise<void>;
   updateStudent: (student: Student) => Promise<void>;
@@ -80,7 +84,7 @@ interface AppContextType {
   awardPoints: (studentId: string, points: number, description: string) => Promise<{ success: boolean; message: string; bonusTotal?: number }>;
   awardPointsToMultipleStudents: (studentIds: string[], points: number, description: string) => Promise<{ success: boolean; message: string; count: number }>;
   deductPointsFromMultipleStudents: (studentIds: string[], points: number, reason: string) => Promise<{ success: boolean; message: string; count: number; }>;
-  redeemPrize: (studentId: string, prize: Prize, quantity: number) => Promise<void>;
+  redeemPrize: (studentId: string, prize: Prize, quantity: number) => Promise<{ success: boolean; activityId?: string; redeemedAt?: number; totalCost?: number; message?: string }>;
   addPrize: (prize: Omit<Prize, 'id'>) => Promise<void>;
   updatePrize: (prize: Prize) => Promise<void>;
   deletePrize: (prizeId: string) => Promise<void>;
@@ -106,7 +110,7 @@ interface AppContextType {
   purgeStudentProgress: (studentId: string) => Promise<void>;
   getAttendanceConfig: () => Promise<AttendanceSettings | null>;
   setAttendanceConfig: (settings: AttendanceSettings) => Promise<void>;
-  recordClassSignIn: (studentId: string, student: Student, config: AttendanceSettings) => Promise<{ pointsAwarded: number; onTime: boolean; periodLabel?: string }>;
+  recordClassSignIn: (studentId: string, student: Student, config: AttendanceSettings) => Promise<RecordClassSignInResult>;
   listAttendanceLog: (limitCount?: number) => Promise<AttendanceLogEntry[]>;
   // Per-teacher attendance helpers
   getTeacherAttendanceConfig: (teacherId: string) => Promise<AttendanceSettings | null>;
@@ -124,7 +128,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
   const authCtx = useAuth();
   const printCtx = usePrint();
   const backupCtx = useBackup();
-  const { firestore, functions } = useFirebase();
+  const { firestore, functions, auth } = useFirebase();
   const schoolId = authCtx.schoolId;
   const canReadCategories = authCtx.isAdmin;
 
@@ -147,6 +151,48 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
   const { data: badges, isLoading: badgesLoading } = useCollection<Badge>(badgesQuery);
 
   const { settings } = useSettings();
+
+  // Background refresh: download coupon snapshot for offline validation.
+  React.useEffect(() => {
+    if (!schoolId || !functions) return;
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
+    const fn = httpsCallable(functions, 'getCouponSnapshot');
+    void fn({ schoolId })
+      .then((res) => {
+        const data = res.data as any;
+        const list = Array.isArray(data?.coupons) ? data.coupons : [];
+        const updatedAt = typeof data?.updatedAt === 'number' ? data.updatedAt : Date.now();
+        const couponsByCode: Record<string, any> = {};
+        for (const c of list) {
+          const code = String(c?.code || '').toUpperCase();
+          if (!code) continue;
+          couponsByCode[code] = {
+            code,
+            value: typeof c?.value === 'number' ? c.value : undefined,
+            category: typeof c?.category === 'string' ? c.category : undefined,
+            expiresAt: typeof c?.expiresAt === 'number' ? c.expiresAt : undefined,
+          };
+        }
+        saveCouponSnapshot(schoolId, { updatedAt, couponsByCode });
+      })
+      .catch(() => {});
+  }, [schoolId, functions]);
+
+  // Background sync: push offline pending redemptions when internet returns.
+  React.useEffect(() => {
+    if (!schoolId || !functions || !auth?.currentUser) return;
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
+    const pending = listPendingCouponRedemptions(schoolId);
+    if (pending.length === 0) return;
+    const fn = httpsCallable(functions, 'syncPendingRedemptions');
+    void fn({ schoolId, items: pending })
+      .then((res) => {
+        const results = (res.data as any)?.results as Array<{ id: string; status: 'confirmed' | 'rejected'; message?: string }> | undefined;
+        if (!results?.length) return;
+        updatePendingCouponRedemptions(results.map((r) => ({ id: r.id, status: r.status, message: r.message })));
+      })
+      .catch(() => {});
+  }, [schoolId, functions, auth]);
 
   // CRUD wrappers — delegate straight to db.ts — delegate straight to db.ts
   const addStudent_ = useCallback((s: Omit<Student, 'id' | 'points' | 'lifetimePoints'>) => {
@@ -215,11 +261,27 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
   }, [firestore, schoolId]);
 
   const redeemCoupon_ = useCallback(async (studentId: string, code: string) => {
-    if (!firestore || !schoolId) return { success: false, message: 'Not logged in.' };
-    const allAchievements = settings.enableAchievements ? (achievements || []) : [];
-    const allBadges = settings.enableBadges ? (badges || []) : [];
-    return dbRedeemCoupon(firestore, schoolId, studentId, code, allAchievements, categories || [], allBadges);
-  }, [firestore, schoolId, categories, achievements, badges, settings.enableAchievements, settings.enableBadges]);
+    if (!schoolId) return { success: false, message: 'Not logged in.' };
+    const couponCode = code.toUpperCase();
+
+    // Offline: only allow coupons known from last snapshot; queue for sync; prevent double-use on kiosk.
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      const ok = couponIsKnownAndValidOffline(schoolId, couponCode);
+      if (!ok.ok) return { success: false, message: ok.reason || 'Coupon not valid offline.' };
+      addPendingCouponRedemption({ schoolId, studentId, couponCode, createdAt: Date.now() });
+      return { success: true, message: 'Saved offline (pending sync).' };
+    }
+
+    // Online: kiosk-safe server redemption.
+    try {
+      const fn = httpsCallable(functions, 'redeemCouponServer');
+      const res = await fn({ schoolId, studentId, couponCode });
+      const data = res.data as any;
+      return { success: !!data?.success, message: String(data?.message || 'Redeemed.'), value: data?.value };
+    } catch (e: any) {
+      return { success: false, message: e?.message || 'Could not redeem this coupon.' };
+    }
+  }, [schoolId, functions]);
 
   const deleteCoupon_ = useCallback((couponId: string) => {
     if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
@@ -339,6 +401,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     isTeacher: authCtx.isTeacher,
     // Print
     ...printCtx,
+    printPrizeTickets: printCtx.printPrizeTickets,
     // CRUD
     addStudent: addStudent_, updateStudent: updateStudent_, deleteStudent: deleteStudent_,
     addClass: addClass_, updateClass: updateClass_, deleteClass: deleteClass_,
@@ -370,9 +433,9 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
   }), [
     authCtx, printCtx, backupCtx,
     addStudent_, updateStudent_, deleteStudent_,
-    addClass_, deleteClass_, addTeacher_, updateTeacher_, deleteTeacher_,
+    addClass_, updateClass_, deleteClass_, addTeacher_, updateTeacher_, deleteTeacher_,
     addCategory_, updateCategory_, deleteCategory_, addCoupons_,
-    redeemCoupon_, awardPoints_, awardPointsToMultipleStudents_, deductPointsFromMultipleStudents_,
+    redeemCoupon_, deleteCoupon_, awardPoints_, awardPointsToMultipleStudents_, deductPointsFromMultipleStudents_,
     redeemPrize_, addPrize_, updatePrize_, deletePrize_,
     uploadStudents_,
     togglePrizeFulfillment_,

@@ -33,14 +33,14 @@ function FeatureRow({ id, label, desc, icon, settings, onToggle, isImplemented =
 }) {
     const isEnabled = settings[id] || false;
     return (
-        <div className="flex items-start justify-between py-4 px-3 border-b border-slate-100/50 dark:border-slate-800/50 last:border-0 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 rounded-xl transition-colors">
+        <div className="flex items-start justify-between py-4 px-3 border-b border-border/40 last:border-0 hover:bg-muted/30 rounded-xl transition-colors">
             <div className={`flex items-start gap-4 ${!isImplemented && 'opacity-60'} mr-6`}>
-                <div className={`p-2.5 rounded-xl transition-colors shrink-0 mt-0.5 ${(isEnabled && isImplemented) ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'}`}>
+                <div className={`p-2.5 rounded-xl transition-colors shrink-0 mt-0.5 ${(isEnabled && isImplemented) ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
                     {icon}
                 </div>
                 <div className="flex flex-col">
-                    <Label className="font-bold text-sm block text-slate-800 dark:text-slate-200 mb-1" htmlFor={isImplemented && isAdmin ? id : undefined}>{label}</Label>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed w-full pr-4">{desc}</p>
+                    <Label className="font-bold text-sm block text-foreground mb-1" htmlFor={isImplemented && isAdmin ? id : undefined}>{label}</Label>
+                    <p className="text-xs text-muted-foreground leading-relaxed w-full pr-4">{desc}</p>
                 </div>
             </div>
             {isImplemented ? (
@@ -50,12 +50,11 @@ function FeatureRow({ id, label, desc, icon, settings, onToggle, isImplemented =
                         checked={isEnabled}
                         onCheckedChange={(checked) => onToggle(id, checked)}
                         disabled={!isAdmin}
-                        className="data-[state=checked]:bg-amber-500"
                     />
-                    {!isAdmin && <span className="text-[10px] text-slate-400 mt-2 font-black uppercase tracking-widest whitespace-nowrap">Admin Only</span>}
+                    {!isAdmin && <span className="text-[10px] text-muted-foreground mt-2 font-black uppercase tracking-widest whitespace-nowrap">Admin Only</span>}
                 </div>
             ) : (
-                <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-md mt-1 whitespace-nowrap">
+                <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground bg-muted px-3 py-1.5 rounded-md mt-1 whitespace-nowrap">
                     Soon
                 </div>
             )}
@@ -82,21 +81,21 @@ export function SettingsModal() {
     return (
         <Dialog onOpenChange={(open) => { if (!open) setView('main'); }}>
             <DialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl group relative z-50">
-                    <Settings className="w-5 h-5 text-slate-600 dark:text-slate-300 group-hover:rotate-45 transition-transform duration-300" />
+                <Button variant="ghost" size="icon" className="hover:bg-muted rounded-xl group relative z-50">
+                    <Settings className="w-5 h-5 text-muted-foreground group-hover:rotate-45 transition-transform duration-300" />
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-2xl rounded-2xl p-0 overflow-hidden border border-slate-200 dark:bg-slate-900 dark:border-slate-800 flex flex-col max-h-[90vh]">
+            <DialogContent className="sm:max-w-2xl rounded-3xl p-0 overflow-hidden border border-border bg-background flex flex-col max-h-[90vh] shadow-2xl">
                 {/* Header */}
-                <div className="px-6 pt-6 pb-4 border-b border-slate-100 dark:border-slate-800">
+                <div className="px-6 pt-6 pb-4 border-b border-border/40 bg-card/30 backdrop-blur-md">
                     <DialogHeader>
                         <div className="flex items-center gap-2">
                             {view !== 'main' && (
-                                <Button variant="ghost" size="icon" onClick={() => setView('main')} className="h-8 w-8 -ml-2">
+                                <Button variant="ghost" size="icon" onClick={() => setView('main')} className="h-8 w-8 -ml-2 rounded-full hover:bg-muted">
                                     <ArrowLeft className="h-4 w-4" />
                                 </Button>
                             )}
-                            <DialogTitle className="text-lg font-bold text-slate-800 dark:text-white">
+                            <DialogTitle className="text-xl font-black tracking-tight text-foreground">
                                 {viewTitle}
                             </DialogTitle>
                         </div>
@@ -107,21 +106,21 @@ export function SettingsModal() {
                     {view === 'main' && (
                         <>
                             {/* Graphic Mode */}
-                            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 mb-4 border border-slate-100 dark:border-slate-800">
+                            <div className="bg-muted/30 rounded-2xl p-4 mb-4 border border-border/50 transition-all hover:bg-muted/40">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
-                                        <div className={`p-2 rounded-lg ${settings.graphicMode === 'graphics' ? 'bg-blue-100 text-blue-600' : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400'}`}>
+                                        <div className={`p-2.5 rounded-xl transition-colors ${settings.graphicMode === 'graphics' ? 'bg-primary/20 text-primary shadow-sm' : 'bg-muted text-muted-foreground'}`}>
                                             <Monitor className="w-5 h-5" />
                                         </div>
                                         <div>
-                                            <h4 className="font-bold text-foreground">Arcade Mode</h4>
-                                            <p className="text-xs text-muted-foreground mt-0.5">Gamified UI with special effects</p>
+                                            <h4 className="font-black text-sm text-foreground uppercase tracking-wider">Arcade Mode</h4>
+                                            <p className="text-[11px] font-medium text-muted-foreground mt-0.5">Gamified UI with special effects</p>
                                         </div>
                                     </div>
                                     <Switch
                                         checked={settings.graphicMode === 'graphics'}
                                         onCheckedChange={(checked) => handleToggle('graphicMode', checked ? 'graphics' : 'classic')}
-                                        className="data-[state=checked]:bg-blue-600 scale-110"
+                                        className="scale-110"
                                     />
                                 </div>
                             </div>
@@ -214,26 +213,30 @@ export function SettingsModal() {
                             </div>
 
                             {/* Display Mode */}
-                            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 mb-4 border border-slate-100 dark:border-slate-800">
-                                <div className="flex items-center gap-3 mb-3">
-                                    {settings.displayMode === 'app' ? <Smartphone className="w-5 h-5 text-muted-foreground" /> : <Monitor className="w-5 h-5 text-muted-foreground" />}
+                            <div className="bg-muted/30 rounded-2xl p-4 mb-4 border border-border/50">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="p-2.5 rounded-xl bg-muted text-muted-foreground">
+                                        {settings.displayMode === 'app' ? <Smartphone className="w-5 h-5" /> : <Monitor className="w-5 h-5" />}
+                                    </div>
                                     <div>
-                                        <h4 className="font-bold text-foreground">Display Mode</h4>
-                                        <p className="text-xs text-muted-foreground mt-0.5">UI layout style</p>
+                                        <h4 className="font-black text-sm text-foreground uppercase tracking-wider">Display Mode</h4>
+                                        <p className="text-[11px] font-medium text-muted-foreground mt-0.5">UI layout style</p>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2 bg-background p-1 rounded-lg border border-border">
+                                <div className="flex items-center gap-1.5 bg-background/50 p-1.5 rounded-2xl border border-border shadow-inner">
                                     <button
                                         onClick={() => handleToggle('displayMode', 'web')}
-                                        className={`flex-1 py-1.5 px-3 rounded-md text-sm font-bold transition-all ${settings.displayMode === 'web' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
+                                        className={`flex-1 py-2 px-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${settings.displayMode === 'web' ? 'bg-primary text-primary-foreground shadow-md' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}
+                                        aria-pressed={settings.displayMode === 'web'}
                                     >
-                                        Web
+                                        Desktop
                                     </button>
                                     <button
                                         onClick={() => handleToggle('displayMode', 'app')}
-                                        className={`flex-1 py-1.5 px-3 rounded-md text-sm font-bold transition-all ${settings.displayMode === 'app' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
+                                        className={`flex-1 py-2 px-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${settings.displayMode === 'app' ? 'bg-primary text-primary-foreground shadow-md' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}
+                                        aria-pressed={settings.displayMode === 'app'}
                                     >
-                                        App
+                                        Mobile
                                     </button>
                                 </div>
                             </div>
@@ -454,19 +457,19 @@ export function SettingsModal() {
                     )}
                 </div>
 
-                <DialogFooter className="px-6 py-4 sm:justify-end border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 absolute bottom-0 w-full left-0 z-10 hidden sm:flex">
+                <DialogFooter className="px-6 py-6 sm:justify-end border-t border-border/40 bg-muted/20 absolute bottom-0 w-full left-0 z-10 hidden sm:flex">
                     <DialogClose asChild>
-                        <Button className="w-full sm:w-auto px-10 h-10 text-sm bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md cursor-pointer">
-                            Close
+                        <Button className="w-full sm:w-auto px-12 h-11 text-xs uppercase tracking-widest bg-primary hover:bg-primary/90 text-primary-foreground font-black rounded-2xl shadow-lg transition-all active:scale-95">
+                            Close Settings
                         </Button>
                     </DialogClose>
                 </DialogFooter>
 
                 {/* Mobile absolute footer */}
-                <div className="p-4 border-t border-slate-100 dark:border-slate-800 sm:hidden">
+                <div className="p-4 border-t border-border/40 sm:hidden bg-background">
                     <DialogClose asChild>
-                        <Button className="w-full h-12 text-sm bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md cursor-pointer">
-                            Close
+                        <Button className="w-full h-14 text-xs uppercase tracking-widest bg-primary hover:bg-primary/90 text-primary-foreground font-black rounded-2xl shadow-lg active:scale-95">
+                            Close Settings
                         </Button>
                     </DialogClose>
                 </div>

@@ -62,3 +62,26 @@ function createEventEmitter<T extends Record<string, any>>() {
 
 // Create and export a singleton instance of the emitter, typed with our AppEvents interface.
 export const errorEmitter = createEventEmitter<AppEvents>();
+
+/**
+ * Helper used across Firestore data helpers to surface permission errors to the app.
+ * This lets UI layers show a helpful, structured message (including simulated rules context).
+ */
+export function reportFirestorePermissionError(
+  err: unknown,
+  context: { path: string; operation: 'get' | 'list' | 'create' | 'update' | 'delete' | 'write'; requestResourceData?: any },
+) {
+  const code = (err as any)?.code;
+  // Firestore client errors often use "permission-denied" or "PERMISSION_DENIED"
+  const isPermissionDenied =
+    code === 'permission-denied' ||
+    code === 'PERMISSION_DENIED' ||
+    (typeof code === 'string' && code.includes('permission-denied'));
+  if (!isPermissionDenied) return;
+
+  try {
+    errorEmitter.emit('permission-error', new FirestorePermissionError(context));
+  } catch {
+    // ignore emitter errors
+  }
+}
