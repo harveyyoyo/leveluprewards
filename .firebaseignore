@@ -1,0 +1,8 @@
+# Keep Firebase Hosting / framework uploads lean (gitignore-style)
+e2e/
+tests/
+playwright-report/
+test-results/
+docs/
+.turbo/
+.github/
