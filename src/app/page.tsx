@@ -66,7 +66,7 @@ export default function LoginPage() {
     });
     if (success) {
       playSound('login');
-      router.push('/portal');
+      router.push(`/${schoolId.trim().toLowerCase() || 'schoolabc'}/portal`);
     } else {
       playSound('error');
       toast({
@@ -102,7 +102,7 @@ export default function LoginPage() {
     });
     if (success) {
       playSound('login');
-      router.push('/portal');
+      router.push(`/${id}/portal`);
     } else {
       playSound('error');
       toast({

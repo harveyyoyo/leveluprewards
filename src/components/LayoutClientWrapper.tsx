@@ -6,11 +6,13 @@ import { useEffect } from 'react';
 import Header from "@/components/Header";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { IntroWizard } from './IntroWizard';
+import dynamic from 'next/dynamic';
 import { useSettings } from './providers/SettingsProvider';
 import { cn } from '@/lib/utils';
 import { ConfirmProvider } from '@/components/providers/ConfirmProvider';
-import { AnimatedSiteBackground } from '@/components/AnimatedSiteBackground';
+
+const IntroWizard = dynamic(() => import('./IntroWizard').then(m => m.IntroWizard), { ssr: false });
+const AnimatedSiteBackground = dynamic(() => import('@/components/AnimatedSiteBackground').then(m => m.AnimatedSiteBackground), { ssr: false });
 
 interface LayoutClientWrapperProps {
     children: React.ReactNode;
