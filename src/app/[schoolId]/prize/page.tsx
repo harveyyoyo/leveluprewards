@@ -369,7 +369,7 @@ function PrizeDashboard({
             // Failures are surfaced but do not roll back the redemption — the
             // points are already spent and the student already saw the success
             // toast; a motor jam is a human-operator problem.
-            if (prize.vendingMotor?.enabled) {
+            if (settings.enableVendingMachine && prize.vendingMotor?.enabled) {
                 if (!motorIsConnected()) {
                     toast({
                         variant: 'destructive',

@@ -22,6 +22,7 @@ import {
   removeTeacherFromPrize,
   teacherListedOnPrize,
 } from '@/lib/prize-utils';
+import { useSettings } from '@/components/providers/SettingsProvider';
 
 export function AdminPrizesTab({
   prizes,
@@ -50,6 +51,8 @@ export function AdminPrizesTab({
   /** Opens the full prize editor modal for the given prize. */
   onEditPrize?: (p: Prize) => void;
 }) {
+  const { settings } = useSettings();
+  const vendingEnabled = settings.enableVendingMachine === true;
   const [helpOpen, setHelpOpen] = useState(false);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardStep, setWizardStep] = useState(0);
@@ -262,7 +265,7 @@ export function AdminPrizesTab({
                 <div className="flex flex-col gap-0.5 min-w-0">
                   <Label className="text-[9px] font-bold uppercase tracking-tighter opacity-50 leading-none flex items-center gap-1">
                     Name
-                    {p.vendingMotor?.enabled ? (
+                    {vendingEnabled && p.vendingMotor?.enabled ? (
                       <span
                         className="inline-flex items-center gap-0.5 rounded bg-emerald-100 px-1 py-px text-[8px] font-bold uppercase tracking-wider text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300"
                         title={`Motor axis: ${p.vendingMotor.axis}`}
@@ -406,60 +409,62 @@ export function AdminPrizesTab({
                     </Button>
                   ) : null}
 
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className={cn(
-                          "h-9 w-9 rounded-full hover:bg-muted",
-                          motorEnabled ? "text-emerald-700 dark:text-emerald-300" : "text-muted-foreground",
-                        )}
-                        disabled={!canEditFull}
-                        title="Vending motor"
-                      >
-                        <Cog className="w-4 h-4" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-72 p-3 z-[250]" align="end">
-                      <div className="space-y-3">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="text-sm font-bold leading-tight">Vending motor</p>
-                            <p className="text-xs text-muted-foreground leading-snug">
-                              Controls the motor triggered after redeem on the kiosk (USB serial).
-                            </p>
+                  {vendingEnabled ? (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className={cn(
+                            "h-9 w-9 rounded-full hover:bg-muted",
+                            motorEnabled ? "text-emerald-700 dark:text-emerald-300" : "text-muted-foreground",
+                          )}
+                          disabled={!canEditFull}
+                          title="Prize vending motor"
+                        >
+                          <Cog className="w-4 h-4" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-72 p-3 z-[250]" align="end">
+                        <div className="space-y-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="text-sm font-bold leading-tight">Prize motor</p>
+                              <p className="text-xs text-muted-foreground leading-snug">
+                                Controls the motor triggered after redeem on the kiosk.
+                              </p>
+                            </div>
+                            <Switch
+                              checked={motorEnabled}
+                              onCheckedChange={(checked) => updateMotor({ enabled: checked })}
+                              className="data-[state=checked]:bg-emerald-500"
+                            />
                           </div>
-                          <Switch
-                            checked={motorEnabled}
-                            onCheckedChange={(checked) => updateMotor({ enabled: checked })}
-                            className="data-[state=checked]:bg-emerald-500"
-                          />
-                        </div>
 
-                        <div className={cn("grid grid-cols-1 gap-2", !motorEnabled && "opacity-50 pointer-events-none")}>
-                          <div className="space-y-1">
-                            <Label className="text-[10px] font-bold uppercase tracking-tighter opacity-60">Axis</Label>
-                            <Select
-                              value={motorAxis}
-                              onValueChange={(v) => updateMotor({ axis: v as 'X' | 'Y' | 'Z' | 'E' })}
-                            >
-                              <SelectTrigger className="h-8 text-xs px-2">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="X">X</SelectItem>
-                                <SelectItem value="Y">Y</SelectItem>
-                                <SelectItem value="Z">Z</SelectItem>
-                                <SelectItem value="E">E</SelectItem>
-                              </SelectContent>
-                            </Select>
+                          <div className={cn("grid grid-cols-1 gap-2", !motorEnabled && "opacity-50 pointer-events-none")}>
+                            <div className="space-y-1">
+                              <Label className="text-[10px] font-bold uppercase tracking-tighter opacity-60">Axis</Label>
+                              <Select
+                                value={motorAxis}
+                                onValueChange={(v) => updateMotor({ axis: v as 'X' | 'Y' | 'Z' | 'E' })}
+                              >
+                                <SelectTrigger className="h-8 text-xs px-2">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="X">X</SelectItem>
+                                  <SelectItem value="Y">Y</SelectItem>
+                                  <SelectItem value="Z">Z</SelectItem>
+                                  <SelectItem value="E">E</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </PopoverContent>
-                  </Popover>
+                      </PopoverContent>
+                    </Popover>
+                  ) : null}
 
                   {canRemoveSelf && teacherId ? (
                     <Button
@@ -508,7 +513,7 @@ export function AdminPrizesTab({
               <li><span className="font-bold">Print</span>: if on, the shop offers a redeem ticket after redemption.</li>
               <li><span className="font-bold">Teachers</span>: pick multiple teachers or school-wide.</li>
               <li><span className="font-bold">Class</span>: optionally restrict by class.</li>
-              <li><span className="font-bold">Vending motor</span>: open a prize (click to edit in the modal) to wire it to a USB serial motor (Arduino Mega + RAMPS) and pick axis X/Y/Z/E.</li>
+              <li><span className="font-bold">Vending motor</span>: enable the Vending Machine feature in settings, then use the prize motor button to pick axis X/Y/Z/E.</li>
             </ul>
           </div>
           <DialogFooter>

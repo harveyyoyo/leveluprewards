@@ -34,6 +34,7 @@ interface Settings {
     enablePrizeCategories: boolean;
     enableWishlist: boolean;
     enableSeasonalPrizes: boolean;
+    enableVendingMachine: boolean;
     enableColorPrinting: boolean;
     // Admin Tools
     enableBulkPoints: boolean;
@@ -104,6 +105,7 @@ const defaultSettings: Settings = {
     enablePrizeCategories: false,
     enableWishlist: false,
     enableSeasonalPrizes: false,
+    enableVendingMachine: false,
     enableColorPrinting: true,
     enableBulkPoints: false,
     enablePointApproval: false,

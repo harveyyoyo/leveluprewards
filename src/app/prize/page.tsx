@@ -253,7 +253,7 @@ function PrizeDashboard({
                 description: `Successfully redeemed ${prize.name}${quantity > 1 ? ` (x${quantity})` : ''}.`,
             });
 
-            if (prize.vendingMotor?.enabled) {
+            if (settings.enableVendingMachine && prize.vendingMotor?.enabled) {
                 if (!motorIsConnected()) {
                     toast({
                         variant: 'destructive',

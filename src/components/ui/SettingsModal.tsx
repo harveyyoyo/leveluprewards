@@ -21,16 +21,17 @@ import {
     Bell, Shield, Moon, Sun, ArrowLeft, Palette, Zap, Trophy,
     BarChart3, MessageSquare, ShoppingBag, ShieldCheck, Star,
     Users, Database, Printer, LayoutDashboard, History, HelpCircle,
-    Cpu, Award, Clock
+    Cpu, Award, Clock, Cog
 } from 'lucide-react';
 import { useSettings, colorSchemes, type ColorScheme } from '../providers/SettingsProvider';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
+import { VendingMotorPanel } from '@/components/VendingMotorPanel';
 
 type SettingsView = 'main' | 'features';
 
-function FeatureRow({ id, label, desc, icon, settings, onToggle, isImplemented = true, isAdmin = true }: {
+function FeatureRow({ id, label, desc, icon, settings, onToggle, onConfigure, isImplemented = true, isAdmin = true }: {
     id: string; label: string; desc: string; icon: React.ReactNode;
-    settings: any; onToggle: (key: string, val: any) => void; isImplemented?: boolean; isAdmin?: boolean;
+    settings: any; onToggle: (key: string, val: any) => void; onConfigure?: () => void; isImplemented?: boolean; isAdmin?: boolean;
 }) {
     const isEnabled = settings[id] || false;
     return (
@@ -46,12 +47,28 @@ function FeatureRow({ id, label, desc, icon, settings, onToggle, isImplemented =
             </div>
             {isImplemented ? (
                 <div className="flex flex-col flex-shrink-0 items-end justify-start min-h-[44px]">
-                    <Switch
-                        id={id}
-                        checked={isEnabled}
-                        onCheckedChange={(checked) => onToggle(id, checked)}
-                        disabled={!isAdmin}
-                    />
+                    <div className="flex items-center gap-2">
+                        {onConfigure ? (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="h-9 w-9 rounded-xl"
+                                onClick={onConfigure}
+                                disabled={!isAdmin}
+                                title={`${label} settings`}
+                                aria-label={`${label} settings`}
+                            >
+                                <Cog className="h-4 w-4" />
+                            </Button>
+                        ) : null}
+                        <Switch
+                            id={id}
+                            checked={isEnabled}
+                            onCheckedChange={(checked) => onToggle(id, checked)}
+                            disabled={!isAdmin}
+                        />
+                    </div>
                     {!isAdmin && <span className="text-[10px] text-muted-foreground mt-2 font-black uppercase tracking-widest whitespace-nowrap">Admin Only</span>}
                 </div>
             ) : (
@@ -69,6 +86,7 @@ export function SettingsModal() {
     const { settings, updateSettings } = useSettings();
     const playSound = useArcadeSound();
     const [view, setView] = useState<SettingsView>('main');
+    const [vendingSettingsOpen, setVendingSettingsOpen] = useState(false);
     const pathname = usePathname();
     const isPublicLoginRoute =
         pathname === '/' ||
@@ -441,6 +459,21 @@ export function SettingsModal() {
                             </div>
 
                             <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
+                                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><ShoppingBag className="w-3.5 h-3.5" /> Prize Shop</p>
+                                <FeatureRow
+                                    id="enableVendingMachine"
+                                    label="Vending Machine"
+                                    desc="Connect a USB serial vending rig and let configured prizes trigger a motor after redemption."
+                                    icon={<Cog className="w-5 h-5" />}
+                                    settings={settings}
+                                    onToggle={handleToggle}
+                                    onConfigure={() => setVendingSettingsOpen(true)}
+                                    isImplemented={true}
+                                    isAdmin={isAdmin}
+                                />
+                            </div>
+
+                            <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
                                 <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><Monitor className="w-3.5 h-3.5" /> Printing & Guidance</p>
                                 <FeatureRow
                                     id="enableColorPrinting"
@@ -476,6 +509,15 @@ export function SettingsModal() {
                         </div>
                     )}
                 </div>
+
+                <Dialog open={vendingSettingsOpen} onOpenChange={setVendingSettingsOpen}>
+                    <DialogContent className="sm:max-w-xl rounded-3xl">
+                        <DialogHeader>
+                            <DialogTitle>Vending Machine Settings</DialogTitle>
+                        </DialogHeader>
+                        <VendingMotorPanel />
+                    </DialogContent>
+                </Dialog>
 
                 <DialogFooter className="px-6 py-6 sm:justify-end border-t border-border/40 bg-muted/20 absolute bottom-0 w-full left-0 z-10 hidden sm:flex">
                     <DialogClose asChild>

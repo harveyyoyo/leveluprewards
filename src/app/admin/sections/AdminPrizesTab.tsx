@@ -9,9 +9,9 @@ import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import DynamicIcon from '@/components/DynamicIcon';
-import { VendingMotorPanel } from '@/components/VendingMotorPanel';
 import { cn } from '@/lib/utils';
 import type { Prize, VendingMotorConfig } from '@/lib/types';
+import { useSettings } from '@/components/providers/SettingsProvider';
 
 export function AdminPrizesTab({
   prizes,
@@ -28,9 +28,10 @@ export function AdminPrizesTab({
   onToggleInStock: (p: Prize, inStock: boolean) => void;
   onUpdatePrize: (p: Prize) => void;
 }) {
+  const { settings } = useSettings();
+  const vendingEnabled = settings.enableVendingMachine === true;
+
   return (
-    <div className="space-y-4">
-      <VendingMotorPanel />
       <Card className="border-t-4 border-destructive shadow-md">
         <CardHeader className="flex flex-row justify-between items-center py-6">
           <div>
@@ -46,7 +47,7 @@ export function AdminPrizesTab({
           </Button>
         </CardHeader>
         <CardContent>
-          <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[500px] overflow-y-auto pr-2">
+          <ul className="grid grid-cols-1 gap-3 max-h-[500px] overflow-y-auto pr-2">
             {prizes
               ?.sort((a, b) => a.points - b.points)
               .map((p) => {
@@ -90,9 +91,9 @@ export function AdminPrizesTab({
                       <DynamicIcon name={p.icon} className="w-6 h-6 text-primary" />
                     </div>
                     <div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <p className={cn("font-bold text-base leading-none mb-1", !p.inStock && "line-through opacity-40")}>{p.name}</p>
-                        {motorEnabled ? (
+                        {vendingEnabled && motorEnabled ? (
                           <span
                             className="inline-flex items-center gap-0.5 rounded bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-800"
                             title={`Motor axis: ${motorAxis}`}
@@ -106,58 +107,60 @@ export function AdminPrizesTab({
                     </div>
                   </div>
                   <div className="flex gap-1 self-end sm:self-center">
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className={cn(
-                            "h-8 w-8 rounded-full",
-                            motorEnabled ? "text-emerald-700" : "text-muted-foreground",
-                          )}
-                          title="Vending motor"
-                        >
-                          <Cog className="w-4 h-4" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-72 p-3 z-[250]" align="end">
-                        <div className="space-y-3">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <p className="text-sm font-bold leading-tight">Vending motor</p>
-                              <p className="text-xs text-muted-foreground leading-snug">
-                                Triggers after this prize is redeemed on the kiosk.
-                              </p>
+                    {vendingEnabled ? (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className={cn(
+                              "h-8 w-8 rounded-full",
+                              motorEnabled ? "text-emerald-700" : "text-muted-foreground",
+                            )}
+                            title="Prize vending motor"
+                          >
+                            <Cog className="w-4 h-4" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-72 p-3 z-[250]" align="end">
+                          <div className="space-y-3">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="text-sm font-bold leading-tight">Prize motor</p>
+                                <p className="text-xs text-muted-foreground leading-snug">
+                                  Triggers after this prize is redeemed on the kiosk.
+                                </p>
+                              </div>
+                              <Switch
+                                checked={motorEnabled}
+                                onCheckedChange={(checked) => updateMotor({ enabled: checked })}
+                                className="data-[state=checked]:bg-emerald-500"
+                              />
                             </div>
-                            <Switch
-                              checked={motorEnabled}
-                              onCheckedChange={(checked) => updateMotor({ enabled: checked })}
-                              className="data-[state=checked]:bg-emerald-500"
-                            />
-                          </div>
-                          <div className={cn("grid grid-cols-1 gap-2", !motorEnabled && "opacity-50 pointer-events-none")}>
-                            <div className="space-y-1">
-                              <Label className="text-[10px] font-bold uppercase tracking-tighter opacity-60">Axis</Label>
-                              <Select
-                                value={motorAxis}
-                                onValueChange={(v) => updateMotor({ axis: v as 'X' | 'Y' | 'Z' | 'E' })}
-                              >
-                                <SelectTrigger className="h-8 text-xs px-2">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="X">X</SelectItem>
-                                  <SelectItem value="Y">Y</SelectItem>
-                                  <SelectItem value="Z">Z</SelectItem>
-                                  <SelectItem value="E">E</SelectItem>
-                                </SelectContent>
-                              </Select>
+                            <div className={cn("grid grid-cols-1 gap-2", !motorEnabled && "opacity-50 pointer-events-none")}>
+                              <div className="space-y-1">
+                                <Label className="text-[10px] font-bold uppercase tracking-tighter opacity-60">Axis</Label>
+                                <Select
+                                  value={motorAxis}
+                                  onValueChange={(v) => updateMotor({ axis: v as 'X' | 'Y' | 'Z' | 'E' })}
+                                >
+                                  <SelectTrigger className="h-8 text-xs px-2">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="X">X</SelectItem>
+                                    <SelectItem value="Y">Y</SelectItem>
+                                    <SelectItem value="Z">Z</SelectItem>
+                                    <SelectItem value="E">E</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </PopoverContent>
-                    </Popover>
+                        </PopoverContent>
+                      </Popover>
+                    ) : null}
                     <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => onEditPrize(p)}>
                       <Edit className="w-4 h-4" />
                     </Button>
@@ -171,7 +174,6 @@ export function AdminPrizesTab({
           </ul>
         </CardContent>
       </Card>
-    </div>
   );
 }
 
