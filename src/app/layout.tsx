@@ -5,6 +5,9 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import LayoutClientWrapper from "@/components/LayoutClientWrapper";
 import "./globals.css";
 
+// Client-only Firebase apps should not be statically pre-rendered in Next.js.
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
   title: 'levelUp EDU',
   description: 'LevelUp rewards hub',
@@ -30,7 +33,11 @@ export default function RootLayout({
           crossOrigin="anonymous"
         />
         <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Ubuntu:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400;1,500;1,700&family=Source+Code+Pro:wght@400;600&family=Libre+Barcode+39&family=Fraunces:wght@600;700;800&family=DM+Sans:wght@500;600;700;800&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Ubuntu:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400;1,500;1,700&family=Source+Code+Pro:wght@400;600&family=Libre+Barcode+39&display=swap"
+          rel="stylesheet"
+        />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,700;9..144,900&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400;1,500;1,700&display=swap"
           rel="stylesheet"
         />
       </head>

@@ -1078,11 +1078,49 @@ exports.matchStudentFace = functions
     }
     // Conservative threshold for "convenience-grade" matching.
     // Higher = fewer false positives, more fallbacks.
-    const threshold = 0.55;
+    const threshold = 0.9;
     if (!bestStudentId || bestScore < threshold) {
         return { studentId: null, confidence: bestScore };
     }
     return { studentId: bestStudentId, confidence: bestScore };
+});
+exports.getStudentFaceAuthStatus = functions.https.onCall(async (data, context) => {
+    requireAuth(context);
+    requireString(data.schoolId, "schoolId");
+    requireString(data.studentId, "studentId");
+    const schoolId = String(data.schoolId).trim().toLowerCase();
+    const studentId = String(data.studentId).trim();
+    // Admin-only: status is used in the admin student modal.
+    await requireSchoolAdmin(schoolId, context);
+    const db = admin.firestore();
+    const ref = db.collection("schools").doc(schoolId).collection("faceAuth").doc(studentId);
+    const snap = await ref.get();
+    const d = snap.exists ? snap.data() : null;
+    const descriptors = Array.isArray(d === null || d === void 0 ? void 0 : d.descriptors) ? d.descriptors : [];
+    const scanCount = Array.isArray(descriptors) ? descriptors.length : 0;
+    return {
+        enrolled: scanCount > 0,
+        scanCount,
+        updatedAt: typeof (d === null || d === void 0 ? void 0 : d.updatedAt) === "number" ? d.updatedAt : null,
+        autoLogin: typeof (d === null || d === void 0 ? void 0 : d.autoLogin) === "boolean" ? d.autoLogin : true,
+        enabled: typeof (d === null || d === void 0 ? void 0 : d.enabled) === "boolean" ? d.enabled : false,
+    };
+});
+exports.setStudentFaceAutoLogin = functions.https.onCall(async (data, context) => {
+    requireAuth(context);
+    requireString(data.schoolId, "schoolId");
+    requireString(data.studentId, "studentId");
+    const autoLogin = typeof data.autoLogin === "boolean" ? data.autoLogin : null;
+    if (autoLogin === null) {
+        throw new functions.https.HttpsError("invalid-argument", "autoLogin must be a boolean.");
+    }
+    const schoolId = String(data.schoolId).trim().toLowerCase();
+    const studentId = String(data.studentId).trim();
+    await requireSchoolAdmin(schoolId, context);
+    const db = admin.firestore();
+    const ref = db.collection("schools").doc(schoolId).collection("faceAuth").doc(studentId);
+    await ref.set({ autoLogin, updatedAt: Date.now() }, { merge: true });
+    return { success: true };
 });
 exports.signInAttendance = signInAttendance_1.signInAttendance;
 //# sourceMappingURL=index.js.map

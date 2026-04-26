@@ -1,13 +1,13 @@
 
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-
 import { useAppContext } from '@/components/AppProvider';
 import { useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, orderBy, limit } from 'firebase/firestore';
-import { StudentScanner } from '@/components/StudentScanner';
+import { StudentScanner, type StudentFoundMeta } from '@/components/StudentScanner';
+import { FaceMismatchBanner } from '@/components/FaceMismatchBanner';
+import { getReadableErrorMessage } from '@/lib/errorMessage';
+import { runMotor as runVendingMotor, isConnected as motorIsConnected } from '@/lib/vendingMotor';
 import {
     Card,
     CardContent,
@@ -176,13 +176,25 @@ function PrizeDashboard({
     studentId: string;
     onDone: () => void;
 }) {
-    const { schoolId, redeemPrize } = useAppContext();
+    const { schoolId, redeemPrize, printPrizeTickets } = useAppContext();
     const firestore = useFirestore();
     const { toast } = useToast();
     const playSound = useArcadeSound();
     const [hoveredPrize, setHoveredPrize] = useState<string | null>(null);
     const { settings } = useSettings();
     const [confirmingPrize, setConfirmingPrize] = useState<Prize | null>(null);
+    const [ticketData, setTicketData] = useState<{
+        activityId: string;
+        ticketNo: string;
+        redeemedAt: number;
+        studentId: string;
+        studentName: string;
+        studentNickname?: string;
+        prizeName: string;
+        prizeIcon?: string;
+        quantity: number;
+        totalCost: number;
+    } | null>(null);
 
     const studentDocRef = useMemoFirebase(() => schoolId ? doc(firestore, 'schools', schoolId, 'students', studentId) : null, [firestore, schoolId, studentId]);
     const { data: student, isLoading: studentLoading } = useDoc<Student>(studentDocRef);
@@ -190,23 +202,110 @@ function PrizeDashboard({
     const prizesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'prizes') : null, [firestore, schoolId]);
     const { data: prizes, isLoading: prizesLoading } = useCollection<Prize>(prizesQuery);
 
+    const handlePrintTicket = useCallback(() => {
+        if (!ticketData || !schoolId) return;
+        setTicketData(null);
+        const qty = Math.max(1, Math.floor(Number(ticketData.quantity)) || 1);
+        const baseNo = ticketData.ticketNo.replace(/\D/g, '').slice(-6) || String(ticketData.redeemedAt).slice(-6);
+        const perUnitCost =
+            qty > 0 && typeof ticketData.totalCost === 'number'
+                ? Math.round(ticketData.totalCost / qty)
+                : undefined;
+        const sheets = Array.from({ length: qty }, (_, i) => ({
+            activityId: ticketData.activityId,
+            ticketNo: qty > 1 ? `${baseNo}-${i + 1}` : baseNo,
+            redeemedAt: ticketData.redeemedAt,
+            studentId: ticketData.studentId,
+            studentName: ticketData.studentName,
+            studentNickname: ticketData.studentNickname,
+            prizeName: ticketData.prizeName,
+            prizeIcon: ticketData.prizeIcon,
+            quantity: 1,
+            totalCost: perUnitCost,
+        }));
+        printPrizeTickets(sheets);
+    }, [ticketData, schoolId, printPrizeTickets]);
+
     const handleRedeemReward = async (prize: Prize, quantity: number) => {
         if (!student) return;
+        setConfirmingPrize(null);
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            playSound('error');
+            toast({
+                variant: 'destructive',
+                title: 'No connection',
+                description: 'Connect to the internet, then try redeeming again.',
+                duration: 8000,
+            });
+            return;
+        }
         try {
-            await redeemPrize(student.id, prize, quantity);
+            const result = await redeemPrize(student.id, prize, quantity);
+            if (!result.success) {
+                throw new Error(result.message || 'An error occurred during redemption.');
+            }
+
+            const { activityId, redeemedAt, totalCost } = result;
+
             playSound('redeem');
             toast({
                 title: 'Reward Redeemed!',
                 description: `Successfully redeemed ${prize.name}${quantity > 1 ? ` (x${quantity})` : ''}.`,
             });
-            setConfirmingPrize(null);
-        } catch (error: any) {
+
+            if (prize.vendingMotor?.enabled) {
+                if (!motorIsConnected()) {
+                    toast({
+                        variant: 'destructive',
+                        title: 'Motor not connected',
+                        description:
+                            'This prize is configured to dispense from the vending machine, but no USB serial port is connected.',
+                        duration: 8000,
+                    });
+                } else {
+                    for (let i = 0; i < quantity; i++) {
+                        try {
+                            await runVendingMotor(prize.vendingMotor);
+                        } catch (motorErr) {
+                            console.error('Vending motor dispense failed:', motorErr);
+                            toast({
+                                variant: 'destructive',
+                                title: 'Motor error',
+                                description: getReadableErrorMessage(motorErr, 'The vending motor failed mid-dispense.'),
+                                duration: 8000,
+                            });
+                            break;
+                        }
+                    }
+                }
+            }
+            if (prize.offerPrintTicketOnRedeem === true && activityId && redeemedAt && typeof totalCost === 'number') {
+                const ticketNo = String(redeemedAt).slice(-6);
+                const displayFirst = getStudentNickname(student);
+                const legalFirst = (student.firstName || '').trim();
+                const nick = student.nickname?.trim();
+                setTicketData({
+                    activityId,
+                    ticketNo,
+                    redeemedAt,
+                    studentId: student.id,
+                    studentName: `${displayFirst} ${student.lastName}`.trim(),
+                    studentNickname:
+                        nick && legalFirst && displayFirst.trim() !== legalFirst ? legalFirst : undefined,
+                    prizeName: prize.name,
+                    prizeIcon: prize.icon || 'Gift',
+                    quantity,
+                    totalCost,
+                });
+            }
+        } catch (error: unknown) {
             console.error('Redemption error:', error);
             playSound('error');
             toast({
                 variant: 'destructive',
                 title: 'Redemption Failed',
-                description: error.message || 'An error occurred during redemption.',
+                description: getReadableErrorMessage(error, 'An error occurred during redemption.'),
+                duration: 8000,
             });
         }
     };
@@ -459,24 +558,51 @@ function PrizeDashboard({
                 </main>
                 <ConfirmRedemptionDialog
                     isOpen={!!confirmingPrize}
-                    onOpenChange={() => setConfirmingPrize(null)}
+                    onOpenChange={(open) => {
+                        if (!open) setConfirmingPrize(null);
+                    }}
                     student={student}
                     prize={confirmingPrize}
-                    onConfirm={(quantity) => confirmingPrize && handleRedeemReward(confirmingPrize, quantity)}
+                    onConfirm={(quantity) => {
+                        const p = confirmingPrize;
+                        if (p) void handleRedeemReward(p, quantity);
+                    }}
                 />
+                <AlertDialog open={!!ticketData} onOpenChange={(open) => { if (!open) setTicketData(null); }}>
+                    <AlertDialogContent className="no-print">
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Print redeem ticket?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Print a ticket for <span className="font-bold">{ticketData?.prizeName}</span>{ticketData && ticketData.quantity > 1 ? ` (x${ticketData.quantity})` : ''}.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter className="flex-col gap-2 sm:flex-col sm:justify-end sm:space-x-0">
+                            <AlertDialogCancel onClick={() => setTicketData(null)}>No Thanks</AlertDialogCancel>
+                            <AlertDialogAction className="w-full sm:w-auto" onClick={handlePrintTicket}>Print Ticket</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
             </div>
         </TooltipProvider>
     );
 }
 export default function PrizePage() {
-    const { loginState, isInitialized, schoolId } = useAppContext();
-    const router = useRouter();
-    const { toast } = useToast();
+    const { loginState, isInitialized } = useAppContext();
     const { settings } = useSettings();
-    const firestore = useFirestore();
 
-    const { activeStudentId, setActiveStudentId, handleDone } = useActiveStudentSession();
-    // Kiosk lock removed.
+    const { activeStudentId, setActiveStudentId, handleDone, loginMeta, setLoginMeta } = useActiveStudentSession();
+
+    const onScannerStudent = useCallback(
+        (id: string, meta?: StudentFoundMeta) => {
+            setActiveStudentId(id);
+            if (meta?.source === 'face') {
+                setLoginMeta({ source: 'face', confidence: meta.confidence });
+            } else {
+                setLoginMeta(null);
+            }
+        },
+        [setActiveStudentId, setLoginMeta],
+    );
 
     if (!isInitialized || !['student', 'teacher', 'admin', 'school', 'developer'].includes(loginState)) {
         return (
@@ -490,16 +616,25 @@ export default function PrizePage() {
     }
 
     if (activeStudentId) {
-        return <PrizeDashboard studentId={activeStudentId} onDone={handleDone} />;
+        return (
+            <>
+                {loginMeta?.source === 'face' && (
+                    <FaceMismatchBanner
+                        studentId={activeStudentId}
+                        confidence={loginMeta.confidence}
+                        onResolved={handleDone}
+                    />
+                )}
+                <PrizeDashboard studentId={activeStudentId} onDone={handleDone} />
+            </>
+        );
     }
-
-
 
     return (
         <TooltipProvider>
             <div className={cn("min-h-[80vh] flex flex-col items-center justify-center", settings.displayMode === 'app' && 'pb-24')}>
                 <StudentScanner
-                    onStudentFound={setActiveStudentId}
+                    onStudentFound={onScannerStudent}
                     title="Prize Redemption"
                     description="Choose how to identify the student below."
                     icon={<Gift className="w-10 h-10 text-chart-3" />}
