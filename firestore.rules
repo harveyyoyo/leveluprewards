@@ -30,7 +30,7 @@ service cloud.firestore {
     match /schools/{schoolId} {
       allow read: if isAuth();
       allow create: if isAuth();
-      allow update, delete: if isAdmin(schoolId);
+      allow update, delete: if isAdmin(schoolId) || isDeveloper();
 
       // Read: any authenticated user (access control enforced at the
       // application layer via passcode — the school URL + passcode gate

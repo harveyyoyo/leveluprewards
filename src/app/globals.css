@@ -228,7 +228,8 @@
 
 /* Print Styles */
 #print-container,
-#student-id-print-container {
+#student-id-print-container,
+#prize-ticket-print-wrapper {
   display: none;
 }
 
@@ -522,6 +523,219 @@
     transform: scaleY(1.5);
     transform-origin: top;
   }
+
+  /* --- Prize redeem ticket (58mm / M110-style narrow receipt) --- */
+  @page prizeticket {
+    size: 58mm auto;
+    margin: 0;
+  }
+
+  #prize-ticket-print-wrapper,
+  #prize-ticket-standalone {
+    display: block !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    min-height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    box-sizing: border-box;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .prize-ticket {
+    page: prizeticket;
+    page-break-inside: avoid;
+    page-break-after: always;
+    width: 58mm;
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 3.5mm 3mm 4mm;
+    box-sizing: border-box;
+    background: #fff !important;
+    color: #111 !important;
+    font-family: 'DM Sans', 'Segoe UI', system-ui, sans-serif;
+    font-size: 3.2mm;
+    line-height: 1.25;
+    border: 0.2mm solid #000;
+  }
+
+  .prize-ticket:last-of-type {
+    page-break-after: auto;
+  }
+
+  .prize-ticket__head {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 2.2mm;
+    margin-bottom: 2.4mm;
+  }
+
+  .prize-ticket__logo-box {
+    width: 10mm;
+    height: 10mm;
+    min-width: 10mm;
+    min-height: 10mm;
+    border-radius: 0.6mm;
+    border: 0.2mm solid #e5e7eb;
+    background: #fafafa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .prize-ticket__logo {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+
+  .prize-ticket__logo-fallback {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 2.4mm;
+    font-family: 'Fraunces', Georgia, serif;
+    color: #b45309;
+    letter-spacing: 0.02em;
+  }
+
+  .prize-ticket__head-text {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .prize-ticket__brandline {
+    margin: 0;
+    padding: 0;
+    line-height: 1.05;
+    font-weight: 800;
+    font-size: 2.5mm;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .prize-ticket__brand-lu {
+    color: #b45309;
+  }
+
+  .prize-ticket__brand-redeem {
+    color: #0f172a;
+  }
+
+  .prize-ticket__school {
+    margin: 0.4mm 0 0 0;
+    font-size: 2.4mm;
+    font-weight: 700;
+    color: #1e293b;
+    line-height: 1.1;
+  }
+
+  .prize-ticket__hero {
+    text-align: center;
+    margin: 1.5mm 0 2mm;
+  }
+
+  .prize-ticket__icon-ring {
+    width: 16mm;
+    height: 16mm;
+    margin: 0 auto 1.4mm;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 0.2mm solid #e2e8f0;
+    border-radius: 999px;
+    background: #f8fafc;
+  }
+
+  .prize-ticket__lucide {
+    width: 9mm !important;
+    height: 9mm !important;
+    color: #0f172a !important;
+  }
+
+  .prize-ticket__prize-name {
+    margin: 0;
+    font-size: 4.4mm;
+    line-height: 1.1;
+    font-weight: 800;
+    font-family: 'Fraunces', Georgia, 'Times New Roman', serif;
+    color: #0f172a;
+    word-break: break-word;
+  }
+
+  .prize-ticket__banner {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5mm 1.2mm;
+    margin: 0 0 1.6mm 0;
+    padding: 0.8mm 0;
+    border-top: 0.2mm solid #000;
+    border-bottom: 0.2mm solid #000;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 800;
+    font-size: 2.1mm;
+    color: #0f172a;
+  }
+
+  .prize-ticket__banner-id {
+    font-weight: 800;
+  }
+
+  .prize-ticket__details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7mm;
+  }
+
+  .prize-ticket__student-block,
+  .prize-ticket__kv {
+    display: grid;
+    grid-template-columns: 1fr 1.1fr;
+    column-gap: 1.2mm;
+    align-items: baseline;
+  }
+
+  .prize-ticket__line-label {
+    font-size: 2.1mm;
+    font-weight: 700;
+    color: #6b7280;
+    text-transform: capitalize;
+  }
+
+  .prize-ticket__line-value {
+    font-size: 2.5mm;
+    font-weight: 600;
+    color: #111;
+    text-align: right;
+    word-break: break-word;
+  }
+
+  .prize-ticket__line-value--name {
+    font-size: 2.7mm;
+    font-weight: 800;
+  }
+
+  .prize-ticket__nick {
+    font-size: 2.1mm;
+    font-weight: 500;
+    color: #4b5563;
+  }
 }
 
 @keyframes fly-up {
@@ -542,6 +756,50 @@
 
 .graphic-text-glow {
   text-shadow: 0 0 8px hsl(var(--primary) / 0.5), 0 0 20px hsl(var(--primary) / 0.3);
+}
+
+/* --- Theme animations (for student theme previews + redeem/prize UI) --- */
+@keyframes theme-gradient-pan {
+  0% {
+    background-position: 0% 50%, 100% 50%, 50% 0%;
+  }
+  50% {
+    background-position: 100% 50%, 0% 50%, 50% 100%;
+  }
+  100% {
+    background-position: 0% 50%, 100% 50%, 50% 0%;
+  }
+}
+
+/**
+ * Adds an animated color wash over the existing themed background.
+ * Intended for on-screen experiences only (prize + redeem), never print.
+ */
+.theme-animated-backdrop {
+  position: relative;
+  overflow: hidden;
+}
+
+.theme-animated-backdrop::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.42;
+  background-image:
+    radial-gradient(circle at 20% 20%, var(--theme-primary, rgba(99, 102, 241, 0.55)) 0%, transparent 55%),
+    radial-gradient(circle at 80% 30%, var(--theme-accent, rgba(236, 72, 153, 0.45)) 0%, transparent 58%),
+    radial-gradient(circle at 50% 80%, var(--theme-bg, rgba(15, 23, 42, 0.22)) 0%, transparent 60%);
+  background-size: 180% 180%;
+  filter: blur(22px) saturate(1.15);
+  transform: translateZ(0);
+  animation: theme-gradient-pan 16s ease-in-out infinite;
+}
+
+.theme-animated-backdrop > * {
+  position: relative;
+  z-index: 1;
 }
 
 /* Legacy Mode Overrides - Strips performance-heavy effects */

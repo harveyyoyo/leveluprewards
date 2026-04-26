@@ -30,14 +30,28 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import type { BackupInfo } from '@/lib/types';
+import {
+  DEFAULT_PLAN,
+  getSchoolEntitlements,
+  PLAN_FEATURE_KEYS,
+  PLAN_FEATURE_LABELS,
+  PLAN_TIERS,
+  PLANS,
+  type PlanFeatureKey,
+  type PlanTier,
+} from '@/lib/plans';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { Helper } from '@/components/ui/helper';
 import { httpsCallable } from 'firebase/functions';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface SchoolInfo {
   id: string;
   name: string;
+  plan?: PlanTier;
+  featureOverrides?: Partial<Record<PlanFeatureKey, boolean>>;
 }
 
 interface SchoolStats {
@@ -170,6 +184,9 @@ export default function DeveloperPage() {
   const [editingSchool, setEditingSchool] = useState<SchoolInfo | null>(null);
   const [editingSchoolName, setEditingSchoolName] = useState('');
   const [editingPasscode, setEditingPasscode] = useState('');
+  const [planSchool, setPlanSchool] = useState<SchoolInfo | null>(null);
+  const [editingPlan, setEditingPlan] = useState<PlanTier>(DEFAULT_PLAN);
+  const [editingFeatureOverrides, setEditingFeatureOverrides] = useState<Partial<Record<PlanFeatureKey, boolean>>>({});
   const [backupSchool, setBackupSchool] = useState<SchoolInfo | null>(null);
   const [schoolBackups, setSchoolBackups] = useState<BackupInfo[]>([]);
   const [statsSchool, setStatsSchool] = useState<SchoolInfo | null>(null);
@@ -432,6 +449,55 @@ export default function DeveloperPage() {
     }
     handleCloseEditModal();
   }
+
+  const handleOpenPlanModal = (school: SchoolInfo) => {
+    setPlanSchool(school);
+    setEditingPlan(school.plan ?? DEFAULT_PLAN);
+    setEditingFeatureOverrides(school.featureOverrides ?? {});
+  };
+
+  const handleClosePlanModal = () => {
+    setPlanSchool(null);
+    setEditingPlan(DEFAULT_PLAN);
+    setEditingFeatureOverrides({});
+  };
+
+  const handleToggleFeatureOverride = (key: PlanFeatureKey, checked: boolean) => {
+    setEditingFeatureOverrides((prev) => ({ ...prev, [key]: checked }));
+  };
+
+  const handleClearFeatureOverride = (key: PlanFeatureKey) => {
+    setEditingFeatureOverrides((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
+
+  const handleSavePlan = async () => {
+    if (!firestore || !planSchool) return;
+    const cleanOverrides = Object.fromEntries(
+      Object.entries(editingFeatureOverrides).filter(([, value]) => typeof value === 'boolean'),
+    ) as Partial<Record<PlanFeatureKey, boolean>>;
+
+    try {
+      await setDoc(
+        doc(firestore, 'schools', planSchool.id),
+        {
+          plan: editingPlan,
+          featureOverrides: cleanOverrides,
+          updatedAt: Date.now(),
+        },
+        { merge: true },
+      );
+      playSound('success');
+      toast({ title: `Plan updated for "${planSchool.id}"`, description: `${PLANS[editingPlan].label} plan saved.` });
+      handleClosePlanModal();
+    } catch (e) {
+      playSound('error');
+      toast({ variant: 'destructive', title: 'Plan update failed', description: (e as Error).message });
+    }
+  };
 
   const handleOpenBackupModal = async (school: SchoolInfo) => {
     if (!firestore) return;
@@ -754,6 +820,9 @@ export default function DeveloperPage() {
                     <div onClick={() => setStatsSchool(school)} className="flex-grow cursor-pointer rounded -m-2 p-2 transition-colors hover:bg-slate-200 dark:hover:bg-slate-700">
                       <p className="font-bold font-code break-all">{school.id}</p>
                       <p className="text-sm text-muted-foreground">{school.name}</p>
+                      <p className="mt-1 inline-flex items-center rounded-md bg-background px-2 py-0.5 text-[11px] font-bold uppercase tracking-widest text-muted-foreground border">
+                        {PLANS[school.plan ?? DEFAULT_PLAN].label} plan
+                      </p>
                       <button
                         onClick={(e) => { e.stopPropagation(); handleCopyUrl(school.id); }}
                         className="mt-1 flex items-center gap-1.5 text-xs text-primary hover:underline font-medium"
@@ -789,6 +858,16 @@ export default function DeveloperPage() {
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" onClick={() => handleOpenPlanModal(school)}>
+                            <ShieldCheck className="w-4 h-4 text-violet-500" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Manage plan and paid features.</p>
+                        </TooltipContent>
+                      </Tooltip>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button variant="ghost" size="icon" onClick={() => handleOpenBackupModal(school)}>
@@ -957,6 +1036,76 @@ export default function DeveloperPage() {
             <DialogFooter>
               <Button variant="secondary" onClick={handleCloseEditModal}>Cancel</Button>
               <Button onClick={handleUpdateSchool}>Save Changes</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={!!planSchool} onOpenChange={(open) => !open && handleClosePlanModal()}>
+          <DialogContent className="max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>Plan & Features: <span className="font-code">{planSchool?.id}</span></DialogTitle>
+              <DialogDescription>
+                Set the school's paid tier and optional per-feature overrides.
+              </DialogDescription>
+            </DialogHeader>
+            {planSchool && (() => {
+              const entitlements = getSchoolEntitlements({ plan: editingPlan, featureOverrides: editingFeatureOverrides });
+              return (
+                <div className="space-y-5 py-4">
+                  <div className="grid gap-2">
+                    <Label>School plan</Label>
+                    <Select value={editingPlan} onValueChange={(value) => setEditingPlan(value as PlanTier)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PLAN_TIERS.map((tier) => (
+                          <SelectItem key={tier} value={tier}>
+                            {PLANS[tier].label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">{PLANS[editingPlan].description}</p>
+                  </div>
+
+                  <div className="max-h-[420px] overflow-y-auto rounded-lg border">
+                    {PLAN_FEATURE_KEYS.map((key) => {
+                      const hasOverride = typeof editingFeatureOverrides[key] === 'boolean';
+                      const planIncludes = PLANS[editingPlan].features.includes(key);
+                      const effective = entitlements[key];
+                      return (
+                        <div key={key} className="flex items-center justify-between gap-3 border-b p-3 last:border-0">
+                          <div className="min-w-0">
+                            <Label className="text-sm font-bold">{PLAN_FEATURE_LABELS[key]}</Label>
+                            <p className="text-xs text-muted-foreground">
+                              {hasOverride ? 'Custom override' : planIncludes ? 'Included in this tier' : 'Locked by this tier'}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            {hasOverride && (
+                              <Button type="button" variant="ghost" size="sm" onClick={() => handleClearFeatureOverride(key)}>
+                                Use tier
+                              </Button>
+                            )}
+                            <Label className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                              <Checkbox
+                                checked={effective}
+                                onCheckedChange={(checked) => handleToggleFeatureOverride(key, checked === true)}
+                              />
+                              Allowed
+                            </Label>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+            <DialogFooter>
+              <Button variant="secondary" onClick={handleClosePlanModal}>Cancel</Button>
+              <Button onClick={handleSavePlan}>Save Plan</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

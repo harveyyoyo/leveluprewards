@@ -21,10 +21,12 @@ export type PlanFeatureKey =
   | 'enableTeacherCharts'
   | 'enableStudentReports'
   | 'enableAttendance'
+  | 'enableClassSignIn'
   | 'enableStudentPortal'
   | 'enableFaceLogin'
   | 'enableQrLogin'
   | 'enablePrizeImages'
+  | 'enableVendingMachine'
   | 'enableWishlist'
   | 'enableAchievements'
   | 'enableBadges'
@@ -49,10 +51,12 @@ export const PLAN_FEATURE_KEYS: PlanFeatureKey[] = [
   'enableTeacherCharts',
   'enableStudentReports',
   'enableAttendance',
+  'enableClassSignIn',
   'enableStudentPortal',
   'enableFaceLogin',
   'enableQrLogin',
   'enablePrizeImages',
+  'enableVendingMachine',
   'enableWishlist',
   'enableAchievements',
   'enableBadges',
@@ -100,6 +104,7 @@ export const PLANS: Record<PlanTier, PlanInfo> = {
     features: [
       'enableAdminAnalytics',
       'enableAttendance',
+      'enableClassSignIn',
       'enableStudentPortal',
       'enableTeacherBudgets',
     ],
@@ -114,6 +119,7 @@ export const PLANS: Record<PlanTier, PlanInfo> = {
       'enableTeacherCharts',
       'enableStudentReports',
       'enableAttendance',
+      'enableClassSignIn',
       'enableStudentPortal',
       'enableFaceLogin',
       'enablePrizeImages',
@@ -145,10 +151,12 @@ export const PLAN_FEATURE_LABELS: Record<PlanFeatureKey, string> = {
   enableTeacherCharts: 'Teacher Analytics',
   enableStudentReports: 'Printable Reports',
   enableAttendance: 'Attendance',
+  enableClassSignIn: 'Class Sign-In',
   enableStudentPortal: 'Student Home Portal',
   enableFaceLogin: 'Face Login',
   enableQrLogin: 'QR Code Login',
   enablePrizeImages: 'Prize Photos',
+  enableVendingMachine: 'Vending Machine',
   enableWishlist: 'Student Wishlists',
   enableAchievements: 'Bonus Points',
   enableBadges: 'Badges',

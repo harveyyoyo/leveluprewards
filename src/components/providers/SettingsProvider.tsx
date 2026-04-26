@@ -1,10 +1,23 @@
 
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useAuth } from './AuthProvider';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useDoc, useFirebase, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import {
+    DEFAULT_PLAN,
+    getSchoolEntitlements,
+    isPlanFeatureKey,
+    normalizePlan,
+    PLAN_FEATURE_KEYS,
+    PLANS,
+    type PlanEntitlements,
+    type PlanTier,
+    type SchoolPlanConfig,
+} from '@/lib/plans';
 
 type ColorScheme = 'default' | 'sky' | 'rose' | 'mint' | 'lavender' | 'peach';
 
@@ -15,6 +28,8 @@ interface Settings {
     soundEnabled: boolean;
     language: string;
     darkMode: boolean;
+    // Theme visuals
+    enableThemeAnimations: boolean;
     // Engagement
     enableAchievements: boolean;
     enableBadges: boolean;
@@ -70,6 +85,10 @@ interface Settings {
 interface SettingsContextType {
     settings: Settings;
     updateSettings: (updates: Partial<Settings>) => void;
+    planTier: PlanTier;
+    planLabel: string;
+    featureEntitlements: PlanEntitlements;
+    isFeatureAllowed: (key: string) => boolean;
     /** True once settings have been loaded from storage. */
     isLoaded: boolean;
 }
@@ -90,6 +109,7 @@ const defaultSettings: Settings = {
     soundEnabled: true,
     language: 'English',
     darkMode: false,
+    enableThemeAnimations: false,
     enableAchievements: false,
     enableBadges: false,
     enableLevels: false,
@@ -142,21 +162,58 @@ const publicLoginSettings: Partial<Settings> = {
 };
 
 export { colorSchemes };
-export type { ColorScheme };
+export type { ColorScheme, Settings };
 
 const SettingsContext = createContext<SettingsContextType | null>(null);
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
     const { schoolId, isInitialized } = useAuth();
+    const { firestore } = useFirebase();
     const [settings, setSettings] = useState<Settings>(defaultSettings);
     const [isLoaded, setIsLoaded] = useState(false);
     const isMobile = useIsMobile();
     const pathname = usePathname();
+    const schoolDocRef = useMemoFirebase(
+        () => (firestore && schoolId ? doc(firestore, 'schools', schoolId) : null),
+        [firestore, schoolId],
+    );
+    const { data: schoolPlanData } = useDoc<SchoolPlanConfig>(schoolDocRef);
+    const planTier = useMemo(
+        () => (schoolId ? normalizePlan(schoolPlanData?.plan) : 'enterprise'),
+        [schoolId, schoolPlanData],
+    );
+    const featureEntitlements = useMemo(
+        () => getSchoolEntitlements(schoolId ? schoolPlanData : { plan: 'enterprise' }),
+        [schoolId, schoolPlanData],
+    );
+    const planLabel = PLANS[planTier]?.label ?? PLANS[DEFAULT_PLAN].label;
     const isPublicLoginRoute =
         pathname === '/' ||
         pathname === '/portal' ||
         pathname === '/login' ||
         (typeof pathname === 'string' && pathname.startsWith('/s/'));
+
+    const isAllowed = (key: string) => {
+        if (key === 'enableClassSignIn') {
+            return featureEntitlements.enableClassSignIn || featureEntitlements.enableAttendance;
+        }
+        if (!isPlanFeatureKey(key)) return true;
+        return featureEntitlements[key];
+    };
+
+    const applyEntitlements = (input: Settings): Settings => {
+        const next = { ...input };
+        for (const key of PLAN_FEATURE_KEYS) {
+            if (!isAllowed(key)) {
+                (next as Record<string, unknown>)[key] = false;
+            }
+        }
+        if (!isAllowed('enableClassSignIn')) {
+            next.enableClassSignIn = false;
+            next.enableAttendance = false;
+        }
+        return next;
+    };
 
     useEffect(() => {
         if (!isInitialized) {
@@ -179,9 +236,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                 if (typeof parsed.enableClassSignIn !== 'boolean' && typeof parsed.enableAttendance === 'boolean') {
                     parsed.enableClassSignIn = parsed.enableAttendance;
                 }
-                setSettings({ ...defaultSettings, ...parsed });
+                setSettings(applyEntitlements({ ...defaultSettings, ...parsed }));
             } catch (e) {
-                setSettings(defaultSettings);
+                setSettings(applyEntitlements(defaultSettings));
             }
         } else {
             // No settings for this school, use defaults and show the intro wizard once.
@@ -192,15 +249,27 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             if (isMobile) {
                 initialSettings.displayMode = 'app';
             }
-            setSettings(initialSettings);
+            setSettings(applyEntitlements(initialSettings));
         }
         setIsLoaded(true);
-    }, [schoolId, isInitialized, isMobile]);
+    }, [schoolId, isInitialized, isMobile, featureEntitlements]);
 
     const updateSettings = (updates: Partial<Settings>) => {
         const settingsKey = schoolId ? `arcade_settings_${schoolId}` : 'arcade_settings_global';
         setSettings((prev) => {
-            const next = { ...prev, ...updates };
+            const allowedUpdates = { ...updates };
+            if (typeof allowedUpdates.enableClassSignIn === 'boolean') {
+                allowedUpdates.enableAttendance = allowedUpdates.enableClassSignIn;
+            }
+            if (typeof allowedUpdates.enableAttendance === 'boolean') {
+                allowedUpdates.enableClassSignIn = allowedUpdates.enableAttendance;
+            }
+            for (const key of Object.keys(allowedUpdates)) {
+                if (!isAllowed(key)) {
+                    delete (allowedUpdates as Record<string, unknown>)[key];
+                }
+            }
+            const next = applyEntitlements({ ...prev, ...allowedUpdates });
 
             localStorage.setItem(settingsKey, JSON.stringify(next));
 
@@ -255,7 +324,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     }, [isLoaded, isPublicLoginRoute, settings]);
 
     return (
-        <SettingsContext.Provider value={{ settings, updateSettings, isLoaded }}>
+        <SettingsContext.Provider value={{ settings, updateSettings, planTier, planLabel, featureEntitlements, isFeatureAllowed: isAllowed, isLoaded }}>
             {children}
         </SettingsContext.Provider>
     );

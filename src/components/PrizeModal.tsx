@@ -34,6 +34,7 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses }: P
   const [points, setPoints] = useState('0');
   const [icon, setIcon] = useState('Gift');
   const [inStock, setInStock] = useState(true);
+  const [offerPrintTicketOnRedeem, setOfferPrintTicketOnRedeem] = useState(false);
   const [teacherId, setTeacherId] = useState('');
   const [classId, setClassId] = useState('');
   const { toast } = useToast();
@@ -48,6 +49,7 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses }: P
         setPoints(prize.points.toString());
         setIcon(prize.icon);
         setInStock(prize.inStock);
+        setOfferPrintTicketOnRedeem(prize.offerPrintTicketOnRedeem === true);
         setTeacherId(prize.teacherId || '');
         setClassId(prize.classId || '');
       } else { // Create mode
@@ -55,6 +57,7 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses }: P
         setPoints('0');
         setIcon('Gift');
         setInStock(true);
+        setOfferPrintTicketOnRedeem(false);
         setTeacherId('');
         setClassId('');
       }
@@ -75,12 +78,12 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses }: P
     }
 
     if (isEditing && prize) {
-      const updatedPrize: Prize = { ...prize, name, points: pointsValue, icon, inStock, teacherId: teacherId || undefined, classId: classId || undefined, addedBy: 'Admin' };
+      const updatedPrize: Prize = { ...prize, name, points: pointsValue, icon, inStock, offerPrintTicketOnRedeem, teacherId: teacherId || undefined, classId: classId || undefined, addedBy: 'Admin' };
       await updatePrize(updatedPrize);
       playSound('success');
       toast({ title: 'Prize updated!' });
     } else {
-      const newPrize = { name, points: pointsValue, icon, inStock, teacherId: teacherId || undefined, classId: classId || undefined, addedBy: 'Admin' };
+      const newPrize = { name, points: pointsValue, icon, inStock, offerPrintTicketOnRedeem, teacherId: teacherId || undefined, classId: classId || undefined, addedBy: 'Admin' };
       await addPrize(newPrize);
       playSound('success');
       toast({ title: 'Prize added!' });
@@ -156,6 +159,19 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses }: P
               id="in-stock"
               checked={inStock}
               onCheckedChange={setInStock}
+            />
+          </div>
+          <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
+            <div className="space-y-0.5">
+              <Label htmlFor="print-ticket">Print redeem ticket</Label>
+              <p className="text-xs text-muted-foreground">
+                After a student redeems, offer to print a ticket in the Prize Shop.
+              </p>
+            </div>
+            <Switch
+              id="print-ticket"
+              checked={offerPrintTicketOnRedeem}
+              onCheckedChange={setOfferPrintTicketOnRedeem}
             />
           </div>
         </div>

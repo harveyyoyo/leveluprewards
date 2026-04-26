@@ -21,7 +21,7 @@ import {
     Bell, Shield, Moon, Sun, ArrowLeft, Palette, Zap, Trophy,
     BarChart3, MessageSquare, ShoppingBag, ShieldCheck, Star,
     Users, Database, Printer, LayoutDashboard, History, HelpCircle,
-    Cpu, Award, Clock, Cog
+    Cpu, Award, Clock, Cog, Lock, Sparkles
 } from 'lucide-react';
 import { useSettings, colorSchemes, type ColorScheme } from '../providers/SettingsProvider';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
@@ -29,19 +29,20 @@ import { VendingMotorPanel } from '@/components/VendingMotorPanel';
 
 type SettingsView = 'main' | 'features';
 
-function FeatureRow({ id, label, desc, icon, settings, onToggle, onConfigure, isImplemented = true, isAdmin = true }: {
+function FeatureRow({ id, label, desc, icon, settings, onToggle, onConfigure, isImplemented = true, isAdmin = true, isAllowed = true, planLabel }: {
     id: string; label: string; desc: string; icon: React.ReactNode;
-    settings: any; onToggle: (key: string, val: any) => void; onConfigure?: () => void; isImplemented?: boolean; isAdmin?: boolean;
+    settings: any; onToggle: (key: string, val: any) => void; onConfigure?: () => void; isImplemented?: boolean; isAdmin?: boolean; isAllowed?: boolean; planLabel?: string;
 }) {
     const isEnabled = settings[id] || false;
+    const canUse = isImplemented && isAllowed;
     return (
         <div className="flex items-start justify-between py-4 px-3 border-b border-border/40 last:border-0 hover:bg-muted/30 rounded-xl transition-colors">
-            <div className={`flex items-start gap-4 ${!isImplemented && 'opacity-60'} mr-6`}>
-                <div className={`p-2.5 rounded-xl transition-colors shrink-0 mt-0.5 ${(isEnabled && isImplemented) ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
+            <div className={`flex items-start gap-4 ${!canUse && 'opacity-60'} mr-6`}>
+                <div className={`p-2.5 rounded-xl transition-colors shrink-0 mt-0.5 ${(isEnabled && canUse) ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
                     {icon}
                 </div>
                 <div className="flex flex-col">
-                    <Label className="font-bold text-sm block text-foreground mb-1" htmlFor={isImplemented && isAdmin ? id : undefined}>{label}</Label>
+                    <Label className="font-bold text-sm block text-foreground mb-1" htmlFor={canUse && isAdmin ? id : undefined}>{label}</Label>
                     <p className="text-xs text-muted-foreground leading-relaxed w-full pr-4">{desc}</p>
                 </div>
             </div>
@@ -55,7 +56,7 @@ function FeatureRow({ id, label, desc, icon, settings, onToggle, onConfigure, is
                                 size="icon"
                                 className="h-9 w-9 rounded-xl"
                                 onClick={onConfigure}
-                                disabled={!isAdmin}
+                                disabled={!isAdmin || !isAllowed}
                                 title={`${label} settings`}
                                 aria-label={`${label} settings`}
                             >
@@ -64,12 +65,17 @@ function FeatureRow({ id, label, desc, icon, settings, onToggle, onConfigure, is
                         ) : null}
                         <Switch
                             id={id}
-                            checked={isEnabled}
+                            checked={isEnabled && isAllowed}
                             onCheckedChange={(checked) => onToggle(id, checked)}
-                            disabled={!isAdmin}
+                            disabled={!isAdmin || !isAllowed}
                         />
                     </div>
                     {!isAdmin && <span className="text-[10px] text-muted-foreground mt-2 font-black uppercase tracking-widest whitespace-nowrap">Admin Only</span>}
+                    {isAdmin && !isAllowed && (
+                        <span className="text-[10px] text-amber-700 dark:text-amber-400 mt-2 font-black uppercase tracking-widest whitespace-nowrap flex items-center gap-1" title={`Current plan: ${planLabel ?? 'Free'}`}>
+                            <Lock className="h-3 w-3" /> Upgrade
+                        </span>
+                    )}
                 </div>
             ) : (
                 <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground bg-muted px-3 py-1.5 rounded-md mt-1 whitespace-nowrap">
@@ -83,7 +89,7 @@ function FeatureRow({ id, label, desc, icon, settings, onToggle, onConfigure, is
 export function SettingsModal() {
     const { loginState } = useAppContext();
     const isAdmin = loginState === 'admin' || loginState === 'developer';
-    const { settings, updateSettings } = useSettings();
+    const { settings, updateSettings, isFeatureAllowed, planLabel } = useSettings();
     const playSound = useArcadeSound();
     const [view, setView] = useState<SettingsView>('main');
     const [vendingSettingsOpen, setVendingSettingsOpen] = useState(false);
@@ -299,6 +305,8 @@ export function SettingsModal() {
                                     onToggle={handleToggle}
                                     isImplemented={true}
                                     isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableTeacherBudgets')}
+                                    planLabel={planLabel}
                                 />
                                 <FeatureRow
                                     id="enableBulkPoints"
@@ -309,6 +317,8 @@ export function SettingsModal() {
                                     onToggle={handleToggle}
                                     isImplemented={false}
                                     isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableBulkPoints')}
+                                    planLabel={planLabel}
                                 />
                             </div>
 
@@ -323,6 +333,8 @@ export function SettingsModal() {
                                     onToggle={handleToggle}
                                     isImplemented={true}
                                     isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableAdminAnalytics')}
+                                    planLabel={planLabel}
                                 />
                                 <FeatureRow
                                     id="enableTeacherCharts"
@@ -333,6 +345,8 @@ export function SettingsModal() {
                                     onToggle={handleToggle}
                                     isImplemented={false}
                                     isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableTeacherCharts')}
+                                    planLabel={planLabel}
                                 />
                                 <FeatureRow
                                     id="enableStudentReports"
@@ -343,6 +357,8 @@ export function SettingsModal() {
                                     onToggle={handleToggle}
                                     isImplemented={false}
                                     isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableStudentReports')}
+                                    planLabel={planLabel}
                                 />
                             </div>
 
@@ -357,6 +373,8 @@ export function SettingsModal() {
                                     onToggle={handleToggle}
                                     isImplemented={true}
                                     isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableClassSignIn')}
+                                    planLabel={planLabel}
                                 />
                             </div>
 
@@ -371,6 +389,20 @@ export function SettingsModal() {
                                     onToggle={handleToggle}
                                     isImplemented={true}
                                     isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableStudentPortal')}
+                                    planLabel={planLabel}
+                                />
+                                <FeatureRow
+                                    id="enableThemeAnimations"
+                                    label="Theme Animations"
+                                    desc="Add gentle motion to student themes in the Prize Shop and student redeem experience (does not affect printed ID cards)."
+                                    icon={<Sparkles className="w-5 h-5" />}
+                                    settings={settings}
+                                    onToggle={handleToggle}
+                                    isImplemented={true}
+                                    isAdmin={isAdmin}
+                                    isAllowed={true}
+                                    planLabel={planLabel}
                                 />
                                 <FeatureRow
                                     id="enableFaceLogin"
@@ -381,6 +413,8 @@ export function SettingsModal() {
                                     onToggle={handleToggle}
                                     isImplemented={true}
                                     isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableFaceLogin')}
+                                    planLabel={planLabel}
                                 />
                                 <FeatureRow
                                     id="enableQrLogin"
@@ -391,6 +425,8 @@ export function SettingsModal() {
                                     onToggle={handleToggle}
                                     isImplemented={false}
                                     isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableQrLogin')}
+                                    planLabel={planLabel}
                                 />
                                 <FeatureRow
                                     id="enablePrizeImages"
@@ -401,6 +437,8 @@ export function SettingsModal() {
                                     onToggle={handleToggle}
                                     isImplemented={false}
                                     isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enablePrizeImages')}
+                                    planLabel={planLabel}
                                 />
                                 <FeatureRow
                                     id="enableWishlist"
@@ -411,6 +449,8 @@ export function SettingsModal() {
                                     onToggle={handleToggle}
                                     isImplemented={false}
                                     isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableWishlist')}
+                                    planLabel={planLabel}
                                 />
                             </div>
 
@@ -425,6 +465,8 @@ export function SettingsModal() {
                                     onToggle={handleToggle}
                                     isImplemented={true}
                                     isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableAchievements')}
+                                    planLabel={planLabel}
                                 />
                                 <FeatureRow
                                     id="enableBadges"
@@ -435,6 +477,8 @@ export function SettingsModal() {
                                     onToggle={handleToggle}
                                     isImplemented={true}
                                     isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableBadges')}
+                                    planLabel={planLabel}
                                 />
                                 <FeatureRow
                                     id="enableLevels"
@@ -445,6 +489,8 @@ export function SettingsModal() {
                                     onToggle={handleToggle}
                                     isImplemented={false}
                                     isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableLevels')}
+                                    planLabel={planLabel}
                                 />
                                 <FeatureRow
                                     id="enableStreaks"
@@ -455,6 +501,8 @@ export function SettingsModal() {
                                     onToggle={handleToggle}
                                     isImplemented={false}
                                     isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableStreaks')}
+                                    planLabel={planLabel}
                                 />
                             </div>
 
@@ -470,6 +518,8 @@ export function SettingsModal() {
                                     onConfigure={() => setVendingSettingsOpen(true)}
                                     isImplemented={true}
                                     isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableVendingMachine')}
+                                    planLabel={planLabel}
                                 />
                             </div>
 
