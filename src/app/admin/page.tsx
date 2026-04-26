@@ -994,6 +994,7 @@ function AdminDashboardInner() {
               onEditPrize={(p) => handleOpenPrizeModal(p)}
               onDeletePrize={deletePrize}
               onToggleInStock={(p, inStock) => updatePrize({ ...p, inStock })}
+              onUpdatePrize={updatePrize}
             />
           </TabsContent>
 
