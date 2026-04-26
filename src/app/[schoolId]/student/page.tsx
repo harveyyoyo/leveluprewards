@@ -15,6 +15,7 @@ import { SchoolGate } from '@/components/SchoolGate';
 import { lookupStudentId } from '@/lib/db';
 import dynamic from 'next/dynamic';
 import { StudentIdCard } from '@/components/StudentIdCard';
+import type { StudentFoundMeta } from '@/components/StudentScanner';
 
 // ~32 KB (plus @vladmandic/face-api on the face tab). Load only when the
 // kiosk actually needs to scan a student.
@@ -1029,9 +1030,21 @@ export default function StudentLoginPage() {
   const { settings } = useSettings();
   const isGraphic = settings.graphicMode === 'graphics';
 
-  const { activeStudentId, setActiveStudentId, handleDone, loginMeta } = useActiveStudentSession();
+  const { activeStudentId, setActiveStudentId, handleDone, loginMeta, setLoginMeta } = useActiveStudentSession();
   const activeStudentIdRef = useRef<string | null>(null);
   activeStudentIdRef.current = activeStudentId;
+
+  const onScannerStudent = useCallback(
+    (id: string, meta?: StudentFoundMeta) => {
+      setActiveStudentId(id);
+      if (meta?.source === 'face') {
+        setLoginMeta({ source: 'face', confidence: meta.confidence });
+      } else {
+        setLoginMeta(null);
+      }
+    },
+    [setActiveStudentId, setLoginMeta],
+  );
 
   const handleStudentLogout = useCallback(() => {
     playSound('swoosh');
@@ -1100,7 +1113,7 @@ export default function StudentLoginPage() {
           } as any}
         >
           <StudentScanner
-            onStudentFound={setActiveStudentId}
+            onStudentFound={onScannerStudent}
             title="Student Portal"
             icon={<GraduationCap className="w-8 h-8" />}
           />

@@ -14,7 +14,8 @@ import { collection, query, orderBy, limit, doc } from 'firebase/firestore';
 import { SchoolGate } from '@/components/SchoolGate';
 import { httpsCallable } from 'firebase/functions';
 import { lookupStudentId } from '@/lib/db';
-import { StudentScanner } from '@/components/StudentScanner';
+import { StudentScanner, type StudentFoundMeta } from '@/components/StudentScanner';
+import { FaceMismatchBanner } from '@/components/FaceMismatchBanner';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -734,7 +735,7 @@ export default function StudentLoginPage() {
   const isGraphic = settings.graphicMode === 'graphics';
   const functions = useFunctions();
 
-  const { activeStudentId, setActiveStudentId, handleDone } = useActiveStudentSession();
+  const { activeStudentId, setActiveStudentId, handleDone, loginMeta, setLoginMeta } = useActiveStudentSession();
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
   const [logoutPasscode, setLogoutPasscode] = useState('');
 
@@ -767,6 +768,18 @@ export default function StudentLoginPage() {
     }
   }, [schoolId, functions, logoutPasscode, activeStudentId, playSound, router, toast, setActiveStudentId]);
 
+  const onScannerStudent = useCallback(
+    (id: string, meta?: StudentFoundMeta) => {
+      setActiveStudentId(id);
+      if (meta?.source === 'face') {
+        setLoginMeta({ source: 'face', confidence: meta.confidence });
+      } else {
+        setLoginMeta(null);
+      }
+    },
+    [setActiveStudentId, setLoginMeta],
+  );
+
   if (!isInitialized || !['student', 'teacher', 'admin', 'school'].includes(loginState)) {
     return <div className="min-h-screen flex items-center justify-center p-8 bg-background">
       <div className="text-center space-y-4">
@@ -778,15 +791,24 @@ export default function StudentLoginPage() {
 
   if (activeStudentId) {
     return (
-      <ErrorBoundary name="StudentDashboard">
-        <SchoolGate>
-          <StudentDashboardInner
+      <>
+        {loginMeta?.source === 'face' && (
+          <FaceMismatchBanner
             studentId={activeStudentId}
-            onDone={handleDone}
-            onRequestExit={() => setIsLogoutDialogOpen(true)}
+            confidence={loginMeta.confidence}
+            onResolved={handleDone}
           />
-        </SchoolGate>
-      </ErrorBoundary>
+        )}
+        <ErrorBoundary name="StudentDashboard">
+          <SchoolGate>
+            <StudentDashboardInner
+              studentId={activeStudentId}
+              onDone={handleDone}
+              onRequestExit={() => setIsLogoutDialogOpen(true)}
+            />
+          </SchoolGate>
+        </ErrorBoundary>
+      </>
     );
   }
 
@@ -799,7 +821,7 @@ export default function StudentLoginPage() {
           settings.displayMode === 'app' && 'pb-24'
         )}>
           <StudentScanner
-            onStudentFound={setActiveStudentId}
+            onStudentFound={onScannerStudent}
             title="Student Portal"
             icon={<GraduationCap className="w-8 h-8 text-chart-1" />}
           />

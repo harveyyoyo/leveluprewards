@@ -2,6 +2,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { useAuth } from './AuthProvider';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -46,6 +47,7 @@ interface Settings {
     enableMultiAdmin: boolean;
     enableStudentPortal: boolean;
     enableClassSignIn: boolean;
+    enableFaceLogin: boolean;
     /** Back-compat alias used by some pages/components. */
     enableAttendance: boolean;
     // Guidance
@@ -113,6 +115,7 @@ const defaultSettings: Settings = {
     enableMultiAdmin: false,
     enableStudentPortal: false,
     enableClassSignIn: false,
+    enableFaceLogin: false,
     enableAttendance: false,
     enableHelperMode: true,
     showIntroWizard: false,
@@ -126,6 +129,16 @@ const defaultSettings: Settings = {
     hiddenAnimatedBackgroundIds: [],
 };
 
+const publicLoginSettings: Partial<Settings> = {
+    graphicMode: 'classic',
+    displayMode: 'web',
+    colorScheme: 'default',
+    soundEnabled: false,
+    darkMode: false,
+    enableAnimatedBackground: false,
+    // Keep feature toggles as-is; this only enforces a neutral look/feel.
+};
+
 export { colorSchemes };
 export type { ColorScheme };
 
@@ -136,6 +149,12 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     const [settings, setSettings] = useState<Settings>(defaultSettings);
     const [isLoaded, setIsLoaded] = useState(false);
     const isMobile = useIsMobile();
+    const pathname = usePathname();
+    const isPublicLoginRoute =
+        pathname === '/' ||
+        pathname === '/portal' ||
+        pathname === '/login' ||
+        (typeof pathname === 'string' && pathname.startsWith('/s/'));
 
     useEffect(() => {
         if (!isInitialized) {
@@ -217,6 +236,21 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             root.classList.remove('legacy');
         }
     }, [settings.legacyMode, isLoaded]);
+
+    // Force a neutral public appearance on public/login routes regardless of saved settings.
+    useEffect(() => {
+        if (!isLoaded) return;
+        if (!isPublicLoginRoute) return;
+
+        const root = document.documentElement;
+        const next = { ...settings, ...publicLoginSettings };
+
+        if (next.darkMode) root.classList.add('dark');
+        else root.classList.remove('dark');
+
+        root.classList.toggle('legacy', !!next.legacyMode);
+        root.setAttribute('data-color-scheme', next.colorScheme ?? 'default');
+    }, [isLoaded, isPublicLoginRoute, settings]);
 
     return (
         <SettingsContext.Provider value={{ settings, updateSettings, isLoaded }}>

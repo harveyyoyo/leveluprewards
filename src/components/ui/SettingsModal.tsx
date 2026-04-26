@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useAppContext } from '@/components/AppProvider';
+import { usePathname } from 'next/navigation';
 import {
     Dialog,
     DialogContent,
@@ -68,6 +69,15 @@ export function SettingsModal() {
     const { settings, updateSettings } = useSettings();
     const playSound = useArcadeSound();
     const [view, setView] = useState<SettingsView>('main');
+    const pathname = usePathname();
+    const isPublicLoginRoute =
+        pathname === '/' ||
+        pathname === '/portal' ||
+        pathname === '/login' ||
+        (typeof pathname === 'string' && pathname.startsWith('/s/'));
+
+    // For short-link kiosk entry routes, keep the UI minimal.
+    if (typeof pathname === 'string' && pathname.startsWith('/s/')) return null;
 
     const handleToggle = (key: string, value: any) => {
         updateSettings({ [key]: value } as any);
@@ -339,6 +349,16 @@ export function SettingsModal() {
                                     label="Student Home Portal"
                                     desc="Let students log in from home to see their points, recent activity, and which prizes they can afford."
                                     icon={<Smartphone className="w-5 h-5" />}
+                                    settings={settings}
+                                    onToggle={handleToggle}
+                                    isImplemented={true}
+                                    isAdmin={isAdmin}
+                                />
+                                <FeatureRow
+                                    id="enableFaceLogin"
+                                    label="Face Login"
+                                    desc="Allow students to sign in using the kiosk webcam. Requires camera permission and deployed Cloud Functions."
+                                    icon={<Shield className="w-5 h-5" />}
                                     settings={settings}
                                     onToggle={handleToggle}
                                     isImplemented={true}

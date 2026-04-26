@@ -2,6 +2,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   /* config options here */
+  webpack: (config) => {
+    // @vladmandic/face-api uses dynamic requires; webpack warns but the bundle works.
+    config.ignoreWarnings = [
+      ...(config.ignoreWarnings || []),
+      { module: /@vladmandic\/face-api/ },
+    ];
+    return config;
+  },
   images: {
     remotePatterns: [
       {

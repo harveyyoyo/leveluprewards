@@ -54,6 +54,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { GoogleFontLoader } from '@/components/GoogleFontLoader';
 import { useActiveStudentSession } from '@/hooks/useActiveStudentSession';
+import type { StudentFoundMeta } from '@/components/StudentScanner';
 import { rainbowTripletForNavId, complementTripletForNavId } from '@/lib/rainbowNav';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
 import { prizeIsListed, stripLeadingEmojiFromPrizeName, studentSeesPrizeByTeachers } from '@/lib/prize-utils';
@@ -962,7 +963,19 @@ export default function PrizePage() {
     const { settings } = useSettings();
     const firestore = useFirestore();
 
-    const { activeStudentId, setActiveStudentId, handleDone, loginMeta } = useActiveStudentSession();
+    const { activeStudentId, setActiveStudentId, handleDone, loginMeta, setLoginMeta } = useActiveStudentSession();
+
+    const onScannerStudent = useCallback(
+        (id: string, meta?: StudentFoundMeta) => {
+            setActiveStudentId(id);
+            if (meta?.source === 'face') {
+                setLoginMeta({ source: 'face', confidence: meta.confidence });
+            } else {
+                setLoginMeta(null);
+            }
+        },
+        [setActiveStudentId, setLoginMeta],
+    );
     // Kiosk lock removed.
 
     if (!isInitialized || !['student', 'teacher', 'admin', 'school', 'developer'].includes(loginState)) {
@@ -1008,7 +1021,7 @@ export default function PrizePage() {
               } as any}
             >
                 <StudentScanner
-                    onStudentFound={setActiveStudentId}
+                    onStudentFound={onScannerStudent}
                     title="Prize Redemption"
                     description="Choose how to identify the student below."
                     icon={<Gift className="w-10 h-10" />}

@@ -141,6 +141,11 @@ service cloud.firestore {
         allow create: if isAuth();
         allow update, delete: if isAdmin(schoolId);
       }
+
+      // Face auth descriptors are private and only accessible via Admin SDK / Cloud Functions.
+      match /faceAuth/{studentId} {
+        allow read, write: if false;
+      }
     }
   }
 }
