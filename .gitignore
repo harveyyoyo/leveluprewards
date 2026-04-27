@@ -40,6 +40,9 @@ next-env.d.ts
 .genkit/*
 .env*
 
+# face-api weights (copied by scripts/copy-face-models.mjs on postinstall / prebuild)
+public/face-api/model/
+
 # firebase
 firebase-debug.log
 firestore-debug.log

@@ -2,12 +2,20 @@
 
 import { useCallback, useRef } from 'react';
 
-const FACE_API_MODEL_BASE_URL =
+/** Same-origin models (see `scripts/copy-face-models.mjs` + postinstall). */
+const FACE_API_MODEL_LOCAL = '/face-api/model/';
+const FACE_API_MODEL_CDN =
   'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.15/model/';
+
+async function loadFaceApiNets(faceapi: typeof import('@vladmandic/face-api'), baseUrl: string) {
+  await faceapi.nets.tinyFaceDetector.loadFromUri(baseUrl);
+  await faceapi.nets.faceLandmark68TinyNet.loadFromUri(baseUrl);
+  await faceapi.nets.faceRecognitionNet.loadFromUri(baseUrl);
+}
 
 /**
  * Shared, lazy-loaded face-api bootstrap. The library is ~600 KB (plus model
- * weights fetched from a CDN) so we only want to pay that cost once per
+ * weights served from this app or a CDN) so we only want to pay that cost once per
  * session, the first time anyone (kiosk or admin) uses face recognition.
  *
  * Returns:
@@ -26,9 +34,19 @@ export function useFaceDescriptor() {
     if (faceApiReadyRef.current) return faceApiReadyRef.current;
     faceApiReadyRef.current = (async () => {
       const faceapi = await import('@vladmandic/face-api');
-      await faceapi.nets.tinyFaceDetector.loadFromUri(FACE_API_MODEL_BASE_URL);
-      await faceapi.nets.faceLandmark68TinyNet.loadFromUri(FACE_API_MODEL_BASE_URL);
-      await faceapi.nets.faceRecognitionNet.loadFromUri(FACE_API_MODEL_BASE_URL);
+      try {
+        await loadFaceApiNets(faceapi, FACE_API_MODEL_LOCAL);
+      } catch (localErr) {
+        console.warn('[face-api] local model load failed, trying CDN', localErr);
+        try {
+          await loadFaceApiNets(faceapi, FACE_API_MODEL_CDN);
+        } catch (cdnErr) {
+          const hint =
+            'Could not load face recognition models. If you are on a school network, ask IT to allow this app’s domain; ' +
+            'otherwise check your connection and try again.';
+          throw new Error(hint, { cause: cdnErr });
+        }
+      }
       return faceapi;
     })();
     return faceApiReadyRef.current;
