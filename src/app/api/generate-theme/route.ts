@@ -6,6 +6,48 @@ import { guardAiRoute } from '@/lib/apiAuth';
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 const defaultOpenAI = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || '' });
 
+type ThemeResponse = {
+    background: string;
+    text: string;
+    primary: string;
+    cardBackground: string;
+    accent: string;
+    emoji: string;
+    fontFamily: string;
+    backgroundStyle?: string | null;
+};
+
+const HEX_COLOR = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
+const SAFE_BACKGROUND = /^(?:(?:repeating-)?linear-gradient|radial-gradient)\([#0-9a-zA-Z.,%\s-]+\)$/;
+
+function asString(value: unknown): string {
+    return typeof value === 'string' ? value.trim() : '';
+}
+
+function requireHex(value: unknown, fallback: string): string {
+    const candidate = asString(value);
+    return HEX_COLOR.test(candidate) ? candidate : fallback;
+}
+
+function sanitizeTheme(raw: unknown): ThemeResponse | null {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+    const data = raw as Record<string, unknown>;
+    const backgroundStyle = asString(data.backgroundStyle);
+    const fontFamily = asString(data.fontFamily).replace(/[^\w\s-]/g, '').slice(0, 80);
+    const emoji = asString(data.emoji);
+
+    return {
+        background: requireHex(data.background, '#020617'),
+        text: requireHex(data.text, '#ffffff'),
+        primary: requireHex(data.primary, '#0ea5e9'),
+        cardBackground: requireHex(data.cardBackground, '#111827'),
+        accent: requireHex(data.accent, '#22c55e'),
+        emoji: emoji ? Array.from(emoji)[0] : '⭐',
+        fontFamily: fontFamily || 'Inter',
+        backgroundStyle: backgroundStyle && SAFE_BACKGROUND.test(backgroundStyle) ? backgroundStyle : null,
+    };
+}
+
 export async function POST(req: NextRequest) {
     try {
         const guarded = await guardAiRoute(req, { requireSchoolStaff: true, maxRequests: 12 });
@@ -79,7 +121,10 @@ Required schema:
 
 
         try {
-            const theme = JSON.parse(responseText);
+            const theme = sanitizeTheme(JSON.parse(responseText));
+            if (!theme) {
+                throw new Error('AI response was not an object');
+            }
             return NextResponse.json(theme);
         } catch (parseError) {
             console.error('Failed to parse Gemini response as JSON:', responseText);

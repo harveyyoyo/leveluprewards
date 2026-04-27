@@ -108,7 +108,14 @@ export function ThemeGeneratorModal({
         setGradientA(previewTheme.primary || previewTheme.background || '#0ea5e9');
         setGradientB(previewTheme.accent || previewTheme.cardBackground || '#22c55e');
         setBackgroundMode(previewTheme.backgroundStyle ? 'custom' : 'solid');
-    }, [previewTheme?.primary, previewTheme?.accent, previewTheme?.backgroundStyle]);
+    }, [
+        previewTheme,
+        previewTheme?.primary,
+        previewTheme?.accent,
+        previewTheme?.background,
+        previewTheme?.cardBackground,
+        previewTheme?.backgroundStyle,
+    ]);
 
     const handleGenerate = async () => {
         if (!prompt.trim()) {

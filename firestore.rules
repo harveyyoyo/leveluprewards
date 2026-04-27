@@ -14,6 +14,50 @@ service cloud.firestore {
       return isAuth() && roleDocData != null && roleDocData.role == 'admin';
     }
 
+    function teacherRoleData(schoolId) {
+      return get(/databases/$(database)/documents/schools/$(schoolId)/roles_teacher/$(request.auth.uid)).data;
+    }
+
+    function isTeacher(schoolId) {
+      return isAuth()
+        && exists(/databases/$(database)/documents/schools/$(schoolId)/roles_teacher/$(request.auth.uid))
+        && teacherRoleData(schoolId).role == 'teacher';
+    }
+
+    function teacherIdFor(schoolId) {
+      return teacherRoleData(schoolId).teacherId;
+    }
+
+    function isTeacherSelf(schoolId, teacherId) {
+      return isTeacher(schoolId) && teacherIdFor(schoolId) == teacherId;
+    }
+
+    function isTeacherOwnedCreate(schoolId) {
+      return isTeacher(schoolId)
+        && request.resource.data.teacherId is string
+        && request.resource.data.teacherId == teacherIdFor(schoolId);
+    }
+
+    function isTeacherOwnedPrizeCreate(schoolId) {
+      return isTeacher(schoolId)
+        && (
+          (request.resource.data.teacherId is string && request.resource.data.teacherId == teacherIdFor(schoolId))
+          || (request.resource.data.teacherIds is list && teacherIdFor(schoolId) in request.resource.data.teacherIds)
+        );
+    }
+
+    function isTeacherOwnedPrizeUpdate(schoolId) {
+      return isTeacher(schoolId)
+        && (
+          (resource.data.teacherId is string && resource.data.teacherId == teacherIdFor(schoolId))
+          || (resource.data.teacherIds is list && teacherIdFor(schoolId) in resource.data.teacherIds)
+        )
+        && (
+          (request.resource.data.teacherId is string && request.resource.data.teacherId == teacherIdFor(schoolId))
+          || (request.resource.data.teacherIds is list && teacherIdFor(schoolId) in request.resource.data.teacherIds)
+        );
+    }
+
     function isDeveloper() {
       return isAuth() && exists(/databases/$(database)/documents/appConfig/global)
         && 'developerUids' in get(/databases/$(database)/documents/appConfig/global).data
@@ -29,7 +73,7 @@ service cloud.firestore {
     
     match /schools/{schoolId} {
       allow read: if isAuth();
-      allow create: if isAuth();
+      allow create: if isDeveloper();
       allow update, delete: if isAdmin(schoolId) || isDeveloper();
 
       // Read: any authenticated user (access control enforced at the
@@ -38,67 +82,86 @@ service cloud.firestore {
       // Write: only provisioned admins.
 
       match /students/{studentId} {
-        allow read: if isAdmin(schoolId);
-        allow write: if isAdmin(schoolId);
+        allow read: if isAdmin(schoolId) || isTeacher(schoolId);
+        allow create, delete: if isAdmin(schoolId);
+        allow update: if isAdmin(schoolId) || isTeacher(schoolId);
 
         match /activities/{activityId} {
-          allow read: if isAdmin(schoolId);
-          allow write: if isAdmin(schoolId);
+          allow read: if isAdmin(schoolId) || isTeacher(schoolId);
+          allow create, update: if isAdmin(schoolId) || isTeacher(schoolId);
+          allow delete: if isAdmin(schoolId);
         }
       }
       
       match /teachers/{teacherId} {
-        allow read: if isAdmin(schoolId);
-        allow write: if isAdmin(schoolId);
+        allow read: if isAdmin(schoolId) || isTeacher(schoolId);
+        allow create, delete: if isAdmin(schoolId);
+        allow update: if isAdmin(schoolId)
+          || (
+            isTeacherSelf(schoolId, teacherId)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['spentThisMonth'])
+          );
       }
 
       // Per-teacher attendance configuration (stored under each teacher document).
       match /teachers/{teacherId}/attendanceConfig/{docId} {
-        // Admins and developers can manage all configs. You can later relax this
-        // to also allow the specific teacher's UID if you map auth.uid -> teacherId.
-        allow read, write: if isAdmin(schoolId) || isDeveloper();
+        allow read, write: if isAdmin(schoolId) || isDeveloper() || isTeacherSelf(schoolId, teacherId);
       }
 
       // Per-teacher attendance reward rules (teacher-managed).
       match /teachers/{teacherId}/attendanceRewards/{ruleId} {
-        // This app relies on app-layer passcode gating; allow authenticated users.
-        // Admins can also manage these.
-        allow read, write: if isAuth() || isAdmin(schoolId) || isDeveloper();
+        allow read, write: if isAdmin(schoolId) || isDeveloper() || isTeacherSelf(schoolId, teacherId);
       }
       
       match /classes/{classId} {
-        allow read: if isAdmin(schoolId);
+        allow read: if isAdmin(schoolId) || isTeacher(schoolId);
         allow write: if isAdmin(schoolId);
       }
       
       match /categories/{categoryId} {
-        // Categories are used by teachers in the UI; allow authenticated users to read.
-        // Writes are allowed for admins/developers, and also for authenticated users
-        // creating teacher-owned categories (teacherId present).
-        allow read: if isAuth();
-        allow write: if isAdmin(schoolId) || isDeveloper()
-          || (isAuth() && request.resource.data.teacherId is string && request.resource.data.teacherId.size() > 0);
+        // Categories are used by teachers in the UI.
+        allow read: if isAdmin(schoolId) || isTeacher(schoolId);
+        allow create: if isAdmin(schoolId) || isDeveloper()
+          || isTeacherOwnedCreate(schoolId);
+        allow update: if isAdmin(schoolId) || isDeveloper()
+          || (
+            isTeacher(schoolId)
+            && resource.data.teacherId is string
+            && resource.data.teacherId == teacherIdFor(schoolId)
+            && request.resource.data.teacherId is string
+            && request.resource.data.teacherId == teacherIdFor(schoolId)
+          );
+        allow delete: if isAdmin(schoolId) || isDeveloper();
       }
 
       match /achievements/{achievementId} {
-        allow read: if isAdmin(schoolId);
+        allow read: if isAdmin(schoolId) || isTeacher(schoolId);
         allow write: if isAdmin(schoolId);
       }
 
       match /badges/{badgeId} {
-        // Read: any authenticated user (so teachers/students can load badge definitions and earned badges).
-        allow read: if request.auth != null;
+        // Read: staff can load badge definitions and earned badges.
+        allow read: if isAdmin(schoolId) || isTeacher(schoolId);
         allow write: if isAdmin(schoolId);
       }
 
       match /prizes/{prizeId} {
-        allow read: if isAdmin(schoolId);
-        allow write: if isAdmin(schoolId);
+        allow read: if isAdmin(schoolId) || isTeacher(schoolId);
+        allow create: if isAdmin(schoolId) || isTeacherOwnedPrizeCreate(schoolId);
+        allow update: if isAdmin(schoolId) || isTeacherOwnedPrizeUpdate(schoolId);
+        allow delete: if isAdmin(schoolId)
+          || (
+            isTeacher(schoolId)
+            && (
+              (resource.data.teacherId is string && resource.data.teacherId == teacherIdFor(schoolId))
+              || (resource.data.teacherIds is list && teacherIdFor(schoolId) in resource.data.teacherIds)
+            )
+          );
       }
       
       match /coupons/{couponId} {
-        allow read: if isAdmin(schoolId);
-        allow write: if isAdmin(schoolId);
+        allow read: if isAdmin(schoolId) || isTeacher(schoolId);
+        allow write: if isAdmin(schoolId) || isTeacher(schoolId);
       }
       
       match /roles_admin/{uid} {
@@ -126,18 +189,18 @@ service cloud.firestore {
       }
 
       match /attendance/{docId} {
-        allow read: if isAuth();
+        allow read: if isAdmin(schoolId) || isTeacher(schoolId);
         allow write: if isAdmin(schoolId) || isDeveloper();
       }
 
       // Universal period definitions (created/managed by admin).
       match /periods/{periodId} {
-        allow read: if isAuth();
+        allow read: if isAdmin(schoolId) || isTeacher(schoolId);
         allow write: if isAdmin(schoolId) || isDeveloper();
       }
 
       match /attendanceLog/{entryId} {
-        allow read: if isAdmin(schoolId);
+        allow read: if isAdmin(schoolId) || isTeacher(schoolId);
         allow create: if isAuth();
         allow update, delete: if isAdmin(schoolId);
       }

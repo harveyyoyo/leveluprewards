@@ -81,7 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setSchoolId(null);
             router.push('/');
         }
-    }, [loginState, router]);
+    }, [loginState, router, schoolId]);
 
     // Auto-logout idle timeout for privileged sessions (admin/teacher).
     useEffect(() => {

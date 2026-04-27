@@ -914,15 +914,10 @@ exports.verifyTeacherPasscode = functions.https.onCall(async (data, context) => 
     if (teacherData.passcode !== data.passcode) {
         throw new functions.https.HttpsError("permission-denied", "Invalid teacher passcode.");
     }
-    // Provision teacher role using the Admin SDK.
-    // TODO: once teacher passcodes move out of readable teacher docs, replace
-    // this temporary admin role with narrower Firestore teacher permissions.
+    // Provision only the teacher role. Firestore rules grant narrow teacher
+    // permissions from this document instead of relying on admin escalation.
     const teacherRoleRef = db.collection("schools").doc(data.schoolId).collection("roles_teacher").doc(context.auth.uid);
-    const adminRoleRef = db.collection("schools").doc(data.schoolId).collection("roles_admin").doc(context.auth.uid);
-    const batch = db.batch();
-    batch.set(teacherRoleRef, { role: 'teacher', teacherId: teacherDoc.id });
-    batch.set(adminRoleRef, { role: 'admin' });
-    await batch.commit();
+    await teacherRoleRef.set({ role: 'teacher', teacherId: teacherDoc.id });
     return { success: true };
 });
 // ========================================================================
