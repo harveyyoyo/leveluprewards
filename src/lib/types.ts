@@ -220,6 +220,12 @@ export interface AttendanceSettings {
   classPeriodAssignmentsByDay?: Record<string, Record<string, string>>;
   categoryId?: string;
   schedule: AttendanceScheduleSlot[];
+  /**
+   * IANA time zone (e.g. `America/Chicago`) for interpreting period times, reward windows,
+   * and session dates in cloud sign-in. Stored on school `attendance/config` only; resolvers
+   * merge it onto the effective config for the kiosk.
+   */
+  attendanceTimeZone?: string;
   /** Optional owner for per-teacher attendance configuration. */
   teacherId?: string;
 }

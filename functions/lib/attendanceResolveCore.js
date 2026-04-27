@@ -5,6 +5,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DEFAULT_ATTENDANCE_SETTINGS = void 0;
 exports.resolveAttendanceSettingsForSignIn = resolveAttendanceSettingsForSignIn;
+const schoolDayClock_1 = require("./schoolDayClock");
 exports.DEFAULT_ATTENDANCE_SETTINGS = {
     pointsForSignIn: 1,
     pointsForOnTime: 5,
@@ -47,6 +48,9 @@ function normalizeConfig(raw) {
             : undefined,
         categoryId: typeof r.categoryId === 'string' ? r.categoryId : undefined,
         schedule: Array.isArray(r.schedule) ? r.schedule : [],
+        attendanceTimeZone: typeof r.attendanceTimeZone === 'string' && String(r.attendanceTimeZone).trim()
+            ? String(r.attendanceTimeZone).trim()
+            : undefined,
     };
 }
 function normalizeTeacherConfig(raw, teacherId) {
@@ -62,7 +66,11 @@ function resolveAttendanceSettingsForSignIn(input) {
     const studentClassId = (student.classId || '').trim();
     const classForStudent = studentClassId ? classes.find((c) => c.id === studentClassId) : undefined;
     const teacherId = ((classForStudent === null || classForStudent === void 0 ? void 0 : classForStudent.primaryTeacherId) || '').trim() || undefined;
-    const nowMinutes = new Date(nowMs).getHours() * 60 + new Date(nowMs).getMinutes();
+    const schoolTimeZone = schoolConfigRaw && typeof schoolConfigRaw['attendanceTimeZone'] === 'string'
+        ? String(schoolConfigRaw['attendanceTimeZone']).trim() || undefined
+        : undefined;
+    const withSchoolTz = (s) => schoolTimeZone ? Object.assign(Object.assign({}, s), { attendanceTimeZone: schoolTimeZone }) : Object.assign(Object.assign({}, s), { attendanceTimeZone: s.attendanceTimeZone });
+    const nowMinutes = (0, schoolDayClock_1.getSchoolDayClock)(nowMs, schoolTimeZone, { whenUnset: 'utc' }).minutesSinceMidnight;
     const parse = (hhmm) => {
         const [h, m] = hhmm.split(':').map(Number);
         return (h || 0) * 60 + (m || 0);
@@ -99,7 +107,7 @@ function resolveAttendanceSettingsForSignIn(input) {
                 categoryId: matchingRule.categoryId,
                 teacherId,
             };
-            return { ok: true, settings, source: 'reward_rule' };
+            return { ok: true, settings: withSchoolTz(settings), source: 'reward_rule' };
         }
     }
     let legacy = null;
@@ -123,6 +131,6 @@ function resolveAttendanceSettingsForSignIn(input) {
             ? Object.assign(Object.assign({}, exports.DEFAULT_ATTENDANCE_SETTINGS), { teacherId }) : Object.assign({}, exports.DEFAULT_ATTENDANCE_SETTINGS);
     }
     const schedule = Array.isArray(periods) && periods.length > 0 ? periods : (_b = legacy.schedule) !== null && _b !== void 0 ? _b : [];
-    return { ok: true, settings: Object.assign(Object.assign({}, legacy), { schedule }), source };
+    return { ok: true, settings: withSchoolTz(Object.assign(Object.assign({}, legacy), { schedule })), source };
 }
 //# sourceMappingURL=attendanceResolveCore.js.map

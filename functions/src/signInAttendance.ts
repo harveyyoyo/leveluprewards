@@ -6,6 +6,7 @@ import {
   type AttendanceSettingsLike,
   type StudentLike,
 } from "./attendanceResolveCore";
+import { getSchoolDayClock } from "./schoolDayClock";
 
 function requireAuth(context: functions.https.CallableContext): void {
   if (!context.auth) {
@@ -38,11 +39,9 @@ function parseTimeToMinutes(hhmm: string): number {
 function getCurrentPeriodAndOnTime(
   schedule: AttendanceSettingsLike["schedule"],
   onTimeWindowMinutes: number,
-  now: number
+  nowMinutes: number
 ): { periodLabel?: string; onTime: boolean } {
   if (!schedule?.length) return { onTime: false };
-  const d = new Date(now);
-  const nowMinutes = d.getHours() * 60 + d.getMinutes();
   for (const slot of schedule) {
     const start = parseTimeToMinutes(slot.startTime);
     const end = parseTimeToMinutes(slot.endTime);
@@ -58,13 +57,11 @@ function getAssignedPeriodAndOnTime(
   schedule: AttendanceSettingsLike["schedule"],
   assignedSlotId: string | undefined,
   onTimeWindowMinutes: number,
-  now: number
+  nowMinutes: number
 ): { periodLabel?: string; onTime: boolean } {
   if (!assignedSlotId) return { onTime: false };
   const slot = (schedule || []).find((s) => s.id === assignedSlotId);
   if (!slot) return { onTime: false };
-  const d = new Date(now);
-  const nowMinutes = d.getHours() * 60 + d.getMinutes();
   const start = parseTimeToMinutes(slot.startTime);
   const end = parseTimeToMinutes(slot.endTime);
   if (nowMinutes < start || nowMinutes > end) return { onTime: false };
@@ -101,11 +98,9 @@ function applyRecordClassSignIn(
   }
 
   const studentClassId = (student.classId || "").trim();
-  const dayOfWeekKey = (() => {
-    const d = new Date(now);
-    const map = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
-    return map[d.getDay()] ?? "mon";
-  })();
+  const clock = getSchoolDayClock(now, config.attendanceTimeZone, { whenUnset: "utc" });
+  const dayOfWeekKey = clock.dayOfWeekKey;
+  const nowMinutes = clock.minutesSinceMidnight;
 
   let assignedSlotId: string | undefined = undefined;
   if (studentClassId) {
@@ -125,19 +120,18 @@ function applyRecordClassSignIn(
     }
   }
 
-  const assigned = getAssignedPeriodAndOnTime(config.schedule, assignedSlotId, config.onTimeWindowMinutes, now);
-  const fallback = getCurrentPeriodAndOnTime(config.schedule, config.onTimeWindowMinutes, now);
+  const assigned = getAssignedPeriodAndOnTime(config.schedule, assignedSlotId, config.onTimeWindowMinutes, nowMinutes);
+  const fallback = getCurrentPeriodAndOnTime(config.schedule, config.onTimeWindowMinutes, nowMinutes);
   const periodLabel = assigned.periodLabel ?? fallback.periodLabel;
   const onTime = assigned.periodLabel ? assigned.onTime : fallback.onTime;
   const pointsForSignIn = toFiniteNumber(config.pointsForSignIn, 0);
   const pointsForOnTime = toFiniteNumber(config.pointsForOnTime, 0);
   const computedPoints = pointsForSignIn + (onTime ? pointsForOnTime : 0);
 
-  const d = new Date(now);
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  const dayKey = yyyy + mm + dd;
+  const yyyy = clock.year;
+  const mm = String(clock.month).padStart(2, "0");
+  const dd = String(clock.day).padStart(2, "0");
+  const dayKey = String(yyyy) + mm + dd;
   const classKey = (student.classId || "").trim() || "no_class";
   const periodKey = (periodLabel || "").trim() || "no_period";
   const sessionId = dayKey + ":" + classKey + ":" + periodKey;

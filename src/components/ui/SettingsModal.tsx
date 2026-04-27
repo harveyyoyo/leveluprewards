@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { useSettings, colorSchemes, type ColorScheme, type Settings as AppSettings } from '../providers/SettingsProvider';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
+import { AttendanceTimeZoneField } from '@/components/attendance/AttendanceTimeZoneField';
 import { VendingMotorPanel } from '@/components/VendingMotorPanel';
 import { ANIMATED_BACKGROUND_STYLES, type AnimatedBackgroundStyle } from '@/lib/animatedBackdrop';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
@@ -94,7 +95,7 @@ function FeatureRow({ id, label, desc, icon, settings, onToggle, onConfigure, is
 }
 
 export function SettingsModal() {
-    const { loginState } = useAppContext();
+    const { loginState, getAttendanceConfig, setAttendanceConfig, schoolId: appSchoolId } = useAppContext();
     const isAdmin = loginState === 'admin' || loginState === 'developer';
     const { settings, updateSettings, isFeatureAllowed, planLabel } = useSettings();
     const playSound = useArcadeSound();
@@ -493,6 +494,17 @@ export function SettingsModal() {
                                     isAllowed={isFeatureAllowed('enableClassSignIn')}
                                     planLabel={planLabel}
                                 />
+                                {isFeatureAllowed('enableClassSignIn') && isAdmin ? (
+                                    <div className="px-3 pb-4 pt-0">
+                                        <AttendanceTimeZoneField
+                                            schoolId={appSchoolId}
+                                            getAttendanceConfig={getAttendanceConfig}
+                                            setAttendanceConfig={setAttendanceConfig}
+                                            enabled
+                                            compact
+                                        />
+                                    </div>
+                                ) : null}
                             </div>
 
                             <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">

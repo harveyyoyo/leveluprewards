@@ -4,6 +4,7 @@ exports.signInAttendance = void 0;
 const functions = require("firebase-functions/v1");
 const admin = require("firebase-admin");
 const attendanceResolveCore_1 = require("./attendanceResolveCore");
+const schoolDayClock_1 = require("./schoolDayClock");
 function requireAuth(context) {
     if (!context.auth) {
         throw new functions.https.HttpsError("unauthenticated", "The function must be called while authenticated.");
@@ -22,11 +23,9 @@ function parseTimeToMinutes(hhmm) {
     const [h, m] = hhmm.split(":").map(Number);
     return (h !== null && h !== void 0 ? h : 0) * 60 + (m !== null && m !== void 0 ? m : 0);
 }
-function getCurrentPeriodAndOnTime(schedule, onTimeWindowMinutes, now) {
+function getCurrentPeriodAndOnTime(schedule, onTimeWindowMinutes, nowMinutes) {
     if (!(schedule === null || schedule === void 0 ? void 0 : schedule.length))
         return { onTime: false };
-    const d = new Date(now);
-    const nowMinutes = d.getHours() * 60 + d.getMinutes();
     for (const slot of schedule) {
         const start = parseTimeToMinutes(slot.startTime);
         const end = parseTimeToMinutes(slot.endTime);
@@ -37,14 +36,12 @@ function getCurrentPeriodAndOnTime(schedule, onTimeWindowMinutes, now) {
     }
     return { onTime: false };
 }
-function getAssignedPeriodAndOnTime(schedule, assignedSlotId, onTimeWindowMinutes, now) {
+function getAssignedPeriodAndOnTime(schedule, assignedSlotId, onTimeWindowMinutes, nowMinutes) {
     if (!assignedSlotId)
         return { onTime: false };
     const slot = (schedule || []).find((s) => s.id === assignedSlotId);
     if (!slot)
         return { onTime: false };
-    const d = new Date(now);
-    const nowMinutes = d.getHours() * 60 + d.getMinutes();
     const start = parseTimeToMinutes(slot.startTime);
     const end = parseTimeToMinutes(slot.endTime);
     if (nowMinutes < start || nowMinutes > end)
@@ -61,12 +58,9 @@ function applyRecordClassSignIn(db, schoolId, studentId, student, config, now) {
         }
     }
     const studentClassId = (student.classId || "").trim();
-    const dayOfWeekKey = (() => {
-        var _a;
-        const d = new Date(now);
-        const map = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
-        return (_a = map[d.getDay()]) !== null && _a !== void 0 ? _a : "mon";
-    })();
+    const clock = (0, schoolDayClock_1.getSchoolDayClock)(now, config.attendanceTimeZone, { whenUnset: "utc" });
+    const dayOfWeekKey = clock.dayOfWeekKey;
+    const nowMinutes = clock.minutesSinceMidnight;
     let assignedSlotId = undefined;
     if (studentClassId) {
         const byDay = config.classPeriodAssignmentsByDay;
@@ -86,18 +80,17 @@ function applyRecordClassSignIn(db, schoolId, studentId, student, config, now) {
             }
         }
     }
-    const assigned = getAssignedPeriodAndOnTime(config.schedule, assignedSlotId, config.onTimeWindowMinutes, now);
-    const fallback = getCurrentPeriodAndOnTime(config.schedule, config.onTimeWindowMinutes, now);
+    const assigned = getAssignedPeriodAndOnTime(config.schedule, assignedSlotId, config.onTimeWindowMinutes, nowMinutes);
+    const fallback = getCurrentPeriodAndOnTime(config.schedule, config.onTimeWindowMinutes, nowMinutes);
     const periodLabel = (_b = assigned.periodLabel) !== null && _b !== void 0 ? _b : fallback.periodLabel;
     const onTime = assigned.periodLabel ? assigned.onTime : fallback.onTime;
     const pointsForSignIn = toFiniteNumber(config.pointsForSignIn, 0);
     const pointsForOnTime = toFiniteNumber(config.pointsForOnTime, 0);
     const computedPoints = pointsForSignIn + (onTime ? pointsForOnTime : 0);
-    const d = new Date(now);
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    const dd = String(d.getDate()).padStart(2, "0");
-    const dayKey = yyyy + mm + dd;
+    const yyyy = clock.year;
+    const mm = String(clock.month).padStart(2, "0");
+    const dd = String(clock.day).padStart(2, "0");
+    const dayKey = String(yyyy) + mm + dd;
     const classKey = (student.classId || "").trim() || "no_class";
     const periodKey = (periodLabel || "").trim() || "no_period";
     const sessionId = dayKey + ":" + classKey + ":" + periodKey;

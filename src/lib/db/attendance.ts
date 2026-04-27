@@ -13,6 +13,7 @@ import {
 } from 'firebase/firestore';
 import type { Student, AttendanceSettings, AttendanceLogEntry, AttendanceScheduleSlot, HistoryItem, RecordClassSignInResult } from '../types';
 import { reportFirestorePermissionError } from '@/firebase/error-emitter';
+import { getSchoolDayClock } from '@/lib/attendance/schoolDayClock';
 import { removeUndefined } from './helpers';
 
 const ATTENDANCE_CONFIG_ID = 'config';
@@ -31,11 +32,9 @@ function parseTimeToMinutes(hhmm: string): number {
 function getCurrentPeriodAndOnTime(
   schedule: AttendanceSettings['schedule'],
   onTimeWindowMinutes: number,
-  now: number
+  nowMinutes: number
 ): { periodLabel?: string; onTime: boolean } {
   if (!schedule?.length) return { onTime: false };
-  const d = new Date(now);
-  const nowMinutes = d.getHours() * 60 + d.getMinutes();
   for (const slot of schedule) {
     const start = parseTimeToMinutes(slot.startTime);
     const end = parseTimeToMinutes(slot.endTime);
@@ -51,13 +50,11 @@ function getAssignedPeriodAndOnTime(
   schedule: AttendanceSettings['schedule'],
   assignedSlotId: string | undefined,
   onTimeWindowMinutes: number,
-  now: number
+  nowMinutes: number
 ): { periodLabel?: string; onTime: boolean } {
   if (!assignedSlotId) return { onTime: false };
   const slot = (schedule || []).find((s) => s.id === assignedSlotId);
   if (!slot) return { onTime: false };
-  const d = new Date(now);
-  const nowMinutes = d.getHours() * 60 + d.getMinutes();
   const start = parseTimeToMinutes(slot.startTime);
   const end = parseTimeToMinutes(slot.endTime);
   if (nowMinutes < start || nowMinutes > end) return { onTime: false };
@@ -90,6 +87,9 @@ export const getAttendanceConfig = async (
         : undefined,
     categoryId: data.categoryId,
     schedule: Array.isArray(data.schedule) ? data.schedule : [],
+    attendanceTimeZone: typeof data.attendanceTimeZone === 'string' && data.attendanceTimeZone.trim()
+      ? String(data.attendanceTimeZone).trim()
+      : undefined,
   };
 };
 
@@ -172,12 +172,9 @@ export const recordClassSignIn = async (
 
   const now = Date.now();
   const studentClassId = (student.classId || '').trim();
-
-  const dayOfWeekKey = (() => {
-    const d = new Date(now);
-    const map = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
-    return map[d.getDay()] ?? 'mon';
-  })();
+  const clock = getSchoolDayClock(now, config.attendanceTimeZone, { whenUnset: 'local' });
+  const dayOfWeekKey = clock.dayOfWeekKey;
+  const nowMinutes = clock.minutesSinceMidnight;
 
   let assignedSlotId: string | undefined = undefined;
   if (studentClassId) {
@@ -197,18 +194,17 @@ export const recordClassSignIn = async (
     }
   }
 
-  const assigned = getAssignedPeriodAndOnTime(config.schedule, assignedSlotId, config.onTimeWindowMinutes, now);
-  const fallback = getCurrentPeriodAndOnTime(config.schedule, config.onTimeWindowMinutes, now);
+  const assigned = getAssignedPeriodAndOnTime(config.schedule, assignedSlotId, config.onTimeWindowMinutes, nowMinutes);
+  const fallback = getCurrentPeriodAndOnTime(config.schedule, config.onTimeWindowMinutes, nowMinutes);
   const periodLabel = assigned.periodLabel ?? fallback.periodLabel;
   const onTime = assigned.periodLabel ? assigned.onTime : fallback.onTime;
   const pointsForSignIn = toFiniteNumber(config.pointsForSignIn, 0);
   const pointsForOnTime = toFiniteNumber(config.pointsForOnTime, 0);
   const computedPoints = pointsForSignIn + (onTime ? pointsForOnTime : 0);
 
-  const d = new Date(now);
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
+  const yyyy = clock.year;
+  const mm = String(clock.month).padStart(2, '0');
+  const dd = String(clock.day).padStart(2, '0');
   const dayKey = `${yyyy}${mm}${dd}`;
   const classKey = (student.classId || '').trim() || 'no_class';
   const periodKey = (periodLabel || '').trim() || 'no_period';

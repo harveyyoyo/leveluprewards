@@ -26,6 +26,7 @@ import type { Student, Prize, Coupon, Category, Class, Teacher, BackupInfo, Achi
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StudentModal } from '@/components/StudentModal';
+import { AttendanceTimeZoneField } from '@/components/attendance/AttendanceTimeZoneField';
 import { PrizeModal } from '@/components/PrizeModal';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -1365,6 +1366,7 @@ function UniversalPeriodsAdmin({ schoolId }: { schoolId: string }) {
   const authFetch = useAuthFetch();
   const { toast } = useToast();
   const confirm = useConfirm();
+  const { getAttendanceConfig, setAttendanceConfig } = useAppContext();
   const periodsQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'periods') : null, [firestore, schoolId]);
   const { data: periods, isLoading } = useCollection<AttendanceScheduleSlot>(periodsQuery);
 
@@ -1554,6 +1556,15 @@ function UniversalPeriodsAdmin({ schoolId }: { schoolId: string }) {
 
   return (
     <div className="space-y-4">
+      <div className="rounded-xl border border-border/60 bg-muted/20 p-3">
+        <AttendanceTimeZoneField
+          schoolId={schoolId}
+          getAttendanceConfig={getAttendanceConfig}
+          setAttendanceConfig={setAttendanceConfig}
+          enabled
+          className="!space-y-2"
+        />
+      </div>
       <div className="space-y-2">
         <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">AI import period times</Label>
         <textarea

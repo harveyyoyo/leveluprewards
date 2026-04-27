@@ -2,6 +2,8 @@
  * KEEP IN SYNC with src/lib/attendance/resolveSettings.ts (Cloud Functions bundle).
  */
 
+import { getSchoolDayClock } from './schoolDayClock';
+
 export interface AttendanceScheduleSlotLike {
   id: string;
   label: string;
@@ -18,6 +20,7 @@ export interface AttendanceSettingsLike {
   classPeriodAssignmentsByDay?: Record<string, Record<string, string>>;
   categoryId?: string;
   schedule: AttendanceScheduleSlotLike[];
+  attendanceTimeZone?: string;
   teacherId?: string;
 }
 
@@ -107,6 +110,10 @@ function normalizeConfig(
         : undefined,
     categoryId: typeof r.categoryId === 'string' ? r.categoryId : undefined,
     schedule: Array.isArray(r.schedule) ? (r.schedule as AttendanceScheduleSlotLike[]) : [],
+    attendanceTimeZone:
+      typeof r.attendanceTimeZone === 'string' && String(r.attendanceTimeZone).trim()
+        ? String(r.attendanceTimeZone).trim()
+        : undefined,
   };
 }
 
@@ -138,7 +145,15 @@ export function resolveAttendanceSettingsForSignIn(input: ResolveAttendanceSetti
   const classForStudent = studentClassId ? classes.find((c) => c.id === studentClassId) : undefined;
   const teacherId = (classForStudent?.primaryTeacherId || '').trim() || undefined;
 
-  const nowMinutes = new Date(nowMs).getHours() * 60 + new Date(nowMs).getMinutes();
+  const schoolTimeZone =
+    schoolConfigRaw && typeof schoolConfigRaw['attendanceTimeZone'] === 'string'
+      ? String(schoolConfigRaw['attendanceTimeZone'] as string).trim() || undefined
+      : undefined;
+
+  const withSchoolTz = (s: AttendanceSettingsLike): AttendanceSettingsLike =>
+    schoolTimeZone ? { ...s, attendanceTimeZone: schoolTimeZone } : { ...s, attendanceTimeZone: s.attendanceTimeZone };
+
+  const nowMinutes = getSchoolDayClock(nowMs, schoolTimeZone, { whenUnset: 'utc' }).minutesSinceMidnight;
   const parse = (hhmm: string) => {
     const [h, m] = hhmm.split(':').map(Number);
     return (h || 0) * 60 + (m || 0);
@@ -175,7 +190,7 @@ export function resolveAttendanceSettingsForSignIn(input: ResolveAttendanceSetti
         categoryId: matchingRule.categoryId,
         teacherId,
       };
-      return { ok: true, settings, source: 'reward_rule' };
+      return { ok: true, settings: withSchoolTz(settings), source: 'reward_rule' };
     }
   }
 
@@ -205,5 +220,5 @@ export function resolveAttendanceSettingsForSignIn(input: ResolveAttendanceSetti
 
   const schedule = Array.isArray(periods) && periods.length > 0 ? periods : legacy.schedule ?? [];
 
-  return { ok: true, settings: { ...legacy, schedule }, source };
+  return { ok: true, settings: withSchoolTz({ ...legacy, schedule }), source };
 }

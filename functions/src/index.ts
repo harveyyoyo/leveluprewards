@@ -590,6 +590,9 @@ exports.setAttendanceConfig = functions.https.onCall(
       if (typeof config.categoryId === "string" && config.categoryId.length > 0) {
         payload.categoryId = config.categoryId;
       }
+      if (typeof config.attendanceTimeZone === "string" && String(config.attendanceTimeZone).trim().length > 0) {
+        payload.attendanceTimeZone = String(config.attendanceTimeZone).trim();
+      }
 
       const configRef = db.collection("schools").doc(schoolId).collection("attendance").doc("config");
       await configRef.set(payload);
