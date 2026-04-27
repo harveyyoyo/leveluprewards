@@ -94,7 +94,16 @@ export default function Header() {
       <>
         <header className="no-print grid grid-cols-3 w-full items-center relative z-20 px-4 pt-4 pb-4 border-b border-border/10">
           <div className="flex justify-start">
-            {/* Home button removed */}
+            {schoolId && (
+              <Link
+                href={centerHref}
+                data-home-button="true"
+                className="rounded-xl p-2 text-slate-500 hover:text-primary hover:bg-primary/10 transition-all flex items-center gap-1"
+                aria-label="Home"
+              >
+                <Home className="h-6 w-6" />
+              </Link>
+            )}
           </div>
           <div className="flex items-center justify-center">
             {schoolId && (

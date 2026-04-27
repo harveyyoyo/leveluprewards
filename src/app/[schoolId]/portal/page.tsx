@@ -1,7 +1,6 @@
 
 'use client';
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useAppContext } from '@/components/AppProvider';
 import { GraduationCap, Printer, Gift, UserCog, Trophy, ChevronRight, Loader2, Home } from 'lucide-react';
@@ -15,7 +14,6 @@ import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
 
 export default function PortalPage() {
     const { loginState, isInitialized, schoolId, isAdmin } = useAppContext();
-    const router = useRouter();
     const { settings, updateSettings } = useSettings();
     const playSound = useArcadeSound();
     const [hoveredIndex, setHoveredIndex] = useState<string | null>(null);
@@ -27,14 +25,6 @@ export default function PortalPage() {
         !settings.calmMode &&
         !settings.legacyMode;
     const isStaff = loginState === 'teacher' || loginState === 'admin' || loginState === 'developer';
-    const isStudentLike = !isStaff && loginState !== 'loggedOut';
-    const shouldRedirectStudentLike = isInitialized && isStudentLike && !!schoolId && schoolId !== 'schoolabc';
-
-    useEffect(() => {
-        if (shouldRedirectStudentLike) {
-            router.replace(`/${schoolId}/student`);
-        }
-    }, [router, schoolId, shouldRedirectStudentLike]);
 
     if (!isInitialized) {
         return (
@@ -42,19 +32,6 @@ export default function PortalPage() {
                 <Button disabled variant="ghost" size="lg" className="text-muted-foreground">
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                     Loading Portal...
-                </Button>
-            </div>
-        );
-    }
-
-    // Kiosk/student sessions should not land on the full portal menu.
-    // Except for the demo school where we want the full experience visible.
-    if (shouldRedirectStudentLike) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <Button disabled variant="ghost" size="lg" className="text-muted-foreground">
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Opening Student Kiosk...
                 </Button>
             </div>
         );
@@ -206,6 +183,17 @@ export default function PortalPage() {
                         )
                     })}
                 </div>
+
+                {loginState === 'student' && schoolId && (
+                    <div className="mt-10 text-center rounded-2xl border border-border/60 bg-muted/30 px-4 py-5">
+                        <p className="text-sm text-muted-foreground mb-3">Need teacher or admin access?</p>
+                        <Button variant="outline" size="sm" asChild className="font-bold">
+                            <Link href={`/login?school=${encodeURIComponent(schoolId)}`} onClick={() => playSound('click')}>
+                                Staff login
+                            </Link>
+                        </Button>
+                    </div>
+                )}
 
                 <div className="mt-16 text-center">
                     <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground/60">beta · {process.env.NEXT_PUBLIC_VERSION || 'beta-1.1.0'}</p>
