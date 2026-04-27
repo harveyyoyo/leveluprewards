@@ -6,11 +6,14 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 // `httpsCallable` from `firebase/functions`. We replace both with spies so
 // we can assert on what the hook sends the backend without booting the SDK.
 const updateDocMock = vi.fn().mockResolvedValue(undefined);
+const setDocMock = vi.fn().mockResolvedValue(undefined);
 const callableMock = vi.fn();
 const httpsCallableMock = vi.fn().mockReturnValue(callableMock);
 
 vi.mock('firebase/firestore', () => ({
   updateDoc: (...args: unknown[]) => updateDocMock(...args),
+  setDoc: (...args: unknown[]) => setDocMock(...args),
+  doc: vi.fn((_db: unknown, col: string, id: string) => ({ path: `${col}/${id}` })),
 }));
 
 vi.mock('firebase/functions', () => ({
@@ -26,6 +29,7 @@ function makeDeps(overrides: Partial<Parameters<typeof useSchoolLogoUpload>[0]> 
     schoolDocRef: { id: 'school-1' } as unknown as NonNullable<
       Parameters<typeof useSchoolLogoUpload>[0]['schoolDocRef']
     >,
+    firestore: {} as NonNullable<Parameters<typeof useSchoolLogoUpload>[0]['firestore']>,
     schoolData: { logoUrl: 'https://cdn/logo.png', logoHistory: [{ url: 'https://cdn/a.png' }, { url: 'https://cdn/b.png' }] },
     functions: {} as NonNullable<Parameters<typeof useSchoolLogoUpload>[0]['functions']>,
     toast: vi.fn(),
@@ -37,6 +41,7 @@ function makeDeps(overrides: Partial<Parameters<typeof useSchoolLogoUpload>[0]> 
 describe('useSchoolLogoUpload', () => {
   beforeEach(() => {
     updateDocMock.mockClear();
+    setDocMock.mockClear();
     callableMock.mockReset();
     httpsCallableMock.mockClear();
   });
@@ -154,6 +159,7 @@ describe('useSchoolLogoUpload', () => {
       });
 
       expect(updateDocMock).toHaveBeenCalledWith(deps.schoolDocRef, { logoUrl: null });
+      expect(setDocMock).toHaveBeenCalled();
       expect(deps.playSound).toHaveBeenCalledWith('success');
       expect(deps.toast).toHaveBeenCalledWith(
         expect.objectContaining({ title: 'Logo removed' }),
@@ -171,6 +177,7 @@ describe('useSchoolLogoUpload', () => {
         await result.current.handleRemoveLogo();
       });
       expect(updateDocMock).not.toHaveBeenCalled();
+      expect(setDocMock).not.toHaveBeenCalled();
       expect(deps.toast).not.toHaveBeenCalled();
     });
 

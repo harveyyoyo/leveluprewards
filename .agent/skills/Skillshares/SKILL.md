@@ -25,3 +25,10 @@ This skill ensures that Antigravity, Cursor, and Codex are synchronized with the
 - **Cursor**: Uses `.cursor/rules/*.mdc` for agent-level instructions.
 - **Antigravity**: Uses `.agent/skills` and `Knowledge Items`.
 - **Codex**: Relies on file-level comments and workspace documentation (READMEs, `.agent/docs`).
+
+## Dev Environment & Localhost
+To ensure consistent verification and centralized logging in a multi-agent setup:
+1. **Primary Orchestrator**: Antigravity should primarily manage the `npm run dev` lifecycle.
+2. **Centralized Logging**: Running the dev server in Antigravity's terminal allows it to monitor build/lint errors and perform autonomous fixes.
+3. **Autonomous Verification**: Antigravity can use its `browser_subagent` to verify UI parity and functional requirements as soon as a build completes.
+4. **Shared Access**: All agents (Cursor, Codex) still access the same `localhost` port on the host machine, but Antigravity provides the "eye" for verification.

@@ -885,14 +885,23 @@ exports.uploadSchoolLogo = functions.https.onCall(
 
       try {
         const db = admin.firestore();
+        const logoHistoryEntry = {
+          url: logoUrl,
+          uploadedAt: Date.now(),
+          uploadedBy: context.auth!.uid,
+        };
         await db.collection("schools").doc(schoolId).update({
           logoUrl,
-          logoHistory: admin.firestore.FieldValue.arrayUnion({
-            url: logoUrl,
-            uploadedAt: Date.now(),
-            uploadedBy: context.auth!.uid,
-          }),
+          logoHistory: admin.firestore.FieldValue.arrayUnion(logoHistoryEntry),
         });
+        await db.collection("schoolPublic").doc(schoolId).set(
+          {
+            active: true,
+            logoUrl,
+            updatedAt: Date.now(),
+          },
+          { merge: true }
+        );
       } catch (e) {
         console.error("uploadSchoolLogo: firestore update failed", e);
         throw new functions.https.HttpsError(

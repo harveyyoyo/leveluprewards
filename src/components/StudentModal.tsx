@@ -28,8 +28,10 @@ import { Checkbox } from './ui/checkbox';
 import { getStudentNickname } from '@/lib/utils';
 import { httpsCallable } from 'firebase/functions';
 import { ThemeGeneratorModal } from './ThemeGeneratorModal';
+import { AdminFaceEnrollmentPanel } from './AdminFaceEnrollmentPanel';
 import { Wand2, Trash2 } from 'lucide-react';
 import { ImageCropper } from './ImageCropper';
+import { cn } from '@/lib/utils';
 
 interface StudentModalProps {
   isOpen: boolean;
@@ -264,7 +266,12 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
   return (
     <>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent
+          className={cn(
+            'max-h-[min(90vh,880px)] overflow-y-auto',
+            isEditing && settings.enableFaceLogin ? 'sm:max-w-lg' : 'sm:max-w-md',
+          )}
+        >
         <DialogHeader>
           <DialogTitle>{isEditing ? `Edit ${getStudentNickname(student!)} ${student!.lastName}` : 'New Student'}</DialogTitle>
         </DialogHeader>
@@ -411,6 +418,12 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
               </div>
             </ScrollArea>
           </div>
+          {isEditing && student?.id && settings.enableFaceLogin ? (
+            <AdminFaceEnrollmentPanel
+              studentId={student.id}
+              studentLabel={[firstName, lastName].filter(Boolean).join(' ').trim() || undefined}
+            />
+          ) : null}
         </div>
         <DialogFooter>
           <Button type="button" variant="secondary" onClick={() => setIsOpen(false)}>Cancel</Button>

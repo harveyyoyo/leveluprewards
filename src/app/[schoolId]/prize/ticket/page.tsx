@@ -63,8 +63,9 @@ export default function PrizeRedeemTicketPage() {
   const { loginState } = useAuth();
   const schoolRef = useMemoFirebase(() => {
     if (!schoolId || !firestore) return null;
-    if (loginState === 'student') return schoolPublicDocRef(firestore, schoolId);
-    return doc(firestore, 'schools', schoolId);
+    const staff = loginState === 'teacher' || loginState === 'admin' || loginState === 'developer';
+    if (staff) return doc(firestore, 'schools', schoolId);
+    return schoolPublicDocRef(firestore, schoolId);
   }, [firestore, schoolId, loginState]);
   const { data: schoolData } = useDoc<{ name?: string; logoUrl?: string }>(schoolRef);
   const schoolName = (schoolData?.name ?? '').trim() || schoolId;
