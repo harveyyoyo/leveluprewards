@@ -5,6 +5,9 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import LayoutClientWrapper from "@/components/LayoutClientWrapper";
 import "./globals.css";
 
+// Client-only Firebase apps should not be statically pre-rendered in Next.js.
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
   title: 'levelUp EDU',
   description: 'LevelUp rewards hub',
@@ -19,7 +22,6 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <meta name="theme-color" content="#13a58d" />
-        <link rel="manifest" href="/manifest.json" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="levelUp EDU" />
@@ -35,15 +37,22 @@ export default function RootLayout({
         />
       </head>
       <body className="font-sans antialiased bg-background text-foreground transition-colors duration-500 min-h-screen" suppressHydrationWarning>
-        <ErrorBoundary name="RootFirebaseProvider">
-          <FirebaseClientProvider>
-            <AppProvider>
-              <LayoutClientWrapper>
-                {children}
-              </LayoutClientWrapper>
-            </AppProvider>
-          </FirebaseClientProvider>
-        </ErrorBoundary>
+        <div
+          id="arcade-backdrop-host"
+          className="arcade-animated-site-bg no-print pointer-events-none fixed inset-0 min-h-0 w-full overflow-visible"
+          aria-hidden
+        />
+        <div data-app-view-root className="min-h-screen">
+          <ErrorBoundary name="RootFirebaseProvider">
+            <FirebaseClientProvider>
+              <AppProvider>
+                <LayoutClientWrapper>
+                  {children}
+                </LayoutClientWrapper>
+              </AppProvider>
+            </FirebaseClientProvider>
+          </ErrorBoundary>
+        </div>
       </body>
     </html>
   );

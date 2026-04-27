@@ -12,6 +12,8 @@ import { useSettings } from './providers/SettingsProvider';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
+import { useAppContext } from '@/components/AppProvider';
+import { useAuthFetch } from '@/lib/authFetch';
 
 interface AiStudentImporterProps {
     classes: Class[];
@@ -26,20 +28,22 @@ export function AiStudentImporter({ classes, onSaveAll }: AiStudentImporterProps
     const [isSaving, setIsSaving] = useState(false);
     const { toast } = useToast();
     const { settings } = useSettings();
+    const { schoolId } = useAppContext();
+    const authFetch = useAuthFetch();
     const isGraphic = settings.graphicMode === 'graphics';
 
     const handleParse = async () => {
-        if (!rawText.trim()) return;
+        if (!rawText.trim() || !schoolId) return;
         setIsParsing(true);
         try {
             const classNames = classes.map(c => c.name);
-            const res = await fetch('/api/parse-students', {
+            const res = await authFetch('/api/parse-students', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     prompt: rawText, 
                     model: localStorage.getItem('arcade_ai_model') || 'gemini-2.5-flash',
-                    classNames
+                    classNames,
+                    schoolId,
                 })
             });
             if (!res.ok) throw new Error('Failed to parse students');

@@ -21,6 +21,15 @@ export default function PortalPage() {
     const [hoveredIndex, setHoveredIndex] = useState<string | null>(null);
     const animBackdrop = globalAnimatedBackdropActive(settings);
     const showPortalLocalDecor = settings.graphicMode === 'graphics' && !animBackdrop;
+    const isStaff = loginState === 'teacher' || loginState === 'admin' || loginState === 'developer';
+    const isStudentLike = !isStaff && loginState !== 'loggedOut';
+    const shouldRedirectStudentLike = isInitialized && isStudentLike && !!schoolId && schoolId !== 'schoolabc';
+
+    useEffect(() => {
+        if (shouldRedirectStudentLike) {
+            router.replace(`/${schoolId}/student`);
+        }
+    }, [router, schoolId, shouldRedirectStudentLike]);
 
     if (!isInitialized) {
         return (
@@ -33,24 +42,28 @@ export default function PortalPage() {
         );
     }
 
-    const isStaff = loginState === 'teacher' || loginState === 'admin' || loginState === 'developer';
-    const isStudentLike = !isStaff && loginState !== 'loggedOut';
-
     // Kiosk/student sessions should not land on the full portal menu.
-    if (isStudentLike && schoolId) {
-        router.replace(`/${schoolId}/student`);
-        return null;
+    // Except for the demo school where we want the full experience visible.
+    if (shouldRedirectStudentLike) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <Button disabled variant="ghost" size="lg" className="text-muted-foreground">
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Opening Student Kiosk...
+                </Button>
+            </div>
+        );
     }
 
     const portals = [
-        ...(isAdmin ? [{ id: 'admin', href: `/${schoolId}/admin`, title: 'Admin Portal', description: 'Manage school data and settings.', icon: UserCog }] : []),
-        ...(isStaff
+        ...(isAdmin || schoolId === 'schoolabc' ? [{ id: 'admin', href: `/${schoolId}/admin`, title: 'Admin Portal', description: 'Manage school data and settings.', icon: UserCog }] : []),
+        ...(isStaff || schoolId === 'schoolabc'
             ? [{ id: 'print', href: `/${schoolId}/teacher`, title: 'Teacher Portal', description: 'Print coupons or award points directly to students.', icon: Printer }]
             : []),
         { id: 'redeem', href: `/${schoolId}/student`, title: 'Student Kiosk', description: 'Scan your badge to redeem coupon codes and view points.', icon: GraduationCap },
         ...(isStaff && settings.enableStudentPortal ? [{ id: 'student-home', href: `/${schoolId}/student-home`, title: 'Student Home Portal', description: 'Log in from home to check your points and prizes.', icon: Home }] : []),
         { id: 'prize', href: `/${schoolId}/prize`, title: 'Prize Shop', description: 'Spend your points for awesome prizes.', icon: Gift },
-        ...(isStaff
+        ...(isStaff || schoolId === 'schoolabc'
             ? [{ id: 'fame', href: `/${schoolId}/halloffame`, title: 'Hall of Fame', description: 'View top student point earners.', icon: Trophy }]
             : []),
     ];
@@ -187,7 +200,7 @@ export default function PortalPage() {
                 </div>
 
                 <div className="mt-16 text-center">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground/60">beta · {process.env.NEXT_PUBLIC_VERSION || 'v1.1.0'}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground/60">beta · {process.env.NEXT_PUBLIC_VERSION || 'beta-1.1.0'}</p>
                 </div>
             </main>
         </div>

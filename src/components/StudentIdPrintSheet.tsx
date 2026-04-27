@@ -25,12 +25,18 @@ export function StudentIdPrintSheet({ students, classes, schoolId, onReady }: St
 
   // Trigger print dialog only after the async configurations have finished loading
   useEffect(() => {
+    document.body.classList.add('id-card-printing');
+    
     if (!isAppConfigLoading && !isSchoolLoading) {
       const t = setTimeout(() => {
         onReady();
       }, 100); // Give the DOM a tiny slice of time to render the fetched names/logos
       return () => clearTimeout(t);
     }
+    
+    return () => {
+      document.body.classList.remove('id-card-printing');
+    };
   }, [isAppConfigLoading, isSchoolLoading, onReady]);
 
   const classMap = useMemo(() => {

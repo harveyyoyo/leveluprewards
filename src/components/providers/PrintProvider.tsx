@@ -16,6 +16,8 @@ import { StudentIdDTCPrintSheet } from '@/components/StudentIdDTCPrintSheet';
 import { PrizeRedeemTicketPrintSheet, PrizeRedeemTicket } from '@/components/PrizeRedeemTicketPrintSheet';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useAuth } from './AuthProvider';
+import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
 
 interface PrintContextType {
     setCouponsToPrint: (coupons: Coupon[]) => void;
@@ -25,12 +27,34 @@ interface PrintContextType {
 
 const PrintContext = createContext<PrintContextType | null>(null);
 
+async function ensurePrizeTicketFontsLoaded(): Promise<void> {
+    if (typeof document === 'undefined') return;
+    // Best-effort: the print wrapper is off-screen; make sure fonts are loaded before printing.
+    try {
+        // Fraunces / DM Sans are loaded via <link> in app layout.
+        await Promise.allSettled([
+            document.fonts.load('700 28pt "Fraunces"'),
+            document.fonts.load('400 16pt "DM Sans"'),
+        ]);
+    } catch {
+        // ignore
+    }
+}
+
 export function PrintProvider({ children }: { children: React.ReactNode }) {
     const [couponsToPrint, setCouponsToPrint] = useState<Coupon[]>([]);
     const [printData, setPrintData] = useState<{ students: Student[]; classes: Class[]; printerType?: 'dtc4500e' } | null>(null);
     const [prizeTicketsToPrint, setPrizeTicketsToPrint] = useState<PrizeRedeemTicket[]>([]);
     const playSound = useArcadeSound();
     const { schoolId } = useAuth();
+    const firestore = useFirestore();
+    const schoolDocRef = useMemoFirebase(
+        () => (schoolId ? doc(firestore, 'schools', schoolId) : null),
+        [firestore, schoolId]
+    );
+    const { data: schoolData } = useDoc<{ name?: string; logoUrl?: string }>(schoolDocRef);
+    const printSchoolName = (schoolData?.name ?? '').trim() || (schoolId ? schoolId : null);
+    const printSchoolLogoUrl = (schoolData?.logoUrl ?? '').trim() || null;
 
     const printTriggered = useRef(false);
     useEffect(() => {
@@ -63,17 +87,22 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
     }, [printData, playSound]);
 
     const prizePrintTriggered = useRef(false);
+    const prizeTicketAfterPrintRef = useRef<(() => void) | null>(null);
     useEffect(() => {
         if (prizeTicketsToPrint.length > 0 && !prizePrintTriggered.current) {
             prizePrintTriggered.current = true;
             const afterPrint = () => {
                 setPrizeTicketsToPrint([]);
                 prizePrintTriggered.current = false;
-                window.removeEventListener('afterprint', afterPrint);
+                if (prizeTicketAfterPrintRef.current) {
+                    window.removeEventListener('afterprint', prizeTicketAfterPrintRef.current);
+                    prizeTicketAfterPrintRef.current = null;
+                }
             };
+            prizeTicketAfterPrintRef.current = afterPrint;
             window.addEventListener('afterprint', afterPrint);
             playSound('swoosh');
-            window.print();
+            ensurePrizeTicketFontsLoaded().finally(() => window.print());
         }
     }, [prizeTicketsToPrint, playSound]);
 
@@ -92,7 +121,13 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
             {couponsToPrint.length > 0 && <PrintSheet coupons={couponsToPrint} schoolId={schoolId} />}
             {printData && printData.students.length > 0 && printData.printerType !== 'dtc4500e' && <StudentIdPrintSheet students={printData.students} classes={printData.classes} schoolId={schoolId} onReady={triggerStudentPrint} />}
             {printData && printData.students.length > 0 && printData.printerType === 'dtc4500e' && <StudentIdDTCPrintSheet students={printData.students} classes={printData.classes} schoolId={schoolId} onReady={triggerStudentPrint} />}
-            {prizeTicketsToPrint.length > 0 && <PrizeRedeemTicketPrintSheet tickets={prizeTicketsToPrint} />}
+            {prizeTicketsToPrint.length > 0 && (
+                <PrizeRedeemTicketPrintSheet
+                    tickets={prizeTicketsToPrint}
+                    schoolName={printSchoolName}
+                    logoUrl={printSchoolLogoUrl}
+                />
+            )}
         </PrintContext.Provider>
     );
 }

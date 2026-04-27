@@ -1,9 +1,23 @@
 
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { useAuth } from './AuthProvider';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useDoc, useFirebase, useMemoFirebase } from '@/firebase';
+import { doc, setDoc } from 'firebase/firestore';
+import {
+    DEFAULT_PLAN,
+    getSchoolEntitlements,
+    isPlanFeatureKey,
+    normalizePlan,
+    PLAN_FEATURE_KEYS,
+    PLANS,
+    type PlanEntitlements,
+    type PlanTier,
+    type SchoolPlanConfig,
+} from '@/lib/plans';
 
 type ColorScheme = 'default' | 'sky' | 'rose' | 'mint' | 'lavender' | 'peach';
 
@@ -14,6 +28,8 @@ interface Settings {
     soundEnabled: boolean;
     language: string;
     darkMode: boolean;
+    // Theme visuals
+    enableThemeAnimations: boolean;
     // Engagement
     enableAchievements: boolean;
     enableBadges: boolean;
@@ -33,6 +49,7 @@ interface Settings {
     enablePrizeCategories: boolean;
     enableWishlist: boolean;
     enableSeasonalPrizes: boolean;
+    enableVendingMachine: boolean;
     enableColorPrinting: boolean;
     // Admin Tools
     enableBulkPoints: boolean;
@@ -46,6 +63,7 @@ interface Settings {
     enableMultiAdmin: boolean;
     enableStudentPortal: boolean;
     enableClassSignIn: boolean;
+    enableFaceLogin: boolean;
     /** Back-compat alias used by some pages/components. */
     enableAttendance: boolean;
     // Guidance
@@ -67,6 +85,10 @@ interface Settings {
 interface SettingsContextType {
     settings: Settings;
     updateSettings: (updates: Partial<Settings>) => void;
+    planTier: PlanTier;
+    planLabel: string;
+    featureEntitlements: PlanEntitlements;
+    isFeatureAllowed: (key: string) => boolean;
     /** True once settings have been loaded from storage. */
     isLoaded: boolean;
 }
@@ -87,6 +109,7 @@ const defaultSettings: Settings = {
     soundEnabled: true,
     language: 'English',
     darkMode: false,
+    enableThemeAnimations: false,
     enableAchievements: false,
     enableBadges: false,
     enableLevels: false,
@@ -102,6 +125,7 @@ const defaultSettings: Settings = {
     enablePrizeCategories: false,
     enableWishlist: false,
     enableSeasonalPrizes: false,
+    enableVendingMachine: false,
     enableColorPrinting: true,
     enableBulkPoints: false,
     enablePointApproval: false,
@@ -113,6 +137,7 @@ const defaultSettings: Settings = {
     enableMultiAdmin: false,
     enableStudentPortal: false,
     enableClassSignIn: false,
+    enableFaceLogin: false,
     enableAttendance: false,
     enableHelperMode: true,
     showIntroWizard: false,
@@ -126,16 +151,69 @@ const defaultSettings: Settings = {
     hiddenAnimatedBackgroundIds: [],
 };
 
+const publicLoginSettings: Partial<Settings> = {
+    graphicMode: 'classic',
+    displayMode: 'web',
+    colorScheme: 'default',
+    soundEnabled: false,
+    darkMode: false,
+    enableAnimatedBackground: false,
+    // Keep feature toggles as-is; this only enforces a neutral look/feel.
+};
+
 export { colorSchemes };
-export type { ColorScheme };
+export type { ColorScheme, Settings };
 
 const SettingsContext = createContext<SettingsContextType | null>(null);
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
-    const { schoolId, isInitialized } = useAuth();
+    const { schoolId, isInitialized, loginState } = useAuth();
+    const { firestore } = useFirebase();
     const [settings, setSettings] = useState<Settings>(defaultSettings);
     const [isLoaded, setIsLoaded] = useState(false);
     const isMobile = useIsMobile();
+    const pathname = usePathname();
+    const schoolDocRef = useMemoFirebase(
+        () => (firestore && schoolId ? doc(firestore, 'schools', schoolId) : null),
+        [firestore, schoolId],
+    );
+    const { data: schoolData } = useDoc<SchoolPlanConfig & { appSettings?: Partial<Settings> }>(schoolDocRef);
+    const planTier = useMemo(
+        () => (schoolId ? normalizePlan(schoolData?.plan) : 'enterprise'),
+        [schoolId, schoolData],
+    );
+    const featureEntitlements = useMemo(
+        () => getSchoolEntitlements(schoolId ? schoolData : { plan: 'enterprise' }),
+        [schoolId, schoolData],
+    );
+    const planLabel = PLANS[planTier]?.label ?? PLANS[DEFAULT_PLAN].label;
+    const isPublicLoginRoute =
+        pathname === '/' ||
+        pathname === '/portal' ||
+        pathname === '/login' ||
+        (typeof pathname === 'string' && pathname.startsWith('/s/'));
+
+    const isAllowed = useCallback((key: string) => {
+        if (key === 'enableClassSignIn') {
+            return featureEntitlements.enableClassSignIn || featureEntitlements.enableAttendance;
+        }
+        if (!isPlanFeatureKey(key)) return true;
+        return featureEntitlements[key];
+    }, [featureEntitlements]);
+
+    const applyEntitlements = useCallback((input: Settings): Settings => {
+        const next = { ...input };
+        for (const key of PLAN_FEATURE_KEYS) {
+            if (!isAllowed(key)) {
+                (next as Record<string, unknown>)[key] = false;
+            }
+        }
+        if (!isAllowed('enableClassSignIn')) {
+            next.enableClassSignIn = false;
+            next.enableAttendance = false;
+        }
+        return next;
+    }, [isAllowed]);
 
     useEffect(() => {
         if (!isInitialized) {
@@ -144,10 +222,13 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
         const settingsKey = schoolId ? `arcade_settings_${schoolId}` : 'arcade_settings_global';
         const saved = localStorage.getItem(settingsKey);
+        const remoteSettings = schoolId && schoolData?.appSettings && typeof schoolData.appSettings === 'object'
+            ? schoolData.appSettings
+            : null;
 
-        if (saved) {
+        if (remoteSettings || saved) {
             try {
-                const parsed = JSON.parse(saved);
+                const parsed = remoteSettings ? { ...remoteSettings } : JSON.parse(saved || '{}');
                 if (parsed.graphicMode === 'arcade') {
                     parsed.graphicMode = 'graphics';
                 }
@@ -158,30 +239,71 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                 if (typeof parsed.enableClassSignIn !== 'boolean' && typeof parsed.enableAttendance === 'boolean') {
                     parsed.enableClassSignIn = parsed.enableAttendance;
                 }
-                setSettings({ ...defaultSettings, ...parsed });
+                // Demo school: apply production defaults
+                if (schoolId === 'schoolabc') {
+                    if (!parsed.colorScheme || parsed.colorScheme === 'default') parsed.colorScheme = 'sky';
+                    parsed.graphicMode = 'graphics';
+                    parsed.enableAnimatedBackground = true;
+                    parsed.soundEnabled = true;
+                    parsed.displayMode = 'web';
+                    parsed.enableHelperMode = true;
+                    if (typeof parsed.calmMode !== 'boolean') parsed.calmMode = false;
+                }
+                const nextSettings = applyEntitlements({ ...defaultSettings, ...parsed });
+                setSettings(nextSettings);
+                localStorage.setItem(settingsKey, JSON.stringify(nextSettings));
             } catch (e) {
-                setSettings(defaultSettings);
+                setSettings(applyEntitlements(defaultSettings));
             }
         } else {
             // No settings for this school, use defaults and show the intro wizard once.
             const initialSettings: Settings = {
                 ...defaultSettings,
                 showIntroWizard: true,
+                // Demo school: apply sky theme and sound to match production
+                ...(schoolId === 'schoolabc' ? { 
+                    colorScheme: 'sky' as ColorScheme, 
+                    graphicMode: 'graphics',
+                    soundEnabled: true,
+                    displayMode: 'web',
+                    enableHelperMode: true
+                } : {}),
             };
             if (isMobile) {
                 initialSettings.displayMode = 'app';
             }
-            setSettings(initialSettings);
+            setSettings(applyEntitlements(initialSettings));
         }
         setIsLoaded(true);
-    }, [schoolId, isInitialized, isMobile]);
+    }, [schoolId, isInitialized, isMobile, applyEntitlements, schoolData?.appSettings]);
 
     const updateSettings = (updates: Partial<Settings>) => {
         const settingsKey = schoolId ? `arcade_settings_${schoolId}` : 'arcade_settings_global';
         setSettings((prev) => {
-            const next = { ...prev, ...updates };
+            const allowedUpdates = { ...updates };
+            if (typeof allowedUpdates.enableClassSignIn === 'boolean') {
+                allowedUpdates.enableAttendance = allowedUpdates.enableClassSignIn;
+            }
+            if (typeof allowedUpdates.enableAttendance === 'boolean') {
+                allowedUpdates.enableClassSignIn = allowedUpdates.enableAttendance;
+            }
+            for (const key of Object.keys(allowedUpdates)) {
+                if (!isAllowed(key)) {
+                    delete (allowedUpdates as Record<string, unknown>)[key];
+                }
+            }
+            const next = applyEntitlements({ ...prev, ...allowedUpdates });
 
             localStorage.setItem(settingsKey, JSON.stringify(next));
+            if (schoolId && firestore && (loginState === 'admin' || loginState === 'developer')) {
+                void setDoc(
+                    doc(firestore, 'schools', schoolId),
+                    { appSettings: next, updatedAt: Date.now() },
+                    { merge: true },
+                ).catch((error) => {
+                    console.error('Failed to save school settings', error);
+                });
+            }
 
             // Dispatch a custom event so non-react code or other tabs can listen if needed
             window.dispatchEvent(new Event('settings-updated'));
@@ -218,8 +340,23 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         }
     }, [settings.legacyMode, isLoaded]);
 
+    // Force a neutral public appearance on public/login routes regardless of saved settings.
+    useEffect(() => {
+        if (!isLoaded) return;
+        if (!isPublicLoginRoute) return;
+
+        const root = document.documentElement;
+        const next = { ...settings, ...publicLoginSettings };
+
+        if (next.darkMode) root.classList.add('dark');
+        else root.classList.remove('dark');
+
+        root.classList.toggle('legacy', !!next.legacyMode);
+        root.setAttribute('data-color-scheme', next.colorScheme ?? 'default');
+    }, [isLoaded, isPublicLoginRoute, settings]);
+
     return (
-        <SettingsContext.Provider value={{ settings, updateSettings, isLoaded }}>
+        <SettingsContext.Provider value={{ settings, updateSettings, planTier, planLabel, featureEntitlements, isFeatureAllowed: isAllowed, isLoaded }}>
             {children}
         </SettingsContext.Provider>
     );

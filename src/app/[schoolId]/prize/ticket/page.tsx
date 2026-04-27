@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useSearchParams } from 'next/navigation';
-import { format } from 'date-fns';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { PrizeRedeemTicketPrintSheet } from '@/components/PrizeRedeemTicketPrintSheet';
+import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
 
 type TicketParams = {
   activityId: string;
@@ -12,6 +13,8 @@ type TicketParams = {
   studentName: string;
   studentNickname: string;
   prizeName: string;
+  /** Lucide name; optional. */
+  prizeIcon?: string;
   quantity: number;
   totalCost: number;
   returnPath: string;
@@ -32,6 +35,7 @@ function useTicketParams(): TicketParams {
     const totalCostRaw = sp.get('totalCost') || '';
     const totalCost = totalCostRaw ? Number(totalCostRaw) : NaN;
     const returnPath = sp.get('returnPath') || '';
+    const prizeIcon = sp.get('prizeIcon') || '';
 
     return {
       activityId,
@@ -40,6 +44,7 @@ function useTicketParams(): TicketParams {
       studentName,
       studentNickname,
       prizeName,
+      prizeIcon: prizeIcon || undefined,
       quantity,
       totalCost,
       returnPath,
@@ -50,16 +55,44 @@ function useTicketParams(): TicketParams {
 export default function PrizeRedeemTicketPage() {
   const ticket = useTicketParams();
   const router = useRouter();
+  const { schoolId } = useParams<{ schoolId: string }>();
   const [printRequested, setPrintRequested] = useState(false);
+  const firestore = useFirestore();
+  const schoolRef = useMemoFirebase(
+    () => (schoolId ? doc(firestore, 'schools', schoolId) : null),
+    [firestore, schoolId]
+  );
+  const { data: schoolData } = useDoc<{ name?: string; logoUrl?: string }>(schoolRef);
+  const schoolName = (schoolData?.name ?? '').trim() || schoolId;
+  const logoUrl = (schoolData?.logoUrl ?? '').trim() || null;
+
+  const prizeTickets = useMemo(() => {
+    if (!ticket.activityId || !ticket.studentId || !ticket.prizeName) return null;
+    const ticketNo = String(ticket.redeemedAt).replace(/\D/g, '').slice(-6) || String(ticket.redeemedAt).slice(-6);
+    const qty = Number.isFinite(ticket.quantity) && ticket.quantity > 0 ? Math.floor(ticket.quantity) : 1;
+    const per =
+      typeof ticket.totalCost === 'number' && qty > 0 ? Math.round(ticket.totalCost / qty) : undefined;
+    return Array.from({ length: qty }, (_, i) => ({
+      activityId: ticket.activityId,
+      ticketNo: qty > 1 ? `${ticketNo}-${i + 1}` : ticketNo,
+      redeemedAt: ticket.redeemedAt,
+      studentId: ticket.studentId,
+      studentName: ticket.studentName,
+      studentNickname: ticket.studentNickname || undefined,
+      prizeName: ticket.prizeName,
+      prizeIcon: ticket.prizeIcon || 'Gift',
+      quantity: 1,
+      totalCost: per,
+    }));
+  }, [ticket]);
 
   useEffect(() => {
-    // Minimal print CSS without template literals (Windows-safe for tsc).
     const style = document.createElement('style');
     style.setAttribute('data-prize-ticket-print', 'true');
     style.textContent =
       '@media print {' +
-      '@page { margin: 0; }' +
-      'html,body{margin:0 !important;padding:0 !important;background:#fff !important;color:#000 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
+      'html,body{margin:0 !important;padding:0 !important;background:#fff !important;}' +
+      '#screen-view,.no-print,[data-radix-toast-viewport]{display:none !important;}' +
       '}';
     document.head.appendChild(style);
     return () => {
@@ -69,7 +102,7 @@ export default function PrizeRedeemTicketPage() {
 
   useEffect(() => {
     if (printRequested) return;
-    if (!ticket.activityId || !ticket.studentId || !ticket.prizeName) return;
+    if (!prizeTickets?.length) return;
 
     setPrintRequested(true);
     const safety = window.setTimeout(() => {
@@ -91,97 +124,24 @@ export default function PrizeRedeemTicketPage() {
       window.clearTimeout(safety);
       window.removeEventListener('afterprint', cleanup);
     };
-  }, [printRequested, ticket.activityId, ticket.studentId, ticket.prizeName, ticket.returnPath, router]);
+  }, [printRequested, prizeTickets, ticket.returnPath, router]);
 
-  const redeemedLabel = (() => {
-    if (!Number.isFinite(ticket.redeemedAt)) return '';
-    try {
-      return format(new Date(ticket.redeemedAt), 'MMM d, yyyy h:mm a');
-    } catch {
-      return '';
-    }
-  })();
-
-  const qty = Number.isFinite(ticket.quantity) && ticket.quantity > 0 ? ticket.quantity : 1;
-  const totalCost = Number.isFinite(ticket.totalCost) ? ticket.totalCost : undefined;
+  if (!prizeTickets?.length) {
+    return (
+      <div className="min-h-[40vh] flex items-center justify-center p-6 text-sm text-muted-foreground">
+        Invalid ticket link.
+      </div>
+    );
+  }
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        display: 'grid',
-        placeItems: 'start center',
-        background: '#fff',
-        padding: 12,
-        boxSizing: 'border-box',
-      }}
-    >
-      <div
-        style={{
-          width: '58mm',
-          maxWidth: '100%',
-          border: '1px solid #000',
-          padding: '10px 10px 12px',
-          boxSizing: 'border-box',
-          fontFamily:
-            'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Liberation Sans", sans-serif',
-          fontSize: 12,
-          lineHeight: 1.2,
-        }}
-      >
-        <div style={{ textAlign: 'center', marginBottom: 8 }}>
-          <div style={{ fontWeight: 900, letterSpacing: '0.12em', fontSize: 14 }}>PRIZE REDEEM</div>
-          <div style={{ opacity: 0.75, fontSize: 10 }}>Ticket #{ticket.activityId}</div>
-        </div>
-
-        <div style={{ display: 'grid', gap: 6 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '44px 1fr', gap: 8, alignItems: 'start' }}>
-            <div style={{ fontWeight: 700, opacity: 0.75 }}>Student</div>
-            <div style={{ fontWeight: 800, wordBreak: 'break-word' }}>
-              {ticket.studentName || ticket.studentId}
-              {ticket.studentNickname ? <span style={{ opacity: 0.75, fontSize: 10 }}> ({ticket.studentNickname})</span> : null}
-            </div>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '44px 1fr', gap: 8, alignItems: 'start' }}>
-            <div style={{ fontWeight: 700, opacity: 0.75 }}>Prize</div>
-            <div style={{ fontWeight: 800, wordBreak: 'break-word' }}>{ticket.prizeName}</div>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '44px 1fr', gap: 8, alignItems: 'start' }}>
-            <div style={{ fontWeight: 700, opacity: 0.75 }}>Qty</div>
-            <div style={{ fontWeight: 800, wordBreak: 'break-word' }}>{qty}</div>
-          </div>
-          {typeof totalCost === 'number' ? (
-            <div style={{ display: 'grid', gridTemplateColumns: '44px 1fr', gap: 8, alignItems: 'start' }}>
-              <div style={{ fontWeight: 700, opacity: 0.75 }}>Cost</div>
-              <div style={{ fontWeight: 800, wordBreak: 'break-word' }}>{totalCost.toLocaleString()} pts</div>
-            </div>
-          ) : null}
-          {redeemedLabel ? (
-            <div style={{ display: 'grid', gridTemplateColumns: '44px 1fr', gap: 8, alignItems: 'start' }}>
-              <div style={{ fontWeight: 700, opacity: 0.75 }}>Time</div>
-              <div style={{ fontWeight: 800, wordBreak: 'break-word' }}>{redeemedLabel}</div>
-            </div>
-          ) : null}
-        </div>
-
-        <div style={{ height: 1, background: '#000', margin: '10px 0' }} />
-
-        <div style={{ display: 'grid', gap: 6 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '44px 1fr', gap: 8, alignItems: 'start' }}>
-            <div style={{ fontWeight: 700, opacity: 0.75 }}>Fulfilled</div>
-            <div style={{ fontWeight: 800, wordBreak: 'break-word' }}>[ ] Yes   [ ] No</div>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '44px 1fr', gap: 8, alignItems: 'start' }}>
-            <div style={{ fontWeight: 700, opacity: 0.75 }}>Staff</div>
-            <div style={{ fontWeight: 800, wordBreak: 'break-word' }}>________________</div>
-          </div>
-        </div>
-
-        <div style={{ marginTop: 10, textAlign: 'center', fontWeight: 700, fontSize: 11, opacity: 0.85 }}>
-          Keep this ticket with the prize.
-        </div>
-      </div>
+    <div className="min-h-screen w-full flex justify-center bg-white py-3 px-2 box-border print:min-h-0 print:py-0 print:px-0">
+      <PrizeRedeemTicketPrintSheet
+        displayMode="page"
+        tickets={prizeTickets}
+        schoolName={schoolName}
+        logoUrl={logoUrl}
+      />
     </div>
   );
 }
-

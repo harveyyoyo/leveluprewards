@@ -54,6 +54,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { GoogleFontLoader } from '@/components/GoogleFontLoader';
 import { useActiveStudentSession } from '@/hooks/useActiveStudentSession';
+import type { StudentFoundMeta } from '@/components/StudentScanner';
 import { rainbowTripletForNavId, complementTripletForNavId } from '@/lib/rainbowNav';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
 import { prizeIsListed, stripLeadingEmojiFromPrizeName, studentSeesPrizeByTeachers } from '@/lib/prize-utils';
@@ -368,7 +369,7 @@ function PrizeDashboard({
             // Failures are surfaced but do not roll back the redemption — the
             // points are already spent and the student already saw the success
             // toast; a motor jam is a human-operator problem.
-            if (prize.vendingMotor?.enabled) {
+            if (settings.enableVendingMachine && prize.vendingMotor?.enabled) {
                 if (!motorIsConnected()) {
                     toast({
                         variant: 'destructive',
@@ -594,6 +595,7 @@ function PrizeDashboard({
             <div
                 className={cn(
                     "min-h-screen relative overflow-hidden font-sans flex flex-col items-center",
+                    settings.enableThemeAnimations && !!activeTheme && "theme-theme-elements-animated theme-motion-override",
                     settings.displayMode === 'app' && 'pb-24',
                     (!student || !activeTheme) && (animBackdrop ? "bg-transparent text-foreground" : "bg-background text-foreground"),
                 )}
@@ -631,7 +633,7 @@ function PrizeDashboard({
                                     <h2 className="text-5xl font-black tracking-tighter font-headline drop-shadow-sm mb-4 flex items-center justify-center md:justify-start gap-4">
                                         {activeTheme?.emoji ? (
                                             <span
-                                                className="text-6xl leading-none"
+                                                className="theme-animated-emoji text-6xl leading-none"
                                                 style={{ filter: activeTheme?.primary ? `drop-shadow(0 0 10px ${activeTheme.primary}) drop-shadow(0 0 20px ${activeTheme.primary})` : undefined }}
                                             >
                                                 {activeTheme.emoji}
@@ -962,7 +964,19 @@ export default function PrizePage() {
     const { settings } = useSettings();
     const firestore = useFirestore();
 
-    const { activeStudentId, setActiveStudentId, handleDone, loginMeta } = useActiveStudentSession();
+    const { activeStudentId, setActiveStudentId, handleDone, loginMeta, setLoginMeta } = useActiveStudentSession();
+
+    const onScannerStudent = useCallback(
+        (id: string, meta?: StudentFoundMeta) => {
+            setActiveStudentId(id);
+            if (meta?.source === 'face') {
+                setLoginMeta({ source: 'face', confidence: meta.confidence });
+            } else {
+                setLoginMeta(null);
+            }
+        },
+        [setActiveStudentId, setLoginMeta],
+    );
     // Kiosk lock removed.
 
     if (!isInitialized || !['student', 'teacher', 'admin', 'school', 'developer'].includes(loginState)) {
@@ -1008,7 +1022,7 @@ export default function PrizePage() {
               } as any}
             >
                 <StudentScanner
-                    onStudentFound={setActiveStudentId}
+                    onStudentFound={onScannerStudent}
                     title="Prize Redemption"
                     description="Choose how to identify the student below."
                     icon={<Gift className="w-10 h-10" />}

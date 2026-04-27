@@ -309,7 +309,7 @@ export default function HallOfFamePage() {
                                         </div>
                                         <div className="grid gap-6 p-6">
                                             <div className="space-y-3">
-                                                <Label htmlFor="sort-by" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1">Sort By</Label>
+                                                <Label htmlFor="sort-by" className="text-[10px] font-semibold text-muted-foreground/80 lowercase tracking-normal">Sort By</Label>
                                                 <Select value={sortBy} onValueChange={(v) => setSortBy(v)}>
                                                     <SelectTrigger id="sort-by" className="h-12 rounded-xl bg-muted/30 border-border hover:bg-muted/50 transition-all font-bold">
                                                         <SelectValue />
@@ -321,9 +321,9 @@ export default function HallOfFamePage() {
                                                     </SelectContent>
                                                 </Select>
                                             </div>
-                                            <div className="grid grid-cols-2 gap-4">
+                                            <div className="grid grid-cols-3 gap-3">
                                                 <div className="space-y-3">
-                                                    <Label htmlFor="scope" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1">Show</Label>
+                                                    <Label htmlFor="scope" className="text-[10px] font-semibold text-muted-foreground/80 lowercase tracking-normal">Show</Label>
                                                     <Select value={scope} onValueChange={setScope}>
                                                         <SelectTrigger id="scope" className="h-12 rounded-xl bg-muted/30 border-border hover:bg-muted/50 transition-all font-bold">
                                                             <SelectValue />
@@ -335,7 +335,7 @@ export default function HallOfFamePage() {
                                                     </Select>
                                                 </div>
                                                 <div className="space-y-3">
-                                                    <Label htmlFor="limit" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1">Show Top</Label>
+                                                    <Label htmlFor="limit" className="text-[10px] font-semibold text-muted-foreground/80 lowercase tracking-normal">Show Top</Label>
                                                     <Input
                                                         id="limit"
                                                         type="number"
@@ -344,10 +344,8 @@ export default function HallOfFamePage() {
                                                         onChange={(e) => setLimit(Math.max(1, parseInt(e.target.value) || 1))}
                                                     />
                                                 </div>
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-4">
                                                 <div className="space-y-3">
-                                                    <Label htmlFor="podium-size" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1">Highlight Top</Label>
+                                                    <Label htmlFor="podium-size" className="text-[10px] font-semibold text-muted-foreground/80 lowercase tracking-normal">Highlight Top</Label>
                                                     <Input
                                                         id="podium-size"
                                                         type="number"
@@ -363,7 +361,7 @@ export default function HallOfFamePage() {
                                                     <Switch id="auto-scroll" checked={autoScroll} onCheckedChange={setAutoScroll} />
                                                 </div>
                                                 <div className="flex items-center justify-between py-1 px-1">
-                                                    <Label htmlFor="grid-layout" className="cursor-pointer font-bold text-sm">Grid Layout</Label>
+                                                    <Label htmlFor="grid-layout" className="cursor-pointer font-bold text-sm">Grid / Multi-column</Label>
                                                     <Switch id="grid-layout" checked={gridLayout} onCheckedChange={setGridLayout} />
                                                 </div>
                                             </div>
@@ -478,20 +476,20 @@ export default function HallOfFamePage() {
                                             )}
                                             title={pointsToNext > 0 ? `${pointsToNext.toLocaleString()} pts to rank up` : ''}
                                         >
-                                        <div className="flex items-center gap-4">
-                                            <span className="text-sm font-black text-muted-foreground/30 w-6">{index + podiumSize + 1}</span>
+                                        <div className="flex min-w-0 items-center gap-4">
+                                            <span className="w-6 shrink-0 text-sm font-black text-muted-foreground/30">{index + podiumSize + 1}</span>
                                             <Avatar className="w-10 h-10 border-2 border-background overflow-hidden">
                                                 {student.photoUrl && <img src={student.photoUrl} alt="Photo" className={settings.photoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />}
                                                 <AvatarFallback className="bg-secondary text-xs font-bold">{getInitials(student.firstName, student.lastName)}</AvatarFallback>
                                             </Avatar>
-                                            <div>
-                                                <div className="flex items-center gap-2">
-                                                    <p className="font-black text-foreground tracking-tight">{getStudentNickname(student)} {student.lastName}</p>
+                                            <div className="min-w-0">
+                                                <div className="flex min-w-0 items-center gap-2">
+                                                    <p className="truncate font-black text-foreground tracking-tight">{getStudentNickname(student)} {student.lastName}</p>
                                                 </div>
-                                                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{getClassName(student.classId)}</p>
+                                                <p className="truncate text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{getClassName(student.classId)}</p>
                                             </div>
                                         </div>
-                                        <div className="text-lg font-black text-primary tracking-tighter">
+                                        <div className="shrink-0 pl-3 text-lg font-black text-primary tracking-tighter">
                                             {getPointsForStudent(student).toLocaleString()}
                                         </div>
 

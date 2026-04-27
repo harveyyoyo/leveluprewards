@@ -57,6 +57,68 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { isUserLoading, functions, firestore, auth } = useFirebase();
     const router = useRouter();
 
+    const logout = useCallback(() => {
+        setIsAdmin(false);
+        setIsTeacher(false);
+        setIsKioskLocked(false);
+        setUserName(null);
+        setTeacherDocId(null);
+        localStorage.removeItem('userName');
+        localStorage.removeItem('teacherDocId');
+
+        if (loginState === 'admin' || loginState === 'teacher') {
+            localStorage.setItem('loginState', 'student');
+            setLoginState('student');
+            if (schoolId) {
+                router.push(`/${schoolId}/portal`);
+            } else {
+                router.push('/portal');
+            }
+        } else {
+            localStorage.removeItem('loginState');
+            localStorage.removeItem('schoolId');
+            setLoginState('loggedOut');
+            setSchoolId(null);
+            router.push('/');
+        }
+    }, [loginState, router, schoolId]);
+
+    // Auto-logout idle timeout for privileged sessions (admin/teacher).
+    useEffect(() => {
+        if (loginState !== 'admin' && loginState !== 'teacher') return;
+
+        const IDLE_MS = 5 * 60 * 1000;
+        let timer: ReturnType<typeof setTimeout> | null = null;
+
+        const arm = () => {
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(() => {
+                logout();
+            }, IDLE_MS);
+        };
+
+        const onActivity = () => arm();
+
+        const events: string[] = [
+            'mousemove',
+            'mousedown',
+            'keydown',
+            'touchstart',
+            'scroll',
+            'wheel',
+            'pointerdown',
+            'visibilitychange',
+        ];
+
+        for (const ev of events) window.addEventListener(ev as any, onActivity, { passive: true } as any);
+        arm();
+
+        return () => {
+            if (timer) clearTimeout(timer);
+            for (const ev of events) window.removeEventListener(ev as any, onActivity as any);
+        };
+    }, [loginState, logout]);
+
     useEffect(() => {
         setIsMounted(true);
     }, []);
@@ -325,28 +387,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         },
         [functions, firestore, auth]
     );
-
-    const logout = useCallback(() => {
-        setIsAdmin(false);
-        setIsTeacher(false);
-        setIsKioskLocked(false);
-        setUserName(null);
-        setTeacherDocId(null);
-        localStorage.removeItem('userName');
-        localStorage.removeItem('teacherDocId');
-
-        if (loginState === 'admin' || loginState === 'teacher') {
-            localStorage.setItem('loginState', 'student');
-            setLoginState('student');
-            router.push('/portal');
-        } else {
-            localStorage.removeItem('loginState');
-            localStorage.removeItem('schoolId');
-            setLoginState('loggedOut');
-            setSchoolId(null);
-            router.push('/');
-        }
-    }, [loginState, router]);
 
     const value = useMemo(
         () => ({

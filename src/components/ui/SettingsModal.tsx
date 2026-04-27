@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useAppContext } from '@/components/AppProvider';
+import { usePathname } from 'next/navigation';
 import {
     Dialog,
     DialogContent,
@@ -20,38 +21,62 @@ import {
     Bell, Shield, Moon, Sun, ArrowLeft, Palette, Zap, Trophy,
     BarChart3, MessageSquare, ShoppingBag, ShieldCheck, Star,
     Users, Database, Printer, LayoutDashboard, History, HelpCircle,
-    Cpu, Award, Clock
+    Cpu, Award, Clock, Cog, Lock, Sparkles, ArrowRightLeft, Trash2, RotateCcw
 } from 'lucide-react';
 import { useSettings, colorSchemes, type ColorScheme } from '../providers/SettingsProvider';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
+import { VendingMotorPanel } from '@/components/VendingMotorPanel';
+import { ANIMATED_BACKGROUND_STYLES, type AnimatedBackgroundStyle } from '@/lib/animatedBackdrop';
 
-type SettingsView = 'main' | 'features';
+type SettingsView = 'main' | 'features' | 'library';
 
-function FeatureRow({ id, label, desc, icon, settings, onToggle, isImplemented = true, isAdmin = true }: {
+function FeatureRow({ id, label, desc, icon, settings, onToggle, onConfigure, isImplemented = true, isAdmin = true, isAllowed = true, planLabel }: {
     id: string; label: string; desc: string; icon: React.ReactNode;
-    settings: any; onToggle: (key: string, val: any) => void; isImplemented?: boolean; isAdmin?: boolean;
+    settings: any; onToggle: (key: string, val: any) => void; onConfigure?: () => void; isImplemented?: boolean; isAdmin?: boolean; isAllowed?: boolean; planLabel?: string;
 }) {
     const isEnabled = settings[id] || false;
+    const canUse = isImplemented && isAllowed;
     return (
         <div className="flex items-start justify-between py-4 px-3 border-b border-border/40 last:border-0 hover:bg-muted/30 rounded-xl transition-colors">
-            <div className={`flex items-start gap-4 ${!isImplemented && 'opacity-60'} mr-6`}>
-                <div className={`p-2.5 rounded-xl transition-colors shrink-0 mt-0.5 ${(isEnabled && isImplemented) ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
+            <div className={`flex items-start gap-4 ${!canUse && 'opacity-60'} mr-6`}>
+                <div className={`p-2.5 rounded-xl transition-colors shrink-0 mt-0.5 ${(isEnabled && canUse) ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
                     {icon}
                 </div>
                 <div className="flex flex-col">
-                    <Label className="font-bold text-sm block text-foreground mb-1" htmlFor={isImplemented && isAdmin ? id : undefined}>{label}</Label>
+                    <Label className="font-bold text-sm block text-foreground mb-1" htmlFor={canUse && isAdmin ? id : undefined}>{label}</Label>
                     <p className="text-xs text-muted-foreground leading-relaxed w-full pr-4">{desc}</p>
                 </div>
             </div>
             {isImplemented ? (
                 <div className="flex flex-col flex-shrink-0 items-end justify-start min-h-[44px]">
-                    <Switch
-                        id={id}
-                        checked={isEnabled}
-                        onCheckedChange={(checked) => onToggle(id, checked)}
-                        disabled={!isAdmin}
-                    />
+                    <div className="flex items-center gap-2">
+                        {onConfigure ? (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="h-9 w-9 rounded-xl"
+                                onClick={onConfigure}
+                                disabled={!isAdmin || !isAllowed}
+                                title={`${label} settings`}
+                                aria-label={`${label} settings`}
+                            >
+                                <Cog className="h-4 w-4" />
+                            </Button>
+                        ) : null}
+                        <Switch
+                            id={id}
+                            checked={isEnabled && isAllowed}
+                            onCheckedChange={(checked) => onToggle(id, checked)}
+                            disabled={!isAdmin || !isAllowed}
+                        />
+                    </div>
                     {!isAdmin && <span className="text-[10px] text-muted-foreground mt-2 font-black uppercase tracking-widest whitespace-nowrap">Admin Only</span>}
+                    {isAdmin && !isAllowed && (
+                        <span className="text-[10px] text-amber-700 dark:text-amber-400 mt-2 font-black uppercase tracking-widest whitespace-nowrap flex items-center gap-1" title={`Current plan: ${planLabel ?? 'Free'}`}>
+                            <Lock className="h-3 w-3" /> Upgrade
+                        </span>
+                    )}
                 </div>
             ) : (
                 <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground bg-muted px-3 py-1.5 rounded-md mt-1 whitespace-nowrap">
@@ -65,9 +90,19 @@ function FeatureRow({ id, label, desc, icon, settings, onToggle, isImplemented =
 export function SettingsModal() {
     const { loginState } = useAppContext();
     const isAdmin = loginState === 'admin' || loginState === 'developer';
-    const { settings, updateSettings } = useSettings();
+    const { settings, updateSettings, isFeatureAllowed, planLabel } = useSettings();
     const playSound = useArcadeSound();
     const [view, setView] = useState<SettingsView>('main');
+    const [vendingSettingsOpen, setVendingSettingsOpen] = useState(false);
+    const pathname = usePathname();
+    const isPublicLoginRoute =
+        pathname === '/' ||
+        pathname === '/portal' ||
+        pathname === '/login' ||
+        (typeof pathname === 'string' && pathname.startsWith('/s/'));
+
+    // For short-link kiosk entry routes, keep the UI minimal.
+    if (typeof pathname === 'string' && pathname.startsWith('/s/')) return null;
 
     const handleToggle = (key: string, value: any) => {
         updateSettings({ [key]: value } as any);
@@ -76,7 +111,18 @@ export function SettingsModal() {
         }
     };
 
-    const viewTitle = view === 'main' ? 'Interface Settings' : 'Features';
+    const viewTitle = view === 'main' ? 'Interface Settings' : view === 'features' ? 'Features' : 'Background Library';
+
+    const visibleStyles = ANIMATED_BACKGROUND_STYLES.filter(s => !(settings.hiddenAnimatedBackgroundIds || []).includes(s.id));
+    const currentStyle = visibleStyles.find(s => s.id === settings.animatedBackgroundStyle) || visibleStyles[0] || ANIMATED_BACKGROUND_STYLES[0];
+    const currentStyleIndex = visibleStyles.findIndex(s => s.id === currentStyle.id);
+
+    const cycleBackground = () => {
+        if (visibleStyles.length === 0) return;
+        const nextIndex = (currentStyleIndex + 1) % visibleStyles.length;
+        updateSettings({ animatedBackgroundStyle: visibleStyles[nextIndex].id });
+        if (settings.soundEnabled) playSound('click');
+    };
 
     return (
         <Dialog onOpenChange={(open) => { if (!open) setView('main'); }}>
@@ -105,138 +151,173 @@ export function SettingsModal() {
                 <div key={view} className="px-6 py-4 overflow-y-auto flex-1 min-h-0 flex flex-col pb-24">
                     {view === 'main' && (
                         <>
-                            {/* Graphic Mode */}
-                            <div className="bg-muted/30 rounded-2xl p-4 mb-4 border border-border/50 transition-all hover:bg-muted/40">
-                                <div className="flex items-center justify-between">
+                            {/* APPEARANCE */}
+                            <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 mb-4 border border-slate-100 dark:border-slate-800/50">
+                                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 pb-3 flex items-center gap-2">
+                                    <Palette className="w-3.5 h-3.5" /> Appearance
+                                </p>
+                                
+                                {/* Color Scheme */}
+                                <div className="grid grid-cols-3 gap-2 mt-1">
+                                    {(Object.keys(colorSchemes) as ColorScheme[]).map((key) => (
+                                        <button
+                                            key={key}
+                                            onClick={() => handleToggle('colorScheme', key)}
+                                            className={`flex items-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition-all border ${settings.colorScheme === key ? 'border-primary bg-primary/5 text-primary ring-1 ring-primary' : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-muted'}`}
+                                        >
+                                            <span className={`w-4 h-4 rounded-full ${colorSchemes[key].swatch} shrink-0`} />
+                                            {colorSchemes[key].label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* MOTION & SOUND */}
+                            <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 mb-4 border border-slate-100 dark:border-slate-800/50">
+                                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 pb-3 flex items-center gap-2">
+                                    <Zap className="w-3.5 h-3.5" /> Motion & Sound
+                                </p>
+
+                                {/* Calm Mode */}
+                                <div className="flex items-center justify-between mb-4 mt-1">
                                     <div className="flex items-center gap-3">
-                                        <div className={`p-2.5 rounded-xl transition-colors ${settings.graphicMode === 'graphics' ? 'bg-primary/20 text-primary shadow-sm' : 'bg-muted text-muted-foreground'}`}>
-                                            <Monitor className="w-5 h-5" />
+                                        <div className={`p-2 rounded-xl bg-muted text-muted-foreground`}>
+                                            <Moon className="w-5 h-5" />
                                         </div>
                                         <div>
-                                            <h4 className="font-black text-sm text-foreground uppercase tracking-wider">Arcade Mode</h4>
-                                            <p className="text-[11px] font-medium text-muted-foreground mt-0.5">Gamified UI with special effects</p>
+                                            <h4 className="font-bold text-sm text-foreground">Calm mode</h4>
+                                            <p className="text-[11px] text-muted-foreground mt-0.5">Quiets decorative motion and glows</p>
                                         </div>
                                     </div>
                                     <Switch
-                                        checked={settings.graphicMode === 'graphics'}
-                                        onCheckedChange={(checked) => handleToggle('graphicMode', checked ? 'graphics' : 'classic')}
+                                        checked={settings.calmMode}
+                                        onCheckedChange={(checked) => handleToggle('calmMode', checked)}
                                         className="scale-110"
                                     />
                                 </div>
-                            </div>
 
-                            {/* Color Scheme */}
-                            {settings.graphicMode === 'classic' && (
-                                <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 mb-4 border border-slate-100 dark:border-slate-800">
-                                    <div className="flex items-center gap-3 mb-3">
-                                        <div className="p-2 rounded-lg bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`p-2 rounded-xl transition-colors ${settings.enableAnimatedBackground && !settings.calmMode ? 'bg-primary/20 text-primary shadow-sm' : 'bg-muted text-muted-foreground'}`}>
+                                            <Sparkles className="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <h4 className="font-bold text-sm text-foreground">Animated background</h4>
+                                            <p className="text-[11px] text-muted-foreground mt-0.5">Vibrant arcade style backdrop</p>
+                                        </div>
+                                    </div>
+                                    <Switch
+                                        checked={settings.enableAnimatedBackground}
+                                        onCheckedChange={(checked) => {
+                                            updateSettings({ 
+                                                enableAnimatedBackground: checked,
+                                                graphicMode: checked ? 'graphics' : 'classic'
+                                            });
+                                        }}
+                                        className="scale-110"
+                                    />
+                                </div>
+
+                                {/* Background Style */}
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 rounded-xl bg-muted text-muted-foreground">
                                             <Palette className="w-5 h-5" />
                                         </div>
                                         <div>
-                                            <h4 className="font-bold text-foreground">Color Scheme</h4>
-                                            <p className="text-xs text-muted-foreground mt-0.5">Classic mode colors</p>
+                                            <h4 className="font-bold text-sm text-foreground">Background style</h4>
+                                            <p className="text-[11px] text-muted-foreground mt-0.5">Current: {currentStyle.label}</p>
                                         </div>
                                     </div>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        {(Object.keys(colorSchemes) as ColorScheme[]).map((key) => (
-                                            <button
-                                                key={key}
-                                                onClick={() => handleToggle('colorScheme', key)}
-                                                className={`flex items-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition-all border ${settings.colorScheme === key ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 ring-1 ring-blue-500' : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
-                                            >
-                                                <span className={`w-4 h-4 rounded-full ${colorSchemes[key].swatch} shrink-0`} />
-                                                {colorSchemes[key].label}
-                                            </button>
-                                        ))}
-                                    </div>
+                                    <Button variant="ghost" className="h-9 px-3 rounded-xl text-xs font-bold gap-2 hover:bg-primary/10 hover:text-primary transition-colors"
+                                        onClick={cycleBackground}
+>
+                                        {currentStyle.label} <ArrowRightLeft className="w-3 h-3" />
+                                    </Button>
                                 </div>
-                            )}
 
-                            {/* Dark Mode */}
-                            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 mb-4 border border-slate-100 dark:border-slate-800">
-                                <div className="flex items-center justify-between">
+                                {/* Theme Animations */}
+                                <div className="flex items-center justify-between mb-4">
                                     <div className="flex items-center gap-3">
-                                        <div className={`p-2 rounded-lg ${settings.darkMode ? 'bg-indigo-100 text-indigo-600' : 'bg-amber-100 text-amber-600'}`}>
-                                            {settings.darkMode ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+                                        <div className={`p-2 rounded-xl transition-colors ${settings.enableThemeAnimations ? 'bg-primary/20 text-primary shadow-sm' : 'bg-muted text-muted-foreground'}`}>
+                                            <Zap className="w-5 h-5" />
                                         </div>
                                         <div>
-                                            <h4 className="font-bold text-foreground">Dark Mode</h4>
-                                            <p className="text-xs text-muted-foreground mt-0.5">Immersive dark interface</p>
+                                            <h4 className="font-bold text-sm text-foreground">Theme animations</h4>
+                                            <p className="text-[11px] text-muted-foreground mt-0.5">Animate emojis + themed accents (kiosk & shop)</p>
                                         </div>
                                     </div>
                                     <Switch
-                                        checked={settings.darkMode}
-                                        onCheckedChange={(checked) => handleToggle('darkMode', checked)}
-                                        className="data-[state=checked]:bg-indigo-600 scale-110"
+                                        checked={settings.enableThemeAnimations}
+                                        onCheckedChange={(checked) => handleToggle('enableThemeAnimations', checked)}
+                                        className="scale-110"
                                     />
                                 </div>
+
+                                {/* Background Library Button */}
+                                <Button variant="outline" className="w-full justify-between h-11 px-4 rounded-xl border-border/50 text-xs font-bold text-muted-foreground hover:text-foreground" onClick={() => setView('library')}>
+                                    <span className="flex items-center gap-2"><LayoutDashboard className="w-4 h-4" /> Background library</span>
+                                    <div className="text-[10px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-600 px-2 py-1 rounded">{visibleStyles.length} of {ANIMATED_BACKGROUND_STYLES.length}</div>
+                                </Button>
                             </div>
 
-                            {/* Legacy Mode */}
-                            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 mb-4 border border-slate-100 dark:border-slate-800">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className={`p-2 rounded-lg ${settings.legacyMode ? 'bg-orange-100 text-orange-600' : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400'}`}>
-                                            <Cpu className="w-5 h-5" />
-                                        </div>
-                                        <div>
-                                            <h4 className="font-bold text-foreground">Legacy Mode</h4>
-                                            <p className="text-xs text-muted-foreground mt-0.5">Disables heavy effects for older hardware</p>
-                                        </div>
-                                    </div>
-                                    <Switch
-                                        checked={settings.legacyMode}
-                                        onCheckedChange={(checked) => handleToggle('legacyMode', checked)}
-                                        className="data-[state=checked]:bg-orange-600 scale-110"
-                                    />
-                                </div>
-                            </div>
+                            {/* THEME & LAYOUT */}
+                            <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 mb-4 border border-slate-100 dark:border-slate-800/50">
+                                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 pb-3 flex items-center gap-2">
+                                    <LayoutDashboard className="w-3.5 h-3.5" /> Theme & Layout
+                                </p>
 
-                            {/* Sound Effects (quick toggle) */}
-                            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 mb-4 border border-slate-100 dark:border-slate-800">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2 rounded-lg bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400">
-                                            {settings.soundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+                                <div className="grid grid-cols-2 gap-4 mb-4 mt-1">
+                                    {/* Dark Mode */}
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <Moon className="w-4 h-4 text-muted-foreground" />
+                                            <span className="text-sm font-bold">Dark Mode</span>
                                         </div>
-                                        <div>
-                                            <h4 className="font-bold text-foreground">Sound Effects</h4>
-                                            <p className="text-xs text-muted-foreground mt-0.5">Button clicks and UI audio</p>
-                                        </div>
+                                        <Switch
+                                            checked={settings.darkMode}
+                                            onCheckedChange={(checked) => handleToggle('darkMode', checked)}
+                                        />
                                     </div>
-                                    <Switch
-                                        checked={settings.soundEnabled}
-                                        onCheckedChange={(checked) => handleToggle('soundEnabled', checked)}
-                                        className="data-[state=checked]:bg-emerald-500 scale-110"
-                                    />
+                                    {/* Legacy Mode */}
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <Cpu className="w-4 h-4 text-muted-foreground" />
+                                            <span className="text-sm font-bold">Legacy Mode</span>
+                                        </div>
+                                        <Switch
+                                            checked={settings.legacyMode}
+                                            onCheckedChange={(checked) => handleToggle('legacyMode', checked)}
+                                            className="data-[state=checked]:bg-orange-600"
+                                        />
+                                    </div>
+                                    {/* Sound Effects */}
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <Volume2 className="w-4 h-4 text-muted-foreground" />
+                                            <span className="text-sm font-bold">Sound FX</span>
+                                        </div>
+                                        <Switch
+                                            checked={settings.soundEnabled}
+                                            onCheckedChange={(checked) => handleToggle('soundEnabled', checked)}
+                                            className="data-[state=checked]:bg-emerald-500"
+                                        />
+                                    </div>
                                 </div>
-                            </div>
 
-                            {/* Display Mode */}
-                            <div className="bg-muted/30 rounded-2xl p-4 mb-4 border border-border/50">
-                                <div className="flex items-center gap-3 mb-4">
-                                    <div className="p-2.5 rounded-xl bg-muted text-muted-foreground">
-                                        {settings.displayMode === 'app' ? <Smartphone className="w-5 h-5" /> : <Monitor className="w-5 h-5" />}
-                                    </div>
-                                    <div>
-                                        <h4 className="font-black text-sm text-foreground uppercase tracking-wider">Display Mode</h4>
-                                        <p className="text-[11px] font-medium text-muted-foreground mt-0.5">UI layout style</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-1.5 bg-background/50 p-1.5 rounded-2xl border border-border shadow-inner">
+                                {/* Display Mode */}
+                                <div className="flex items-center justify-between bg-muted/40 p-1.5 rounded-2xl border border-border/50">
                                     <button
                                         onClick={() => handleToggle('displayMode', 'web')}
-                                        className={`flex-1 py-2 px-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${settings.displayMode === 'web' ? 'bg-primary text-primary-foreground shadow-md' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}
-                                        aria-pressed={settings.displayMode === 'web'}
+                                        className={`flex-1 py-2 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${settings.displayMode === 'web' ? 'bg-background text-foreground shadow-sm border border-border/50' : 'text-muted-foreground hover:text-foreground'}`}
                                     >
-                                        Desktop
+                                        Web
                                     </button>
                                     <button
                                         onClick={() => handleToggle('displayMode', 'app')}
-                                        className={`flex-1 py-2 px-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${settings.displayMode === 'app' ? 'bg-primary text-primary-foreground shadow-md' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}
-                                        aria-pressed={settings.displayMode === 'app'}
+                                        className={`flex-1 py-2 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${settings.displayMode === 'app' ? 'bg-background text-foreground shadow-sm border border-border/50' : 'text-muted-foreground hover:text-foreground'}`}
                                     >
-                                        Mobile
+                                        App
                                     </button>
                                 </div>
                             </div>
@@ -249,7 +330,7 @@ export function SettingsModal() {
                             >
                                 <div className="flex items-center gap-3">
                                     <Zap className="w-5 h-5" />
-                                    <span className="font-bold">Features</span>
+                                    <span className="font-bold">Features & Add-ons</span>
                                 </div>
                                 <ChevronRight className="w-5 h-5 opacity-50" />
                             </Button>
@@ -258,7 +339,26 @@ export function SettingsModal() {
                     )}
 
                     {view === 'features' && (
-                        <div className="space-y-4 animate-in slide-in-from-right-4 duration-300 pb-24">
+                        <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6 pb-24">
+                            {/* Current Plan Banner */}
+                            {planLabel === 'Enterprise' && (
+                                <div className="bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800/50 rounded-2xl p-4 flex items-center justify-between shadow-sm">
+                                    <div className="flex items-center gap-4">
+                                        <div className="h-12 w-12 rounded-xl bg-amber-500 flex items-center justify-center text-white shadow-inner">
+                                            <Zap className="w-7 h-7" />
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-600 dark:text-amber-400">Current Plan</p>
+                                            <h3 className="text-xl font-headline font-black text-amber-900 dark:text-amber-100 uppercase italic tracking-tighter">Enterprise</h3>
+                                        </div>
+                                    </div>
+                                    <div className="text-[10px] font-black bg-amber-500 text-white px-3 py-1.5 rounded-full uppercase tracking-widest shadow-sm">
+                                        Unlimited
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="space-y-4">
 
                             <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
                                 <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><Settings className="w-3.5 h-3.5" /> Core Workflow</p>
@@ -271,6 +371,8 @@ export function SettingsModal() {
                                     onToggle={handleToggle}
                                     isImplemented={true}
                                     isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableTeacherBudgets')}
+                                    planLabel={planLabel}
                                 />
                                 <FeatureRow
                                     id="enableBulkPoints"
@@ -281,6 +383,8 @@ export function SettingsModal() {
                                     onToggle={handleToggle}
                                     isImplemented={false}
                                     isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableBulkPoints')}
+                                    planLabel={planLabel}
                                 />
                             </div>
 
@@ -295,6 +399,8 @@ export function SettingsModal() {
                                     onToggle={handleToggle}
                                     isImplemented={true}
                                     isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableAdminAnalytics')}
+                                    planLabel={planLabel}
                                 />
                                 <FeatureRow
                                     id="enableTeacherCharts"
@@ -305,6 +411,8 @@ export function SettingsModal() {
                                     onToggle={handleToggle}
                                     isImplemented={false}
                                     isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableTeacherCharts')}
+                                    planLabel={planLabel}
                                 />
                                 <FeatureRow
                                     id="enableStudentReports"
@@ -315,6 +423,8 @@ export function SettingsModal() {
                                     onToggle={handleToggle}
                                     isImplemented={false}
                                     isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableStudentReports')}
+                                    planLabel={planLabel}
                                 />
                             </div>
 
@@ -322,13 +432,15 @@ export function SettingsModal() {
                                 <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><Clock className="w-3.5 h-3.5" /> Attendance</p>
                                 <FeatureRow
                                     id="enableClassSignIn"
-                                    label="Class Sign-In"
+                                    label="Attendance"
                                     desc="Use student kiosk login as class attendance. Optional punctuality points and schedules can be configured in Admin → Attendance."
                                     icon={<Clock className="w-5 h-5" />}
                                     settings={settings}
                                     onToggle={handleToggle}
                                     isImplemented={true}
                                     isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableClassSignIn')}
+                                    planLabel={planLabel}
                                 />
                             </div>
 
@@ -343,36 +455,56 @@ export function SettingsModal() {
                                     onToggle={handleToggle}
                                     isImplemented={true}
                                     isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableStudentPortal')}
+                                    planLabel={planLabel}
+                                />
+                                <FeatureRow
+                                    id="enableFaceLogin"
+                                    label="Face Login"
+                                    desc="Allow students to sign in using the kiosk webcam. Requires camera permission and deployed Cloud Functions."
+                                    icon={<Shield className="w-5 h-5" />}
+                                    settings={settings}
+                                    onToggle={handleToggle}
+                                    isImplemented={true}
+                                    isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableFaceLogin')}
+                                    planLabel={planLabel}
                                 />
                                 <FeatureRow
                                     id="enableQrLogin"
-                                    label="QR Code Login (Soon)"
+                                    label="QR Code Login"
                                     desc="Students scan a QR code instead of typing their ID to log into kiosks."
                                     icon={<LayoutDashboard className="w-5 h-5" />}
                                     settings={settings}
                                     onToggle={handleToggle}
                                     isImplemented={false}
                                     isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableQrLogin')}
+                                    planLabel={planLabel}
                                 />
                                 <FeatureRow
                                     id="enablePrizeImages"
-                                    label="Prize Photos (Soon)"
+                                    label="Prize Photos"
                                     desc="Show real photos of prizes in the shop, not only icons."
                                     icon={<ShoppingBag className="w-5 h-5" />}
                                     settings={settings}
                                     onToggle={handleToggle}
                                     isImplemented={false}
                                     isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enablePrizeImages')}
+                                    planLabel={planLabel}
                                 />
                                 <FeatureRow
                                     id="enableWishlist"
-                                    label="Student Wishlists (Soon)"
+                                    label="Student Wishlists"
                                     desc="Let students star favorite prizes and track progress toward them."
                                     icon={<Star className="w-5 h-5" />}
                                     settings={settings}
                                     onToggle={handleToggle}
                                     isImplemented={false}
                                     isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableWishlist')}
+                                    planLabel={planLabel}
                                 />
                             </div>
 
@@ -387,6 +519,8 @@ export function SettingsModal() {
                                     onToggle={handleToggle}
                                     isImplemented={true}
                                     isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableAchievements')}
+                                    planLabel={planLabel}
                                 />
                                 <FeatureRow
                                     id="enableBadges"
@@ -397,6 +531,8 @@ export function SettingsModal() {
                                     onToggle={handleToggle}
                                     isImplemented={true}
                                     isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableBadges')}
+                                    planLabel={planLabel}
                                 />
                                 <FeatureRow
                                     id="enableLevels"
@@ -407,6 +543,8 @@ export function SettingsModal() {
                                     onToggle={handleToggle}
                                     isImplemented={false}
                                     isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableLevels')}
+                                    planLabel={planLabel}
                                 />
                                 <FeatureRow
                                     id="enableStreaks"
@@ -417,6 +555,26 @@ export function SettingsModal() {
                                     onToggle={handleToggle}
                                     isImplemented={false}
                                     isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableStreaks')}
+                                    planLabel={planLabel}
+                                />
+                            </div>
+
+
+                            <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
+                                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><ShoppingBag className="w-3.5 h-3.5" /> Prize Shop</p>
+                                <FeatureRow
+                                    id="enableVendingMachine"
+                                    label="Vending Machine"
+                                    desc="Connect a USB serial vending rig and let configured prizes trigger a motor after redemption."
+                                    icon={<Cog className="w-5 h-5" />}
+                                    settings={settings}
+                                    onToggle={handleToggle}
+                                    onConfigure={() => setVendingSettingsOpen(true)}
+                                    isImplemented={true}
+                                    isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableVendingMachine')}
+                                    planLabel={planLabel}
                                 />
                             </div>
 
@@ -454,8 +612,65 @@ export function SettingsModal() {
                                 />
                             </div>
                         </div>
-                    )}
+                    </div>
+                )}
+
+                {view === 'library' && (
+                    <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4 pb-24">
+                        <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 mb-2 border border-slate-100 dark:border-slate-800/50">
+                            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 pb-3 flex items-center gap-2">
+                                <LayoutDashboard className="w-3.5 h-3.5" /> Background Library
+                            </p>
+                            <p className="text-xs text-muted-foreground leading-relaxed">
+                                Remove styles you don't want in the picker. Restore anytime. At least one style stays available.
+                            </p>
+                        </div>
+
+                        <div className="space-y-1">
+                            {ANIMATED_BACKGROUND_STYLES.map((style) => {
+                                const isHidden = (settings.hiddenAnimatedBackgroundIds || []).includes(style.id);
+                                return (
+                                    <div key={style.id} className="flex items-center justify-between py-2.5 px-3 rounded-xl border-b border-border/40 last:border-0 hover:bg-muted/30 transition-colors group">
+                                        <div className="flex flex-col">
+                                            <span className="font-bold text-sm text-foreground">{style.label}</span>
+                                            <span className="text-[10px] text-muted-foreground leading-tight">{style.description}</span>
+                                        </div>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 rounded-lg shrink-0"
+                                            onClick={() => {
+                                                const current = settings.hiddenAnimatedBackgroundIds || [];
+                                                if (isHidden) {
+                                                    const next = current.filter(id => id !== style.id);
+                                                    updateSettings({ hiddenAnimatedBackgroundIds: next });
+                                                } else {
+                                                    if (visibleStyles.length > 1) {
+                                                        const next = [...current, style.id];
+                                                        updateSettings({ hiddenAnimatedBackgroundIds: next });
+                                                    }
+                                                }
+                                                if (settings.soundEnabled) playSound('click');
+                                            }}
+                                        >
+                                            {isHidden ? <RotateCcw className="w-4 h-4 text-primary" /> : <Trash2 className="w-4 h-4 text-muted-foreground group-hover:text-destructive transition-colors" />}
+                                        </Button>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
                 </div>
+
+                <Dialog open={vendingSettingsOpen} onOpenChange={setVendingSettingsOpen}>
+                    <DialogContent className="sm:max-w-xl rounded-3xl">
+                        <DialogHeader>
+                            <DialogTitle>Vending Machine Settings</DialogTitle>
+                        </DialogHeader>
+                        <VendingMotorPanel />
+                    </DialogContent>
+                </Dialog>
 
                 <DialogFooter className="px-6 py-6 sm:justify-end border-t border-border/40 bg-muted/20 absolute bottom-0 w-full left-0 z-10 hidden sm:flex">
                     <DialogClose asChild>

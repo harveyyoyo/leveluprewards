@@ -2,6 +2,19 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   /* config options here */
+  webpack: (config, { isServer }) => {
+    // @vladmandic/face-api uses dynamic requires; webpack warns but the bundle works.
+    config.ignoreWarnings = [
+      ...(config.ignoreWarnings || []),
+      { module: /@vladmandic\/face-api/ },
+    ];
+    // Work around intermittent Windows builds where the server webpack runtime
+    // tries to require `./<id>.js` but chunks are emitted under `chunks/`.
+    if (isServer) {
+      config.output.chunkFilename = '[id].js';
+    }
+    return config;
+  },
   images: {
     remotePatterns: [
       {

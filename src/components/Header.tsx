@@ -48,7 +48,7 @@ export default function Header() {
   }, [firestore, schoolId]);
 
   const { data: schoolData } = useDoc<{ name: string; logoUrl?: string }>(schoolDocRef);
-  const schoolName = schoolData?.name || schoolId;
+  const schoolName = schoolData?.name || (schoolId ? schoolId.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : '');
 
   const appConfigDocRef = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -70,19 +70,21 @@ export default function Header() {
     return null;
   }
 
-  const logoLink = '/';
+  const logoLink = schoolId ? `/${schoolId}/portal` : '/';
   const centerLabel = schoolName;
-  const centerHref = '/portal';
+  const centerHref = schoolId ? `/${schoolId}/portal` : '/portal';
+  const isStaff = loginState === 'teacher' || loginState === 'admin';
+  const isDemoSchool = schoolId === 'schoolabc';
 
 
   // --- APP MODE HEADER ---
   if (settings.displayMode === 'app') {
     const navItems = [
-      ...(isAdmin ? [{ id: 'admin', href: '/admin', icon: UserCog, label: 'Admin', color: 'destructive' }] : []),
-      { id: 'print', href: '/teacher', icon: Printer, label: 'Teacher', color: 'chart-2' },
-      { id: 'redeem', href: '/student', icon: GraduationCap, label: 'Student', color: 'chart-1' },
-      { id: 'prize', href: '/prize', icon: Gift, label: 'Shop', color: 'chart-3' },
-      { id: 'fame', href: '/halloffame', icon: Trophy, label: 'Fame', color: 'chart-5' },
+      ...(isAdmin ? [{ id: 'admin', href: `/${schoolId}/admin`, icon: UserCog, label: 'Admin', color: 'destructive' }] : []),
+      ...(isStaff || isDemoSchool ? [{ id: 'print', href: `/${schoolId}/teacher`, icon: Printer, label: 'Teacher', color: 'chart-2' }] : []),
+      { id: 'redeem', href: `/${schoolId}/student`, icon: GraduationCap, label: 'Student', color: 'chart-1' },
+      { id: 'prize', href: `/${schoolId}/prize`, icon: Gift, label: 'Shop', color: 'chart-3' },
+      ...(isStaff || isDemoSchool ? [{ id: 'fame', href: `/${schoolId}/halloffame`, icon: Trophy, label: 'Fame', color: 'chart-5' }] : []),
     ].sort((a, b) => {
       const order = ['admin', 'print', 'redeem', 'prize', 'fame'];
       return order.indexOf(a.id) - order.indexOf(b.id);
@@ -151,9 +153,9 @@ export default function Header() {
       "no-print w-full z-50 transition-colors border-b border-primary/10 sticky top-0",
       "bg-background/80 backdrop-blur-xl"
     )}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-8 h-20 flex justify-between items-center">
+      <div className="max-w-7xl mx-auto px-4 sm:px-8 h-20 flex items-center">
         {/* Left: Branding */}
-        <div className="flex items-center gap-4 shrink-0">
+        <div className="flex items-center gap-4 flex-1">
           <Link href={logoLink} className="flex items-center gap-4 group" data-home-button="true">
             {appLogoUrl ? (
               <span className="inline-flex h-10 w-10 rounded-2xl overflow-hidden bg-muted border border-border/40 shrink-0 shadow-md">
@@ -172,7 +174,7 @@ export default function Header() {
 
         {/* Center: School Name */}
         {schoolId && (
-          <Link href={centerHref} className="absolute left-1/2 -translate-x-1/2 text-center no-underline hidden lg:inline-flex">
+          <Link href={centerHref} className="flex-1 flex justify-center text-center no-underline hidden lg:inline-flex">
             <span className="inline-flex items-center gap-3">
               {schoolData?.logoUrl && (
                 <span className="inline-flex h-10 w-10 rounded-full overflow-hidden bg-muted border border-border/40 shrink-0 drop-shadow-md">
@@ -184,10 +186,7 @@ export default function Header() {
                   />
                 </span>
               )}
-              <span
-                className="text-5xl font-school font-black tracking-[0.08em] text-white whitespace-nowrap"
-                style={{ textShadow: '0 0 2px hsl(var(--primary)), 0 0 4px hsl(var(--primary)), 0 0 8px hsl(var(--primary))' }}
-              >
+              <span className="text-xl lg:text-2xl xl:text-3xl font-headline font-bold text-foreground truncate">
                 {centerLabel}
               </span>
             </span>
@@ -195,18 +194,18 @@ export default function Header() {
         )}
 
         {/* Right: Actions */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center justify-end gap-2 flex-1">
           {isInitialized && (
             <>
-              {schoolId && loginState !== 'loggedOut' && (
-                <div className="flex items-center gap-1.5 bg-emerald-500/10 px-2 py-1 rounded-full border border-emerald-500/20">
+                <div className="flex items-center gap-1.5 bg-emerald-500 px-2.5 py-1 rounded-full shadow-sm">
                   <span className="relative flex h-1.5 w-1.5">
-                    {syncStatus === 'synced' && <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75" />}
-                    <span className={cn("relative inline-flex h-1.5 w-1.5 rounded-full", syncStatus === 'synced' ? "bg-emerald-500" : syncStatus === 'syncing' ? "bg-amber-400 animate-pulse" : "bg-slate-300")} />
+                    {syncStatus === 'synced' && <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />}
+                    <span className={cn("relative inline-flex h-1.5 w-1.5 rounded-full", syncStatus === 'synced' ? "bg-white" : syncStatus === 'syncing' ? "bg-amber-300 animate-pulse" : "bg-slate-300")} />
                   </span>
-                  <span className="text-[10px] font-black uppercase tracking-tighter text-emerald-600/80">{syncStatus === 'synced' ? 'Live' : syncStatus}</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-white leading-none">
+                    {syncStatus === 'synced' ? 'LIVE' : syncStatus}
+                  </span>
                 </div>
-              )}
 
               {loginState !== 'student' && loginState !== 'loggedOut' && (
                 <DropdownMenu>
@@ -230,7 +229,7 @@ export default function Header() {
 
               <div className="h-8 w-px bg-primary/20" />
 
-              <Link href={schoolId ? "/portal" : "/"} data-home-button="true" className="rounded-xl p-3 text-slate-500 hover:text-primary hover:bg-primary/10 transition-all active:scale-90 flex items-center gap-2">
+              <Link href={schoolId ? `/${schoolId}/portal` : "/"} data-home-button="true" className="rounded-xl p-3 text-slate-500 hover:text-primary hover:bg-primary/10 transition-all active:scale-90 flex items-center gap-2">
                 <Home className="h-6 w-6" />
                 <span className="hidden sm:inline font-bold">Home</span>
               </Link>

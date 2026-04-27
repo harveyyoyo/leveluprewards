@@ -24,6 +24,7 @@ import { useArcadeSound } from '@/hooks/useArcadeSound';
 import type { HistoryItem, Student } from '@/lib/types';
 import { YESHIVA_DATA } from '@/lib/yeshiva-data';
 import { SCHOOL_DATA } from '@/lib/school-data';
+import { DEFAULT_PLAN } from '@/lib/plans';
 
 interface BackupContextType {
     createSchool: (schoolId: string, name?: string, passcode?: string) => Promise<{ passcode: string; cleanId: string } | null>;
@@ -101,6 +102,8 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
             ...schoolDocData,
             passcode: newPasscode,
             name: schoolData.name,
+            plan: schoolDocData.plan ?? DEFAULT_PLAN,
+            featureOverrides: schoolDocData.featureOverrides ?? {},
             hasMigratedStudents: true,
             hasMigratedClasses: true,
             hasMigratedTeachers: true,
@@ -304,6 +307,8 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
             ...schoolDocData,
             passcode: newPasscode,
             name: schoolData.name,
+            plan: schoolDocData.plan ?? DEFAULT_PLAN,
+            featureOverrides: schoolDocData.featureOverrides ?? {},
             hasMigratedStudents: true,
             hasMigratedClasses: true,
             hasMigratedTeachers: true,

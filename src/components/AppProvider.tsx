@@ -130,23 +130,23 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
   const backupCtx = useBackup();
   const { firestore, functions, auth } = useFirebase();
   const schoolId = authCtx.schoolId;
-  const canReadCategories = authCtx.isAdmin;
+  const canReadRewardMetadata = authCtx.isAdmin || authCtx.isTeacher;
 
   const categoriesQuery = useMemoFirebase(
-    () => (schoolId && canReadCategories ? collection(firestore, 'schools', schoolId, 'categories') : null),
-    [firestore, schoolId, canReadCategories]
+    () => (schoolId && canReadRewardMetadata ? collection(firestore, 'schools', schoolId, 'categories') : null),
+    [firestore, schoolId, canReadRewardMetadata]
   );
   const { data: categories, isLoading: categoriesLoading } = useCollection<Category>(categoriesQuery);
 
   const achievementsQuery = useMemoFirebase(
-    () => (schoolId && canReadCategories ? collection(firestore, 'schools', schoolId, 'achievements') : null),
-    [firestore, schoolId, canReadCategories]
+    () => (schoolId && canReadRewardMetadata ? collection(firestore, 'schools', schoolId, 'achievements') : null),
+    [firestore, schoolId, canReadRewardMetadata]
   );
   const { data: achievements, isLoading: achievementsLoading } = useCollection<Achievement>(achievementsQuery);
 
   const badgesQuery = useMemoFirebase(
-    () => (schoolId && canReadCategories ? collection(firestore, 'schools', schoolId, 'badges') : null),
-    [firestore, schoolId, canReadCategories]
+    () => (schoolId && canReadRewardMetadata ? collection(firestore, 'schools', schoolId, 'badges') : null),
+    [firestore, schoolId, canReadRewardMetadata]
   );
   const { data: badges, isLoading: badgesLoading } = useCollection<Badge>(badgesQuery);
 
@@ -154,7 +154,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
 
   // Background refresh: download coupon snapshot for offline validation.
   React.useEffect(() => {
-    if (!schoolId || !functions) return;
+    if (!schoolId || !functions || schoolId === 'schoolabc') return;
     if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
     const fn = httpsCallable(functions, 'getCouponSnapshot');
     void fn({ schoolId })

@@ -283,27 +283,6 @@ function MyCoupons({ schoolId, teacherName, students }: { schoolId: string; teac
           </div>
         </CardHeader>
         <CardContent className="grid md:grid-cols-2 gap-6">
-          <div>
-            <h3 className="text-lg font-semibold mb-4">Available ({available.length})</h3>
-            <ScrollArea className="h-72 border rounded-lg bg-background/50">
-              {isLoading ? <div className="p-8 text-center text-sm text-muted-foreground">Loading coupons...</div> : available.length > 0 ? (
-                <ul className="p-3 space-y-2">
-                  {available.map(coupon => (
-                    <li key={coupon.id} className="p-3 bg-card rounded-lg border">
-                      <div className="flex justify-between items-center font-bold">
-                        <span className="font-code text-primary">{coupon.code}</span>
-                        <span>{coupon.value} pts</span>
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        <p>{coupon.category}</p>
-                        <p>Created on {new Date(coupon.createdAt).toLocaleDateString()}</p>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              ) : <p className="p-8 text-center text-sm text-muted-foreground">No available coupons created by you.</p>}
-            </ScrollArea>
-          </div>
           <div className="space-y-4">
             <h3 className="text-base font-bold text-foreground/80 uppercase tracking-widest pl-1">Available ({available.length})</h3>
             <ScrollArea className="h-72 border border-border/60 rounded-xl bg-background/50 backdrop-blur-sm">
@@ -2046,8 +2025,7 @@ export default function TeacherPage() {
                     : 'bg-white border-chart-1 shadow-2xl'
                     }`}>
                     <CardHeader className="text-center space-y-4">
-                        <div className={`w-20 h-20 mx-auto rounded-3xl flex items-center justify-center shadow-lg transition-transform hover:scale-105 duration-300 ${isGraphic ? 'bg-primary text-primary-foreground' : 'bg-slate-800 text-white'
-                            }`}>
+                        <div className="w-20 h-20 mx-auto rounded-3xl flex items-center justify-center shadow-lg transition-transform hover:scale-105 duration-300 bg-primary text-primary-foreground">
                             <UserCheck className="w-10 h-10" />
                         </div>
                         <div>
@@ -2098,8 +2076,7 @@ export default function TeacherPage() {
                                 </div>
                             </div>
 
-                            <Button type="submit" className={`w-full h-16 rounded-2xl font-black text-lg uppercase tracking-widest shadow-xl transition-all active:scale-95 text-primary-foreground ${isGraphic ? 'bg-primary hover:bg-primary/90 shadow-primary/20' : 'bg-slate-800 hover:bg-slate-700'
-                                }`} disabled={teachersLoading}>
+                            <Button type="submit" className="w-full h-16 rounded-2xl font-black text-lg uppercase tracking-widest shadow-xl transition-all active:scale-95 text-primary-foreground bg-primary hover:bg-primary/90 shadow-primary/20" disabled={teachersLoading}>
                                 <LogIn className="mr-3 w-6 h-6" /> Login
                             </Button>
                         </form>
