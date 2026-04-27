@@ -31,26 +31,10 @@ export function PrizeRedeemTicketPrintSheet({
   schoolName?: string | null;
   displayMode?: 'overlay' | 'page';
 }) {
-  const [logoLoaded, setLogoLoaded] = useState(false);
+  const [logoError, setLogoError] = useState(false);
 
   useEffect(() => {
-    let cancelled = false;
-    setLogoLoaded(false);
-    const src = (logoUrl || '').trim();
-    if (!src) return;
-
-    const img = new Image();
-    img.onload = () => {
-      if (!cancelled) setLogoLoaded(true);
-    };
-    img.onerror = () => {
-      if (!cancelled) setLogoLoaded(false);
-    };
-    img.src = src;
-
-    return () => {
-      cancelled = true;
-    };
+    setLogoError(false);
   }, [logoUrl]);
 
   useEffect(() => {
@@ -94,9 +78,14 @@ export function PrizeRedeemTicketPrintSheet({
           <article key={`${t.activityId}-${t.ticketNo}`} className="prize-ticket">
             <header className="prize-ticket__head">
               <div className="prize-ticket__logo-box">
-                {logoUrl && logoLoaded ? (
+                {logoUrl && !logoError ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img className="prize-ticket__logo" src={logoUrl} alt="" />
+                  <img
+                    className="prize-ticket__logo"
+                    src={logoUrl}
+                    alt=""
+                    onError={() => setLogoError(true)}
+                  />
                 ) : (
                   <div className="prize-ticket__logo-fallback" aria-hidden>
                     LU
