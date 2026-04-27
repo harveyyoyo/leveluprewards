@@ -18,6 +18,18 @@ import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { APP_NAME, APP_TAGLINE } from '@/lib/app-branding';
 
+function hexForColorInput(color: string | undefined, fallback: string): string {
+    if (!color) return fallback;
+    const c = color.trim();
+    if (/^#[0-9a-fA-F]{6}$/.test(c)) return c;
+    const m3 = c.match(/^#([0-9a-fA-F]{3})$/);
+    if (m3) {
+        const x = m3[1];
+        return `#${x[0]}${x[0]}${x[1]}${x[1]}${x[2]}${x[2]}`;
+    }
+    return fallback;
+}
+
 interface ThemeGeneratorModalProps {
     isOpen: boolean;
     onOpenChange: (open: boolean) => void;
@@ -83,10 +95,10 @@ export function ThemeGeneratorModal({
         const el = previewWrapRef.current;
         if (!el) return;
 
-        // StudentIdCard has fixed physical dimensions in CSS:
-        // width: 3.38in, height: 2.18in. Assume 96 CSS px per inch.
-        const cardW = 3.38 * 96;
-        const cardH = 2.18 * 96;
+        // ISO ID-1: 85.6mm × 53.98mm (same as `.print-id-card` in globals.css)
+        const MM_PER_IN = 25.4;
+        const cardW = (85.6 / MM_PER_IN) * 96;
+        const cardH = (53.98 / MM_PER_IN) * 96;
         const desired = 1.85; // "make it bigger" but still fit
 
         const compute = () => {
@@ -360,10 +372,15 @@ export function ThemeGeneratorModal({
                                                     <SelectValue placeholder="Default" />
                                                 </SelectTrigger>
                                                 <SelectContent>
+                                                    <SelectItem value="0.85">Extra small</SelectItem>
                                                     <SelectItem value="0.9">Smaller</SelectItem>
+                                                    <SelectItem value="0.95">Slight small</SelectItem>
                                                     <SelectItem value="1">Default</SelectItem>
                                                     <SelectItem value="1.05">+1 step</SelectItem>
                                                     <SelectItem value="1.1">+2 steps</SelectItem>
+                                                    <SelectItem value="1.15">+3 steps</SelectItem>
+                                                    <SelectItem value="1.2">Large</SelectItem>
+                                                    <SelectItem value="1.25">Extra large</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>
@@ -459,7 +476,33 @@ export function ThemeGeneratorModal({
                                                 <SelectItem value="custom">CSS / Image</SelectItem>
                                             </SelectContent>
                                         </Select>
-                                        {backgroundMode === 'gradient' ? (
+                                        {backgroundMode === 'solid' ? (
+                                            <div className="space-y-2">
+                                                <div className="space-y-1">
+                                                    <Label className="text-[10px] uppercase tracking-[0.18em]">Background color</Label>
+                                                    <div className="flex gap-2 items-center">
+                                                        <Input
+                                                            type="color"
+                                                            aria-label="Pick solid background color"
+                                                            value={hexForColorInput(previewTheme.background, '#020617')}
+                                                            onChange={(e) => {
+                                                                const v = e.target.value;
+                                                                updateTheme({ background: v, backgroundStyle: null });
+                                                            }}
+                                                            className="h-10 w-[3.25rem] shrink-0 p-1 cursor-pointer"
+                                                        />
+                                                        <Input
+                                                            value={previewTheme.background || ''}
+                                                            onChange={(e) =>
+                                                                updateTheme({ background: e.target.value || '#020617', backgroundStyle: null })
+                                                            }
+                                                            className="font-mono text-xs flex-1 min-w-0"
+                                                            placeholder="#hex or CSS color"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ) : backgroundMode === 'gradient' ? (
                                             <div className="grid grid-cols-3 gap-2 items-end">
                                                 <div className="space-y-1">
                                                     <Label className="text-[10px] uppercase tracking-[0.18em]">Color A</Label>

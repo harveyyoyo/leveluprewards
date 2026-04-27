@@ -102,6 +102,7 @@ export function StudentIdCard({
   const themeTracking = typeof theme?.fontTracking === 'number' ? theme.fontTracking : undefined;
   const themeFontStyle = theme?.fontStyle;
   const themeFontWeight = typeof theme?.fontWeight === 'number' ? theme.fontWeight : undefined;
+  const themeFontScale = typeof theme?.fontScale === 'number' && theme.fontScale > 0 ? theme.fontScale : undefined;
 
   const emojiGlowFilter = (() => {
     const primary = theme?.primary;
@@ -120,6 +121,7 @@ export function StudentIdCard({
         ...(themeFontFamily ? { fontFamily: themeFontFamily } : {}),
         ...(themeFontStyle ? { fontStyle: themeFontStyle } : {}),
         ...(themeFontWeight ? { fontWeight: themeFontWeight } : {}),
+        ...(themeFontScale !== undefined ? { ['--print-id-font-scale' as string]: String(themeFontScale) } : {}),
       }
     : undefined;
 
@@ -196,7 +198,10 @@ export function StudentIdCard({
       
       {/* Barcode zone: always light background + dark bars for scanner reliability */}
       <div className="print-id-barcode-container" style={{ background: '#ffffff', color: '#000000', borderTop: `1px solid #e5e7eb` }}>
-        <div className="font-barcode text-[10px] leading-none" style={{ color: '#000000' }}>
+        <div
+          className="font-barcode text-[10px] leading-none"
+          style={{ color: '#000000', fontWeight: 400, fontStyle: 'normal' }}
+        >
           *{student.nfcId}*
         </div>
       </div>
