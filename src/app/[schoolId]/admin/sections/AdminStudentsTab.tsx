@@ -1,6 +1,6 @@
 'use client';
 
-import { Award, Edit, History, IdCard, LayoutDashboard, Plus, Printer, Trash2, UploadCloud, Users, Wand2, Zap } from 'lucide-react';
+import { Award, Edit, History, IdCard, LayoutDashboard, Plus, Printer, Trash2, UploadCloud, Users, Wand2, X, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -140,6 +140,16 @@ export function AdminStudentsTab({
             <LayoutDashboard className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground" />
           </div>
           <div className="flex gap-2 items-center flex-wrap">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11 rounded-xl px-4 font-semibold"
+              disabled={selectedStudentIds.size === 0}
+              onClick={() => setSelectedStudentIds(new Set())}
+            >
+              <X className="mr-2 h-4 w-4" />
+              Deselect
+            </Button>
             <Select value={studentSortOption} onValueChange={setStudentSortOption}>
               <SelectTrigger className="w-[180px] rounded-xl h-11">
                 <SelectValue placeholder="Sort By" />
