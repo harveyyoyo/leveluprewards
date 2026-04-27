@@ -16,14 +16,19 @@ import type { Student } from '@/lib/types';
 import { StudentIdCard } from '@/components/StudentIdCard';
 import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
-
+import { APP_NAME, APP_TAGLINE } from '@/lib/app-branding';
 
 interface ThemeGeneratorModalProps {
     isOpen: boolean;
     onOpenChange: (open: boolean) => void;
     onSave: (theme: StudentTheme) => void;
     currentTheme?: StudentTheme;
+    /** Shown in the dialog title; use full name when available. */
     studentName: string;
+    /** When set, the live preview uses real student data (name, class, ID, photo, etc.). */
+    previewStudent?: Student;
+    /** Class line on the ID card, e.g. "Grade 8". Defaults to "Unassigned" if omitted. */
+    classLabel?: string;
 }
 
 export function ThemeGeneratorModal({
@@ -32,6 +37,8 @@ export function ThemeGeneratorModal({
     onSave,
     currentTheme,
     studentName,
+    previewStudent,
+    classLabel = 'Unassigned',
 }: ThemeGeneratorModalProps) {
     const [prompt, setPrompt] = useState('');
     const [isGenerating, setIsGenerating] = useState(false);
@@ -49,8 +56,19 @@ export function ThemeGeneratorModal({
         [firestore, schoolId],
     );
     const { data: schoolData } = useDoc<{ name?: string; logoUrl?: string }>(schoolDocRef);
+    const appConfigRef = useMemoFirebase(
+        () => (firestore ? doc(firestore, 'appConfig', 'global') : null),
+        [firestore],
+    );
+    const { data: appConfig } = useDoc<{ appLogoUrl?: string; appName?: string; appTagline?: string }>(appConfigRef);
     const previewSchoolName = (schoolData?.name ?? '').trim() || (schoolId ? schoolId : 'School');
     const previewSchoolLogoUrl = (schoolData?.logoUrl ?? '').trim() || null;
+    const previewAppLogoUrl = appConfig?.appLogoUrl || null;
+    const previewAppName = appConfig?.appName?.trim() || APP_NAME;
+    const previewAppTagline = appConfig?.appTagline?.trim() ?? APP_TAGLINE;
+    const displayTitleName = previewStudent
+        ? `${previewStudent.firstName}${previewStudent.lastName ? ` ${previewStudent.lastName}` : ''}`.trim() || studentName
+        : studentName;
 
     const previewWrapRef = useRef<HTMLDivElement | null>(null);
     const [idPreviewScale, setIdPreviewScale] = useState(1.35);
@@ -222,7 +240,7 @@ export function ThemeGeneratorModal({
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
             <DialogContent wide className="rounded-3xl sm:rounded-3xl max-h-[min(92dvh,92vh)]">
                 <DialogHeader>
-                    <DialogTitle>Generate Theme for {studentName}</DialogTitle>
+                    <DialogTitle>Generate theme for {displayTitleName}</DialogTitle>
                     <DialogDescription>
                         Describe a theme and let AI generate a custom look. Themes can include gradients/patterns, and even “animated vibe” ideas (moving colors or playful motion like an emoji popping in/out).
                         After generating, you can also fine‑tune specific parts like the emoji and colors.
@@ -584,14 +602,17 @@ export function ThemeGeneratorModal({
                                     (() => {
                                         const [firstName, ...rest] = studentName.trim().split(/\s+/);
                                         const lastName = rest.join(' ') || 'Student';
-                                        const previewStudent: Student = {
+                                        const synthetic: Student = {
                                             id: 'preview-student',
                                             firstName: firstName || 'Preview',
                                             lastName,
-                                            points: 1250,
-                                            nfcId: '123456',
-                                            theme: previewTheme,
+                                            points: 0,
+                                            nfcId: '00000000',
+                                            theme: previewTheme!,
                                         };
+                                        const cardStudent: Student = previewStudent
+                                            ? { ...previewStudent, theme: previewTheme! }
+                                            : synthetic;
 
                                         return (
                                             <div ref={previewWrapRef} className="h-full w-full flex items-center justify-center p-3 md:p-4">
@@ -604,11 +625,14 @@ export function ThemeGeneratorModal({
                                                     }}
                                                 >
                                                     <StudentIdCard
-                                                        student={previewStudent}
+                                                        student={cardStudent}
                                                         schoolName={previewSchoolName}
                                                         schoolLogoUrl={previewSchoolLogoUrl}
-                                                        className="Preview"
+                                                        className={classLabel}
                                                         isColorEnabled={settings.enableColorPrinting}
+                                                        appLogoUrl={previewAppLogoUrl}
+                                                        appName={previewAppName}
+                                                        appTagline={previewAppTagline}
                                                     />
                                                 </div>
                                             </div>

@@ -115,6 +115,8 @@ export function StudentIdCard({
         background: theme.backgroundStyle || theme.background,
         color: theme.text,
         borderColor: theme.primary,
+        WebkitPrintColorAdjust: 'exact' as const,
+        printColorAdjust: 'exact' as const,
         ...(themeFontFamily ? { fontFamily: themeFontFamily } : {}),
         ...(themeFontStyle ? { fontStyle: themeFontStyle } : {}),
         ...(themeFontWeight ? { fontWeight: themeFontWeight } : {}),
@@ -125,7 +127,7 @@ export function StudentIdCard({
   const headerStyle = theme && isColorEnabled ? { color: theme.text, ...trackedStyle } : trackedStyle;
   const mainStyle = theme && isColorEnabled ? {} : undefined;
   const avatarStyle = theme && isColorEnabled
-    ? { borderColor: theme.primary, background: theme.cardBackground || theme.background }
+    ? { borderColor: theme.primary, background: theme.cardBackground || theme.background, WebkitPrintColorAdjust: 'exact' as const, printColorAdjust: 'exact' as const }
     : undefined;
   const nameStyle = theme && isColorEnabled ? { color: theme.text, ...trackedStyle } : trackedStyle;
   const classStyle = theme && isColorEnabled ? { color: theme.text, opacity: 0.9, ...trackedStyle } : trackedStyle;

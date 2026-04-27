@@ -1047,7 +1047,11 @@ function AdminDashboardInner() {
           <ThemeGeneratorModal
             isOpen={!!themeStudent}
             onOpenChange={(open) => !open && setThemeStudent(null)}
-            studentName={themeStudent.firstName}
+            studentName={
+              `${themeStudent.firstName}${themeStudent.lastName ? ` ${themeStudent.lastName}` : ''}`.trim() || themeStudent.firstName
+            }
+            previewStudent={themeStudent}
+            classLabel={getClassName(themeStudent.classId || '')}
             currentTheme={themeStudent.theme}
             onSave={async (theme) => {
               try {

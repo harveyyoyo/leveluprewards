@@ -421,7 +421,26 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
         <ThemeGeneratorModal
           isOpen={isThemeModalOpen}
           onOpenChange={setIsThemeModalOpen}
-          studentName={firstName || 'Student'}
+          studentName={
+            [firstName, lastName].filter(Boolean).join(' ').trim() || firstName || 'Student'
+          }
+          previewStudent={{
+            id: student?.id ?? 'preview',
+            firstName: firstName || 'Student',
+            lastName: lastName || '',
+            middleName: middleName || undefined,
+            nickname: nickname || undefined,
+            points: parseInt(points, 10) || 0,
+            nfcId: nfcId || '00000000',
+            classId: classId === 'none' ? undefined : classId,
+            photoUrl: student?.photoUrl,
+            theme,
+          }}
+          classLabel={
+            classId === 'none'
+              ? 'Unassigned'
+              : (allClasses.find((c) => c.id === classId)?.name ?? 'Unassigned')
+          }
           currentTheme={theme}
           onSave={(newTheme) => {
             setTheme(newTheme);
