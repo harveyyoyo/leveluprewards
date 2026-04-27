@@ -20,7 +20,12 @@ export default function PortalPage() {
     const playSound = useArcadeSound();
     const [hoveredIndex, setHoveredIndex] = useState<string | null>(null);
     const animBackdrop = globalAnimatedBackdropActive(settings);
-    const showPortalLocalDecor = settings.graphicMode === 'graphics' && !animBackdrop;
+    const showPortalLocalDecor =
+        settings.graphicMode === 'graphics' &&
+        !animBackdrop &&
+        !!settings.enableAnimatedBackground &&
+        !settings.calmMode &&
+        !settings.legacyMode;
     const isStaff = loginState === 'teacher' || loginState === 'admin' || loginState === 'developer';
     const isStudentLike = !isStaff && loginState !== 'loggedOut';
     const shouldRedirectStudentLike = isInitialized && isStudentLike && !!schoolId && schoolId !== 'schoolabc';
@@ -61,7 +66,7 @@ export default function PortalPage() {
             ? [{ id: 'print', href: `/${schoolId}/teacher`, title: 'Teacher Portal', description: 'Print coupons or award points directly to students.', icon: Printer }]
             : []),
         { id: 'redeem', href: `/${schoolId}/student`, title: 'Student Kiosk', description: 'Scan your badge to redeem coupon codes and view points.', icon: GraduationCap },
-        ...(isStaff && settings.enableStudentPortal ? [{ id: 'student-home', href: `/${schoolId}/student-home`, title: 'Student Home Portal', description: 'Log in from home to check your points and prizes.', icon: Home }] : []),
+        ...(isStaff && settings.enableStudentPortal ? [{ id: 'student-home', href: `/${schoolId}/student-home`, title: 'Student Home Portal (Coming Soon)', description: 'Home access is being prepared and is not available yet.', icon: Home }] : []),
         { id: 'prize', href: `/${schoolId}/prize`, title: 'Prize Shop', description: 'Spend your points for awesome prizes.', icon: Gift },
         ...(isStaff || schoolId === 'schoolabc'
             ? [{ id: 'fame', href: `/${schoolId}/halloffame`, title: 'Hall of Fame', description: 'View top student point earners.', icon: Trophy }]
@@ -108,8 +113,11 @@ export default function PortalPage() {
                     <h2
                         className="text-5xl font-black tracking-tighter font-headline drop-shadow-md px-6 py-2 inline-block"
                         style={{
-                            color: rainbowByIndex(0, settings.colorScheme),
-                            textShadow: `0 0 14px ${rainbowByIndex(0, settings.colorScheme)}55, 0 0 28px ${rainbowByIndex(0, settings.colorScheme)}33`,
+                            color: settings.colorScheme === 'default' ? 'hsl(var(--primary))' : rainbowByIndex(0, settings.colorScheme),
+                            textShadow:
+                                settings.colorScheme === 'default'
+                                    ? undefined
+                                    : `0 0 14px ${rainbowByIndex(0, settings.colorScheme)}55, 0 0 28px ${rainbowByIndex(0, settings.colorScheme)}33`,
                         }}
                     >
                         Where to?
@@ -129,7 +137,7 @@ export default function PortalPage() {
                 <div className="flex flex-col gap-4">
                     {portals.map((area, index) => {
                         const Icon = area.icon;
-                        const rainbowColor = rainbowByIndex(index, settings.colorScheme);
+                        const rainbowColor = settings.colorScheme === 'default' ? 'hsl(var(--primary))' : rainbowByIndex(index, settings.colorScheme);
                         return (
                             <Link
                                 key={area.id}

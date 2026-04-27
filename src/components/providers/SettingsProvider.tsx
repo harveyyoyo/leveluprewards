@@ -239,16 +239,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                 if (typeof parsed.enableClassSignIn !== 'boolean' && typeof parsed.enableAttendance === 'boolean') {
                     parsed.enableClassSignIn = parsed.enableAttendance;
                 }
-                // Demo school: apply production defaults
-                if (schoolId === 'schoolabc') {
-                    if (!parsed.colorScheme || parsed.colorScheme === 'default') parsed.colorScheme = 'sky';
-                    parsed.graphicMode = 'graphics';
-                    parsed.enableAnimatedBackground = true;
-                    parsed.soundEnabled = true;
-                    parsed.displayMode = 'web';
-                    parsed.enableHelperMode = true;
-                    if (typeof parsed.calmMode !== 'boolean') parsed.calmMode = false;
-                }
+                // Demo school: production defaults are applied only on first-run (see no-saved-settings branch below).
                 const nextSettings = applyEntitlements({ ...defaultSettings, ...parsed });
                 setSettings(nextSettings);
                 localStorage.setItem(settingsKey, JSON.stringify(nextSettings));
@@ -265,7 +256,6 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                     colorScheme: 'sky' as ColorScheme, 
                     graphicMode: 'graphics',
                     soundEnabled: true,
-                    displayMode: 'web',
                     enableHelperMode: true
                 } : {}),
             };

@@ -8,11 +8,6 @@ const nextConfig = {
       ...(config.ignoreWarnings || []),
       { module: /@vladmandic\/face-api/ },
     ];
-    // Work around intermittent Windows builds where the server webpack runtime
-    // tries to require `./<id>.js` but chunks are emitted under `chunks/`.
-    if (isServer) {
-      config.output.chunkFilename = '[id].js';
-    }
     return config;
   },
   images: {

@@ -529,15 +529,11 @@ function AdminDashboardInner() {
 
         <Tabs key={`${String(settings.enableAchievements)}:${String(settings.enableBadges)}`} defaultValue="students" className="space-y-6">
           {/*
-            Mobile: horizontal scroll with fade-edge masks so the user knows
-            more tabs exist off-screen. sm+: centered, no mask.
+            Tabs wrap onto multiple rows when they don't fit on a single line,
+            so every section is always visible without horizontal scrolling.
           */}
-          <div
-            className="flex overflow-x-auto overflow-y-hidden -mx-4 px-4 sm:mx-0 sm:px-0 justify-start sm:justify-center [scrollbar-width:thin] [-webkit-overflow-scrolling:touch] [mask-image:linear-gradient(to_right,transparent_0,black_1.25rem,black_calc(100%-1.25rem),transparent_100%)] sm:[mask-image:none]"
-            role="region"
-            aria-label="Admin section tabs, scroll horizontally"
-          >
-            <TabsList className="bg-muted/50 p-1.5 rounded-2xl inline-flex w-max border shadow-sm sm:mx-auto gap-0.5"
+          <div className="w-full">
+            <TabsList className="bg-muted/50 p-1.5 rounded-2xl flex flex-wrap justify-center border shadow-sm gap-x-0.5 gap-y-1 h-auto w-full"
               style={{ ['--admin-accent' as any]: rainbowForNavId('admin', settings.colorScheme) }}
               aria-label="Admin sections"
             >

@@ -101,7 +101,7 @@ export default function Header() {
           </div>
           <div className="flex items-center justify-center">
             {schoolId && (
-              <Link href={centerHref} className="flex items-center gap-2 font-school font-black text-xl truncate no-underline max-w-full">
+              <Link href={centerHref} className="flex items-center gap-2 font-school font-black text-3xl truncate no-underline max-w-full">
                 <span className="truncate text-foreground font-bold">{centerLabel}</span>
               </Link>
             )}
@@ -186,7 +186,7 @@ export default function Header() {
                   />
                 </span>
               )}
-              <span className="text-xl lg:text-2xl xl:text-3xl font-headline font-bold text-foreground truncate">
+              <span className="text-3xl lg:text-3xl xl:text-4xl font-headline font-bold text-foreground truncate">
                 {centerLabel}
               </span>
             </span>

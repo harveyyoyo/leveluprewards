@@ -522,7 +522,10 @@ function StudentDashboardInner({
   if (studentLoading || !student || !schoolId) {
     return (
       <div
-        className="min-h-screen bg-background px-3 md:px-6 pt-6 md:pt-10 space-y-4"
+        className={cn(
+          "min-h-screen px-3 md:px-6 pt-6 md:pt-10 space-y-4",
+          animBackdrop ? "bg-transparent" : "bg-background",
+        )}
         role="status"
         aria-live="polite"
         aria-label="Loading student profile"
@@ -1030,6 +1033,7 @@ export default function StudentLoginPage() {
   const playSound = useArcadeSound();
   const { settings } = useSettings();
   const isGraphic = settings.graphicMode === 'graphics';
+  const animBackdrop = globalAnimatedBackdropActive(settings);
 
   const { activeStudentId, setActiveStudentId, handleDone, loginMeta, setLoginMeta } = useActiveStudentSession();
   const activeStudentIdRef = useRef<string | null>(null);
@@ -1063,7 +1067,10 @@ export default function StudentLoginPage() {
   }, [handleStudentLogout]);
 
   if (!isInitialized || !['student', 'teacher', 'admin', 'school', 'developer'].includes(loginState)) {
-    return <div className="min-h-screen flex items-center justify-center p-8 bg-background">
+    return <div className={cn(
+      "min-h-screen flex items-center justify-center p-8",
+      animBackdrop ? "bg-transparent" : "bg-background",
+    )}>
       <div className="text-center space-y-4">
         <Loader2 className="w-8 h-8 animate-spin mx-auto text-muted-foreground" />
         <p className="text-muted-foreground font-medium animate-pulse">Loading Student Portal...</p>

@@ -31,9 +31,14 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 
-function HallOfFameSkeleton() {
+function HallOfFameSkeleton({ animBackdrop }: { animBackdrop: boolean }) {
     return (
-        <div className="min-h-screen bg-background p-4 sm:p-8 md:p-12 flex flex-col items-center">
+        <div
+            className={cn(
+                "min-h-screen p-4 sm:p-8 md:p-12 flex flex-col items-center",
+                animBackdrop ? "bg-transparent" : "bg-background",
+            )}
+        >
             <Skeleton className="h-16 w-64 mb-16 rounded-2xl" />
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-full items-end mb-12">
                 <Skeleton className="h-64 w-full rounded-3xl" />
@@ -213,17 +218,14 @@ export default function HallOfFamePage() {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
 
+    const animBackdrop = globalAnimatedBackdropActive(settings);
+
     if (!isInitialized || !['student', 'teacher', 'admin', 'school', 'developer'].includes(loginState) || studentsLoading || classesLoading || categoriesLoading) {
-        return <HallOfFameSkeleton />;
+        return <HallOfFameSkeleton animBackdrop={animBackdrop} />;
     }
 
     const podium = topStudents?.slice(0, podiumSize) || [];
     const others = topStudents?.slice(podiumSize) || [];
-    const animBackdrop = globalAnimatedBackdropActive({
-        enableAnimatedBackground: settings.enableAnimatedBackground,
-        legacyMode: settings.legacyMode,
-        calmMode: (settings as any).calmMode,
-    });
     const showHallLocalDecor = !animBackdrop;
 
     return (

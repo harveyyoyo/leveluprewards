@@ -27,6 +27,8 @@ import { useSettings, colorSchemes, type ColorScheme } from '../providers/Settin
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { VendingMotorPanel } from '@/components/VendingMotorPanel';
 import { ANIMATED_BACKGROUND_STYLES, type AnimatedBackgroundStyle } from '@/lib/animatedBackdrop';
+import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
+import { cn } from '@/lib/utils';
 
 type SettingsView = 'main' | 'features' | 'library';
 
@@ -116,6 +118,9 @@ export function SettingsModal() {
     const visibleStyles = ANIMATED_BACKGROUND_STYLES.filter(s => !(settings.hiddenAnimatedBackgroundIds || []).includes(s.id));
     const currentStyle = visibleStyles.find(s => s.id === settings.animatedBackgroundStyle) || visibleStyles[0] || ANIMATED_BACKGROUND_STYLES[0];
     const currentStyleIndex = visibleStyles.findIndex(s => s.id === currentStyle.id);
+    const backdropActive = globalAnimatedBackdropActive(settings);
+    const backdropBlockedReason =
+        settings.legacyMode ? 'Legacy mode is on' : settings.calmMode ? 'Calm mode is on' : !settings.enableAnimatedBackground ? 'Animated background is off' : null;
 
     const cycleBackground = () => {
         if (visibleStyles.length === 0) return;
@@ -209,10 +214,8 @@ export function SettingsModal() {
                                     <Switch
                                         checked={settings.enableAnimatedBackground}
                                         onCheckedChange={(checked) => {
-                                            updateSettings({ 
-                                                enableAnimatedBackground: checked,
-                                                graphicMode: checked ? 'graphics' : 'classic'
-                                            });
+                                            // Only toggle the backdrop itself; don't force other UI modes.
+                                            handleToggle('enableAnimatedBackground', checked);
                                         }}
                                         className="scale-110"
                                     />
@@ -226,11 +229,26 @@ export function SettingsModal() {
                                         </div>
                                         <div>
                                             <h4 className="font-bold text-sm text-foreground">Background style</h4>
-                                            <p className="text-[11px] text-muted-foreground mt-0.5">Current: {currentStyle.label}</p>
+                                            <p className="text-[11px] text-muted-foreground mt-0.5">
+                                                Current: {currentStyle.label}
+                                                {!backdropActive && backdropBlockedReason ? (
+                                                    <span className="ml-2 text-amber-700 dark:text-amber-400 font-bold">
+                                                        (not visible: {backdropBlockedReason})
+                                                    </span>
+                                                ) : null}
+                                            </p>
                                         </div>
                                     </div>
-                                    <Button variant="ghost" className="h-9 px-3 rounded-xl text-xs font-bold gap-2 hover:bg-primary/10 hover:text-primary transition-colors"
+                                    <Button
+                                        variant="ghost"
+                                        className={cn(
+                                            "h-9 px-3 rounded-xl text-xs font-bold gap-2 transition-colors",
+                                            backdropActive && "hover:bg-primary/10 hover:text-primary",
+                                            !backdropActive && "opacity-50 cursor-not-allowed",
+                                        )}
                                         onClick={cycleBackground}
+                                        disabled={!backdropActive || visibleStyles.length <= 1}
+                                        title={!backdropActive && backdropBlockedReason ? `Background style is disabled: ${backdropBlockedReason}` : undefined}
 >
                                         {currentStyle.label} <ArrowRightLeft className="w-3 h-3" />
                                     </Button>
@@ -448,12 +466,12 @@ export function SettingsModal() {
                                 <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><Smartphone className="w-3.5 h-3.5" /> Student Experience</p>
                                 <FeatureRow
                                     id="enableStudentPortal"
-                                    label="Student Home Portal"
-                                    desc="Let students log in from home to see their points, recent activity, and which prizes they can afford."
+                                    label="Student Home Portal (Soon)"
+                                    desc="Placeholder for future home access. Students should use the in-school kiosk and prize shop for now."
                                     icon={<Smartphone className="w-5 h-5" />}
                                     settings={settings}
                                     onToggle={handleToggle}
-                                    isImplemented={true}
+                                    isImplemented={false}
                                     isAdmin={isAdmin}
                                     isAllowed={isFeatureAllowed('enableStudentPortal')}
                                     planLabel={planLabel}
@@ -671,23 +689,6 @@ export function SettingsModal() {
                         <VendingMotorPanel />
                     </DialogContent>
                 </Dialog>
-
-                <DialogFooter className="px-6 py-6 sm:justify-end border-t border-border/40 bg-muted/20 absolute bottom-0 w-full left-0 z-10 hidden sm:flex">
-                    <DialogClose asChild>
-                        <Button className="w-full sm:w-auto px-12 h-11 text-xs uppercase tracking-widest bg-primary hover:bg-primary/90 text-primary-foreground font-black rounded-2xl shadow-lg transition-all active:scale-95">
-                            Close Settings
-                        </Button>
-                    </DialogClose>
-                </DialogFooter>
-
-                {/* Mobile absolute footer */}
-                <div className="p-4 border-t border-border/40 sm:hidden bg-background">
-                    <DialogClose asChild>
-                        <Button className="w-full h-14 text-xs uppercase tracking-widest bg-primary hover:bg-primary/90 text-primary-foreground font-black rounded-2xl shadow-lg active:scale-95">
-                            Close Settings
-                        </Button>
-                    </DialogClose>
-                </div>
             </DialogContent>
         </Dialog>
     );
