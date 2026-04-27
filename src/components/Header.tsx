@@ -124,7 +124,7 @@ export default function Header() {
             <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl" onClick={handleLogout}>
               <LogOut className="w-4 h-4" />
             </Button>
-            <SettingsModal />
+            {loginState !== 'student' && <SettingsModal />}
           </div>
         </header>
 
@@ -242,7 +242,7 @@ export default function Header() {
 
               <div className="h-8 w-px bg-primary/20" />
 
-              <SettingsModal />
+              {loginState !== 'student' && <SettingsModal />}
             </>
           )}
         </div>

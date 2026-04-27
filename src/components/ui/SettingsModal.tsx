@@ -107,6 +107,7 @@ export function SettingsModal() {
 
     // For short-link kiosk entry routes, keep the UI minimal.
     if (typeof pathname === 'string' && pathname.startsWith('/s/')) return null;
+    if (loginState === 'student') return null;
 
     const handleToggle = (key: string, value: any) => {
         setDraft((prev) => {

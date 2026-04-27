@@ -3,7 +3,7 @@
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { useAuth } from './AuthProvider';
+import { useAuth, type LoginState } from './AuthProvider';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useDoc, useFirebase, useMemoFirebase } from '@/firebase';
 import { doc, setDoc } from 'firebase/firestore';
@@ -167,6 +167,13 @@ export type { ColorScheme, Settings };
 
 const SettingsContext = createContext<SettingsContextType | null>(null);
 
+/** Per-browser settings: students and staff keep separate theme and UI prefs on shared devices. */
+function getLocalArcadeSettingsKey(schoolId: string | null, loginState: LoginState): string {
+    if (!schoolId) return 'arcade_settings_global';
+    if (loginState === 'student') return `arcade_settings_${schoolId}_student`;
+    return `arcade_settings_${schoolId}_staff`;
+}
+
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
     const { schoolId, isInitialized, loginState } = useAuth();
     const { firestore } = useFirebase();
@@ -223,8 +230,17 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             return; // Wait for auth provider to be ready
         }
 
-        const settingsKey = schoolId ? `arcade_settings_${schoolId}` : 'arcade_settings_global';
-        const saved = localStorage.getItem(settingsKey);
+        const settingsKey = getLocalArcadeSettingsKey(schoolId, loginState);
+        const legacySchoolKey = schoolId ? `arcade_settings_${schoolId}` : null;
+        let saved = localStorage.getItem(settingsKey);
+        if (!saved && legacySchoolKey && loginState !== 'student') {
+            const legacy = localStorage.getItem(legacySchoolKey);
+            if (legacy) {
+                saved = legacy;
+                localStorage.setItem(settingsKey, legacy);
+                localStorage.removeItem(legacySchoolKey);
+            }
+        }
         const remoteSettings = schoolId && schoolData?.appSettings && typeof schoolData.appSettings === 'object'
             ? schoolData.appSettings
             : null;
@@ -268,10 +284,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             setSettings(applyEntitlements(initialSettings));
         }
         setIsLoaded(true);
-    }, [schoolId, isInitialized, isMobile, applyEntitlements, schoolData?.appSettings]);
+    }, [schoolId, isInitialized, isMobile, applyEntitlements, schoolData?.appSettings, loginState]);
 
     const updateSettings = (updates: Partial<Settings>) => {
-        const settingsKey = schoolId ? `arcade_settings_${schoolId}` : 'arcade_settings_global';
+        const settingsKey = getLocalArcadeSettingsKey(schoolId, loginState);
         setSettings((prev) => {
             const allowedUpdates = { ...updates };
             if (typeof allowedUpdates.enableClassSignIn === 'boolean') {
