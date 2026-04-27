@@ -84,21 +84,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     }, [loginState, router, schoolId]);
 
-    // Auto-logout idle timeout for privileged sessions (admin/teacher).
+    // Privileged sessions (admin, teacher): auto-logout after 5 min idle. Hiding the tab does not reset the clock.
     useEffect(() => {
         if (loginState !== 'admin' && loginState !== 'teacher') return;
 
         const IDLE_MS = 5 * 60 * 1000;
         let timer: ReturnType<typeof setTimeout> | null = null;
+        let sessionEndAt = 0;
 
         const arm = () => {
+            sessionEndAt = Date.now() + IDLE_MS;
             if (timer) clearTimeout(timer);
             timer = setTimeout(() => {
                 logout();
             }, IDLE_MS);
         };
 
-        const onActivity = () => arm();
+        const checkExpired = () => {
+            if (Date.now() >= sessionEndAt) {
+                logout();
+            }
+        };
+
+        const onActivity = () => {
+            if (document.visibilityState === 'visible') {
+                arm();
+            }
+        };
+
+        const onVisibility = () => {
+            if (document.visibilityState === 'visible') {
+                checkExpired();
+            }
+        };
 
         const events: string[] = [
             'mousemove',
@@ -108,15 +126,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             'scroll',
             'wheel',
             'pointerdown',
-            'visibilitychange',
         ];
 
-        for (const ev of events) window.addEventListener(ev as any, onActivity, { passive: true } as any);
+        for (const ev of events) {
+            window.addEventListener(ev as any, onActivity, { passive: true } as any);
+        }
+        document.addEventListener('visibilitychange', onVisibility);
         arm();
 
         return () => {
             if (timer) clearTimeout(timer);
-            for (const ev of events) window.removeEventListener(ev as any, onActivity as any);
+            for (const ev of events) {
+                window.removeEventListener(ev as any, onActivity as any);
+            }
+            document.removeEventListener('visibilitychange', onVisibility);
         };
     }, [loginState, logout]);
 
