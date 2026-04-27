@@ -3,7 +3,7 @@
  * KEEP IN SYNC with src/lib/attendance/resolveSettings.ts (Cloud Functions bundle).
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DEFAULT_ATTENDANCE_SETTINGS = void 0;
+exports.EARLY_SIGN_IN_WINDOW_MINUTES = exports.DEFAULT_ATTENDANCE_SETTINGS = void 0;
 exports.resolveAttendanceSettingsForSignIn = resolveAttendanceSettingsForSignIn;
 const schoolDayClock_1 = require("./schoolDayClock");
 exports.DEFAULT_ATTENDANCE_SETTINGS = {
@@ -12,6 +12,7 @@ exports.DEFAULT_ATTENDANCE_SETTINGS = {
     onTimeWindowMinutes: 5,
     schedule: [],
 };
+exports.EARLY_SIGN_IN_WINDOW_MINUTES = 10;
 function toFiniteNumber(value, fallback) {
     const n = typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : NaN;
     return Number.isFinite(n) ? n : fallback;
@@ -84,7 +85,7 @@ function resolveAttendanceSettingsForSignIn(input) {
             return false;
         const start = parse(period.startTime);
         const end = parse(period.endTime);
-        return nowMinutes >= start && nowMinutes <= end;
+        return nowMinutes >= start - exports.EARLY_SIGN_IN_WINDOW_MINUTES && nowMinutes <= end;
     });
     if (matchingRule && teacherId) {
         const period = resolveRulePeriod(matchingRule, periods);

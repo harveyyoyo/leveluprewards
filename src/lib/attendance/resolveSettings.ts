@@ -76,6 +76,8 @@ export const DEFAULT_ATTENDANCE_SETTINGS: AttendanceSettingsLike = {
   schedule: [],
 };
 
+export const EARLY_SIGN_IN_WINDOW_MINUTES = 10;
+
 function toFiniteNumber(value: unknown, fallback: number): number {
   const n = typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : NaN;
   return Number.isFinite(n) ? n : fallback;
@@ -181,7 +183,7 @@ export function resolveAttendanceSettingsForSignIn(input: ResolveAttendanceSetti
     if (!period) return false;
     const start = parse(period.startTime);
     const end = parse(period.endTime);
-    return nowMinutes >= start && nowMinutes <= end;
+    return nowMinutes >= start - EARLY_SIGN_IN_WINDOW_MINUTES && nowMinutes <= end;
   });
 
   if (matchingRule && teacherId) {

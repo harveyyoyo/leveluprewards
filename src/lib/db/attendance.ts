@@ -17,6 +17,7 @@ import { getSchoolDayClock } from '@/lib/attendance/schoolDayClock';
 import { removeUndefined } from './helpers';
 
 const ATTENDANCE_CONFIG_ID = 'config';
+const EARLY_SIGN_IN_WINDOW_MINUTES = 10;
 
 function toFiniteNumber(value: unknown, fallback: number): number {
   const n = typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : NaN;
@@ -38,7 +39,7 @@ function getCurrentPeriodAndOnTime(
   for (const slot of schedule) {
     const start = parseTimeToMinutes(slot.startTime);
     const end = parseTimeToMinutes(slot.endTime);
-    if (nowMinutes >= start && nowMinutes <= end) {
+    if (nowMinutes >= start - EARLY_SIGN_IN_WINDOW_MINUTES && nowMinutes <= end) {
       const onTime = nowMinutes <= start + onTimeWindowMinutes;
       return { periodLabel: slot.label, onTime };
     }
@@ -57,7 +58,7 @@ function getAssignedPeriodAndOnTime(
   if (!slot) return { onTime: false };
   const start = parseTimeToMinutes(slot.startTime);
   const end = parseTimeToMinutes(slot.endTime);
-  if (nowMinutes < start || nowMinutes > end) return { onTime: false };
+  if (nowMinutes < start - EARLY_SIGN_IN_WINDOW_MINUTES || nowMinutes > end) return { onTime: false };
   const onTime = nowMinutes <= start + onTimeWindowMinutes;
   return { periodLabel: slot.label, onTime };
 }

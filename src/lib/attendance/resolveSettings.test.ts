@@ -38,6 +38,62 @@ describe('resolveAttendanceSettingsForSignIn', () => {
     }
   });
 
+  it('uses the upcoming reward rule for sign-ins up to 10 minutes early', () => {
+    const nowMs = new Date('2026-01-05T07:52:00Z').getTime();
+    const r = resolveAttendanceSettingsForSignIn({
+      nowMs,
+      student,
+      classes,
+      periods,
+      teacherRewards: [
+        {
+          id: 'r1',
+          enabled: true,
+          classId: 'c1',
+          periodId: 'p1',
+          pointsForSignIn: 5,
+          pointsForOnTime: 2,
+          onTimeWindowMinutes: 10,
+        },
+      ],
+      teacherConfigRaw: null,
+      schoolConfigRaw: null,
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.source).toBe('reward_rule');
+      expect(r.settings.classPeriodAssignments).toEqual({ c1: 'p1' });
+      expect(r.settings.schedule[0].label).toBe('Period 1');
+    }
+  });
+
+  it('does not use a reward rule before the early sign-in window', () => {
+    const nowMs = new Date('2026-01-05T07:49:00Z').getTime();
+    const r = resolveAttendanceSettingsForSignIn({
+      nowMs,
+      student,
+      classes,
+      periods,
+      teacherRewards: [
+        {
+          id: 'r1',
+          enabled: true,
+          classId: 'c1',
+          periodId: 'p1',
+          pointsForSignIn: 5,
+          pointsForOnTime: 2,
+          onTimeWindowMinutes: 10,
+        },
+      ],
+      teacherConfigRaw: null,
+      schoolConfigRaw: null,
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.source).toBe('default');
+    }
+  });
+
   it('uses the school time zone even when the school config only stores timezone', () => {
     const nowMs = Date.UTC(2026, 0, 5, 13, 30); // 8:30 AM in America/New_York
     const r = resolveAttendanceSettingsForSignIn({

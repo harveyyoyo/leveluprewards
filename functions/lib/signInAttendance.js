@@ -29,7 +29,7 @@ function getCurrentPeriodAndOnTime(schedule, onTimeWindowMinutes, nowMinutes) {
     for (const slot of schedule) {
         const start = parseTimeToMinutes(slot.startTime);
         const end = parseTimeToMinutes(slot.endTime);
-        if (nowMinutes >= start && nowMinutes <= end) {
+        if (nowMinutes >= start - attendanceResolveCore_1.EARLY_SIGN_IN_WINDOW_MINUTES && nowMinutes <= end) {
             const onTime = nowMinutes <= start + onTimeWindowMinutes;
             return { periodLabel: slot.label, onTime };
         }
@@ -44,7 +44,7 @@ function getAssignedPeriodAndOnTime(schedule, assignedSlotId, onTimeWindowMinute
         return { onTime: false };
     const start = parseTimeToMinutes(slot.startTime);
     const end = parseTimeToMinutes(slot.endTime);
-    if (nowMinutes < start || nowMinutes > end)
+    if (nowMinutes < start - attendanceResolveCore_1.EARLY_SIGN_IN_WINDOW_MINUTES || nowMinutes > end)
         return { onTime: false };
     const onTime = nowMinutes <= start + onTimeWindowMinutes;
     return { periodLabel: slot.label, onTime };
