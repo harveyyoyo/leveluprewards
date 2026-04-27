@@ -23,7 +23,7 @@ import {
     Users, Database, Printer, LayoutDashboard, History, HelpCircle,
     Cpu, Award, Clock, Cog, Lock, Sparkles, ArrowRightLeft, Trash2, RotateCcw
 } from 'lucide-react';
-import { useSettings, colorSchemes, type ColorScheme } from '../providers/SettingsProvider';
+import { useSettings, colorSchemes, type ColorScheme, type Settings as AppSettings } from '../providers/SettingsProvider';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { VendingMotorPanel } from '@/components/VendingMotorPanel';
 import { ANIMATED_BACKGROUND_STYLES, type AnimatedBackgroundStyle } from '@/lib/animatedBackdrop';
@@ -31,6 +31,10 @@ import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
 import { cn } from '@/lib/utils';
 
 type SettingsView = 'main' | 'features' | 'library';
+
+function cloneSettings(s: AppSettings): AppSettings {
+    return JSON.parse(JSON.stringify(s)) as AppSettings;
+}
 
 function FeatureRow({ id, label, desc, icon, settings, onToggle, onConfigure, isImplemented = true, isAdmin = true, isAllowed = true, planLabel }: {
     id: string; label: string; desc: string; icon: React.ReactNode;
@@ -94,43 +98,71 @@ export function SettingsModal() {
     const isAdmin = loginState === 'admin' || loginState === 'developer';
     const { settings, updateSettings, isFeatureAllowed, planLabel } = useSettings();
     const playSound = useArcadeSound();
+    const [open, setOpen] = useState(false);
+    const [draft, setDraft] = useState<AppSettings | null>(null);
     const [view, setView] = useState<SettingsView>('main');
     const [vendingSettingsOpen, setVendingSettingsOpen] = useState(false);
+    const local = draft ?? settings;
     const pathname = usePathname();
-    const isPublicLoginRoute =
-        pathname === '/' ||
-        pathname === '/portal' ||
-        pathname === '/login' ||
-        (typeof pathname === 'string' && pathname.startsWith('/s/'));
 
     // For short-link kiosk entry routes, keep the UI minimal.
     if (typeof pathname === 'string' && pathname.startsWith('/s/')) return null;
 
     const handleToggle = (key: string, value: any) => {
-        updateSettings({ [key]: value } as any);
-        if (settings.soundEnabled || key === 'soundEnabled') {
+        setDraft((prev) => {
+            if (!prev) return prev;
+            let next: AppSettings = { ...prev, [key]: value } as AppSettings;
+            if (key === 'enableClassSignIn' && typeof value === 'boolean') {
+                next = { ...next, enableAttendance: value };
+            }
+            if (key === 'enableAttendance' && typeof value === 'boolean') {
+                next = { ...next, enableClassSignIn: value };
+            }
+            return next;
+        });
+        if (local.soundEnabled || key === 'soundEnabled') {
             playSound('click');
         }
     };
 
     const viewTitle = view === 'main' ? 'Interface Settings' : view === 'features' ? 'Features' : 'Background Library';
 
-    const visibleStyles = ANIMATED_BACKGROUND_STYLES.filter(s => !(settings.hiddenAnimatedBackgroundIds || []).includes(s.id));
-    const currentStyle = visibleStyles.find(s => s.id === settings.animatedBackgroundStyle) || visibleStyles[0] || ANIMATED_BACKGROUND_STYLES[0];
+    const visibleStyles = ANIMATED_BACKGROUND_STYLES.filter(s => !(local.hiddenAnimatedBackgroundIds || []).includes(s.id));
+    const currentStyle = visibleStyles.find(s => s.id === local.animatedBackgroundStyle) || visibleStyles[0] || ANIMATED_BACKGROUND_STYLES[0];
     const currentStyleIndex = visibleStyles.findIndex(s => s.id === currentStyle.id);
-    const backdropActive = globalAnimatedBackdropActive(settings);
+    const backdropActive = globalAnimatedBackdropActive(local);
     const backdropBlockedReason =
-        settings.legacyMode ? 'Legacy mode is on' : settings.calmMode ? 'Calm mode is on' : !settings.enableAnimatedBackground ? 'Animated background is off' : null;
+        local.legacyMode ? 'Legacy mode is on' : local.calmMode ? 'Calm mode is on' : !local.enableAnimatedBackground ? 'Animated background is off' : null;
 
     const cycleBackground = () => {
         if (visibleStyles.length === 0) return;
         const nextIndex = (currentStyleIndex + 1) % visibleStyles.length;
-        updateSettings({ animatedBackgroundStyle: visibleStyles[nextIndex].id });
-        if (settings.soundEnabled) playSound('click');
+        setDraft((d) => (d ? { ...d, animatedBackgroundStyle: visibleStyles[nextIndex].id } : d));
+        if (local.soundEnabled) playSound('click');
+    };
+
+    const handleOpenChange = (next: boolean) => {
+        if (next) {
+            setDraft(cloneSettings(settings));
+            setView('main');
+        } else {
+            setDraft(null);
+            setView('main');
+        }
+        setOpen(next);
+    };
+
+    const handleOk = () => {
+        if (draft) {
+            updateSettings({ ...draft });
+        }
+        setDraft(null);
+        setView('main');
+        setOpen(false);
     };
 
     return (
-        <Dialog onOpenChange={(open) => { if (!open) setView('main'); }}>
+        <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
                 <Button variant="ghost" size="icon" className="hover:bg-muted rounded-xl group relative z-50">
                     <Settings className="w-5 h-5 text-muted-foreground group-hover:rotate-45 transition-transform duration-300" />
@@ -153,7 +185,7 @@ export function SettingsModal() {
                     </DialogHeader>
                 </div>
 
-                <div key={view} className="px-6 py-4 overflow-y-auto flex-1 min-h-0 flex flex-col pb-24">
+                <div key={view} className="px-6 py-4 overflow-y-auto flex-1 min-h-0 flex flex-col pb-4">
                     {view === 'main' && (
                         <>
                             {/* APPEARANCE */}
@@ -168,7 +200,7 @@ export function SettingsModal() {
                                         <button
                                             key={key}
                                             onClick={() => handleToggle('colorScheme', key)}
-                                            className={`flex items-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition-all border ${settings.colorScheme === key ? 'border-primary bg-primary/5 text-primary ring-1 ring-primary' : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-muted'}`}
+                                            className={`flex items-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition-all border ${local.colorScheme === key ? 'border-primary bg-primary/5 text-primary ring-1 ring-primary' : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-muted'}`}
                                         >
                                             <span className={`w-4 h-4 rounded-full ${colorSchemes[key].swatch} shrink-0`} />
                                             {colorSchemes[key].label}
@@ -195,7 +227,7 @@ export function SettingsModal() {
                                         </div>
                                     </div>
                                     <Switch
-                                        checked={settings.calmMode}
+                                        checked={local.calmMode}
                                         onCheckedChange={(checked) => handleToggle('calmMode', checked)}
                                         className="scale-110"
                                     />
@@ -203,7 +235,7 @@ export function SettingsModal() {
 
                                 <div className="flex items-center justify-between mb-4">
                                     <div className="flex items-center gap-3">
-                                        <div className={`p-2 rounded-xl transition-colors ${settings.enableAnimatedBackground && !settings.calmMode ? 'bg-primary/20 text-primary shadow-sm' : 'bg-muted text-muted-foreground'}`}>
+                                        <div className={`p-2 rounded-xl transition-colors ${local.enableAnimatedBackground && !local.calmMode ? 'bg-primary/20 text-primary shadow-sm' : 'bg-muted text-muted-foreground'}`}>
                                             <Sparkles className="w-5 h-5" />
                                         </div>
                                         <div>
@@ -212,7 +244,7 @@ export function SettingsModal() {
                                         </div>
                                     </div>
                                     <Switch
-                                        checked={settings.enableAnimatedBackground}
+                                        checked={local.enableAnimatedBackground}
                                         onCheckedChange={(checked) => {
                                             // Only toggle the backdrop itself; don't force other UI modes.
                                             handleToggle('enableAnimatedBackground', checked);
@@ -257,7 +289,7 @@ export function SettingsModal() {
                                 {/* Theme Animations */}
                                 <div className="flex items-center justify-between mb-4">
                                     <div className="flex items-center gap-3">
-                                        <div className={`p-2 rounded-xl transition-colors ${settings.enableThemeAnimations ? 'bg-primary/20 text-primary shadow-sm' : 'bg-muted text-muted-foreground'}`}>
+                                        <div className={`p-2 rounded-xl transition-colors ${local.enableThemeAnimations ? 'bg-primary/20 text-primary shadow-sm' : 'bg-muted text-muted-foreground'}`}>
                                             <Zap className="w-5 h-5" />
                                         </div>
                                         <div>
@@ -266,7 +298,7 @@ export function SettingsModal() {
                                         </div>
                                     </div>
                                     <Switch
-                                        checked={settings.enableThemeAnimations}
+                                        checked={local.enableThemeAnimations}
                                         onCheckedChange={(checked) => handleToggle('enableThemeAnimations', checked)}
                                         className="scale-110"
                                     />
@@ -293,7 +325,7 @@ export function SettingsModal() {
                                             <span className="text-sm font-bold">Dark Mode</span>
                                         </div>
                                         <Switch
-                                            checked={settings.darkMode}
+                                            checked={local.darkMode}
                                             onCheckedChange={(checked) => handleToggle('darkMode', checked)}
                                         />
                                     </div>
@@ -304,7 +336,7 @@ export function SettingsModal() {
                                             <span className="text-sm font-bold">Legacy Mode</span>
                                         </div>
                                         <Switch
-                                            checked={settings.legacyMode}
+                                            checked={local.legacyMode}
                                             onCheckedChange={(checked) => handleToggle('legacyMode', checked)}
                                             className="data-[state=checked]:bg-orange-600"
                                         />
@@ -316,7 +348,7 @@ export function SettingsModal() {
                                             <span className="text-sm font-bold">Sound FX</span>
                                         </div>
                                         <Switch
-                                            checked={settings.soundEnabled}
+                                            checked={local.soundEnabled}
                                             onCheckedChange={(checked) => handleToggle('soundEnabled', checked)}
                                             className="data-[state=checked]:bg-emerald-500"
                                         />
@@ -327,13 +359,13 @@ export function SettingsModal() {
                                 <div className="flex items-center justify-between bg-muted/40 p-1.5 rounded-2xl border border-border/50">
                                     <button
                                         onClick={() => handleToggle('displayMode', 'web')}
-                                        className={`flex-1 py-2 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${settings.displayMode === 'web' ? 'bg-background text-foreground shadow-sm border border-border/50' : 'text-muted-foreground hover:text-foreground'}`}
+                                        className={`flex-1 py-2 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${local.displayMode === 'web' ? 'bg-background text-foreground shadow-sm border border-border/50' : 'text-muted-foreground hover:text-foreground'}`}
                                     >
                                         Web
                                     </button>
                                     <button
                                         onClick={() => handleToggle('displayMode', 'app')}
-                                        className={`flex-1 py-2 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${settings.displayMode === 'app' ? 'bg-background text-foreground shadow-sm border border-border/50' : 'text-muted-foreground hover:text-foreground'}`}
+                                        className={`flex-1 py-2 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${local.displayMode === 'app' ? 'bg-background text-foreground shadow-sm border border-border/50' : 'text-muted-foreground hover:text-foreground'}`}
                                     >
                                         App
                                     </button>
@@ -357,7 +389,7 @@ export function SettingsModal() {
                     )}
 
                     {view === 'features' && (
-                        <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6 pb-24">
+                        <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6 pb-4">
                             {/* Current Plan Banner */}
                             {planLabel === 'Enterprise' && (
                                 <div className="bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800/50 rounded-2xl p-4 flex items-center justify-between shadow-sm">
@@ -385,7 +417,7 @@ export function SettingsModal() {
                                     label="Teacher Budgets"
                                     desc="Give each teacher a monthly points allowance so they can’t overspend when printing coupons or awarding points."
                                     icon={<Users className="w-5 h-5" />}
-                                    settings={settings}
+                                    settings={local}
                                     onToggle={handleToggle}
                                     isImplemented={true}
                                     isAdmin={isAdmin}
@@ -397,7 +429,7 @@ export function SettingsModal() {
                                     label="Bulk Class Points (Soon)"
                                     desc="Award points to an entire class at once instead of one student at a time."
                                     icon={<Users className="w-5 h-5" />}
-                                    settings={settings}
+                                    settings={local}
                                     onToggle={handleToggle}
                                     isImplemented={false}
                                     isAdmin={isAdmin}
@@ -413,7 +445,7 @@ export function SettingsModal() {
                                     label="Admin Analytics"
                                     desc="Turn on the Admin → Stats view with school-wide totals, trends, and active student counts."
                                     icon={<ShieldCheck className="w-5 h-5" />}
-                                    settings={settings}
+                                    settings={local}
                                     onToggle={handleToggle}
                                     isImplemented={true}
                                     isAdmin={isAdmin}
@@ -425,7 +457,7 @@ export function SettingsModal() {
                                     label="Teacher Analytics (Soon)"
                                     desc="Let teachers see simple charts for just their own classes and students."
                                     icon={<BarChart3 className="w-5 h-5" />}
-                                    settings={settings}
+                                    settings={local}
                                     onToggle={handleToggle}
                                     isImplemented={false}
                                     isAdmin={isAdmin}
@@ -437,7 +469,7 @@ export function SettingsModal() {
                                     label="Printable Reports (Soon)"
                                     desc="Generate PDF-style reports for a student that can be shared with families or staff."
                                     icon={<Printer className="w-5 h-5" />}
-                                    settings={settings}
+                                    settings={local}
                                     onToggle={handleToggle}
                                     isImplemented={false}
                                     isAdmin={isAdmin}
@@ -453,7 +485,7 @@ export function SettingsModal() {
                                     label="Attendance"
                                     desc="Use student kiosk login as class attendance. Optional punctuality points and schedules can be configured in Admin → Attendance."
                                     icon={<Clock className="w-5 h-5" />}
-                                    settings={settings}
+                                    settings={local}
                                     onToggle={handleToggle}
                                     isImplemented={true}
                                     isAdmin={isAdmin}
@@ -469,7 +501,7 @@ export function SettingsModal() {
                                     label="Student Home Portal (Soon)"
                                     desc="Placeholder for future home access. Students should use the in-school kiosk and prize shop for now."
                                     icon={<Smartphone className="w-5 h-5" />}
-                                    settings={settings}
+                                    settings={local}
                                     onToggle={handleToggle}
                                     isImplemented={false}
                                     isAdmin={isAdmin}
@@ -481,7 +513,7 @@ export function SettingsModal() {
                                     label="Face Login"
                                     desc="Allow students to sign in using the kiosk webcam. Requires camera permission and deployed Cloud Functions."
                                     icon={<Shield className="w-5 h-5" />}
-                                    settings={settings}
+                                    settings={local}
                                     onToggle={handleToggle}
                                     isImplemented={true}
                                     isAdmin={isAdmin}
@@ -493,7 +525,7 @@ export function SettingsModal() {
                                     label="QR Code Login"
                                     desc="Students scan a QR code instead of typing their ID to log into kiosks."
                                     icon={<LayoutDashboard className="w-5 h-5" />}
-                                    settings={settings}
+                                    settings={local}
                                     onToggle={handleToggle}
                                     isImplemented={false}
                                     isAdmin={isAdmin}
@@ -505,7 +537,7 @@ export function SettingsModal() {
                                     label="Prize Photos"
                                     desc="Show real photos of prizes in the shop, not only icons."
                                     icon={<ShoppingBag className="w-5 h-5" />}
-                                    settings={settings}
+                                    settings={local}
                                     onToggle={handleToggle}
                                     isImplemented={false}
                                     isAdmin={isAdmin}
@@ -517,7 +549,7 @@ export function SettingsModal() {
                                     label="Student Wishlists"
                                     desc="Let students star favorite prizes and track progress toward them."
                                     icon={<Star className="w-5 h-5" />}
-                                    settings={settings}
+                                    settings={local}
                                     onToggle={handleToggle}
                                     isImplemented={false}
                                     isAdmin={isAdmin}
@@ -533,7 +565,7 @@ export function SettingsModal() {
                                     label="Bonus Points"
                                     desc="Students earn extra points when they hit point milestones; show milestones and bonus points."
                                     icon={<Trophy className="w-5 h-5" />}
-                                    settings={settings}
+                                    settings={local}
                                     onToggle={handleToggle}
                                     isImplemented={true}
                                     isAdmin={isAdmin}
@@ -545,7 +577,7 @@ export function SettingsModal() {
                                     label="Badges"
                                     desc="Students earn badges for reaching a points threshold in a category within a time period (e.g. Good Behavior badge this month)."
                                     icon={<Award className="w-5 h-5" />}
-                                    settings={settings}
+                                    settings={local}
                                     onToggle={handleToggle}
                                     isImplemented={true}
                                     isAdmin={isAdmin}
@@ -557,7 +589,7 @@ export function SettingsModal() {
                                     label="Levels (Soon)"
                                     desc="Turn total points into fun “levels” (Level 1, Level 2, etc.) for extra motivation."
                                     icon={<Zap className="w-5 h-5" />}
-                                    settings={settings}
+                                    settings={local}
                                     onToggle={handleToggle}
                                     isImplemented={false}
                                     isAdmin={isAdmin}
@@ -569,7 +601,7 @@ export function SettingsModal() {
                                     label="Daily Streaks (Soon)"
                                     desc="Reward students for showing up or logging in on consecutive days."
                                     icon={<History className="w-5 h-5" />}
-                                    settings={settings}
+                                    settings={local}
                                     onToggle={handleToggle}
                                     isImplemented={false}
                                     isAdmin={isAdmin}
@@ -586,7 +618,7 @@ export function SettingsModal() {
                                     label="Vending Machine"
                                     desc="Connect a USB serial vending rig and let configured prizes trigger a motor after redemption."
                                     icon={<Cog className="w-5 h-5" />}
-                                    settings={settings}
+                                    settings={local}
                                     onToggle={handleToggle}
                                     onConfigure={() => setVendingSettingsOpen(true)}
                                     isImplemented={true}
@@ -603,7 +635,7 @@ export function SettingsModal() {
                                     label="Color Printing"
                                     desc="Use color for coupons and badges when printing, instead of plain black-and-white."
                                     icon={<Palette className="w-5 h-5" />}
-                                    settings={settings}
+                                    settings={local}
                                     onToggle={handleToggle}
                                     isImplemented={true}
                                     isAdmin={isAdmin}
@@ -613,7 +645,7 @@ export function SettingsModal() {
                                     label="Helper Tips"
                                     desc="Show little “?” helpers and tooltips around the app to explain what things do."
                                     icon={<HelpCircle className="w-5 h-5" />}
-                                    settings={settings}
+                                    settings={local}
                                     onToggle={handleToggle}
                                     isImplemented={true}
                                     isAdmin={isAdmin}
@@ -623,7 +655,7 @@ export function SettingsModal() {
                                     label="Show Welcome Tour"
                                     desc="Display the introductory guide for new users that explains the basic features."
                                     icon={<HelpCircle className="w-5 h-5" />}
-                                    settings={settings}
+                                    settings={local}
                                     onToggle={handleToggle}
                                     isImplemented={true}
                                     isAdmin={true}
@@ -634,7 +666,7 @@ export function SettingsModal() {
                 )}
 
                 {view === 'library' && (
-                    <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4 pb-24">
+                    <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4 pb-4">
                         <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 mb-2 border border-slate-100 dark:border-slate-800/50">
                             <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 pb-3 flex items-center gap-2">
                                 <LayoutDashboard className="w-3.5 h-3.5" /> Background Library
@@ -646,7 +678,7 @@ export function SettingsModal() {
 
                         <div className="space-y-1">
                             {ANIMATED_BACKGROUND_STYLES.map((style) => {
-                                const isHidden = (settings.hiddenAnimatedBackgroundIds || []).includes(style.id);
+                                const isHidden = (local.hiddenAnimatedBackgroundIds || []).includes(style.id);
                                 return (
                                     <div key={style.id} className="flex items-center justify-between py-2.5 px-3 rounded-xl border-b border-border/40 last:border-0 hover:bg-muted/30 transition-colors group">
                                         <div className="flex flex-col">
@@ -658,17 +690,20 @@ export function SettingsModal() {
                                             size="icon"
                                             className="h-8 w-8 rounded-lg shrink-0"
                                             onClick={() => {
-                                                const current = settings.hiddenAnimatedBackgroundIds || [];
-                                                if (isHidden) {
-                                                    const next = current.filter(id => id !== style.id);
-                                                    updateSettings({ hiddenAnimatedBackgroundIds: next });
-                                                } else {
+                                                setDraft((d) => {
+                                                    if (!d) return d;
+                                                    const current = d.hiddenAnimatedBackgroundIds || [];
+                                                    if (isHidden) {
+                                                        const next = current.filter((id) => id !== style.id);
+                                                        return { ...d, hiddenAnimatedBackgroundIds: next };
+                                                    }
                                                     if (visibleStyles.length > 1) {
                                                         const next = [...current, style.id];
-                                                        updateSettings({ hiddenAnimatedBackgroundIds: next });
+                                                        return { ...d, hiddenAnimatedBackgroundIds: next };
                                                     }
-                                                }
-                                                if (settings.soundEnabled) playSound('click');
+                                                    return d;
+                                                });
+                                                if (local.soundEnabled) playSound('click');
                                             }}
                                         >
                                             {isHidden ? <RotateCcw className="w-4 h-4 text-primary" /> : <Trash2 className="w-4 h-4 text-muted-foreground group-hover:text-destructive transition-colors" />}
@@ -680,6 +715,17 @@ export function SettingsModal() {
                     </div>
                 )}
                 </div>
+
+                <DialogFooter className="border-t border-border/40 bg-card/30 px-6 py-4 shrink-0 sm:justify-end gap-2">
+                    <DialogClose asChild>
+                        <Button type="button" variant="outline" className="rounded-xl min-w-[88px]">
+                            Cancel
+                        </Button>
+                    </DialogClose>
+                    <Button type="button" className="rounded-xl min-w-[88px]" onClick={handleOk}>
+                        OK
+                    </Button>
+                </DialogFooter>
 
                 <Dialog open={vendingSettingsOpen} onOpenChange={setVendingSettingsOpen}>
                     <DialogContent className="sm:max-w-xl rounded-3xl">
