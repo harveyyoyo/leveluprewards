@@ -761,6 +761,11 @@
       height: 8.5mm !important;
     }
 
+    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__hero-emoji {
+      font-size: 8.5mm !important;
+      line-height: 1 !important;
+    }
+
     /* Keep school logo/fallback visible on small labels. */
     body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__logo,
     body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__logo-fallback {
@@ -1402,6 +1407,12 @@
     height: 32mm !important;
     color: #000 !important;
     stroke-width: 2.5px !important; /* Bold Icon */
+  }
+
+  .prize-ticket__hero-emoji {
+    font-size: 32mm;
+    line-height: 1;
+    display: block;
   }
 
   .prize-ticket__prize-name {

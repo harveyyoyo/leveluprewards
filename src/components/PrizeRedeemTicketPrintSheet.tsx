@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
 import DynamicIcon from '@/components/DynamicIcon';
-import { stripLeadingEmojiFromPrizeName } from '@/lib/prize-utils';
+import { leadingEmojiSequenceFromName, stripLeadingEmojiFromPrizeName } from '@/lib/prize-utils';
 
 export type PrizeRedeemTicket = {
   activityId: string;
@@ -71,7 +71,10 @@ export function PrizeRedeemTicketPrintSheet({
     >
       {tickets.map((t) => {
         const rawPrizeName = (t.prizeName || '').trim();
-        const displayPrizeName = stripLeadingEmojiFromPrizeName(rawPrizeName) || rawPrizeName;
+        const leadingEmoji = leadingEmojiSequenceFromName(rawPrizeName);
+        const nameWithoutLeadingEmoji = stripLeadingEmojiFromPrizeName(rawPrizeName);
+        const titleText = leadingEmoji ? nameWithoutLeadingEmoji : rawPrizeName;
+        const showTitle = Boolean(titleText || !leadingEmoji);
         const displayStudent = (t.studentName || t.studentId || '').normalize('NFC');
 
         return (
@@ -103,12 +106,18 @@ export function PrizeRedeemTicketPrintSheet({
 
             <div className="prize-ticket__hero">
               <div className="prize-ticket__icon-ring" aria-hidden>
-                <DynamicIcon
-                  name={(t.prizeIcon || 'Gift').trim() || 'Gift'}
-                  className="prize-ticket__lucide"
-                />
+                {leadingEmoji ? (
+                  <span className="prize-ticket__hero-emoji">{leadingEmoji}</span>
+                ) : (
+                  <DynamicIcon
+                    name={(t.prizeIcon || 'Gift').trim() || 'Gift'}
+                    className="prize-ticket__lucide"
+                  />
+                )}
               </div>
-              <h2 className="prize-ticket__prize-name">{displayPrizeName}</h2>
+              {showTitle ? (
+                <h2 className="prize-ticket__prize-name">{titleText || rawPrizeName}</h2>
+              ) : null}
             </div>
 
             <div className="prize-ticket__banner" role="group" aria-label="Ticket reference">

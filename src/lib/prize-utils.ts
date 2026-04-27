@@ -8,7 +8,7 @@ export function prizeIsListed(p: Prize): boolean {
 }
 
 /** Leading ZWJ emoji sequence at the start of a prize title (legacy names like "🧽 Eraser"). */
-function leadingEmojiSequenceFromName(raw: string): string | undefined {
+export function leadingEmojiSequenceFromName(raw: string): string | undefined {
   const name = raw?.trim() ?? '';
   if (!name) return undefined;
   const m = name.match(
