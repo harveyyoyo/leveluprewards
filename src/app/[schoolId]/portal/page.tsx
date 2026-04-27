@@ -21,6 +21,15 @@ export default function PortalPage() {
     const [hoveredIndex, setHoveredIndex] = useState<string | null>(null);
     const animBackdrop = globalAnimatedBackdropActive(settings);
     const showPortalLocalDecor = settings.graphicMode === 'graphics' && !animBackdrop;
+    const isStaff = loginState === 'teacher' || loginState === 'admin' || loginState === 'developer';
+    const isStudentLike = !isStaff && loginState !== 'loggedOut';
+    const shouldRedirectStudentLike = isInitialized && isStudentLike && !!schoolId && schoolId !== 'schoolabc';
+
+    useEffect(() => {
+        if (shouldRedirectStudentLike) {
+            router.replace(`/${schoolId}/student`);
+        }
+    }, [router, schoolId, shouldRedirectStudentLike]);
 
     if (!isInitialized) {
         return (
@@ -33,14 +42,17 @@ export default function PortalPage() {
         );
     }
 
-    const isStaff = loginState === 'teacher' || loginState === 'admin' || loginState === 'developer';
-    const isStudentLike = !isStaff && loginState !== 'loggedOut';
-
     // Kiosk/student sessions should not land on the full portal menu.
     // Except for the demo school where we want the full experience visible.
-    if (isStudentLike && schoolId && schoolId !== 'schoolabc') {
-        router.replace(`/${schoolId}/student`);
-        return null;
+    if (shouldRedirectStudentLike) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <Button disabled variant="ghost" size="lg" className="text-muted-foreground">
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Opening Student Kiosk...
+                </Button>
+            </div>
+        );
     }
 
     const portals = [

@@ -73,16 +73,18 @@ export default function Header() {
   const logoLink = schoolId ? `/${schoolId}/portal` : '/';
   const centerLabel = schoolName;
   const centerHref = schoolId ? `/${schoolId}/portal` : '/portal';
+  const isStaff = loginState === 'teacher' || loginState === 'admin';
+  const isDemoSchool = schoolId === 'schoolabc';
 
 
   // --- APP MODE HEADER ---
   if (settings.displayMode === 'app') {
     const navItems = [
       ...(isAdmin ? [{ id: 'admin', href: `/${schoolId}/admin`, icon: UserCog, label: 'Admin', color: 'destructive' }] : []),
-      { id: 'print', href: `/${schoolId}/teacher`, icon: Printer, label: 'Teacher', color: 'chart-2' },
+      ...(isStaff || isDemoSchool ? [{ id: 'print', href: `/${schoolId}/teacher`, icon: Printer, label: 'Teacher', color: 'chart-2' }] : []),
       { id: 'redeem', href: `/${schoolId}/student`, icon: GraduationCap, label: 'Student', color: 'chart-1' },
       { id: 'prize', href: `/${schoolId}/prize`, icon: Gift, label: 'Shop', color: 'chart-3' },
-      { id: 'fame', href: `/${schoolId}/halloffame`, icon: Trophy, label: 'Fame', color: 'chart-5' },
+      ...(isStaff || isDemoSchool ? [{ id: 'fame', href: `/${schoolId}/halloffame`, icon: Trophy, label: 'Fame', color: 'chart-5' }] : []),
     ].sort((a, b) => {
       const order = ['admin', 'print', 'redeem', 'prize', 'fame'];
       return order.indexOf(a.id) - order.indexOf(b.id);
@@ -205,7 +207,7 @@ export default function Header() {
                   </span>
                 </div>
 
-              {loginState !== 'student' && loginState !== 'loggedOut' && schoolId !== 'schoolabc' && (
+              {loginState !== 'student' && loginState !== 'loggedOut' && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="font-bold gap-2 h-12 px-4 rounded-xl text-primary">

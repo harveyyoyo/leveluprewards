@@ -476,20 +476,20 @@ export default function HallOfFamePage() {
                                             )}
                                             title={pointsToNext > 0 ? `${pointsToNext.toLocaleString()} pts to rank up` : ''}
                                         >
-                                        <div className="flex items-center gap-4">
-                                            <span className="text-sm font-black text-muted-foreground/30 w-6">{index + podiumSize + 1}</span>
+                                        <div className="flex min-w-0 items-center gap-4">
+                                            <span className="w-6 shrink-0 text-sm font-black text-muted-foreground/30">{index + podiumSize + 1}</span>
                                             <Avatar className="w-10 h-10 border-2 border-background overflow-hidden">
                                                 {student.photoUrl && <img src={student.photoUrl} alt="Photo" className={settings.photoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />}
                                                 <AvatarFallback className="bg-secondary text-xs font-bold">{getInitials(student.firstName, student.lastName)}</AvatarFallback>
                                             </Avatar>
-                                            <div>
-                                                <div className="flex items-center gap-2">
-                                                    <p className="font-black text-foreground tracking-tight">{getStudentNickname(student)} {student.lastName}</p>
+                                            <div className="min-w-0">
+                                                <div className="flex min-w-0 items-center gap-2">
+                                                    <p className="truncate font-black text-foreground tracking-tight">{getStudentNickname(student)} {student.lastName}</p>
                                                 </div>
-                                                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{getClassName(student.classId)}</p>
+                                                <p className="truncate text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{getClassName(student.classId)}</p>
                                             </div>
                                         </div>
-                                        <div className="text-lg font-black text-primary tracking-tighter">
+                                        <div className="shrink-0 pl-3 text-lg font-black text-primary tracking-tighter">
                                             {getPointsForStudent(student).toLocaleString()}
                                         </div>
 
