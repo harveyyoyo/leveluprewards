@@ -64,6 +64,9 @@ import { runMotor as runVendingMotor, isConnected as motorIsConnected } from '@/
 /** Max units per redemption for 0-point prizes when stock is unlimited (balance does not limit). */
 const FREE_PRIZE_MAX_QTY = 99;
 
+/** Inactivity before returning to the student scanner (same as the student / redeem kiosk). */
+const KIOSK_AUTO_LOGOUT_SEC = 15;
+
 function ConfirmRedemptionDialog({
     student,
     prize,
@@ -303,12 +306,14 @@ function PrizeActivityList({ schoolId, studentId, themed = false }: { schoolId: 
 function PrizeDashboard({
     studentId,
     onDone,
+    onRequestExit,
 }: {
     studentId: string;
     onDone: () => void;
+    onRequestExit: () => void;
 }) {
     const router = useRouter();
-    const { schoolId, redeemPrize, printPrizeTickets } = useAppContext();
+    const { schoolId, redeemPrize, printPrizeTickets, isKioskLocked } = useAppContext();
     const firestore = useFirestore();
     const { toast } = useToast();
     const playSound = useArcadeSound();
@@ -337,8 +342,41 @@ function PrizeDashboard({
     const prizesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'prizes') : null, [firestore, schoolId]);
     const { data: prizes, isLoading: prizesLoading, error: prizesError } = useCollection<Prize>(prizesQuery);
 
+    const [logoutTimer, setLogoutTimer] = useState(KIOSK_AUTO_LOGOUT_SEC);
+
+    const resetTimer = useCallback(() => {
+        if (!isKioskLocked) {
+            setLogoutTimer(KIOSK_AUTO_LOGOUT_SEC);
+        }
+    }, [isKioskLocked]);
+
+    useEffect(() => {
+        if (isKioskLocked) return;
+        if (logoutTimer <= 0) {
+            onDone();
+            return;
+        }
+        const timerId = setTimeout(() => {
+            setLogoutTimer((t) => t - 1);
+        }, 1000);
+        return () => clearTimeout(timerId);
+    }, [logoutTimer, onDone, isKioskLocked]);
+
+    useEffect(() => {
+        if (isKioskLocked) return;
+        const handleActivity = () => {
+            resetTimer();
+        };
+        const events: (keyof WindowEventMap)[] = ['mousemove', 'mousedown', 'keydown', 'touchstart'];
+        events.forEach((ev) => window.addEventListener(ev, handleActivity));
+        return () => {
+            events.forEach((ev) => window.removeEventListener(ev, handleActivity));
+        };
+    }, [resetTimer, isKioskLocked]);
+
     const handleRedeemReward = async (prize: Prize, quantity: number) => {
         if (!student) return;
+        resetTimer();
         setConfirmingPrize(null);
         if (typeof navigator !== 'undefined' && navigator.onLine === false) {
             playSound('error');
@@ -490,7 +528,7 @@ function PrizeDashboard({
                         <Button type="button" variant="default" onClick={() => router.refresh()}>
                             Try again
                         </Button>
-                        <Button type="button" variant="outline" onClick={onDone}>
+                        <Button type="button" variant="outline" onClick={onRequestExit}>
                             Go back
                         </Button>
                     </CardContent>
@@ -647,7 +685,73 @@ function PrizeDashboard({
                                         Redeem your points for rewards
                                     </p>
                                 </div>
-                                <div
+                                <div className="flex flex-col items-stretch sm:items-end gap-4 w-full md:w-auto">
+                                    <div className="flex items-center justify-center sm:justify-end gap-2 flex-wrap">
+                                        <div
+                                            className={cn(
+                                                "px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-colors whitespace-nowrap",
+                                                isKioskLocked
+                                                    ? "bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-red-100 dark:border-red-800"
+                                                    : "bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-800",
+                                            )}
+                                            role="timer"
+                                            aria-live={logoutTimer <= 5 ? 'assertive' : 'off'}
+                                            aria-label={isKioskLocked ? 'Kiosk locked' : `Auto logout in ${logoutTimer} seconds`}
+                                        >
+                                            <span>{isKioskLocked ? 'Kiosk Locked • ' : ''}Auto-logout in {logoutTimer}s</span>
+                                        </div>
+                                        <div className="relative">
+                                            {!isKioskLocked && (
+                                                <svg
+                                                    className="absolute inset-0 w-full h-full pointer-events-none motion-reduce:hidden"
+                                                    viewBox="0 0 36 36"
+                                                    aria-hidden="true"
+                                                >
+                                                    <circle
+                                                        cx="18"
+                                                        cy="18"
+                                                        r="16"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        strokeOpacity="0.15"
+                                                        strokeWidth="2"
+                                                    />
+                                                    <circle
+                                                        cx="18"
+                                                        cy="18"
+                                                        r="16"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        strokeWidth="2"
+                                                        strokeLinecap="round"
+                                                        strokeDasharray={2 * Math.PI * 16}
+                                                        strokeDashoffset={
+                                                            2 *
+                                                            Math.PI *
+                                                            16 *
+                                                            (1 - Math.max(0, Math.min(1, logoutTimer / KIOSK_AUTO_LOGOUT_SEC)))
+                                                        }
+                                                        transform="rotate(-90 18 18)"
+                                                        className={cn(
+                                                            'transition-[stroke-dashoffset] duration-500 ease-linear',
+                                                            logoutTimer <= 5 ? 'text-rose-500' : 'text-amber-500',
+                                                        )}
+                                                    />
+                                                </svg>
+                                            )}
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                className="relative h-8 px-3.5 rounded-full text-[11px] font-bold uppercase tracking-widest whitespace-nowrap"
+                                                onClick={onRequestExit}
+                                                aria-label={`Log out now. Auto logout in ${logoutTimer} seconds.`}
+                                            >
+                                                Logout
+                                            </Button>
+                                        </div>
+                                    </div>
+                                    <div
                                     className="backdrop-blur-md border-2 rounded-3xl p-6 px-10 text-center shadow-xl"
                                     style={activeTheme ? {
                                         backgroundColor: 'var(--theme-card)',
@@ -666,6 +770,7 @@ function PrizeDashboard({
                                         </p>
                                     ) : null}
                                     <p className="text-4xl font-black tracking-tighter" style={{ color: activeTheme ? 'var(--theme-primary)' : 'hsl(var(--primary))' }}>{(student.points || 0).toLocaleString()} <span className="text-sm font-bold uppercase tracking-widest ml-1" style={{ color: activeTheme ? 'var(--theme-primary)' : 'hsl(var(--primary) / 0.6)', opacity: 0.6 }}>pts</span></p>
+                                </div>
                                 </div>
                             </div>
 
@@ -910,7 +1015,7 @@ function PrizeDashboard({
                                     <Button
                                         variant="outline"
                                         className="w-full h-16 rounded-3xl border-2 font-black uppercase tracking-widest text-xs transition-all group"
-                                        onClick={onDone}
+                                        onClick={onRequestExit}
                                         style={activeTheme ? {
                                             borderColor: 'var(--theme-text)',
                                             color: 'var(--theme-text)',
@@ -958,13 +1063,18 @@ function PrizeDashboard({
     );
 }
 export default function PrizePage() {
-    const { loginState, isInitialized, schoolId } = useAppContext();
-    const router = useRouter();
+    const { loginState, isInitialized } = useAppContext();
     const { toast } = useToast();
     const { settings } = useSettings();
-    const firestore = useFirestore();
 
     const { activeStudentId, setActiveStudentId, handleDone, loginMeta, setLoginMeta } = useActiveStudentSession();
+    const playSound = useArcadeSound();
+
+    const handlePrizeSessionExit = useCallback(() => {
+        playSound('swoosh');
+        handleDone();
+        toast({ title: 'Logged Out', description: 'Returning to prize portal home.' });
+    }, [handleDone, playSound, toast]);
 
     const onScannerStudent = useCallback(
         (id: string, meta?: StudentFoundMeta) => {
@@ -977,7 +1087,6 @@ export default function PrizePage() {
         },
         [setActiveStudentId, setLoginMeta],
     );
-    // Kiosk lock removed.
 
     if (!isInitialized || !['student', 'teacher', 'admin', 'school', 'developer'].includes(loginState)) {
         return (
@@ -1000,7 +1109,11 @@ export default function PrizePage() {
                         onResolved={handleDone}
                     />
                 )}
-                <PrizeDashboard studentId={activeStudentId} onDone={handleDone} />
+                <PrizeDashboard
+                    studentId={activeStudentId}
+                    onDone={handleDone}
+                    onRequestExit={handlePrizeSessionExit}
+                />
             </>
         );
     }
