@@ -89,7 +89,6 @@
 }
 
 /* Color Schemes for both Light & Dark Mode */
-.data-color-scheme-default,
 [data-color-scheme="sky"] {
   --primary: 199 89% 48%;
   --primary-foreground: 210 40% 98%;
@@ -641,8 +640,8 @@
     display: none !important;
   }
   
-  body.prize-ticket-printing [data-app-view-root] > *:not(#prize-ticket-print-wrapper),
-  body.id-card-printing [data-app-view-root] > *:not(#student-id-print-wrapper) {
+  /* Prize tickets: keep only the wrapper to avoid layout gaps. */
+  body.prize-ticket-printing [data-app-view-root] > *:not(#prize-ticket-print-wrapper) {
     display: none !important;
   }
 
@@ -663,6 +662,134 @@
     overflow: hidden !important;
     transform: scale(var(--prize-print-scale, 1)) !important;
     transform-origin: left top !important;
+  }
+
+  /* Prize tickets should not be stretched to full-page height (creates huge gaps). */
+  body.prize-ticket-printing #prize-ticket-print-wrapper {
+    /* Disable any scaling that can shift/left-align the ticket in preview */
+    --prize-print-scale: 1 !important;
+    transform: none !important;
+    height: auto !important;
+    overflow: visible !important;
+    align-items: center !important;
+  }
+
+  /* Force the ticket itself to not stretch or "space-between" in print. */
+  body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket {
+    height: 100% !important;
+    display: grid !important;
+    grid-template-rows: auto 1fr auto auto !important;
+    width: 8.5in !important;
+    max-width: 8.5in !important;
+  }
+
+  /* If printing to a label-sized page (e.g. 50x70mm / M110S), fill the label instead of Letter. */
+  @media (max-width: 100mm) {
+    body.prize-ticket-printing #prize-ticket-print-wrapper {
+      transform: none !important;
+      height: 100% !important;
+      overflow: visible !important;
+      align-items: stretch !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket {
+      width: 100% !important;
+      max-width: 100% !important;
+      /* Account for @page margin to avoid clipping. */
+      height: 68mm !important;
+      max-height: 68mm !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: space-between !important;
+      border-width: 1.8px !important;
+      overflow: hidden !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__head {
+      padding: 1.6mm 2.1mm !important;
+      border-bottom-width: 1.8px !important;
+      gap: 1.8mm !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__logo-box {
+      width: 10mm !important;
+      height: 10mm !important;
+      min-width: 10mm !important;
+      min-height: 10mm !important;
+      border-width: 2px !important;
+      padding: 0.6mm !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__brandline {
+      letter-spacing: 0.08em !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__brand-lu,
+    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__brand-redeem {
+      font-size: 2.5mm !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__school {
+      font-size: 3.3mm !important;
+      margin-top: 0.4mm !important;
+      line-height: 1.05 !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__hero {
+      gap: 0.8mm !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__icon-ring {
+      width: 13mm !important;
+      height: 13mm !important;
+      margin: 0 auto !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__prize-name {
+      font-size: 7.2mm !important;
+      line-height: 0.88 !important;
+      padding: 0 2mm !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__student-name {
+      font-size: 4.1mm !important;
+      margin: 0.35mm 0 !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__lucide {
+      width: 8.5mm !important;
+      height: 8.5mm !important;
+    }
+
+    /* Keep school logo/fallback visible on small labels. */
+    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__logo,
+    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__logo-fallback {
+      display: block !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__banner {
+      padding: 0.9mm 0 !important;
+      border-top-width: 1.8px !important;
+      border-bottom-width: 1.8px !important;
+      font-size: 2.35mm !important;
+      letter-spacing: 0.11em !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__details {
+      gap: 0.35mm !important;
+      margin-top: 0 !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__stats {
+      padding: 0.45mm 2.1mm 0.3mm !important;
+      gap: 0.4mm !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__stat-line {
+      font-size: 1.95mm !important;
+      grid-template-columns: 9.5mm 1fr !important;
+      gap: 0.7mm !important;
+    }
   }
   
   body.prize-ticket-printing #prize-ticket-print-wrapper * {
@@ -951,7 +1078,7 @@
   /* Conserving the prize ticket content styling, but removing the conflicting wrapper override */
   .prize-ticket {
     width: 100% !important;
-    height: 100% !important;
+    height: auto !important;
     page-break-inside: avoid;
     break-inside: avoid;
     margin: 0 !important;
@@ -964,7 +1091,8 @@
     border: 4px solid #000 !important; /* Thick production border */
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    justify-content: flex-start;
+    gap: 4mm;
     align-items: stretch;
   }
   
@@ -1014,9 +1142,10 @@
     align-items: center;
     justify-content: center;
     font-weight: 800;
-    font-size: 4mm; /* Larger fallback */
+    font-size: 5.5mm; /* Ensure legible in preview/print */
     font-family: 'Fraunces', Georgia, serif;
     color: #000 !important;
+    line-height: 1 !important;
     letter-spacing: 0.02em;
     border: 0.5mm solid #000;
   }
@@ -1075,6 +1204,7 @@
     align-items: center;
     gap: 6mm; /* Production gap balance */
     justify-content: center;
+    align-self: center;
   }
 
   .prize-ticket__icon-ring {

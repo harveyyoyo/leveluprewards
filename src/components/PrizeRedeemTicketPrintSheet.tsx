@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
 import DynamicIcon from '@/components/DynamicIcon';
 import { stripLeadingEmojiFromPrizeName } from '@/lib/prize-utils';
@@ -31,10 +31,45 @@ export function PrizeRedeemTicketPrintSheet({
   schoolName?: string | null;
   displayMode?: 'overlay' | 'page';
 }) {
+  const [logoLoaded, setLogoLoaded] = useState(false);
+
   useEffect(() => {
+    let cancelled = false;
+    setLogoLoaded(false);
+    const src = (logoUrl || '').trim();
+    if (!src) return;
+
+    const img = new Image();
+    img.onload = () => {
+      if (!cancelled) setLogoLoaded(true);
+    };
+    img.onerror = () => {
+      if (!cancelled) setLogoLoaded(false);
+    };
+    img.src = src;
+
+    return () => {
+      cancelled = true;
+    };
+  }, [logoUrl]);
+
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.setAttribute('data-prize-ticket-print', 'true');
+    // Ensure the browser lays out the ticket on the actual label size (e.g. M110S 50x70mm),
+    // otherwise global print CSS (Letter) will create a huge blank area.
+    style.textContent =
+      '@media print{' +
+      // Small margin prevents edge clipping on many label printers/browsers.
+      '@page{size:50mm 70mm;margin:1mm;}' +
+      'html,body{margin:0 !important;padding:0 !important;background:#fff !important;}' +
+      '}';
+    document.head.appendChild(style);
+
     document.body.classList.add('prize-ticket-printing');
     return () => {
       document.body.classList.remove('prize-ticket-printing');
+      style.remove();
     };
   }, []);
 
@@ -59,7 +94,7 @@ export function PrizeRedeemTicketPrintSheet({
           <article key={`${t.activityId}-${t.ticketNo}`} className="prize-ticket">
             <header className="prize-ticket__head">
               <div className="prize-ticket__logo-box">
-                {logoUrl ? (
+                {logoUrl && logoLoaded ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img className="prize-ticket__logo" src={logoUrl} alt="" />
                 ) : (
