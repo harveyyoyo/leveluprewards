@@ -84,6 +84,10 @@ export const getAttendanceConfig = async (
     classPeriodAssignments: (data.classPeriodAssignments && typeof data.classPeriodAssignments === 'object')
       ? data.classPeriodAssignments
       : undefined,
+    classPeriodAssignmentsByDay:
+      data.classPeriodAssignmentsByDay && typeof data.classPeriodAssignmentsByDay === 'object'
+        ? (data.classPeriodAssignmentsByDay as Record<string, Record<string, string>>)
+        : undefined,
     categoryId: data.categoryId,
     schedule: Array.isArray(data.schedule) ? data.schedule : [],
   };
@@ -124,6 +128,10 @@ export const getTeacherAttendanceConfig = async (
     classPeriodAssignments: (data.classPeriodAssignments && typeof data.classPeriodAssignments === 'object')
       ? data.classPeriodAssignments
       : undefined,
+    classPeriodAssignmentsByDay:
+      data.classPeriodAssignmentsByDay && typeof data.classPeriodAssignmentsByDay === 'object'
+        ? (data.classPeriodAssignmentsByDay as Record<string, Record<string, string>>)
+        : undefined,
     categoryId: data.categoryId,
     schedule: Array.isArray(data.schedule) ? data.schedule : [],
     teacherId,
