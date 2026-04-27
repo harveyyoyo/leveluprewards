@@ -1007,8 +1007,8 @@ function TeacherAttendanceRewardsPanel({
   return (
     <div className="space-y-6">
       <div>
-        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">Create reward</Label>
-        <p className="text-sm text-muted-foreground">Pick a class + period, set points, choose a category, then create. Create as many as you want and toggle them on/off.</p>
+        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">Create attendance rule</Label>
+        <p className="text-sm text-muted-foreground">Choose one class and one period, then set the points students earn when they check in.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1133,7 +1133,7 @@ function TeacherAttendanceRewardsPanel({
         {isLoading ? (
           <Skeleton className="h-24 w-full rounded-2xl" />
         ) : (rules || []).length === 0 ? (
-          <p className="text-sm text-muted-foreground">No rewards yet.</p>
+          <p className="text-sm text-muted-foreground">No attendance rules yet. Create one above, then test a student sign-in during that period.</p>
         ) : (
           <div className="space-y-2">
             {(rules || []).slice().sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).map((r) => (
@@ -1844,7 +1844,7 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
                             <TabsContent value="attendance" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-muted/30 px-4 py-3 mb-6">
                                     <p className="text-sm text-muted-foreground max-w-prose">
-                                        First time? Use the walkthrough for a simple example rule and kiosk test.
+                                        New setup takes one rule: class, period, points. Use the walkthrough for a quick test.
                                     </p>
                                     <AttendanceSetupWizard variant="teacher" />
                                 </div>
@@ -1864,7 +1864,7 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
                                                     Attendance Rewards
                                                 </CardTitle>
                                                 <CardDescription className={isGraphic ? 'text-muted-foreground/80' : ''}>
-                                                    Create rewards tied to a class + period (from Admin or custom).
+                                                    Create the rules that award attendance points during active class periods.
                                                 </CardDescription>
                                             </div>
                                         </CardHeader>

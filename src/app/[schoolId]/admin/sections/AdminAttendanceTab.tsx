@@ -109,9 +109,12 @@ export function AdminAttendanceTab(props: any) {
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-muted/30 px-4 py-3">
-        <p className="text-sm text-muted-foreground max-w-prose">
-          First time? Open the walkthrough for a minimal example (periods, class, kiosk check).
-        </p>
+        <div className="max-w-prose">
+          <p className="text-sm font-bold">Preferred setup: periods, primary teacher, teacher reward rule.</p>
+          <p className="text-sm text-muted-foreground">
+            Use legacy assignments only for older setups. New attendance rewards should live in each teacher&apos;s rules.
+          </p>
+        </div>
         <AttendanceSetupWizard variant="admin" />
       </div>
       <Card className="border-t-4 border-primary/60 shadow-md">
@@ -273,7 +276,7 @@ export function AdminAttendanceTab(props: any) {
               <div className="space-y-2 rounded-2xl border-2 border-primary/30 bg-primary/[0.03] p-4">
                 <div className="flex flex-wrap items-center gap-2">
                   <Label className="text-sm font-bold">
-                    Attendance reward rules created by this teacher
+                    Active reward rules for this teacher
                   </Label>
                   <span
                     className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-primary"
@@ -283,7 +286,7 @@ export function AdminAttendanceTab(props: any) {
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Per-class reward rules let each teacher set different points per period and only fire during that period&rsquo;s time window. This is the preferred way to configure attendance.
+                  These rules are the main attendance setup: class, period, points, and on-time bonus. Sign-ins only earn from a rule while its period is active.
                 </p>
                 {teacherAttendanceRewardsLoading ? (
                   <p className="text-sm text-muted-foreground flex items-center gap-2">

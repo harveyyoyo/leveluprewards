@@ -1,21 +1,10 @@
-import { doc, getDoc } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
-import type { Firestore } from 'firebase/firestore';
 import type { Functions } from 'firebase/functions';
 import type {
   Student,
-  Class,
-  AttendanceScheduleSlot,
-  AttendanceRewardRule,
-  AttendanceSettings,
   AttendanceKioskSignInResult,
-  RecordClassSignInResult,
 } from '@/lib/types';
-import {
-  resolveAttendanceSettingsForSignIn,
-  ATTENDANCE_RESOLVE_FAILURE_MESSAGES,
-  type AttendanceResolveSource,
-} from '@/lib/attendance/resolveSettings';
+import { ATTENDANCE_RESOLVE_FAILURE_MESSAGES, type AttendanceResolveSource } from '@/lib/attendance/resolveSettings';
 
 type CallablePayload = { schoolId: string; studentId: string };
 type CallableResult = {
@@ -63,25 +52,21 @@ export function describeAttendanceKioskOutcome(result: AttendanceKioskSignInResu
     return ATTENDANCE_RESOLVE_FAILURE_MESSAGES.no_periods_for_school_legacy;
   }
   if (result.reason === 'callable_failed') {
-    return 'Could not reach the attendance server; used on-device rules.';
+    return 'Could not reach the attendance server; attendance was not recorded.';
   }
   return 'Attendance was not recorded.';
 }
 
 /**
- * Server-first attendance sign-in (Cloud Function), with the same resolver + Firestore path as fallback.
+ * Trusted attendance sign-in. The Cloud Function is the only code path that
+ * awards points so attendance logs and balances stay auditable.
  */
 export async function performKioskAttendanceSignIn(params: {
-  firestore: Firestore;
   functions: Functions;
   schoolId: string;
   student: Student;
-  classes: Class[];
-  periods: AttendanceScheduleSlot[];
-  teacherRewards: AttendanceRewardRule[];
-  recordClassSignIn: (studentId: string, student: Student, config: AttendanceSettings) => Promise<RecordClassSignInResult>;
 }): Promise<AttendanceKioskSignInResult> {
-  const { firestore, functions, schoolId, student, classes, periods, teacherRewards, recordClassSignIn } = params;
+  const { functions, schoolId, student } = params;
 
   try {
     const fn = httpsCallable<CallablePayload, CallableResult>(functions, 'signInAttendance');
@@ -97,49 +82,14 @@ export async function performKioskAttendanceSignIn(params: {
       source: data.source as AttendanceResolveSource | undefined,
     };
   } catch (err) {
-    // Fall through to the client-side path so the kiosk can still record
-    // attendance when the callable is unreachable, but surface the reason so
-    // deploy / auth / permission issues don't silently degrade to "0 points".
     // eslint-disable-next-line no-console
-    console.warn('[attendance] signInAttendance callable failed, using client fallback:', err);
-  }
-
-  const classForStudent = student.classId ? classes.find((c) => c.id === student.classId) : undefined;
-  const teacherId = classForStudent?.primaryTeacherId?.trim();
-
-  const schoolSnap = await getDoc(doc(firestore, 'schools', schoolId, 'attendance', 'config'));
-  const teacherSnap = teacherId
-    ? await getDoc(doc(firestore, 'schools', schoolId, 'teachers', teacherId, 'attendanceConfig', 'config'))
-    : null;
-
-  const resolved = resolveAttendanceSettingsForSignIn({
-    nowMs: Date.now(),
-    student,
-    classes,
-    periods,
-    teacherRewards,
-    teacherConfigRaw: teacherSnap?.exists() ? (teacherSnap.data() as Record<string, unknown>) : null,
-    schoolConfigRaw: schoolSnap.exists() ? (schoolSnap.data() as Record<string, unknown>) : null,
-  });
-
-  if (!resolved.ok) {
+    console.warn('[attendance] signInAttendance callable failed:', err);
     return {
       pointsAwarded: 0,
       onTime: false,
       periodLabel: null,
-      reason: resolved.reason,
+      reason: 'callable_failed',
       usedServer: false,
     };
   }
-
-  const cfg = resolved.settings as AttendanceSettings;
-  const r: RecordClassSignInResult = await recordClassSignIn(student.id, student, cfg);
-  return {
-    pointsAwarded: r.pointsAwarded,
-    onTime: r.onTime,
-    periodLabel: r.periodLabel ?? null,
-    reason: r.reason,
-    usedServer: false,
-    source: resolved.source,
-  };
 }

@@ -168,7 +168,7 @@ export function resolveAttendanceSettingsForSignIn(input: ResolveAttendanceSetti
   const withSchoolTz = (s: AttendanceSettingsLike): AttendanceSettingsLike =>
     schoolTimeZone ? { ...s, attendanceTimeZone: schoolTimeZone } : { ...s, attendanceTimeZone: s.attendanceTimeZone };
 
-  const nowMinutes = getSchoolDayClock(nowMs, schoolTimeZone, { whenUnset: 'local' }).minutesSinceMidnight;
+  const nowMinutes = getSchoolDayClock(nowMs, schoolTimeZone, { whenUnset: 'utc' }).minutesSinceMidnight;
   const parse = (hhmm: string) => {
     const [h, m] = hhmm.split(':').map(Number);
     return (h || 0) * 60 + (m || 0);

@@ -208,7 +208,9 @@ service cloud.firestore {
 
       match /attendanceLog/{entryId} {
         allow read: if isAdmin(schoolId) || isTeacher(schoolId);
-        allow create: if isAuth();
+        // Attendance logs are audit records and point-award evidence. They are
+        // created by the trusted Cloud Function via the Admin SDK.
+        allow create: if false;
         allow update, delete: if isAdmin(schoolId);
       }
 

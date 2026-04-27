@@ -10,7 +10,7 @@ describe('resolveAttendanceSettingsForSignIn', () => {
   const periods = [{ id: 'p1', label: 'Period 1', startTime: '08:00', endTime: '09:00' }];
 
   it('uses matching reward rule when now is inside window', () => {
-    const nowMs = new Date('2026-01-05T08:30:00').getTime();
+    const nowMs = new Date('2026-01-05T08:30:00Z').getTime();
     const r = resolveAttendanceSettingsForSignIn({
       nowMs,
       student,
@@ -35,6 +35,90 @@ describe('resolveAttendanceSettingsForSignIn', () => {
       expect(r.source).toBe('reward_rule');
       expect(r.settings.pointsForSignIn).toBe(5);
       expect(r.settings.teacherId).toBe('t1');
+    }
+  });
+
+  it('uses the school time zone even when the school config only stores timezone', () => {
+    const nowMs = Date.UTC(2026, 0, 5, 13, 30); // 8:30 AM in America/New_York
+    const r = resolveAttendanceSettingsForSignIn({
+      nowMs,
+      student,
+      classes,
+      periods,
+      teacherRewards: [
+        {
+          id: 'r1',
+          enabled: true,
+          classId: 'c1',
+          periodId: 'p1',
+          pointsForSignIn: 5,
+          pointsForOnTime: 2,
+          onTimeWindowMinutes: 10,
+        },
+      ],
+      teacherConfigRaw: null,
+      schoolConfigRaw: { attendanceTimeZone: 'America/New_York' },
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.source).toBe('reward_rule');
+      expect(r.settings.attendanceTimeZone).toBe('America/New_York');
+    }
+  });
+
+  it('ignores disabled reward rules and falls through to defaults', () => {
+    const nowMs = new Date('2026-01-05T08:30:00Z').getTime();
+    const r = resolveAttendanceSettingsForSignIn({
+      nowMs,
+      student,
+      classes,
+      periods,
+      teacherRewards: [
+        {
+          id: 'r1',
+          enabled: false,
+          classId: 'c1',
+          periodId: 'p1',
+          pointsForSignIn: 50,
+          pointsForOnTime: 20,
+          onTimeWindowMinutes: 10,
+        },
+      ],
+      teacherConfigRaw: null,
+      schoolConfigRaw: null,
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.source).toBe('default');
+      expect(r.settings.pointsForSignIn).toBe(DEFAULT_ATTENDANCE_SETTINGS.pointsForSignIn);
+    }
+  });
+
+  it('matches custom reward periods without a universal period id', () => {
+    const nowMs = new Date('2026-01-05T10:15:00Z').getTime();
+    const r = resolveAttendanceSettingsForSignIn({
+      nowMs,
+      student,
+      classes,
+      periods,
+      teacherRewards: [
+        {
+          id: 'custom1',
+          enabled: true,
+          classId: 'c1',
+          customPeriod: { label: 'Advisory', startTime: '10:00', endTime: '10:30' },
+          pointsForSignIn: 4,
+          pointsForOnTime: 1,
+          onTimeWindowMinutes: 5,
+        },
+      ],
+      teacherConfigRaw: null,
+      schoolConfigRaw: null,
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.source).toBe('reward_rule');
+      expect(r.settings.schedule[0]).toMatchObject({ id: 'custom_custom1', label: 'Advisory' });
     }
   });
 

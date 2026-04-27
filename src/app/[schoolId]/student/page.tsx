@@ -237,7 +237,7 @@ function StudentDashboardInner({
   onRequestExit: () => void;
 }) {
   const router = useRouter();
-  const { redeemCoupon, schoolId, isKioskLocked, achievements, badges, recordClassSignIn } = useAppContext();
+  const { redeemCoupon, schoolId, isKioskLocked, achievements, badges } = useAppContext();
   const firestore = useFirestore();
   const { functions } = useFirebase();
   const { toast } = useToast();
@@ -338,21 +338,15 @@ function StudentDashboardInner({
   }, [hookHasPermission]);
 
   useEffect(() => {
-    if (!settings.enableClassSignIn || !student || !schoolId || !functions || signInRecordedRef.current || !recordClassSignIn) return;
-    if (classes === undefined || periods === undefined || teacherRewards === undefined) return;
+    if (!settings.enableClassSignIn || !student || !schoolId || !functions || signInRecordedRef.current) return;
     signInRecordedRef.current = true;
 
     void (async () => {
       try {
         const result = await performKioskAttendanceSignIn({
-          firestore,
           functions,
           schoolId,
           student,
-          classes: classes ?? [],
-          periods: periods ?? [],
-          teacherRewards: teacherRewards ?? [],
-          recordClassSignIn,
         });
         if (result.pointsAwarded > 0) {
           playSound('success');
@@ -396,7 +390,7 @@ function StudentDashboardInner({
         });
       }
     })();
-  }, [settings.enableClassSignIn, student, schoolId, classes, periods, teacherRewards, firestore, functions, recordClassSignIn, toast, playSound]);
+  }, [settings.enableClassSignIn, student, schoolId, functions, toast, playSound]);
 
   const resetTimer = useCallback(() => {
     if (!isKioskLocked) {
