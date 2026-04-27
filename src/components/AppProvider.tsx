@@ -154,7 +154,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
 
   // Background refresh: download coupon snapshot for offline validation.
   React.useEffect(() => {
-    if (!schoolId || !functions) return;
+    if (!schoolId || !functions || schoolId === 'schoolabc') return;
     if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
     const fn = httpsCallable(functions, 'getCouponSnapshot');
     void fn({ schoolId })

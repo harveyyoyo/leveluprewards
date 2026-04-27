@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import OpenAI from 'openai';
+import { guardAiRoute } from '@/lib/apiAuth';
 
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
@@ -8,11 +9,14 @@ const defaultOpenAI = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || '' });
 
 export async function POST(req: NextRequest) {
     try {
-        const { prompt, model = 'gemini-2.5-flash' } = await req.json();
+        const guarded = await guardAiRoute(req, { requireSchoolStaff: true, maxRequests: 8, maxBodyBytes: 48 * 1024 });
+        if (!guarded.ok) return guarded.response;
+        const { prompt, model = 'gemini-2.5-flash' } = guarded.value.body;
 
-        if (!prompt) {
+        if (typeof prompt !== 'string' || !prompt.trim()) {
             return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
         }
+        const selectedModel = typeof model === 'string' ? model : 'gemini-2.5-flash';
 
         const systemInstruction = `You are a scheduling assistant. Your task is to parse a raw text schedule into a structured array of JSON class objects.
         
@@ -30,14 +34,14 @@ You MUST reply with ONLY a JSON array containing objects matching this schema:
 
         let responseText = '';
 
-        if (model.startsWith('gpt')) {
+        if (selectedModel.startsWith('gpt')) {
             const effectiveKey = process.env.OPENAI_API_KEY;
             if (!effectiveKey) {
                 return NextResponse.json({ error: 'OpenAI API key configuration error (Server)' }, { status: 500 });
             }
 
             const response = await defaultOpenAI.chat.completions.create({
-                model: model as any,
+                model: selectedModel as any,
                 response_format: { type: 'json_object' },
                 messages: [
                     { role: 'system', content: systemInstruction + '\nEnsure your output is wrapped in an object like { "classes": [...] } so it is valid JSON.' },
@@ -54,7 +58,7 @@ You MUST reply with ONLY a JSON array containing objects matching this schema:
             }
 
             const activeModel = genAI.getGenerativeModel({
-                model: model,
+                model: selectedModel,
                 generationConfig: {
                     responseMimeType: 'application/json',
                 },

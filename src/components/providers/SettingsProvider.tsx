@@ -1,12 +1,12 @@
 
 'use client';
 
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useAuth } from './AuthProvider';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useDoc, useFirebase, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import {
     DEFAULT_PLAN,
     getSchoolEntitlements,
@@ -167,7 +167,7 @@ export type { ColorScheme, Settings };
 const SettingsContext = createContext<SettingsContextType | null>(null);
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
-    const { schoolId, isInitialized } = useAuth();
+    const { schoolId, isInitialized, loginState } = useAuth();
     const { firestore } = useFirebase();
     const [settings, setSettings] = useState<Settings>(defaultSettings);
     const [isLoaded, setIsLoaded] = useState(false);
@@ -177,14 +177,14 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         () => (firestore && schoolId ? doc(firestore, 'schools', schoolId) : null),
         [firestore, schoolId],
     );
-    const { data: schoolPlanData } = useDoc<SchoolPlanConfig>(schoolDocRef);
+    const { data: schoolData } = useDoc<SchoolPlanConfig & { appSettings?: Partial<Settings> }>(schoolDocRef);
     const planTier = useMemo(
-        () => (schoolId ? normalizePlan(schoolPlanData?.plan) : 'enterprise'),
-        [schoolId, schoolPlanData],
+        () => (schoolId ? normalizePlan(schoolData?.plan) : 'enterprise'),
+        [schoolId, schoolData],
     );
     const featureEntitlements = useMemo(
-        () => getSchoolEntitlements(schoolId ? schoolPlanData : { plan: 'enterprise' }),
-        [schoolId, schoolPlanData],
+        () => getSchoolEntitlements(schoolId ? schoolData : { plan: 'enterprise' }),
+        [schoolId, schoolData],
     );
     const planLabel = PLANS[planTier]?.label ?? PLANS[DEFAULT_PLAN].label;
     const isPublicLoginRoute =
@@ -193,15 +193,15 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         pathname === '/login' ||
         (typeof pathname === 'string' && pathname.startsWith('/s/'));
 
-    const isAllowed = (key: string) => {
+    const isAllowed = useCallback((key: string) => {
         if (key === 'enableClassSignIn') {
             return featureEntitlements.enableClassSignIn || featureEntitlements.enableAttendance;
         }
         if (!isPlanFeatureKey(key)) return true;
         return featureEntitlements[key];
-    };
+    }, [featureEntitlements]);
 
-    const applyEntitlements = (input: Settings): Settings => {
+    const applyEntitlements = useCallback((input: Settings): Settings => {
         const next = { ...input };
         for (const key of PLAN_FEATURE_KEYS) {
             if (!isAllowed(key)) {
@@ -213,7 +213,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             next.enableAttendance = false;
         }
         return next;
-    };
+    }, [isAllowed]);
 
     useEffect(() => {
         if (!isInitialized) {
@@ -222,10 +222,13 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
         const settingsKey = schoolId ? `arcade_settings_${schoolId}` : 'arcade_settings_global';
         const saved = localStorage.getItem(settingsKey);
+        const remoteSettings = schoolId && schoolData?.appSettings && typeof schoolData.appSettings === 'object'
+            ? schoolData.appSettings
+            : null;
 
-        if (saved) {
+        if (remoteSettings || saved) {
             try {
-                const parsed = JSON.parse(saved);
+                const parsed = remoteSettings ? { ...remoteSettings } : JSON.parse(saved || '{}');
                 if (parsed.graphicMode === 'arcade') {
                     parsed.graphicMode = 'graphics';
                 }
@@ -236,7 +239,19 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                 if (typeof parsed.enableClassSignIn !== 'boolean' && typeof parsed.enableAttendance === 'boolean') {
                     parsed.enableClassSignIn = parsed.enableAttendance;
                 }
-                setSettings(applyEntitlements({ ...defaultSettings, ...parsed }));
+                // Demo school: apply production defaults
+                if (schoolId === 'schoolabc') {
+                    if (!parsed.colorScheme || parsed.colorScheme === 'default') parsed.colorScheme = 'sky';
+                    parsed.graphicMode = 'graphics';
+                    parsed.enableAnimatedBackground = true;
+                    parsed.soundEnabled = true;
+                    parsed.displayMode = 'web';
+                    parsed.enableHelperMode = true;
+                    if (typeof parsed.calmMode !== 'boolean') parsed.calmMode = false;
+                }
+                const nextSettings = applyEntitlements({ ...defaultSettings, ...parsed });
+                setSettings(nextSettings);
+                localStorage.setItem(settingsKey, JSON.stringify(nextSettings));
             } catch (e) {
                 setSettings(applyEntitlements(defaultSettings));
             }
@@ -245,6 +260,14 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             const initialSettings: Settings = {
                 ...defaultSettings,
                 showIntroWizard: true,
+                // Demo school: apply sky theme and sound to match production
+                ...(schoolId === 'schoolabc' ? { 
+                    colorScheme: 'sky' as ColorScheme, 
+                    graphicMode: 'graphics',
+                    soundEnabled: true,
+                    displayMode: 'web',
+                    enableHelperMode: true
+                } : {}),
             };
             if (isMobile) {
                 initialSettings.displayMode = 'app';
@@ -252,7 +275,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             setSettings(applyEntitlements(initialSettings));
         }
         setIsLoaded(true);
-    }, [schoolId, isInitialized, isMobile, featureEntitlements]);
+    }, [schoolId, isInitialized, isMobile, applyEntitlements, schoolData?.appSettings]);
 
     const updateSettings = (updates: Partial<Settings>) => {
         const settingsKey = schoolId ? `arcade_settings_${schoolId}` : 'arcade_settings_global';
@@ -272,6 +295,15 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             const next = applyEntitlements({ ...prev, ...allowedUpdates });
 
             localStorage.setItem(settingsKey, JSON.stringify(next));
+            if (schoolId && firestore && (loginState === 'admin' || loginState === 'developer')) {
+                void setDoc(
+                    doc(firestore, 'schools', schoolId),
+                    { appSettings: next, updatedAt: Date.now() },
+                    { merge: true },
+                ).catch((error) => {
+                    console.error('Failed to save school settings', error);
+                });
+            }
 
             // Dispatch a custom event so non-react code or other tabs can listen if needed
             window.dispatchEvent(new Event('settings-updated'));

@@ -19,7 +19,7 @@ interface LayoutClientWrapperProps {
 export default function LayoutClientWrapper({ children }: LayoutClientWrapperProps) {
     const pathname = usePathname();
     const { settings } = useSettings();
-    const isLoginPage = pathname === '/' || pathname.startsWith('/s/');
+    const isLoginPage = pathname === '/' || pathname === '/login' || pathname === '/developer' || pathname.startsWith('/s/');
 
     // Unregister service workers to prevent stale cache issues
     useEffect(() => {
@@ -35,22 +35,15 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
     return (
         <TooltipProvider>
             <ConfirmProvider>
-                <div
-                    id="arcade-backdrop-host"
-                    className="arcade-animated-site-bg no-print pointer-events-none fixed inset-0 min-h-0 w-full overflow-visible"
-                    aria-hidden
-                />
-                <div data-app-view-root className="min-h-screen flex flex-col">
-                    {!isLoginPage && <Header />}
-                    <main id="screen-view" className={cn(
-                        isLoginPage ? "flex-1" : "flex-1 w-full max-w-7xl mx-auto relative z-10",
-                        settings.displayMode === 'app' && 'pb-24'
-                    )}>
-                        {children}
-                    </main>
-                    <IntroWizard />
-                </div>
-                <AnimatedSiteBackground />
+                {!isLoginPage && <Header />}
+                <main id="screen-view" className={cn(
+                    isLoginPage ? "flex-1" : "flex-1 w-full max-w-7xl mx-auto relative z-10",
+                    settings.displayMode === 'app' && 'pb-24'
+                )}>
+                    {children}
+                </main>
+                <IntroWizard />
+                {!isLoginPage && <AnimatedSiteBackground />}
             </ConfirmProvider>
             <Toaster />
         </TooltipProvider>

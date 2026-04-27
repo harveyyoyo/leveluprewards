@@ -46,6 +46,7 @@ import { Helper } from '@/components/ui/helper';
 import { httpsCallable } from 'firebase/functions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { ImageCropper } from '@/components/ImageCropper';
 
 interface SchoolInfo {
   id: string;
@@ -199,13 +200,15 @@ export default function DeveloperPage() {
   const [appLogoHistory, setAppLogoHistory] = useState<string[]>([]);
   const [isAppLogoUploading, setIsAppLogoUploading] = useState(false);
   const appLogoInputRef = useRef<HTMLInputElement | null>(null);
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
+  const [pendingLogoFile, setPendingLogoFile] = useState<File | null>(null);
 
   const schoolsQuery = useMemoFirebase(() => (loginState === 'developer' && !isUserLoading) ? collection(firestore, 'schools') : null, [loginState, firestore, isUserLoading]);
   const { data: allSchools, isLoading: schoolsLoading } = useCollection<SchoolInfo>(schoolsQuery);
 
   useEffect(() => {
     if (isInitialized && loginState !== 'developer') {
-      router.replace('/');
+      router.replace('/login?redirectTo=/developer');
     }
   }, [isInitialized, loginState, router]);
 
@@ -272,16 +275,6 @@ export default function DeveloperPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!functions || !firestore) {
-      toast({
-        variant: 'destructive',
-        title: 'Cannot upload app logo',
-        description: 'Cloud Functions are not available. Refresh and try again.',
-      });
-      e.target.value = '';
-      return;
-    }
-
     const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
     const maxSizeBytes = 5 * 1024 * 1024; // 5MB
 
@@ -306,6 +299,25 @@ export default function DeveloperPage() {
       return;
     }
 
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCropImageSrc(reader.result as string);
+      setPendingLogoFile(file);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const processAppLogoUpload = async (blob: Blob) => {
+    if (!functions || !firestore) {
+      toast({
+        variant: 'destructive',
+        title: 'Cannot upload app logo',
+        description: 'Cloud Functions are not available. Refresh and try again.',
+      });
+      return;
+    }
+
     try {
       setIsAppLogoUploading(true);
       toast({ title: 'Uploading app logo…', description: 'Please wait.' });
@@ -318,13 +330,13 @@ export default function DeveloperPage() {
           resolve(base64 || '');
         };
         reader.onerror = () => reject(reader.error);
-        reader.readAsDataURL(file);
+        reader.readAsDataURL(blob);
       });
 
       const uploadLogo = httpsCallable<{ imageBase64: string; contentType: string }, { logoUrl: string }>(functions, 'uploadAppLogo');
       const res = await uploadLogo({
         imageBase64,
-        contentType: file.type,
+        contentType: blob.type,
       });
 
       const data = res.data;
@@ -336,6 +348,8 @@ export default function DeveloperPage() {
       setAppLogoHistory((prev) => [data.logoUrl, ...prev.filter((url) => url !== data.logoUrl)]);
       playSound('success');
       toast({ title: 'App logo updated!', description: 'This logo can be used across the app shell.' });
+      setCropImageSrc(null);
+      setPendingLogoFile(null);
     } catch (error: unknown) {
       console.error('App logo upload failed', error);
       playSound('error');
@@ -366,7 +380,6 @@ export default function DeveloperPage() {
       });
     } finally {
       setIsAppLogoUploading(false);
-      e.target.value = '';
     }
   };
 
@@ -1210,6 +1223,18 @@ export default function DeveloperPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {cropImageSrc && (
+          <ImageCropper 
+            imageSrc={cropImageSrc}
+            onCancel={() => { setCropImageSrc(null); setPendingLogoFile(null); }}
+            onCropComplete={processAppLogoUpload}
+            showSkip
+            onSkip={() => pendingLogoFile && processAppLogoUpload(pendingLogoFile)}
+            title="App Logo Cropper"
+            aspectRatio={1}
+          />
+        )}
       </div>
     </TooltipProvider>
   )

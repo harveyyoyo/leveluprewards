@@ -309,7 +309,7 @@ export default function HallOfFamePage() {
                                         </div>
                                         <div className="grid gap-6 p-6">
                                             <div className="space-y-3">
-                                                <Label htmlFor="sort-by" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1">Sort By</Label>
+                                                <Label htmlFor="sort-by" className="text-[10px] font-semibold text-muted-foreground/80 lowercase tracking-normal">Sort By</Label>
                                                 <Select value={sortBy} onValueChange={(v) => setSortBy(v)}>
                                                     <SelectTrigger id="sort-by" className="h-12 rounded-xl bg-muted/30 border-border hover:bg-muted/50 transition-all font-bold">
                                                         <SelectValue />
@@ -321,9 +321,9 @@ export default function HallOfFamePage() {
                                                     </SelectContent>
                                                 </Select>
                                             </div>
-                                            <div className="grid grid-cols-2 gap-4">
+                                            <div className="grid grid-cols-3 gap-3">
                                                 <div className="space-y-3">
-                                                    <Label htmlFor="scope" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1">Show</Label>
+                                                    <Label htmlFor="scope" className="text-[10px] font-semibold text-muted-foreground/80 lowercase tracking-normal">Show</Label>
                                                     <Select value={scope} onValueChange={setScope}>
                                                         <SelectTrigger id="scope" className="h-12 rounded-xl bg-muted/30 border-border hover:bg-muted/50 transition-all font-bold">
                                                             <SelectValue />
@@ -335,7 +335,7 @@ export default function HallOfFamePage() {
                                                     </Select>
                                                 </div>
                                                 <div className="space-y-3">
-                                                    <Label htmlFor="limit" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1">Show Top</Label>
+                                                    <Label htmlFor="limit" className="text-[10px] font-semibold text-muted-foreground/80 lowercase tracking-normal">Show Top</Label>
                                                     <Input
                                                         id="limit"
                                                         type="number"
@@ -344,10 +344,8 @@ export default function HallOfFamePage() {
                                                         onChange={(e) => setLimit(Math.max(1, parseInt(e.target.value) || 1))}
                                                     />
                                                 </div>
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-4">
                                                 <div className="space-y-3">
-                                                    <Label htmlFor="podium-size" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1">Highlight Top</Label>
+                                                    <Label htmlFor="podium-size" className="text-[10px] font-semibold text-muted-foreground/80 lowercase tracking-normal">Highlight Top</Label>
                                                     <Input
                                                         id="podium-size"
                                                         type="number"
@@ -363,7 +361,7 @@ export default function HallOfFamePage() {
                                                     <Switch id="auto-scroll" checked={autoScroll} onCheckedChange={setAutoScroll} />
                                                 </div>
                                                 <div className="flex items-center justify-between py-1 px-1">
-                                                    <Label htmlFor="grid-layout" className="cursor-pointer font-bold text-sm">Grid Layout</Label>
+                                                    <Label htmlFor="grid-layout" className="cursor-pointer font-bold text-sm">Grid / Multi-column</Label>
                                                     <Switch id="grid-layout" checked={gridLayout} onCheckedChange={setGridLayout} />
                                                 </div>
                                             </div>

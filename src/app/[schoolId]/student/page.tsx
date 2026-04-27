@@ -552,6 +552,7 @@ function StudentDashboardInner({
       <div
         className={cn(
           "mt-3 md:mt-8 space-y-3 md:space-y-4 relative max-w-full mx-auto px-3 md:px-6 min-h-screen flex flex-col",
+          settings.enableThemeAnimations && !!activeTheme && "theme-theme-elements-animated theme-motion-override",
           isGraphic ? 'animate-in fade-in duration-500' : '',
           // Avoid large bottom padding that leaves a visible gap.
           settings.displayMode === 'app' && 'pb-6'
@@ -637,7 +638,7 @@ function StudentDashboardInner({
                     </h2>
                     {activeTheme?.emoji && (
                       <span
-                        className="text-3xl md:text-4xl leading-none"
+                        className="theme-animated-emoji text-3xl md:text-4xl leading-none"
                         style={{ filter: activeTheme?.primary ? `drop-shadow(0 0 8px ${activeTheme.primary}) drop-shadow(0 0 16px ${activeTheme.primary})` : undefined }}
                       >
                         {activeTheme.emoji}

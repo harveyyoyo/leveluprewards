@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { format } from 'date-fns';
 import DynamicIcon from '@/components/DynamicIcon';
 import { stripLeadingEmojiFromPrizeName } from '@/lib/prize-utils';
@@ -30,6 +31,13 @@ export function PrizeRedeemTicketPrintSheet({
   schoolName?: string | null;
   displayMode?: 'overlay' | 'page';
 }) {
+  useEffect(() => {
+    document.body.classList.add('prize-ticket-printing');
+    return () => {
+      document.body.classList.remove('prize-ticket-printing');
+    };
+  }, []);
+
   if (!tickets || tickets.length === 0) return null;
 
   const multiPage = tickets.length > 1;
@@ -88,38 +96,37 @@ export function PrizeRedeemTicketPrintSheet({
             </div>
 
             <div className="prize-ticket__details">
-              <div className="prize-ticket__student-block">
-                <span className="prize-ticket__line-label">Name</span>
-                <span className="prize-ticket__line-value prize-ticket__line-value--name">
+              <div className="prize-ticket__student-info">
+                <h3 className="prize-ticket__student-name">
                   {displayStudent}
-                  {t.studentNickname ? (
-                    <span className="prize-ticket__nick">
-                      {' '}
-                      ({t.studentNickname.normalize('NFC')})
-                    </span>
-                  ) : null}
-                </span>
+                </h3>
+                {t.studentNickname ? (
+                  <p className="prize-ticket__student-nick">
+                    ({t.studentNickname.normalize('NFC')})
+                  </p>
+                ) : null}
               </div>
-              {typeof t.totalCost === 'number' ? (
-                <div className="prize-ticket__kv">
-                  <span className="prize-ticket__line-label">Cost</span>
-                  <span className="prize-ticket__line-value">{t.totalCost.toLocaleString()} pts</span>
-                </div>
-              ) : null}
-              {Number.isFinite(t.redeemedAt) ? (
-                <div className="prize-ticket__kv">
-                  <span className="prize-ticket__line-label">Date</span>
-                  <span className="prize-ticket__line-value">
+              
+              <div className="prize-ticket__stats">
+                {typeof t.totalCost === 'number' ? (
+                  <p className="prize-ticket__stat-line">
+                    <span className="prize-ticket__stat-label">Cost:</span>
+                    {t.totalCost.toLocaleString()} pts
+                  </p>
+                ) : null}
+                {Number.isFinite(t.redeemedAt) ? (
+                  <p className="prize-ticket__stat-line">
+                    <span className="prize-ticket__stat-label">Date:</span>
                     {(() => {
-                      try {
-                        return format(new Date(t.redeemedAt), 'MMM d, yyyy');
-                      } catch {
-                        return '';
-                      }
-                    })()}
-                  </span>
-                </div>
-              ) : null}
+                        try {
+                          return format(new Date(t.redeemedAt), 'MMM d, yyyy');
+                        } catch {
+                          return '';
+                        }
+                      })()}
+                  </p>
+                ) : null}
+              </div>
             </div>
           </article>
         );

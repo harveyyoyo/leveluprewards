@@ -226,6 +226,353 @@
   --muted-foreground: 25 30% 72%;
 }
 
+/* Student ID Card (screen preview)
+   Print styles below use aggressive resets; this keeps ID cards looking correct on-screen too. */
+.print-id-card {
+  border: 1px solid hsl(var(--border));
+  padding: 12px 14px;
+  text-align: center;
+  width: 324px; /* 3.38in @ 96dpi */
+  height: 209px; /* 2.18in @ 96dpi */
+  box-sizing: border-box;
+  font-family: 'Ubuntu', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Liberation Sans", sans-serif;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.print-id-header-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.15);
+  padding-bottom: 4px;
+  margin-bottom: 4px;
+}
+
+.print-id-app {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.print-id-app-logo {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: #f3f4f6;
+}
+.print-id-app-logo img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.print-id-app-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  text-align: left;
+}
+.print-id-app-name {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+}
+.print-id-app-tagline {
+  font-size: 8px;
+  font-weight: 600;
+  opacity: 0.85;
+  line-height: 1.2;
+}
+
+.print-id-school {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-align: right;
+}
+.print-id-school-logo {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: #f3f4f6;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+.print-id-school-logo img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.print-id-header {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.print-id-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0;
+  justify-content: space-between;
+}
+
+.print-id-left {
+  flex: 1;
+  min-width: 0;
+}
+
+.print-id-theme-emoji-center {
+  font-size: 44px;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-left: auto;
+  opacity: 0.85;
+}
+
+.print-id-avatar {
+  width: 54px;
+  height: 54px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #e5e7eb;
+  border: 1px solid #d1d5db;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  color: #4b5563;
+  flex-shrink: 0;
+}
+.print-id-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.print-id-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  min-width: 0;
+}
+.print-id-name {
+  font-weight: 800;
+  font-size: 14px;
+  letter-spacing: 0.03em;
+  line-height: 1.05;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.print-id-nickname {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.85;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.print-id-class {
+  font-size: 12px;
+  color: #4b5563;
+  font-weight: 600;
+}
+.print-id-number {
+  font-size: 10px;
+  color: #6b7280;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.print-id-barcode-container {
+  width: 100%;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  background: #ffffff;
+  color: #000000;
+  padding-top: 10px;
+  padding-bottom: 6px;
+  border-radius: 10px;
+  margin-top: 4px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+.print-id-card .print-id-barcode-container .font-barcode,
+.print-id-card .font-barcode {
+  font-size: 30px;
+  line-height: 0.7;
+  color: #000000;
+  transform: scaleY(1.5);
+  transform-origin: top;
+}
+
+.theme-idcard-animated .print-id-theme-emoji-center {
+  animation: idcard-emoji-bob 1.6s ease-in-out infinite;
+}
+
+.theme-idcard-animated .print-id-avatar {
+  animation: idcard-avatar-pop 2.2s ease-in-out infinite;
+}
+
+/* More ID card animations: shimmer + scanline + border glow */
+.theme-idcard-animated .print-id-card {
+  position: relative;
+}
+
+.theme-idcard-animated .print-id-card::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: 14px;
+  pointer-events: none;
+  background: radial-gradient(circle at 20% 0%, rgba(255,255,255,0.22), transparent 40%),
+              radial-gradient(circle at 80% 100%, rgba(255,255,255,0.14), transparent 45%);
+  mix-blend-mode: overlay;
+  opacity: 0.75;
+  animation: idcard-border-glow 2.8s ease-in-out infinite;
+}
+
+.theme-idcard-animated .print-id-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(120deg, transparent 0%, rgba(255,255,255,0.18) 45%, transparent 60%);
+  transform: translateX(-120%) skewX(-12deg);
+  animation: idcard-sheen 3.6s ease-in-out infinite;
+  opacity: 0.7;
+}
+
+.theme-idcard-animated .print-id-barcode-container {
+  position: relative;
+  overflow: hidden;
+}
+
+.theme-idcard-animated .print-id-barcode-container::after {
+  content: "";
+  position: absolute;
+  left: -30%;
+  top: 0;
+  bottom: 0;
+  width: 40%;
+  background: linear-gradient(to right, transparent, rgba(0,0,0,0.08), transparent);
+  transform: translateX(0);
+  animation: idcard-scanline 2.4s linear infinite;
+  opacity: 0.6;
+}
+
+@keyframes idcard-emoji-bob {
+  0%, 100% { transform: translateY(0) scale(1); opacity: 0.88; }
+  50% { transform: translateY(-6px) scale(1.05); opacity: 1; }
+}
+
+@keyframes idcard-avatar-pop {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+
+@keyframes idcard-border-glow {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 0.95; }
+}
+
+@keyframes idcard-sheen {
+  0% { transform: translateX(-140%) skewX(-12deg); opacity: 0; }
+  20% { opacity: 0.85; }
+  55% { opacity: 0.85; }
+  100% { transform: translateX(140%) skewX(-12deg); opacity: 0; }
+}
+
+@keyframes idcard-scanline {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(260%); }
+}
+
+/* Theme element animations (student portal + prize shop): animate emoji + primary accents, not the background. */
+.theme-theme-elements-animated .theme-animated-emoji {
+  animation: theme-emoji-float 1.7s ease-in-out infinite !important;
+  will-change: transform;
+}
+
+.theme-theme-elements-animated h2 span,
+.theme-theme-elements-animated .text-6xl,
+.theme-theme-elements-animated .text-4xl.md\\:text-5xl.font-black.leading-none + span,
+.theme-theme-elements-animated .text-3xl.md\\:text-4xl.leading-none {
+  animation: theme-emoji-float 1.7s ease-in-out infinite;
+}
+
+/* Legacy mode forces animation-duration/iteration-count with !important.
+   When a kiosk explicitly enables Theme animations, restore real timing. */
+.legacy .theme-theme-elements-animated.theme-motion-override h2 span,
+.legacy .theme-theme-elements-animated.theme-motion-override .text-6xl,
+.legacy .theme-theme-elements-animated.theme-motion-override .text-4xl.md\\:text-5xl.font-black.leading-none + span,
+.legacy .theme-theme-elements-animated.theme-motion-override .text-3xl.md\\:text-4xl.leading-none {
+  animation-duration: 1.7s !important;
+  animation-iteration-count: infinite !important;
+}
+
+.legacy .theme-idcard-animated.theme-motion-override .print-id-theme-emoji-center {
+  animation-duration: 1.6s !important;
+  animation-iteration-count: infinite !important;
+}
+.legacy .theme-idcard-animated.theme-motion-override .print-id-avatar {
+  animation-duration: 2.2s !important;
+  animation-iteration-count: infinite !important;
+}
+.legacy .theme-idcard-animated.theme-motion-override .print-id-card::before {
+  animation-duration: 2.8s !important;
+  animation-iteration-count: infinite !important;
+}
+.legacy .theme-idcard-animated.theme-motion-override .print-id-card::after {
+  animation-duration: 3.6s !important;
+  animation-iteration-count: infinite !important;
+}
+.legacy .theme-idcard-animated.theme-motion-override .print-id-barcode-container::after {
+  animation-duration: 2.4s !important;
+  animation-iteration-count: infinite !important;
+}
+
+.theme-theme-elements-animated [style*="var(--theme-primary)"] {
+  transition: filter 300ms ease;
+}
+.theme-theme-elements-animated [style*="var(--theme-primary)"]:hover {
+  filter: drop-shadow(0 0 10px rgba(255,255,255,0.16));
+}
+
+@keyframes theme-emoji-float {
+  0%, 100% { transform: translateY(0) rotate(-1deg); }
+  50% { transform: translateY(-6px) rotate(2deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-idcard-animated:not(.theme-motion-override) .print-id-theme-emoji-center,
+  .theme-idcard-animated:not(.theme-motion-override) .print-id-avatar,
+  .theme-idcard-animated:not(.theme-motion-override) .print-id-card::before,
+  .theme-idcard-animated:not(.theme-motion-override) .print-id-card::after,
+  .theme-idcard-animated:not(.theme-motion-override) .print-id-barcode-container::after,
+  .theme-theme-elements-animated:not(.theme-motion-override) h2 span,
+  .theme-theme-elements-animated:not(.theme-motion-override) .text-6xl,
+  .theme-theme-elements-animated:not(.theme-motion-override) .text-3xl.md\\:text-4xl.leading-none {
+    animation: none !important;
+  }
+}
+
 /* Print Styles */
 #print-container,
 #student-id-print-container,
@@ -235,26 +582,101 @@
 
 @media print {
   @page {
+    size: auto;
+    margin: 0;
+  }
+
+  /* 1. AGGRESSIVE RESET: Force white background at the most root levels */
+  /* 1. PRODUCTION RESET: Strict visibility-based isolation */
+  html,
+  body {
+    background: white !important;
+    color: black !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    overflow: hidden !important;
+  }
+
+  /* Scorched Earth: Hide EVERYTHING on body */
+  body.prize-ticket-printing *,
+  body.id-card-printing * {
+    visibility: hidden !important;
+  }
+
+  /* Whitelist the print wrappers and their children */
+  body.prize-ticket-printing #prize-ticket-print-wrapper,
+  body.prize-ticket-printing #prize-ticket-print-wrapper *,
+  body.id-card-printing #student-id-print-wrapper,
+  body.id-card-printing #student-id-print-wrapper * {
+    visibility: visible !important;
+  }
+
+  @page {
+    size: auto;
+    margin: 0 !important; /* Zero margin pushes browser to use all physical space */
+  }
+
+  /* 2. DISABLE FILTERS: Universal reset to kill backdrop-filters and filters */
+  *,
+  ::after,
+  ::before {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    filter: none !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    transition: none !important;
+    animation: none !important;
+  }
+
+  /* 3. PATH-TO-VISIBLE ISOLATION:
+     The definitive way to hide everything without phantom page space.
+     We hide all children of the body, then white-list the app root and the active print wrapper. */
+  body.prize-ticket-printing > *:not([data-app-view-root]),
+  body.id-card-printing > *:not([data-app-view-root]) {
+    display: none !important;
+  }
+  
+  body.prize-ticket-printing [data-app-view-root] > *:not(#prize-ticket-print-wrapper),
+  body.id-card-printing [data-app-view-root] > *:not(#student-id-print-wrapper) {
+    display: none !important;
+  }
+
+  /* Whitelist the print wrappers - PRODUCTION VERBATIM */
+  body.prize-ticket-printing #prize-ticket-print-wrapper,
+  body.id-card-printing #student-id-print-wrapper {
+    display: flex !important;
+    flex-direction: column !important;
+    position: absolute !important; /* Absolute fill of the page */
+    inset: 0px !important;
+    width: 100% !important;
+    height: 100% !important;
+    z-index: 9999 !important;
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-sizing: border-box;
+    overflow: hidden !important;
+    transform: scale(var(--prize-print-scale, 1)) !important;
+    transform-origin: left top !important;
+  }
+  
+  body.prize-ticket-printing #prize-ticket-print-wrapper * {
+    visibility: visible !important;
+  }
+
+  @page {
     size: letter portrait;
     margin: 0;
   }
 
-  body,
-  html {
-    background: white !important;
-    color: black !important;
+  @page prizeticket {
+    size: 58mm auto;
     margin: 0;
-    padding: 0;
-    width: 100%;
-    height: 100%;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-
-  #screen-view,
-  .no-print,
-  [data-radix-toast-viewport] {
-    display: none !important;
   }
 
   #print-container {
@@ -285,9 +707,9 @@
 
   #student-id-print-wrapper {
     width: 100%;
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
+    margin: 0;
+    padding: 0;
+    background: #fff;
   }
 
   .student-id-print-page {
@@ -314,20 +736,15 @@
 
   .print-id-card {
     /* 
-     * Target: Avery 25395 Name Badge Labels
-     * Label dimensions: 3.33" x 2.33"
-     * Grid gap: 0.16" horiz, 0" vert 
-     * Card dimensions: locked exactly to CC size to prevent internal DOM stretching breaks.
+     * Default: Responsive sizing to fill the paper/labels provided.
+     * When printed on 50x70mm labels, it will stretch.
+     * When printed on Avery sheets, the grid container controls size.
      */
     border: none !important;
-    padding: 0.12in 0.14in !important;
+    padding: 4mm 5mm !important;
     text-align: center !important;
-    width: 3.38in !important;
-    min-width: 3.38in !important;
-    max-width: 3.38in !important;
-    height: 2.18in !important;
-    min-height: 2.18in !important;
-    max-height: 2.18in !important;
+    width: 100% !important;
+    min-height: 64mm !important; /* Targeted for 70mm labels */
     box-sizing: border-box !important;
     page-break-inside: avoid;
     font-family: 'Ubuntu', sans-serif;
@@ -335,9 +752,9 @@
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    justify-content: flex-start;
+    justify-content: space-between; /* Fill paper vertically */
     position: relative;
-    border-radius: 0.1in; 
+    border-radius: 0; /* Remove for full-paper labels */
     overflow: hidden !important;
   }
 
@@ -436,17 +853,17 @@
   }
 
   .print-id-avatar {
-    width: 0.55in;
-    height: 0.55in;
-    border-radius: 999px;
+    width: 1.2in; /* Upscaled */
+    height: 1.2in;
+    border-radius: 0.2in; /* More modern */
     overflow: hidden;
-    background: #e5e7eb;
-    border: 1px solid #d1d5db;
+    background: #f3f4f6;
+    border: 1px solid rgba(0,0,0,0.1);
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: 800;
-    font-size: 0.2in;
+    font-size: 0.3in;
     color: #4b5563;
     flex-shrink: 0;
   }
@@ -467,12 +884,13 @@
 
   .print-id-name {
     font-weight: 800;
-    font-size: 11pt;
+    font-size: 14pt; /* Upscaled */
     letter-spacing: 0.03em;
     line-height: 1.05;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    text-transform: uppercase;
   }
 
   .print-id-nickname {
@@ -530,42 +948,31 @@
     margin: 0;
   }
 
-  #prize-ticket-print-wrapper,
-  #prize-ticket-standalone {
-    display: block !important;
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    width: 100% !important;
-    min-height: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    background: #ffffff !important;
-    box-sizing: border-box;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-
+  /* Conserving the prize ticket content styling, but removing the conflicting wrapper override */
   .prize-ticket {
-    page: prizeticket;
+    width: 100% !important;
+    height: 100% !important;
     page-break-inside: avoid;
-    page-break-after: always;
-    width: 58mm;
-    max-width: 100%;
-    margin: 0 auto;
-    padding: 3.5mm 3mm 4mm;
+    break-inside: avoid;
+    margin: 0 !important;
+    padding: 0 !important; /* Ensure absolute no padding */
     box-sizing: border-box;
     background: #fff !important;
-    color: #111 !important;
+    color: #000 !important;
     font-family: 'DM Sans', 'Segoe UI', system-ui, sans-serif;
-    font-size: 3.2mm;
-    line-height: 1.25;
-    border: 0.2mm solid #000;
+    line-height: 1.2;
+    border: 4px solid #000 !important; /* Thick production border */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: stretch;
   }
-
-  .prize-ticket:last-of-type {
-    page-break-after: auto;
+  
+  /* If on a narrow label, don't force 250mm height */
+  @media (max-width: 100mm) {
+    .prize-ticket {
+      min-height: 66mm !important;
+    }
   }
 
   .prize-ticket__head {
@@ -573,22 +980,24 @@
     flex-direction: row;
     align-items: center;
     justify-content: flex-start;
-    gap: 2.2mm;
-    margin-bottom: 2.4mm;
+    gap: 4mm;
+    margin: 0;
+    padding: 4mm 5mm; 
+    border-bottom: 4px solid #000; /* Edge-to-edge thick line */
   }
 
   .prize-ticket__logo-box {
-    width: 10mm;
-    height: 10mm;
-    min-width: 10mm;
-    min-height: 10mm;
-    border-radius: 0.6mm;
-    border: 0.2mm solid #e5e7eb;
-    background: #fafafa;
+    width: 20mm; 
+    height: 20mm;
+    min-width: 20mm;
+    min-height: 20mm;
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
+    background: #fff;
+    border: 3px solid #000; /* Production logo is boxed */
+    padding: 1mm;
   }
 
   .prize-ticket__logo {
@@ -605,10 +1014,11 @@
     align-items: center;
     justify-content: center;
     font-weight: 800;
-    font-size: 2.4mm;
+    font-size: 4mm; /* Larger fallback */
     font-family: 'Fraunces', Georgia, serif;
-    color: #b45309;
+    color: #000 !important;
     letter-spacing: 0.02em;
+    border: 0.5mm solid #000;
   }
 
   .prize-ticket__head-text {
@@ -619,78 +1029,100 @@
   .prize-ticket__brandline {
     margin: 0;
     padding: 0;
-    line-height: 1.05;
+    line-height: 1.1;
     font-weight: 800;
-    font-size: 2.5mm;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
+    color: #000 !important;
+    white-space: nowrap;
   }
 
   .prize-ticket__brand-lu {
-    color: #b45309;
+    font-size: 3.5mm !important;
+    font-weight: 800;
+    color: #000 !important;
   }
 
   .prize-ticket__brand-redeem {
-    color: #0f172a;
+    font-size: 3.5mm !important; 
+    font-weight: 500;
+    color: #000 !important;
+    text-transform: uppercase;
   }
 
   .prize-ticket__school {
-    margin: 0.4mm 0 0 0;
-    font-size: 2.4mm;
-    font-weight: 700;
-    color: #1e293b;
+    margin: 0.5mm 0 0 0;
+    font-size: 6mm !important; /* Larger than brandline */
+    font-weight: 800;
+    color: #000 !important;
     line-height: 1.1;
+  }
+
+  .prize-ticket__body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
   }
 
   .prize-ticket__hero {
     text-align: center;
-    margin: 1.5mm 0 2mm;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6mm; /* Production gap balance */
+    justify-content: center;
   }
 
   .prize-ticket__icon-ring {
-    width: 16mm;
-    height: 16mm;
-    margin: 0 auto 1.4mm;
+    width: 40mm;
+    height: 40mm;
+    margin: -4mm auto 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 0.2mm solid #e2e8f0;
-    border-radius: 999px;
-    background: #f8fafc;
+    border: none;
+    background: transparent;
   }
 
   .prize-ticket__lucide {
-    width: 9mm !important;
-    height: 9mm !important;
-    color: #0f172a !important;
+    width: 32mm !important; 
+    height: 32mm !important;
+    color: #000 !important;
+    stroke-width: 2.5px !important; /* Bold Icon */
   }
 
   .prize-ticket__prize-name {
     margin: 0;
-    font-size: 4.4mm;
-    line-height: 1.1;
+    font-size: 24.5mm !important; /* Slightly more precise */
+    line-height: 0.82;
     font-weight: 800;
     font-family: 'Fraunces', Georgia, 'Times New Roman', serif;
-    color: #0f172a;
+    color: #000 !important;
     word-break: break-word;
+    letter-spacing: -0.01em;
+    text-transform: none !important;
+    padding: 0 4mm;
   }
 
   .prize-ticket__banner {
     display: flex;
     flex-direction: row;
-    flex-wrap: wrap;
     align-items: center;
     justify-content: center;
-    gap: 0.5mm 1.2mm;
-    margin: 0 0 1.6mm 0;
-    padding: 0.8mm 0;
-    border-top: 0.2mm solid #000;
-    border-bottom: 0.2mm solid #000;
+    gap: 2mm;
+    margin: 0;
+    padding: 2.5mm 0;
+    border-top: 4px solid #000; /* Thick edge-to-edge */
+    border-bottom: 4px solid #000; /* Thick edge-to-edge */
     text-transform: uppercase;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.15em;
     font-weight: 800;
-    font-size: 2.1mm;
-    color: #0f172a;
+    font-size: 3.5mm; 
+    color: #000 !important;
   }
 
   .prize-ticket__banner-id {
@@ -700,41 +1132,55 @@
   .prize-ticket__details {
     display: flex;
     flex-direction: column;
-    gap: 0.7mm;
+    text-align: center;
+    gap: 1mm;
+    margin-top: 0.5mm;
   }
 
-  .prize-ticket__student-block,
-  .prize-ticket__kv {
-    display: grid;
-    grid-template-columns: 1fr 1.1fr;
-    column-gap: 1.2mm;
-    align-items: baseline;
-  }
-
-  .prize-ticket__line-label {
-    font-size: 2.1mm;
-    font-weight: 700;
-    color: #6b7280;
-    text-transform: capitalize;
-  }
-
-  .prize-ticket__line-value {
-    font-size: 2.5mm;
-    font-weight: 600;
-    color: #111;
-    text-align: right;
-    word-break: break-word;
-  }
-
-  .prize-ticket__line-value--name {
-    font-size: 2.7mm;
+  .prize-ticket__student-name {
+    margin: 3mm 0;
+    font-size: 15mm !important; 
     font-weight: 800;
+    line-height: 1.1;
+    color: #000 !important;
+    text-transform: none !important;
   }
 
-  .prize-ticket__nick {
-    font-size: 2.1mm;
+  .prize-ticket__student-nick {
+    font-size: 3.5mm;
     font-weight: 500;
-    color: #4b5563;
+    color: #000 !important;
+    opacity: 0.8;
+  }
+
+  .prize-ticket__stats {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch; 
+    gap: 1mm;
+    margin: 0;
+    padding: 2mm 5mm 5mm; /* Indent slightly, massive bottom margin */
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .prize-ticket__stat-line {
+    display: grid;
+    grid-template-columns: 14mm 1fr; /* Tight alignment */
+    gap: 1.5mm;
+    align-items: baseline;
+    margin: 0;
+    width: fit-content;
+    font-size: 4mm !important; 
+    font-weight: 700;
+    color: #000 !important;
+    line-height: 1.2;
+  }
+
+  .prize-ticket__stat-label {
+    font-weight: 800;
+    text-align: left; /* Production Left Bias */
+    color: #000 !important;
   }
 }
 

@@ -69,7 +69,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (loginState === 'admin' || loginState === 'teacher') {
             localStorage.setItem('loginState', 'student');
             setLoginState('student');
-            router.push('/portal');
+            if (schoolId) {
+                router.push(`/${schoolId}/portal`);
+            } else {
+                router.push('/portal');
+            }
         } else {
             localStorage.removeItem('loginState');
             localStorage.removeItem('schoolId');

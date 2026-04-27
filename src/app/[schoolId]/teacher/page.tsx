@@ -2046,8 +2046,7 @@ export default function TeacherPage() {
                     : 'bg-white border-chart-1 shadow-2xl'
                     }`}>
                     <CardHeader className="text-center space-y-4">
-                        <div className={`w-20 h-20 mx-auto rounded-3xl flex items-center justify-center shadow-lg transition-transform hover:scale-105 duration-300 ${isGraphic ? 'bg-primary text-primary-foreground' : 'bg-slate-800 text-white'
-                            }`}>
+                        <div className="w-20 h-20 mx-auto rounded-3xl flex items-center justify-center shadow-lg transition-transform hover:scale-105 duration-300 bg-primary text-primary-foreground">
                             <UserCheck className="w-10 h-10" />
                         </div>
                         <div>
@@ -2098,8 +2097,7 @@ export default function TeacherPage() {
                                 </div>
                             </div>
 
-                            <Button type="submit" className={`w-full h-16 rounded-2xl font-black text-lg uppercase tracking-widest shadow-xl transition-all active:scale-95 text-primary-foreground ${isGraphic ? 'bg-primary hover:bg-primary/90 shadow-primary/20' : 'bg-slate-800 hover:bg-slate-700'
-                                }`} disabled={teachersLoading}>
+                            <Button type="submit" className="w-full h-16 rounded-2xl font-black text-lg uppercase tracking-widest shadow-xl transition-all active:scale-95 text-primary-foreground bg-primary hover:bg-primary/90 shadow-primary/20" disabled={teachersLoading}>
                                 <LogIn className="mr-3 w-6 h-6" /> Login
                             </Button>
                         </form>

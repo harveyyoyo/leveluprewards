@@ -99,6 +99,9 @@ export function StudentIdCard({
   const theme = student.theme;
   const themeEmoji = theme?.emoji;
   const themeFontFamily = theme?.fontFamily;
+  const themeTracking = typeof theme?.fontTracking === 'number' ? theme.fontTracking : undefined;
+  const themeFontStyle = theme?.fontStyle;
+  const themeFontWeight = typeof theme?.fontWeight === 'number' ? theme.fontWeight : undefined;
 
   const emojiGlowFilter = (() => {
     const primary = theme?.primary;
@@ -113,17 +116,20 @@ export function StudentIdCard({
         color: theme.text,
         borderColor: theme.primary,
         ...(themeFontFamily ? { fontFamily: themeFontFamily } : {}),
+        ...(themeFontStyle ? { fontStyle: themeFontStyle } : {}),
+        ...(themeFontWeight ? { fontWeight: themeFontWeight } : {}),
       }
     : undefined;
 
-  const headerStyle = theme && isColorEnabled ? { color: theme.text } : undefined;
+  const trackedStyle: React.CSSProperties | undefined = themeTracking !== undefined ? { letterSpacing: `${themeTracking}em` } : undefined;
+  const headerStyle = theme && isColorEnabled ? { color: theme.text, ...trackedStyle } : trackedStyle;
   const mainStyle = theme && isColorEnabled ? {} : undefined;
   const avatarStyle = theme && isColorEnabled
     ? { borderColor: theme.primary, background: theme.cardBackground || theme.background }
     : undefined;
-  const nameStyle = theme && isColorEnabled ? { color: theme.text } : undefined;
-  const classStyle = theme && isColorEnabled ? { color: theme.text, opacity: 0.9 } : undefined;
-  const metaStyle = theme && isColorEnabled ? { color: theme.text, opacity: 0.8 } : undefined;
+  const nameStyle = theme && isColorEnabled ? { color: theme.text, ...trackedStyle } : trackedStyle;
+  const classStyle = theme && isColorEnabled ? { color: theme.text, opacity: 0.9, ...trackedStyle } : trackedStyle;
+  const metaStyle = theme && isColorEnabled ? { color: theme.text, opacity: 0.8, ...trackedStyle } : trackedStyle;
 
   const displayFirst = student.firstName ?? '';
   const displayLast = student.lastName ?? '';

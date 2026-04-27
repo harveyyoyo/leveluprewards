@@ -1154,10 +1154,10 @@ exports.verifyTeacherPasscode = functions.https.onCall(
       throw new functions.https.HttpsError("permission-denied", "Invalid teacher passcode.");
     }
 
-    // Provision teacher role using the Admin SDK
+    // Provision teacher role using the Admin SDK.
+    // TODO: once teacher passcodes move out of readable teacher docs, replace
+    // this temporary admin role with narrower Firestore teacher permissions.
     const teacherRoleRef = db.collection("schools").doc(data.schoolId).collection("roles_teacher").doc(context.auth!.uid);
-    // Note: We also set 'admin' role in 'roles_admin' to ensure they have read/write to the needed collections
-    // This allows teachers to access students, activities, prizes, etc as currently defined in firestore.rules
     const adminRoleRef = db.collection("schools").doc(data.schoolId).collection("roles_admin").doc(context.auth!.uid);
 
     const batch = db.batch();

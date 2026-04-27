@@ -595,6 +595,7 @@ function PrizeDashboard({
             <div
                 className={cn(
                     "min-h-screen relative overflow-hidden font-sans flex flex-col items-center",
+                    settings.enableThemeAnimations && !!activeTheme && "theme-theme-elements-animated theme-motion-override",
                     settings.displayMode === 'app' && 'pb-24',
                     (!student || !activeTheme) && (animBackdrop ? "bg-transparent text-foreground" : "bg-background text-foreground"),
                 )}
@@ -632,7 +633,7 @@ function PrizeDashboard({
                                     <h2 className="text-5xl font-black tracking-tighter font-headline drop-shadow-sm mb-4 flex items-center justify-center md:justify-start gap-4">
                                         {activeTheme?.emoji ? (
                                             <span
-                                                className="text-6xl leading-none"
+                                                className="theme-animated-emoji text-6xl leading-none"
                                                 style={{ filter: activeTheme?.primary ? `drop-shadow(0 0 10px ${activeTheme.primary}) drop-shadow(0 0 20px ${activeTheme.primary})` : undefined }}
                                             >
                                                 {activeTheme.emoji}

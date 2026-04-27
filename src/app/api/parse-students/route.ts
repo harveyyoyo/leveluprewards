@@ -1,17 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import OpenAI from 'openai';
+import { guardAiRoute } from '@/lib/apiAuth';
 
 export async function POST(req: NextRequest) {
     try {
-        const { prompt, model = 'gemini-2.5-flash', classNames = [] } = await req.json();
+        const guarded = await guardAiRoute(req, { requireSchoolStaff: true, maxRequests: 8, maxBodyBytes: 48 * 1024 });
+        if (!guarded.ok) return guarded.response;
+        const { prompt, model = 'gemini-2.5-flash', classNames = [] } = guarded.value.body;
 
-        if (!prompt) {
+        if (typeof prompt !== 'string' || !prompt.trim()) {
             return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
         }
+        const selectedModel = typeof model === 'string' ? model : 'gemini-2.5-flash';
+        const safeClassNames = Array.isArray(classNames)
+            ? classNames.filter((name): name is string => typeof name === 'string').slice(0, 200)
+            : [];
 
-        const classContext = classNames.length > 0 
-            ? `Available classes to map students to: ${classNames.join(', ')}.` 
+        const classContext = safeClassNames.length > 0
+            ? `Available classes to map students to: ${safeClassNames.join(', ')}.`
             : 'No specific class list provided. Extract class names if they exist in the text context.';
 
         const systemInstruction = `You are an administrative assistant mapping raw text rosters into structured JSON arrays of student objects.
@@ -32,7 +39,7 @@ You MUST reply with ONLY a JSON array containing objects matching this schema:
 
         let responseText = '';
 
-        if (model.startsWith('gpt')) {
+        if (selectedModel.startsWith('gpt')) {
             const effectiveKey = process.env.OPENAI_API_KEY;
             if (!effectiveKey) {
                 return NextResponse.json({ error: 'OpenAI API key is not configured on the server' }, { status: 503 });
@@ -40,7 +47,7 @@ You MUST reply with ONLY a JSON array containing objects matching this schema:
 
             const openai = new OpenAI({ apiKey: effectiveKey });
             const response = await openai.chat.completions.create({
-                model: model as any,
+                model: selectedModel as any,
                 response_format: { type: 'json_object' },
                 messages: [
                     { role: 'system', content: systemInstruction + '\nEnsure your output is wrapped in an object like { "students": [...] } so it is valid JSON.' },
@@ -57,7 +64,7 @@ You MUST reply with ONLY a JSON array containing objects matching this schema:
 
             const genAI = new GoogleGenerativeAI(effectiveKey);
             const activeModel = genAI.getGenerativeModel({
-                model: model,
+                model: selectedModel,
                 generationConfig: {
                     responseMimeType: 'application/json',
                 },

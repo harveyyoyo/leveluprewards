@@ -22,6 +22,9 @@ interface ImageCropperProps {
     onCropComplete: (croppedImageBlob: Blob) => void;
     onCancel: () => void;
     aspectRatio?: number;
+    title?: string;
+    showSkip?: boolean;
+    onSkip?: () => void;
 }
 
 const createImage = (url: string): Promise<HTMLImageElement> =>
@@ -138,9 +141,18 @@ async function getCroppedImg(
     });
 }
 
-export function ImageCropper({ imageSrc, onCropComplete, onCancel, aspectRatio = 1 }: ImageCropperProps) {
+export function ImageCropper({ 
+  imageSrc, 
+  onCropComplete, 
+  onCancel, 
+  aspectRatio: initialAspectRatio, 
+  title = "Crop Image",
+  showSkip = false,
+  onSkip
+}: ImageCropperProps) {
     const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
     const [zoom, setZoom] = useState(1);
+    const [aspect, setAspect] = useState<number | undefined>(initialAspectRatio);
     const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
 
     const onCropCompleteHandler = useCallback((croppedArea: Area, croppedAreaPixels: Area) => {
@@ -165,22 +177,68 @@ export function ImageCropper({ imageSrc, onCropComplete, onCancel, aspectRatio =
         }}>
             <DialogContent className="sm:max-w-xl">
                 <DialogHeader>
-                    <DialogTitle>Crop Image</DialogTitle>
+                    <DialogTitle className="flex justify-between items-center pr-6">
+                        <span>{title}</span>
+                        {showSkip && (
+                            <Button variant="ghost" size="sm" onClick={onSkip} className="h-8 text-xs font-bold uppercase tracking-tight text-muted-foreground hover:text-foreground">
+                                Skip Crop
+                            </Button>
+                        )}
+                    </DialogTitle>
                 </DialogHeader>
-                <div className="relative w-full h-80 bg-black/5 rounded-lg overflow-hidden">
+                <div className="relative w-full h-80 bg-black/5 rounded-lg overflow-hidden border">
                     <Cropper
                         image={imageSrc}
                         crop={crop}
                         zoom={zoom}
-                        aspect={aspectRatio}
+                        aspect={aspect}
                         onCropChange={setCrop}
                         onCropComplete={onCropCompleteHandler}
                         onZoomChange={setZoom}
                         restrictPosition={false}
                     />
                 </div>
+                
+                <div className="flex gap-2 py-4 border-b overflow-x-auto no-scrollbar">
+                    <Button 
+                      size="sm" 
+                      variant={aspect === undefined ? "secondary" : "outline"}
+                      onClick={() => setAspect(undefined)}
+                      className="text-[10px] uppercase font-bold h-7 px-2"
+                    >
+                        Original
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant={aspect === 1 ? "secondary" : "outline"}
+                      onClick={() => setAspect(1)}
+                      className="text-[10px] uppercase font-bold h-7 px-2"
+                    >
+                        1:1 Square
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant={aspect === 16/9 ? "secondary" : "outline"}
+                      onClick={() => setAspect(16/9)}
+                      className="text-[10px] uppercase font-bold h-7 px-2"
+                    >
+                        16:9 Wide
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant={aspect === 4/3 ? "secondary" : "outline"}
+                      onClick={() => setAspect(4/3)}
+                      className="text-[10px] uppercase font-bold h-7 px-2"
+                    >
+                        4:3 TV
+                    </Button>
+                </div>
+
                 <div className="py-4">
-                    <div className="text-sm font-medium mb-2">Zoom</div>
+                    <div className="text-sm font-medium mb-2 flex justify-between">
+                      <span>Zoom</span>
+                      <span className="text-xs text-muted-foreground">{(zoom * 100).toFixed(0)}%</span>
+                    </div>
                     <Slider
                         value={[zoom]}
                         min={0.1}
@@ -191,7 +249,7 @@ export function ImageCropper({ imageSrc, onCropComplete, onCancel, aspectRatio =
                 </div>
                 <DialogFooter>
                     <Button variant="outline" onClick={onCancel}>Cancel</Button>
-                    <Button onClick={handleSave}>Apply Crop</Button>
+                    <Button onClick={handleSave}>Confirm Crop</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
