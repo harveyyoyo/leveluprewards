@@ -92,8 +92,8 @@ export default function Header() {
 
     return (
       <>
-        <header className="no-print grid grid-cols-3 w-full items-center relative z-20 px-4 pt-4 pb-4 border-b border-border/10">
-          <div className="flex justify-start">
+        <header className="no-print grid grid-cols-[2.5rem_minmax(0,1fr)_auto] sm:grid-cols-[3rem_minmax(0,1fr)_auto] w-full items-center relative z-20 px-3 sm:px-4 pt-3 sm:pt-4 pb-3 sm:pb-4 border-b border-border/10">
+          <div className="flex justify-start min-w-0">
             {schoolId && (
               <Link
                 href={centerHref}
@@ -101,27 +101,27 @@ export default function Header() {
                 className="rounded-xl p-2 text-slate-500 hover:text-primary hover:bg-primary/10 transition-all flex items-center gap-1"
                 aria-label="Home"
               >
-                <Home className="h-6 w-6" />
+                <Home className="h-5 w-5 sm:h-6 sm:w-6" />
               </Link>
             )}
           </div>
-          <div className="flex items-center justify-center">
+          <div className="flex items-center justify-center min-w-0 px-2">
             {schoolId && (
-              <Link href={centerHref} className="flex items-center gap-2 font-school font-black text-3xl truncate no-underline max-w-full">
+              <Link href={centerHref} className="flex min-w-0 max-w-full items-center gap-2 truncate no-underline font-school text-lg font-black sm:text-2xl md:text-3xl">
                 <span className="truncate text-foreground font-bold">{centerLabel}</span>
               </Link>
             )}
           </div>
-          <div className="flex items-center justify-end gap-2">
+          <div className="flex shrink-0 items-center justify-end gap-1 sm:gap-2">
             {schoolId && loginState !== 'loggedOut' && (
-              <div className="flex items-center justify-center h-9 w-9">
+              <div className="flex h-8 w-6 items-center justify-center sm:h-9 sm:w-9">
                 <span className="relative flex h-2.5 w-2.5">
                   {syncStatus === 'synced' && <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75" />}
                   <span className={cn("relative inline-flex h-full w-full rounded-full", syncStatus === 'synced' ? "bg-emerald-500" : syncStatus === 'syncing' ? "bg-amber-400 animate-pulse" : "bg-slate-400")} />
                 </span>
               </div>
             )}
-            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl" onClick={handleLogout}>
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl sm:h-9 sm:w-9" onClick={handleLogout}>
               <LogOut className="w-4 h-4" />
             </Button>
             {loginState !== 'student' && <SettingsModal />}

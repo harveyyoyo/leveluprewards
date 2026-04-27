@@ -1,7 +1,9 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 
+import Link from 'next/link';
 import Logo from '@/components/Logo';
+import { Button } from '@/components/ui/button';
 import { doc } from 'firebase/firestore';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 
@@ -17,15 +19,26 @@ export default function RootPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background text-foreground p-6">
-      {appLogoUrl ? (
-        <img
-          src={appLogoUrl}
-          alt="App logo"
-          className="h-[260px] w-[260px] sm:h-[360px] sm:w-[360px] lg:h-[520px] lg:w-[520px] object-contain"
-        />
-      ) : (
-        <Logo className="h-[260px] w-[260px] sm:h-[360px] sm:w-[360px] lg:h-[520px] lg:w-[520px]" />
-      )}
+      <main className="flex w-full max-w-md flex-col items-center gap-8 text-center">
+        {appLogoUrl ? (
+          <img
+            src={appLogoUrl}
+            alt="App logo"
+            className="h-48 w-48 sm:h-64 sm:w-64 object-contain"
+          />
+        ) : (
+          <Logo className="h-48 w-48 sm:h-64 sm:w-64" />
+        )}
+
+        <div className="w-full space-y-3">
+          <Button asChild className="h-12 w-full rounded-xl font-bold">
+            <Link href="/login">School Login</Link>
+          </Button>
+          <Button asChild variant="outline" className="h-12 w-full rounded-xl font-bold">
+            <Link href="/developer">Developer Tools</Link>
+          </Button>
+        </div>
+      </main>
     </div>
   );
 }

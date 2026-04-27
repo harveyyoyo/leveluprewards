@@ -1,6 +1,6 @@
 
 'use client';
-import { useState } from 'react';
+import { useState, type ComponentType, type CSSProperties } from 'react';
 import Link from 'next/link';
 import { useAppContext } from '@/components/AppProvider';
 import { GraduationCap, Printer, Gift, UserCog, Trophy, ChevronRight, Loader2, Home } from 'lucide-react';
@@ -11,6 +11,16 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from '@/components/ui/button';
 import { rainbowByIndex, rainbowForPortalId } from '@/lib/rainbowNav';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
+
+type PortalArea = {
+    id: string;
+    href: string;
+    title: string;
+    description: string;
+    icon: ComponentType<{ className?: string; style?: CSSProperties }>;
+    disabled?: boolean;
+    status?: string;
+};
 
 export default function PortalPage() {
     const { loginState, isInitialized, schoolId, isAdmin } = useAppContext();
@@ -37,13 +47,13 @@ export default function PortalPage() {
         );
     }
 
-    const portals = [
+    const portals: PortalArea[] = [
         ...(isAdmin || schoolId === 'schoolabc' ? [{ id: 'admin', href: `/${schoolId}/admin`, title: 'Admin Portal', description: 'Manage school data and settings.', icon: UserCog }] : []),
         ...(isStaff || schoolId === 'schoolabc'
             ? [{ id: 'print', href: `/${schoolId}/teacher`, title: 'Teacher Portal', description: 'Print coupons or award points directly to students.', icon: Printer }]
             : []),
         { id: 'redeem', href: `/${schoolId}/student`, title: 'Student Kiosk', description: 'Scan your badge to redeem coupon codes and view points.', icon: GraduationCap },
-        ...(isStaff && settings.enableStudentPortal ? [{ id: 'student-home', href: `/${schoolId}/student-home`, title: 'Student Home Portal (Coming Soon)', description: 'Home access is being prepared and is not available yet.', icon: Home }] : []),
+        ...(isStaff && settings.enableStudentPortal ? [{ id: 'student-home', href: `/${schoolId}/student-home`, title: 'Student Home Portal', description: 'Home access is being prepared and is not available yet.', icon: Home, disabled: true, status: 'Coming soon' }] : []),
         { id: 'prize', href: `/${schoolId}/prize`, title: 'Prize Shop', description: 'Spend your points for awesome prizes.', icon: Gift },
         ...(isStaff || schoolId === 'schoolabc'
             ? [{ id: 'fame', href: `/${schoolId}/halloffame`, title: 'Hall of Fame', description: 'View top student point earners.', icon: Trophy }]
@@ -114,25 +124,21 @@ export default function PortalPage() {
                 <div className="flex flex-col gap-4">
                     {portals.map((area, index) => {
                         const Icon = area.icon;
+                        const isDisabled = !!area.disabled;
                         const rainbowColor =
                             settings.colorScheme === 'default'
                                 ? 'hsl(var(--primary))'
                                 : rainbowForPortalId(area.id, settings.colorScheme);
-                        return (
-                            <Link
-                                key={area.id}
-                                href={area.href}
-                                onClick={() => playSound('click')}
-                                className="block group no-underline rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                            >
+                        const portalCard = (
                                 <motion.div
                                     initial={{ opacity: 0, x: -50 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ duration: 0.5, delay: 0.15 + index * 0.1 }}
-                                    onMouseEnter={() => setHoveredIndex(area.id)}
-                                    onMouseLeave={() => setHoveredIndex(null)}
+                                    onMouseEnter={() => !isDisabled && setHoveredIndex(area.id)}
+                                    onMouseLeave={() => !isDisabled && setHoveredIndex(null)}
                                     className={cn(
-                                        "relative flex w-full items-center justify-between rounded-2xl border-2 px-6 py-4 md:px-8 md:py-5 text-left transition-all duration-300 hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1",
+                                        "relative flex w-full items-center justify-between rounded-2xl border-2 px-6 py-4 md:px-8 md:py-5 text-left transition-all duration-300",
+                                        isDisabled ? "cursor-not-allowed opacity-70" : "hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1",
                                         animBackdrop
                                             ? "border-border/50 bg-card/90 backdrop-blur-md shadow-sm hover:bg-card hover:border-border"
                                             : "border-transparent bg-card/40 backdrop-blur-sm hover:bg-card",
@@ -152,26 +158,35 @@ export default function PortalPage() {
                                         <div className={cn(
                                             "w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center transition-all duration-300 border-2 border-border/50 shadow-md",
                                             animBackdrop ? "bg-card/90" : "bg-card/70",
-                                            "group-hover:scale-105 group-hover:border-primary/20 group-hover:shadow-lg"
+                                            !isDisabled && "group-hover:scale-105 group-hover:border-primary/20 group-hover:shadow-lg"
                                         )}>
                                             <Icon className="w-6 h-6 md:w-7 md:h-7" style={{ color: rainbowColor }} />
                                         </div>
-                                        <div>
-                                            <h3 className="text-lg md:text-xl font-black tracking-tight leading-tight" style={{ color: rainbowColor }}>
-                                              {area.title}
-                                            </h3>
+                                        <div className="min-w-0">
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <h3 className="text-lg md:text-xl font-black tracking-tight leading-tight" style={{ color: rainbowColor }}>
+                                                  {area.title}
+                                                </h3>
+                                                {area.status && (
+                                                    <span className="rounded-full border border-border/70 bg-muted/60 px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                                                        {area.status}
+                                                    </span>
+                                                )}
+                                            </div>
                                             <p className="text-sm text-muted-foreground mt-1 font-medium leading-normal">{area.description}</p>
                                         </div>
                                     </div>
 
                                     {/* Right arrow — always visible, darker on hover (touch-friendly) */}
-                                    <motion.div animate={{ x: hoveredIndex === area.id ? 0 : -4, opacity: hoveredIndex === area.id ? 1 : 0.4 }} transition={{ duration: 0.2 }}>
-                                        <ChevronRight className="h-7 w-7 text-muted-foreground" aria-hidden="true" />
-                                    </motion.div>
+                                    {!isDisabled && (
+                                        <motion.div animate={{ x: hoveredIndex === area.id ? 0 : -4, opacity: hoveredIndex === area.id ? 1 : 0.4 }} transition={{ duration: 0.2 }}>
+                                            <ChevronRight className="h-7 w-7 text-muted-foreground" aria-hidden="true" />
+                                        </motion.div>
+                                    )}
 
                                     {/* Background Glow - Increased opacity on hover */}
                                     <AnimatePresence>
-                                        {hoveredIndex === area.id && (
+                                        {hoveredIndex === area.id && !isDisabled && (
                                             <motion.div
                                               initial={{ opacity: 0 }}
                                               animate={{ opacity: 0.08 }}
@@ -182,6 +197,24 @@ export default function PortalPage() {
                                         )}
                                     </AnimatePresence>
                                 </motion.div>
+                        );
+
+                        if (isDisabled) {
+                            return (
+                                <div key={area.id} className="block rounded-2xl no-underline" aria-disabled="true">
+                                    {portalCard}
+                                </div>
+                            );
+                        }
+
+                        return (
+                            <Link
+                                key={area.id}
+                                href={area.href}
+                                onClick={() => playSound('click')}
+                                className="block group no-underline rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                            >
+                                {portalCard}
                             </Link>
                         )
                     })}
