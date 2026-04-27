@@ -7,6 +7,7 @@ import { useAuth } from './AuthProvider';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useDoc, useFirebase, useMemoFirebase } from '@/firebase';
 import { doc, setDoc } from 'firebase/firestore';
+import { schoolPublicDocRef } from '@/lib/schoolPublic';
 import {
     DEFAULT_PLAN,
     getSchoolEntitlements,
@@ -173,10 +174,12 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     const [isLoaded, setIsLoaded] = useState(false);
     const isMobile = useIsMobile();
     const pathname = usePathname();
-    const schoolDocRef = useMemoFirebase(
-        () => (firestore && schoolId ? doc(firestore, 'schools', schoolId) : null),
-        [firestore, schoolId],
-    );
+    const schoolDocRef = useMemoFirebase(() => {
+        if (!firestore || !schoolId) return null;
+        const sid = schoolId.trim().toLowerCase();
+        if (loginState === 'student') return schoolPublicDocRef(firestore, sid);
+        return doc(firestore, 'schools', sid);
+    }, [firestore, schoolId, loginState]);
     const { data: schoolData } = useDoc<SchoolPlanConfig & { appSettings?: Partial<Settings> }>(schoolDocRef);
     const planTier = useMemo(
         () => (schoolId ? normalizePlan(schoolData?.plan) : 'enterprise'),
@@ -286,12 +289,20 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
             localStorage.setItem(settingsKey, JSON.stringify(next));
             if (schoolId && firestore && (loginState === 'admin' || loginState === 'developer')) {
+                const sid = schoolId.trim().toLowerCase();
                 void setDoc(
-                    doc(firestore, 'schools', schoolId),
+                    doc(firestore, 'schools', sid),
                     { appSettings: next, updatedAt: Date.now() },
                     { merge: true },
                 ).catch((error) => {
                     console.error('Failed to save school settings', error);
+                });
+                void setDoc(
+                    schoolPublicDocRef(firestore, sid),
+                    { appSettings: next, active: true, updatedAt: Date.now() },
+                    { merge: true },
+                ).catch((error) => {
+                    console.error('Failed to save public school settings mirror', error);
                 });
             }
 

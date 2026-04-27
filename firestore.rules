@@ -70,16 +70,23 @@ service cloud.firestore {
       allow read: if true;
       allow write: if false;
     }
+
+    // Minimal tenant metadata for student portal and public deep links (no secrets).
+    // get-by-id only: list is forbidden so clients cannot enumerate other schools.
+    match /schoolPublic/{schoolId} {
+      allow get: if isAuth();
+      allow list: if false;
+      allow create, update: if isAdmin(schoolId) || isDeveloper();
+      allow delete: if isDeveloper();
+    }
     
     match /schools/{schoolId} {
-      allow read: if isAuth();
+      allow read: if isDeveloper() || isAdmin(schoolId) || isTeacher(schoolId);
       allow create: if isDeveloper();
       allow update, delete: if isAdmin(schoolId) || isDeveloper();
 
-      // Read: any authenticated user (access control enforced at the
-      // application layer via passcode — the school URL + passcode gate
-      // prevents unauthorized UI access).
-      // Write: only provisioned admins.
+      // Private school record: staff of this school or a platform developer.
+      // Students and anonymous users use `schoolPublic/{schoolId}` instead.
 
       match /students/{studentId} {
         allow read: if isAdmin(schoolId) || isTeacher(schoolId);

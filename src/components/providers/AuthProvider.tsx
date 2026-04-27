@@ -13,6 +13,7 @@ import { useRouter } from 'next/navigation';
 import { useFirebase } from '@/firebase';
 import { httpsCallable } from 'firebase/functions';
 import { doc, getDocFromServer, onSnapshot } from 'firebase/firestore';
+import { schoolPublicDocRef } from '@/lib/schoolPublic';
 
 export type SyncStatus = 'synced' | 'syncing' | 'offline' | 'error';
 export type LoginState = 'loggedOut' | 'school' | 'developer' | 'student' | 'teacher' | 'admin';
@@ -228,7 +229,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return;
         }
 
-        const metadataRef = doc(firestore, 'schools', schoolId);
+        const sid = schoolId.trim().toLowerCase();
+        const metadataRef =
+            loginState === 'student'
+                ? schoolPublicDocRef(firestore, sid)
+                : doc(firestore, 'schools', sid);
         const unsubscribe = onSnapshot(
             metadataRef,
             { includeMetadataChanges: true },

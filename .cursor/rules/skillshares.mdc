@@ -1,0 +1,30 @@
+---
+description: Global coordination rules for Antigravity, Cursor, and Codex
+globs: .agent/**/*, .cursor/rules/**/*
+alwaysApply: true
+---
+
+# Skillshares: Cross-Assistant Coordination
+
+This project uses multiple AI assistants (Antigravity, Cursor, Codex). To maintain consistency, follow these coordination rules.
+
+## Source of Truth
+The `.agent` directory is the source of truth for AI-specific instructions.
+- `.agent/skills/`: Permanent capability definitions and coding standards.
+- `.agent/workflows/`: Step-by-step procedures for complex tasks.
+
+## Assistant Roles
+- **Antigravity**: Primary agent for complex refactoring, planning, and knowledge management.
+- **Cursor**: Primary agent for iterative UI development and local file editing.
+- **Codex (Copilot)**: Auto-completion and micro-suggestions.
+
+## Rules
+1. **Sync Before Work**: Check `.agent/workflows/sync-skills.md` to ensure your instructions are up to date.
+2. **Auto-Git**: ALWAYS stage your changes after a successful edit (`git add <file>`). Suggest or perform a commit (`git commit`) when a task boundary or logical unit of work is reached. Prefex commit messages with `[cursor]`.
+3. **Document Deviations**: If you discover a project quirk, document it in a new Skill or Knowledge Item in `.agent` so other assistants can learn.
+3. **Respect Boundaries**: Do not overwrite `.mdc` files that are marked as "Managed by Antigravity" unless specifically asked.
+
+## Shared Context
+- **Project Goal**: "School Arcade Rewards" - a system for managing student rewards in a school setting.
+- **Tech Stack**: Next.js, TypeScript, Tailwind CSS, Firebase/Firestore.
+- **UI Standard**: Modern, premium, theme-aware designs with high contrast ratios for accessibility.

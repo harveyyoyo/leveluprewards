@@ -5,6 +5,8 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { PrizeRedeemTicketPrintSheet } from '@/components/PrizeRedeemTicketPrintSheet';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
+import { useAuth } from '@/components/providers/AuthProvider';
+import { schoolPublicDocRef } from '@/lib/schoolPublic';
 
 type TicketParams = {
   activityId: string;
@@ -58,10 +60,12 @@ export default function PrizeRedeemTicketPage() {
   const { schoolId } = useParams<{ schoolId: string }>();
   const [printRequested, setPrintRequested] = useState(false);
   const firestore = useFirestore();
-  const schoolRef = useMemoFirebase(
-    () => (schoolId ? doc(firestore, 'schools', schoolId) : null),
-    [firestore, schoolId]
-  );
+  const { loginState } = useAuth();
+  const schoolRef = useMemoFirebase(() => {
+    if (!schoolId || !firestore) return null;
+    if (loginState === 'student') return schoolPublicDocRef(firestore, schoolId);
+    return doc(firestore, 'schools', schoolId);
+  }, [firestore, schoolId, loginState]);
   const { data: schoolData } = useDoc<{ name?: string; logoUrl?: string }>(schoolRef);
   const schoolName = (schoolData?.name ?? '').trim() || schoolId;
   const logoUrl = (schoolData?.logoUrl ?? '').trim() || null;

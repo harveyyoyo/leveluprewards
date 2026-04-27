@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirestore, useFirebase, useCollection, useMemoFirebase, useFunctions } from '@/firebase';
 import { collection, doc, getDoc, setDoc, query, getDocs, orderBy, limit } from 'firebase/firestore';
+import { schoolPublicDocRef, mainSchoolDocToPublicPayload } from '@/lib/schoolPublic';
 import {
   Plus, Trash2, Server, Pencil, Database, Download, Upload, ShieldCheck, LifeBuoy, RefreshCw, Link2, Check, Loader2, Image as ImageIcon,
 } from 'lucide-react';
@@ -165,7 +166,7 @@ export default function DeveloperPage() {
   const {
     loginState, isInitialized, isUserLoading, createSchool, deleteSchool, updateSchool,
     devCreateBackup, devRestoreFromBackup, devDownloadBackup, devBackupAllSchools,
-    devVerifyBackup, devMigrateSchoolData, devResetSampleSchool
+    devVerifyBackup, devMigrateSchoolData, devResetSampleSchool, devSyncSchoolPublicIndex,
   } = useAppContext();
   const firestore = useFirestore();
   const functions = useFunctions();
@@ -494,13 +495,15 @@ export default function DeveloperPage() {
     ) as Partial<Record<PlanFeatureKey, boolean>>;
 
     try {
+      const planPayload = {
+        plan: editingPlan,
+        featureOverrides: cleanOverrides,
+        updatedAt: Date.now(),
+      };
+      await setDoc(doc(firestore, 'schools', planSchool.id), planPayload, { merge: true });
       await setDoc(
-        doc(firestore, 'schools', planSchool.id),
-        {
-          plan: editingPlan,
-          featureOverrides: cleanOverrides,
-          updatedAt: Date.now(),
-        },
+        schoolPublicDocRef(firestore, planSchool.id),
+        mainSchoolDocToPublicPayload(planPayload as Record<string, unknown>),
         { merge: true },
       );
       playSound('success');
@@ -821,8 +824,11 @@ export default function DeveloperPage() {
                 <span className="text-sm font-normal bg-slate-100 text-slate-600 px-2 py-1 rounded-md">{allSchools?.length || 0} total</span>
               </CardTitle>
             </Helper>
-            <CardDescription>
+            <CardDescription className="flex flex-wrap gap-2">
               <Button onClick={() => setIsCreateSchoolDialogOpen(true)} className="mt-4"><Plus className="mr-2 h-4 w-4" />Create New School</Button>
+              <Button variant="outline" onClick={() => void devSyncSchoolPublicIndex()} className="mt-4">
+                <RefreshCw className="mr-2 h-4 w-4" />Sync student portal index
+              </Button>
             </CardDescription>
           </CardHeader>
           <CardContent>

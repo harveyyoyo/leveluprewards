@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirebase } from '@/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { getDoc } from 'firebase/firestore';
+import { schoolPublicDocRef } from '@/lib/schoolPublic';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -28,10 +29,10 @@ export default function PublicSchoolPage() {
         let cancelled = false;
         (async () => {
             try {
-                const snap = await getDoc(doc(firestore, 'schools', schoolId));
+                const snap = await getDoc(schoolPublicDocRef(firestore, schoolId));
                 if (cancelled) return;
 
-                if (snap.exists()) {
+                if (snap.exists() && snap.data()?.active !== false) {
                     // Automatically log them in as a student
                     await login('student', { schoolId });
                     if (!cancelled) {

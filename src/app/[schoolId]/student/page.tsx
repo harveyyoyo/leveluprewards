@@ -10,6 +10,7 @@ import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirestore, useFirebase, useCollection, useDoc, useMemoFirebase } from '@/firebase';
+import { useSchoolMetadataDocRef } from '@/hooks/useSchoolMetadataDocRef';
 import { collection, query, orderBy, limit, doc } from 'firebase/firestore';
 import { SchoolGate } from '@/components/SchoolGate';
 import { lookupStudentId } from '@/lib/db';
@@ -255,7 +256,7 @@ function StudentDashboardInner({
   const appConfigRef = useMemoFirebase(() => (firestore ? doc(firestore, 'appConfig', 'global') : null), [firestore]);
   const { data: appConfig } = useDoc<{ appLogoUrl?: string; appName?: string; appTagline?: string }>(appConfigRef);
 
-  const schoolDocRef = useMemoFirebase(() => (firestore && schoolId ? doc(firestore, 'schools', schoolId) : null), [firestore, schoolId]);
+  const schoolDocRef = useSchoolMetadataDocRef();
   const { data: schoolData } = useDoc<{ name?: string; logoUrl?: string }>(schoolDocRef);
 
   const previewSchoolName = schoolData?.name?.trim() || 'School';

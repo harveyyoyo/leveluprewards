@@ -30,7 +30,8 @@ import { SettingsModal } from './ui/SettingsModal';
 import { useSettings } from './providers/SettingsProvider';
 import { cn } from '@/lib/utils';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
-import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { useDoc, useFirebase, useMemoFirebase } from '@/firebase';
+import { useSchoolMetadataDocRef } from '@/hooks/useSchoolMetadataDocRef';
 import Logo from './Logo';
 import { portalHoverTextClass, portalTextClass, type PortalColorKey } from '@/lib/portalColors';
 
@@ -40,12 +41,8 @@ export default function Header() {
   const { loginState, schoolId, isInitialized, syncStatus, logout, isAdmin, userName, isKioskLocked } = useAppContext();
   const { settings } = useSettings();
   const playSound = useArcadeSound();
-  const firestore = useFirestore();
-
-  const schoolDocRef = useMemoFirebase(() => {
-    if (!firestore || !schoolId) return null;
-    return doc(firestore, 'schools', schoolId);
-  }, [firestore, schoolId]);
+  const { firestore } = useFirebase();
+  const schoolDocRef = useSchoolMetadataDocRef();
 
   const { data: schoolData } = useDoc<{ name: string; logoUrl?: string }>(schoolDocRef);
   const schoolName = schoolData?.name || (schoolId ? schoolId.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : '');

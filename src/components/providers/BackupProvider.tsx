@@ -18,6 +18,11 @@ import {
     writeBatch,
     getDocs,
 } from 'firebase/firestore';
+import {
+    mainSchoolDocToPublicPayload,
+    schoolPublicDocRef,
+    schoolPublicPatchFromSchoolUpdates,
+} from '@/lib/schoolPublic';
 import { httpsCallable } from "firebase/functions";
 import { useToast } from '@/hooks/use-toast';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
@@ -37,6 +42,7 @@ interface BackupContextType {
     devVerifyBackup: (schoolId: string, backupId: string) => Promise<{ verified: boolean; reason: string }>;
     devMigrateSchoolData: (schoolId: string) => Promise<void>;
     devResetSampleSchool: (schoolId: string) => Promise<void>;
+    devSyncSchoolPublicIndex: () => Promise<void>;
 }
 
 const BackupContext = createContext<BackupContextType | null>(null);
@@ -144,6 +150,10 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
 
         const firstBatch = writeBatch(firestore);
         firstBatch.set(schoolDocRef, finalSchoolDocData);
+        firstBatch.set(
+            schoolPublicDocRef(firestore, cleanId),
+            mainSchoolDocToPublicPayload(finalSchoolDocData as Record<string, unknown>),
+        );
         await firstBatch.commit();
 
         const BATCH_LIMIT = 499;
@@ -349,6 +359,10 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
 
         const firstBatch = writeBatch(firestore);
         firstBatch.set(schoolDocRef, finalSchoolDocData);
+        firstBatch.set(
+            schoolPublicDocRef(firestore, cleanId),
+            mainSchoolDocToPublicPayload(finalSchoolDocData as Record<string, unknown>),
+        );
         await firstBatch.commit();
 
         const restOps = allOps;
@@ -372,7 +386,10 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
             await createBackupFn({ schoolId, type: 'pre-delete' });
             playSound('swoosh');
             toast({ title: "Final Backup Created", description: `A full backup for ${schoolId} has been saved before deletion.` });
-            await deleteDoc(doc(firestore, 'schools', schoolId));
+            const delBatch = writeBatch(firestore);
+            delBatch.delete(schoolPublicDocRef(firestore, schoolId));
+            delBatch.delete(doc(firestore, 'schools', schoolId));
+            await delBatch.commit();
             playSound('success');
             toast({ title: `School "${schoolId}" deleted!` });
         } catch (e) {
@@ -385,12 +402,38 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
         if (!firestore) return;
         try {
             await updateDoc(doc(firestore, 'schools', schoolId), updates);
+            const patch = schoolPublicPatchFromSchoolUpdates(updates as Record<string, unknown>);
+            if (patch) {
+                await setDoc(schoolPublicDocRef(firestore, schoolId), patch, { merge: true });
+            }
             playSound('success');
         } catch (e) {
             playSound('error');
             toast({ variant: 'destructive', title: "School update failed", description: (e as Error).message });
         }
     }, [firestore, playSound, toast]);
+
+    const devSyncSchoolPublicIndex = useCallback(async () => {
+        if (!firestore || !auth.currentUser) return;
+        try {
+            const snap = await getDocs(collection(firestore, 'schools'));
+            let n = 0;
+            for (const d of snap.docs) {
+                const payload = mainSchoolDocToPublicPayload(d.data() as Record<string, unknown>);
+                await setDoc(schoolPublicDocRef(firestore, d.id), payload, { merge: true });
+                n += 1;
+            }
+            playSound('success');
+            toast({ title: 'Public school index synced', description: `Updated ${n} schoolPublic document(s).` });
+        } catch (e) {
+            playSound('error');
+            toast({
+                variant: 'destructive',
+                title: 'Sync failed',
+                description: (e as Error).message,
+            });
+        }
+    }, [firestore, auth, playSound, toast]);
 
     const devMigrateSchoolData = useCallback(async (schoolId: string) => {
         if (!functions) return;
@@ -422,12 +465,12 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
         () => ({
             createSchool, deleteSchool, updateSchool,
             devCreateBackup, devRestoreFromBackup, devDownloadBackup, devBackupAllSchools,
-            devVerifyBackup, devMigrateSchoolData, devResetSampleSchool,
+            devVerifyBackup, devMigrateSchoolData, devResetSampleSchool, devSyncSchoolPublicIndex,
         }),
         [
             createSchool, deleteSchool, updateSchool,
             devCreateBackup, devRestoreFromBackup, devDownloadBackup, devBackupAllSchools,
-            devVerifyBackup, devMigrateSchoolData, devResetSampleSchool,
+            devVerifyBackup, devMigrateSchoolData, devResetSampleSchool, devSyncSchoolPublicIndex,
         ]
     );
 

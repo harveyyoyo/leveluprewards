@@ -231,6 +231,7 @@ function AdminDashboardInner() {
   } = useSchoolLogoUpload({
     schoolId,
     schoolDocRef,
+    firestore,
     schoolData,
     functions,
     toast,
@@ -844,6 +845,7 @@ function AdminDashboardInner() {
           <TabsContent value="branding" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <AdminBrandingTab
               schoolId={schoolId}
+              firestore={firestore}
               schoolDocRef={schoolDocRef}
               schoolData={schoolData ?? undefined}
               logoPreviewUrl={logoPreviewUrl}

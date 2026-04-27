@@ -1,8 +1,9 @@
 'use client';
 
 import { Loader2, Trash2, UploadCloud } from 'lucide-react';
-import type { DocumentReference } from 'firebase/firestore';
-import { updateDoc } from 'firebase/firestore';
+import type { DocumentReference, Firestore } from 'firebase/firestore';
+import { updateDoc, setDoc } from 'firebase/firestore';
+import { schoolPublicDocRef } from '@/lib/schoolPublic';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -12,6 +13,7 @@ import { Helper } from '@/components/ui/helper';
 
 export function AdminBrandingTab({
   schoolId,
+  firestore,
   schoolDocRef,
   schoolData,
   logoPreviewUrl,
@@ -28,6 +30,7 @@ export function AdminBrandingTab({
   playSound,
 }: {
   schoolId: string | null | undefined;
+  firestore: Firestore | null;
   schoolDocRef: DocumentReference | null;
   schoolData: { logoUrl?: string; logoHistory?: { url?: string; uploadedAt?: number }[] } | null | undefined;
   logoPreviewUrl: string | null;
@@ -105,9 +108,14 @@ export function AdminBrandingTab({
                           key={`${url}-${idx}`}
                           type="button"
                           onClick={async () => {
-                            if (!schoolDocRef) return;
+                            if (!schoolDocRef || !firestore || !schoolId) return;
                             try {
                               await updateDoc(schoolDocRef, { logoUrl: url });
+                              await setDoc(
+                                schoolPublicDocRef(firestore, schoolId),
+                                { logoUrl: url, active: true, updatedAt: Date.now() },
+                                { merge: true },
+                              );
                               setLogoPreviewUrl(url ?? null);
                               playSound('success');
                               toast({ title: 'Logo restored', description: 'Using selected previous logo.' });

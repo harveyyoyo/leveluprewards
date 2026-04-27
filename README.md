@@ -48,6 +48,15 @@ Once you've logged into a school, you can choose from several portals:
 
 That's it! It's designed to be simple and intuitive. Enjoy building a positive and rewarding environment at your school!
 
+## AI Coordination (Skillshares)
+
+This project uses a unified AI coordination system called **Skillshares**.
+- **Source of Truth**: All AI instructions and project standards are located in the `.agent/` directory.
+- **Cursor Rules**: Synchronization rules for Cursor are in `.cursor/rules/`.
+- **Workflows**: Common AI procedures are documented in `.agent/workflows/`.
+
+All AI assistants (Antigravity, Cursor, Codex) should refer to these directories to ensure consistency.
+
 ## License
 
 This project and its source code are proprietary.

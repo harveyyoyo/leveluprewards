@@ -3,8 +3,11 @@
 import { ChangeEvent, useCallback, useMemo, useState } from 'react';
 import {
   updateDoc,
+  setDoc,
   type DocumentReference,
+  type Firestore,
 } from 'firebase/firestore';
+import { schoolPublicDocRef } from '@/lib/schoolPublic';
 import { httpsCallable, type Functions } from 'firebase/functions';
 import type { SoundEffect } from '@/hooks/useArcadeSound';
 import type { useToast } from '@/hooks/use-toast';
@@ -24,6 +27,7 @@ interface SchoolDocShape {
 export interface UseSchoolLogoUploadDeps {
   schoolId: string | null;
   schoolDocRef: DocumentReference | null;
+  firestore: Firestore | null;
   schoolData: SchoolDocShape | null | undefined;
   functions: Functions | null;
   toast: ToastFn;
@@ -43,6 +47,7 @@ const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 export function useSchoolLogoUpload({
   schoolId,
   schoolDocRef,
+  firestore,
   schoolData,
   functions,
   toast,
@@ -214,10 +219,15 @@ export function useSchoolLogoUpload({
   );
 
   const handleRemoveLogo = useCallback(async () => {
-    if (!schoolId || !schoolDocRef) return;
+    if (!schoolId || !schoolDocRef || !firestore) return;
     try {
       setIsLogoUploading(true);
       await updateDoc(schoolDocRef, { logoUrl: null });
+      await setDoc(
+        schoolPublicDocRef(firestore, schoolId),
+        { logoUrl: null, active: true, updatedAt: Date.now() },
+        { merge: true },
+      );
       setLogoPreviewUrl(null);
       playSound('success');
       toast({ title: 'Logo removed', description: 'The school logo has been deleted.' });
@@ -228,7 +238,7 @@ export function useSchoolLogoUpload({
     } finally {
       setIsLogoUploading(false);
     }
-  }, [schoolId, schoolDocRef, playSound, toast]);
+  }, [schoolId, schoolDocRef, firestore, playSound, toast]);
 
   return {
     logoPreviewUrl,

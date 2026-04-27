@@ -16,8 +16,8 @@ import { StudentIdDTCPrintSheet } from '@/components/StudentIdDTCPrintSheet';
 import { PrizeRedeemTicketPrintSheet, PrizeRedeemTicket } from '@/components/PrizeRedeemTicketPrintSheet';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useAuth } from './AuthProvider';
-import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useDoc } from '@/firebase';
+import { useSchoolMetadataDocRef } from '@/hooks/useSchoolMetadataDocRef';
 
 interface PrintContextType {
     setCouponsToPrint: (coupons: Coupon[]) => void;
@@ -47,11 +47,7 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
     const [prizeTicketsToPrint, setPrizeTicketsToPrint] = useState<PrizeRedeemTicket[]>([]);
     const playSound = useArcadeSound();
     const { schoolId } = useAuth();
-    const firestore = useFirestore();
-    const schoolDocRef = useMemoFirebase(
-        () => (schoolId ? doc(firestore, 'schools', schoolId) : null),
-        [firestore, schoolId]
-    );
+    const schoolDocRef = useSchoolMetadataDocRef();
     const { data: schoolData } = useDoc<{ name?: string; logoUrl?: string }>(schoolDocRef);
     const printSchoolName = (schoolData?.name ?? '').trim() || (schoolId ? schoolId : null);
     const printSchoolLogoUrl = (schoolData?.logoUrl ?? '').trim() || null;
