@@ -219,6 +219,35 @@ function getPalette(scheme?: NavColorScheme) {
   return PALETTES[scheme];
 }
 
+/** Parse `H S% L%` triplets from our palette strings. */
+function parseHslParts(t: string): [string, string, string] {
+  const parts = t.trim().split(/\s+/);
+  if (parts.length < 3) return ['0', '0%', '50%'];
+  return [parts[0], parts[1], parts[2]];
+}
+
+/**
+ * Like `rainbowByIndex`, but uses the hue at `index` while keeping saturation
+ * and lightness from the palette anchor (first swatch). Stops 'gradient' themes
+ * from washing out items lower in a list (e.g. portal cards).
+ */
+export function rainbowByIndexUniformLightness(index: number, scheme?: NavColorScheme) {
+  const palette = getPalette(scheme);
+  const len = palette.length;
+  const i = ((index % len) + len) % len;
+  const [h] = parseHslParts(palette[i]);
+  const [, s, l] = parseHslParts(palette[0]);
+  return `hsl(${h} ${s} ${l})`;
+}
+
+/** Order used to map portal `area.id` to a theme slot (independent of visible list order). */
+const PORTAL_COLOR_ORDER = ['admin', 'print', 'redeem', 'student-home', 'prize', 'fame'] as const;
+
+export function rainbowForPortalId(id: string, scheme?: NavColorScheme) {
+  const idx = PORTAL_COLOR_ORDER.indexOf(id as (typeof PORTAL_COLOR_ORDER)[number]);
+  return rainbowByIndexUniformLightness(idx === -1 ? 0 : idx, scheme);
+}
+
 export function rainbowByIndex(index: number, scheme?: NavColorScheme) {
   const palette = getPalette(scheme);
   return `hsl(${palette[((index % palette.length) + palette.length) % palette.length]})`;

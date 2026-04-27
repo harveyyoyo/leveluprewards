@@ -9,7 +9,7 @@ import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from '@/components/ui/button';
-import { rainbowByIndex } from '@/lib/rainbowNav';
+import { rainbowByIndex, rainbowForPortalId } from '@/lib/rainbowNav';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
 
 export default function PortalPage() {
@@ -114,7 +114,10 @@ export default function PortalPage() {
                 <div className="flex flex-col gap-4">
                     {portals.map((area, index) => {
                         const Icon = area.icon;
-                        const rainbowColor = settings.colorScheme === 'default' ? 'hsl(var(--primary))' : rainbowByIndex(index, settings.colorScheme);
+                        const rainbowColor =
+                            settings.colorScheme === 'default'
+                                ? 'hsl(var(--primary))'
+                                : rainbowForPortalId(area.id, settings.colorScheme);
                         return (
                             <Link
                                 key={area.id}
