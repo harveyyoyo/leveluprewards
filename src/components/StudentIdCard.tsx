@@ -2,7 +2,7 @@
 
 import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Student } from '@/lib/types';
-import { cn, getStudentNickname } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { APP_NAME, APP_TAGLINE } from '@/lib/app-branding';
 import { GoogleFontLoader } from '@/components/GoogleFontLoader';
@@ -135,7 +135,7 @@ export function StudentIdCard({
 
   const displayFirst = student.firstName ?? '';
   const displayLast = student.lastName ?? '';
-  const displayNickname = getStudentNickname(student);
+  const displayNickname = student.nickname?.trim() || null;
   const fullName = `${displayFirst} ${displayLast}`.trim();
 
   return (
