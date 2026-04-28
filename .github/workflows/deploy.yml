@@ -28,8 +28,14 @@ jobs:
           NODE_ENV: production
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
+        env:
+          # Ensure the subprocess spawned by the action inherits webframeworks (belt-and-suspenders).
+          FIREBASE_CLI_EXPERIMENTS: webframeworks
         with:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_STUDIO_1273073612_71183 }}'
           channelId: live
           projectId: studio-1273073612-71183
+          # Pin CLI: avoid `latest` drift; 14.27.x stays clear of early 14.0 regressions and pre-15 churn.
+          firebaseToolsVersion: '14.27.0'
+          force: 'true'
