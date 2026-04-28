@@ -250,7 +250,7 @@ export function ThemeGeneratorModal({
 
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
-            <DialogContent wide className="rounded-3xl sm:rounded-3xl max-h-[min(92dvh,92vh)]">
+      <DialogContent wide className="max-h-[min(92dvh,92vh)]">
                 <DialogHeader>
                     <DialogTitle>Generate theme for {displayTitleName}</DialogTitle>
                     <DialogDescription>

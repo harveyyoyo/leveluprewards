@@ -175,7 +175,7 @@ export function ImageCropper({
         <Dialog open={true} onOpenChange={(open) => {
             if (!open) onCancel();
         }}>
-            <DialogContent className="sm:max-w-xl">
+      <DialogContent size="lg">
                 <DialogHeader>
                     <DialogTitle className="flex justify-between items-center pr-6">
                         <span>{title}</span>

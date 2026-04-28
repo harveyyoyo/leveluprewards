@@ -80,7 +80,7 @@ export function StudentActivityModal({ isOpen, setIsOpen, student }: StudentActi
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>
             Activity for {getStudentNickname(student)} {student.lastName}

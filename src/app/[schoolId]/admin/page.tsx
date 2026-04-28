@@ -985,7 +985,7 @@ function AdminDashboardInner() {
         />
         {settings.enableBadges && (
           <Dialog open={!!badgesStudent} onOpenChange={(open) => !open && setBadgesStudent(null)}>
-            <DialogContent className="sm:max-w-lg rounded-2xl">
+            <DialogContent>
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
                   <Award className="h-5 w-5 text-amber-500" />
@@ -1071,7 +1071,7 @@ function AdminDashboardInner() {
         )}
         {idPreviewStudent && (
           <Dialog open={!!idPreviewStudent} onOpenChange={(open) => !open && setIdPreviewStudent(null)}>
-            <DialogContent className="!flex w-[min(98vw,52rem)] max-w-[52rem] flex-col gap-2 !max-h-[min(92vh,calc(100dvh-1.5rem))] overflow-y-auto overflow-x-hidden p-4 pt-12 sm:p-5 sm:pt-14 md:max-w-[52rem]">
+            <DialogContent size="xl" className="!flex flex-col gap-2 overflow-x-hidden pt-12 sm:pt-14">
               <DialogHeader className="shrink-0 space-y-1 pr-8">
                 <DialogTitle className="text-lg">ID Card Preview</DialogTitle>
                 <DialogDescription className="text-xs leading-snug">
@@ -1127,7 +1127,7 @@ function AdminDashboardInner() {
           }}
         />
         <AlertDialog open={!!categoryBadgeToDelete} onOpenChange={(open) => !open && setCategoryBadgeToDelete(null)}>
-          <AlertDialogContent className="rounded-3xl border-2">
+          <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Delete badge &quot;{categoryBadgeToDelete?.name}&quot;?</AlertDialogTitle>
               <AlertDialogDescription>Students will no longer earn this badge. Already earned badges are not removed.</AlertDialogDescription>
@@ -1151,7 +1151,7 @@ function AdminDashboardInner() {
           </AlertDialogContent>
         </AlertDialog>
         <Dialog open={!!badgeEarnersFor} onOpenChange={(open) => !open && setBadgeEarnersFor(null)}>
-          <DialogContent className="sm:max-w-lg rounded-2xl">
+            <DialogContent>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 {badgeEarnersFor && (
@@ -1197,7 +1197,7 @@ function AdminDashboardInner() {
           </DialogContent>
         </Dialog>
         <AlertDialog open={!!achievementToDelete} onOpenChange={(open) => !open && setAchievementToDelete(null)}>
-          <AlertDialogContent className="rounded-3xl border-2">
+          <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Delete milestone &quot;{achievementToDelete?.name}&quot;?</AlertDialogTitle>
               <AlertDialogDescription>Students will no longer earn bonus points from this milestone. Existing bonus points already awarded are not removed.</AlertDialogDescription>
@@ -1221,7 +1221,7 @@ function AdminDashboardInner() {
           </AlertDialogContent>
         </AlertDialog>
         <AlertDialog open={!!studentToPurge} onOpenChange={(open) => !open && !isPurgingStudent && setStudentToPurge(null)}>
-          <AlertDialogContent className="rounded-3xl border-2">
+            <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>
                 Purge points & badges for&nbsp;
@@ -1262,7 +1262,7 @@ function AdminDashboardInner() {
           </AlertDialogContent>
         </AlertDialog>
         <AlertDialog open={isAddSampleBadgesOpen} onOpenChange={setIsAddSampleBadgesOpen}>
-          <AlertDialogContent className="rounded-3xl border-2">
+              <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Add sample milestones?</AlertDialogTitle>
               <AlertDialogDescription>
@@ -1296,7 +1296,7 @@ function AdminDashboardInner() {
           </AlertDialogContent>
         </AlertDialog>
         <AlertDialog open={isAddSampleCategoryBadgesOpen} onOpenChange={setIsAddSampleCategoryBadgesOpen}>
-          <AlertDialogContent className="rounded-3xl border-2">
+              <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Add sample badges?</AlertDialogTitle>
               <AlertDialogDescription>

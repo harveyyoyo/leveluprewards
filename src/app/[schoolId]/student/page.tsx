@@ -705,7 +705,7 @@ function StudentDashboardInner({
         </Card>
 
         <Dialog open={isIdPreviewOpen} onOpenChange={setIsIdPreviewOpen}>
-          <DialogContent className="!flex w-[min(98vw,52rem)] max-w-[52rem] flex-col gap-2 !max-h-[min(92vh,calc(100dvh-1.5rem))] overflow-y-auto overflow-x-hidden p-4 pt-12 sm:p-5 sm:pt-14 md:max-w-[52rem]">
+          <DialogContent size="xl" className="!flex flex-col gap-2 overflow-x-hidden pt-12 sm:pt-14">
             <DialogHeader className="shrink-0 space-y-1 pr-8">
               <DialogTitle className="text-lg">ID Card Preview</DialogTitle>
               <DialogDescription className="text-xs leading-snug">

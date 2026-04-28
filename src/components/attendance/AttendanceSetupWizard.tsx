@@ -140,7 +140,7 @@ export function AttendanceSetupWizard({ variant }: { variant: AttendanceWizardVa
           Example walkthrough
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent size="sm">
         <DialogHeader>
           <DialogTitle className="text-lg">Attendance: quick example setup</DialogTitle>
           <DialogDescription className="text-xs">

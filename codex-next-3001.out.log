@@ -1,0 +1,17 @@
+
+> levelup-edu@0.1.0 dev
+> next dev -p 3001
+
+  ▲ Next.js 14.2.35
+  - Local:        http://localhost:3001
+  - Environments: .env.local, .env
+
+ ✓ Starting...
+ ✓ Ready in 2.6s
+ ✓ Compiled /src/middleware in 205ms (117 modules)
+ ○ Compiling / ...
+ ✓ Compiled / in 12s (5225 modules)
+FirebaseClientProvider: Initializing Firebase...
+ ✓ Compiled in 1161ms (2514 modules)
+FirebaseClientProvider: Initializing Firebase...
+ GET / 200 in 33ms

@@ -122,7 +122,7 @@ export function AchievementModal({ isOpen, setIsOpen, achievement, categories, o
 
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent size="sm">
                 <DialogHeader>
                     <DialogTitle>{isEditing ? 'Edit bonus milestone' : 'New bonus milestone'}</DialogTitle>
                     <DialogDescription>

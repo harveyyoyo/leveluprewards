@@ -220,18 +220,11 @@ export function AdminFaceEnrollmentPanel({ studentId, studentLabel }: AdminFaceE
       setStatus(null);
       await refreshStatus();
     } catch (e: any) {
-      const code = String(e?.code ?? '');
-      const codeLabel = code ? `[${code}] ` : '';
-      const technical =
-        e && (code || e?.message)
-          ? ` (tech: ${code ? `code=${code}` : ''}${code && e?.message ? ', ' : ''}${
-              e?.message ? `msg=${String(e.message)}` : ''
-            })`
-          : '';
+      console.warn('[enrollStudentFace]', e?.code, e?.message, e);
       toast({
         variant: 'destructive',
         title: 'Face training failed',
-        description: `${codeLabel}${getReadableErrorMessage(e, 'Could not save face login.')}${technical}`,
+        description: getReadableErrorMessage(e, 'Could not save face login.'),
       });
       setStatus(null);
     } finally {
@@ -344,7 +337,7 @@ export function AdminFaceEnrollmentPanel({ studentId, studentLabel }: AdminFaceE
 
       <Dialog open={trainingDialogOpen} onOpenChange={handleTrainingDialogOpenChange}>
         <DialogContent
-          className="gap-0 z-[60] [--dialog-max-w:36rem]"
+          className="gap-0 z-[60]"
           onInteractOutside={(e) => {
             if (busy) e.preventDefault();
           }}

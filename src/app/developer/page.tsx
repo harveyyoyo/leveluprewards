@@ -1060,7 +1060,7 @@ export default function DeveloperPage() {
         </Dialog>
 
         <Dialog open={!!planSchool} onOpenChange={(open) => !open && handleClosePlanModal()}>
-          <DialogContent className="max-w-3xl">
+            <DialogContent size="xl">
             <DialogHeader>
               <DialogTitle>Plan & Features: <span className="font-code">{planSchool?.id}</span></DialogTitle>
               <DialogDescription>
@@ -1130,7 +1130,7 @@ export default function DeveloperPage() {
         </Dialog>
 
         <Dialog open={!!backupSchool} onOpenChange={handleCloseBackupModal}>
-          <DialogContent className="max-w-2xl">
+            <DialogContent size="lg">
             <DialogHeader>
               <DialogTitle>Manage Backups for <span className="font-code">{backupSchool?.id}</span></DialogTitle>
               <DialogDescription>

@@ -566,7 +566,7 @@ function TeacherAttendancePanel({
                             New Class
                         </Button>
                     </DialogTrigger>
-                    <DialogContent className="rounded-3xl">
+                    <DialogContent>
                         <DialogHeader>
                             <DialogTitle className="text-2xl font-black">Create Class</DialogTitle>
                             <DialogDescription>Add a class for your roster (e.g. “Period 1 – Science”).</DialogDescription>
@@ -1093,7 +1093,7 @@ function TeacherAttendanceRewardsPanel({
                   <Plus className="w-4 h-4" />
                 </Button>
               </DialogTrigger>
-              <DialogContent className="rounded-3xl">
+            <DialogContent>
                 <DialogHeader>
                   <DialogTitle className="text-2xl font-black">New Attendance Category</DialogTitle>
                   <DialogDescription>Create a category (defaults to “Punctuality”).</DialogDescription>
@@ -1630,7 +1630,7 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
                                                                 <Plus className="h-4 w-4" />
                                                             </Button>
                                                         </DialogTrigger>
-                                                        <DialogContent className={cn("rounded-[2rem]", isGraphic ? 'bg-card/90 backdrop-blur-2xl text-foreground border-white/10' : 'bg-white')}>
+            <DialogContent className={cn(isGraphic ? 'bg-card/90 backdrop-blur-2xl text-foreground border-white/10' : 'bg-white')}>
                                                             <DialogHeader>
                                                                 <DialogTitle className="text-2xl font-black">Add Category</DialogTitle>
                                                                 <DialogDescription>Create a new quick-selection category for rewards.</DialogDescription>

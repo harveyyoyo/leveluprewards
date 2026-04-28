@@ -97,7 +97,7 @@ export function AdminBrandingTab({
                   View previous logos
                 </Button>
                 <Dialog open={isPreviousLogosOpen} onOpenChange={setIsPreviousLogosOpen}>
-                  <DialogContent className="sm:max-w-md">
+          <DialogContent size="sm">
                     <DialogHeader>
                       <DialogTitle>Previous School Logos</DialogTitle>
                       <DialogDescription>Select a previous logo to restore it.</DialogDescription>

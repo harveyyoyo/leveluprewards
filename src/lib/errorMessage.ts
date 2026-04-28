@@ -9,6 +9,19 @@ const OFFLINE_HINT =
 const PERMISSION_HINT =
   "You don't have permission to do this. If you're signed in, ask a teacher or admin for help.";
 
+/** When HTTPS callables only return codes like `functions/internal` and message `INTERNAL`. */
+function getFirebaseCallableConnectivityHint(): string {
+  let dev = '';
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    if (host === 'localhost' || host === '127.0.0.1') {
+      dev =
+        ' On localhost: deploy Cloud Functions to this Firebase project (including face-auth callables), or connect the Firebase CLI Functions emulator.';
+    }
+  }
+  return `Could not reach or run Firebase Cloud Functions. Check VPN/firewall/proxy (allow *.cloudfunctions.net and *.googleapis.com), then try again.${dev}`;
+}
+
 /** e.g. `functions/internal` → `internal` (gRPC / Firebase Functions client). */
 function tailErrorCode(code: string): string {
   if (!code) return '';
@@ -90,6 +103,26 @@ export function getReadableErrorMessage(error: unknown, fallback: string): strin
 
   if (message.includes('missing or insufficient permissions')) {
     return PERMISSION_HINT;
+  }
+
+  // Firebase callable: `functions/internal` + message `INTERNAL` is not a useful server error—
+  // often network, blocking, wrong project, or undeployed/emulator mismatch. Handle before the
+  // generic "cryptic token" branch so we don't mislabel it as a generic offline page load.
+  if (code.includes('functions/')) {
+    const noUsefulDetail =
+      !rawMessage ||
+      (!rawMessage.includes(' ') && CRYPTIC_SINGLE_TOKEN_MESSAGES.has(message));
+    if (
+      noUsefulDetail &&
+      (codeTail === 'internal' ||
+        codeTail === 'unknown' ||
+        codeTail === 'unavailable' ||
+        codeTail === 'deadline-exceeded' ||
+        codeTail === 'cancelled' ||
+        codeTail === 'aborted')
+    ) {
+      return getFirebaseCallableConnectivityHint();
+    }
   }
 
   // Cryptic single-token messages (e.g. "internal", "unknown") carry no useful

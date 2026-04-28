@@ -76,7 +76,7 @@ export function AdminBackupsTab({
                           <Upload className="h-4 w-4 text-primary" />
                         </Button>
                       </AlertDialogTrigger>
-                      <AlertDialogContent className="rounded-3xl border-2">
+            <AlertDialogContent>
                         <AlertDialogHeader>
                           <AlertDialogTitle className="text-2xl font-bold">Restore snapshot?</AlertDialogTitle>
                           <AlertDialogDescription className="text-base text-balance mt-2">

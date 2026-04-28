@@ -77,7 +77,7 @@ export function CategoryModal({ isOpen, setIsOpen, category }: CategoryModalProp
 
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogContent className="sm:max-w-md">
+      <DialogContent size="sm">
                 <DialogHeader>
                     <DialogTitle>{isEditing ? 'Edit Category' : 'New Category'}</DialogTitle>
                     <DialogDescription>

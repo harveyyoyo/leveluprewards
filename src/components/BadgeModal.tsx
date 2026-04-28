@@ -119,7 +119,7 @@ export function BadgeModal({ isOpen, setIsOpen, badge, categories, onSave }: Bad
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="sm:max-w-md">
+            <DialogContent size="sm">
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Edit badge' : 'New badge'}</DialogTitle>
           <DialogDescription>

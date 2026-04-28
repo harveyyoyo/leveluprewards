@@ -300,7 +300,7 @@ export default function HallOfFamePage() {
                                     <DialogTrigger asChild>
                                         <Button variant="outline" size="icon" className="rounded-full flex-shrink-0"><Settings className="w-4 h-4" /></Button>
                                     </DialogTrigger>
-                                    <DialogContent className="sm:max-w-md rounded-3xl border border-border shadow-2xl p-0 overflow-hidden">
+      <DialogContent size="sm" className="border border-border p-0 overflow-hidden">
                                         <div className="px-6 pt-6 pb-4 border-b border-border/40 bg-card/30 backdrop-blur-md">
                                             <DialogHeader>
                                                 <DialogTitle className="text-xl font-black tracking-tight text-foreground">Display Options</DialogTitle>

@@ -35,12 +35,20 @@ type DialogContentProps = React.ComponentPropsWithoutRef<typeof DialogPrimitive.
    * Useful for large tools like theme generators.
    */
   wide?: boolean;
+  size?: "sm" | "md" | "lg" | "xl";
+};
+
+const dialogSizeClasses: Record<NonNullable<DialogContentProps["size"]>, string> = {
+  sm: "max-w-[var(--dialog-max-w,28rem)]",
+  md: "max-w-[var(--dialog-max-w,32rem)]",
+  lg: "max-w-[var(--dialog-max-w,42rem)]",
+  xl: "max-w-[var(--dialog-max-w,52rem)]",
 };
 
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   DialogContentProps
->(({ className, children, wide, ...props }, ref) => (
+>(({ className, children, wide, size = "md", ...props }, ref) => (
   <DialogPortal>
     <DialogOverlay />
     <DialogPrimitive.Content
@@ -48,7 +56,10 @@ const DialogContent = React.forwardRef<
       className={cn(
         wide
           ? "fixed inset-4 z-50 grid w-auto gap-4 border bg-background p-4 md:p-6 shadow-lg duration-200 overflow-y-auto data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-lg"
-          : "fixed left-[50%] top-[50%] z-50 grid w-full translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-4 md:p-6 shadow-lg duration-200 overflow-y-auto data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg max-w-[var(--dialog-max-w,42rem)] max-h-[var(--dialog-max-h,90vh)]",
+          : cn(
+              "fixed left-[50%] top-[50%] z-50 grid w-[calc(100vw-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-4 shadow-lg duration-200 overflow-y-auto data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] rounded-2xl sm:w-full md:p-6 max-h-[var(--dialog-max-h,min(90vh,calc(100dvh-2rem)))]",
+              dialogSizeClasses[size]
+            ),
         className
       )}
       {...props}

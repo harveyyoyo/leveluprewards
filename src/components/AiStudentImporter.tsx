@@ -112,7 +112,7 @@ export function AiStudentImporter({ classes, onSaveAll }: AiStudentImporterProps
                     <Wand2 className="w-4 h-4" /> Import w/ AI
                 </Button>
             </DialogTrigger>
-            <DialogContent className={cn("sm:max-w-[800px] h-[85vh] flex flex-col p-0 overflow-hidden", isGraphic ? 'bg-card/95 backdrop-blur-2xl border-primary/20' : 'bg-white')}>
+            <DialogContent size="xl" className={cn("h-[85vh] flex flex-col p-0 overflow-hidden", isGraphic ? 'bg-card/95 backdrop-blur-2xl border-primary/20' : 'bg-white')}>
                 <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
                     <DialogTitle className="text-2xl font-black flex items-center gap-2">
                         <Wand2 className="w-6 h-6 text-primary" /> AI Student Importer

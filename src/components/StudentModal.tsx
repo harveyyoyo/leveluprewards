@@ -266,7 +266,7 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
   return (
     <>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="max-h-[min(90vh,880px)] overflow-y-auto sm:max-w-md">
+      <DialogContent size="sm">
         <DialogHeader>
           <DialogTitle>{isEditing ? `Edit ${getStudentNickname(student!)} ${student!.lastName}` : 'New Student'}</DialogTitle>
         </DialogHeader>

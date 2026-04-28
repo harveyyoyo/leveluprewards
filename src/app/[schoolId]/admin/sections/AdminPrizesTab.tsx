@@ -499,7 +499,7 @@ export function AdminPrizesTab({
         </ul>
       </CardContent>
       <Dialog open={helpOpen} onOpenChange={setHelpOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>How prizes work</DialogTitle>
             <DialogDescription>Quick overview of prize settings.</DialogDescription>
@@ -522,7 +522,7 @@ export function AdminPrizesTab({
         </DialogContent>
       </Dialog>
       <Dialog open={wizardOpen} onOpenChange={(open) => { setWizardOpen(open); if (!open) resetWizard(); }}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>{wizardTitle}</DialogTitle>
             <DialogDescription>Step-by-step creation with explanations.</DialogDescription>

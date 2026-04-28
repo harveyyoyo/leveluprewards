@@ -170,7 +170,7 @@ export function SettingsModal() {
                     <Settings className="w-5 h-5 text-muted-foreground group-hover:rotate-45 transition-transform duration-300" />
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-2xl rounded-3xl p-0 overflow-hidden border border-border bg-background flex flex-col max-h-[90vh] shadow-2xl">
+      <DialogContent size="lg" className="p-0 overflow-hidden border border-border bg-background flex flex-col shadow-2xl">
                 {/* Header */}
                 <div className="px-6 pt-6 pb-4 border-b border-border/40 bg-card/30 backdrop-blur-md">
                     <DialogHeader>
@@ -741,7 +741,7 @@ export function SettingsModal() {
                 </DialogFooter>
 
                 <Dialog open={vendingSettingsOpen} onOpenChange={setVendingSettingsOpen}>
-                    <DialogContent className="sm:max-w-xl rounded-3xl">
+      <DialogContent size="lg">
                         <DialogHeader>
                             <DialogTitle>Vending Machine Settings</DialogTitle>
                         </DialogHeader>

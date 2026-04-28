@@ -93,7 +93,7 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses }: P
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent size="sm">
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Edit Prize' : 'New Prize'}</DialogTitle>
            <DialogDescription>
