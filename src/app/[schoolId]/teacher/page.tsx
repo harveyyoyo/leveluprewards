@@ -38,6 +38,12 @@ import DynamicIcon from '@/components/DynamicIcon';
 import { getStudentNickname } from '@/lib/utils';
 import { rainbowForNavId, rainbowTripletForNavId } from '@/lib/rainbowNav';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
+import {
+    remainingTeacherBudgetPoints,
+    teacherWithBudgetAfterSpend,
+    teacherBudgetRemainingPhrase,
+    resolveTeacherBudgetPeriod,
+} from '@/lib/teacherBudget';
 import { Helper } from '@/components/ui/helper';
 import { AttendanceSetupWizard } from '@/components/attendance/AttendanceSetupWizard';
 import { getReadableErrorMessage } from '@/lib/errorMessage';
@@ -1297,15 +1303,15 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
         }
 
         const totalCost = value * COUPONS_PER_SHEET;
-        if (settings.enableTeacherBudgets && currentTeacher?.monthlyBudget !== undefined) {
-            const spent = currentTeacher.spentThisMonth || 0;
-            const remaining = currentTeacher.monthlyBudget - spent;
-            if (totalCost > remaining) {
+        if (settings.enableTeacherBudgets && currentTeacher && currentTeacher.monthlyBudget !== undefined) {
+            const remaining = remainingTeacherBudgetPoints(currentTeacher);
+            if (remaining !== null && totalCost > remaining) {
+                const phrase = teacherBudgetRemainingPhrase(resolveTeacherBudgetPeriod(currentTeacher));
                 playSound('error');
                 toast({
                     variant: 'destructive',
                     title: 'Budget Exceeded',
-                    description: `Generating these coupons requires ${totalCost} pts, but you only have ${remaining} pts remaining this month.`,
+                    description: `Generating these coupons requires ${totalCost} pts, but you only have ${remaining.toLocaleString()} pts remaining ${phrase}.`,
                 });
                 return;
             }
@@ -1339,7 +1345,11 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
         });
         await addCoupons(couponsToCreate);
         if (settings.enableTeacherBudgets && currentTeacher) {
-            await updateTeacher({ ...currentTeacher, spentThisMonth: (currentTeacher.spentThisMonth || 0) + totalCost });
+            const next =
+                currentTeacher.monthlyBudget !== undefined
+                    ? teacherWithBudgetAfterSpend(currentTeacher, totalCost)
+                    : { ...currentTeacher, spentThisMonth: (currentTeacher.spentThisMonth || 0) + totalCost };
+            await updateTeacher(next);
         }
         setCouponsToPrint(couponsToCreate);
     };
@@ -1364,15 +1374,15 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
         }
 
         const totalCost = points * selectedStudentIds.length;
-        if (settings.enableTeacherBudgets && currentTeacher?.monthlyBudget !== undefined) {
-            const spent = currentTeacher.spentThisMonth || 0;
-            const remaining = currentTeacher.monthlyBudget - spent;
-            if (totalCost > remaining) {
+        if (settings.enableTeacherBudgets && currentTeacher && currentTeacher.monthlyBudget !== undefined) {
+            const remainingPts = remainingTeacherBudgetPoints(currentTeacher);
+            if (remainingPts !== null && totalCost > remainingPts) {
+                const phrase = teacherBudgetRemainingPhrase(resolveTeacherBudgetPeriod(currentTeacher));
                 playSound('error');
                 toast({
                     variant: 'destructive',
                     title: 'Budget Exceeded',
-                    description: `Awarding requires ${totalCost} pts, but you only have ${remaining} pts remaining this month.`,
+                    description: `Awarding requires ${totalCost} pts, but you only have ${remainingPts.toLocaleString()} pts remaining ${phrase}.`,
                 });
                 return;
             }
@@ -1382,7 +1392,11 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
 
         if (result.success) {
             if (settings.enableTeacherBudgets && currentTeacher) {
-                await updateTeacher({ ...currentTeacher, spentThisMonth: (currentTeacher.spentThisMonth || 0) + totalCost });
+                const next =
+                    currentTeacher.monthlyBudget !== undefined
+                        ? teacherWithBudgetAfterSpend(currentTeacher, totalCost)
+                        : { ...currentTeacher, spentThisMonth: (currentTeacher.spentThisMonth || 0) + totalCost };
+                await updateTeacher(next);
             }
             playSound('success');
             toast({ title: 'Points Awarded!', description: `Awarded ${points} points to ${result.count} student(s).` });
@@ -1524,8 +1538,9 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
                                     {settings.enableTeacherBudgets && currentTeacher?.monthlyBudget !== undefined ? (
                                         <>
                                             {' '}
-                                            · {Math.max(0, currentTeacher.monthlyBudget - (currentTeacher.spentThisMonth || 0))} pts budget
-                                            remaining
+                                            ·{' '}
+                                            {(remainingTeacherBudgetPoints(currentTeacher) ?? 0).toLocaleString()} pts remaining{' '}
+                                            {teacherBudgetRemainingPhrase(resolveTeacherBudgetPeriod(currentTeacher))}
                                         </>
                                     ) : null}
                                 </p>

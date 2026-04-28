@@ -22,7 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import type { Student, Prize, Coupon, Category, Class, Teacher, BackupInfo, Achievement, Badge, AttendanceScheduleSlot } from '@/lib/types';
+import type { Student, Prize, Coupon, Category, Class, Teacher, BackupInfo, Achievement, Badge, AttendanceScheduleSlot, TeacherBudgetPeriod } from '@/lib/types';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StudentModal } from '@/components/StudentModal';
@@ -85,12 +85,7 @@ import { SAMPLE_BADGES, getSampleCategoryBadges } from '@/lib/sample-badges';
 // code-split with `next/dynamic` so its chunk is only fetched when the admin
 // actually clicks into it — this dramatically reduces the initial admin JS.
 import { AdminStudentsTab } from './sections/AdminStudentsTab';
-
-/** Quick picks for teacher monthly point budget when Teacher Budgets is enabled. */
-const TEACHER_MONTHLY_BUDGET_PRESETS = [
-  100, 250, 500, 750, 1000, 1250, 1500, 2000, 2500, 3000, 3500, 4000, 5000, 6000, 7500, 10000,
-  12500, 15000, 20000, 25000, 50000, 75000, 100000, 150000, 200000, 250000, 500000,
-] as const;
+import { budgetWindowKeyForDate } from '@/lib/teacherBudget';
 
 const tabLoader = () => (
   <div className="animate-pulse h-64 w-full rounded-xl bg-muted/40" aria-hidden="true" />
@@ -250,6 +245,7 @@ function AdminDashboardInner() {
   const [newTeacherUsername, setNewTeacherUsername] = useState('');
   const [newTeacherPasscode, setNewTeacherPasscode] = useState('');
   const [newTeacherBudget, setNewTeacherBudget] = useState('');
+  const [newTeacherBudgetPeriod, setNewTeacherBudgetPeriod] = useState<TeacherBudgetPeriod>('month');
   const [isClassModalOpen, setIsClassModalOpen] = useState(false);
   const [isTeacherModalOpen, setIsTeacherModalOpen] = useState(false);
 
@@ -398,31 +394,70 @@ function AdminDashboardInner() {
 
     let username = newTeacherUsername;
     let passcode = newTeacherPasscode;
-    const budgetVal = newTeacherBudget ? parseInt(newTeacherBudget, 10) : undefined;
-
     if (!username) {
       username = newTeacherName.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '');
     }
     if (!passcode) {
       passcode = '1234';
     }
+    const budgetRaw = newTeacherBudget.trim();
+    const budgetVal = budgetRaw === '' ? undefined : parseInt(budgetRaw, 10);
+    if (budgetVal !== undefined && (Number.isNaN(budgetVal) || budgetVal < 0)) {
+      playSound('error');
+      toast({ variant: 'destructive', title: 'Invalid budget', description: 'Enter a non-negative whole number or leave the cap blank.' });
+      return;
+    }
+
+    const periodForSave: TeacherBudgetPeriod | undefined =
+      budgetVal !== undefined ? newTeacherBudgetPeriod : undefined;
 
     if (editingTeacher) {
-      updateTeacher({
-        ...editingTeacher,
+      if (budgetVal === undefined) {
+        updateTeacher(
+          { ...editingTeacher, name: newTeacherName, username, passcode },
+          { clearTeacherBudget: true },
+        );
+      } else {
+        const prevPeriod = editingTeacher.budgetPeriod ?? 'month';
+        const prevCap = editingTeacher.monthlyBudget;
+        const budgetChanged = prevCap !== budgetVal || prevPeriod !== (periodForSave ?? 'month');
+        const base: Teacher = {
+          ...editingTeacher,
+          name: newTeacherName,
+          username,
+          passcode,
+          monthlyBudget: budgetVal,
+          budgetPeriod: periodForSave,
+        };
+        if (budgetChanged) {
+          updateTeacher({
+            ...base,
+            spentThisMonth: 0,
+            budgetWindowKey: budgetWindowKeyForDate(periodForSave ?? 'month'),
+          });
+        } else {
+          updateTeacher(base);
+        }
+      }
+    } else if (budgetVal === undefined) {
+      addTeacher({ name: newTeacherName, username, passcode });
+    } else {
+      addTeacher({
         name: newTeacherName,
         username,
         passcode,
-        ...(budgetVal !== undefined ? { monthlyBudget: budgetVal } : { monthlyBudget: undefined }),
+        monthlyBudget: budgetVal,
+        budgetPeriod: periodForSave,
+        spentThisMonth: 0,
+        budgetWindowKey: budgetWindowKeyForDate(periodForSave ?? 'month'),
       });
-    } else {
-      addTeacher({ name: newTeacherName, username, passcode, ...(budgetVal !== undefined && { monthlyBudget: budgetVal }) });
     }
 
     setNewTeacherName('');
     setNewTeacherUsername('');
     setNewTeacherPasscode('');
     setNewTeacherBudget('');
+    setNewTeacherBudgetPeriod('month');
     setEditingTeacher(null);
     setIsTeacherModalOpen(false);
   };
@@ -696,6 +731,8 @@ function AdminDashboardInner() {
                 setNewTeacherUsername(t.username || '');
                 setNewTeacherPasscode(t.passcode || '');
                 setNewTeacherBudget(t.monthlyBudget?.toString() || '');
+                const p = t.budgetPeriod;
+                setNewTeacherBudgetPeriod(p === 'day' || p === 'week' || p === 'month' ? p : 'month');
                 setIsTeacherModalOpen(true);
               }}
               onDeleteTeacher={async (id) => {
@@ -908,6 +945,7 @@ function AdminDashboardInner() {
             setNewTeacherUsername('');
             setNewTeacherPasscode('');
             setNewTeacherBudget('');
+            setNewTeacherBudgetPeriod('month');
           }
         }}>
           <DialogContent>
@@ -934,35 +972,38 @@ function AdminDashboardInner() {
                   <Input id="new-teacher-passcode" type="password" value={newTeacherPasscode} onChange={e => setNewTeacherPasscode(e.target.value)} placeholder="Secret passcode" autoComplete="new-password" />
                 </div>
                 {settings.enableTeacherBudgets && (
-                  <div className="space-y-2">
-                    <Label htmlFor="new-teacher-budget">Monthly Budget (Points)</Label>
-                    <Input id="new-teacher-budget" type="number" value={newTeacherBudget} onChange={e => setNewTeacherBudget(e.target.value)} placeholder="Leave blank for unlimited" />
-                    <div className="flex flex-wrap gap-1.5">
-                      <Button
-                        type="button"
-                        variant={newTeacherBudget.trim() === '' ? 'secondary' : 'outline'}
-                        size="sm"
-                        className="h-7 rounded-md px-2 text-[11px] font-semibold"
-                        onClick={() => setNewTeacherBudget('')}
-                      >
-                        Unlimited
-                      </Button>
-                      {TEACHER_MONTHLY_BUDGET_PRESETS.map((n) => (
-                        <Button
-                          key={n}
-                          type="button"
-                          variant={newTeacherBudget.trim() === String(n) ? 'default' : 'outline'}
-                          size="sm"
-                          className="h-7 rounded-md px-2 text-[11px] font-semibold tabular-nums"
-                          onClick={() => setNewTeacherBudget(String(n))}
-                        >
-                          {n.toLocaleString()}
-                        </Button>
-                      ))}
+                  <div className="space-y-3">
+                    <div className="space-y-1">
+                      <Label htmlFor="new-teacher-budget">Budget cap (points)</Label>
+                      <Input
+                        id="new-teacher-budget"
+                        type="number"
+                        min={0}
+                        value={newTeacherBudget}
+                        onChange={(e) => setNewTeacherBudget(e.target.value)}
+                        placeholder="Leave blank for unlimited"
+                      />
                     </div>
-                    <p className="text-[10px] text-muted-foreground leading-snug">
-                      Tap a preset or type any amount. Leave the field empty for no monthly cap.
-                    </p>
+                    <div className="space-y-1">
+                      <Label htmlFor="new-teacher-budget-period">Budget resets</Label>
+                      <Select
+                        value={newTeacherBudgetPeriod}
+                        onValueChange={(v) => setNewTeacherBudgetPeriod(v as TeacherBudgetPeriod)}
+                        disabled={!newTeacherBudget.trim()}
+                      >
+                        <SelectTrigger id="new-teacher-budget-period">
+                          <SelectValue placeholder="How often the cap resets" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="day">Each day</SelectItem>
+                          <SelectItem value="week">Each week (Mon-Sun)</SelectItem>
+                          <SelectItem value="month">Each calendar month</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-[10px] text-muted-foreground leading-snug">
+                        Uses this browser&apos;s local date. Changing the cap or period resets spend tracking for that teacher.
+                      </p>
+                    </div>
                   </div>
                 )}
               </div>
@@ -974,6 +1015,7 @@ function AdminDashboardInner() {
                   setNewTeacherUsername('');
                   setNewTeacherPasscode('');
                   setNewTeacherBudget('');
+                  setNewTeacherBudgetPeriod('month');
                 }}>Cancel</Button>
                 <Button type="submit">{editingTeacher ? 'Save Changes' : 'Add Teacher'}</Button>
               </DialogFooter>

@@ -106,7 +106,10 @@ service cloud.firestore {
         allow update: if isAdmin(schoolId)
           || (
             isTeacherSelf(schoolId, teacherId)
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['spentThisMonth'])
+            && (
+              request.resource.data.diff(resource.data).affectedKeys().hasOnly(['spentThisMonth'])
+              || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['spentThisMonth', 'budgetWindowKey'])
+            )
           );
       }
 

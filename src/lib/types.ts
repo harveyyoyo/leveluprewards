@@ -14,12 +14,20 @@ export interface Class {
   primaryTeacherId?: string;
 }
 
+/** How often a teacher’s point budget resets (local date on this device). */
+export type TeacherBudgetPeriod = 'day' | 'week' | 'month';
+
 export interface Teacher {
   id: string;
   name: string;
   username?: string;
   passcode?: string;
+  /** Max points this teacher may issue per `budgetPeriod` window (still named for Firestore compatibility). */
   monthlyBudget?: number;
+  /** Defaults to `month` when `monthlyBudget` is set. */
+  budgetPeriod?: TeacherBudgetPeriod;
+  /** Identifies the active budget window (format depends on `budgetPeriod`). */
+  budgetWindowKey?: string;
   spentThisMonth?: number;
 }
 
@@ -75,7 +83,7 @@ export interface Student {
   lastName: string;
   nickname?: string;
   photoUrl?: string;
-  /** Student-uploaded sticker image (PNG/JPEG/WebP/GIF) shown with their name on kiosk and ID card. */
+  /** Optional image URL for a sticker shown by the student's name (set in admin, Students). */
   customEmojiUrl?: string;
   /** When the student record was created (ms since epoch). */
   createdAt?: number;
