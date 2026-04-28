@@ -1,24 +1,39 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Cable, CheckCircle2, Cog, Loader2, Plug, PlugZap, TriangleAlert, XCircle } from 'lucide-react';
+import { Cable, CheckCircle2, Cog, Loader2, Plug, PlugZap, RotateCw, TriangleAlert, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
+import type { VendingMotorConfig } from '@/lib/types';
 import {
   disconnect as motorDisconnect,
   getBaudRate,
+  getDisableSteppersAfterMove,
+  getMotorDriverModule,
+  getStepperMotorFrame,
+  getTestMoveConfig,
   isSupported as motorIsSupported,
   requestAndConnect,
+  runSavedTestMove,
   sendRawGcode,
   setBaudRate,
+  setDisableSteppersAfterMove,
+  setMotorDriverModule,
+  setStepperMotorFrame,
+  setTestMoveConfig,
   SUPPORTED_BAUDS,
   tryAutoReconnect,
   useMotorStatus,
+  VENDING_MOTOR_DRIVER_LABELS,
+  VENDING_STEPPER_FRAME_LABELS,
   type SupportedBaud,
+  type VendingMotorDriverModule,
+  type VendingStepperMotorFrame,
 } from '@/lib/vendingMotor';
 
 /**
@@ -34,12 +49,31 @@ export function VendingMotorPanel({ className }: { className?: string }) {
   const [baud, setBaud] = useState<SupportedBaud>(() => getBaudRate());
   const [manualGcode, setManualGcode] = useState('G91\nG1 E10 F500\nM400');
   const [isSendingManual, setIsSendingManual] = useState(false);
+  const [driverModule, setDriverModuleState] = useState<VendingMotorDriverModule>('a4988');
+  const [stepperFrame, setStepperFrameState] = useState<VendingStepperMotorFrame>('nema17');
+  const [disableAfterMove, setDisableAfterMoveState] = useState(true);
+  const [testAxis, setTestAxis] = useState<VendingMotorConfig['axis']>('E');
+  const [testDistance, setTestDistance] = useState(String(360));
+  const [testFeed, setTestFeed] = useState(String(500));
+  const [isSendingTest, setIsSendingTest] = useState(false);
+  const [prefsReady, setPrefsReady] = useState(false);
 
   useEffect(() => {
     // Silently restore a previously-authorized port on mount. This does not
     // show the permission prompt — it only succeeds when the user already
     // granted access to this origin earlier.
     void tryAutoReconnect();
+  }, []);
+
+  useEffect(() => {
+    setDriverModuleState(getMotorDriverModule());
+    setStepperFrameState(getStepperMotorFrame());
+    setDisableAfterMoveState(getDisableSteppersAfterMove());
+    const t = getTestMoveConfig();
+    setTestAxis(t.axis);
+    setTestDistance(String(t.distance));
+    setTestFeed(String(t.feedRate));
+    setPrefsReady(true);
   }, []);
 
   const handleConnect = async () => {
@@ -91,6 +125,69 @@ export function VendingMotorPanel({ className }: { className?: string }) {
         title: 'Baud rate updated',
         description: 'Disconnect and reconnect for the new rate to take effect.',
       });
+    }
+  };
+
+  const persistTestMoveFromFields = () => {
+    const dist = parseFloat(testDistance);
+    const feed = parseFloat(testFeed);
+    setTestMoveConfig({
+      axis: testAxis,
+      distance: Number.isFinite(dist) ? dist : 360,
+      feedRate: Number.isFinite(feed) && feed > 0 ? feed : 500,
+    });
+  };
+
+  const handleDriverChange = (value: string) => {
+    const v = value as VendingMotorDriverModule;
+    setDriverModuleState(v);
+    setMotorDriverModule(v);
+  };
+
+  const handleFrameChange = (value: string) => {
+    const v = value as VendingStepperMotorFrame;
+    setStepperFrameState(v);
+    setStepperMotorFrame(v);
+  };
+
+  const handleDisableIdleChange = (checked: boolean) => {
+    setDisableAfterMoveState(checked);
+    setDisableSteppersAfterMove(checked);
+  };
+
+  const applyTestPreset = (axis: VendingMotorConfig['axis'], distance: number, feed: number) => {
+    setTestAxis(axis);
+    setTestDistance(String(distance));
+    setTestFeed(String(feed));
+    setTestMoveConfig({ axis, distance, feedRate: feed });
+  };
+
+  const handleTestMove = async () => {
+    if (isSendingTest) return;
+    if (status.kind !== 'connected') {
+      toast({ variant: 'destructive', title: 'Not connected', description: 'Connect to a serial device first.' });
+      return;
+    }
+    setIsSendingTest(true);
+    try {
+      const dist = parseFloat(testDistance);
+      const feed = parseFloat(testFeed);
+      const distance = Number.isFinite(dist) ? dist : 360;
+      const feedRate = Number.isFinite(feed) && feed > 0 ? feed : 500;
+      setTestMoveConfig({ axis: testAxis, distance, feedRate });
+      await runSavedTestMove();
+      toast({
+        title: 'Test move sent',
+        description: `Axis ${testAxis}, distance ${distance}, F${feedRate}.`,
+      });
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: 'Test move failed',
+        description: (err as Error)?.message ?? 'Unknown serial error.',
+      });
+    } finally {
+      setIsSendingTest(false);
     }
   };
 
@@ -178,6 +275,143 @@ export function VendingMotorPanel({ className }: { className?: string }) {
           Marlin's default is <span className="font-mono">250000</span>. If your firmware uses a different rate, pick it before
           connecting. After changing, disconnect and reconnect for it to apply.
         </p>
+
+        <div className="space-y-3 pt-2 border-t">
+          <div>
+            <p className="text-xs font-medium text-foreground">Stepper motor & driver</p>
+            <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
+              Stored in this browser only. Tune steps/mm and current in Marlin — these labels are for your notes and presets
+              below.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="motor-frame" className="text-xs">
+                Motor frame
+              </Label>
+              <Select value={stepperFrame} onValueChange={handleFrameChange} disabled={!prefsReady}>
+                <SelectTrigger id="motor-frame" className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(Object.keys(VENDING_STEPPER_FRAME_LABELS) as VendingStepperMotorFrame[]).map((key) => (
+                    <SelectItem key={key} value={key}>
+                      {VENDING_STEPPER_FRAME_LABELS[key]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="motor-driver" className="text-xs">
+                Driver on RAMPS
+              </Label>
+              <Select value={driverModule} onValueChange={handleDriverChange} disabled={!prefsReady}>
+                <SelectTrigger id="motor-driver" className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(Object.keys(VENDING_MOTOR_DRIVER_LABELS) as VendingMotorDriverModule[]).map((key) => (
+                    <SelectItem key={key} value={key}>
+                      {VENDING_MOTOR_DRIVER_LABELS[key]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2 rounded-md border bg-muted/30 p-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-0.5 pr-2">
+              <Label htmlFor="motor-disable-idle" className="text-xs cursor-pointer">
+                Turn off motors when idle
+              </Label>
+              <p className="text-[11px] text-muted-foreground leading-snug">
+                After each prize or test move, send Marlin <span className="font-mono">M84</span> so steppers release (less heat
+                and buzz). Manual G-code below is unchanged.
+              </p>
+            </div>
+            <Switch
+              id="motor-disable-idle"
+              checked={disableAfterMove}
+              onCheckedChange={handleDisableIdleChange}
+              disabled={!prefsReady}
+              className="shrink-0 self-start sm:self-center"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-xs">Test one move (calibration)</Label>
+            <p className="text-[11px] text-muted-foreground leading-snug">
+              Uses the same path as a redemption. Set distance to match one full spiral in your firmware units (often{' '}
+              <span className="font-mono">E360</span>).
+            </p>
+            <div className="flex flex-wrap items-end gap-2">
+              <div className="space-y-1 w-[4.5rem]">
+                <Label className="text-[10px] text-muted-foreground">Axis</Label>
+                <Select
+                  value={testAxis}
+                  onValueChange={(v) => setTestAxis(v as VendingMotorConfig['axis'])}
+                  disabled={status.kind !== 'connected'}
+                >
+                  <SelectTrigger className="h-9 font-mono">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(['X', 'Y', 'Z', 'E'] as const).map((a) => (
+                      <SelectItem key={a} value={a}>
+                        {a}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1 flex-1 min-w-[5rem]">
+                <Label className="text-[10px] text-muted-foreground">Distance</Label>
+                <Input
+                  className="h-9 font-mono text-xs"
+                  inputMode="decimal"
+                  value={testDistance}
+                  onChange={(e) => setTestDistance(e.target.value)}
+                  onBlur={persistTestMoveFromFields}
+                  disabled={status.kind !== 'connected'}
+                />
+              </div>
+              <div className="space-y-1 flex-1 min-w-[5rem]">
+                <Label className="text-[10px] text-muted-foreground">Feed F</Label>
+                <Input
+                  className="h-9 font-mono text-xs"
+                  inputMode="numeric"
+                  value={testFeed}
+                  onChange={(e) => setTestFeed(e.target.value)}
+                  onBlur={persistTestMoveFromFields}
+                  disabled={status.kind !== 'connected'}
+                />
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                className="h-9"
+                onClick={handleTestMove}
+                disabled={isSendingTest || status.kind !== 'connected'}
+              >
+                {isSendingTest ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCw className="h-4 w-4" />}
+                <span className="ml-2">Run test</span>
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              <Button type="button" size="sm" variant="outline" className="h-8 text-xs" onClick={() => applyTestPreset('E', 360, 500)} disabled={status.kind !== 'connected'}>
+                Preset: E 360
+              </Button>
+              <Button type="button" size="sm" variant="outline" className="h-8 text-xs" onClick={() => applyTestPreset('E', 90, 500)} disabled={status.kind !== 'connected'}>
+                E 90
+              </Button>
+              <Button type="button" size="sm" variant="outline" className="h-8 text-xs" onClick={() => applyTestPreset('E', 10, 500)} disabled={status.kind !== 'connected'}>
+                E 10 jog
+              </Button>
+            </div>
+          </div>
+        </div>
 
         <div className="space-y-2 pt-2 border-t">
           <Label htmlFor="motor-manual" className="text-xs">Manual G-code</Label>

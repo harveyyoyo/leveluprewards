@@ -113,7 +113,8 @@ export interface Coupon {
  * Intended to drive a RAMPS 1.4 / Arduino Mega board running Marlin-style
  * firmware over USB serial (Web Serial API). When a prize is redeemed the
  * kiosk browser sends a short G-code sequence to the currently-connected
- * board to push the item out.
+ * board to push the item out. When the kiosk option is enabled, Marlin
+ * `M84` is also sent after each move to disable steppers while idle.
  */
 /** After redemption, the kiosk may show one AI-generated surprise (school-appropriate). */
 export type PrizeAiFunReward = 'random' | 'joke' | 'riddle' | 'fortune';

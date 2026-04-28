@@ -77,6 +77,152 @@ export function setBaudRate(baud: SupportedBaud): void {
 }
 
 // ---------------------------------------------------------------------------
+// Kiosk-local rig profile (driver / motor labels + test move + idle shutdown)
+// ---------------------------------------------------------------------------
+
+export type VendingMotorDriverModule = 'a4988' | 'drv8825' | 'tmc2208' | 'tmc5160' | 'other';
+export type VendingStepperMotorFrame = 'nema17' | 'nema23' | 'other';
+
+const DRIVER_KEY = 'vending_motor_driver_module';
+const FRAME_KEY = 'vending_motor_stepper_frame';
+const DISABLE_AFTER_KEY = 'vending_motor_disable_after_move';
+const TEST_AXIS_KEY = 'vending_motor_test_axis';
+const TEST_DIST_KEY = 'vending_motor_test_distance';
+const TEST_FEED_KEY = 'vending_motor_test_feed';
+
+export const VENDING_MOTOR_DRIVER_LABELS: Record<VendingMotorDriverModule, string> = {
+  a4988: 'A4988',
+  drv8825: 'DRV8825',
+  tmc2208: 'TMC2208',
+  tmc5160: 'TMC5160',
+  other: 'Other / unknown',
+};
+
+export const VENDING_STEPPER_FRAME_LABELS: Record<VendingStepperMotorFrame, string> = {
+  nema17: 'NEMA 17',
+  nema23: 'NEMA 23',
+  other: 'Other',
+};
+
+const DRIVER_MODULES: VendingMotorDriverModule[] = ['a4988', 'drv8825', 'tmc2208', 'tmc5160', 'other'];
+const FRAMES: VendingStepperMotorFrame[] = ['nema17', 'nema23', 'other'];
+
+export function getMotorDriverModule(): VendingMotorDriverModule {
+  if (typeof window === 'undefined') return 'a4988';
+  try {
+    const raw = window.localStorage.getItem(DRIVER_KEY);
+    if (raw && DRIVER_MODULES.includes(raw as VendingMotorDriverModule)) return raw as VendingMotorDriverModule;
+  } catch {
+    /* ignore */
+  }
+  return 'a4988';
+}
+
+export function setMotorDriverModule(module: VendingMotorDriverModule): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(DRIVER_KEY, module);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function getStepperMotorFrame(): VendingStepperMotorFrame {
+  if (typeof window === 'undefined') return 'nema17';
+  try {
+    const raw = window.localStorage.getItem(FRAME_KEY);
+    if (raw && FRAMES.includes(raw as VendingStepperMotorFrame)) return raw as VendingStepperMotorFrame;
+  } catch {
+    /* ignore */
+  }
+  return 'nema17';
+}
+
+export function setStepperMotorFrame(frame: VendingStepperMotorFrame): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(FRAME_KEY, frame);
+  } catch {
+    /* ignore */
+  }
+}
+
+/** When true (default), append Marlin `M84` after each generated dispense so drivers release current when idle. */
+export function getDisableSteppersAfterMove(): boolean {
+  if (typeof window === 'undefined') return true;
+  try {
+    const raw = window.localStorage.getItem(DISABLE_AFTER_KEY);
+    if (raw === '0') return false;
+    if (raw === '1') return true;
+  } catch {
+    /* ignore */
+  }
+  return true;
+}
+
+export function setDisableSteppersAfterMove(enabled: boolean): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(DISABLE_AFTER_KEY, enabled ? '1' : '0');
+  } catch {
+    /* ignore */
+  }
+}
+
+export type VendingTestMoveConfig = {
+  axis: VendingMotorConfig['axis'];
+  distance: number;
+  feedRate: number;
+};
+
+const DEFAULT_TEST_MOVE: VendingTestMoveConfig = { axis: 'E', distance: 360, feedRate: 500 };
+
+export function getTestMoveConfig(): VendingTestMoveConfig {
+  if (typeof window === 'undefined') return { ...DEFAULT_TEST_MOVE };
+  try {
+    const axisRaw = window.localStorage.getItem(TEST_AXIS_KEY);
+    const axis =
+      axisRaw === 'X' || axisRaw === 'Y' || axisRaw === 'Z' || axisRaw === 'E' ? axisRaw : DEFAULT_TEST_MOVE.axis;
+    const distRaw = window.localStorage.getItem(TEST_DIST_KEY);
+    const distance = distRaw != null ? parseFloat(distRaw) : DEFAULT_TEST_MOVE.distance;
+    const feedRaw = window.localStorage.getItem(TEST_FEED_KEY);
+    const feedRate = feedRaw != null ? parseFloat(feedRaw) : DEFAULT_TEST_MOVE.feedRate;
+    return {
+      axis,
+      distance: Number.isFinite(distance) ? distance : DEFAULT_TEST_MOVE.distance,
+      feedRate: Number.isFinite(feedRate) && feedRate > 0 ? feedRate : DEFAULT_TEST_MOVE.feedRate,
+    };
+  } catch {
+    return { ...DEFAULT_TEST_MOVE };
+  }
+}
+
+export function setTestMoveConfig(patch: Partial<VendingTestMoveConfig>): void {
+  if (typeof window === 'undefined') return;
+  const cur = getTestMoveConfig();
+  const next = { ...cur, ...patch };
+  try {
+    window.localStorage.setItem(TEST_AXIS_KEY, next.axis);
+    window.localStorage.setItem(TEST_DIST_KEY, String(next.distance));
+    window.localStorage.setItem(TEST_FEED_KEY, String(next.feedRate));
+  } catch {
+    /* ignore */
+  }
+}
+
+/** One calibration move using saved axis / distance / feed (same G-code path as redemption). */
+export async function runSavedTestMove(): Promise<void> {
+  const { axis, distance, feedRate } = getTestMoveConfig();
+  await testMotor({
+    enabled: true,
+    axis,
+    distance,
+    feedRate,
+    returnToStart: false,
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Connection state (module-level singleton, subscribable for React).
 // ---------------------------------------------------------------------------
 
@@ -266,10 +412,15 @@ export async function disconnect(): Promise<void> {
  */
 export function buildGcode(config: VendingMotorConfig): string[] {
   if (config.customGcode && config.customGcode.trim()) {
-    return config.customGcode
+    const lines = config.customGcode
       .split(/\r?\n/)
       .map((line) => line.trim())
       .filter((line) => line.length > 0 && !line.startsWith(';'));
+    lines.push('M400');
+    if (getDisableSteppersAfterMove()) {
+      lines.push('M84');
+    }
+    return lines;
   }
 
   const axis = config.axis;
@@ -289,6 +440,10 @@ export function buildGcode(config: VendingMotorConfig): string[] {
   // Wait for all queued moves to finish before we return — lets the UI show
   // a meaningful "done" state and stops the next redeem from queueing behind.
   lines.push('M400');
+  // Release holding torque when the kiosk is done (Marlin). Skipped for manual raw G-code panel.
+  if (getDisableSteppersAfterMove()) {
+    lines.push('M84');
+  }
   return lines;
 }
 
