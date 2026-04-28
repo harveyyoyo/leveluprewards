@@ -98,6 +98,7 @@ export function StudentIdCard({
   const { settings } = useSettings();
   const theme = student.theme;
   const themeEmoji = theme?.emoji;
+  const customEmojiUrl = student.customEmojiUrl;
   const themeFontFamily = theme?.fontFamily;
   const themeTracking = typeof theme?.fontTracking === 'number' ? theme.fontTracking : undefined;
   const themeFontStyle = theme?.fontStyle;
@@ -189,9 +190,14 @@ export function StudentIdCard({
           </div>
         </div>
 
-        {themeEmoji && (
+        {(customEmojiUrl || themeEmoji) && (
           <div className="print-id-theme-emoji-center" aria-hidden style={emojiGlowFilter ? { filter: emojiGlowFilter } : undefined}>
-            {themeEmoji}
+            {customEmojiUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={customEmojiUrl} alt="" className="print-id-custom-emoji-img" />
+            ) : (
+              themeEmoji
+            )}
           </div>
         )}
       </div>

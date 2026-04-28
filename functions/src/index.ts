@@ -833,6 +833,14 @@ const LOGO_MAX_BYTES = 5 * 1024 * 1024; // 5MB
 const LOGO_ALLOWED_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
 const STUDENT_PHOTO_MAX_BYTES = 5 * 1024 * 1024; // 5MB
 const STUDENT_PHOTO_ALLOWED_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+const STUDENT_CUSTOM_EMOJI_MAX_BYTES = 2 * 1024 * 1024; // 2MB
+const STUDENT_CUSTOM_EMOJI_ALLOWED_TYPES = [
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "image/webp",
+  "image/gif",
+];
 
 exports.uploadSchoolLogo = functions.https.onCall(
   async (data: any, context: functions.https.CallableContext) => {
@@ -1129,6 +1137,90 @@ exports.uploadStudentPhoto = functions.https.onCall(
       throw new functions.https.HttpsError(
         "internal",
         "Unexpected error while uploading student photo.",
+        { originalMessage: String(e?.message || e) }
+      );
+    }
+  }
+);
+
+/** Callable: student kiosk uploads a personal sticker/emoji image (requires school entry like coupon redeem). */
+exports.uploadStudentCustomEmoji = functions.https.onCall(
+  async (data: any, context: functions.https.CallableContext) => {
+    try {
+      requireAuth(context);
+      requireString(data.schoolId, "schoolId");
+      requireString(data.studentId, "studentId");
+      const schoolId = String(data.schoolId).trim().toLowerCase();
+      const studentId = String(data.studentId).trim();
+      const clear = data.clear === true;
+
+      const db = admin.firestore();
+      const memberRef = db.collection("schools").doc(schoolId).collection("kioskMembers").doc(context.auth!.uid);
+      const memberSnap = await memberRef.get();
+      if (!memberSnap.exists) {
+        throw new functions.https.HttpsError("permission-denied", "School entry required.");
+      }
+
+      const studentRef = db.collection("schools").doc(schoolId).collection("students").doc(studentId);
+      const studentSnap = await studentRef.get();
+      if (!studentSnap.exists) {
+        throw new functions.https.HttpsError("not-found", "Student not found.");
+      }
+
+      if (clear) {
+        await studentRef.update({ customEmojiUrl: admin.firestore.FieldValue.delete() });
+        return { customEmojiUrl: null as string | null };
+      }
+
+      if (typeof data.imageBase64 !== "string" || data.imageBase64.length === 0) {
+        throw new functions.https.HttpsError("invalid-argument", "imageBase64 is required.");
+      }
+      const contentType =
+        typeof data.contentType === "string" ? data.contentType.trim().toLowerCase() : "";
+      if (!STUDENT_CUSTOM_EMOJI_ALLOWED_TYPES.includes(contentType)) {
+        throw new functions.https.HttpsError(
+          "invalid-argument",
+          "contentType must be image/png, image/jpeg, image/webp, or image/gif."
+        );
+      }
+
+      let buffer: Buffer;
+      try {
+        buffer = Buffer.from(data.imageBase64, "base64");
+      } catch {
+        throw new functions.https.HttpsError("invalid-argument", "Invalid base64 image data.");
+      }
+      if (buffer.length > STUDENT_CUSTOM_EMOJI_MAX_BYTES) {
+        throw new functions.https.HttpsError("invalid-argument", "Image must be under 2MB.");
+      }
+
+      const bucket = admin.storage().bucket();
+      const path = `student-custom-emojis/${schoolId}/${studentId}`;
+      const file = bucket.file(path);
+
+      const downloadToken = crypto.randomUUID();
+      await file.save(buffer, {
+        metadata: {
+          contentType,
+          metadata: {
+            firebaseStorageDownloadTokens: downloadToken,
+          },
+        },
+        validation: false,
+      });
+
+      const encodedPath = encodeURIComponent(path);
+      const customEmojiUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodedPath}?alt=media&token=${downloadToken}`;
+
+      await studentRef.update({ customEmojiUrl });
+
+      return { customEmojiUrl };
+    } catch (e: any) {
+      if (e instanceof functions.https.HttpsError) throw e;
+      console.error("uploadStudentCustomEmoji: unexpected error", e);
+      throw new functions.https.HttpsError(
+        "internal",
+        "Unexpected error while uploading student emoji.",
         { originalMessage: String(e?.message || e) }
       );
     }

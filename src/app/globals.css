@@ -355,6 +355,13 @@
   opacity: 0.85;
 }
 
+.print-id-theme-emoji-center .print-id-custom-emoji-img {
+  width: 1em;
+  height: 1em;
+  object-fit: contain;
+  display: block;
+}
+
 .print-id-avatar {
   width: 54px;
   height: 54px;
@@ -1001,6 +1008,13 @@
     flex-shrink: 0;
     margin-left: auto;
     opacity: 0.85;
+  }
+
+  .print-id-theme-emoji-center .print-id-custom-emoji-img {
+    width: 1em;
+    height: 1em;
+    object-fit: contain;
+    display: block;
   }
 
   .print-id-avatar {

@@ -116,8 +116,9 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
       triggerShake();
       toast({
         variant: 'destructive',
-        title: 'Login Failed',
-        description: 'Incorrect developer passcode.',
+        title: 'Developer login failed',
+        description:
+          'Wrong passcode, no Firebase user session yet, or Cloud Functions could not add your UID to developerUids (check DEV_PASSCODE matches on Functions).',
       });
       setSchoolPasscode('');
     }

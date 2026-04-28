@@ -291,16 +291,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     });
                     const data = await res.json();
                     if (data.success) {
+                        // Listing `schools` in Firestore requires `isDeveloper()` (UID in appConfig/global.developerUids).
+                        // addDeveloperMe merges the current Firebase user's UID into that allow-list (needs DEV_PASSCODE on Functions).
+                        let uid = auth.currentUser?.uid ?? null;
+                        if (!uid) {
+                            for (let i = 0; i < 40; i++) {
+                                await new Promise((r) => setTimeout(r, 250));
+                                uid = auth.currentUser?.uid ?? null;
+                                if (uid) break;
+                            }
+                        }
+                        if (!uid) {
+                            console.error('Developer login: no Firebase signed-in user (anonymous auth should run first).');
+                            return false;
+                        }
                         try {
                             const addDeveloperMe = httpsCallable(functions, 'addDeveloperMe');
                             await addDeveloperMe({ passcode: credentials.passcode });
                         } catch (e) {
-                            console.warn('addDeveloperMe failed (may affect saving attendance):', e);
+                            console.error('addDeveloperMe failed:', e);
+                            return false;
                         }
                         setLoginState('developer');
                         setIsAdmin(true);
                         setUserName('Developer');
-                        setUserId('developer');
+                        setUserId(uid);
                         localStorage.setItem('loginState', 'developer');
                         localStorage.setItem('userName', 'Developer');
                         return true;

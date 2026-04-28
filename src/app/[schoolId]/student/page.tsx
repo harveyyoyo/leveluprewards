@@ -87,6 +87,7 @@ import { FaceMismatchBanner } from '@/components/FaceMismatchBanner';
 import { rainbowTripletForNavId, complementTripletForNavId } from '@/lib/rainbowNav';
 import { STUDENT_KIOSK_REQUEST_EXIT_EVENT } from '@/lib/student-kiosk';
 import { prizeIsListed, studentSeesPrizeByTeachers } from '@/lib/prize-utils';
+import { StudentCustomEmojiControls } from '@/components/StudentCustomEmojiControls';
 
 function StudentActivityList({ schoolId, studentId, themed = false }: { schoolId: string; studentId: string; themed?: boolean }) {
   const firestore = useFirestore();
@@ -634,13 +635,23 @@ function StudentDashboardInner({
                     <h2 className="text-xl md:text-2xl font-black leading-tight">
                       {student.firstName} {student.lastName}
                     </h2>
-                    {activeTheme?.emoji && (
-                      <span
-                        className="theme-animated-emoji text-3xl md:text-4xl leading-none"
-                        style={{ filter: activeTheme?.primary ? `drop-shadow(0 0 8px ${activeTheme.primary}) drop-shadow(0 0 16px ${activeTheme.primary})` : undefined }}
-                      >
-                        {activeTheme.emoji}
-                      </span>
+                    {(student.customEmojiUrl || activeTheme?.emoji) && (
+                      student.customEmojiUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={student.customEmojiUrl}
+                          alt=""
+                          className="theme-animated-emoji h-9 w-9 md:h-11 md:w-11 shrink-0 object-contain"
+                          style={{ filter: activeTheme?.primary ? `drop-shadow(0 0 8px ${activeTheme.primary}) drop-shadow(0 0 16px ${activeTheme.primary})` : undefined }}
+                        />
+                      ) : (
+                        <span
+                          className="theme-animated-emoji text-3xl md:text-4xl leading-none"
+                          style={{ filter: activeTheme?.primary ? `drop-shadow(0 0 8px ${activeTheme.primary}) drop-shadow(0 0 16px ${activeTheme.primary})` : undefined }}
+                        >
+                          {activeTheme?.emoji ?? ''}
+                        </span>
+                      )
                     )}
                   </div>
                   {student.nickname?.trim() ? (
@@ -669,6 +680,14 @@ function StudentDashboardInner({
                       )}
                     </div>
                   )}
+                  <StudentCustomEmojiControls
+                    schoolId={schoolId}
+                    studentId={student.id}
+                    customEmojiUrl={student.customEmojiUrl}
+                    resetTimer={resetTimer}
+                    activeTheme={activeTheme}
+                    className="mt-2"
+                  />
                 </div>
               </div>
             </div>

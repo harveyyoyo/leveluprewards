@@ -5,9 +5,13 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
       # Required for firebase.json hosting.source (Next.js Web Frameworks integration).
@@ -19,23 +23,24 @@ jobs:
         with:
           node-version: 22
           cache: 'npm'
+
+      # Use Application Default Credentials (same JSON secret as before). Avoids
+      # FirebaseExtended/action-hosting-deploy swallowing real errors behind --json parsing.
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_STUDIO_1273073612_71183 }}
+
       - name: Install dependencies
         run: npm ci
+
       - name: Build
         run: npm run build
         env:
           NEXT_PUBLIC_ENABLE_DEV_LOGIN: 'false'
           NODE_ENV: production
+
       - name: Deploy to Firebase Hosting
-        uses: FirebaseExtended/action-hosting-deploy@v0
+        run: npx firebase-tools@14.27.0 deploy --only hosting --project studio-1273073612-71183 --non-interactive --force
         env:
-          # Ensure the subprocess spawned by the action inherits webframeworks (belt-and-suspenders).
           FIREBASE_CLI_EXPERIMENTS: webframeworks
-        with:
-          repoToken: '${{ secrets.GITHUB_TOKEN }}'
-          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_STUDIO_1273073612_71183 }}'
-          channelId: live
-          projectId: studio-1273073612-71183
-          # Pin CLI: avoid `latest` drift; 14.27.x stays clear of early 14.0 regressions and pre-15 churn.
-          firebaseToolsVersion: '14.27.0'
-          force: 'true'

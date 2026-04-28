@@ -205,7 +205,7 @@ export default function DeveloperPage() {
   const [pendingLogoFile, setPendingLogoFile] = useState<File | null>(null);
 
   const schoolsQuery = useMemoFirebase(() => (loginState === 'developer' && !isUserLoading) ? collection(firestore, 'schools') : null, [loginState, firestore, isUserLoading]);
-  const { data: allSchools, isLoading: schoolsLoading } = useCollection<SchoolInfo>(schoolsQuery);
+  const { data: allSchools, isLoading: schoolsLoading, error: schoolsError } = useCollection<SchoolInfo>(schoolsQuery);
 
   useEffect(() => {
     if (isInitialized && loginState !== 'developer') {
@@ -832,7 +832,27 @@ export default function DeveloperPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {schoolsLoading ? <p>Loading schools...</p> : (
+            {schoolsLoading ? <p>Loading schools...</p> : schoolsError ? (
+              <Alert variant="destructive">
+                <AlertTitle>Cannot load schools</AlertTitle>
+                <AlertDescription className="space-y-2 text-sm">
+                  <p>
+                    Firestore only allows listing all schools when your account UID is in{' '}
+                    <code className="rounded bg-background px-1 py-0.5 text-xs">appConfig/global.developerUids</code>.
+                    That entry is added automatically when developer login succeeds and the{' '}
+                    <code className="rounded bg-background px-1 py-0.5 text-xs">addDeveloperMe</code> Cloud Function runs.
+                  </p>
+                  <p>
+                    Sign out, sign in again with the developer passcode, and ensure{' '}
+                    <code className="rounded bg-background px-1 py-0.5 text-xs">DEV_PASSCODE</code> is set the same on Cloud Functions and on this app.
+                    You can also add your UID manually in the Firebase console under that document.
+                  </p>
+                  {auth.currentUser?.uid ? (
+                    <p className="font-mono text-xs opacity-90 pt-1">Your UID: {auth.currentUser.uid}</p>
+                  ) : null}
+                </AlertDescription>
+              </Alert>
+            ) : (
               <ul className="space-y-2">
                 {allSchools && [...allSchools].sort((a, b) => a.id.localeCompare(b.id)).map((school) => (
                   <li key={school.id} className="flex flex-wrap gap-2 justify-between items-center bg-secondary p-3 rounded-lg border">

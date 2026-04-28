@@ -48,6 +48,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
+import { StudentCustomEmojiControls } from '@/components/StudentCustomEmojiControls';
 import { motion, AnimatePresence } from "framer-motion";
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -729,13 +730,23 @@ function PrizeDashboard({
                             <div className="flex flex-col md:flex-row justify-between items-center gap-8 mb-16">
                                 <div className="text-center md:text-left">
                                     <h2 className="text-5xl font-black tracking-tighter font-headline drop-shadow-sm mb-4 flex items-center justify-center md:justify-start gap-4">
-                                        {activeTheme?.emoji ? (
-                                            <span
-                                                className="theme-animated-emoji text-6xl leading-none"
-                                                style={{ filter: activeTheme?.primary ? `drop-shadow(0 0 10px ${activeTheme.primary}) drop-shadow(0 0 20px ${activeTheme.primary})` : undefined }}
-                                            >
-                                                {activeTheme.emoji}
-                                            </span>
+                                        {(student?.customEmojiUrl || activeTheme?.emoji) ? (
+                                            student?.customEmojiUrl ? (
+                                                // eslint-disable-next-line @next/next/no-img-element
+                                                <img
+                                                    src={student.customEmojiUrl}
+                                                    alt=""
+                                                    className="theme-animated-emoji h-14 w-14 md:h-16 md:w-16 shrink-0 object-contain"
+                                                    style={{ filter: activeTheme?.primary ? `drop-shadow(0 0 10px ${activeTheme.primary}) drop-shadow(0 0 20px ${activeTheme.primary})` : undefined }}
+                                                />
+                                            ) : (
+                                                <span
+                                                    className="theme-animated-emoji text-6xl leading-none"
+                                                    style={{ filter: activeTheme?.primary ? `drop-shadow(0 0 10px ${activeTheme.primary}) drop-shadow(0 0 20px ${activeTheme.primary})` : undefined }}
+                                                >
+                                                    {activeTheme?.emoji}
+                                                </span>
+                                            )
                                         ) : (
                                             <ShoppingBag className="w-12 h-12 text-primary" />
                                         )}
@@ -744,6 +755,16 @@ function PrizeDashboard({
                                     <p className="text-sm font-bold uppercase tracking-[0.3em]" style={{ color: activeTheme ? 'var(--theme-text)' : undefined, opacity: 0.7 }}>
                                         Redeem your points for rewards
                                     </p>
+                                    {student && schoolId ? (
+                                        <StudentCustomEmojiControls
+                                            schoolId={schoolId}
+                                            studentId={student.id}
+                                            customEmojiUrl={student.customEmojiUrl}
+                                            resetTimer={resetTimer}
+                                            activeTheme={activeTheme}
+                                            className="mt-3 justify-center md:justify-start"
+                                        />
+                                    ) : null}
                                 </div>
                                 <div className="flex flex-col items-stretch sm:items-end gap-4 w-full md:w-auto">
                                     <div className="flex items-center justify-center sm:justify-end gap-2 flex-wrap">
