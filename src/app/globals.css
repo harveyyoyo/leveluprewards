@@ -782,6 +782,11 @@
       margin: 0.35mm 0 !important;
     }
 
+    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__student-emoji {
+      font-size: 4.6mm !important;
+      line-height: 1 !important;
+    }
+
     body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__lucide {
       width: 8.5mm !important;
       height: 8.5mm !important;
@@ -1501,6 +1506,20 @@
     line-height: 1.1;
     color: #000 !important;
     text-transform: none !important;
+  }
+
+  .prize-ticket__student-name-inner {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2mm;
+    flex-wrap: wrap;
+  }
+
+  .prize-ticket__student-emoji {
+    font-size: 1.12em;
+    line-height: 1;
+    flex-shrink: 0;
   }
 
   .prize-ticket__student-nick {

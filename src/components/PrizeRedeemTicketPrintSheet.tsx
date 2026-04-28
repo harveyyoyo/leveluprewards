@@ -12,6 +12,8 @@ export type PrizeRedeemTicket = {
   studentId: string;
   studentName: string;
   studentNickname?: string;
+  /** Theme emoji for this student when school setting enables it on tickets. */
+  studentEmoji?: string;
   prizeName: string;
   /** Lucide icon name (matches shop card). */
   prizeIcon?: string;
@@ -131,7 +133,14 @@ export function PrizeRedeemTicketPrintSheet({
             <div className="prize-ticket__details">
               <div className="prize-ticket__student-info">
                 <h3 className="prize-ticket__student-name">
-                  {displayStudent}
+                  <span className="prize-ticket__student-name-inner">
+                    {t.studentEmoji ? (
+                      <span className="prize-ticket__student-emoji" aria-hidden>
+                        {t.studentEmoji.normalize('NFC')}
+                      </span>
+                    ) : null}
+                    <span>{displayStudent}</span>
+                  </span>
                 </h3>
                 {t.studentNickname ? (
                   <p className="prize-ticket__student-nick">

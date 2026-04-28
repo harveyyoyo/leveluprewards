@@ -345,6 +345,7 @@ function PrizeDashboard({
         studentId: string;
         studentName: string;
         studentNickname?: string;
+        studentEmoji?: string;
         prizeName: string;
         prizeIcon?: string;
         quantity: number;
@@ -468,6 +469,11 @@ function PrizeDashboard({
                 const displayFirst = getStudentNickname(student);
                 const legalFirst = (student.firstName || '').trim();
                 const nick = student.nickname?.trim();
+                const themeForTicket = resolveStudentThemeWithSchoolDefault(student.theme, settings.defaultStudentTheme);
+                const emojiRaw =
+                    settings.enableStudentEmojiOnPrizeTickets === true ? themeForTicket?.emoji : undefined;
+                const studentEmoji =
+                    typeof emojiRaw === 'string' && emojiRaw.trim() ? emojiRaw.trim() : undefined;
                 ticketPayload = {
                     activityId,
                     ticketNo,
@@ -477,6 +483,7 @@ function PrizeDashboard({
                     /** Legal first name in parens only when a real nickname is shown. */
                     studentNickname:
                         nick && legalFirst && displayFirst.trim() !== legalFirst ? legalFirst : undefined,
+                    studentEmoji,
                     prizeName: prize.name,
                     prizeIcon: prize.icon || 'Gift',
                     quantity,
@@ -541,6 +548,7 @@ function PrizeDashboard({
             studentId: ticketData.studentId,
             studentName: ticketData.studentName,
             studentNickname: ticketData.studentNickname,
+            studentEmoji: ticketData.studentEmoji,
             prizeName: ticketData.prizeName,
             prizeIcon: ticketData.prizeIcon,
             quantity: 1,

@@ -14,6 +14,7 @@ type TicketParams = {
   studentId: string;
   studentName: string;
   studentNickname: string;
+  studentEmoji: string;
   prizeName: string;
   /** Lucide name; optional. */
   prizeIcon?: string;
@@ -31,6 +32,7 @@ function useTicketParams(): TicketParams {
     const studentId = sp.get('studentId') || '';
     const studentName = sp.get('studentName') || '';
     const studentNickname = sp.get('studentNickname') || '';
+    const studentEmoji = sp.get('studentEmoji') || '';
     const prizeName = sp.get('prizeName') || '';
     const quantityRaw = sp.get('quantity') || '';
     const quantity = quantityRaw ? Number(quantityRaw) : NaN;
@@ -45,6 +47,7 @@ function useTicketParams(): TicketParams {
       studentId,
       studentName,
       studentNickname,
+      studentEmoji,
       prizeName,
       prizeIcon: prizeIcon || undefined,
       quantity,
@@ -84,6 +87,7 @@ export default function PrizeRedeemTicketPage() {
       studentId: ticket.studentId,
       studentName: ticket.studentName,
       studentNickname: ticket.studentNickname || undefined,
+      studentEmoji: ticket.studentEmoji.trim() || undefined,
       prizeName: ticket.prizeName,
       prizeIcon: ticket.prizeIcon || 'Gift',
       quantity: 1,

@@ -23,7 +23,7 @@ import {
     Bell, Shield, Moon, Sun, ArrowLeft, Palette, Zap, Trophy,
     BarChart3, MessageSquare, ShoppingBag, ShieldCheck, Star,
     Users, Database, Printer, LayoutDashboard, History, HelpCircle,
-    Cpu, Award, Clock, Cog, Lock, Sparkles, ArrowRightLeft, Trash2, RotateCcw
+    Cpu, Award, Clock, Cog, Lock, Sparkles, ArrowRightLeft, Trash2, RotateCcw, Smile
 } from 'lucide-react';
 import { useSettings, colorSchemes, type ColorScheme, type Settings as AppSettings } from '../providers/SettingsProvider';
 import type { StudentTheme } from '@/lib/types';
@@ -712,6 +712,16 @@ export function SettingsModal() {
                                     isAdmin={isAdmin}
                                     isAllowed={isFeatureAllowed('enableVendingMachine')}
                                     planLabel={planLabel}
+                                />
+                                <FeatureRow
+                                    id="enableStudentEmojiOnPrizeTickets"
+                                    label="Student emoji on prize tickets"
+                                    desc="When printing a redeem ticket, show the student theme emoji (or school default theme emoji) next to their name."
+                                    icon={<Smile className="w-5 h-5" />}
+                                    settings={local}
+                                    onToggle={handleToggle}
+                                    isImplemented={true}
+                                    isAdmin={isAdmin}
                                 />
                             </div>
 

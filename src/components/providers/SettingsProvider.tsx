@@ -53,6 +53,8 @@ interface Settings {
     enableWishlist: boolean;
     enableSeasonalPrizes: boolean;
     enableVendingMachine: boolean;
+    /** When on, include the student’s theme emoji (or school default theme) on printed prize redeem tickets. */
+    enableStudentEmojiOnPrizeTickets: boolean;
     enableColorPrinting: boolean;
     // Admin Tools
     enableBulkPoints: boolean;
@@ -132,6 +134,7 @@ const defaultSettings: Settings = {
     enableWishlist: false,
     enableSeasonalPrizes: false,
     enableVendingMachine: false,
+    enableStudentEmojiOnPrizeTickets: false,
     enableColorPrinting: true,
     enableBulkPoints: false,
     enablePointApproval: false,
