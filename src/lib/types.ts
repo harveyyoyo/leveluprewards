@@ -115,6 +115,9 @@ export interface Coupon {
  * kiosk browser sends a short G-code sequence to the currently-connected
  * board to push the item out.
  */
+/** After redemption, the kiosk may show one AI-generated surprise (school-appropriate). */
+export type PrizeAiFunReward = 'random' | 'joke' | 'riddle' | 'fortune';
+
 export interface VendingMotorConfig {
   /** Master switch — when false, the motor is not triggered even if a port is connected. */
   enabled: boolean;
@@ -142,6 +145,11 @@ export interface Prize {
   offerPrintTicketOnRedeem?: boolean;
   /** Optional physical vending motor trigger run on the kiosk browser after a successful redemption. */
   vendingMotor?: VendingMotorConfig;
+  /**
+   * When set, after a successful redemption the Prize Shop shows one AI-generated
+   * clean joke, riddle (with answer), or fortune-cookie line. `random` picks one kind per redemption.
+   */
+  aiFunReward?: PrizeAiFunReward;
   addedBy?: string;
   /**
    * When set, only these teachers' students see the prize (union with `teacherId` if present for legacy data).

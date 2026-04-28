@@ -40,7 +40,7 @@ export const addPrize = async (firestore: Firestore, schoolId: string, prizeData
 export const updatePrize = async (firestore: Firestore, schoolId: string, updatedPrize: Prize) => {
   const prizeDocRef = doc(firestore, 'schools', schoolId, 'prizes', updatedPrize.id);
   try {
-    const { stockCount, teacherId, teacherIds, vendingMotor, id, ...rest } = updatedPrize;
+    const { stockCount, teacherId, teacherIds, vendingMotor, aiFunReward, id, ...rest } = updatedPrize;
     const payload = removeUndefined({ ...rest } as unknown as Record<string, unknown>) as Record<string, unknown>;
     if (stockCount === undefined) {
       payload.stockCount = deleteField();
@@ -52,6 +52,11 @@ export const updatePrize = async (firestore: Firestore, schoolId: string, update
     } else {
       // Strip undefined leaves so Firestore doesn't reject the write.
       payload.vendingMotor = removeUndefined(vendingMotor as unknown as Record<string, unknown>);
+    }
+    if (aiFunReward === undefined) {
+      payload.aiFunReward = deleteField();
+    } else {
+      payload.aiFunReward = aiFunReward;
     }
     const ids = [...(teacherIds || [])].filter((tid): tid is string => typeof tid === 'string' && tid.length > 0);
     if (ids.length > 0) {

@@ -1,6 +1,6 @@
 'use client';
 
-import { Cog, Edit3, Gift, Plus, Trash2, HelpCircle, GraduationCap, ShoppingBag, Wand2, UserMinus } from 'lucide-react';
+import { Cog, Edit3, Gift, Plus, Trash2, HelpCircle, GraduationCap, ShoppingBag, Wand2, UserMinus, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import DynamicIcon from '@/components/DynamicIcon';
 import { cn } from '@/lib/utils';
-import type { Prize, Teacher, Class, VendingMotorConfig } from '@/lib/types';
+import type { Prize, Teacher, Class, VendingMotorConfig, PrizeAiFunReward } from '@/lib/types';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -64,6 +64,7 @@ export function AdminPrizesTab({
   const [wInStock, setWInStock] = useState(true);
   const [wStockCount, setWStockCount] = useState('');
   const [wOfferPrint, setWOfferPrint] = useState(false);
+  const [wAiFun, setWAiFun] = useState<'off' | PrizeAiFunReward>('off');
   /** Admin wizard: selected teacher ids; empty = school-wide. */
   const [wTeacherIds, setWTeacherIds] = useState<string[]>([]);
   const [wClassId, setWClassId] = useState<'all' | string>('all');
@@ -77,6 +78,7 @@ export function AdminPrizesTab({
     setWInStock(true);
     setWStockCount('');
     setWOfferPrint(false);
+    setWAiFun('off');
     setWTeacherIds([]);
     setWClassId('all');
     setWSchoolWide(false);
@@ -395,6 +397,51 @@ export function AdminPrizesTab({
                   </Select>
                 </div>
                 <div className="flex items-center justify-end gap-0.5 justify-self-end">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className={cn(
+                          'h-9 w-9 rounded-full hover:bg-muted',
+                          p.aiFunReward ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground',
+                        )}
+                        disabled={!canEditFull}
+                        title="AI joke / riddle / fortune after redeem"
+                      >
+                        <Sparkles className="w-4 h-4" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-72 p-3 z-[250]" align="end">
+                      <div className="space-y-2">
+                        <p className="text-sm font-bold leading-tight">AI surprise</p>
+                        <p className="text-xs text-muted-foreground leading-snug">
+                          After redemption, the kiosk can show one school-safe AI joke, riddle (with answer), or fortune line.
+                        </p>
+                        <Select
+                          value={p.aiFunReward ?? 'off'}
+                          onValueChange={(v) => {
+                            if (!canEditFull) return;
+                            if (v === 'off') onUpdatePrize({ ...p, aiFunReward: undefined });
+                            else onUpdatePrize({ ...p, aiFunReward: v as PrizeAiFunReward });
+                          }}
+                          disabled={!canEditFull}
+                        >
+                          <SelectTrigger className="h-9 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="off">Off</SelectItem>
+                            <SelectItem value="random">Random</SelectItem>
+                            <SelectItem value="joke">Joke</SelectItem>
+                            <SelectItem value="riddle">Riddle</SelectItem>
+                            <SelectItem value="fortune">Fortune cookie</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                   {onEditPrize ? (
                     <Button
                       type="button"
@@ -514,6 +561,7 @@ export function AdminPrizesTab({
               <li><span className="font-bold">Teachers</span>: pick multiple teachers or school-wide.</li>
               <li><span className="font-bold">Class</span>: optionally restrict by class.</li>
               <li><span className="font-bold">Vending motor</span>: enable the Vending Machine feature in settings, then use the prize motor button to pick axis X/Y/Z/E.</li>
+              <li><span className="font-bold">AI surprise</span>: sparkle control — after redemption, show an AI joke, riddle, or fortune on the Prize Shop.</li>
             </ul>
           </div>
           <DialogFooter>
@@ -596,6 +644,27 @@ export function AdminPrizesTab({
                 <Switch checked={wOfferPrint} onCheckedChange={setWOfferPrint} />
               </div>
 
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-lg border p-3">
+                <div className="space-y-0.5 min-w-0">
+                  <Label>AI surprise after redeem</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Optional: show a clean AI joke, riddle, or fortune on the Prize Shop after redemption.
+                  </p>
+                </div>
+                <Select value={wAiFun} onValueChange={(v) => setWAiFun(v as 'off' | PrizeAiFunReward)}>
+                  <SelectTrigger className="h-9 w-full sm:w-[148px] text-xs shrink-0">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="off">Off</SelectItem>
+                    <SelectItem value="random">Random</SelectItem>
+                    <SelectItem value="joke">Joke</SelectItem>
+                    <SelectItem value="riddle">Riddle</SelectItem>
+                    <SelectItem value="fortune">Fortune cookie</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               {mode === 'teacher' ? (
                 <div className="flex items-center justify-between rounded-lg border p-3">
                   <div className="space-y-0.5">
@@ -665,6 +734,10 @@ export function AdminPrizesTab({
                   <li><span className="font-bold">In stock</span>: {wInStock ? 'Yes' : 'No'}</li>
                   <li><span className="font-bold">Qty</span>: {wStockCount.trim() ? wStockCount.trim() : 'Unlimited'}</li>
                   <li><span className="font-bold">Print ticket</span>: {wOfferPrint ? 'Yes' : 'No'}</li>
+                  <li>
+                    <span className="font-bold">AI surprise</span>:{' '}
+                    {wAiFun === 'off' ? 'Off' : wAiFun === 'random' ? 'Random' : wAiFun === 'fortune' ? 'Fortune cookie' : wAiFun}
+                  </li>
                   {mode === 'admin' ? (
                     <li>
                       <span className="font-bold">Teachers</span>:{' '}
@@ -684,6 +757,7 @@ export function AdminPrizesTab({
                   <li>An activity log entry is created.</li>
                   <li>If Qty is set, it decreases until it reaches 0.</li>
                   <li>If Print is on, the shop offers a print ticket right after redeeming.</li>
+                  <li>If AI surprise is on, the kiosk shows one generated joke, riddle, or fortune after redeeming.</li>
                 </ul>
               </div>
               <div className="flex flex-col sm:flex-row gap-2">
@@ -734,6 +808,7 @@ export function AdminPrizesTab({
                     inStock: wInStock,
                     stockCount,
                     offerPrintTicketOnRedeem: wOfferPrint,
+                    ...(wAiFun !== 'off' ? { aiFunReward: wAiFun } : {}),
                     teacherIds: finalTeacherIds.length ? finalTeacherIds : undefined,
                     teacherId: undefined,
                     classId: finalClassId,

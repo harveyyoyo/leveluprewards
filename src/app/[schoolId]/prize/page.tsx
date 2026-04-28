@@ -35,7 +35,8 @@ import {
     ShoppingBasket,
     Plus,
     Minus,
-    Loader2
+    Loader2,
+    Sparkles,
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
@@ -59,10 +60,18 @@ import { rainbowTripletForNavId, complementTripletForNavId } from '@/lib/rainbow
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
 import { prizeIsListed, stripLeadingEmojiFromPrizeName, studentSeesPrizeByTeachers } from '@/lib/prize-utils';
 import { runMotor as runVendingMotor, isConnected as motorIsConnected } from '@/lib/vendingMotor';
+import { useAuthFetch } from '@/lib/authFetch';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 
 /** Max units per redemption for 0-point prizes when stock is unlimited (balance does not limit). */
 const FREE_PRIZE_MAX_QTY = 99;
+
+const AI_SURPRISE_KIND_LABEL: Record<string, string> = {
+    joke: 'Your joke',
+    riddle: 'Your riddle',
+    fortune: 'Your fortune',
+};
 
 /** Inactivity before returning to the student scanner (same as the student / redeem kiosk). */
 const KIOSK_AUTO_LOGOUT_SEC = 15;
@@ -336,6 +345,20 @@ function PrizeDashboard({
         totalCost: number;
     } | null>(null);
 
+    const [aiSurpriseOpen, setAiSurpriseOpen] = useState(false);
+    const [aiSurpriseLoading, setAiSurpriseLoading] = useState(false);
+    const [aiSurpriseErr, setAiSurpriseErr] = useState<string | null>(null);
+    const [aiSurpriseBody, setAiSurpriseBody] = useState<{ kind: string; text: string; answer?: string } | null>(null);
+    const pendingTicketAfterAiRef = useRef<typeof ticketData>(null);
+
+    const authFetch = useAuthFetch();
+
+    const flushPendingTicketAfterAi = useCallback(() => {
+        const p = pendingTicketAfterAiRef.current;
+        pendingTicketAfterAiRef.current = null;
+        if (p) setTicketData(p);
+    }, []);
+
     const studentDocRef = useMemoFirebase(() => schoolId ? doc(firestore, 'schools', schoolId, 'students', studentId) : null, [firestore, schoolId, studentId]);
     const { data: student, isLoading: studentLoading, error: studentError } = useDoc<Student>(studentDocRef);
 
@@ -433,12 +456,13 @@ function PrizeDashboard({
                     }
                 }
             }
+            let ticketPayload: NonNullable<typeof ticketData> | null = null;
             if (prize.offerPrintTicketOnRedeem === true && activityId && redeemedAt && typeof totalCost === 'number') {
                 const ticketNo = String(redeemedAt).slice(-6);
                 const displayFirst = getStudentNickname(student);
                 const legalFirst = (student.firstName || '').trim();
                 const nick = student.nickname?.trim();
-                setTicketData({
+                ticketPayload = {
                     activityId,
                     ticketNo,
                     redeemedAt,
@@ -451,7 +475,37 @@ function PrizeDashboard({
                     prizeIcon: prize.icon || 'Gift',
                     quantity,
                     totalCost,
-                });
+                };
+            }
+
+            if (prize.aiFunReward && schoolId) {
+                pendingTicketAfterAiRef.current = ticketPayload;
+                setAiSurpriseErr(null);
+                setAiSurpriseBody(null);
+                setAiSurpriseLoading(true);
+                setAiSurpriseOpen(true);
+                try {
+                    const res = await authFetch('/api/prize-ai-fun', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            schoolId,
+                            mode: prize.aiFunReward,
+                        }),
+                    });
+                    const j = (await res.json()) as { error?: string; kind?: string; text?: string; answer?: string };
+                    if (!res.ok) throw new Error(j.error || 'Could not load surprise.');
+                    setAiSurpriseBody({
+                        kind: typeof j.kind === 'string' ? j.kind : 'fortune',
+                        text: typeof j.text === 'string' ? j.text : '',
+                        answer: typeof j.answer === 'string' ? j.answer : undefined,
+                    });
+                } catch (e: unknown) {
+                    setAiSurpriseErr(getReadableErrorMessage(e, 'Something went wrong loading your surprise.'));
+                } finally {
+                    setAiSurpriseLoading(false);
+                }
+            } else if (ticketPayload) {
+                setTicketData(ticketPayload);
             }
         } catch (error: unknown) {
             console.error('Redemption error:', error);
@@ -652,7 +706,7 @@ function PrizeDashboard({
                     </div>
                 )}
 
-                <main className="relative z-10 w-full max-w-full px-8">
+                <div className="relative z-10 w-full max-w-full px-8">
                     <Card
                         className={cn(
                             "border-t-8 shadow-2xl mt-12 mb-24 backdrop-blur-md",
@@ -1031,7 +1085,7 @@ function PrizeDashboard({
                             </div>
                         </CardContent>
                     </Card>
-                </main>
+                </div>
                 <ConfirmRedemptionDialog
                     isOpen={!!confirmingPrize}
                     onOpenChange={(open) => {
@@ -1058,6 +1112,60 @@ function PrizeDashboard({
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>
+                <Dialog
+                    open={aiSurpriseOpen}
+                    onOpenChange={(open) => {
+                        if (!open) {
+                            flushPendingTicketAfterAi();
+                            setAiSurpriseOpen(false);
+                        }
+                    }}
+                >
+                    <DialogContent className="no-print sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2 text-left">
+                                <Sparkles className="h-5 w-5 shrink-0 text-amber-500" aria-hidden />
+                                {aiSurpriseLoading
+                                    ? 'Your surprise'
+                                    : (AI_SURPRISE_KIND_LABEL[aiSurpriseBody?.kind ?? ''] ?? 'Your surprise')}
+                            </DialogTitle>
+                            <DialogDescription className="sr-only">
+                                AI-generated joke, riddle, or fortune after redeeming a prize.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="min-h-[100px] py-1">
+                            {aiSurpriseLoading ? (
+                                <div className="flex flex-col items-center justify-center gap-3 py-8 text-muted-foreground">
+                                    <Loader2 className="h-10 w-10 animate-spin" aria-hidden />
+                                    <p className="text-sm font-medium">Cooking up something fun…</p>
+                                </div>
+                            ) : aiSurpriseErr ? (
+                                <p className="text-sm text-destructive">{aiSurpriseErr}</p>
+                            ) : aiSurpriseBody ? (
+                                <div className="space-y-4 text-base leading-relaxed">
+                                    <p className="font-medium">{aiSurpriseBody.text}</p>
+                                    {aiSurpriseBody.kind === 'riddle' && aiSurpriseBody.answer ? (
+                                        <p className="text-sm rounded-lg bg-muted/80 px-3 py-2 border border-border">
+                                            <span className="font-semibold text-muted-foreground">Answer: </span>
+                                            {aiSurpriseBody.answer}
+                                        </p>
+                                    ) : null}
+                                </div>
+                            ) : null}
+                        </div>
+                        <DialogFooter>
+                            <Button
+                                type="button"
+                                variant="default"
+                                className="w-full sm:w-auto"
+                                onClick={() => setAiSurpriseOpen(false)}
+                                disabled={aiSurpriseLoading}
+                            >
+                                {aiSurpriseLoading ? 'Please wait…' : 'Awesome'}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </div>
         </TooltipProvider>
     );

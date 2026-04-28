@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAppContext } from '@/components/AppProvider';
 import { useToast } from '@/hooks/use-toast';
-import type { Prize, Teacher, Class } from '@/lib/types';
+import type { Prize, Teacher, Class, PrizeAiFunReward } from '@/lib/types';
 import DynamicIcon from './DynamicIcon';
 import { Switch } from './ui/switch';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
@@ -35,6 +35,7 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses }: P
   const [icon, setIcon] = useState('Gift');
   const [inStock, setInStock] = useState(true);
   const [offerPrintTicketOnRedeem, setOfferPrintTicketOnRedeem] = useState(false);
+  const [aiFun, setAiFun] = useState<'off' | PrizeAiFunReward>('off');
   const [teacherId, setTeacherId] = useState('');
   const [classId, setClassId] = useState('');
   const { toast } = useToast();
@@ -50,6 +51,7 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses }: P
         setIcon(prize.icon);
         setInStock(prize.inStock);
         setOfferPrintTicketOnRedeem(prize.offerPrintTicketOnRedeem === true);
+        setAiFun(prize.aiFunReward ?? 'off');
         setTeacherId(prize.teacherId || '');
         setClassId(prize.classId || '');
       } else { // Create mode
@@ -58,6 +60,7 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses }: P
         setIcon('Gift');
         setInStock(true);
         setOfferPrintTicketOnRedeem(false);
+        setAiFun('off');
         setTeacherId('');
         setClassId('');
       }
@@ -78,12 +81,33 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses }: P
     }
 
     if (isEditing && prize) {
-      const updatedPrize: Prize = { ...prize, name, points: pointsValue, icon, inStock, offerPrintTicketOnRedeem, teacherId: teacherId || undefined, classId: classId || undefined, addedBy: 'Admin' };
+      const updatedPrize: Prize = {
+        ...prize,
+        name,
+        points: pointsValue,
+        icon,
+        inStock,
+        offerPrintTicketOnRedeem,
+        aiFunReward: aiFun === 'off' ? undefined : aiFun,
+        teacherId: teacherId || undefined,
+        classId: classId || undefined,
+        addedBy: 'Admin',
+      };
       await updatePrize(updatedPrize);
       playSound('success');
       toast({ title: 'Prize updated!' });
     } else {
-      const newPrize = { name, points: pointsValue, icon, inStock, offerPrintTicketOnRedeem, teacherId: teacherId || undefined, classId: classId || undefined, addedBy: 'Admin' };
+      const newPrize = {
+        name,
+        points: pointsValue,
+        icon,
+        inStock,
+        offerPrintTicketOnRedeem,
+        ...(aiFun !== 'off' ? { aiFunReward: aiFun } : {}),
+        teacherId: teacherId || undefined,
+        classId: classId || undefined,
+        addedBy: 'Admin',
+      };
       await addPrize(newPrize);
       playSound('success');
       toast({ title: 'Prize added!' });
@@ -173,6 +197,26 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses }: P
               checked={offerPrintTicketOnRedeem}
               onCheckedChange={setOfferPrintTicketOnRedeem}
             />
+          </div>
+          <div className="flex flex-col gap-2 rounded-lg border p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="ai-fun">AI surprise after redeem</Label>
+              <p className="text-xs text-muted-foreground">
+                Optional joke, riddle, or fortune on the Prize Shop kiosk.
+              </p>
+            </div>
+            <Select value={aiFun} onValueChange={(v) => setAiFun(v as 'off' | PrizeAiFunReward)}>
+              <SelectTrigger id="ai-fun" className="w-full sm:w-[160px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="off">Off</SelectItem>
+                <SelectItem value="random">Random</SelectItem>
+                <SelectItem value="joke">Joke</SelectItem>
+                <SelectItem value="riddle">Riddle</SelectItem>
+                <SelectItem value="fortune">Fortune cookie</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
         <DialogFooter>
