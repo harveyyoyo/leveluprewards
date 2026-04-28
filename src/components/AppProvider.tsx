@@ -19,6 +19,7 @@ import {
   addStudent as dbAddStudent, updateStudent as dbUpdateStudent,
   deleteStudent as dbDeleteStudent, addClass as dbAddClass, updateClass as dbUpdateClass,
   deleteClass as dbDeleteClass, addTeacher as dbAddTeacher, updateTeacher as dbUpdateTeacher, deleteTeacher as dbDeleteTeacher, uploadStudents as dbUploadStudents,
+  uploadClassesFromCsv as dbUploadClassesFromCsv, uploadTeachersFromCsv as dbUploadTeachersFromCsv,
   awardPointsToStudent as dbAwardPointsToStudent,
   awardPointsToMultipleStudents as dbAwardPointsToMultipleStudents,
   deductPointsFromMultipleStudents as dbDeductPointsFromMultipleStudents,
@@ -90,6 +91,8 @@ interface AppContextType {
   updatePrize: (prize: Prize) => Promise<void>;
   deletePrize: (prizeId: string) => Promise<void>;
   uploadStudents: (csvContent: string, currentStudents: Student[], allClasses: Class[]) => Promise<{ success: number; failed: number; errors: string[] }>;
+  uploadClassesFromCsv: (csvContent: string, currentClasses: Class[]) => Promise<{ success: number; failed: number; errors: string[] }>;
+  uploadTeachersFromCsv: (csvContent: string, currentTeachers: Teacher[]) => Promise<{ success: number; failed: number; errors: string[] }>;
   togglePrizeFulfillment: (studentId: string, activityId: string, fulfilled: boolean) => Promise<void>;
   categories: Category[];
   categoriesLoading: boolean;
@@ -172,6 +175,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
             code,
             value: typeof c?.value === 'number' ? c.value : undefined,
             category: typeof c?.category === 'string' ? c.category : undefined,
+            startsAt: typeof c?.startsAt === 'number' ? c.startsAt : undefined,
             expiresAt: typeof c?.expiresAt === 'number' ? c.expiresAt : undefined,
           };
         }
@@ -334,6 +338,16 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     return dbUploadStudents(firestore, schoolId, csv, curr, classes);
   }, [firestore, schoolId]);
 
+  const uploadClassesFromCsv_ = useCallback((csv: string, curr: Class[]) => {
+    if (!firestore || !schoolId) return Promise.resolve({ success: 0, failed: 0, errors: ["Not logged in."] });
+    return dbUploadClassesFromCsv(firestore, schoolId, csv, curr);
+  }, [firestore, schoolId]);
+
+  const uploadTeachersFromCsv_ = useCallback((csv: string, curr: Teacher[]) => {
+    if (!firestore || !schoolId) return Promise.resolve({ success: 0, failed: 0, errors: ["Not logged in."] });
+    return dbUploadTeachersFromCsv(firestore, schoolId, csv, curr);
+  }, [firestore, schoolId]);
+
   const togglePrizeFulfillment_ = useCallback(async (studentId: string, activityId: string, fulfilled: boolean) => {
     if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
     return dbTogglePrizeFulfillment(firestore, schoolId, studentId, activityId, fulfilled);
@@ -415,6 +429,8 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     redeemPrize: redeemPrize_,
     addPrize: addPrize_, updatePrize: updatePrize_, deletePrize: deletePrize_,
     uploadStudents: uploadStudents_,
+    uploadClassesFromCsv: uploadClassesFromCsv_,
+    uploadTeachersFromCsv: uploadTeachersFromCsv_,
     togglePrizeFulfillment: togglePrizeFulfillment_,
     categories: categories || [],
     categoriesLoading,
@@ -440,6 +456,8 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     redeemCoupon_, deleteCoupon_, awardPoints_, awardPointsToMultipleStudents_, deductPointsFromMultipleStudents_,
     redeemPrize_, addPrize_, updatePrize_, deletePrize_,
     uploadStudents_,
+    uploadClassesFromCsv_,
+    uploadTeachersFromCsv_,
     togglePrizeFulfillment_,
     purgeStudentProgress_,
     getAttendanceConfig_, setAttendanceConfig_, recordClassSignIn_, listAttendanceLog_,

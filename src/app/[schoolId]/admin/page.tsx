@@ -15,7 +15,7 @@ import { collection, doc, updateDoc, setDoc, deleteDoc, getDocs, query, orderBy,
 import {
   Users, Gift, BookOpen, Trash2, Edit, Plus, UploadCloud, Printer, LayoutDashboard, Database,
   Settings, History, Award, CheckCircle, Tag, Trophy, ArrowRight, Loader2, Play, ShieldCheck,
-  User, Ticket, Upload, Download, Activity, Zap, Clock, Palette, Wand2
+  User, Ticket, Upload, Download, Activity, Zap, Clock, Palette, Wand2, TableProperties
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -136,6 +136,23 @@ const AdminBadgesTab = dynamic(
   { loading: tabLoader, ssr: false },
 );
 import { getReadableErrorMessage } from '@/lib/errorMessage';
+import { BulkRosterSetupDialog } from '@/components/BulkRosterSetupDialog';
+
+function describeCsvImportReport(
+  report: { success: number; failed: number; errors: string[] },
+  noun: string,
+): { title: string; description: string; variant: 'default' | 'destructive' } {
+  const lines: string[] = [];
+  if (report.success > 0) lines.push(`Added ${report.success}.`);
+  if (report.failed > 0) lines.push(`${report.failed} row(s) skipped or not imported.`);
+  const errPreview = report.errors.slice(0, 10).join('\n');
+  if (errPreview) lines.push(errPreview);
+  const description = lines.join('\n') || 'Nothing changed.';
+  const title = report.success > 0 ? `${noun} imported` : `No ${noun.toLowerCase()} imported`;
+  const variant =
+    report.success === 0 && (report.failed > 0 || report.errors.length > 0) ? 'destructive' : 'default';
+  return { title, description, variant };
+}
 
 function AdminDashboardSkeleton() {
   return (
@@ -184,7 +201,7 @@ function AdminDashboardInner() {
     schoolId, setCouponsToPrint, deleteStudent,
     addClass, updateClass, deleteClass, deleteCategory, addCategory, updateCategory,
     devCreateBackup, devRestoreFromBackup, devDownloadBackup, addTeacher, updateTeacher, deleteTeacher,
-    addPrize, updatePrize, deletePrize, uploadStudents, setStudentsToPrint,
+    addPrize, updatePrize, deletePrize, uploadStudents, uploadClassesFromCsv, uploadTeachersFromCsv, setStudentsToPrint,
     updateStudent,
     achievements, achievementsLoading,
     badges, badgesLoading,
@@ -286,7 +303,7 @@ function AdminDashboardInner() {
   const [isPurgingStudent, setIsPurgingStudent] = useState(false);
   const [showPurgeFlash, setShowPurgeFlash] = useState(false);
 
-  const [uploadReport, setUploadReport] = useState<{ success: number, failed: number, errors: string[] } | null>(null);
+  const [bulkRosterOpen, setBulkRosterOpen] = useState(false);
   const [isPreviousLogosOpen, setIsPreviousLogosOpen] = useState(false);
   const [isDtcAlertOpen, setIsDtcAlertOpen] = useState(false);
 
@@ -506,9 +523,9 @@ function AdminDashboardInner() {
     try {
       const text = await file.text();
       const report = await uploadStudents(text, students || [], classes || []);
-      if (report.failed > 0) {
-        setUploadReport(report);
-      }
+      playSound(report.success > 0 ? 'success' : 'error');
+      const msg = describeCsvImportReport(report, 'Students');
+      toast({ variant: msg.variant, title: msg.title, description: msg.description });
     } catch (err: any) {
       playSound('error');
       toast({
@@ -518,6 +535,54 @@ function AdminDashboardInner() {
       });
     }
     if (studentCsvInputRef.current) studentCsvInputRef.current.value = '';
+  };
+
+  const handleBulkClassesCsv = async (text: string) => {
+    try {
+      const report = await uploadClassesFromCsv(text, classes || []);
+      playSound(report.success > 0 ? 'success' : 'error');
+      const msg = describeCsvImportReport(report, 'Classes');
+      toast({ variant: msg.variant, title: msg.title, description: msg.description });
+    } catch (err: unknown) {
+      playSound('error');
+      toast({
+        variant: 'destructive',
+        title: 'Failed to import classes',
+        description: getReadableErrorMessage(err),
+      });
+    }
+  };
+
+  const handleBulkTeachersCsv = async (text: string) => {
+    try {
+      const report = await uploadTeachersFromCsv(text, teachers || []);
+      playSound(report.success > 0 ? 'success' : 'error');
+      const msg = describeCsvImportReport(report, 'Teachers');
+      toast({ variant: msg.variant, title: msg.title, description: msg.description });
+    } catch (err: unknown) {
+      playSound('error');
+      toast({
+        variant: 'destructive',
+        title: 'Failed to import teachers',
+        description: getReadableErrorMessage(err),
+      });
+    }
+  };
+
+  const handleBulkStudentsCsv = async (text: string) => {
+    try {
+      const report = await uploadStudents(text, students || [], classes || []);
+      playSound(report.success > 0 ? 'success' : 'error');
+      const msg = describeCsvImportReport(report, 'Students');
+      toast({ variant: msg.variant, title: msg.title, description: msg.description });
+    } catch (err: unknown) {
+      playSound('error');
+      toast({
+        variant: 'destructive',
+        title: 'Failed to import students',
+        description: getReadableErrorMessage(err),
+      });
+    }
   };
 
   const usedCouponsCount = coupons?.filter((c) => c.used).length || 0;
@@ -558,17 +623,36 @@ function AdminDashboardInner() {
           ['--ring' as any]: complementTripletForNavId('admin', settings.colorScheme),
         } as any}
       >
-        <Helper content="This page is for system administrators. It allows you to manage all school instances, create backups, and perform system-wide operations.">
-          <h2
-            className="text-2xl font-bold tracking-tight"
-            style={{ color: rainbowForNavId('admin', settings.colorScheme) }}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <Helper content="This page is for system administrators. It allows you to manage all school instances, create backups, and perform system-wide operations.">
+            <h2
+              className="text-2xl font-bold tracking-tight"
+              style={{ color: rainbowForNavId('admin', settings.colorScheme) }}
+            >
+              Admin
+            </h2>
+            <p className="text-muted-foreground">
+              Manage students, classes, prizes, and system settings.
+            </p>
+          </Helper>
+          <Button
+            type="button"
+            variant="outline"
+            className="rounded-xl shrink-0 font-semibold gap-2"
+            onClick={() => setBulkRosterOpen(true)}
           >
-            Admin
-          </h2>
-          <p className="text-muted-foreground">
-            Manage students, classes, prizes, and system settings.
-          </p>
-        </Helper>
+            <TableProperties className="w-4 h-4" aria-hidden />
+            Bulk roster setup
+          </Button>
+        </div>
+
+        <BulkRosterSetupDialog
+          open={bulkRosterOpen}
+          onOpenChange={setBulkRosterOpen}
+          onClassesCsv={handleBulkClassesCsv}
+          onTeachersCsv={handleBulkTeachersCsv}
+          onStudentsCsv={handleBulkStudentsCsv}
+        />
 
         <Tabs key={`${String(settings.enableAchievements)}:${String(settings.enableBadges)}`} defaultValue="students" className="space-y-6">
           {/*

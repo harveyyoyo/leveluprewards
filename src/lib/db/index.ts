@@ -24,10 +24,10 @@ export {
 export { lookupStudentId } from './lookup';
 
 // Classes
-export { addClass, updateClass, deleteClass } from './classes';
+export { addClass, updateClass, deleteClass, uploadClassesFromCsv } from './classes';
 
 // Teachers
-export { addTeacher, updateTeacher, deleteTeacher } from './teachers';
+export { addTeacher, updateTeacher, deleteTeacher, uploadTeachersFromCsv } from './teachers';
 
 // Categories
 export { addCategory, updateCategory, deleteCategory } from './categories';
