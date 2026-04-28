@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Wand2, Loader2 } from 'lucide-react';
+import { Wand2, Loader2, Trash2 } from 'lucide-react';
 import { StudentTheme } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { cn, getContrastColor } from '@/lib/utils';
@@ -28,6 +28,53 @@ function hexForColorInput(color: string | undefined, fallback: string): string {
         return `#${x[0]}${x[0]}${x[1]}${x[1]}${x[2]}${x[2]}`;
     }
     return fallback;
+}
+
+function cssColorToHexForPicker(color: string, fallback: string): string {
+    const t = color.trim();
+    if (/^#/i.test(t)) return hexForColorInput(t, fallback);
+    const rgb = t.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+    if (rgb) {
+        const r = Math.min(255, parseInt(rgb[1], 10));
+        const g = Math.min(255, parseInt(rgb[2], 10));
+        const b = Math.min(255, parseInt(rgb[3], 10));
+        return `#${[r, g, b].map((x) => x.toString(16).padStart(2, '0')).join('')}`;
+    }
+    return fallback;
+}
+
+const GRADIENT_ANGLE_OPTS = [45, 90, 135, 180, 225] as const;
+function snapGradientAngleDeg(deg: number): string {
+    let best: (typeof GRADIENT_ANGLE_OPTS)[number] = GRADIENT_ANGLE_OPTS[0];
+    let bestD = Infinity;
+    for (const o of GRADIENT_ANGLE_OPTS) {
+        const d = Math.abs(o - deg);
+        if (d < bestD) {
+            bestD = d;
+            best = o;
+        }
+    }
+    return String(best);
+}
+
+function parseWizardLinearGradient(backgroundStyle: string): { angle: string; colorA: string; colorB: string } | null {
+    const norm = backgroundStyle.replace(/\s+/g, ' ').trim();
+    const m = norm.match(
+        /^linear-gradient\(\s*(\d+(?:\.\d+)?)deg\s*,\s*((?:#[\da-fA-F]{3,8}|rgba?\([^)]+\)))\s+0%\s*,\s*((?:#[\da-fA-F]{3,8}|rgba?\([^)]+\)))\s+100%\s*\)$/i,
+    );
+    if (!m) return null;
+    return {
+        angle: snapGradientAngleDeg(parseFloat(m[1])),
+        colorA: m[2].trim(),
+        colorB: m[3].trim(),
+    };
+}
+
+function inferBackgroundMode(theme: StudentTheme | undefined): 'solid' | 'gradient' | 'custom' {
+    if (!theme?.backgroundStyle?.trim()) return 'solid';
+    const bs = theme.backgroundStyle.trim();
+    if (bs.startsWith('linear-gradient') && parseWizardLinearGradient(bs)) return 'gradient';
+    return 'custom';
 }
 
 async function readJsonErrorMessage(response: Response, fallback: string): Promise<string> {
@@ -60,6 +107,8 @@ interface ThemeGeneratorModalProps {
     previewStudent?: Student;
     /** Class line on the ID card, e.g. "Grade 8". Defaults to "Unassigned" if omitted. */
     classLabel?: string;
+    /** When set, a “Remove theme” control calls this (e.g. clear student theme or school default). */
+    onRemoveTheme?: () => void | Promise<void>;
 }
 
 export function ThemeGeneratorModal({
@@ -70,6 +119,7 @@ export function ThemeGeneratorModal({
     studentName,
     previewStudent,
     classLabel = 'Unassigned',
+    onRemoveTheme,
 }: ThemeGeneratorModalProps) {
     const [prompt, setPrompt] = useState('');
     const [isGenerating, setIsGenerating] = useState(false);
@@ -106,9 +156,10 @@ export function ThemeGeneratorModal({
     const [gradientAngle, setGradientAngle] = useState('135');
     const [gradientA, setGradientA] = useState(currentTheme?.primary || '#0ea5e9');
     const [gradientB, setGradientB] = useState(currentTheme?.accent || '#22c55e');
-    const [backgroundMode, setBackgroundMode] = useState<'solid' | 'gradient' | 'custom'>(
-        currentTheme?.backgroundStyle ? 'custom' : 'solid'
+    const [backgroundMode, setBackgroundMode] = useState<'solid' | 'gradient' | 'custom'>(() =>
+        inferBackgroundMode(currentTheme),
     );
+    const [isRemovingTheme, setIsRemovingTheme] = useState(false);
 
     useLayoutEffect(() => {
         const el = previewWrapRef.current;
@@ -151,19 +202,30 @@ export function ThemeGeneratorModal({
         if (savedModel) setModel(savedModel);
     }, []);
 
-    // Keep gradient defaults in sync when theme changes (first open / regenerate / revert).
+    // When the dialog opens, reset preview from the latest saved theme (per student / school default).
+    useEffect(() => {
+        if (!isOpen) return;
+        setPreviewTheme(currentTheme);
+        setPreviousTheme(currentTheme);
+        setPrompt('');
+        setBackgroundMode(inferBackgroundMode(currentTheme));
+    }, [isOpen, currentTheme]);
+
+    // Keep gradient controls and background mode in sync with the active preview theme.
     useEffect(() => {
         if (!previewTheme) return;
-        setGradientA(previewTheme.primary || previewTheme.background || '#0ea5e9');
-        setGradientB(previewTheme.accent || previewTheme.cardBackground || '#22c55e');
-        setBackgroundMode(previewTheme.backgroundStyle ? 'custom' : 'solid');
+        const mode = inferBackgroundMode(previewTheme);
+        setBackgroundMode(mode);
+        if (mode !== 'gradient' || !previewTheme.backgroundStyle) return;
+        const parsed = parseWizardLinearGradient(previewTheme.backgroundStyle);
+        if (!parsed) return;
+        setGradientAngle(parsed.angle);
+        setGradientA(cssColorToHexForPicker(parsed.colorA, previewTheme.primary || '#0ea5e9'));
+        setGradientB(cssColorToHexForPicker(parsed.colorB, previewTheme.accent || '#22c55e'));
     }, [
-        previewTheme,
+        previewTheme?.backgroundStyle,
         previewTheme?.primary,
         previewTheme?.accent,
-        previewTheme?.background,
-        previewTheme?.cardBackground,
-        previewTheme?.backgroundStyle,
     ]);
 
     const handleGenerate = async () => {
@@ -225,6 +287,35 @@ export function ThemeGeneratorModal({
     const handleRevert = () => {
         if (previousTheme) {
             setPreviewTheme(previousTheme);
+        }
+    };
+
+    const canRemoveThemeFromWizard = Boolean(previewTheme || currentTheme);
+
+    const handleRemoveTheme = async () => {
+        if (!canRemoveThemeFromWizard) return;
+        setIsRemovingTheme(true);
+        try {
+            if (onRemoveTheme) {
+                await onRemoveTheme();
+            } else {
+                toast({
+                    title: 'Preview cleared',
+                    description: 'Generate again or close the dialog.',
+                });
+            }
+            setPreviewTheme(undefined);
+            setPreviousTheme(undefined);
+            onOpenChange(false);
+        } catch (error) {
+            console.error('Remove theme failed:', error);
+            const description =
+                error instanceof Error && error.message
+                    ? error.message
+                    : 'Could not remove the theme. Please try again.';
+            toast({ title: 'Error', description, variant: 'destructive' });
+        } finally {
+            setIsRemovingTheme(false);
         }
     };
 
@@ -483,107 +574,179 @@ export function ThemeGeneratorModal({
                                             );
                                         })}
                                     </div>
-                                    <div className="space-y-1 pt-1">
-                                        <Label htmlFor="theme-background-style">Background style (picker)</Label>
-                                        <Select
-                                            value={backgroundMode}
-                                            onValueChange={(v) => {
-                                                const mode = v as typeof backgroundMode;
-                                                setBackgroundMode(mode);
-                                                if (mode === 'solid') {
-                                                    updateTheme({ backgroundStyle: null });
-                                                } else if (mode === 'gradient') {
-                                                    const css = `linear-gradient(${gradientAngle}deg, ${gradientA} 0%, ${gradientB} 100%)`;
-                                                    updateTheme({ backgroundStyle: css, background: gradientA });
-                                                }
-                                            }}
-                                        >
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select style" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="solid">Solid</SelectItem>
-                                                <SelectItem value="gradient">Gradient</SelectItem>
-                                                <SelectItem value="custom">CSS / Image</SelectItem>
-                                            </SelectContent>
-                                        </Select>
+                                    <div className="rounded-xl border border-border bg-muted/30 p-3 space-y-3">
+                                        <div className="space-y-1.5">
+                                            <Label htmlFor="theme-bg-style-mode">Card background style</Label>
+                                            <Select
+                                                value={backgroundMode}
+                                                onValueChange={(v) => {
+                                                    const mode = v as typeof backgroundMode;
+                                                    setBackgroundMode(mode);
+                                                    if (mode === 'solid') {
+                                                        updateTheme({ backgroundStyle: null });
+                                                    } else if (mode === 'gradient') {
+                                                        const a = gradientA || previewTheme.primary || '#0ea5e9';
+                                                        const b = gradientB || previewTheme.accent || '#22c55e';
+                                                        setGradientA(a);
+                                                        setGradientB(b);
+                                                        const css = `linear-gradient(${gradientAngle}deg, ${a} 0%, ${b} 100%)`;
+                                                        updateTheme({ backgroundStyle: css, background: a });
+                                                    }
+                                                }}
+                                            >
+                                                <SelectTrigger id="theme-bg-style-mode">
+                                                    <SelectValue placeholder="Select style" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="solid">Solid</SelectItem>
+                                                    <SelectItem value="gradient">Gradient</SelectItem>
+                                                    <SelectItem value="custom">CSS / Image</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
                                         {backgroundMode === 'solid' ? (
                                             <div className="space-y-2">
                                                 <div className="space-y-1">
                                                     <Label className="text-[10px] uppercase tracking-[0.18em]">Background color</Label>
                                                     <div className="flex gap-2 items-center">
-                                                        <Input
-                                                            type="color"
-                                                            aria-label="Pick solid background color"
-                                                            value={hexForColorInput(previewTheme.background, '#020617')}
-                                                            onChange={(e) => {
-                                                                const v = e.target.value;
-                                                                updateTheme({ background: v, backgroundStyle: null });
-                                                            }}
-                                                            className="h-10 w-[3.25rem] shrink-0 p-1 cursor-pointer"
-                                                        />
+                                                        <label className="relative h-10 w-[3.25rem] shrink-0 cursor-pointer overflow-hidden rounded-lg border border-border shadow-sm">
+                                                            <span
+                                                                className="absolute inset-0"
+                                                                style={{
+                                                                    backgroundColor: hexForColorInput(previewTheme.background, '#020617'),
+                                                                }}
+                                                            />
+                                                            <input
+                                                                type="color"
+                                                                aria-label="Pick solid background color"
+                                                                value={hexForColorInput(previewTheme.background, '#020617')}
+                                                                onChange={(e) => {
+                                                                    const v = e.target.value;
+                                                                    updateTheme({ background: v, backgroundStyle: null });
+                                                                }}
+                                                                className="sr-only"
+                                                            />
+                                                        </label>
                                                         <Input
                                                             value={previewTheme.background || ''}
                                                             onChange={(e) =>
-                                                                updateTheme({ background: e.target.value || '#020617', backgroundStyle: null })
+                                                                updateTheme({
+                                                                    background: e.target.value || '#020617',
+                                                                    backgroundStyle: null,
+                                                                })
                                                             }
-                                                            className="font-mono text-xs flex-1 min-w-0"
+                                                            className="min-w-0 flex-1 font-mono text-xs"
                                                             placeholder="#hex or CSS color"
                                                         />
                                                     </div>
                                                 </div>
                                             </div>
                                         ) : backgroundMode === 'gradient' ? (
-                                            <div className="grid grid-cols-3 gap-2 items-end">
-                                                <div className="space-y-1">
-                                                    <Label className="text-[10px] uppercase tracking-[0.18em]">Color A</Label>
-                                                    <Input
-                                                        type="color"
-                                                        value={gradientA}
-                                                        onChange={(e) => {
-                                                            const v = e.target.value;
-                                                            setGradientA(v);
-                                                            const css = `linear-gradient(${gradientAngle}deg, ${v} 0%, ${gradientB} 100%)`;
-                                                            updateTheme({ backgroundStyle: css, background: v });
-                                                        }}
-                                                        className="h-10 p-1"
-                                                    />
-                                                </div>
-                                                <div className="space-y-1">
-                                                    <Label className="text-[10px] uppercase tracking-[0.18em]">Color B</Label>
-                                                    <Input
-                                                        type="color"
-                                                        value={gradientB}
-                                                        onChange={(e) => {
-                                                            const v = e.target.value;
-                                                            setGradientB(v);
-                                                            const css = `linear-gradient(${gradientAngle}deg, ${gradientA} 0%, ${v} 100%)`;
-                                                            updateTheme({ backgroundStyle: css, background: gradientA });
-                                                        }}
-                                                        className="h-10 p-1"
-                                                    />
-                                                </div>
-                                                <div className="space-y-1">
-                                                    <Label className="text-[10px] uppercase tracking-[0.18em]">Angle</Label>
-                                                    <Select
-                                                        value={gradientAngle}
-                                                        onValueChange={(v) => {
-                                                            setGradientAngle(v);
-                                                            const css = `linear-gradient(${v}deg, ${gradientA} 0%, ${gradientB} 100%)`;
-                                                            updateTheme({ backgroundStyle: css, background: gradientA });
-                                                        }}
-                                                    >
-                                                        <SelectTrigger className="h-10">
-                                                            <SelectValue />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            <SelectItem value="45">45°</SelectItem>
-                                                            <SelectItem value="90">90°</SelectItem>
-                                                            <SelectItem value="135">135°</SelectItem>
-                                                            <SelectItem value="180">180°</SelectItem>
-                                                            <SelectItem value="225">225°</SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
+                                            <div className="space-y-3">
+                                                <div
+                                                    className="h-11 w-full rounded-xl border border-border shadow-inner"
+                                                    style={{
+                                                        backgroundImage: `linear-gradient(${gradientAngle}deg, ${gradientA} 0%, ${gradientB} 100%)`,
+                                                    }}
+                                                    aria-hidden
+                                                />
+                                                <div className="grid grid-cols-1 items-end gap-4 sm:grid-cols-3">
+                                                    <div className="space-y-1.5">
+                                                        <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+                                                            Color A
+                                                        </span>
+                                                        <div className="flex items-center gap-2">
+                                                            <label className="relative block h-10 w-10 shrink-0 cursor-pointer overflow-hidden rounded-xl border border-border shadow-sm">
+                                                                <span
+                                                                    className="absolute inset-0"
+                                                                    style={{ backgroundColor: gradientA }}
+                                                                />
+                                                                <input
+                                                                    type="color"
+                                                                    aria-label="Gradient color A"
+                                                                    value={gradientA}
+                                                                    className="sr-only"
+                                                                    onChange={(e) => {
+                                                                        const v = e.target.value;
+                                                                        setGradientA(v);
+                                                                        const css = `linear-gradient(${gradientAngle}deg, ${v} 0%, ${gradientB} 100%)`;
+                                                                        updateTheme({ backgroundStyle: css, background: v });
+                                                                    }}
+                                                                />
+                                                            </label>
+                                                            <Input
+                                                                value={gradientA}
+                                                                onChange={(e) => {
+                                                                    const v = hexForColorInput(e.target.value, gradientA);
+                                                                    setGradientA(v);
+                                                                    const css = `linear-gradient(${gradientAngle}deg, ${v} 0%, ${gradientB} 100%)`;
+                                                                    updateTheme({ backgroundStyle: css, background: v });
+                                                                }}
+                                                                className="min-w-0 flex-1 font-mono text-xs"
+                                                                placeholder="#hex"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-1.5">
+                                                        <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+                                                            Color B
+                                                        </span>
+                                                        <div className="flex items-center gap-2">
+                                                            <label className="relative block h-10 w-10 shrink-0 cursor-pointer overflow-hidden rounded-xl border border-border shadow-sm">
+                                                                <span
+                                                                    className="absolute inset-0"
+                                                                    style={{ backgroundColor: gradientB }}
+                                                                />
+                                                                <input
+                                                                    type="color"
+                                                                    aria-label="Gradient color B"
+                                                                    value={gradientB}
+                                                                    className="sr-only"
+                                                                    onChange={(e) => {
+                                                                        const v = e.target.value;
+                                                                        setGradientB(v);
+                                                                        const css = `linear-gradient(${gradientAngle}deg, ${gradientA} 0%, ${v} 100%)`;
+                                                                        updateTheme({ backgroundStyle: css, background: gradientA });
+                                                                    }}
+                                                                />
+                                                            </label>
+                                                            <Input
+                                                                value={gradientB}
+                                                                onChange={(e) => {
+                                                                    const v = hexForColorInput(e.target.value, gradientB);
+                                                                    setGradientB(v);
+                                                                    const css = `linear-gradient(${gradientAngle}deg, ${gradientA} 0%, ${v} 100%)`;
+                                                                    updateTheme({ backgroundStyle: css, background: gradientA });
+                                                                }}
+                                                                className="min-w-0 flex-1 font-mono text-xs"
+                                                                placeholder="#hex"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-1.5">
+                                                        <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+                                                            Angle
+                                                        </span>
+                                                        <Select
+                                                            value={gradientAngle}
+                                                            onValueChange={(v) => {
+                                                                setGradientAngle(v);
+                                                                const css = `linear-gradient(${v}deg, ${gradientA} 0%, ${gradientB} 100%)`;
+                                                                updateTheme({ backgroundStyle: css, background: gradientA });
+                                                            }}
+                                                        >
+                                                            <SelectTrigger className="h-10 w-full">
+                                                                <SelectValue />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="45">45°</SelectItem>
+                                                                <SelectItem value="90">90°</SelectItem>
+                                                                <SelectItem value="135">135°</SelectItem>
+                                                                <SelectItem value="180">180°</SelectItem>
+                                                                <SelectItem value="225">225°</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
                                                 </div>
                                             </div>
                                         ) : (
@@ -619,11 +782,16 @@ export function ThemeGeneratorModal({
                                                     }}
                                                     className="text-xs"
                                                 />
+                                                <p className="text-[10px] text-muted-foreground">
+                                                    Paste a CSS background or upload an image (small files recommended).
+                                                </p>
                                             </div>
                                         )}
-                                        <p className="text-[10px] text-muted-foreground">
-                                            You can paste a CSS background or upload an image (small files recommended).
-                                        </p>
+                                        {backgroundMode !== 'custom' ? (
+                                            <p className="text-[10px] text-muted-foreground">
+                                                Solid and gradient modes keep the ID card preview in sync with the colors above.
+                                            </p>
+                                        ) : null}
                                     </div>
                                 </div>
                             ) : null}
@@ -718,15 +886,35 @@ export function ThemeGeneratorModal({
                     </div>
                 </div>
 
-                <DialogFooter>
-                    <Button variant="outline" onClick={() => onOpenChange(false)}>
-                        Cancel
-                    </Button>
-                    <Button onClick={handleSave} disabled={!previewTheme}>
-                        Save & Apply Theme
-                    </Button>
+                <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-between sm:items-center">
+                    <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                        {canRemoveThemeFromWizard ? (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                disabled={isRemovingTheme}
+                                onClick={() => void handleRemoveTheme()}
+                            >
+                                {isRemovingTheme ? (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                )}
+                                Remove theme
+                            </Button>
+                        ) : null}
+                    </div>
+                    <div className="flex w-full justify-end gap-2 sm:w-auto">
+                        <Button variant="outline" onClick={() => onOpenChange(false)}>
+                            Cancel
+                        </Button>
+                        <Button onClick={handleSave} disabled={!previewTheme}>
+                            Save & Apply Theme
+                        </Button>
+                    </div>
                 </DialogFooter>
             </DialogContent>
-        </Dialog >
+        </Dialog>
     );
 }

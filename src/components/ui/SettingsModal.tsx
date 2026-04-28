@@ -840,6 +840,9 @@ export function SettingsModal() {
             studentName="School default"
             currentTheme={local.defaultStudentTheme || undefined}
             onSave={handleSchoolDefaultThemeSave}
+            onRemoveTheme={() => {
+                handleClearSchoolDefaultTheme();
+            }}
         />
         </>
     );

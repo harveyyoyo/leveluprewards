@@ -1141,6 +1141,21 @@ function AdminDashboardInner() {
                 toast({ variant: 'destructive', title: 'Error', description: 'Failed to update student theme.' });
               }
             }}
+            onRemoveTheme={async () => {
+              try {
+                await updateStudent({ ...themeStudent, theme: undefined });
+                playSound('success');
+                toast({
+                  title: 'Theme removed',
+                  description: `Cleared custom theme for ${themeStudent.firstName}.`,
+                });
+              } catch (e) {
+                console.error(e);
+                playSound('error');
+                toast({ variant: 'destructive', title: 'Error', description: 'Failed to remove student theme.' });
+                throw e;
+              }
+            }}
           />
         )}
         {idPreviewStudent && (

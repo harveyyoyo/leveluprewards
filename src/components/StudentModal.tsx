@@ -29,7 +29,7 @@ import { getStudentNickname } from '@/lib/utils';
 import { httpsCallable } from 'firebase/functions';
 import { ThemeGeneratorModal } from './ThemeGeneratorModal';
 import { AdminFaceEnrollmentPanel } from './AdminFaceEnrollmentPanel';
-import { Wand2, Trash2 } from 'lucide-react';
+import { Wand2, Trash2, Loader2 } from 'lucide-react';
 import { ImageCropper } from './ImageCropper';
 import { cn } from '@/lib/utils';
 
@@ -56,6 +56,7 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
   const [classId, setClassId] = useState('none');
   const [selectedTeacherIds, setSelectedTeacherIds] = useState<string[]>([]);
   const [isPhotoUploading, setIsPhotoUploading] = useState(false);
+  const [isCustomEmojiUploading, setIsCustomEmojiUploading] = useState(false);
   const [theme, setTheme] = useState<StudentTheme | undefined>(undefined);
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
@@ -191,6 +192,92 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
     }
   };
 
+  const handleCustomEmojiUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!student?.id || !schoolId) {
+      playSound('error');
+      toast({ variant: 'destructive', title: 'Save the student first, then upload a sticker.' });
+      return;
+    }
+    if (!functions) {
+      playSound('error');
+      toast({ variant: 'destructive', title: 'Server connection not found.' });
+      return;
+    }
+
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif'];
+    const maxSizeBytes = 2 * 1024 * 1024;
+    if (!allowedTypes.includes(file.type)) {
+      playSound('error');
+      toast({ variant: 'destructive', title: 'Unsupported file type', description: 'Use PNG, JPG, WebP, or GIF.' });
+      return;
+    }
+    if (file.size > maxSizeBytes) {
+      playSound('error');
+      toast({ variant: 'destructive', title: 'File too large', description: 'Must be under 2MB.' });
+      return;
+    }
+
+    try {
+      setIsCustomEmojiUploading(true);
+      const imageBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          const base64 = result.includes(',') ? result.split(',')[1] : result;
+          resolve(base64 || '');
+        };
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
+      });
+
+      const uploadStudentCustomEmoji = httpsCallable<
+        { schoolId: string; studentId: string; imageBase64: string; contentType: string },
+        { customEmojiUrl: string }
+      >(functions, 'uploadStudentCustomEmoji');
+
+      const res = await uploadStudentCustomEmoji({
+        schoolId,
+        studentId: student.id,
+        imageBase64,
+        contentType: file.type || 'image/png',
+      });
+
+      if (!res.data?.customEmojiUrl) throw new Error('No URL returned');
+      await updateStudent({ ...student, customEmojiUrl: res.data.customEmojiUrl });
+      playSound('success');
+      toast({ title: 'Sticker / emoji updated!' });
+    } catch (err: unknown) {
+      console.error('Custom emoji upload failed', err);
+      playSound('error');
+      toast({
+        variant: 'destructive',
+        title: 'Upload failed',
+        description: String((err as { message?: string })?.message ?? 'Could not upload sticker.'),
+      });
+    } finally {
+      setIsCustomEmojiUploading(false);
+    }
+  };
+
+  const handleRemoveCustomEmoji = async () => {
+    if (!student?.id || !schoolId) return;
+    try {
+      setIsCustomEmojiUploading(true);
+      await updateStudent({ ...student, customEmojiUrl: '' });
+      playSound('success');
+      toast({ title: 'Sticker / emoji removed' });
+    } catch (err: unknown) {
+      console.error('Failed to remove custom emoji', err);
+      playSound('error');
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not remove sticker.' });
+    } finally {
+      setIsCustomEmojiUploading(false);
+    }
+  };
+
   const handleSave = async () => {
     if (!firstName || !lastName) {
       playSound('error');
@@ -306,6 +393,49 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
                   <p className="text-[11px] text-muted-foreground mt-1">PNG/JPG/WebP under 5MB.</p>
                 </div>
               </div>
+            </div>
+          )}
+          {isEditing && (
+            <div className="space-y-2">
+              <Label>Sticker / emoji (by name)</Label>
+              <div className="flex items-center gap-3">
+                <div className="relative group">
+                  <div className="h-12 w-12 rounded-lg overflow-hidden bg-muted border border-border/60 flex items-center justify-center text-[10px] font-semibold text-muted-foreground">
+                    {student?.customEmojiUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={student.customEmojiUrl} alt="" className="h-full w-full object-contain" />
+                    ) : (
+                      <span>None</span>
+                    )}
+                  </div>
+                  {student?.customEmojiUrl ? (
+                    <button
+                      type="button"
+                      onClick={() => void handleRemoveCustomEmoji()}
+                      className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Remove sticker"
+                      disabled={isCustomEmojiUploading}
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  ) : null}
+                </div>
+                <div className="flex-1">
+                  <Input
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
+                    onChange={(e) => void handleCustomEmojiUpload(e)}
+                    disabled={isCustomEmojiUploading}
+                  />
+                  <p className="text-[11px] text-muted-foreground mt-1">PNG/JPG/WebP/GIF under 2MB. Shown next to their name on the student portal, prize shop, and ID card.</p>
+                </div>
+              </div>
+              {isCustomEmojiUploading ? (
+                <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" aria-hidden />
+                  Uploading…
+                </p>
+              ) : null}
             </div>
           )}
           <div className="grid grid-cols-2 gap-4">
@@ -442,6 +572,7 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
             nfcId: nfcId || '00000000',
             classId: classId === 'none' ? undefined : classId,
             photoUrl: student?.photoUrl,
+            customEmojiUrl: student?.customEmojiUrl,
             theme,
           }}
           classLabel={
@@ -453,6 +584,13 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
           onSave={(newTheme) => {
             setTheme(newTheme);
             setIsThemeModalOpen(false);
+          }}
+          onRemoveTheme={() => {
+            setTheme(undefined);
+            toast({
+              title: 'Theme removed',
+              description: 'Save the student to apply this change to the database.',
+            });
           }}
         />
       )}

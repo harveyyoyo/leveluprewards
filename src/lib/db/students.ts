@@ -3,6 +3,7 @@ import {
   setDoc,
   updateDoc,
   deleteDoc,
+  deleteField,
   collection,
   writeBatch,
   runTransaction,
@@ -71,7 +72,12 @@ export const updateStudent = async (firestore: Firestore, schoolId: string, stud
 
       const finalStudentData = { ...student, lifetimePoints: newLifetimePoints };
 
-      transaction.update(studentDocRef, removeUndefined(finalStudentData as unknown as Record<string, unknown>));
+      const payload = removeUndefined(finalStudentData as unknown as Record<string, unknown>) as Record<string, unknown>;
+      // `theme: undefined` in the client object is stripped by removeUndefined; Firestore would otherwise keep the old theme.
+      if (Object.prototype.hasOwnProperty.call(student, 'theme') && student.theme === undefined) {
+        payload.theme = deleteField();
+      }
+      transaction.update(studentDocRef, payload as DocumentData);
     });
   } catch (error) {
     reportFirestorePermissionError(error, {
