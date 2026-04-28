@@ -86,6 +86,12 @@ import { SAMPLE_BADGES, getSampleCategoryBadges } from '@/lib/sample-badges';
 // actually clicks into it — this dramatically reduces the initial admin JS.
 import { AdminStudentsTab } from './sections/AdminStudentsTab';
 
+/** Quick picks for teacher monthly point budget when Teacher Budgets is enabled. */
+const TEACHER_MONTHLY_BUDGET_PRESETS = [
+  100, 250, 500, 750, 1000, 1250, 1500, 2000, 2500, 3000, 3500, 4000, 5000, 6000, 7500, 10000,
+  12500, 15000, 20000, 25000, 50000, 75000, 100000, 150000, 200000, 250000, 500000,
+] as const;
+
 const tabLoader = () => (
   <div className="animate-pulse h-64 w-full rounded-xl bg-muted/40" aria-hidden="true" />
 );
@@ -928,9 +934,35 @@ function AdminDashboardInner() {
                   <Input id="new-teacher-passcode" type="password" value={newTeacherPasscode} onChange={e => setNewTeacherPasscode(e.target.value)} placeholder="Secret passcode" autoComplete="new-password" />
                 </div>
                 {settings.enableTeacherBudgets && (
-                  <div className="space-y-1">
+                  <div className="space-y-2">
                     <Label htmlFor="new-teacher-budget">Monthly Budget (Points)</Label>
                     <Input id="new-teacher-budget" type="number" value={newTeacherBudget} onChange={e => setNewTeacherBudget(e.target.value)} placeholder="Leave blank for unlimited" />
+                    <div className="flex flex-wrap gap-1.5">
+                      <Button
+                        type="button"
+                        variant={newTeacherBudget.trim() === '' ? 'secondary' : 'outline'}
+                        size="sm"
+                        className="h-7 rounded-md px-2 text-[11px] font-semibold"
+                        onClick={() => setNewTeacherBudget('')}
+                      >
+                        Unlimited
+                      </Button>
+                      {TEACHER_MONTHLY_BUDGET_PRESETS.map((n) => (
+                        <Button
+                          key={n}
+                          type="button"
+                          variant={newTeacherBudget.trim() === String(n) ? 'default' : 'outline'}
+                          size="sm"
+                          className="h-7 rounded-md px-2 text-[11px] font-semibold tabular-nums"
+                          onClick={() => setNewTeacherBudget(String(n))}
+                        >
+                          {n.toLocaleString()}
+                        </Button>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground leading-snug">
+                      Tap a preset or type any amount. Leave the field empty for no monthly cap.
+                    </p>
                   </div>
                 )}
               </div>
