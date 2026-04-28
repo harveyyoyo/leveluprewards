@@ -86,6 +86,19 @@
   .print-coupon-wrapper .coupon-scalable {
     font-size: 34px;
   }
+
+  /* Teacher "Print preview" (same em-based coupon as the sheet) — was inheriting ~16px; scale to match print. */
+  .coupon-print-preview-shell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem 1.25rem;
+  }
+
+  .coupon-print-match-wrapper .coupon-scalable {
+    /* Same as .print-coupon-wrapper — em-based coupon scales with this root */
+    font-size: 34px;
+  }
 }
 
 /* Color Schemes for both Light & Dark Mode */

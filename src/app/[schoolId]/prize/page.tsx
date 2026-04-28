@@ -129,7 +129,7 @@ function ConfirmRedemptionDialog({
             <AlertDialogContent>
                 <AlertDialogHeader>
                     <AlertDialogTitle>Confirm Purchase</AlertDialogTitle>
-                    <AlertDialogDescription>
+                    <AlertDialogDescription className="break-words [overflow-wrap:anywhere]">
                         You are redeeming <span className="font-bold">{prize.name}</span>.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
@@ -924,7 +924,7 @@ function PrizeDashboard({
                                                     onMouseEnter={() => setHoveredPrize(prize.id)}
                                                     onMouseLeave={() => setHoveredPrize(null)}
                                                     className={cn(
-                                                        "group relative flex flex-col items-center justify-between text-center p-8 rounded-3xl border-2 border-transparent transition-all duration-300 backdrop-blur-sm",
+                                                        "group relative flex min-w-0 w-full flex-col items-center justify-between text-center p-8 rounded-3xl border-2 border-transparent transition-all duration-300 backdrop-blur-sm",
                                                         canAfford ? "hover:shadow-2xl hover:shadow-primary/5 hover:-translate-y-1" : "opacity-75 cursor-not-allowed"
                                                     )}
                                                     style={activeTheme ? {
@@ -977,18 +977,21 @@ function PrizeDashboard({
                                                         <DynamicIcon name={prize.icon || 'Gift'} className="w-12 h-12 drop-shadow-sm relative z-10" />
                                                     </div>
 
-                                                    <div className="mb-6">
+                                                    <div className="mb-6 w-full min-w-0">
                                                         <Tooltip>
                                                             <TooltipTrigger asChild>
                                                                 <h3
-                                                                    className={cn("font-black text-xl tracking-tight line-clamp-1 cursor-help", !activeTheme && "text-foreground")}
+                                                                    className={cn(
+                                                                        "font-black text-xl tracking-tight line-clamp-2 w-full max-w-full cursor-help break-words leading-snug [overflow-wrap:anywhere]",
+                                                                        !activeTheme && "text-foreground"
+                                                                    )}
                                                                     style={activeTheme ? { color: 'var(--theme-text)' } : undefined}
                                                                 >
                                                                     {displayName}
                                                                 </h3>
                                                             </TooltipTrigger>
-                                                            <TooltipContent side="top" align="center">
-                                                                <p className="max-w-xs break-words text-sm font-semibold">
+                                                            <TooltipContent side="top" align="center" className="max-w-[min(20rem,calc(100vw-2rem))]">
+                                                                <p className="break-words text-sm font-semibold [overflow-wrap:anywhere]">
                                                                     {displayName}
                                                                 </p>
                                                             </TooltipContent>

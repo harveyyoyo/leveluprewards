@@ -30,6 +30,25 @@ function hexForColorInput(color: string | undefined, fallback: string): string {
     return fallback;
 }
 
+async function readJsonErrorMessage(response: Response, fallback: string): Promise<string> {
+    try {
+        const text = await response.text();
+        if (!text) return fallback;
+        try {
+            const data = JSON.parse(text) as { error?: unknown };
+            if (typeof data.error === 'string' && data.error.trim()) {
+                return data.error.trim();
+            }
+        } catch {
+            const t = text.trim();
+            if (t.length > 0 && t.length <= 280) return t;
+        }
+    } catch {
+        // ignore
+    }
+    return fallback;
+}
+
 interface ThemeGeneratorModalProps {
     isOpen: boolean;
     onOpenChange: (open: boolean) => void;
@@ -166,7 +185,8 @@ export function ThemeGeneratorModal({
             });
 
             if (!response.ok) {
-                throw new Error('Failed to generate theme');
+                const msg = await readJsonErrorMessage(response, 'Failed to generate theme.');
+                throw new Error(msg);
             }
 
             const generatedTheme: StudentTheme = await response.json();
@@ -178,9 +198,13 @@ export function ThemeGeneratorModal({
             });
         } catch (error) {
             console.error('Error generating theme:', error);
+            const description =
+                error instanceof Error && error.message
+                    ? error.message
+                    : 'There was a problem generating the theme. Please try again.';
             toast({
                 title: 'Error',
-                description: 'There was a problem generating the theme. Please try again.',
+                description,
                 variant: 'destructive',
             });
         } finally {
@@ -220,7 +244,10 @@ export function ThemeGeneratorModal({
                 method: 'POST',
                 body: JSON.stringify({ prompt, model, schoolId }),
             });
-            if (!response.ok) throw new Error('Failed to generate theme');
+            if (!response.ok) {
+                const msg = await readJsonErrorMessage(response, 'Failed to generate theme.');
+                throw new Error(msg);
+            }
             const generated: StudentTheme = await response.json();
             setPreviewTheme(prev => {
                 if (!prev) return generated;
@@ -238,9 +265,13 @@ export function ThemeGeneratorModal({
             });
         } catch (error) {
             console.error('Error generating theme for fine‑tune:', error);
+            const description =
+                error instanceof Error && error.message
+                    ? error.message
+                    : 'There was a problem asking AI for a suggestion. Please try again.';
             toast({
                 title: 'Error',
-                description: 'There was a problem asking AI for a suggestion. Please try again.',
+                description,
                 variant: 'destructive',
             });
         } finally {

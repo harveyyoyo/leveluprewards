@@ -29,6 +29,41 @@ function requireHex(value: unknown, fallback: string): string {
     return HEX_COLOR.test(candidate) ? candidate : fallback;
 }
 
+/** Gemini/OpenAI often wrap JSON in markdown fences or a `{ "theme": { ... } }` envelope. */
+function unwrapThemeCandidate(parsed: unknown): unknown {
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return parsed;
+    const o = parsed as Record<string, unknown>;
+    for (const key of ['theme', 'data', 'result', 'palette'] as const) {
+        const nested = o[key];
+        if (nested && typeof nested === 'object' && !Array.isArray(nested)) {
+            const n = nested as Record<string, unknown>;
+            if (typeof n.background === 'string' || typeof n.primary === 'string') {
+                return nested;
+            }
+        }
+    }
+    return parsed;
+}
+
+function parseThemeAiJson(responseText: string): unknown {
+    let t = responseText.trim();
+    if (!t) throw new SyntaxError('Empty AI response');
+    t = t.replace(/^```(?:json)?\s*\r?\n?/i, '').replace(/\r?\n?```\s*$/i, '').trim();
+
+    const tryParse = (s: string) => unwrapThemeCandidate(JSON.parse(s) as unknown);
+
+    try {
+        return tryParse(t);
+    } catch {
+        const start = t.indexOf('{');
+        const end = t.lastIndexOf('}');
+        if (start >= 0 && end > start) {
+            return tryParse(t.slice(start, end + 1));
+        }
+        throw new SyntaxError('Could not parse theme JSON');
+    }
+}
+
 function sanitizeTheme(raw: unknown): ThemeResponse | null {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
     const data = raw as Record<string, unknown>;
@@ -121,18 +156,24 @@ Required schema:
 
 
         try {
-            const theme = sanitizeTheme(JSON.parse(responseText));
+            const theme = sanitizeTheme(parseThemeAiJson(responseText));
             if (!theme) {
                 throw new Error('AI response was not an object');
             }
             return NextResponse.json(theme);
         } catch (parseError) {
-            console.error('Failed to parse Gemini response as JSON:', responseText);
+            const preview =
+                responseText.length > 500 ? `${responseText.slice(0, 500)}…` : responseText;
+            console.error('Failed to parse AI theme response as JSON:', preview, parseError);
             return NextResponse.json({ error: 'Invalid response format from AI' }, { status: 500 });
         }
 
     } catch (error) {
         console.error('Error in /api/generate-theme:', error);
-        return NextResponse.json({ error: 'Failed to generate theme' }, { status: 500 });
+        const message =
+            error instanceof Error
+                ? error.message.slice(0, 240) || 'Failed to generate theme'
+                : 'Failed to generate theme';
+        return NextResponse.json({ error: message }, { status: 500 });
     }
 }
