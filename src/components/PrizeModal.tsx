@@ -32,9 +32,11 @@ interface PrizeModalProps {
   prize: Prize | null;
   teachers: Teacher[];
   allClasses: Class[];
+  /** When a teacher opens this modal from the teacher portal, set so new prizes record ownership for edit rights. */
+  creatorTeacherId?: string;
 }
 
-export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses }: PrizeModalProps) {
+export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses, creatorTeacherId }: PrizeModalProps) {
   const { addPrize, updatePrize, schoolId } = useAppContext();
   const { storage, firestore } = useFirebase();
   const { settings } = useSettings();
@@ -75,7 +77,8 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses }: P
         setInStock(prize.inStock);
         setOfferPrintTicketOnRedeem(prize.offerPrintTicketOnRedeem === true);
         setAiFun(prize.aiFunReward ?? 'off');
-        setTeacherId(prize.teacherId || '');
+        const tidFromIds = (prize.teacherIds || []).find((id) => typeof id === 'string' && id.length > 0);
+        setTeacherId(prize.teacherId || tidFromIds || '');
         setClassId(prize.classId || '');
       } else { // Create mode
         setName('');
@@ -84,13 +87,13 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses }: P
         setInStock(true);
         setOfferPrintTicketOnRedeem(false);
         setAiFun('off');
-        setTeacherId('');
+        setTeacherId(creatorTeacherId || '');
         setClassId('');
       }
       setPendingFile(null);
       setStripImage(false);
     }
-  }, [prize, isOpen]);
+  }, [prize, isOpen, creatorTeacherId]);
 
   const displayImageSrc =
     pendingPreview || (!stripImage && prize?.imageUrl ? prize.imageUrl : null);
@@ -125,7 +128,7 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses }: P
       return;
     }
 
-    const baseFields = {
+    const coreFields = {
       name,
       points: pointsValue,
       icon,
@@ -134,7 +137,6 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses }: P
       aiFunReward: prizeAiOn && aiFun !== 'off' ? aiFun : undefined,
       teacherId: teacherId || undefined,
       classId: classId || undefined,
-      addedBy: 'Admin' as const,
     };
 
     setUploading(true);
@@ -147,7 +149,7 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses }: P
         }
         const updatedPrize: Prize = {
           ...prize,
-          ...baseFields,
+          ...coreFields,
           imageUrl,
         };
         await updatePrize(updatedPrize);
@@ -155,7 +157,10 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses }: P
         toast({ title: 'Prize updated!' });
       } else {
         const newId = await addPrize({
-          ...baseFields,
+          ...coreFields,
+          ...(creatorTeacherId
+            ? { addedBy: 'teacher' as const, createdByTeacherId: creatorTeacherId }
+            : { addedBy: 'Admin' as const }),
         });
         if (pendingFile) {
           const imageUrl = await uploadPrizeImage(storage, schoolId, newId, pendingFile);

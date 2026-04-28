@@ -251,6 +251,7 @@ function TeacherPrizeManager({
                 prize={null}
                 teachers={teachersForPrizeModal}
                 allClasses={classes || []}
+                creatorTeacherId={teacherId}
             />
         </>
     );

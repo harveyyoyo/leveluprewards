@@ -50,9 +50,11 @@ export function teacherListedOnPrize(p: Prize, teacherId: string): boolean {
 
 export function isTeacherPrizeCreator(p: Prize, teacherId: string): boolean {
   if (p.createdByTeacherId) return p.createdByTeacherId === teacherId;
-  if (p.addedBy !== 'teacher') return false;
   const ids = prizeRestrictionTeacherIds(p);
+  // Only this teacher is on the restriction list — treat as theirs for edit/delete
+  // (covers legacy rows created before `createdByTeacherId`, e.g. teacher PrizeModal used `addedBy: Admin`).
   if (ids.length === 1 && ids[0] === teacherId) return true;
+  if (p.addedBy !== 'teacher') return false;
   if ((!p.teacherIds || p.teacherIds.length === 0) && p.teacherId === teacherId) return true;
   return false;
 }
