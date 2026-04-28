@@ -1017,6 +1017,24 @@ function cosineSimilarity(a, b) {
         return 0;
     return dot / denom;
 }
+function descriptorRecordsFrom(value) {
+    if (!Array.isArray(value))
+        return [];
+    const records = [];
+    for (const item of value) {
+        const candidate = Array.isArray(item)
+            ? item
+            : item && typeof item === "object" && Array.isArray(item.values)
+                ? item.values
+                : null;
+        if (!candidate || candidate.length !== 128)
+            continue;
+        if (candidate.every((n) => typeof n === "number" && Number.isFinite(n))) {
+            records.push({ values: candidate });
+        }
+    }
+    return records;
+}
 exports.enrollStudentFace = functions.https.onCall(async (data, context) => {
     requireAuth(context);
     requireString(data.schoolId, "schoolId");
@@ -1029,8 +1047,8 @@ exports.enrollStudentFace = functions.https.onCall(async (data, context) => {
     const ref = db.collection("schools").doc(schoolId).collection("faceAuth").doc(studentId);
     const snap = await ref.get();
     const prev = snap.exists ? snap.data() : null;
-    const prevDescriptors = Array.isArray(prev === null || prev === void 0 ? void 0 : prev.descriptors) ? prev.descriptors : [];
-    const nextDescriptors = [...prevDescriptors, descriptor].slice(-3); // keep last 3
+    const prevDescriptors = descriptorRecordsFrom(prev === null || prev === void 0 ? void 0 : prev.descriptors);
+    const nextDescriptors = [...prevDescriptors, { values: descriptor }].slice(-3); // keep last 3
     await ref.set({
         enabled: true,
         descriptors: nextDescriptors,
@@ -1069,11 +1087,9 @@ exports.matchStudentFace = functions
     let bestScore = -1;
     for (const doc of snap.docs) {
         const d = doc.data();
-        const list = Array.isArray(d.descriptors) ? d.descriptors : [];
+        const list = descriptorRecordsFrom(d.descriptors);
         for (const cand of list) {
-            if (!Array.isArray(cand) || cand.length !== 128)
-                continue;
-            const score = cosineSimilarity(descriptor, cand);
+            const score = cosineSimilarity(descriptor, cand.values);
             if (score > bestScore) {
                 bestScore = score;
                 bestStudentId = doc.id;
@@ -1100,8 +1116,8 @@ exports.getStudentFaceAuthStatus = functions.https.onCall(async (data, context) 
     const ref = db.collection("schools").doc(schoolId).collection("faceAuth").doc(studentId);
     const snap = await ref.get();
     const d = snap.exists ? snap.data() : null;
-    const descriptors = Array.isArray(d === null || d === void 0 ? void 0 : d.descriptors) ? d.descriptors : [];
-    const scanCount = Array.isArray(descriptors) ? descriptors.length : 0;
+    const descriptors = descriptorRecordsFrom(d === null || d === void 0 ? void 0 : d.descriptors);
+    const scanCount = descriptors.length;
     return {
         enrolled: scanCount > 0,
         scanCount,

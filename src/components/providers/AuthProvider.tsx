@@ -438,7 +438,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
 
     if (!isMounted) {
-        return null;
+        return (
+            <AuthContext.Provider value={value}>
+                <div className="min-h-screen flex items-center justify-center bg-background text-foreground p-6 text-center">
+                    <div className="animate-pulse text-primary font-bold text-xl uppercase tracking-tighter">
+                        Loading levelUp EDU...
+                    </div>
+                </div>
+            </AuthContext.Provider>
+        );
     }
 
     return (

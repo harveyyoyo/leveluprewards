@@ -90,7 +90,7 @@ export default function PortalPage() {
                 </>
             )}
 
-            <main className="relative z-10 w-full max-w-2xl px-4 sm:px-6 flex flex-col justify-start">
+            <div className="relative z-10 w-full max-w-2xl px-4 sm:px-6 flex flex-col justify-start">
                 <motion.div
                     initial={{ opacity: 0, y: 48, scale: 0.92 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -234,7 +234,7 @@ export default function PortalPage() {
                 <div className="mt-16 text-center">
                     <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground/60">beta · {process.env.NEXT_PUBLIC_VERSION || 'beta-1.1.0'}</p>
                 </div>
-            </main>
+            </div>
         </div>
     );
 }

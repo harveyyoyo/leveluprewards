@@ -19,7 +19,7 @@ export default function RootPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background text-foreground p-6">
-      <main className="flex w-full max-w-md flex-col items-center gap-8 text-center">
+      <div className="flex w-full max-w-md flex-col items-center gap-8 text-center">
         {appLogoUrl ? (
           <img
             src={appLogoUrl}
@@ -38,7 +38,7 @@ export default function RootPage() {
             <Link href="/developer">Developer Tools</Link>
           </Button>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

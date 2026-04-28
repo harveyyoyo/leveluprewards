@@ -15,10 +15,11 @@ import {
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useAppContext } from '@/components/AppProvider';
-import { useFunctions } from '@/firebase';
+import { useFirebase } from '@/firebase';
 import { useConfirm } from '@/components/providers/ConfirmProvider';
 import { useToast } from '@/hooks/use-toast';
 import { getReadableErrorMessage } from '@/lib/errorMessage';
+import { callableToastDescription } from '@/firebase/emulatorHints';
 import { useFaceDescriptor } from '@/hooks/useFaceDescriptor';
 import { cn } from '@/lib/utils';
 
@@ -44,7 +45,7 @@ type FaceAuthStatus = {
  */
 export function AdminFaceEnrollmentPanel({ studentId, studentLabel }: AdminFaceEnrollmentPanelProps) {
   const { schoolId } = useAppContext();
-  const functions = useFunctions();
+  const { functions, user, isUserLoading, userError } = useFirebase();
   const confirm = useConfirm();
   const { toast } = useToast();
   const { captureFaceDescriptor, averageDescriptor } = useFaceDescriptor();
@@ -176,11 +177,39 @@ export function AdminFaceEnrollmentPanel({ studentId, studentLabel }: AdminFaceE
     }
   }, [toast]);
 
+  const firebaseAuthReadyForCallables =
+    !userError && !isUserLoading && !!user;
+
   const handleTrain = useCallback(async () => {
     if (!schoolId || !functions || !studentId) return;
+    if (userError) {
+      toast({
+        variant: 'destructive',
+        title: 'Face training unavailable',
+        description: getReadableErrorMessage(userError, 'Firebase Authentication failed.'),
+      });
+      return;
+    }
+    if (isUserLoading) {
+      toast({
+        description: 'Still connecting to Firebase. Wait a moment, then tap Train again.',
+      });
+      return;
+    }
+    if (!user) {
+      toast({
+        variant: 'destructive',
+        title: 'Not signed in to Firebase',
+        description:
+          'Enable Anonymous sign-in in Firebase Console → Authentication → Sign-in method, hard-refresh this page, and try Training again.',
+      });
+      return;
+    }
+
     setBusy(true);
     setStatus('Starting camera…');
     try {
+      await user.getIdToken(true);
       const video = await startCamera();
       if (!video) return;
 
@@ -195,7 +224,7 @@ export function AdminFaceEnrollmentPanel({ studentId, studentLabel }: AdminFaceE
       if (
         !descriptor ||
         descriptor.length !== 128 ||
-        descriptor.some((n) => !Number.isFinite(n))
+        descriptor.some((n: number) => !Number.isFinite(n))
       ) {
         toast({
           variant: 'destructive',
@@ -211,7 +240,7 @@ export function AdminFaceEnrollmentPanel({ studentId, studentLabel }: AdminFaceE
       await enroll({
         schoolId,
         studentId,
-        descriptor: descriptor.map((n) => Number(n)),
+        descriptor: descriptor.map((n: number) => Number(n)),
       });
       toast({
         title: enrolled ? 'Face retrained' : 'Face trained',
@@ -224,17 +253,49 @@ export function AdminFaceEnrollmentPanel({ studentId, studentLabel }: AdminFaceE
       toast({
         variant: 'destructive',
         title: 'Face training failed',
-        description: getReadableErrorMessage(e, 'Could not save face login.'),
+        description: callableToastDescription(e, 'Could not save face login.'),
       });
       setStatus(null);
     } finally {
       setBusy(false);
       stopCamera();
     }
-  }, [schoolId, functions, studentId, studentLabel, enrolled, startCamera, captureFaceDescriptor, averageDescriptor, toast, stopCamera, refreshStatus]);
+  }, [
+    schoolId,
+    functions,
+    studentId,
+    studentLabel,
+    enrolled,
+    user,
+    userError,
+    isUserLoading,
+    startCamera,
+    captureFaceDescriptor,
+    averageDescriptor,
+    toast,
+    stopCamera,
+    refreshStatus,
+  ]);
 
   const handleRemove = useCallback(async () => {
     if (!schoolId || !functions || !studentId) return;
+    if (userError) {
+      toast({
+        variant: 'destructive',
+        title: 'Cannot remove face login',
+        description: getReadableErrorMessage(userError, 'Firebase Authentication failed.'),
+      });
+      return;
+    }
+    if (isUserLoading || !user) {
+      toast({
+        variant: 'destructive',
+        title: 'Firebase not ready',
+        description:
+          'Sign in anonymously (Firebase Console → Authentication) or refresh the page.',
+      });
+      return;
+    }
     const ok = await confirm({
       title: 'Remove face login?',
       description: 'The student will stop being recognized by face. They can retrain later.',
@@ -245,6 +306,7 @@ export function AdminFaceEnrollmentPanel({ studentId, studentLabel }: AdminFaceE
     setBusy(true);
     setStatus('Removing…');
     try {
+      await user.getIdToken(true);
       const del = httpsCallable(functions, 'deleteStudentFace');
       await del({ schoolId, studentId });
       toast({ title: 'Face login removed' });
@@ -254,20 +316,31 @@ export function AdminFaceEnrollmentPanel({ studentId, studentLabel }: AdminFaceE
       toast({
         variant: 'destructive',
         title: 'Remove failed',
-        description: getReadableErrorMessage(e, 'Could not remove face login.'),
+        description: callableToastDescription(e, 'Could not remove face login.'),
       });
       setStatus(null);
     } finally {
       setBusy(false);
     }
-  }, [schoolId, functions, studentId, confirm, toast, refreshStatus]);
+  }, [schoolId, functions, studentId, user, userError, isUserLoading, confirm, toast, refreshStatus]);
 
   const handleToggleAutoLogin = useCallback(
     async (next: boolean) => {
       if (!schoolId || !functions || !studentId) return;
+      if (userError || isUserLoading || !user) {
+        toast({
+          variant: 'destructive',
+          title: 'Could not update face login',
+          description: userError
+            ? getReadableErrorMessage(userError, 'Firebase Authentication failed.')
+            : 'Wait for Firebase to finish signing you in, then try again.',
+        });
+        return;
+      }
       // Optimistic UI
       setFaceStatus((s) => ({ ...s, autoLogin: next }));
       try {
+        await user.getIdToken(true);
         const fn = httpsCallable(functions, 'setStudentFaceAutoLogin');
         await fn({ schoolId, studentId, autoLogin: next });
         await refreshStatus();
@@ -281,7 +354,7 @@ export function AdminFaceEnrollmentPanel({ studentId, studentLabel }: AdminFaceE
         });
       }
     },
-    [schoolId, functions, studentId, refreshStatus, toast],
+    [schoolId, functions, studentId, user, userError, isUserLoading, refreshStatus, toast],
   );
 
   if (!schoolId || !studentId) return null;
@@ -319,16 +392,29 @@ export function AdminFaceEnrollmentPanel({ studentId, studentLabel }: AdminFaceE
         <Switch
           checked={faceStatus.autoLogin}
           onCheckedChange={(v) => void handleToggleAutoLogin(!!v)}
-          disabled={busy}
+          disabled={busy || !firebaseAuthReadyForCallables}
           aria-label="Auto face login"
         />
       </div>
+
+      {userError ? (
+        <p className="text-[11px] text-destructive font-medium leading-snug">
+          Firebase sign-in failed: {getReadableErrorMessage(userError, String(userError?.message ?? 'Unknown error'))}
+        </p>
+      ) : isUserLoading ? (
+        <p className="text-[11px] text-muted-foreground">Connecting your session to Firebase…</p>
+      ) : !user ? (
+        <p className="text-[11px] text-destructive font-medium leading-snug">
+          Not signed in to Firebase. Enable Anonymous in Authentication → Sign-in method, then reload.
+        </p>
+      ) : null}
 
       <Button
         type="button"
         variant="outline"
         size="sm"
         className="w-full rounded-lg font-semibold"
+        disabled={busy || !firebaseAuthReadyForCallables}
         onClick={() => setTrainingDialogOpen(true)}
       >
         <Camera className="w-4 h-4 mr-2" />
@@ -385,7 +471,7 @@ export function AdminFaceEnrollmentPanel({ studentId, studentLabel }: AdminFaceE
                 variant="default"
                 size="sm"
                 onClick={() => void handleTrain()}
-                disabled={busy}
+                disabled={busy || !firebaseAuthReadyForCallables}
                 className="flex-1"
               >
                 <Camera className="w-4 h-4 mr-2" />
@@ -397,7 +483,7 @@ export function AdminFaceEnrollmentPanel({ studentId, studentLabel }: AdminFaceE
                   variant="outline"
                   size="sm"
                   onClick={() => void handleRemove()}
-                  disabled={busy}
+                  disabled={busy || !firebaseAuthReadyForCallables}
                   className="text-muted-foreground hover:text-destructive hover:border-destructive/60"
                 >
                   <Trash2 className="w-4 h-4 mr-1" />

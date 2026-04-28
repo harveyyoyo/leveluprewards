@@ -270,7 +270,7 @@ export default function HallOfFamePage() {
             </>
             )}
 
-            <main className={cn(
+            <div className={cn(
                 "relative z-10 w-full px-4 sm:px-8 pt-8 md:pt-12 transition-all duration-500",
                 "max-w-full",
                 settings.displayMode === 'app' ? 'pb-24' : 'pb-12'
@@ -517,7 +517,7 @@ export default function HallOfFamePage() {
                         )}
                     </CardContent>
                 </Card>
-            </main>
+            </div>
         </div>
     );
 }

@@ -5,6 +5,7 @@ import {
   getFirebaseEmulatorHost,
   parseEmulatorPort,
   shouldConnectFirebaseEmulators,
+  shouldConnectFunctionsEmulator,
 } from '@/firebase/emulatorConfig';
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
 import { getAuth, connectAuthEmulator } from 'firebase/auth';
@@ -16,6 +17,9 @@ import {
 } from 'firebase/firestore';
 import { getFunctions, connectFunctionsEmulator } from 'firebase/functions';
 import { getStorage, connectStorageEmulator } from 'firebase/storage';
+
+/** Must match `firebase deploy` function labels, e.g. `enrollStudentFace(us-central1)`. */
+export const FIREBASE_CLOUD_FUNCTIONS_REGION = 'us-central1';
 
 export function initializeFirebase() {
   const apps = getApps();
@@ -36,6 +40,8 @@ declare global {
 export function getSdks(firebaseApp: FirebaseApp) {
   const isBrowser = typeof window !== 'undefined';
   const useEmulators = isBrowser && shouldConnectFirebaseEmulators();
+  const useFunctionsEmulatorOnly =
+    isBrowser && !useEmulators && shouldConnectFunctionsEmulator();
 
   let firestore;
 
@@ -54,7 +60,7 @@ export function getSdks(firebaseApp: FirebaseApp) {
   }
 
   const auth = getAuth(firebaseApp);
-  const functions = getFunctions(firebaseApp);
+  const functions = getFunctions(firebaseApp, FIREBASE_CLOUD_FUNCTIONS_REGION);
   const storageBucket =
     (firebaseConfig as { storageBucket?: string }).storageBucket || `${firebaseConfig.projectId}.appspot.com`;
   const storage = getStorage(firebaseApp, storageBucket);
@@ -79,6 +85,26 @@ export function getSdks(firebaseApp: FirebaseApp) {
     console.info('[Firebase] Using local Emulator Suite:', { host, ports });
 
     window.__SCHOOL_ARCADE_FIREBASE_EMULATORS__ = true;
+  } else if (useFunctionsEmulatorOnly && !window.__SCHOOL_ARCADE_FIREBASE_EMULATORS__) {
+    const host = getFirebaseEmulatorHost();
+    const port = parseEmulatorPort(
+      'functions',
+      process.env.NEXT_PUBLIC_FIREBASE_EMULATOR_FUNCTIONS_PORT,
+    );
+
+    connectFunctionsEmulator(functions, host, port);
+
+    console.info('[Firebase] Using local Functions emulator:', { host, port });
+
+    window.__SCHOOL_ARCADE_FIREBASE_EMULATORS__ = true;
+  } else if (isBrowser && process.env.NODE_ENV === 'development') {
+    const w = window as Window & { __FIREBASE_LOGGED_PROD_CALLABLES__?: boolean };
+    if (!w.__FIREBASE_LOGGED_PROD_CALLABLES__) {
+      w.__FIREBASE_LOGGED_PROD_CALLABLES__ = true;
+      console.info(
+        `[Firebase] Callable functions → HTTPS (${FIREBASE_CLOUD_FUNCTIONS_REGION}, production project endpoints)`,
+      );
+    }
   }
 
   return {

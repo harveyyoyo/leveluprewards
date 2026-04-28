@@ -15,12 +15,30 @@ export function firebaseEmulatorsEnabledByEnv(): boolean {
   return v === '1' || v === 'true';
 }
 
+export function functionsEmulatorEnabledByEnv(): boolean {
+  const v = process.env.NEXT_PUBLIC_FIREBASE_FUNCTIONS_EMULATOR;
+  return v === '1' || v === 'true' || firebaseEmulatorsEnabledByEnv();
+}
+
 /**
  * Emulator wiring is only intended for local development (never production deployments).
  */
 export function shouldConnectFirebaseEmulators(): boolean {
   if (typeof window === 'undefined') return false;
   if (!firebaseEmulatorsEnabledByEnv()) return false;
+
+  const localHost =
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1' ||
+    window.location.hostname === '[::1]';
+
+  if (process.env.NODE_ENV === 'development') return true;
+  return localHost;
+}
+
+export function shouldConnectFunctionsEmulator(): boolean {
+  if (typeof window === 'undefined') return false;
+  if (!functionsEmulatorEnabledByEnv()) return false;
 
   const localHost =
     window.location.hostname === 'localhost' ||
