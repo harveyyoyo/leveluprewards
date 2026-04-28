@@ -5,6 +5,7 @@ import {
   normalizeStudentTheme,
   pickReadableOn,
   primaryForegroundFor,
+  resolveStudentThemeWithSchoolDefault,
 } from './themeContrast';
 
 describe('contrastRatio', () => {
@@ -117,6 +118,31 @@ describe('normalizeStudentTheme', () => {
     expect(out.text).toBe(input.text);
     expect(out.primary).toBe(input.primary);
     expect(out.accent).toBe(input.accent);
+  });
+});
+
+describe('resolveStudentThemeWithSchoolDefault', () => {
+  const school = {
+    background: '#0f172a',
+    text: '#f8fafc',
+    primary: '#38bdf8',
+    cardBackground: '#1e293b',
+    accent: '#a78bfa',
+  };
+
+  it('prefers the student theme when both exist', () => {
+    const student = { ...school, primary: '#ef4444' };
+    const out = resolveStudentThemeWithSchoolDefault(student, school)!;
+    expect(out.primary).toBe('#ef4444');
+  });
+
+  it('falls back to school default when student has no theme', () => {
+    const out = resolveStudentThemeWithSchoolDefault(undefined, school)!;
+    expect(out.primary).toBe(school.primary);
+  });
+
+  it('returns undefined when neither is set', () => {
+    expect(resolveStudentThemeWithSchoolDefault(undefined, undefined)).toBeUndefined();
   });
 });
 

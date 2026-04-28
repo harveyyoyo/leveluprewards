@@ -240,6 +240,17 @@ export function normalizeStudentTheme(
 }
 
 /**
+ * Per-student theme wins; otherwise the school default from admin settings.
+ * Result is always contrast-normalized for rendering.
+ */
+export function resolveStudentThemeWithSchoolDefault(
+  studentTheme: StudentTheme | null | undefined,
+  schoolDefault: StudentTheme | null | undefined,
+): StudentTheme | undefined {
+  return normalizeStudentTheme(studentTheme ?? schoolDefault ?? undefined);
+}
+
+/**
  * Foreground color that reads on top of the theme's primary button.
  * Always returns hex so it can be set as an inline `color` without
  * depending on CSS variables.

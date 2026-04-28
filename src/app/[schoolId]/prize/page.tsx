@@ -42,13 +42,12 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import DynamicIcon from '@/components/DynamicIcon';
 import { cn, getStudentNickname, getContrastColor } from '@/lib/utils';
-import { normalizeStudentTheme, primaryForegroundFor } from '@/lib/themeContrast';
+import { resolveStudentThemeWithSchoolDefault, primaryForegroundFor } from '@/lib/themeContrast';
 import { getReadableErrorMessage } from '@/lib/errorMessage';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
-import { StudentCustomEmojiControls } from '@/components/StudentCustomEmojiControls';
 import { motion, AnimatePresence } from "framer-motion";
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -652,9 +651,9 @@ function PrizeDashboard({
 
     // Normalize the student theme so every color pairing we render meets
     // at least WCAG AA contrast, regardless of what the AI or a teacher
-    // hand-picked. Downstream code reads `activeTheme` instead of
-    // `student.theme` so the fixes propagate everywhere.
-    const activeTheme = normalizeStudentTheme(student.theme);
+    // hand-picked. Uses per-student theme, else admin default from school
+    // settings. Downstream reads `activeTheme` instead of `student.theme`.
+    const activeTheme = resolveStudentThemeWithSchoolDefault(student.theme, settings.defaultStudentTheme);
     const fontScale = activeTheme?.fontScale ?? 1;
     const themeBg = activeTheme?.background || 'transparent';
     const computedThemeText = activeTheme?.text || (getContrastColor(activeTheme?.background || activeTheme?.cardBackground || activeTheme?.primary || '#0ea5e9') === 'black' ? '#020617' : '#ffffff');
@@ -755,16 +754,6 @@ function PrizeDashboard({
                                     <p className="text-sm font-bold uppercase tracking-[0.3em]" style={{ color: activeTheme ? 'var(--theme-text)' : undefined, opacity: 0.7 }}>
                                         Redeem your points for rewards
                                     </p>
-                                    {student && schoolId ? (
-                                        <StudentCustomEmojiControls
-                                            schoolId={schoolId}
-                                            studentId={student.id}
-                                            customEmojiUrl={student.customEmojiUrl}
-                                            resetTimer={resetTimer}
-                                            activeTheme={activeTheme}
-                                            className="mt-3 justify-center md:justify-start"
-                                        />
-                                    ) : null}
                                 </div>
                                 <div className="flex flex-col items-stretch sm:items-end gap-4 w-full md:w-auto">
                                     <div className="flex items-center justify-center sm:justify-end gap-2 flex-wrap">

@@ -3,6 +3,7 @@
 import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Student } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { resolveStudentThemeWithSchoolDefault } from '@/lib/themeContrast';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { APP_NAME, APP_TAGLINE } from '@/lib/app-branding';
 import { GoogleFontLoader } from '@/components/GoogleFontLoader';
@@ -96,7 +97,7 @@ export function StudentIdCard({
   appTagline?: string;
 }) {
   const { settings } = useSettings();
-  const theme = student.theme;
+  const theme = resolveStudentThemeWithSchoolDefault(student.theme, settings.defaultStudentTheme);
   const themeEmoji = theme?.emoji;
   const customEmojiUrl = student.customEmojiUrl;
   const themeFontFamily = theme?.fontFamily;

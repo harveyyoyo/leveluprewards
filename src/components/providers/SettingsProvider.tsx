@@ -19,6 +19,7 @@ import {
     type PlanTier,
     type SchoolPlanConfig,
 } from '@/lib/plans';
+import type { StudentTheme } from '@/lib/types';
 
 type ColorScheme = 'default' | 'sky' | 'rose' | 'mint' | 'lavender' | 'peach';
 
@@ -82,6 +83,8 @@ interface Settings {
     // Visuals
     animatedBackgroundStyle: string;
     hiddenAnimatedBackgroundIds: string[];
+    /** Admin-set palette for students with no individual `student.theme` (kiosk, shop, ID card). */
+    defaultStudentTheme?: StudentTheme | null;
 }
 
 interface SettingsContextType {

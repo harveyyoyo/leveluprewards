@@ -34,7 +34,7 @@ import { performKioskAttendanceSignIn, describeAttendanceKioskOutcome } from '@/
 import DynamicIcon from '@/components/DynamicIcon';
 import { Progress } from '@/components/ui/progress';
 import { cn, getStudentNickname, getContrastColor } from '@/lib/utils';
-import { normalizeStudentTheme, primaryForegroundFor } from '@/lib/themeContrast';
+import { resolveStudentThemeWithSchoolDefault, primaryForegroundFor } from '@/lib/themeContrast';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
 import { getReadableErrorMessage } from '@/lib/errorMessage';
 import {
@@ -87,7 +87,6 @@ import { FaceMismatchBanner } from '@/components/FaceMismatchBanner';
 import { rainbowTripletForNavId, complementTripletForNavId } from '@/lib/rainbowNav';
 import { STUDENT_KIOSK_REQUEST_EXIT_EVENT } from '@/lib/student-kiosk';
 import { prizeIsListed, studentSeesPrizeByTeachers } from '@/lib/prize-utils';
-import { StudentCustomEmojiControls } from '@/components/StudentCustomEmojiControls';
 
 function StudentActivityList({ schoolId, studentId, themed = false }: { schoolId: string; studentId: string; themed?: boolean }) {
   const firestore = useFirestore();
@@ -537,10 +536,8 @@ function StudentDashboardInner({
     );
   }
 
-  // Normalize the student theme so every color pairing we render meets
-  // at least WCAG AA contrast on this kiosk, regardless of what the AI
-  // or a teacher hand-picked.
-  const activeTheme = normalizeStudentTheme(student.theme);
+  // Normalize: per-student theme, else school default from admin settings.
+  const activeTheme = resolveStudentThemeWithSchoolDefault(student.theme, settings.defaultStudentTheme);
   const fontScale = activeTheme?.fontScale ?? 1;
   const themeBg = activeTheme?.background || '#020617';
   const computedThemeText = activeTheme?.text || (getContrastColor(themeBg) === 'black' ? '#020617' : '#ffffff');
@@ -680,14 +677,6 @@ function StudentDashboardInner({
                       )}
                     </div>
                   )}
-                  <StudentCustomEmojiControls
-                    schoolId={schoolId}
-                    studentId={student.id}
-                    customEmojiUrl={student.customEmojiUrl}
-                    resetTimer={resetTimer}
-                    activeTheme={activeTheme}
-                    className="mt-2"
-                  />
                 </div>
               </div>
             </div>
