@@ -40,6 +40,8 @@ jobs:
         shell: bash
         env:
           DEV_PASSCODE: ${{ secrets.DEV_PASSCODE }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           if [ -z "$DEV_PASSCODE" ]; then
             echo "::error::Missing GitHub Actions secret DEV_PASSCODE"
@@ -47,6 +49,12 @@ jobs:
           fi
           {
             printf 'DEV_PASSCODE=%s\n' "$DEV_PASSCODE"
+            if [ -n "$OPENAI_API_KEY" ]; then
+              printf 'OPENAI_API_KEY=%s\n' "$OPENAI_API_KEY"
+            fi
+            if [ -n "$GEMINI_API_KEY" ]; then
+              printf 'GEMINI_API_KEY=%s\n' "$GEMINI_API_KEY"
+            fi
             printf 'NEXT_PUBLIC_ENABLE_DEV_LOGIN=false\n'
           } > .env
 

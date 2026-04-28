@@ -7,7 +7,7 @@ import { useFirestore, useFirebase, useCollection, useMemoFirebase, useFunctions
 import { collection, doc, getDoc, setDoc, query, getDocs, orderBy, limit } from 'firebase/firestore';
 import { schoolPublicDocRef, mainSchoolDocToPublicPayload } from '@/lib/schoolPublic';
 import {
-  Plus, Trash2, Server, Pencil, Database, Download, Upload, ShieldCheck, LifeBuoy, RefreshCw, Link2, Check, Loader2, Image as ImageIcon,
+  Plus, Trash2, Server, Pencil, Database, Download, Upload, ShieldCheck, LifeBuoy, RefreshCw, Link2, Check, Loader2, Image as ImageIcon, LogOut,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -48,6 +48,8 @@ import { httpsCallable } from 'firebase/functions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ImageCropper } from '@/components/ImageCropper';
+import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 
 interface SchoolInfo {
   id: string;
@@ -164,7 +166,7 @@ function SchoolStatsModal({ school, isOpen, onOpenChange }: { school: SchoolInfo
 
 export default function DeveloperPage() {
   const {
-    loginState, isInitialized, isUserLoading, createSchool, deleteSchool, updateSchool,
+    loginState, isInitialized, isUserLoading, logout, createSchool, deleteSchool, updateSchool,
     devCreateBackup, devRestoreFromBackup, devDownloadBackup, devBackupAllSchools,
     devVerifyBackup, devMigrateSchoolData, devResetSampleSchool, devSyncSchoolPublicIndex,
   } = useAppContext();
@@ -600,235 +602,55 @@ export default function DeveloperPage() {
 
   return (
     <TooltipProvider>
-      <div className="space-y-6">
-        <Card className="bg-card border-b-4 border-slate-700 dark:border-slate-500 p-6 shadow-lg flex justify-between items-center">
-          <Helper content="This page is for system administrators. It allows you to manage all school instances, create backups, and perform system-wide operations.">
-            <div>
-              <h2 className="text-2xl font-bold flex items-center gap-2 font-headline">
-                <Server /> Developer Mode
-              </h2>
-              <p className="text-slate-400 text-sm">Manage all school databases.</p>
-            </div>
-          </Helper>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Sample Schools</CardTitle>
-            <CardDescription>
-              Quickly reset the built-in demo schools back to their default data. This will wipe any changes (students, themes, prizes, etc.) for that sample only.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col sm:flex-row gap-3">
-            <Button
-              variant="outline"
-              onClick={() => devResetSampleSchool('yeshiva')}
-              className="justify-between sm:w-auto"
-            >
-              <span className="font-bold">Reset &quot;yeshiva&quot;</span>
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => devResetSampleSchool('schoolabc')}
-              className="justify-between sm:w-auto"
-            >
-              <span className="font-bold">Reset &quot;schoolabc&quot;</span>
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="border shadow-md">
-          <CardHeader className="flex flex-row items-center justify-between gap-4">
-            <div>
-              <Helper content="Upload a global logo for the arcade app itself. This can be used in marketing pages, headers, and the portal shell.">
-                <CardTitle className="flex items-center gap-2">
-                  <ImageIcon className="w-5 h-5 text-slate-600" /> App Logo
-                </CardTitle>
-              </Helper>
-              <CardDescription>Developer-level branding for the overall app (not per-school).</CardDescription>
-            </div>
-            <div className="flex flex-col items-center gap-2">
-              <div className="h-16 w-16 rounded-2xl overflow-hidden bg-muted border border-border/70 flex items-center justify-center text-xs font-semibold text-muted-foreground">
-                {appLogoUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={appLogoUrl} alt="Current app logo" className={settings.logoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />
-                ) : (
-                  <span>App</span>
-                )}
-              </div>
-              {appLogoHistory.length > 0 && (
-                <div className="flex flex-col items-center gap-1 w-full">
-                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Previous (click to use)</span>
-                  <div className="flex flex-wrap justify-center gap-2 max-w-xs">
-                    {appLogoHistory.map((url, idx) => (
-                      <button
-                        key={`${url}-${idx}`}
-                        type="button"
-                        onClick={() => handleSetAppLogoUrl(url)}
-                        className="h-10 w-10 rounded-xl overflow-hidden border-2 border-border hover:border-primary transition-colors bg-muted/60 flex-shrink-0"
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={url} alt="Previous app logo" className={settings.logoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />
-                      </button>
-                    ))}
+      <div className="relative mx-auto w-full max-w-6xl px-4 pb-12 pt-6 sm:px-6 sm:pt-8">
+        <header className="mb-8">
+          <Card className="overflow-hidden border bg-card/90 shadow-md backdrop-blur-sm supports-[backdrop-filter]:bg-card/80">
+            <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+              <Helper content="This page is for system administrators. It allows you to manage all school instances, create backups, and perform system-wide operations.">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground ring-1 ring-border">
+                    <Server className="h-5 w-5" aria-hidden />
+                  </div>
+                  <div>
+                    <h1 id="developer-console-title" className="font-headline text-2xl font-bold tracking-tight sm:text-3xl">Developer Mode</h1>
+                    <p className="mt-1 text-sm text-muted-foreground">Manage every school instance, backups, and system-wide settings.</p>
                   </div>
                 </div>
-              )}
-              <div className="space-y-1 w-full">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Display</span>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => updateSettings({ logoDisplayMode: 'contain' })}
-                    className={`flex-1 py-1.5 px-3 rounded-md text-sm font-bold ${settings.logoDisplayMode === 'contain' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
-                  >
-                    Fit
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => updateSettings({ logoDisplayMode: 'cover' })}
-                    className={`flex-1 py-1.5 px-3 rounded-md text-sm font-bold ${settings.logoDisplayMode === 'cover' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
-                  >
-                    Fill (crop)
-                  </button>
-                </div>
-              </div>
-              <Button
-                size="sm"
-                variant="outline"
-                className="mt-1 rounded-full"
-                onClick={handleAppLogoUploadClick}
-                disabled={isAppLogoUploading}
-              >
-                {isAppLogoUploading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Upload className="h-4 w-4 mr-1" />}
-                Upload Logo
-              </Button>
-              <input
-                ref={appLogoInputRef}
-                type="file"
-                accept="image/png,image/jpeg,image/jpg,image/webp"
-                className="hidden"
-                onChange={handleAppLogoUpload}
-              />
-            </div>
-          </CardHeader>
-        </Card>
-
-        <Alert variant="destructive" className="border-2">
-          <Helper content="This tool attempts to recover the main document for a school that was accidentally deleted or had its data overwritten. It finds the most recent backup file and restores it. You must know the exact School ID.">
-            <AlertTitle className="font-bold flex items-center gap-2">
-              <LifeBuoy className="h-4 w-4" />
-              Emergency Data Recovery
-            </AlertTitle>
-          </Helper>
-          <AlertDescription>
-            If a school was accidentally deleted or its data overwritten, you can attempt to restore it here. This will restore the main school document from its most recent backup. You may then need to use the "Migrate Data" tool on the school.
-          </AlertDescription>
-          <div className="mt-4 flex flex-col sm:flex-row gap-2 items-start">
-            <div className="flex-grow w-full sm:w-auto">
-              <Label htmlFor="orphan-id" className="font-bold">Orphaned School ID</Label>
-              <Input
-                id="orphan-id"
-                placeholder="e.g. elisheva"
-                value={orphanSchoolId}
-                onChange={e => setOrphanSchoolId(e.target.value.trim().toLowerCase())}
-              />
-            </div>
-            <div className="self-end h-full">
-              <Button onClick={handleFindLatestBackup} disabled={!orphanSchoolId || isFindingBackup}>
-                {isFindingBackup ? "Searching..." : "Find Latest Backup"}
-              </Button>
-            </div>
-          </div>
-          {latestBackup && (
-            <div className="mt-4 p-4 bg-secondary rounded-lg flex flex-col sm:flex-row justify-between items-center">
-              <div>
-                <p className="font-bold">Latest Backup Found!</p>
-                <p className="text-sm font-code">Date: {new Date(parseInt(latestBackup.id)).toLocaleString()}</p>
-              </div>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button>Restore This Backup</Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This will restore the school document '{orphanSchoolId}' using the backup from {new Date(parseInt(latestBackup.id)).toLocaleString()}. The school will reappear in the list below.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleRestoreOrphan}>Restore</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
-          )}
-        </Alert>
-
-        <Card>
-          <CardHeader>
-            <Helper content="These actions affect all schools in the system simultaneously.">
-              <CardTitle>Global Actions</CardTitle>
-            </Helper>
-            <CardDescription>Perform actions across all school databases.</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col justify-between bg-secondary p-4 rounded-lg border">
-              <Helper content="This will create a full data snapshot for every single school instance in the database. This is useful for creating a system-wide save point.">
-                <div>
-                  <h3 className="font-bold flex items-center gap-2"><Database />One-Click Backup</h3>
-                  <p className="text-sm text-muted-foreground mt-1">Create a new backup for every school instance instantly.</p>
-                </div>
               </Helper>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="secondary" className="mt-4">Backup All Schools</Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This will trigger a backup for all {allSchools?.length || 0} school databases. This may take a few moments to complete.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleBackupAll}>Continue</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
-            <div className="flex flex-col justify-between bg-secondary p-4 rounded-lg border">
-              <div>
-                <h3 className="font-bold flex items-center gap-2"><ShieldCheck />Scheduled Daily Backups</h3>
-                <p className="text-sm text-muted-foreground mt-1">Full-depth backups of all schools run automatically every 24 hours via Cloud Scheduler. Includes all students, classes, teachers, prizes, coupons, categories, and activity history. Old backups are automatically pruned after 30 days.</p>
-              </div>
-              <div className="mt-4 text-xs text-muted-foreground bg-background p-2 rounded flex items-center gap-2">
-                <ShieldCheck className="h-3.5 w-3.5 flex-shrink-0" />
-                <span>Each backup is signed with a SHA-256 integrity hash for verification.</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <Helper content="This is a list of all separate school databases in the system. You can create new schools or manage existing ones from here.">
-              <CardTitle className="flex items-center justify-between">
-                <span>School Instances</span>
-                <span className="text-sm font-normal bg-slate-100 text-slate-600 px-2 py-1 rounded-md">{allSchools?.length || 0} total</span>
-              </CardTitle>
-            </Helper>
-            <CardDescription className="flex flex-wrap gap-2">
-              <Button onClick={() => setIsCreateSchoolDialogOpen(true)} className="mt-4"><Plus className="mr-2 h-4 w-4" />Create New School</Button>
-              <Button variant="outline" onClick={() => void devSyncSchoolPublicIndex()} className="mt-4">
-                <RefreshCw className="mr-2 h-4 w-4" />Sync student portal index
+              <Button type="button" variant="outline" className="shrink-0 gap-2" onClick={() => logout()}>
+                <LogOut className="h-4 w-4" aria-hidden />
+                Sign out
               </Button>
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+            </CardContent>
+          </Card>
+        </header>
+
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:items-start">
+          <section className="space-y-6 lg:col-span-7" aria-labelledby="dev-schools-heading">
+            <Card className="shadow-md">
+              <CardHeader className="space-y-4 pb-2">
+                <div className="flex flex-col gap-2">
+                  <Helper content="This is a list of all separate school databases in the system. You can create new schools or manage existing ones from here.">
+                    <CardTitle id="dev-schools-heading" className="flex flex-wrap items-center gap-2 text-xl sm:text-2xl">
+                      <span>School Instances</span>
+                      <Badge variant="secondary" className="font-mono text-xs font-semibold tabular-nums">
+                        {allSchools?.length ?? 0}
+                      </Badge>
+                    </CardTitle>
+                  </Helper>
+                  <CardDescription>
+                    Create schools, sync the student portal index, and use each row for plans, backups, migration, and edits.
+                  </CardDescription>
+                </div>
+                <Separator />
+                <div className="flex flex-wrap gap-2">
+                  <Button onClick={() => setIsCreateSchoolDialogOpen(true)}><Plus className="mr-2 h-4 w-4" />Create New School</Button>
+                  <Button variant="outline" onClick={() => void devSyncSchoolPublicIndex()}>
+                    <RefreshCw className="mr-2 h-4 w-4" />Sync student portal index
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
             {schoolsLoading ? <p>Loading schools...</p> : schoolsError ? (
               <Alert variant="destructive">
                 <AlertTitle>Cannot load schools</AlertTitle>
@@ -852,8 +674,8 @@ export default function DeveloperPage() {
             ) : (
               <ul className="space-y-2">
                 {allSchools && [...allSchools].sort((a, b) => a.id.localeCompare(b.id)).map((school) => (
-                  <li key={school.id} className="flex flex-wrap gap-2 justify-between items-center bg-secondary p-3 rounded-lg border">
-                    <div onClick={() => setStatsSchool(school)} className="flex-grow cursor-pointer rounded -m-2 p-2 transition-colors hover:bg-slate-200 dark:hover:bg-slate-700">
+                  <li key={school.id} className="flex flex-wrap gap-2 items-center justify-between rounded-xl border bg-secondary/80 p-3 shadow-sm">
+                    <div onClick={() => setStatsSchool(school)} className="min-w-0 flex-1 cursor-pointer rounded-md p-2 -m-2 transition-colors hover:bg-accent/50">
                       <p className="font-bold font-code break-all">{school.id}</p>
                       <p className="text-sm text-muted-foreground">{school.name}</p>
                       <p className="mt-1 inline-flex items-center rounded-md bg-background px-2 py-0.5 text-[11px] font-bold uppercase tracking-widest text-muted-foreground border">
@@ -959,7 +781,213 @@ export default function DeveloperPage() {
               </ul>
             )}
           </CardContent>
-        </Card>
+            </Card>
+          </section>
+
+          <aside className="space-y-6 lg:col-span-5" aria-label="Developer utilities">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Sample Schools</CardTitle>
+                <CardDescription>
+                  Reset built-in demo schools to default data. This wipes local changes for that sample only.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                <Button
+                  variant="outline"
+                  onClick={() => devResetSampleSchool('yeshiva')}
+                  className="justify-center sm:flex-1"
+                >
+                  <span className="font-semibold">Reset &quot;yeshiva&quot;</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => devResetSampleSchool('schoolabc')}
+                  className="justify-center sm:flex-1"
+                >
+                  <span className="font-semibold">Reset &quot;schoolabc&quot;</span>
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="border shadow-md">
+              <CardHeader className="pb-2">
+                <Helper content="Upload a global logo for the arcade app itself. This can be used in marketing pages, headers, and the portal shell.">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <ImageIcon className="h-5 w-5 text-muted-foreground" aria-hidden /> App Logo
+                  </CardTitle>
+                </Helper>
+                <CardDescription>App-wide branding (not per-school).</CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+                <p className="text-sm text-muted-foreground sm:max-w-[14rem] sm:pt-1">
+                  Preview uses your current shell display mode (fit vs fill).
+                </p>
+                <div className="flex flex-col items-stretch gap-3 sm:min-w-[11rem] sm:items-end">
+                  <div className="mx-auto h-16 w-16 shrink-0 overflow-hidden rounded-2xl border border-border/70 bg-muted sm:mx-0 flex items-center justify-center text-xs font-semibold text-muted-foreground">
+                    {appLogoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={appLogoUrl} alt="Current app logo" className={settings.logoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />
+                    ) : (
+                      <span>App</span>
+                    )}
+                  </div>
+                  {appLogoHistory.length > 0 && (
+                    <div className="flex w-full flex-col items-center gap-1 sm:items-end">
+                      <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Previous (click to use)</span>
+                      <div className="flex max-w-full flex-wrap justify-center gap-2 sm:justify-end">
+                        {appLogoHistory.map((url, idx) => (
+                          <button
+                            key={`${url}-${idx}`}
+                            type="button"
+                            onClick={() => handleSetAppLogoUrl(url)}
+                            className="h-10 w-10 shrink-0 overflow-hidden rounded-xl border-2 border-border bg-muted/60 transition-colors hover:border-primary"
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={url} alt="Previous app logo" className={settings.logoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div className="w-full space-y-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Display</span>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => updateSettings({ logoDisplayMode: 'contain' })}
+                        className={`flex-1 rounded-md px-3 py-1.5 text-sm font-bold ${settings.logoDisplayMode === 'contain' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
+                      >
+                        Fit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateSettings({ logoDisplayMode: 'cover' })}
+                        className={`flex-1 rounded-md px-3 py-1.5 text-sm font-bold ${settings.logoDisplayMode === 'cover' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
+                      >
+                        Fill (crop)
+                      </button>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="rounded-full"
+                    onClick={handleAppLogoUploadClick}
+                    disabled={isAppLogoUploading}
+                  >
+                    {isAppLogoUploading ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Upload className="mr-1 h-4 w-4" />}
+                    Upload Logo
+                  </Button>
+                  <input
+                    ref={appLogoInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg,image/webp"
+                    className="hidden"
+                    onChange={handleAppLogoUpload}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Alert variant="destructive" className="border-2">
+              <Helper content="This tool attempts to recover the main document for a school that was accidentally deleted or had its data overwritten. It finds the most recent backup file and restores it. You must know the exact School ID.">
+                <AlertTitle className="flex items-center gap-2 font-bold">
+                  <LifeBuoy className="h-4 w-4" />
+                  Emergency Data Recovery
+                </AlertTitle>
+              </Helper>
+              <AlertDescription>
+                If a school was accidentally deleted or its data overwritten, you can attempt to restore it here. This will restore the main school document from its most recent backup. You may then need to use the &quot;Migrate Data&quot; tool on the school.
+              </AlertDescription>
+              <div className="mt-4 flex flex-col items-stretch gap-2 sm:flex-row sm:items-end">
+                <div className="w-full flex-1 sm:w-auto">
+                  <Label htmlFor="orphan-id" className="font-bold">Orphaned School ID</Label>
+                  <Input
+                    id="orphan-id"
+                    placeholder="e.g. elisheva"
+                    value={orphanSchoolId}
+                    onChange={e => setOrphanSchoolId(e.target.value.trim().toLowerCase())}
+                  />
+                </div>
+                <Button className="shrink-0" onClick={handleFindLatestBackup} disabled={!orphanSchoolId || isFindingBackup}>
+                  {isFindingBackup ? 'Searching…' : 'Find Latest Backup'}
+                </Button>
+              </div>
+              {latestBackup && (
+                <div className="mt-4 flex flex-col items-stretch gap-3 rounded-lg bg-secondary p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="font-bold">Latest Backup Found!</p>
+                    <p className="font-code text-sm">Date: {new Date(parseInt(latestBackup.id)).toLocaleString()}</p>
+                  </div>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button className="shrink-0">Restore This Backup</Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will restore the school document &apos;{orphanSchoolId}&apos; using the backup from {new Date(parseInt(latestBackup.id)).toLocaleString()}. The school will reappear in the list.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleRestoreOrphan}>Restore</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              )}
+            </Alert>
+
+            <Card>
+              <CardHeader>
+                <Helper content="These actions affect all schools in the system simultaneously.">
+                  <CardTitle className="text-base">Global Actions</CardTitle>
+                </Helper>
+                <CardDescription>System-wide backup and scheduler information.</CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-4">
+                <div className="flex flex-col justify-between rounded-lg border bg-secondary p-4">
+                  <Helper content="This will create a full data snapshot for every single school instance in the database. This is useful for creating a system-wide save point.">
+                    <div>
+                      <h3 className="flex items-center gap-2 font-bold"><Database className="h-4 w-4 shrink-0" aria-hidden />One-Click Backup</h3>
+                      <p className="mt-1 text-sm text-muted-foreground">Create a new backup for every school instance instantly.</p>
+                    </div>
+                  </Helper>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="secondary" className="mt-4 w-full sm:w-auto">Backup All Schools</Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will trigger a backup for all {allSchools?.length || 0} school databases. This may take a few moments to complete.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleBackupAll}>Continue</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+                <div className="flex flex-col justify-between rounded-lg border bg-secondary p-4">
+                  <div>
+                    <h3 className="flex items-center gap-2 font-bold"><ShieldCheck className="h-4 w-4 shrink-0" aria-hidden />Scheduled Daily Backups</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">Full-depth backups of all schools run automatically every 24 hours via Cloud Scheduler. Includes all students, classes, teachers, prizes, coupons, categories, and activity history. Old backups are automatically pruned after 30 days.</p>
+                  </div>
+                  <div className="mt-4 flex items-center gap-2 rounded bg-background p-2 text-xs text-muted-foreground">
+                    <ShieldCheck className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                    <span>Each backup is signed with a SHA-256 integrity hash for verification.</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </aside>
+        </div>
 
         <Dialog open={isCreateSchoolDialogOpen} onOpenChange={setIsCreateSchoolDialogOpen}>
           <DialogContent>
