@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useRef, useCallback, RefObject, useMemo } from 'react';
 import { httpsCallable } from 'firebase/functions';
-import { Nfc, Type, Camera, GraduationCap, User, ScanFace, Loader2, Trash2 } from 'lucide-react';
+import { Nfc, Type, Camera, GraduationCap, User, ScanFace } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -46,7 +46,7 @@ export function StudentScanner({
     const playSound = useArcadeSound();
     const { settings } = useSettings();
     const isGraphic = settings.graphicMode === 'graphics';
-    const { captureFaceDescriptor, averageDescriptor } = useFaceDescriptor();
+    const { captureFaceDescriptor } = useFaceDescriptor();
     const FACE_MATCH_MIN_CONFIDENCE = 0.9;
 
     const [nfcId, setNfcId] = useState('');
@@ -57,8 +57,8 @@ export function StudentScanner({
     // Face login state (kiosk)
     const faceVideoRef = useRef<HTMLVideoElement>(null);
     const faceStreamRef = useRef<MediaStream | null>(null);
-    const [faceIdInput, setFaceIdInput] = useState('');
-    const [faceBusy, setFaceBusy] = useState(false);
+    const faceMatchInFlightRef = useRef(false);
+    const faceLoopCancelRef = useRef(false);
     const [faceStatus, setFaceStatus] = useState<string | null>(null);
 
     const faceEnabled = !!settings.enableFaceLogin;
@@ -131,160 +131,112 @@ export function StudentScanner({
         }
     }, [toast]);
 
-    const handleFaceSignIn = useCallback(async () => {
-        if (!schoolId || !functions) return;
-        setFaceBusy(true);
-        setFaceStatus('Starting camera…');
-        try {
-            if (isUserLoading || !user) {
-                setFaceStatus('Signing in…');
-                // FirebaseProvider should auto sign-in anonymously; just wait a moment.
-                await new Promise((r) => setTimeout(r, 350));
-            }
-
-            const video = await startFaceCamera();
-            if (!video) return;
-
-            setFaceStatus('Looking for a face…');
-            const descriptor = await captureFaceDescriptor(video);
-            if (!descriptor) {
-                toast({
-                    variant: 'destructive',
-                    title: 'No face detected',
-                    description: 'Center your face and ensure good lighting, then try again.',
-                });
-                setFaceStatus(null);
-                return;
-            }
-
-            setFaceStatus('Matching…');
-            const match = httpsCallable(functions, 'matchStudentFace');
-            const res = await match({
-                schoolId,
-                descriptor: descriptor.map((n) => Number(n)),
-            });
-            const data = res.data as any;
-            const studentId = typeof data?.studentId === 'string' ? data.studentId : '';
-            const confidence = typeof data?.confidence === 'number' ? data.confidence : null;
-
-            if (studentId && typeof confidence === 'number' && confidence >= FACE_MATCH_MIN_CONFIDENCE) {
-                playSound('login');
-                onStudentFound(studentId, { source: 'face', confidence: confidence ?? undefined });
-                setFaceStatus(null);
-                return;
-            }
-
-            playSound('error');
-            toast({
-                variant: 'destructive',
-                title: 'Not recognized',
-                description:
-                    typeof confidence === 'number'
-                        ? `No strong match found (${Math.round(confidence * 100)}%).`
-                        : 'No strong match found.',
-            });
-            setFaceStatus(null);
-        } catch (e: any) {
-            playSound('error');
-            toast({
-                variant: 'destructive',
-                title: 'Face sign-in failed',
-                description: getReadableErrorMessage(e, 'Could not sign in by face.'),
-            });
-            setFaceStatus(null);
-        } finally {
-            setFaceBusy(false);
-            stopFaceCamera();
-        }
-    }, [schoolId, functions, isUserLoading, user, startFaceCamera, captureFaceDescriptor, toast, playSound, onStudentFound, stopFaceCamera]);
-
-    const handleFaceTrain = useCallback(async () => {
-        if (!schoolId || !functions) return;
-        const studentId = faceIdInput.trim();
-        if (!studentId) {
-            toast({ variant: 'destructive', title: 'Student ID required', description: 'Enter a student ID to train.' });
+    // Face tab: open camera and continuously try to match (no sign-in button).
+    useEffect(() => {
+        if (!isActive || loginTab !== 'face' || !faceEnabled || !schoolId || !functions) {
             return;
         }
-        setFaceBusy(true);
-        setFaceStatus('Starting camera…');
-        try {
-            if (isUserLoading || !user) {
-                setFaceStatus('Signing in…');
-                await new Promise((r) => setTimeout(r, 350));
-            }
 
-            const video = await startFaceCamera();
-            if (!video) return;
+        faceLoopCancelRef.current = false;
+        const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
-            const samples: number[][] = [];
-            for (let i = 0; i < 3; i++) {
-                setFaceStatus(`Hold still… scan ${i + 1} of 3`);
-                const d = await captureFaceDescriptor(video);
-                if (d) samples.push(d);
-                await new Promise((r) => setTimeout(r, 220));
-            }
-            const descriptor = averageDescriptor(samples);
-            if (
-                !descriptor ||
-                descriptor.length !== 128 ||
-                descriptor.some((n) => !Number.isFinite(n))
-            ) {
-                toast({
-                    variant: 'destructive',
-                    title: 'No face detected',
-                    description: 'Make sure the student is centered and well-lit, then try again.',
-                });
-                setFaceStatus(null);
-                return;
-            }
+        const run = async () => {
+            try {
+                if (isUserLoading || !user) {
+                    setFaceStatus('Connecting…');
+                    await sleep(350);
+                }
+                if (faceLoopCancelRef.current) return;
 
-            setFaceStatus('Saving…');
-            const enroll = httpsCallable(functions, 'enrollStudentFace');
-            await enroll({
-                schoolId,
-                studentId,
-                descriptor: descriptor.map((n) => Number(n)),
-            });
-            toast({ title: 'Face trained', description: 'This student can now sign in by face.' });
-            setFaceStatus(null);
-        } catch (e: any) {
-            toast({
-                variant: 'destructive',
-                title: 'Face training failed',
-                description: getReadableErrorMessage(e, 'Could not save face login.'),
-            });
-            setFaceStatus(null);
-        } finally {
-            setFaceBusy(false);
+                setFaceStatus('Starting camera…');
+                const video = await startFaceCamera();
+                if (!video || faceLoopCancelRef.current) return;
+
+                setFaceStatus('Look at the camera');
+
+                while (!faceLoopCancelRef.current) {
+                    if (faceMatchInFlightRef.current) {
+                        await sleep(200);
+                        continue;
+                    }
+                    faceMatchInFlightRef.current = true;
+                    try {
+                        setFaceStatus('Looking for a face…');
+                        const descriptor = await captureFaceDescriptor(video);
+                        if (!descriptor || faceLoopCancelRef.current) {
+                            await sleep(700);
+                            continue;
+                        }
+
+                        setFaceStatus('Matching…');
+                        const match = httpsCallable(functions, 'matchStudentFace');
+                        const res = await match({
+                            schoolId,
+                            descriptor: descriptor.map((n) => Number(n)),
+                        });
+                        if (faceLoopCancelRef.current) break;
+
+                        const data = res.data as any;
+                        const studentId = typeof data?.studentId === 'string' ? data.studentId : '';
+                        const confidence = typeof data?.confidence === 'number' ? data.confidence : null;
+
+                        if (studentId && typeof confidence === 'number' && confidence >= FACE_MATCH_MIN_CONFIDENCE) {
+                            playSound('login');
+                            onStudentFound(studentId, { source: 'face', confidence: confidence ?? undefined });
+                            setFaceStatus(null);
+                            stopFaceCamera();
+                            return;
+                        }
+
+                        setFaceStatus(
+                            typeof confidence === 'number'
+                                ? `Not recognized (${Math.round(confidence * 100)}%) — keep trying`
+                                : 'Not recognized — keep trying',
+                        );
+                        await sleep(1600);
+                        if (!faceLoopCancelRef.current) setFaceStatus('Look at the camera');
+                    } catch (e: any) {
+                        playSound('error');
+                        toast({
+                            variant: 'destructive',
+                            title: 'Face sign-in failed',
+                            description: getReadableErrorMessage(e, 'Could not sign in by face.'),
+                        });
+                        await sleep(1200);
+                        if (!faceLoopCancelRef.current) setFaceStatus('Look at the camera');
+                    } finally {
+                        faceMatchInFlightRef.current = false;
+                    }
+                    await sleep(350);
+                }
+            } finally {
+                if (faceLoopCancelRef.current) {
+                    stopFaceCamera();
+                }
+            }
+        };
+
+        void run();
+
+        return () => {
+            faceLoopCancelRef.current = true;
             stopFaceCamera();
-        }
-    }, [schoolId, functions, faceIdInput, isUserLoading, user, startFaceCamera, captureFaceDescriptor, averageDescriptor, toast, stopFaceCamera]);
-
-    const handleFaceDelete = useCallback(async () => {
-        if (!schoolId || !functions) return;
-        const studentId = faceIdInput.trim();
-        if (!studentId) {
-            toast({ variant: 'destructive', title: 'Student ID required', description: 'Enter a student ID to remove.' });
-            return;
-        }
-        setFaceBusy(true);
-        setFaceStatus('Removing…');
-        try {
-            const del = httpsCallable(functions, 'deleteStudentFace');
-            await del({ schoolId, studentId });
-            toast({ title: 'Face login removed' });
-            setFaceStatus(null);
-        } catch (e: any) {
-            toast({
-                variant: 'destructive',
-                title: 'Remove failed',
-                description: getReadableErrorMessage(e, 'Could not remove face login.'),
-            });
-            setFaceStatus(null);
-        } finally {
-            setFaceBusy(false);
-        }
-    }, [schoolId, functions, faceIdInput, toast]);
+        };
+    }, [
+        isActive,
+        loginTab,
+        faceEnabled,
+        schoolId,
+        functions,
+        isUserLoading,
+        user,
+        startFaceCamera,
+        captureFaceDescriptor,
+        toast,
+        playSound,
+        onStudentFound,
+        stopFaceCamera,
+    ]);
 
     const handleLookup = useCallback(async (rawId: string) => {
         if (!rawId?.trim() || !schoolId) return;
@@ -481,21 +433,6 @@ export function StudentScanner({
                             <div className="py-2 space-y-4">
                                 <div className="relative border-2 border-border rounded-xl overflow-hidden shadow-xl bg-black">
                                     <video ref={faceVideoRef} className="w-full aspect-square object-cover" playsInline muted />
-                                    {faceBusy && (
-                                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                                            <Loader2 className="w-8 h-8 text-white animate-spin" />
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label className="text-xs font-bold uppercase tracking-widest opacity-70">Student ID (for train/remove)</Label>
-                                    <Input
-                                        value={faceIdInput}
-                                        onChange={(e) => setFaceIdInput(e.target.value)}
-                                        placeholder="Student ID"
-                                        className={cn("h-12 rounded-xl font-mono tracking-widest", isGraphic ? 'bg-foreground/5' : '')}
-                                    />
                                 </div>
 
                                 {faceStatus && (
@@ -504,39 +441,8 @@ export function StudentScanner({
                                     </p>
                                 )}
 
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                                    <Button
-                                        type="button"
-                                        onClick={() => void handleFaceSignIn()}
-                                        disabled={faceBusy}
-                                        className="h-12 rounded-xl font-black uppercase tracking-widest"
-                                    >
-                                        <ScanFace className="w-4 h-4 mr-2" />
-                                        Sign in
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        onClick={() => void handleFaceTrain()}
-                                        disabled={faceBusy}
-                                        className="h-12 rounded-xl font-black uppercase tracking-widest"
-                                    >
-                                        Train
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        onClick={() => void handleFaceDelete()}
-                                        disabled={faceBusy}
-                                        className="h-12 rounded-xl font-black uppercase tracking-widest text-muted-foreground hover:text-destructive"
-                                    >
-                                        <Trash2 className="w-4 h-4 mr-2" />
-                                        Remove
-                                    </Button>
-                                </div>
-
                                 <p className="text-center text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                                    Face login requires camera permission.
+                                    Allow camera access. We sign you in automatically when we recognize your face.
                                 </p>
                             </div>
                         </TabsContent>
