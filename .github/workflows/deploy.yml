@@ -36,6 +36,20 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Create production runtime env
+        shell: bash
+        env:
+          DEV_PASSCODE: ${{ secrets.DEV_PASSCODE }}
+        run: |
+          if [ -z "$DEV_PASSCODE" ]; then
+            echo "::error::Missing GitHub Actions secret DEV_PASSCODE"
+            exit 1
+          fi
+          {
+            printf 'DEV_PASSCODE=%s\n' "$DEV_PASSCODE"
+            printf 'NEXT_PUBLIC_ENABLE_DEV_LOGIN=false\n'
+          } > .env
+
       - name: Build
         run: npm run build
         env:
@@ -53,8 +67,7 @@ jobs:
             --only hosting \
             --project studio-1273073612-71183 \
             --non-interactive \
-            --force \
-            --debug 2>&1 | tee firebase-debug.log
+            --force 2>&1 | tee firebase-debug.log
         env:
           FIREBASE_CLI_EXPERIMENTS: webframeworks
 
