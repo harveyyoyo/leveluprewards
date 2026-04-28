@@ -14,7 +14,7 @@ import { reportFirestorePermissionError } from '@/firebase/error-emitter';
 import { removeUndefined } from './helpers';
 import { prizeRestrictionTeacherIds } from '@/lib/prize-utils';
 
-export const addPrize = async (firestore: Firestore, schoolId: string, prizeData: Omit<Prize, 'id'>) => {
+export const addPrize = async (firestore: Firestore, schoolId: string, prizeData: Omit<Prize, 'id'>): Promise<string> => {
   const newId = `p_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
   const newPrize: Prize = { ...prizeData, id: newId };
   const prizeDocRef = doc(firestore, 'schools', schoolId, 'prizes', newPrize.id);
@@ -31,6 +31,7 @@ export const addPrize = async (firestore: Firestore, schoolId: string, prizeData
       payload.vendingMotor = removeUndefined(vendingMotor as unknown as Record<string, unknown>);
     }
     await setDoc(prizeDocRef, payload);
+    return newId;
   } catch (error) {
     reportFirestorePermissionError(error, { path: prizeDocRef.path, operation: 'create', requestResourceData: newPrize });
     throw error;
@@ -40,12 +41,17 @@ export const addPrize = async (firestore: Firestore, schoolId: string, prizeData
 export const updatePrize = async (firestore: Firestore, schoolId: string, updatedPrize: Prize) => {
   const prizeDocRef = doc(firestore, 'schools', schoolId, 'prizes', updatedPrize.id);
   try {
-    const { stockCount, teacherId, teacherIds, vendingMotor, aiFunReward, id, ...rest } = updatedPrize;
+    const { stockCount, imageUrl, teacherId, teacherIds, vendingMotor, aiFunReward, id, ...rest } = updatedPrize;
     const payload = removeUndefined({ ...rest } as unknown as Record<string, unknown>) as Record<string, unknown>;
     if (stockCount === undefined) {
       payload.stockCount = deleteField();
     } else {
       payload.stockCount = stockCount;
+    }
+    if (!imageUrl) {
+      payload.imageUrl = deleteField();
+    } else {
+      payload.imageUrl = imageUrl;
     }
     if (vendingMotor === undefined) {
       payload.vendingMotor = deleteField();

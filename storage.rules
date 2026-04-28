@@ -5,6 +5,10 @@ service firebase.storage {
       allow read: if true;
       allow write: if request.auth != null;
     }
+    match /schools/{schoolId}/prizes/{prizeId}/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
     match /backups/{allPaths=**} {
       // Backups are managed exclusively through Cloud Functions (admin SDK).
       // No direct client access is needed or permitted.

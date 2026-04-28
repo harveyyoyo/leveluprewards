@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAppContext } from '@/components/AppProvider';
+import { useFirebase } from '@/firebase';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useToast } from '@/hooks/use-toast';
 import type { Prize, Teacher, Class, PrizeAiFunReward } from '@/lib/types';
@@ -20,6 +21,10 @@ import DynamicIcon from './DynamicIcon';
 import { Switch } from './ui/switch';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { uploadPrizeImage, validatePrizeImageFile } from '@/lib/prize-image-upload';
+import { cn } from '@/lib/utils';
+import { doc, updateDoc } from 'firebase/firestore';
+import { ImagePlus, Loader2 } from 'lucide-react';
 
 interface PrizeModalProps {
   isOpen: boolean;
@@ -30,7 +35,8 @@ interface PrizeModalProps {
 }
 
 export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses }: PrizeModalProps) {
-  const { addPrize, updatePrize } = useAppContext();
+  const { addPrize, updatePrize, schoolId } = useAppContext();
+  const { storage, firestore } = useFirebase();
   const { settings } = useSettings();
   const prizeAiOn = settings.enablePrizeAiSurprise === true;
   const [name, setName] = useState('');
@@ -41,10 +47,24 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses }: P
   const [aiFun, setAiFun] = useState<'off' | PrizeAiFunReward>('off');
   const [teacherId, setTeacherId] = useState('');
   const [classId, setClassId] = useState('');
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [stripImage, setStripImage] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
   const playSound = useArcadeSound();
 
   const isEditing = !!prize;
+
+  const pendingPreview = useMemo(
+    () => (pendingFile ? URL.createObjectURL(pendingFile) : null),
+    [pendingFile],
+  );
+
+  useEffect(() => {
+    return () => {
+      if (pendingPreview) URL.revokeObjectURL(pendingPreview);
+    };
+  }, [pendingPreview]);
 
   useEffect(() => {
     if (isOpen) {
@@ -67,8 +87,25 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses }: P
         setTeacherId('');
         setClassId('');
       }
+      setPendingFile(null);
+      setStripImage(false);
     }
   }, [prize, isOpen]);
+
+  const displayImageSrc =
+    pendingPreview || (!stripImage && prize?.imageUrl ? prize.imageUrl : null);
+
+  const handlePickFile = (file: File | undefined) => {
+    if (!file) return;
+    const err = validatePrizeImageFile(file);
+    if (err) {
+      playSound('error');
+      toast({ variant: 'destructive', title: err });
+      return;
+    }
+    setPendingFile(file);
+    setStripImage(false);
+  };
 
   const handleSave = async () => {
     const pointsValue = parseInt(points);
@@ -83,39 +120,58 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses }: P
       return;
     }
 
-    if (isEditing && prize) {
-      const updatedPrize: Prize = {
-        ...prize,
-        name,
-        points: pointsValue,
-        icon,
-        inStock,
-        offerPrintTicketOnRedeem,
-        aiFunReward: prizeAiOn && aiFun !== 'off' ? aiFun : undefined,
-        teacherId: teacherId || undefined,
-        classId: classId || undefined,
-        addedBy: 'Admin',
-      };
-      await updatePrize(updatedPrize);
-      playSound('success');
-      toast({ title: 'Prize updated!' });
-    } else {
-      const newPrize = {
-        name,
-        points: pointsValue,
-        icon,
-        inStock,
-        offerPrintTicketOnRedeem,
-        ...(prizeAiOn && aiFun !== 'off' ? { aiFunReward: aiFun } : {}),
-        teacherId: teacherId || undefined,
-        classId: classId || undefined,
-        addedBy: 'Admin',
-      };
-      await addPrize(newPrize);
-      playSound('success');
-      toast({ title: 'Prize added!' });
+    if (!schoolId || !storage || !firestore) {
+      toast({ variant: 'destructive', title: 'Storage is not ready. Try again.' });
+      return;
     }
-    setIsOpen(false);
+
+    const baseFields = {
+      name,
+      points: pointsValue,
+      icon,
+      inStock,
+      offerPrintTicketOnRedeem,
+      aiFunReward: prizeAiOn && aiFun !== 'off' ? aiFun : undefined,
+      teacherId: teacherId || undefined,
+      classId: classId || undefined,
+      addedBy: 'Admin' as const,
+    };
+
+    setUploading(true);
+    try {
+      if (isEditing && prize) {
+        let imageUrl: string | undefined = prize.imageUrl;
+        if (stripImage && !pendingFile) imageUrl = undefined;
+        else if (pendingFile) {
+          imageUrl = await uploadPrizeImage(storage, schoolId, prize.id, pendingFile);
+        }
+        const updatedPrize: Prize = {
+          ...prize,
+          ...baseFields,
+          imageUrl,
+        };
+        await updatePrize(updatedPrize);
+        playSound('success');
+        toast({ title: 'Prize updated!' });
+      } else {
+        const newId = await addPrize({
+          ...baseFields,
+        });
+        if (pendingFile) {
+          const imageUrl = await uploadPrizeImage(storage, schoolId, newId, pendingFile);
+          await updateDoc(doc(firestore, 'schools', schoolId, 'prizes', newId), { imageUrl });
+        }
+        playSound('success');
+        toast({ title: 'Prize added!' });
+      }
+      setIsOpen(false);
+    } catch (e) {
+      playSound('error');
+      const msg = e instanceof Error ? e.message : 'Could not save prize.';
+      toast({ variant: 'destructive', title: msg });
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
@@ -124,7 +180,7 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses }: P
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Edit Prize' : 'New Prize'}</DialogTitle>
            <DialogDescription>
-            Enter the prize details below. For the icon, use any valid name from the Lucide icon library.
+            Enter the prize details below. For the icon, use any valid name from the Lucide icon library. Optionally add a photo for the shop and admin list.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -135,6 +191,52 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses }: P
            <div className="space-y-1">
             <Label htmlFor="prize-points">Point Cost</Label>
             <Input id="prize-points" type="number" value={points} onChange={e => setPoints(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Prize picture (optional)</Label>
+            <div className="flex flex-wrap items-start gap-3">
+              <div
+                className={cn(
+                  'relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border bg-muted flex items-center justify-center',
+                  displayImageSrc ? '' : 'border-dashed',
+                )}
+              >
+                {displayImageSrc ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img src={displayImageSrc} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <ImagePlus className="h-8 w-8 text-muted-foreground/50" aria-hidden />
+                )}
+              </div>
+              <div className="flex min-w-0 flex-1 flex-col gap-2">
+                <Input
+                  type="file"
+                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  className="cursor-pointer text-sm file:mr-2"
+                  disabled={uploading}
+                  onChange={(e) => {
+                    handlePickFile(e.target.files?.[0]);
+                    e.target.value = '';
+                  }}
+                />
+                <p className="text-xs text-muted-foreground">JPEG, PNG, GIF, or WebP up to 2 MB.</p>
+                {displayImageSrc && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 self-start px-2 text-destructive hover:text-destructive"
+                    disabled={uploading}
+                    onClick={() => {
+                      setPendingFile(null);
+                      setStripImage(true);
+                    }}
+                  >
+                    Remove picture
+                  </Button>
+                )}
+              </div>
+            </div>
           </div>
           <div className="space-y-1">
             <Label htmlFor="prize-icon">Icon Name</Label>
@@ -225,8 +327,11 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses }: P
           ) : null}
         </div>
         <DialogFooter>
-          <Button type="button" variant="secondary" onClick={() => setIsOpen(false)}>Cancel</Button>
-          <Button type="submit" onClick={handleSave}>Save</Button>
+          <Button type="button" variant="secondary" disabled={uploading} onClick={() => setIsOpen(false)}>Cancel</Button>
+          <Button type="submit" disabled={uploading} onClick={handleSave} className="gap-2">
+            {uploading ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden /> : null}
+            {uploading ? 'Saving…' : 'Save'}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

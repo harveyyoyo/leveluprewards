@@ -75,6 +75,8 @@ export interface Student {
   lastName: string;
   nickname?: string;
   photoUrl?: string;
+  /** Student-uploaded sticker image (PNG/JPEG/WebP/GIF) shown with their name on kiosk and ID card. */
+  customEmojiUrl?: string;
   /** When the student record was created (ms since epoch). */
   createdAt?: number;
   points: number;
@@ -139,6 +141,8 @@ export interface Prize {
   name: string;
   points: number;
   icon: string;
+  /** Optional photo shown in the Prize Shop and admin list (Firebase Storage URL). */
+  imageUrl?: string;
   inStock: boolean;
   /** Optional quantity on hand. Omit for unlimited. When set, listing requires count above zero; redeem decrements until empty. */
   stockCount?: number;

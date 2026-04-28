@@ -43,7 +43,7 @@ export function AdminPrizesTab({
   schoolId: string;
   mode?: 'admin' | 'teacher';
   teacherId?: string;
-  onCreatePrize: (p: Omit<Prize, 'id'>) => Promise<void> | void;
+  onCreatePrize: (p: Omit<Prize, 'id'>) => Promise<void | string> | void;
   onDeletePrize: (prizeId: string) => void;
   onUpdatePrize: (p: Prize) => void;
   /** When set, "New Prize" opens this (single form) instead of the step wizard. */
@@ -257,13 +257,18 @@ export function AdminPrizesTab({
                   />
                 </div>
                 <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center bg-background border flex-shrink-0 relative overflow-hidden", !p.inStock && "opacity-40 grayscale")}>
-                  {p.name && (
-                    <div className="absolute inset-0 opacity-40 mix-blend-overlay pointer-events-none z-0">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={`https://api.dicebear.com/9.x/shapes/svg?seed=${encodeURIComponent(p.name)}&backgroundColor=transparent`} alt="" className="w-full h-full object-cover" />
-                    </div>
+                  {p.imageUrl ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={p.imageUrl} alt="" className="absolute inset-0 z-[5] size-full object-cover" />
+                  ) : (
+                    p.name && (
+                      <div className="absolute inset-0 opacity-40 mix-blend-overlay pointer-events-none z-0">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={`https://api.dicebear.com/9.x/shapes/svg?seed=${encodeURIComponent(p.name)}&backgroundColor=transparent`} alt="" className="w-full h-full object-cover" />
+                      </div>
+                    )
                   )}
-                  <DynamicIcon name={p.icon || 'Gift'} className="w-6 h-6 text-primary relative z-10" />
+                  <DynamicIcon name={p.icon || 'Gift'} className="w-6 h-6 text-primary relative z-10 drop-shadow-sm" />
                 </div>
                 <div className="flex flex-col gap-0.5 min-w-0">
                   <Label className="text-[9px] font-bold uppercase tracking-tighter opacity-50 leading-none flex items-center gap-1">

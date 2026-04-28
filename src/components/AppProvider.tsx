@@ -85,7 +85,7 @@ interface AppContextType {
   awardPointsToMultipleStudents: (studentIds: string[], points: number, description: string) => Promise<{ success: boolean; message: string; count: number }>;
   deductPointsFromMultipleStudents: (studentIds: string[], points: number, reason: string) => Promise<{ success: boolean; message: string; count: number; }>;
   redeemPrize: (studentId: string, prize: Prize, quantity: number) => Promise<{ success: boolean; activityId?: string; redeemedAt?: number; totalCost?: number; message?: string }>;
-  addPrize: (prize: Omit<Prize, 'id'>) => Promise<void>;
+  addPrize: (prize: Omit<Prize, 'id'>) => Promise<string>;
   updatePrize: (prize: Prize) => Promise<void>;
   deletePrize: (prizeId: string) => Promise<void>;
   uploadStudents: (csvContent: string, currentStudents: Student[], allClasses: Class[]) => Promise<{ success: number; failed: number; errors: string[] }>;

@@ -11,9 +11,10 @@ import { firebaseConfig } from '@/firebase/config';
  *  2. Firebase ID token required (Authorization: Bearer <token>) and verified
  *     against Google's Identity Toolkit REST API using the project's Web API key.
  *  3. When `requireSchoolStaff` is set, the body must include a `schoolId` and
- *     the caller must have an admin or teacher role doc under that school
- *     (verified via the Firestore REST API using the user's own ID token, so
- *     the existing Firestore security rules enforce the check).
+ *     the caller must have an admin or teacher role doc under that school, or
+ *     be listed in `appConfig/global.developerUids` (same anonymous Firebase
+ *     UID added by dev login + `addDeveloperMe`). Verified via the Firestore
+ *     REST API with the caller's ID token so security rules apply.
  *  4. Per-user + per-IP rate limits (sliding window).
  *  5. Payload size cap on the JSON body.
  *
@@ -30,6 +31,7 @@ const tokenCache = new Map<string, { uid: string; expiresAt: number }>();
 
 const ROLE_CACHE_MS = 60_000;
 const roleCache = new Map<string, { allowed: boolean; expiresAt: number }>();
+const developerUidCache = new Map<string, { allowed: boolean; expiresAt: number }>();
 
 interface Bucket {
   count: number;
@@ -167,6 +169,48 @@ async function checkSchoolRole(
   return allowed;
 }
 
+async function checkDeveloperAllowlist(idToken: string, uid: string): Promise<boolean> {
+  const cached = developerUidCache.get(uid);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.allowed;
+  }
+
+  const projectId = firebaseConfig.projectId;
+  if (!projectId) return false;
+
+  const url = `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(
+    projectId
+  )}/databases/(default)/documents/appConfig/global`;
+
+  let allowed = false;
+  try {
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${idToken}` },
+      cache: 'no-store',
+    });
+    if (!res.ok) {
+      developerUidCache.set(uid, { allowed: false, expiresAt: Date.now() + ROLE_CACHE_MS });
+      return false;
+    }
+    const body = (await res.json()) as {
+      fields?: {
+        developerUids?: {
+          arrayValue?: { values?: Array<{ stringValue?: string }> };
+        };
+      };
+    };
+    const values = body.fields?.developerUids?.arrayValue?.values;
+    if (Array.isArray(values)) {
+      allowed = values.some((v) => v?.stringValue === uid);
+    }
+  } catch {
+    allowed = false;
+  }
+
+  developerUidCache.set(uid, { allowed, expiresAt: Date.now() + ROLE_CACHE_MS });
+  return allowed;
+}
+
 function checkRateLimit(
   key: string,
   maxRequests: number,
@@ -207,8 +251,8 @@ export interface GuardOptions {
   /**
    * When true, the request body must include a `schoolId` string and the
    * authenticated user must have an `admin` or `teacher` role doc under that
-   * school. Enforced via the Firestore REST API with the caller's ID token,
-   * so the existing security rules are the source of truth.
+   * school, or appear in `appConfig/global.developerUids`. Enforced via the
+   * Firestore REST API with the caller's ID token.
    */
   requireSchoolStaff?: boolean;
 }
@@ -301,8 +345,9 @@ export async function guardAiRoute(
     }
     schoolId = raw.trim().toLowerCase();
 
-    const allowed = await checkSchoolRole(idToken, verified.uid, schoolId);
-    if (!allowed) {
+    const staff = await checkSchoolRole(idToken, verified.uid, schoolId);
+    const developer = staff ? false : await checkDeveloperAllowlist(idToken, verified.uid);
+    if (!staff && !developer) {
       return {
         ok: false,
         response: jsonError(403, 'You do not have permission to use this feature.'),

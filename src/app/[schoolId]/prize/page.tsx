@@ -134,6 +134,12 @@ function ConfirmRedemptionDialog({
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <div className="py-4 space-y-4">
+                    {prize.imageUrl ? (
+                        <div className="mx-auto flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl border bg-muted">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={prize.imageUrl} alt="" className="size-full object-cover" />
+                        </div>
+                    ) : null}
                     <div className="flex items-center justify-center gap-3">
                         <Button
                             variant="outline"
@@ -964,15 +970,24 @@ function PrizeDashboard({
                                                             color: canAfford ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))'
                                                         }}
                                                     >
-                                                        {prize.name && (
-                                                            <div className="absolute inset-0 opacity-40 mix-blend-overlay group-hover:scale-125 transition-transform duration-700 pointer-events-none z-0">
-                                                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                                                <img
-                                                                    src={`https://api.dicebear.com/9.x/shapes/svg?seed=${encodeURIComponent(prize.name)}&backgroundColor=transparent`}
-                                                                    alt=""
-                                                                    className="w-full h-full object-cover"
-                                                                />
-                                                            </div>
+                                                        {prize.imageUrl ? (
+                                                            /* eslint-disable-next-line @next/next/no-img-element */
+                                                            <img
+                                                                src={prize.imageUrl}
+                                                                alt=""
+                                                                className="absolute inset-0 z-[5] size-full object-cover group-hover:scale-105 transition-transform duration-700"
+                                                            />
+                                                        ) : (
+                                                            prize.name && (
+                                                                <div className="absolute inset-0 opacity-40 mix-blend-overlay group-hover:scale-125 transition-transform duration-700 pointer-events-none z-0">
+                                                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                                    <img
+                                                                        src={`https://api.dicebear.com/9.x/shapes/svg?seed=${encodeURIComponent(prize.name)}&backgroundColor=transparent`}
+                                                                        alt=""
+                                                                        className="w-full h-full object-cover"
+                                                                    />
+                                                                </div>
+                                                            )
                                                         )}
                                                         <DynamicIcon name={prize.icon || 'Gift'} className="w-12 h-12 drop-shadow-sm relative z-10" />
                                                     </div>
