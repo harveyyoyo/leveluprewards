@@ -269,7 +269,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             // No settings for this school, use defaults and show the intro wizard once.
             const initialSettings: Settings = {
                 ...defaultSettings,
-                showIntroWizard: true,
+                showIntroWizard: !!schoolId,
                 // Demo school: apply sky theme and sound to match production
                 ...(schoolId === 'schoolabc' ? { 
                     colorScheme: 'sky' as ColorScheme, 

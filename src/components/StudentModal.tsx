@@ -266,12 +266,7 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
   return (
     <>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent
-          className={cn(
-            'max-h-[min(90vh,880px)] overflow-y-auto',
-            isEditing && settings.enableFaceLogin ? 'sm:max-w-lg' : 'sm:max-w-md',
-          )}
-        >
+        <DialogContent className="max-h-[min(90vh,880px)] overflow-y-auto sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{isEditing ? `Edit ${getStudentNickname(student!)} ${student!.lastName}` : 'New Student'}</DialogTitle>
         </DialogHeader>

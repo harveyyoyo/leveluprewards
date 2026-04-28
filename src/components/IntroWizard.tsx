@@ -1,6 +1,7 @@
 
 'use client';
 import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useSettings } from './providers/SettingsProvider';
@@ -89,9 +90,15 @@ const steps = [
 
 export function IntroWizard() {
   const { settings, updateSettings } = useSettings();
+  const pathname = usePathname();
   const [stepIndex, setStepIndex] = useState(0);
 
   const isWizardEnabled = settings.showIntroWizard === true;
+  const isPublicRoute =
+    pathname === '/' ||
+    pathname === '/login' ||
+    pathname === '/developer' ||
+    pathname.startsWith('/s/');
 
   // Remember progress so restarting the wizard continues where you left off.
   useEffect(() => {
@@ -130,8 +137,12 @@ export function IntroWizard() {
   };
   
   const currentStep = steps[stepIndex];
+  const isCurrentRoute =
+    !!currentStep &&
+    !isPublicRoute &&
+    (pathname === currentStep.target || pathname.endsWith(currentStep.target));
 
-  if (!isWizardEnabled || !currentStep) {
+  if (!isWizardEnabled || !currentStep || !isCurrentRoute) {
     return null;
   }
 
@@ -143,7 +154,7 @@ export function IntroWizard() {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 50, scale: 0.9 }}
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-        className="fixed bottom-6 right-6 w-full max-w-sm z-[200]"
+        className="fixed bottom-4 right-4 left-4 w-auto max-w-sm z-[200] sm:bottom-6 sm:left-auto sm:right-6 sm:w-full"
       >
         <Card className="shadow-2xl border-2 border-primary/20 bg-background/80 backdrop-blur-xl">
           <CardHeader>
