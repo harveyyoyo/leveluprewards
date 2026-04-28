@@ -1,8 +1,8 @@
 
 'use client';
 import { useEffect, useState, useRef } from 'react';
-import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
+import { SchoolDeveloperLoginForm } from '@/components/SchoolDeveloperLoginForm';
 import { useFirestore, useFirebase, useCollection, useMemoFirebase, useFunctions } from '@/firebase';
 import { collection, doc, getDoc, setDoc, query, getDocs, orderBy, limit } from 'firebase/firestore';
 import { schoolPublicDocRef, mainSchoolDocToPublicPayload } from '@/lib/schoolPublic';
@@ -171,7 +171,6 @@ export default function DeveloperPage() {
   const firestore = useFirestore();
   const functions = useFunctions();
   const { auth } = useFirebase();
-  const router = useRouter();
   const { toast } = useToast();
   const playSound = useArcadeSound();
   const { settings, updateSettings } = useSettings();
@@ -206,12 +205,6 @@ export default function DeveloperPage() {
 
   const schoolsQuery = useMemoFirebase(() => (loginState === 'developer' && !isUserLoading) ? collection(firestore, 'schools') : null, [loginState, firestore, isUserLoading]);
   const { data: allSchools, isLoading: schoolsLoading, error: schoolsError } = useCollection<SchoolInfo>(schoolsQuery);
-
-  useEffect(() => {
-    if (isInitialized && loginState !== 'developer') {
-      router.replace('/login?redirectTo=/developer');
-    }
-  }, [isInitialized, loginState, router]);
 
   // Note: Admin roles are provisioned by backend-only code (Cloud Functions / Admin SDK).
   // We intentionally do not write to roles collections from the client.
@@ -590,7 +583,7 @@ export default function DeveloperPage() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  if (!isInitialized || loginState !== 'developer' || isUserLoading) {
+  if (!isInitialized || isUserLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Button disabled variant="ghost" size="lg" className="text-muted-foreground">
@@ -599,6 +592,10 @@ export default function DeveloperPage() {
         </Button>
       </div>
     );
+  }
+
+  if (loginState !== 'developer') {
+    return <SchoolDeveloperLoginForm mode="developer-only" />;
   }
 
   return (

@@ -46,7 +46,15 @@ jobs:
       # If deploy fails with IAM errors, grant the CI service account "Service Account User" on the
       # default compute SA: <PROJECT_NUMBER>-compute@developer.gserviceaccount.com (see Firebase docs).
       - name: Deploy to Firebase Hosting
-        run: npx firebase-tools@14.27.0 deploy --only hosting --project studio-1273073612-71183 --non-interactive --force
+        shell: bash
+        run: |
+          set -o pipefail
+          npx firebase-tools@14.27.0 deploy \
+            --only hosting \
+            --project studio-1273073612-71183 \
+            --non-interactive \
+            --force \
+            --debug 2>&1 | tee firebase-debug.log
         env:
           FIREBASE_CLI_EXPERIMENTS: webframeworks
 
@@ -55,5 +63,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: firebase-debug-log
-          path: firebase-debug.log
+          path: |
+            firebase-debug.log
+            .firebase/*.log
           if-no-files-found: ignore

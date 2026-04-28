@@ -226,10 +226,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     setIsAdmin(false);
                     setIsTeacher(false);
                 }
+            } else if (savedState === 'developer') {
+                localStorage.removeItem('loginState');
+                localStorage.removeItem('userName');
+                setLoginState('loggedOut');
+                setIsAdmin(false);
             } else if (savedState) {
                 setLoginState(savedState);
-                if (savedState === 'developer') setIsAdmin(true);
-                else setIsAdmin(false);
+                setIsAdmin(false);
             }
 
             setIsInitialized(true);
@@ -316,8 +320,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         setIsAdmin(true);
                         setUserName('Developer');
                         setUserId(uid);
-                        localStorage.setItem('loginState', 'developer');
-                        localStorage.setItem('userName', 'Developer');
                         return true;
                     }
                 } catch (e) {
