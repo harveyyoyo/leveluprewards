@@ -1,7 +1,7 @@
 
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 import { useAppContext } from '@/components/AppProvider';
@@ -328,6 +328,7 @@ function PrizeDashboard({
     onRequestExit: () => void;
 }) {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { schoolId, redeemPrize, printPrizeTickets, isKioskLocked } = useAppContext();
     const firestore = useFirestore();
     const { toast } = useToast();
@@ -371,6 +372,32 @@ function PrizeDashboard({
 
     const prizesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'prizes') : null, [firestore, schoolId]);
     const { data: prizes, isLoading: prizesLoading, error: prizesError } = useCollection<Prize>(prizesQuery);
+
+    /** Open confirm dialog when linked from student dashboard (?redeem=prizeId). */
+    useEffect(() => {
+        const redeemId = searchParams.get('redeem');
+        if (!redeemId || studentLoading || prizesLoading || !schoolId || !student) return;
+        const visible = (prizes || []).filter((p) => {
+            if (!prizeIsListed(p)) return false;
+            const teacherMatch = studentSeesPrizeByTeachers(student, p);
+            const classMatch = !p.classId || student.classId === p.classId;
+            return teacherMatch && classMatch;
+        });
+        const match = visible.find((p) => p.id === redeemId);
+        const pts = student.points || 0;
+        if (match && pts >= (match.points || 0)) {
+            setConfirmingPrize(match);
+        }
+        router.replace(`/${schoolId}/prize`, { scroll: false });
+    }, [
+        searchParams,
+        studentLoading,
+        prizesLoading,
+        schoolId,
+        student,
+        prizes,
+        router,
+    ]);
 
     const [logoutTimer, setLogoutTimer] = useState(KIOSK_AUTO_LOGOUT_SEC);
 

@@ -884,32 +884,6 @@ function StudentDashboardInner({
                   )}
                 </Tabs>
 
-                <Button
-                  asChild
-                  className={cn(
-                    'w-full mt-5 h-14 md:h-16 text-base md:text-lg font-black rounded-2xl shadow-lg transition-all active:scale-[0.99] uppercase tracking-wide',
-                    !activeTheme && 'bg-gradient-to-r from-primary to-primary/90',
-                  )}
-                  style={
-                    activeTheme
-                      ? {
-                          backgroundColor: 'var(--theme-primary)',
-                          color: primaryForeground,
-                        }
-                      : undefined
-                  }
-                >
-                  <Link
-                    href={`/${schoolId}/prize`}
-                    onClick={() => playSound('click')}
-                    className="flex items-center justify-center gap-2"
-                  >
-                    <Gift className="h-6 w-6 shrink-0" aria-hidden />
-                    Redeem Prize now
-                    <ChevronRight className="h-5 w-5 shrink-0 opacity-90" aria-hidden />
-                  </Link>
-                </Button>
-
               </CardContent>
             </Card>
 
@@ -919,19 +893,19 @@ function StudentDashboardInner({
               style={activeTheme ? { backgroundColor: 'var(--theme-card)', color: 'var(--theme-text)' } : undefined}
             >
               <CardHeader className="pb-2 pt-4">
-                <Helper content="These are prizes you currently have enough points to redeem. Go to the Prize Shop to make a purchase.">
+                <Helper content="Prizes you can afford right now. Tap one to open the same redeem confirmation as in the Prize Shop, or use Redeem Prize now to browse the full shop.">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={activeTheme ? { backgroundColor: 'var(--theme-bg)' } : undefined}>
                       <Award className="w-4 h-4" style={activeTheme ? { color: 'var(--theme-primary)' } : undefined} />
                     </div>
                     <div>
                       <CardTitle className="text-sm font-black">Eligible Rewards</CardTitle>
-                      <CardDescription className="text-[10px] font-medium leading-snug" style={activeTheme ? { color: 'var(--theme-text)', opacity: 0.7 } : undefined}>Enough points for these — open Prize Shop to redeem.</CardDescription>
+                      <CardDescription className="text-[10px] font-medium leading-snug" style={activeTheme ? { color: 'var(--theme-text)', opacity: 0.7 } : undefined}>Tap a reward to redeem — same as the Prize Shop.</CardDescription>
                     </div>
                   </div>
                 </Helper>
               </CardHeader>
-              <CardContent className="pt-0 pb-4">
+              <CardContent className="pt-0 pb-4 space-y-3">
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {prizesLoading ? (
                     [...Array(3)].map((_, i) => <Skeleton key={i} className="h-20 w-full rounded-lg" />)
@@ -940,10 +914,13 @@ function StudentDashboardInner({
                     .sort((a, b) => b.points - a.points)
                     .slice(0, 3)
                     .map((reward) => (
-                      <div
+                      <Link
                         key={reward.id}
+                        href={`/${schoolId}/prize?redeem=${encodeURIComponent(reward.id)}`}
+                        onClick={() => playSound('click')}
+                        aria-label={`Redeem ${reward.name || 'prize'} in Prize Shop`}
                         className={cn(
-                          "p-2.5 rounded-lg transition-all flex flex-col items-center text-center gap-1 shadow-sm hover:shadow-md hover:-translate-y-0.5 transform duration-300 group relative overflow-hidden",
+                          "p-2.5 rounded-lg transition-all flex flex-col items-center text-center gap-1 shadow-sm hover:shadow-md hover:-translate-y-0.5 transform duration-300 group relative overflow-hidden cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
                           !activeTheme && "border border-slate-100 dark:border-slate-800 bg-white/40 dark:bg-slate-800/40",
                         )}
                         style={activeTheme ? { backgroundColor: 'var(--theme-bg)', color: 'var(--theme-text)', borderColor: 'var(--theme-primary)', borderWidth: 1, borderStyle: 'solid' } : undefined}
@@ -987,7 +964,7 @@ function StudentDashboardInner({
                         >
                           {(reward.points || 0).toLocaleString()} PTS
                         </Badge>
-                      </div>
+                      </Link>
                     ))}
                   {!prizesLoading && (prizes || []).filter(p => prizeIsListed(p) && p.points <= student.points).length === 0 && (
                     <div
@@ -1010,6 +987,31 @@ function StudentDashboardInner({
                     </div>
                   )}
                 </div>
+                <Button
+                  asChild
+                  className={cn(
+                    'w-full h-12 md:h-14 text-sm md:text-base font-black rounded-2xl shadow-lg transition-all active:scale-[0.99] uppercase tracking-wide',
+                    !activeTheme && 'bg-gradient-to-r from-primary to-primary/90',
+                  )}
+                  style={
+                    activeTheme
+                      ? {
+                          backgroundColor: 'var(--theme-primary)',
+                          color: primaryForeground,
+                        }
+                      : undefined
+                  }
+                >
+                  <Link
+                    href={`/${schoolId}/prize`}
+                    onClick={() => playSound('click')}
+                    className="flex items-center justify-center gap-2"
+                  >
+                    <Gift className="h-5 w-5 md:h-6 md:w-6 shrink-0" aria-hidden />
+                    Redeem Prize now
+                    <ChevronRight className="h-4 w-4 md:h-5 md:w-5 shrink-0 opacity-90" aria-hidden />
+                  </Link>
+                </Button>
               </CardContent>
             </Card>
 
