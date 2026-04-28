@@ -166,7 +166,12 @@ export function SettingsModal() {
     return (
         <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="hover:bg-muted rounded-xl group relative z-50">
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="hover:bg-muted rounded-xl group relative z-50"
+                    aria-label="Open settings"
+                >
                     <Settings className="w-5 h-5 text-muted-foreground group-hover:rotate-45 transition-transform duration-300" />
                 </Button>
             </DialogTrigger>
@@ -626,6 +631,18 @@ export function SettingsModal() {
 
                             <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
                                 <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><ShoppingBag className="w-3.5 h-3.5" /> Prize Shop</p>
+                                <FeatureRow
+                                    id="enablePrizeAiSurprise"
+                                    label="AI Prize Surprise"
+                                    desc="After redemption, show a school-safe AI joke, riddle, or fortune for prizes that have it configured. Uses server API keys."
+                                    icon={<Sparkles className="w-5 h-5" />}
+                                    settings={local}
+                                    onToggle={handleToggle}
+                                    isImplemented={true}
+                                    isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enablePrizeAiSurprise')}
+                                    planLabel={planLabel}
+                                />
                                 <FeatureRow
                                     id="enableVendingMachine"
                                     label="Vending Machine"

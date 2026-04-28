@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import OpenAI from 'openai';
 import { guardAiRoute } from '@/lib/apiAuth';
+import { assertPrizeAiSurpriseAllowedForSchool } from '@/lib/server/prizeAiSurpriseGate';
 import type { PrizeAiFunReward } from '@/lib/types';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
@@ -49,6 +50,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'schoolId is required.' }, { status: 400 });
     }
     const schoolId = rawSchoolId.trim();
+
+    const planDenied = await assertPrizeAiSurpriseAllowedForSchool(schoolId);
+    if (planDenied) return planDenied;
 
     if (typeof rawMode !== 'string' || !MODES.includes(rawMode as PrizeAiFunReward)) {
       return NextResponse.json({ error: 'mode must be random, joke, riddle, or fortune.' }, { status: 400 });

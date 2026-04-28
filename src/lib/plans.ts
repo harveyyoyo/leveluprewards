@@ -26,6 +26,7 @@ export type PlanFeatureKey =
   | 'enableFaceLogin'
   | 'enableQrLogin'
   | 'enablePrizeImages'
+  | 'enablePrizeAiSurprise'
   | 'enableVendingMachine'
   | 'enableWishlist'
   | 'enableAchievements'
@@ -56,6 +57,7 @@ export const PLAN_FEATURE_KEYS: PlanFeatureKey[] = [
   'enableFaceLogin',
   'enableQrLogin',
   'enablePrizeImages',
+  'enablePrizeAiSurprise',
   'enableVendingMachine',
   'enableWishlist',
   'enableAchievements',
@@ -123,6 +125,7 @@ export const PLANS: Record<PlanTier, PlanInfo> = {
       'enableStudentPortal',
       'enableFaceLogin',
       'enablePrizeImages',
+      'enablePrizeAiSurprise',
       'enableWishlist',
       'enableAchievements',
       'enableBadges',
@@ -156,6 +159,7 @@ export const PLAN_FEATURE_LABELS: Record<PlanFeatureKey, string> = {
   enableFaceLogin: 'Face Login',
   enableQrLogin: 'QR Code Login',
   enablePrizeImages: 'Prize Photos',
+  enablePrizeAiSurprise: 'AI Prize Surprise',
   enableVendingMachine: 'Vending Machine',
   enableWishlist: 'Student Wishlists',
   enableAchievements: 'Bonus Points',

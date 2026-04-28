@@ -53,6 +53,7 @@ export function AdminPrizesTab({
 }) {
   const { settings } = useSettings();
   const vendingEnabled = settings.enableVendingMachine === true;
+  const prizeAiSurpriseEnabled = settings.enablePrizeAiSurprise === true;
   const [helpOpen, setHelpOpen] = useState(false);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardStep, setWizardStep] = useState(0);
@@ -397,6 +398,7 @@ export function AdminPrizesTab({
                   </Select>
                 </div>
                 <div className="flex items-center justify-end gap-0.5 justify-self-end">
+                  {prizeAiSurpriseEnabled ? (
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
@@ -442,6 +444,7 @@ export function AdminPrizesTab({
                       </div>
                     </PopoverContent>
                   </Popover>
+                  ) : null}
                   {onEditPrize ? (
                     <Button
                       type="button"
@@ -561,7 +564,7 @@ export function AdminPrizesTab({
               <li><span className="font-bold">Teachers</span>: pick multiple teachers or school-wide.</li>
               <li><span className="font-bold">Class</span>: optionally restrict by class.</li>
               <li><span className="font-bold">Vending motor</span>: enable the Vending Machine feature in settings, then use the prize motor button to pick axis X/Y/Z/E.</li>
-              <li><span className="font-bold">AI surprise</span>: sparkle control — after redemption, show an AI joke, riddle, or fortune on the Prize Shop.</li>
+              <li><span className="font-bold">AI surprise</span>: included on Pro+ plans — enable “AI Prize Surprise” under Settings → Features, then use the sparkle control. After redemption, the Prize Shop can show an AI joke, riddle, or fortune.</li>
             </ul>
           </div>
           <DialogFooter>
@@ -644,6 +647,7 @@ export function AdminPrizesTab({
                 <Switch checked={wOfferPrint} onCheckedChange={setWOfferPrint} />
               </div>
 
+              {prizeAiSurpriseEnabled ? (
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-lg border p-3">
                 <div className="space-y-0.5 min-w-0">
                   <Label>AI surprise after redeem</Label>
@@ -664,6 +668,7 @@ export function AdminPrizesTab({
                   </SelectContent>
                 </Select>
               </div>
+              ) : null}
 
               {mode === 'teacher' ? (
                 <div className="flex items-center justify-between rounded-lg border p-3">
@@ -734,10 +739,12 @@ export function AdminPrizesTab({
                   <li><span className="font-bold">In stock</span>: {wInStock ? 'Yes' : 'No'}</li>
                   <li><span className="font-bold">Qty</span>: {wStockCount.trim() ? wStockCount.trim() : 'Unlimited'}</li>
                   <li><span className="font-bold">Print ticket</span>: {wOfferPrint ? 'Yes' : 'No'}</li>
+                  {prizeAiSurpriseEnabled ? (
                   <li>
                     <span className="font-bold">AI surprise</span>:{' '}
                     {wAiFun === 'off' ? 'Off' : wAiFun === 'random' ? 'Random' : wAiFun === 'fortune' ? 'Fortune cookie' : wAiFun}
                   </li>
+                  ) : null}
                   {mode === 'admin' ? (
                     <li>
                       <span className="font-bold">Teachers</span>:{' '}
@@ -757,7 +764,9 @@ export function AdminPrizesTab({
                   <li>An activity log entry is created.</li>
                   <li>If Qty is set, it decreases until it reaches 0.</li>
                   <li>If Print is on, the shop offers a print ticket right after redeeming.</li>
+                  {prizeAiSurpriseEnabled ? (
                   <li>If AI surprise is on, the kiosk shows one generated joke, riddle, or fortune after redeeming.</li>
+                  ) : null}
                 </ul>
               </div>
               <div className="flex flex-col sm:flex-row gap-2">
@@ -808,7 +817,7 @@ export function AdminPrizesTab({
                     inStock: wInStock,
                     stockCount,
                     offerPrintTicketOnRedeem: wOfferPrint,
-                    ...(wAiFun !== 'off' ? { aiFunReward: wAiFun } : {}),
+                    ...(prizeAiSurpriseEnabled && wAiFun !== 'off' ? { aiFunReward: wAiFun } : {}),
                     teacherIds: finalTeacherIds.length ? finalTeacherIds : undefined,
                     teacherId: undefined,
                     classId: finalClassId,

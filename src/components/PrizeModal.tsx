@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAppContext } from '@/components/AppProvider';
+import { useSettings } from '@/components/providers/SettingsProvider';
 import { useToast } from '@/hooks/use-toast';
 import type { Prize, Teacher, Class, PrizeAiFunReward } from '@/lib/types';
 import DynamicIcon from './DynamicIcon';
@@ -30,6 +31,8 @@ interface PrizeModalProps {
 
 export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses }: PrizeModalProps) {
   const { addPrize, updatePrize } = useAppContext();
+  const { settings } = useSettings();
+  const prizeAiOn = settings.enablePrizeAiSurprise === true;
   const [name, setName] = useState('');
   const [points, setPoints] = useState('0');
   const [icon, setIcon] = useState('Gift');
@@ -88,7 +91,7 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses }: P
         icon,
         inStock,
         offerPrintTicketOnRedeem,
-        aiFunReward: aiFun === 'off' ? undefined : aiFun,
+        aiFunReward: prizeAiOn && aiFun !== 'off' ? aiFun : undefined,
         teacherId: teacherId || undefined,
         classId: classId || undefined,
         addedBy: 'Admin',
@@ -103,7 +106,7 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses }: P
         icon,
         inStock,
         offerPrintTicketOnRedeem,
-        ...(aiFun !== 'off' ? { aiFunReward: aiFun } : {}),
+        ...(prizeAiOn && aiFun !== 'off' ? { aiFunReward: aiFun } : {}),
         teacherId: teacherId || undefined,
         classId: classId || undefined,
         addedBy: 'Admin',
@@ -198,6 +201,7 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses }: P
               onCheckedChange={setOfferPrintTicketOnRedeem}
             />
           </div>
+          {prizeAiOn ? (
           <div className="flex flex-col gap-2 rounded-lg border p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-0.5">
               <Label htmlFor="ai-fun">AI surprise after redeem</Label>
@@ -218,6 +222,7 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses }: P
               </SelectContent>
             </Select>
           </div>
+          ) : null}
         </div>
         <DialogFooter>
           <Button type="button" variant="secondary" onClick={() => setIsOpen(false)}>Cancel</Button>

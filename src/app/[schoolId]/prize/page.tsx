@@ -478,7 +478,7 @@ function PrizeDashboard({
                 };
             }
 
-            if (prize.aiFunReward && schoolId) {
+            if (prize.aiFunReward && schoolId && settings.enablePrizeAiSurprise === true) {
                 pendingTicketAfterAiRef.current = ticketPayload;
                 setAiSurpriseErr(null);
                 setAiSurpriseBody(null);

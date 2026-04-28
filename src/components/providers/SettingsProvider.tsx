@@ -47,6 +47,7 @@ interface Settings {
     enableShoutouts: boolean;
     // Prize Shop
     enablePrizeImages: boolean;
+    enablePrizeAiSurprise: boolean;
     enablePrizeCategories: boolean;
     enableWishlist: boolean;
     enableSeasonalPrizes: boolean;
@@ -123,6 +124,7 @@ const defaultSettings: Settings = {
     enableClassLeaderboard: false,
     enableShoutouts: false,
     enablePrizeImages: false,
+    enablePrizeAiSurprise: false,
     enablePrizeCategories: false,
     enableWishlist: false,
     enableSeasonalPrizes: false,
