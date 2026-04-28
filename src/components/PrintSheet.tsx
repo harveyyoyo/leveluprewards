@@ -1,11 +1,10 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
 import type { Coupon } from '@/lib/types';
-import { useSettings } from './providers/SettingsProvider';
-import { cn } from '@/lib/utils';
-import { APP_NAME } from '@/lib/app-branding';
 import { Coupon as CouponComponent } from '@/components/Coupon';
+import { chunkCouponsForPrint } from '@/lib/coupon-print';
+
+export { COUPONS_PER_PRINT_PAGE } from '@/lib/coupon-print';
 
 interface PrintSheetProps {
   coupons: Coupon[];
@@ -13,17 +12,21 @@ interface PrintSheetProps {
 }
 
 export function PrintSheet({ coupons, schoolId }: PrintSheetProps) {
-  const { settings } = useSettings();
-
   if (coupons.length === 0) {
     return null;
   }
 
+  const pages = chunkCouponsForPrint(coupons);
+
   return (
-    <div id="print-container">
-      {coupons.map((c, index) => (
-        <div key={`${c.code}-${index}`} className="print-coupon-wrapper">
-          <CouponComponent coupon={c} schoolId={schoolId} />
+    <div id="coupon-print-root">
+      {pages.map((pageCoupons, pageIndex) => (
+        <div key={pageIndex} className="coupon-print-page">
+          {pageCoupons.map((c, index) => (
+            <div key={`${c.code}-${pageIndex}-${index}`} className="print-coupon-wrapper">
+              <CouponComponent coupon={c} schoolId={schoolId} />
+            </div>
+          ))}
         </div>
       ))}
     </div>

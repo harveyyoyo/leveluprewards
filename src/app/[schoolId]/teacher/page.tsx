@@ -49,7 +49,10 @@ import { AttendanceSetupWizard } from '@/components/attendance/AttendanceSetupWi
 import { getReadableErrorMessage } from '@/lib/errorMessage';
 import { AdminPrizesTab } from '@/app/[schoolId]/admin/sections/AdminPrizesTab';
 import { PrizeModal } from '@/components/PrizeModal';
+import { COUPONS_PER_PRINT_PAGE, generateUniqueCouponCodes } from '@/lib/coupon-print';
 
+/** Max sheets per run (12 coupons per sheet). Bounded for sensible printer jobs and UI. */
+const MAX_COUPON_PRINT_SHEETS = 100;
 
 function RecentRedemptions({ schoolId, students, classes, teacherId }: { schoolId: string; students: Student[], classes: Class[], teacherId: string }) {
     const [redemptions, setRedemptions] = useState<(HistoryItem & { id: string; studentId: string; studentName: string; studentClass: string })[]>([]);
@@ -305,6 +308,13 @@ function MyCoupons({ schoolId, teacherName, students }: { schoolId: string; teac
                         <p className="bg-muted px-2 py-0.5 rounded-sm">{coupon.category}</p>
                         <p className="opacity-70">{new Date(coupon.createdAt).toLocaleDateString()}</p>
                       </div>
+                      {(coupon.startsAt || coupon.expiresAt) && (
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                          {coupon.startsAt && <>Starts {new Date(coupon.startsAt).toLocaleDateString()}</>}
+                          {coupon.startsAt && coupon.expiresAt && ' · '}
+                          {coupon.expiresAt && <>Ends {new Date(coupon.expiresAt).toLocaleDateString()}</>}
+                        </p>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -1195,7 +1205,9 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
     // State for coupon printing
     const [printCategoryId, setPrintCategoryId] = useState('');
     const [printValue, setPrintValue] = useState('10');
+    const [printStartsOn, setPrintStartsOn] = useState(''); // yyyy-mm-dd, optional — coupon valid from start of this day
     const [printExpiresOn, setPrintExpiresOn] = useState(''); // yyyy-mm-dd
+    const [printSheetCount, setPrintSheetCount] = useState('1');
     const [isPrintCategoryDialogOpen, setIsPrintCategoryDialogOpen] = useState(false);
     const [newPrintCategoryName, setNewPrintCategoryName] = useState('');
     const [newPrintCategoryPoints, setNewPrintCategoryPoints] = useState('10');
@@ -1266,6 +1278,13 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
         return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
     };
 
+    const computeStartsAt = () => {
+        if (!printStartsOn) return undefined;
+        const date = new Date(printStartsOn + 'T00:00:00');
+        if (Number.isNaN(date.getTime())) return undefined;
+        return date.getTime();
+    };
+
     const computeExpiresAt = () => {
         if (!printExpiresOn) return undefined;
         if (printExpiresOn < localTodayYmd()) return undefined;
@@ -1274,10 +1293,9 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
         return date.getTime();
     };
 
-    const COUPONS_PER_SHEET = 12;
-
     const handlePrintSheet = async () => {
         const value = parseInt(printValue);
+        const sheets = parseInt(printSheetCount, 10);
         if (!teacherName) {
             playSound('error');
             toast({ variant: 'destructive', title: 'An error occurred. Please log in again.' });
@@ -1292,6 +1310,16 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
             });
             return;
         }
+        if (isNaN(sheets) || sheets < 1 || sheets > MAX_COUPON_PRINT_SHEETS) {
+            playSound('error');
+            toast({
+                variant: 'destructive',
+                title: 'Invalid sheet count',
+                description: `Enter between 1 and ${MAX_COUPON_PRINT_SHEETS} sheets (${COUPONS_PER_PRINT_PAGE} coupons per sheet).`,
+            });
+            return;
+        }
+        const couponCount = sheets * COUPONS_PER_PRINT_PAGE;
         const selectedCategory = categories?.find(c => c.id === printCategoryId);
         if (!selectedCategory) {
             playSound('error');
@@ -1303,7 +1331,7 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
             return;
         }
 
-        const totalCost = value * COUPONS_PER_SHEET;
+        const totalCost = value * couponCount;
         if (settings.enableTeacherBudgets && currentTeacher && currentTeacher.monthlyBudget !== undefined) {
             const remaining = remainingTeacherBudgetPoints(currentTeacher);
             if (remaining !== null && totalCost > remaining) {
@@ -1328,22 +1356,41 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
             return;
         }
 
-        const expiresAt = computeExpiresAt();
+        if (printStartsOn && printExpiresOn && printStartsOn > printExpiresOn) {
+            playSound('error');
+            toast({
+                variant: 'destructive',
+                title: 'Invalid date range',
+                description: 'Valid-from date cannot be after the expiration date.',
+            });
+            return;
+        }
 
-        const couponsToCreate: Coupon[] = Array.from({ length: COUPONS_PER_SHEET }, () => {
-            const code = Math.floor(100000 + Math.random() * 900000).toString();
-            return {
-                id: code,
-                code,
-                value: value,
-                category: selectedCategory.name,
-                teacher: teacherName,
-                used: false,
-                createdAt: Date.now(),
-                color: selectedCategory.color,
-                ...(expiresAt ? { expiresAt } : {}),
-            };
-        });
+        const startsAt = computeStartsAt();
+        const expiresAt = computeExpiresAt();
+        if (startsAt !== undefined && expiresAt !== undefined && startsAt >= expiresAt) {
+            playSound('error');
+            toast({
+                variant: 'destructive',
+                title: 'Invalid date range',
+                description: 'The coupon must begin before it expires (same calendar day is OK).',
+            });
+            return;
+        }
+
+        const codes = generateUniqueCouponCodes(couponCount);
+        const couponsToCreate: Coupon[] = codes.map((code) => ({
+            id: code,
+            code,
+            value: value,
+            category: selectedCategory.name,
+            teacher: teacherName,
+            used: false,
+            createdAt: Date.now(),
+            color: selectedCategory.color,
+            ...(startsAt !== undefined ? { startsAt } : {}),
+            ...(expiresAt ? { expiresAt } : {}),
+        }));
         await addCoupons(couponsToCreate);
         if (settings.enableTeacherBudgets && currentTeacher) {
             const next =
@@ -1452,6 +1499,7 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
         used: false,
         createdAt: Date.now(),
         color: selectedCategoryForPreview?.color,
+        ...(computeStartsAt() !== undefined ? { startsAt: computeStartsAt() } : {}),
         expiresAt: computeExpiresAt(),
     };
 
@@ -1622,13 +1670,13 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
                                     Print Coupons
                                 </CardTitle>
                                 <CardDescription className={isGraphic ? 'text-muted-foreground/80' : ''}>
-                                    Generate 12 coupons per letter page (two columns × six rows)—each cell matches the preview below.
+                                    {COUPONS_PER_PRINT_PAGE} coupons per letter page (3×4 grid). Set sheets to mass-print; each cell matches the preview below.
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="p-4 md:p-6">
                                 {isLoading ? <Skeleton className="h-48 w-full rounded-xl" /> : (
                                     <div className="space-y-6">
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
                                             <div className="space-y-2 md:col-span-1">
                                                 <Label className={cn("text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1", isGraphic ? 'text-muted-foreground' : 'text-slate-500')}>Incentive Category</Label>
                                                 <div className="flex items-center gap-2">
@@ -1673,6 +1721,34 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
                                                 <Input type="number" value={printValue} onChange={(e) => setPrintValue(e.target.value)} className={cn("h-12 rounded-xl text-lg font-black transition-all", isGraphic ? 'bg-foreground/5 border-white/10 text-foreground focus:ring-chart-1/20' : 'bg-slate-50 border-slate-200')} />
                                             </div>
                                             <div className="space-y-2 md:col-span-1">
+                                                <Label className={cn("text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1", isGraphic ? 'text-muted-foreground' : 'text-slate-500')}>
+                                                    Sheets ({COUPONS_PER_PRINT_PAGE} per page)
+                                                </Label>
+                                                <Input
+                                                    type="number"
+                                                    min={1}
+                                                    max={MAX_COUPON_PRINT_SHEETS}
+                                                    value={printSheetCount}
+                                                    onChange={(e) => setPrintSheetCount(e.target.value)}
+                                                    className={cn("h-12 rounded-xl text-lg font-black transition-all", isGraphic ? 'bg-foreground/5 border-white/10 text-foreground focus:ring-chart-1/20' : 'bg-slate-50 border-slate-200')}
+                                                />
+                                                <p className="text-[11px] text-muted-foreground px-0.5">
+                                                    Total: {(parseInt(printSheetCount, 10) || 0) * COUPONS_PER_PRINT_PAGE} coupons
+                                                    {settings.enableTeacherBudgets && currentTeacher?.monthlyBudget !== undefined && parseInt(printValue, 10) > 0
+                                                        ? ` · ${((parseInt(printSheetCount, 10) || 0) * COUPONS_PER_PRINT_PAGE * (parseInt(printValue, 10) || 0)).toLocaleString()} pts from budget`
+                                                        : null}
+                                                </p>
+                                            </div>
+                                            <div className="space-y-2 xl:col-span-1">
+                                                <Label className={cn("text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1", isGraphic ? 'text-muted-foreground' : 'text-slate-500')}>Valid from (optional)</Label>
+                                                <Input
+                                                    type="date"
+                                                    value={printStartsOn}
+                                                    onChange={(e) => setPrintStartsOn(e.target.value)}
+                                                    className={cn("h-12 rounded-xl text-xs font-bold tracking-widest", isGraphic ? 'bg-foreground/5 border-white/10 text-foreground' : 'bg-slate-50 border-slate-200')}
+                                                />
+                                            </div>
+                                            <div className="space-y-2 xl:col-span-1">
                                                 <Label className={cn("text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1", isGraphic ? 'text-muted-foreground' : 'text-slate-500')}>Expiration (optional)</Label>
                                                 <Input
                                                     type="date"
@@ -1693,7 +1769,7 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
                                             style={{ backgroundColor: teacherAccent }}
                                         >
                                             <Printer className="w-6 h-6 mr-3 group-hover:scale-110 transition-transform" />
-                                            Generate Sheet
+                                            Generate & print
                                         </Button>
 
                                         <div className="flex flex-col items-center pt-8 border-t border-dashed border-border/50">

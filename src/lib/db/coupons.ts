@@ -11,17 +11,23 @@ import { reportFirestorePermissionError } from '@/firebase/error-emitter';
 import { getReadableErrorMessage } from '@/lib/errorMessage';
 import { removeUndefined, applyCategoryPointsByPeriod, applyAchievementsAndBadges } from './helpers';
 
+/** Firestore allows up to 500 writes per batch; stay under for safety. */
+const COUPON_ADD_BATCH_SIZE = 450;
+
 export const addCoupons = async (firestore: Firestore, schoolId: string, newCoupons: Coupon[]) => {
-  const batch = writeBatch(firestore);
-  newCoupons.forEach(coupon => {
-    const couponDocRef = doc(firestore, 'schools', schoolId, 'coupons', coupon.id);
-    batch.set(couponDocRef, removeUndefined(coupon as unknown as Record<string, unknown>));
-  });
-  try {
-    await batch.commit();
-  } catch (error) {
-    reportFirestorePermissionError(error, { path: `schools/${schoolId}/coupons`, operation: 'write' });
-    throw error;
+  for (let i = 0; i < newCoupons.length; i += COUPON_ADD_BATCH_SIZE) {
+    const slice = newCoupons.slice(i, i + COUPON_ADD_BATCH_SIZE);
+    const batch = writeBatch(firestore);
+    slice.forEach((coupon) => {
+      const couponDocRef = doc(firestore, 'schools', schoolId, 'coupons', coupon.id);
+      batch.set(couponDocRef, removeUndefined(coupon as unknown as Record<string, unknown>));
+    });
+    try {
+      await batch.commit();
+    } catch (error) {
+      reportFirestorePermissionError(error, { path: `schools/${schoolId}/coupons`, operation: 'write' });
+      throw error;
+    }
   }
 };
 
@@ -61,6 +67,9 @@ export const redeemCoupon = async (
 
       const coupon = couponDoc.data() as Coupon;
       const nowTs = Date.now();
+      if (coupon.startsAt && nowTs < coupon.startsAt) {
+        throw new Error('This coupon is not valid yet.');
+      }
       if (coupon.expiresAt && nowTs > coupon.expiresAt) {
         throw new Error('This coupon has expired.');
       }
