@@ -33,6 +33,7 @@ import {
   listTeacherAttendanceLog as dbListTeacherAttendanceLog,
 } from '@/lib/db';
 import { AuthProvider, useAuth } from './providers/AuthProvider';
+import type { LogoutOptions } from './providers/AuthProvider';
 import { PrintProvider, usePrint } from './providers/PrintProvider';
 import { BackupProvider, useBackup } from './providers/BackupProvider';
 import { SettingsProvider, useSettings } from './providers/SettingsProvider';
@@ -40,7 +41,7 @@ import { addPendingCouponRedemption, listPendingCouponRedemptions, updatePending
 import { couponIsKnownAndValidOffline, saveCouponSnapshot } from '@/lib/couponCache';
 
 // Re-export types from AuthProvider for backward compatibility
-export type { SyncStatus, LoginState } from './providers/AuthProvider';
+export type { SyncStatus, LoginState, LogoutOptions } from './providers/AuthProvider';
 
 interface AppContextType {
   // ... existing types
@@ -57,7 +58,7 @@ interface AppContextType {
   schoolId: string | null;
   syncStatus: 'synced' | 'syncing' | 'offline' | 'error';
   login: (type: 'school' | 'developer' | 'student' | 'teacher' | 'admin', credentials: { schoolId?: string; passcode?: string; username?: string; teacherName?: string; teacherDocId?: string }) => Promise<boolean>;
-  logout: () => void;
+  logout: (options?: LogoutOptions) => void;
   setUserName: (name: string | null) => void;
   isKioskLocked: boolean;
   setIsKioskLocked: (locked: boolean) => void;

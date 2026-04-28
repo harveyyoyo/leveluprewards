@@ -1997,7 +1997,7 @@ export default function TeacherPage() {
 
     const handleLogout = () => {
         playSound('swoosh');
-        logout();
+        logout({ staffNavigateTo: 'teacher' });
     };
 
     if (!isInitialized || !schoolId) {

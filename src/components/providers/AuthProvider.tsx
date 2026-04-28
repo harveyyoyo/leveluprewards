@@ -18,6 +18,11 @@ import { schoolPublicDocRef } from '@/lib/schoolPublic';
 export type SyncStatus = 'synced' | 'syncing' | 'offline' | 'error';
 export type LoginState = 'loggedOut' | 'school' | 'developer' | 'student' | 'teacher' | 'admin';
 
+/** Optional navigation after ending an admin or teacher session (default: school portal). */
+export type LogoutOptions = {
+    staffNavigateTo?: 'portal' | 'teacher';
+};
+
 interface AuthContextType {
     isInitialized: boolean;
     isUserLoading: boolean;
@@ -33,7 +38,7 @@ interface AuthContextType {
         type: LoginState,
         credentials: { schoolId?: string; passcode?: string; username?: string; teacherName?: string; teacherDocId?: string; }
     ) => Promise<boolean>;
-    logout: () => void;
+    logout: (options?: LogoutOptions) => void;
     setUserName: (name: string | null) => void;
     isKioskLocked: boolean;
     setIsKioskLocked: (locked: boolean) => void;
@@ -58,7 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { isUserLoading, functions, firestore, auth } = useFirebase();
     const router = useRouter();
 
-    const logout = useCallback(() => {
+    const logout = useCallback((options?: LogoutOptions) => {
         setIsAdmin(false);
         setIsTeacher(false);
         setIsKioskLocked(false);
@@ -71,7 +76,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             localStorage.setItem('loginState', 'student');
             setLoginState('student');
             if (schoolId) {
-                router.push(`/${schoolId}/portal`);
+                const dest = options?.staffNavigateTo === 'teacher' ? 'teacher' : 'portal';
+                router.push(`/${schoolId}/${dest}`);
             } else {
                 router.push('/portal');
             }
