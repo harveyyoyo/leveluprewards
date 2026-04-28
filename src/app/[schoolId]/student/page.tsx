@@ -876,6 +876,32 @@ function StudentDashboardInner({
                   )}
                 </Tabs>
 
+                <Button
+                  asChild
+                  className={cn(
+                    'w-full mt-5 h-14 md:h-16 text-base md:text-lg font-black rounded-2xl shadow-lg transition-all active:scale-[0.99] uppercase tracking-wide',
+                    !activeTheme && 'bg-gradient-to-r from-primary to-primary/90',
+                  )}
+                  style={
+                    activeTheme
+                      ? {
+                          backgroundColor: 'var(--theme-primary)',
+                          color: primaryForeground,
+                        }
+                      : undefined
+                  }
+                >
+                  <Link
+                    href={`/${schoolId}/prize`}
+                    onClick={() => playSound('click')}
+                    className="flex items-center justify-center gap-2"
+                  >
+                    <Gift className="h-6 w-6 shrink-0" aria-hidden />
+                    Redeem Prize now
+                    <ChevronRight className="h-5 w-5 shrink-0 opacity-90" aria-hidden />
+                  </Link>
+                </Button>
+
               </CardContent>
             </Card>
 

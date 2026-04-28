@@ -36,7 +36,7 @@ export default function PublicSchoolPage() {
                     // Automatically log them in as a student
                     await login('student', { schoolId });
                     if (!cancelled) {
-                        router.push(`/${schoolId}/portal`);
+                        router.push(`/${schoolId}/student`);
                     }
                 } else {
                     setNotFound(true);
