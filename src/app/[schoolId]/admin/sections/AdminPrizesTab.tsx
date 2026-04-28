@@ -149,8 +149,8 @@ export function AdminPrizesTab({
           </Button>
         </div>
       </CardHeader>
-      <CardContent>
-        <ul className="grid grid-cols-1 gap-4 max-h-[500px] overflow-y-auto pr-2">
+      <CardContent className="min-w-0">
+        <ul className="grid grid-cols-1 gap-4 max-h-[500px] min-w-0 overflow-y-auto overflow-x-hidden pr-2">
           {prizes
             ?.sort((a, b) => a.points - b.points)
             .map((p) => (
@@ -194,24 +194,22 @@ export function AdminPrizesTab({
               <li
                 key={p.id}
                 className={cn(
-                  "grid grid-cols-[72px_86px_86px_72px_48px_1fr_104px_128px_92px_56px] items-center gap-2 bg-secondary/30 p-3 rounded-2xl border group transition-all hover:bg-background",
+                  "flex flex-wrap items-end gap-x-2 gap-y-3 rounded-2xl border bg-secondary/30 p-3 transition-all hover:bg-background group min-w-0",
                   rowDimmed && "opacity-60"
                 )}
               >
-                <div className="flex items-center gap-2">
-                  <div className="flex flex-col items-center w-[72px]">
+                <div className="flex shrink-0 flex-col items-center w-[4.5rem]">
                     <Switch
                       checked={p.inStock}
                       disabled={!canEditFull}
                       onCheckedChange={(checked) => onUpdatePrize({ ...p, inStock: checked })}
                       className="data-[state=checked]:bg-primary scale-75"
                     />
-                    <p className="text-[9px] font-bold mt-1 tracking-tighter opacity-50 text-center leading-tight max-w-[72px]">
+                    <p className="text-[9px] font-bold mt-1 tracking-tighter opacity-50 text-center leading-tight max-w-[4.5rem]">
                       {p.inStock ? 'In stock' : 'Out of stock'}
                     </p>
-                  </div>
                 </div>
-                <div className="flex flex-col items-center w-[86px]">
+                <div className="flex shrink-0 flex-col items-center w-[5.25rem]">
                     <Switch
                       checked={p.offerPrintTicketOnRedeem === true}
                       disabled={!canEditFull}
@@ -222,7 +220,7 @@ export function AdminPrizesTab({
                       Print
                     </p>
                 </div>
-                <div className="flex flex-col gap-0.5 w-[86px]">
+                <div className="flex shrink-0 flex-col gap-0.5 w-[5.25rem]">
                   <Label className="text-[9px] font-bold uppercase tracking-tighter opacity-50 leading-none">Qty</Label>
                   <Input
                     type="number"
@@ -240,7 +238,7 @@ export function AdminPrizesTab({
                     }}
                   />
                 </div>
-                <div className="flex flex-col gap-0.5 w-[72px]">
+                <div className="flex shrink-0 flex-col gap-0.5 w-[4.5rem]">
                   <Label className="text-[9px] font-bold uppercase tracking-tighter opacity-50 leading-none">Points</Label>
                   <Input
                     type="number"
@@ -256,7 +254,7 @@ export function AdminPrizesTab({
                     }}
                   />
                 </div>
-                <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center bg-background border flex-shrink-0 relative overflow-hidden", !p.inStock && "opacity-40 grayscale")}>
+                <div className={cn("size-12 shrink-0 rounded-xl flex items-center justify-center bg-background border relative overflow-hidden", !p.inStock && "opacity-40 grayscale")}>
                   {p.imageUrl ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img src={p.imageUrl} alt="" className="absolute inset-0 z-[5] size-full object-cover" />
@@ -270,7 +268,7 @@ export function AdminPrizesTab({
                   )}
                   <DynamicIcon name={p.icon || 'Gift'} className="w-6 h-6 text-primary relative z-10 drop-shadow-sm" />
                 </div>
-                <div className="flex flex-col gap-0.5 min-w-0">
+                <div className="min-w-0 flex-1 basis-[min(100%,14rem)] sm:basis-[min(100%,18rem)]">
                   <Label className="text-[9px] font-bold uppercase tracking-tighter opacity-50 leading-none flex items-center gap-1">
                     Name
                     {vendingEnabled && p.vendingMotor?.enabled ? (
@@ -284,7 +282,7 @@ export function AdminPrizesTab({
                     ) : null}
                   </Label>
                   <Input
-                    className={cn("h-8 text-xs px-2 w-full", !p.inStock && "opacity-70")}
+                    className={cn("h-8 text-xs px-2 w-full min-w-0", !p.inStock && "opacity-70")}
                     disabled={!canEditFull}
                     defaultValue={p.name}
                     key={`name-${p.id}-${p.name}`}
@@ -294,10 +292,10 @@ export function AdminPrizesTab({
                     }}
                   />
                 </div>
-                <div className="flex flex-col gap-0.5 w-[104px] min-w-0">
+                <div className="flex shrink-0 flex-col gap-0.5 w-[6.5rem] min-w-0">
                   <Label className="text-[9px] font-bold uppercase tracking-tighter opacity-50 leading-none">Icon</Label>
                   <Input
-                    className="h-8 text-xs px-2 font-mono"
+                    className="h-8 text-xs px-2 font-mono w-full"
                     disabled={!canEditFull}
                     placeholder="Gift"
                     defaultValue={p.icon || 'Gift'}
@@ -308,7 +306,7 @@ export function AdminPrizesTab({
                     }}
                   />
                 </div>
-                <div className="flex flex-col gap-0.5 w-[128px] min-w-0">
+                <div className="flex shrink-0 flex-col gap-0.5 w-[7.5rem] min-w-0">
                   {mode === 'teacher' ? (
                     <>
                       <Label className="text-[9px] font-bold uppercase tracking-tighter opacity-50 leading-none">Wide</Label>
@@ -384,14 +382,14 @@ export function AdminPrizesTab({
                     </>
                   )}
                 </div>
-                <div className="flex flex-col gap-0.5 w-[92px]">
+                <div className="flex shrink-0 flex-col gap-0.5 w-[6.75rem] min-w-0">
                   <Label className="text-[9px] font-bold uppercase tracking-tighter opacity-50 leading-none">Class</Label>
                   <Select
                     value={p.classId || 'all'}
                     disabled={!canEditFull}
                     onValueChange={(v) => onUpdatePrize({ ...p, classId: v === 'all' ? undefined : v })}
                   >
-                    <SelectTrigger className="h-8 text-xs px-2">
+                    <SelectTrigger className="h-8 text-xs px-2 w-full">
                       <SelectValue placeholder="All" />
                     </SelectTrigger>
                     <SelectContent>
@@ -402,7 +400,7 @@ export function AdminPrizesTab({
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="flex items-center justify-end gap-0.5 justify-self-end">
+                <div className="flex shrink-0 flex-wrap items-center justify-end gap-0.5 basis-full sm:basis-auto sm:ml-auto">
                   {prizeAiSurpriseEnabled ? (
                   <Popover>
                     <PopoverTrigger asChild>
