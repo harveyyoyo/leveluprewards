@@ -46,7 +46,7 @@ export function StudentScanner({
     const playSound = useArcadeSound();
     const { settings } = useSettings();
     const isGraphic = settings.graphicMode === 'graphics';
-    const { captureFaceDescriptor } = useFaceDescriptor();
+    const { captureFaceDescriptor, ensureFaceApiReady } = useFaceDescriptor();
     const FACE_MATCH_MIN_CONFIDENCE = 0.9;
 
     const [nfcId, setNfcId] = useState('');
@@ -96,6 +96,7 @@ export function StudentScanner({
             if (video.srcObject !== faceStreamRef.current) {
                 video.srcObject = faceStreamRef.current;
             }
+            
             try {
                 await video.play();
             } catch (playErr: any) {
@@ -104,16 +105,38 @@ export function StudentScanner({
                     /interrupted by a new load request/i.test(String(playErr?.message ?? ''));
                 if (!benign) throw playErr;
             }
+
+            // Wait for dimensions to be available. If they are already > 0, we are good.
             if (video.videoWidth <= 0) {
                 await new Promise<void>((resolve, reject) => {
-                    const t = window.setTimeout(() => reject(new Error('Camera preview never started.')), 10000);
-                    video.onloadedmetadata = () => {
-                        window.clearTimeout(t);
-                        video.onloadedmetadata = null;
-                        resolve();
+                    const timeout = window.setTimeout(() => {
+                        cleanup();
+                        reject(new Error('Camera preview never started (timeout).'));
+                    }, 10000);
+
+                    const onReady = () => {
+                        if (video.videoWidth > 0) {
+                            cleanup();
+                            resolve();
+                        }
                     };
+
+                    const cleanup = () => {
+                        window.clearTimeout(timeout);
+                        video.removeEventListener('loadedmetadata', onReady);
+                        video.removeEventListener('canplay', onReady);
+                        video.removeEventListener('playing', onReady);
+                    };
+
+                    video.addEventListener('loadedmetadata', onReady);
+                    video.addEventListener('canplay', onReady);
+                    video.addEventListener('playing', onReady);
+                    
+                    // Final safety check in case it fired just now
+                    if (video.videoWidth > 0) onReady();
                 });
             }
+
             return video;
         } catch (e: any) {
             const denied =
@@ -150,7 +173,15 @@ export function StudentScanner({
 
                 setFaceStatus('Starting camera…');
                 const video = await startFaceCamera();
-                if (!video || faceLoopCancelRef.current) return;
+                if (faceLoopCancelRef.current) return;
+                
+                if (!video) {
+                    setFaceStatus('Camera unavailable');
+                    return;
+                }
+
+                setFaceStatus('Initializing AI…');
+                await ensureFaceApiReady();
 
                 setFaceStatus('Look at the camera');
 
@@ -335,7 +366,7 @@ export function StudentScanner({
                 </div>
                 <div className="space-y-1 mb-4">
                     <h2 className={cn("text-4xl font-black tracking-tighter uppercase font-headline", isGraphic ? 'text-foreground graphic-text-glow' : 'text-foreground')}>Ready to Scan</h2>
-                    <p className={cn("text-[10px] font-black uppercase tracking-[0.2em] opacity-40", isGraphic ? 'text-primary' : 'text-muted-foreground')}>Place your ID card on the reader</p>
+                    <p className={cn("text-[10px] font-black uppercase tracking-[0.2em] opacity-40", isGraphic ? 'text-primary' : 'text-muted-foreground')}>Scan your card</p>
                 </div>
             </div>
 
@@ -368,7 +399,7 @@ export function StudentScanner({
                             </div>
                             <div className="space-y-2">
                                 <p className={cn("font-black text-lg", isGraphic ? 'text-foreground' : 'text-foreground')}>System Ready</p>
-                                <p className="text-muted-foreground text-sm font-medium">Please place your card on the reader</p>
+                                <p className="text-muted-foreground text-sm font-medium">Please scan your card</p>
                             </div>
                             <Input
                                 ref={nfcInputRef}

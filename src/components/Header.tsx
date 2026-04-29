@@ -164,9 +164,9 @@ export default function Header() {
         <div className="flex items-center gap-4 flex-1">
           <Link href={logoLink} className="flex items-center gap-4 group" data-home-button="true">
             {appLogoUrl ? (
-              <span className="inline-flex h-10 w-10 rounded-2xl overflow-hidden bg-muted border border-border/40 shrink-0 shadow-md">
+              <span className="inline-flex h-10 w-auto max-w-[200px] shrink-0 drop-shadow-md items-center justify-center">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={appLogoUrl} alt="App logo" className={settings.logoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />
+                <img src={appLogoUrl} alt="App logo" className={settings.logoDisplayMode === 'cover' ? 'h-full w-full object-cover rounded-md' : 'h-full w-auto object-contain'} />
               </span>
             ) : (
               <Logo className="h-10 w-auto" />
@@ -183,12 +183,12 @@ export default function Header() {
           <Link href={centerHref} className="flex-1 flex justify-center text-center no-underline hidden lg:inline-flex">
             <span className="inline-flex items-center gap-3">
               {schoolData?.logoUrl && (
-                <span className="inline-flex h-10 w-10 rounded-full overflow-hidden bg-muted border border-border/40 shrink-0 drop-shadow-md">
+                <span className="inline-flex h-10 w-auto max-w-[200px] shrink-0 drop-shadow-md items-center justify-center">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={schoolData.logoUrl}
                     alt="Logo"
-                    className={settings.logoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'}
+                    className={settings.logoDisplayMode === 'cover' ? 'h-full w-full object-cover rounded-md' : 'h-full w-auto object-contain'}
                   />
                 </span>
               )}

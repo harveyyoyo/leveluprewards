@@ -1,15 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { httpsCallable } from 'firebase/functions';
+import { collection } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAppContext } from '@/components/AppProvider';
-import { useFunctions } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { LogIn, LogOut, UserCheck, Loader2 } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
@@ -19,13 +19,14 @@ import { TeacherPrinterInner } from './TeacherPrinterInner';
 
 type StaffPortalLoginOption = {
     id: string;
+    sourceId?: string;
     type: 'teacher' | 'secretary' | 'prizeClerk';
     label: string;
     username: string;
 };
 
 function staffLoginKey(option: StaffPortalLoginOption) {
-    return `${option.type}:${option.id}`;
+    return option.id;
 }
 
 function roleLabel(type: StaffPortalLoginOption['type']) {
@@ -77,17 +78,26 @@ export default function TeacherPage() {
     const { loginState, isInitialized, schoolId, login, logout, isAdmin, isTeacher, userName, userId, teacherDocId } = useAppContext();
     const router = useRouter();
     const searchParams = useSearchParams();
-    const functions = useFunctions();
+    const firestore = useFirestore();
     const { settings } = useSettings();
     const isGraphic = settings.graphicMode === 'graphics';
     const playSound = useArcadeSound();
     const { toast } = useToast();
 
-    const [loginOptions, setLoginOptions] = useState<StaffPortalLoginOption[]>([]);
-    const [optionsLoading, setOptionsLoading] = useState(true);
     const [selectedLoginKey, setSelectedLoginKey] = useState('');
     const [passcode, setPasscode] = useState('');
     const directAccountKey = searchParams.get('account') || '';
+
+    const staffDirectoryQuery = useMemoFirebase(
+        () => (schoolId ? collection(firestore, 'schoolPublic', schoolId, 'staffDirectory') : null),
+        [firestore, schoolId],
+    );
+    const {
+        data: loginOptions,
+        isLoading: optionsLoading,
+        error: optionsError,
+    } = useCollection<Omit<StaffPortalLoginOption, 'id'>>(staffDirectoryQuery);
+    const staffOptions = useMemo(() => loginOptions || [], [loginOptions]);
 
     useEffect(() => {
         if (!isInitialized || !schoolId) return;
@@ -105,47 +115,21 @@ export default function TeacherPage() {
     }, [isInitialized, loginState, router]);
 
     useEffect(() => {
-        if (!schoolId) return;
-        let cancelled = false;
-
-        const loadOptions = async () => {
-            setOptionsLoading(true);
-            try {
-                const getOptions = httpsCallable(functions, 'getStaffPortalLoginOptions');
-                const result = await getOptions({ schoolId });
-                const options = ((result.data as { options?: StaffPortalLoginOption[] })?.options || []).filter(
-                    (option) => option?.id && option?.type && option?.label && option?.username,
-                );
-                if (!cancelled) {
-                    setLoginOptions(options);
-                }
-            } catch (error) {
-                if (!cancelled) {
-                    setLoginOptions([]);
-                    toast({
-                        variant: 'destructive',
-                        title: 'Could not load staff list',
-                        description: error instanceof Error ? error.message : 'Try refreshing the page.',
-                    });
-                }
-            } finally {
-                if (!cancelled) setOptionsLoading(false);
-            }
-        };
-
-        void loadOptions();
-        return () => {
-            cancelled = true;
-        };
-    }, [functions, schoolId, toast]);
+        if (!optionsError) return;
+        toast({
+            variant: 'destructive',
+            title: 'Could not load staff list',
+            description: 'Open Admin > Staff once to publish the staff directory, then refresh this page.',
+        });
+    }, [optionsError, toast]);
 
     useEffect(() => {
-        if (!directAccountKey || loginOptions.length === 0) return;
-        const match = loginOptions.find((option) => staffLoginKey(option) === directAccountKey);
+        if (!directAccountKey || staffOptions.length === 0) return;
+        const match = staffOptions.find((option) => staffLoginKey(option) === directAccountKey);
         if (match) {
             setSelectedLoginKey(staffLoginKey(match));
         }
-    }, [directAccountKey, loginOptions]);
+    }, [directAccountKey, loginOptions, staffOptions]);
 
     const handleLogin = async () => {
         if (!selectedLoginKey || !passcode) {
@@ -154,7 +138,7 @@ export default function TeacherPage() {
             return;
         }
 
-        const selected = loginOptions.find((option) => staffLoginKey(option) === selectedLoginKey);
+        const selected = staffOptions.find((option) => staffLoginKey(option) === selectedLoginKey);
         if (!selected) {
             playSound('error');
             toast({ variant: 'destructive', title: 'Choose a staff account from the list.' });
@@ -166,7 +150,7 @@ export default function TeacherPage() {
             username: selected.username,
             passcode,
             teacherName: selected.label,
-            teacherDocId: selected.type === 'teacher' ? selected.id : undefined,
+            teacherDocId: selected.type === 'teacher' ? selected.sourceId || selected.id.replace(/^teacher:/, '') : undefined,
         });
 
         if (result) {
@@ -206,7 +190,7 @@ export default function TeacherPage() {
         return <TeacherPrinter teacherName={displayName} teacherId={validTeacherId} onLogout={handleLogout} />;
     }
 
-    const selectedOption = loginOptions.find((option) => staffLoginKey(option) === selectedLoginKey);
+    const selectedOption = staffOptions.find((option) => staffLoginKey(option) === selectedLoginKey);
     const directAccountSelected = !!directAccountKey && !!selectedOption && staffLoginKey(selectedOption) === directAccountKey;
 
     return (
@@ -247,10 +231,18 @@ export default function TeacherPage() {
                                                 id="staff-account"
                                                 className={`h-14 rounded-xl text-lg font-bold ${isGraphic ? 'bg-foreground/5 border-border' : 'bg-slate-50'}`}
                                             >
-                                                <SelectValue placeholder={optionsLoading ? 'Loading staff...' : 'Select your name...'} />
+                                                <SelectValue
+                                                    placeholder={
+                                                        optionsLoading
+                                                            ? 'Loading staff...'
+                                                            : staffOptions.length === 0
+                                                                ? 'No staff published yet'
+                                                                : 'Select your name...'
+                                                    }
+                                                />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {loginOptions.map((option) => (
+                                                {staffOptions.map((option) => (
                                                     <SelectItem key={staffLoginKey(option)} value={staffLoginKey(option)}>
                                                         {option.label}{option.type === 'teacher' ? '' : ` - ${roleLabel(option.type)}`}
                                                     </SelectItem>

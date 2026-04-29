@@ -1,8 +1,6 @@
 
 
 import { useState } from 'react';
-import { ThemeGeneratorModal } from '@/components/ThemeGeneratorModal';
-import { normalizeStudentTheme } from '@/lib/themeContrast';
 import { useAppContext } from '@/components/AppProvider';
 import { usePathname } from 'next/navigation';
 import {
@@ -103,7 +101,6 @@ export function SettingsModal() {
     const { settings, updateSettings, isFeatureAllowed, planLabel } = useSettings();
     const playSound = useArcadeSound();
     const [open, setOpen] = useState(false);
-    const [schoolDefaultThemeOpen, setSchoolDefaultThemeOpen] = useState(false);
     const [draft, setDraft] = useState<AppSettings | null>(null);
     const [view, setView] = useState<SettingsView>('main');
     const [vendingSettingsOpen, setVendingSettingsOpen] = useState(false);
@@ -154,25 +151,10 @@ export function SettingsModal() {
         } else {
             setDraft(null);
             setView('main');
-            setSchoolDefaultThemeOpen(false);
         }
         setOpen(next);
     };
 
-    const handleSchoolDefaultThemeSave = (theme: StudentTheme) => {
-        const normalized = normalizeStudentTheme(theme);
-        if (!normalized) return;
-        updateSettings({ defaultStudentTheme: normalized });
-        setDraft((d) => (d ? { ...d, defaultStudentTheme: normalized } : null));
-        setSchoolDefaultThemeOpen(false);
-        playSound('success');
-    };
-
-    const handleClearSchoolDefaultTheme = () => {
-        updateSettings({ defaultStudentTheme: null });
-        setDraft((d) => (d ? { ...d, defaultStudentTheme: null } : null));
-        if (local.soundEnabled) playSound('click');
-    };
 
     const handleOk = () => {
         if (draft) {
@@ -236,41 +218,6 @@ export function SettingsModal() {
                                     ))}
                                 </div>
 
-                                {isAdmin ? (
-                                    <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700/50 space-y-3">
-                                        <div>
-                                            <h4 className="font-bold text-sm text-foreground">Default student theme</h4>
-                                            <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
-                                                Kiosk, prize shop, and ID cards use this look when a student has no individual theme.
-                                            </p>
-                                        </div>
-                                        <div className="flex flex-wrap gap-2">
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                size="sm"
-                                                className="rounded-xl text-xs font-bold"
-                                                onClick={() => {
-                                                    setSchoolDefaultThemeOpen(true);
-                                                    if (local.soundEnabled) playSound('click');
-                                                }}
-                                            >
-                                                {local.defaultStudentTheme ? 'Edit default theme' : 'Set default theme'}
-                                            </Button>
-                                            {local.defaultStudentTheme ? (
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="rounded-xl text-xs font-bold text-muted-foreground"
-                                                    onClick={handleClearSchoolDefaultTheme}
-                                                >
-                                                    Clear
-                                                </Button>
-                                            ) : null}
-                                        </div>
-                                    </div>
-                                ) : null}
                             </div>
 
                             {/* MOTION & SOUND */}
@@ -834,16 +781,6 @@ export function SettingsModal() {
                 </Dialog>
             </DialogContent>
         </Dialog>
-        <ThemeGeneratorModal
-            isOpen={schoolDefaultThemeOpen}
-            onOpenChange={setSchoolDefaultThemeOpen}
-            studentName="School default"
-            currentTheme={local.defaultStudentTheme || undefined}
-            onSave={handleSchoolDefaultThemeSave}
-            onRemoveTheme={() => {
-                handleClearSchoolDefaultTheme();
-            }}
-        />
         </>
     );
 }

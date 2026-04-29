@@ -12,6 +12,7 @@ import type { Student, Class, Category } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { cn, getStudentNickname } from '@/lib/utils';
+import { getPeriodKeys } from '@/lib/db/helpers';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
 import { rainbowTripletForNavId, complementTripletForNavId } from '@/lib/rainbowNav';
 import { motion, AnimatePresence } from "framer-motion";
@@ -96,15 +97,22 @@ export default function HallOfFamePage() {
         }
     }, [isInitialized, loginState, router]);
 
-    const studentsQuery = useMemoFirebase(() =>
-        schoolId
-            ? query(
-                collection(firestore, 'schools', schoolId, 'students'),
-                orderBy(sortBy === 'points' ? 'points' : 'lifetimePoints', 'desc'),
-                firestoreLimit(200) // Fetch more for client-side category sorting
-            )
-            : null,
-        [firestore, schoolId, sortBy]);
+    const currentPeriodKeys = useMemo(() => getPeriodKeys(Date.now()), []);
+
+    const studentsQuery = useMemoFirebase(() => {
+        if (!schoolId) return null;
+        let orderByField = 'lifetimePoints';
+        if (sortBy === 'points') orderByField = 'points';
+        else if (sortBy === 'period_day') orderByField = `pointsByPeriod.${currentPeriodKeys.day}`;
+        else if (sortBy === 'period_week') orderByField = `pointsByPeriod.${currentPeriodKeys.week}`;
+        else if (sortBy === 'period_month') orderByField = `pointsByPeriod.${currentPeriodKeys.month}`;
+        
+        return query(
+            collection(firestore, 'schools', schoolId, 'students'),
+            orderBy(orderByField, 'desc'),
+            firestoreLimit(200) // Fetch more for client-side category sorting
+        );
+    }, [firestore, schoolId, sortBy, currentPeriodKeys]);
     const { data: allTopStudents, isLoading: studentsLoading } = useCollection<Student>(studentsQuery);
 
     const classesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'classes') : null, [firestore, schoolId]);
@@ -117,7 +125,7 @@ export default function HallOfFamePage() {
         if (!allTopStudents) return [];
         let sorted = [...allTopStudents];
 
-        if (sortBy !== 'points' && sortBy !== 'lifetimePoints') {
+        if (sortBy !== 'points' && sortBy !== 'lifetimePoints' && !sortBy.startsWith('period_')) {
             // It's a category sort
             const categoryName = sortBy;
             sorted.sort((a, b) => (b.categoryPoints?.[categoryName] || 0) - (a.categoryPoints?.[categoryName] || 0));
@@ -144,12 +152,18 @@ export default function HallOfFamePage() {
     const getSortByLabel = () => {
         if (sortBy === 'points') return 'Top Current Earners';
         if (sortBy === 'lifetimePoints') return 'Top Lifetime Earners';
+        if (sortBy === 'period_day') return 'Top Earners Today';
+        if (sortBy === 'period_week') return 'Top Earners This Week';
+        if (sortBy === 'period_month') return 'Top Earners This Month';
         return `Top Earners in ${sortBy}`;
     }
 
     const getPointsForStudent = (student: Student) => {
         if (sortBy === 'points') return student.points || 0;
         if (sortBy === 'lifetimePoints') return student.lifetimePoints || 0;
+        if (sortBy === 'period_day') return student.pointsByPeriod?.[currentPeriodKeys.day] || 0;
+        if (sortBy === 'period_week') return student.pointsByPeriod?.[currentPeriodKeys.week] || 0;
+        if (sortBy === 'period_month') return student.pointsByPeriod?.[currentPeriodKeys.month] || 0;
         return student.categoryPoints?.[sortBy] || 0;
     }
 
@@ -319,6 +333,9 @@ export default function HallOfFamePage() {
                                                     <SelectContent className="rounded-xl border-border">
                                                         <SelectItem value="lifetimePoints" className="rounded-lg font-medium">Lifetime Points</SelectItem>
                                                         <SelectItem value="points" className="rounded-lg font-medium">Current Points</SelectItem>
+                                                        <SelectItem value="period_day" className="rounded-lg font-medium">Points Today</SelectItem>
+                                                        <SelectItem value="period_week" className="rounded-lg font-medium">Points This Week</SelectItem>
+                                                        <SelectItem value="period_month" className="rounded-lg font-medium">Points This Month</SelectItem>
                                                         {categories?.map(c => <SelectItem key={c.id} value={c.name} className="rounded-lg font-medium">{c.name} Points</SelectItem>)}
                                                     </SelectContent>
                                                 </Select>

@@ -276,12 +276,12 @@
   gap: 6px;
 }
 .print-id-app-logo {
-  width: 24px;
+  width: auto;
   height: 24px;
-  border-radius: 4px;
-  overflow: hidden;
   flex-shrink: 0;
-  background: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .print-id-app-logo img {
   width: 100%;
@@ -314,13 +314,12 @@
   text-align: right;
 }
 .print-id-school-logo {
-  width: 24px;
+  width: auto;
   height: 24px;
-  border-radius: 4px;
-  overflow: hidden;
   flex-shrink: 0;
-  background: #f3f4f6;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .print-id-school-logo img {
   width: 100%;
@@ -1396,16 +1395,14 @@
   }
 
   .prize-ticket__logo-box {
-    width: 20mm; 
+    width: auto; 
     height: 20mm;
     min-width: 20mm;
     min-height: 20mm;
     display: flex;
     align-items: center;
     justify-content: center;
-    overflow: hidden;
-    background: #fff;
-    border: 3px solid #000; /* Production logo is boxed */
+    overflow: visible;
     padding: 1mm;
   }
 

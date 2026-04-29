@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Copy, Edit, Gift, Plus, Printer, Trash2, User } from 'lucide-react';
+import { collection, deleteDoc, doc, getDocs, setDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Helper } from '@/components/ui/helper';
@@ -17,6 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { useFirestore } from '@/firebase';
 import type { StaffAccount, StaffAccountRole, Teacher } from '@/lib/types';
 
 export function AdminTeachersTab({
@@ -38,6 +40,7 @@ export function AdminTeachersTab({
   onSaveStaffAccount: (account: StaffAccount | Omit<StaffAccount, 'id'>) => Promise<void>;
   onDeleteStaffAccount: (accountId: string) => Promise<void>;
 }) {
+  const firestore = useFirestore();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<StaffAccount | null>(null);
   const [username, setUsername] = useState('');
@@ -53,6 +56,55 @@ export function AdminTeachersTab({
     setOrigin(window.location.origin);
   }, []);
 
+  useEffect(() => {
+    if (!schoolId) return;
+    if (!teachers || !staffAccounts) return;
+
+    const syncDirectory = async () => {
+      const directoryRef = collection(firestore, 'schoolPublic', schoolId, 'staffDirectory');
+      const expected = new Map<string, Record<string, unknown>>();
+
+      for (const teacher of teachers) {
+        const username = (teacher.username || teacher.id).trim();
+        if (!teacher.name?.trim() || !username) continue;
+        expected.set(`teacher:${teacher.id}`, {
+          sourceId: teacher.id,
+          type: 'teacher',
+          label: teacher.name.trim(),
+          username,
+          updatedAt: Date.now(),
+        });
+      }
+
+      for (const account of staffAccounts) {
+        const username = account.username.trim().toLowerCase();
+        const label = account.displayName.trim();
+        if (!username || !label) continue;
+        expected.set(`${account.role}:${account.id}`, {
+          sourceId: account.id,
+          type: account.role,
+          label,
+          username,
+          updatedAt: Date.now(),
+        });
+      }
+
+      const existing = await getDocs(directoryRef);
+      await Promise.all([
+        ...Array.from(expected.entries()).map(([id, payload]) =>
+          setDoc(doc(directoryRef, id), payload, { merge: true }),
+        ),
+        ...existing.docs
+          .filter((entry) => !expected.has(entry.id))
+          .map((entry) => deleteDoc(entry.ref)),
+      ]);
+    };
+
+    void syncDirectory().catch(() => {
+      // Best effort: staff can still use manually copied links once rules/data are in sync.
+    });
+  }, [firestore, schoolId, staffAccounts, teachers]);
+
   const getStaffPortalUrl = (key: string) => {
     const path = `/${schoolId}/teacher?account=${encodeURIComponent(key)}`;
     return `${origin}${path}`;
@@ -65,29 +117,19 @@ export function AdminTeachersTab({
     window.setTimeout(() => setCopiedKey((current) => (current === key ? '' : current)), 1500);
   };
 
-  const renderPersonalLink = (key: string) => {
-    const link = getStaffPortalUrl(key);
-    return (
-      <div className="mt-2 flex max-w-full flex-col gap-1 sm:flex-row sm:items-center">
-        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground sm:w-24">
-          Personal link
-        </Label>
-        <div className="flex min-w-0 flex-1 gap-1">
-          <Input readOnly value={link} className="h-8 min-w-0 flex-1 truncate font-mono text-xs" />
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="h-8 shrink-0 gap-1"
-            onClick={() => void copyStaffPortalUrl(key)}
-          >
-            <Copy className="h-3.5 w-3.5" />
-            {copiedKey === key ? 'Copied' : 'Copy'}
-          </Button>
-        </div>
-      </div>
-    );
-  };
+  const renderCopyLinkButton = (key: string) => (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      className="h-8 shrink-0 gap-1"
+      title="Copy personal sign-in link"
+      onClick={() => void copyStaffPortalUrl(key)}
+    >
+      <Copy className="h-3.5 w-3.5" />
+      {copiedKey === key ? 'Copied' : 'Link'}
+    </Button>
+  );
 
   const openNewDeskStaff = () => {
     setEditing(null);
@@ -167,23 +209,21 @@ export function AdminTeachersTab({
           {teachers?.map((t) => (
             <li
               key={t.id}
-              className="flex flex-col gap-3 bg-secondary/20 p-4 rounded-2xl border hover:border-purple-200 transition-colors md:flex-row md:justify-between md:items-start"
+              className="flex justify-between items-center gap-3 bg-secondary/20 p-4 rounded-2xl border hover:border-purple-200 transition-colors"
             >
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center font-bold text-purple-700">
-                    {t.name[0]}
-                  </div>
-                  <div>
-                    <p className="font-bold">{t.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      User: <span className="font-code">{t.username}</span> | Pass: <span className="font-code">{t.passcode}</span>
-                    </p>
-                  </div>
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="w-10 h-10 shrink-0 rounded-full bg-purple-100 flex items-center justify-center font-bold text-purple-700">
+                  {t.name[0]}
                 </div>
-                {renderPersonalLink(`teacher:${t.id}`)}
+                <div className="min-w-0">
+                  <p className="font-bold">{t.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    User: <span className="font-code">{t.username}</span> | Pass: <span className="font-code">{t.passcode}</span>
+                  </p>
+                </div>
               </div>
-              <div className="flex gap-1">
+              <div className="flex shrink-0 gap-1">
+                {renderCopyLinkButton(`teacher:${t.id}`)}
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEditTeacher(t)}>
                   <Edit className="h-4 w-4" />
                 </Button>
@@ -218,25 +258,23 @@ export function AdminTeachersTab({
             {staffAccounts?.map((account) => (
               <li
                 key={account.id}
-                className="flex flex-col gap-3 bg-secondary/20 p-4 rounded-2xl border hover:border-primary/30 transition-colors md:flex-row md:justify-between md:items-start"
+                className="flex justify-between items-center gap-3 bg-secondary/20 p-4 rounded-2xl border hover:border-primary/30 transition-colors"
               >
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center text-primary">
-                      {account.role === 'secretary' ? <Printer className="w-5 h-5" /> : <Gift className="w-5 h-5" />}
-                    </div>
-                    <div>
-                      <p className="font-bold">{account.displayName}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {account.role === 'secretary' ? 'Coupon printing' : 'Prize desk'} | User:{' '}
-                        <span className="font-code">{account.username}</span> | Pass:{' '}
-                        <span className="font-code">{account.passcode}</span>
-                      </p>
-                    </div>
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="w-10 h-10 shrink-0 rounded-full bg-primary/15 flex items-center justify-center text-primary">
+                    {account.role === 'secretary' ? <Printer className="w-5 h-5" /> : <Gift className="w-5 h-5" />}
                   </div>
-                  {renderPersonalLink(`${account.role}:${account.id}`)}
+                  <div className="min-w-0">
+                    <p className="font-bold">{account.displayName}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {account.role === 'secretary' ? 'Coupon printing' : 'Prize desk'} | User:{' '}
+                      <span className="font-code">{account.username}</span> | Pass:{' '}
+                      <span className="font-code">{account.passcode}</span>
+                    </p>
+                  </div>
                 </div>
-                <div className="flex gap-1">
+                <div className="flex shrink-0 gap-1">
+                  {renderCopyLinkButton(`${account.role}:${account.id}`)}
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditDeskStaff(account)}>
                     <Edit className="h-4 w-4" />
                   </Button>

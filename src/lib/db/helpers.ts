@@ -22,15 +22,26 @@ export const removeUndefined = <T extends Record<string, unknown>>(obj: T): Docu
 // Period key helpers (for category-based badges).
 // -------------------------------------------------------------------------
 
-/** Returns period keys for a given timestamp (for category-based badges). */
-export function getPeriodKeys(now: number): { month: string; semester: string; year: string; all_time: string } {
+/** Returns period keys for a given timestamp (for category-based badges and total points). */
+export function getPeriodKeys(now: number): { day: string; week: string; month: string; semester: string; year: string; all_time: string } {
   const d = new Date(now);
   const y = d.getFullYear();
   const m = d.getMonth() + 1; // 1-12
+  const date = d.getDate();
+  const day = `${y}-${String(m).padStart(2, '0')}-${String(date).padStart(2, '0')}`;
   const month = `${y}-${String(m).padStart(2, '0')}`;
   const semester = m <= 6 ? `${y}-H1` : `${y}-H2`;
   const year = String(y);
-  return { month, semester, year, all_time: 'all' };
+
+  // ISO week logic
+  const d2 = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = d2.getUTCDay() || 7;
+  d2.setUTCDate(d2.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d2.getUTCFullYear(), 0, 1));
+  const weekNo = Math.ceil((((d2.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  const week = `${d2.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`;
+
+  return { day, week, month, semester, year, all_time: 'all' };
 }
 
 /** Update categoryPointsByPeriod for an award of `points` in `categoryName` at time `now`. */
@@ -46,6 +57,21 @@ export function applyCategoryPointsByPeriod(
   for (const key of periodKeys) {
     if (!next[key]) next[key] = {};
     next[key][categoryName] = (next[key][categoryName] || 0) + points;
+  }
+  return next;
+}
+
+/** Update pointsByPeriod for an award of `points` at time `now`. */
+export function applyPointsByPeriod(
+  current: Student['pointsByPeriod'],
+  points: number,
+  now: number
+): Student['pointsByPeriod'] {
+  const keys = getPeriodKeys(now);
+  const periodKeys = [keys.day, keys.week, keys.month, keys.semester, keys.year, keys.all_time];
+  const next = { ...current } as Record<string, number>;
+  for (const key of periodKeys) {
+    next[key] = (next[key] || 0) + points;
   }
   return next;
 }

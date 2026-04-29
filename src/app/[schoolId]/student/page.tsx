@@ -246,7 +246,7 @@ function StudentDashboardInner({
   onRequestExit: () => void;
 }) {
   const router = useRouter();
-  const { redeemCoupon, redeemPrize, schoolId, isKioskLocked, achievements, badges } = useAppContext();
+  const { redeemCoupon, redeemPrize, printPrizeTickets, schoolId, isKioskLocked, achievements, badges } = useAppContext();
   const firestore = useFirestore();
   const { functions } = useFirebase();
   const { toast } = useToast();
@@ -330,6 +330,19 @@ function StudentDashboardInner({
   const [isIdPreviewOpen, setIsIdPreviewOpen] = useState(false);
   const [confirmingPrize, setConfirmingPrize] = useState<Prize | null>(null);
   const [isRedeemingPrize, setIsRedeemingPrize] = useState(false);
+  const [prizeTicketData, setPrizeTicketData] = useState<{
+    activityId: string;
+    ticketNo: string;
+    redeemedAt: number;
+    studentId: string;
+    studentName: string;
+    studentNickname?: string;
+    studentEmoji?: string;
+    prizeName: string;
+    prizeIcon?: string;
+    quantity: number;
+    totalCost: number;
+  } | null>(null);
 
   const [activeTab, setActiveTab] = useState('manual');
   const [hasCameraPermission, setHasCameraPermission] = useState(true);
@@ -410,7 +423,7 @@ function StudentDashboardInner({
   }, [isKioskLocked]);
 
   useEffect(() => {
-    if (isKioskLocked) return;
+    if (isKioskLocked || confirmingPrize || isRedeemingPrize || prizeTicketData) return;
     if (logoutTimer <= 0) {
       onDone();
       return;
@@ -420,7 +433,7 @@ function StudentDashboardInner({
     }, 1000);
 
     return () => clearTimeout(timerId);
-  }, [logoutTimer, onDone, isKioskLocked]);
+  }, [logoutTimer, onDone, isKioskLocked, confirmingPrize, isRedeemingPrize, prizeTicketData]);
 
   // Also reset auto‑logout timer when there is general user activity (mouse / keyboard / touch).
   useEffect(() => {
@@ -491,6 +504,34 @@ function StudentDashboardInner({
         title: 'Prize Redeemed!',
         description: `Successfully redeemed ${confirmingPrize.name}.`,
       });
+
+      const { activityId, redeemedAt, totalCost } = result;
+      if (
+        confirmingPrize.offerPrintTicketOnRedeem === true &&
+        activityId &&
+        redeemedAt &&
+        typeof totalCost === 'number'
+      ) {
+        const displayFirst = getStudentNickname(student);
+        const legalFirst = (student.firstName || '').trim();
+        const nick = student.nickname?.trim();
+        const themeForTicket = resolveStudentThemeWithSchoolDefault(student.theme, settings.defaultStudentTheme);
+        const emojiRaw = settings.enableStudentEmojiOnPrizeTickets === true ? themeForTicket?.emoji : undefined;
+        const studentEmoji = typeof emojiRaw === 'string' && emojiRaw.trim() ? emojiRaw.trim() : undefined;
+        setPrizeTicketData({
+          activityId,
+          ticketNo: String(redeemedAt).replace(/\D/g, '').slice(-6) || String(redeemedAt).slice(-6),
+          redeemedAt,
+          studentId: student.id,
+          studentName: `${displayFirst} ${student.lastName}`.trim(),
+          studentNickname: nick && legalFirst && displayFirst.trim() !== legalFirst ? legalFirst : undefined,
+          studentEmoji,
+          prizeName: confirmingPrize.name,
+          prizeIcon: confirmingPrize.icon || 'Gift',
+          quantity: 1,
+          totalCost,
+        });
+      }
       setConfirmingPrize(null);
     } catch (e: unknown) {
       playSound('error');
@@ -502,7 +543,25 @@ function StudentDashboardInner({
     } finally {
       setIsRedeemingPrize(false);
     }
-  }, [confirmingPrize, playSound, redeemPrize, resetTimer, student, toast]);
+  }, [confirmingPrize, playSound, redeemPrize, resetTimer, settings.defaultStudentTheme, settings.enableStudentEmojiOnPrizeTickets, student, toast]);
+
+  const handlePrintPrizeTicket = useCallback(() => {
+    if (!prizeTicketData) return;
+    setPrizeTicketData(null);
+    printPrizeTickets([{
+      activityId: prizeTicketData.activityId,
+      ticketNo: prizeTicketData.ticketNo,
+      redeemedAt: prizeTicketData.redeemedAt,
+      studentId: prizeTicketData.studentId,
+      studentName: prizeTicketData.studentName,
+      studentNickname: prizeTicketData.studentNickname,
+      studentEmoji: prizeTicketData.studentEmoji,
+      prizeName: prizeTicketData.prizeName,
+      prizeIcon: prizeTicketData.prizeIcon,
+      quantity: 1,
+      totalCost: prizeTicketData.totalCost,
+    }]);
+  }, [printPrizeTickets, prizeTicketData]);
 
   // Celebrate on login if new badges / bonus milestones were earned since last time this student opened the portal.
   useEffect(() => {
@@ -960,7 +1019,6 @@ function StudentDashboardInner({
                   ) : (prizes || [])
                     .filter(p => prizeIsListed(p) && p.points <= student.points && studentSeesPrizeByTeachers(student, p) && (!p.classId || student.classId === p.classId))
                     .sort((a, b) => b.points - a.points)
-                    .slice(0, 3)
                     .map((reward) => (
                       <button
                         type="button"
@@ -1088,6 +1146,25 @@ function StudentDashboardInner({
                     ) : (
                       'Redeem'
                     )}
+                  </Button>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+
+            <AlertDialog open={!!prizeTicketData} onOpenChange={(open) => {
+              if (!open) setPrizeTicketData(null);
+            }}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Print redeem ticket?</AlertDialogTitle>
+                  <AlertDialogDescription className="break-words [overflow-wrap:anywhere]">
+                    Print a ticket for <span className="font-bold">{prizeTicketData?.prizeName}</span>?
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>No Thanks</AlertDialogCancel>
+                  <Button type="button" onClick={handlePrintPrizeTicket}>
+                    Print Ticket
                   </Button>
                 </AlertDialogFooter>
               </AlertDialogContent>

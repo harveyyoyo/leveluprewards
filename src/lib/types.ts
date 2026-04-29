@@ -104,6 +104,8 @@ export interface Student {
   classId?: string;
   nfcId: string;
   categoryPoints?: { [key: string]: number };
+  /** Total points within time periods (e.g. "2025-03-15" for day, "2025-W12" for week). */
+  pointsByPeriod?: { [periodKey: string]: number };
   /** Category points within time periods (e.g. "2025-03" for month, "2025-H1" for semester). Used for category-based badges. */
   categoryPointsByPeriod?: { [periodKey: string]: { [categoryName: string]: number } };
   earnedAchievements?: { achievementId: string; earnedAt: number }[];

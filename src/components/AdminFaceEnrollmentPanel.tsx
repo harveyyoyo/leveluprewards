@@ -48,7 +48,7 @@ export function AdminFaceEnrollmentPanel({ studentId, studentLabel }: AdminFaceE
   const { functions, user, isUserLoading, userError } = useFirebase();
   const confirm = useConfirm();
   const { toast } = useToast();
-  const { captureFaceDescriptor, averageDescriptor } = useFaceDescriptor();
+  const { captureFaceDescriptor, averageDescriptor, ensureFaceApiReady } = useFaceDescriptor();
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -149,16 +149,38 @@ export function AdminFaceEnrollmentPanel({ studentId, studentLabel }: AdminFaceE
           /interrupted by a new load request/i.test(String(playErr?.message ?? ''));
         if (!benign) throw playErr;
       }
+      
+      // Wait for dimensions to be available. If they are already > 0, we are good.
       if (video.videoWidth <= 0) {
         await new Promise<void>((resolve, reject) => {
-          const t = window.setTimeout(() => reject(new Error('Camera preview never started.')), 10000);
-          video.onloadedmetadata = () => {
-            window.clearTimeout(t);
-            video.onloadedmetadata = null;
-            resolve();
+          const timeout = window.setTimeout(() => {
+            cleanup();
+            reject(new Error('Camera preview never started (timeout).'));
+          }, 10000);
+
+          const onReady = () => {
+            if (video.videoWidth > 0) {
+              cleanup();
+              resolve();
+            }
           };
+
+          const cleanup = () => {
+            window.clearTimeout(timeout);
+            video.removeEventListener('loadedmetadata', onReady);
+            video.removeEventListener('canplay', onReady);
+            video.removeEventListener('playing', onReady);
+          };
+
+          video.addEventListener('loadedmetadata', onReady);
+          video.addEventListener('canplay', onReady);
+          video.addEventListener('playing', onReady);
+          
+          // Final safety check in case it fired just now
+          if (video.videoWidth > 0) onReady();
         });
       }
+      
       setCameraOn(true);
       return video;
     } catch (e: any) {
@@ -211,7 +233,13 @@ export function AdminFaceEnrollmentPanel({ studentId, studentLabel }: AdminFaceE
     try {
       await user.getIdToken(true);
       const video = await startCamera();
-      if (!video) return;
+      if (!video) {
+        setStatus(null);
+        return;
+      }
+      
+      setStatus('Initializing AI…');
+      await ensureFaceApiReady();
 
       const samples: number[][] = [];
       for (let i = 0; i < 3; i++) {

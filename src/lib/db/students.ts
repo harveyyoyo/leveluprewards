@@ -21,6 +21,7 @@ import {
   evaluateAchievements,
   evaluateBadges,
   applyCategoryPointsByPeriod,
+  applyPointsByPeriod,
   applyAchievementsAndBadges,
 } from './helpers';
 
@@ -37,6 +38,7 @@ export const addStudent = async (firestore: Firestore, schoolId: string, student
     points: 0,
     lifetimePoints: 0,
     categoryPoints: {},
+    pointsByPeriod: {},
     categoryPointsByPeriod: {},
     earnedAchievements: [],
     earnedBadges: [],
@@ -133,6 +135,11 @@ export const awardPointsToStudent = async (
       categoryPointsUpdate[description] = (categoryPointsUpdate[description] || 0) + points;
 
       const now = Date.now();
+      const pointsByPeriodUpdate = applyPointsByPeriod(
+        studentData.pointsByPeriod,
+        points,
+        now
+      );
       const categoryPointsByPeriodUpdate = applyCategoryPointsByPeriod(
         studentData.categoryPointsByPeriod,
         description,
@@ -153,6 +160,7 @@ export const awardPointsToStudent = async (
         points: newPoints + bonusTotal,
         lifetimePoints: newLifetimePoints + bonusTotal,
         categoryPoints: categoryPointsUpdate,
+        pointsByPeriod: pointsByPeriodUpdate,
         categoryPointsByPeriod: categoryPointsByPeriodUpdate,
         earnedAchievements: result.earnedAchievements,
         earnedBadges: result.earnedBadges,
@@ -216,6 +224,11 @@ export const awardPointsToMultipleStudents = async (
       categoryPointsUpdate[description] = (categoryPointsUpdate[description] || 0) + points;
 
       const now = Date.now();
+      const pointsByPeriodUpdate = applyPointsByPeriod(
+        studentData.pointsByPeriod,
+        points,
+        now
+      );
       const categoryPointsByPeriodUpdate = applyCategoryPointsByPeriod(
         studentData.categoryPointsByPeriod,
         description,
@@ -272,6 +285,7 @@ export const awardPointsToMultipleStudents = async (
           points: newPoints + bonusTotal,
           lifetimePoints: newLifetimePoints + bonusTotal,
           categoryPoints: categoryPointsUpdate,
+          pointsByPeriod: pointsByPeriodUpdate,
           categoryPointsByPeriod: categoryPointsByPeriodUpdate,
           earnedAchievements,
           earnedBadges
@@ -382,6 +396,7 @@ export const purgeStudentProgress = async (firestore: Firestore, schoolId: strin
         points: 0,
         lifetimePoints: 0,
         categoryPoints: {},
+        pointsByPeriod: {},
         categoryPointsByPeriod: {},
         earnedAchievements: [],
         earnedBadges: [],
@@ -470,6 +485,7 @@ export const importStudentsFromParsedRows = async (
       lifetimePoints: 0,
       classId: classObj?.id || '',
       categoryPoints: {},
+      pointsByPeriod: {},
       categoryPointsByPeriod: {},
       earnedAchievements: [],
       earnedBadges: [],
@@ -529,6 +545,7 @@ export const uploadStudents = async (firestore: Firestore, schoolId: string, csv
       lifetimePoints: 0,
       classId: classObj?.id || '',
       categoryPoints: {},
+      pointsByPeriod: {},
       categoryPointsByPeriod: {},
       earnedAchievements: [],
       earnedBadges: [],
