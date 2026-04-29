@@ -611,6 +611,32 @@
     margin: 0;
   }
 
+  /* Multi-page school reports (portal on body): allow overflow and sane margins */
+  html:has(body.school-reports-printing),
+  body.school-reports-printing {
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  body.school-reports-printing > *:not(#school-reports-print-wrapper) {
+    display: none !important;
+  }
+
+  body.school-reports-printing #school-reports-print-wrapper {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    min-height: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+    padding: 10mm 12mm !important;
+    box-sizing: border-box !important;
+    background: white !important;
+    color: black !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
   /* 1. AGGRESSIVE RESET: Force white background at the most root levels */
   /* 1. PRODUCTION RESET: Strict visibility-based isolation */
   html,
@@ -624,6 +650,12 @@
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
     overflow: hidden !important;
+  }
+
+  html:has(body.school-reports-printing),
+  body.school-reports-printing {
+    overflow: visible !important;
+    height: auto !important;
   }
 
   /* Scorched Earth: Hide EVERYTHING on body */

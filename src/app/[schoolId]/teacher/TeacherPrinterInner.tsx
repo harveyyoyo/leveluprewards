@@ -1,4 +1,4 @@
-﻿
+
 'use client';
 import { useState, useEffect, useMemo } from 'react';
 import { useConfirm } from '@/components/providers/ConfirmProvider';
@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import type { Coupon, Category, Teacher, Student, Class, HistoryItem, Prize, AttendanceSettings, AttendanceLogEntry, AttendanceScheduleSlot, AttendanceRewardRule, CouponRedemptionScope } from '@/lib/types';
-import { ArrowLeft, Printer, Plus, LogIn, LogOut, UserCheck, Award, User, Search, Users, Minus, Gift, Loader2, Trash2, Edit, Filter, Ticket, Clock, ChevronRight, History } from 'lucide-react';
+import { ArrowLeft, Printer, Plus, LogIn, LogOut, UserCheck, Award, User, Search, Users, Minus, Gift, Loader2, Trash2, Edit, Filter, Ticket, Clock, ChevronRight, History, FileText } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import {
     Dialog,
@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import { Coupon as CouponPreview } from '@/components/Coupon';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, where, getDocs, doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
@@ -52,6 +52,7 @@ import { AdminPrizesTab } from '@/app/[schoolId]/admin/sections/AdminPrizesTab';
 import { PrizeModal } from '@/components/PrizeModal';
 import { COUPONS_PER_PRINT_PAGE, generateUniqueCouponCodes } from '@/lib/coupon-print';
 import { describeCouponRedemptionSummary } from '@/lib/couponRedemptionRules';
+import { SchoolReportsPanel } from '@/components/reports/SchoolReportsPanel';
 
 /** Max sheets per run (12 coupons per sheet). Bounded for sensible printer jobs and UI. */
 const MAX_COUPON_PRINT_SHEETS = 100;
@@ -1214,6 +1215,18 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
     const { data: teachers } = useCollection<Teacher>(teachersQuery);
     const currentTeacher = teachers?.find(t => t.id === teacherId);
 
+    const schoolDocRef = useMemoFirebase(
+        () => (schoolId && firestore ? doc(firestore, 'schools', schoolId) : null),
+        [firestore, schoolId],
+    );
+    const { data: schoolDocData } = useDoc<{ name?: string }>(schoolDocRef);
+
+    const couponsQuery = useMemoFirebase(() => (schoolId ? collection(firestore, 'schools', schoolId, 'coupons') : null), [firestore, schoolId]);
+    const { data: coupons } = useCollection<Coupon>(couponsQuery);
+
+    const prizesQuery = useMemoFirebase(() => (schoolId ? collection(firestore, 'schools', schoolId, 'prizes') : null), [firestore, schoolId]);
+    const { data: prizes } = useCollection<Prize>(prizesQuery);
+
     // State for coupon printing
     const [printCategoryId, setPrintCategoryId] = useState('');
     const [printValue, setPrintValue] = useState('10');
@@ -1727,6 +1740,14 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                     <History className="w-4 h-4 shrink-0 opacity-80" />
                                     Redemptions
                                 </TabsTrigger>
+                                <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground/45 pointer-events-none" aria-hidden />
+                                <TabsTrigger
+                                    value="reports"
+                                    className="rounded-xl px-3 py-2 font-bold text-sm flex items-center gap-1.5 text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--teacher-accent)]"
+                                >
+                                    <FileText className="w-4 h-4 shrink-0 opacity-80" />
+                                    Reports
+                                </TabsTrigger>
                             </TabsList>
                         </div>
                         )}
@@ -2164,6 +2185,25 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                             <TabsContent value="redemptions" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                     <RecentRedemptions schoolId={schoolId!} students={students || []} classes={classes || []} teacherId={teacherId} />
+                                </div>
+                            </TabsContent>
+
+                            <TabsContent value="reports" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                <div className="flex justify-center w-full">
+                                    <div className="w-full max-w-4xl">
+                                        <SchoolReportsPanel
+                                            scope="teacher"
+                                            schoolName={schoolDocData?.name?.trim() || 'School'}
+                                            teacherId={teacherId}
+                                            teacherName={teacherName}
+                                            students={students || []}
+                                            classes={classes || []}
+                                            teachers={teachers || []}
+                                            coupons={coupons || []}
+                                            prizes={prizes || []}
+                                            categories={globalCategories || categories || []}
+                                        />
+                                    </div>
                                 </div>
                             </TabsContent>
 
