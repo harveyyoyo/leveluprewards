@@ -8,7 +8,7 @@ import { studentMayRedeemCouponData } from "./couponRedemption";
 
 admin.initializeApp();
 
-const SUBCOLLECTIONS = ["students", "classes", "teachers", "categories", "prizes", "coupons"];
+const SUBCOLLECTIONS = ["students", "classes", "teachers", "staffAccounts", "categories", "prizes", "coupons"];
 const RETENTION_DAYS = 30;
 
 // ========================================================================

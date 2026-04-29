@@ -29,6 +29,9 @@ export { addClass, updateClass, deleteClass, uploadClassesFromCsv } from './clas
 // Teachers
 export { addTeacher, updateTeacher, deleteTeacher, uploadTeachersFromCsv } from './teachers';
 
+// Staff accounts (secretary / prize desk)
+export { addStaffAccount, updateStaffAccount, deleteStaffAccount, staffAccountsCollectionRef } from './staffAccounts';
+
 // Categories
 export { addCategory, updateCategory, deleteCategory } from './categories';
 

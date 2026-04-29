@@ -1,7 +1,8 @@
 
 'use client';
-import { useState, type ComponentType, type CSSProperties } from 'react';
+import { useState, useEffect, type ComponentType, type CSSProperties } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
 import { GraduationCap, Printer, Gift, UserCog, Trophy, ChevronRight, Loader2, Home } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
@@ -22,12 +23,41 @@ type PortalArea = {
     status?: string;
 };
 
+/** In student (kiosk) login, idle on the hub → default to the badge / redeem flow. */
+const STUDENT_MODE_DEFAULT_TO_KIOSK_SEC = 10;
+
 export default function PortalPage() {
     const { loginState, isInitialized, schoolId, isAdmin } = useAppContext();
     const { settings, updateSettings } = useSettings();
     const playSound = useArcadeSound();
+    const router = useRouter();
     const [hoveredIndex, setHoveredIndex] = useState<string | null>(null);
     const animBackdrop = globalAnimatedBackdropActive(settings);
+
+    useEffect(() => {
+        if (!isInitialized || loginState !== 'student' || !schoolId) return;
+        const ms = STUDENT_MODE_DEFAULT_TO_KIOSK_SEC * 1000;
+        let timer: ReturnType<typeof setTimeout> | null = null;
+        const arm = () => {
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(() => {
+                router.push(`/${schoolId}/student`);
+            }, ms);
+        };
+        arm();
+        const onActivity = () => {
+            arm();
+        };
+        window.addEventListener('pointerdown', onActivity, { capture: true, passive: true });
+        window.addEventListener('keydown', onActivity, { capture: true });
+        window.addEventListener('scroll', onActivity, { capture: true, passive: true });
+        return () => {
+            if (timer) clearTimeout(timer);
+            window.removeEventListener('pointerdown', onActivity, { capture: true });
+            window.removeEventListener('keydown', onActivity, { capture: true });
+            window.removeEventListener('scroll', onActivity, { capture: true });
+        };
+    }, [isInitialized, loginState, schoolId, router]);
     const showPortalLocalDecor =
         settings.graphicMode === 'graphics' &&
         !animBackdrop &&

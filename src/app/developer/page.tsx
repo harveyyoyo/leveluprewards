@@ -810,83 +810,160 @@ export default function DeveloperPage() {
               </CardContent>
             </Card>
 
-            <Card className="border shadow-md">
-              <CardHeader className="pb-2">
+            <Card className="overflow-hidden border shadow-md">
+              <CardHeader className="border-b bg-muted/25 pb-4">
                 <Helper content="Upload a global logo for the arcade app itself. This can be used in marketing pages, headers, and the portal shell.">
                   <CardTitle className="flex items-center gap-2 text-base">
-                    <ImageIcon className="h-5 w-5 text-muted-foreground" aria-hidden /> App Logo
+                    <ImageIcon className="h-5 w-5 text-muted-foreground" aria-hidden /> App logo
                   </CardTitle>
                 </Helper>
-                <CardDescription>App-wide branding (not per-school).</CardDescription>
+                <CardDescription className="text-pretty">
+                  One image for the whole product (headers, portal shell, marketing). Not tied to individual schools.
+                </CardDescription>
               </CardHeader>
-              <CardContent className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-                <p className="text-sm text-muted-foreground sm:max-w-[14rem] sm:pt-1">
-                  Preview uses your current shell display mode (fit vs fill).
-                </p>
-                <div className="flex flex-col items-stretch gap-3 sm:min-w-[11rem] sm:items-end">
-                  <div className="mx-auto h-16 w-16 shrink-0 overflow-hidden rounded-2xl border border-border/70 bg-muted sm:mx-0 flex items-center justify-center text-xs font-semibold text-muted-foreground">
-                    {appLogoUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={appLogoUrl} alt="Current app logo" className={settings.logoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />
-                    ) : (
-                      <span>App</span>
-                    )}
+              <CardContent className="space-y-6 pt-6">
+                <div className="grid gap-6 sm:grid-cols-[minmax(0,200px)_1fr] sm:items-start">
+                  <div className="flex flex-col gap-2">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Live preview</span>
+                    <div
+                      className={cn(
+                        'relative flex aspect-square w-full max-w-[200px] mx-auto sm:mx-0 overflow-hidden rounded-2xl border-2 border-border bg-muted shadow-inner',
+                        'ring-1 ring-black/5 dark:ring-white/10',
+                      )}
+                      aria-live="polite"
+                    >
+                      {appLogoUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={appLogoUrl}
+                          alt=""
+                          className={cn(
+                            'h-full w-full',
+                            settings.logoDisplayMode === 'cover' ? 'object-cover' : 'object-contain p-3',
+                          )}
+                        />
+                      ) : (
+                        <div className="flex h-full w-full flex-col items-center justify-center gap-1 p-4 text-center">
+                          <ImageIcon className="h-10 w-10 text-muted-foreground/50" aria-hidden />
+                          <span className="text-xs font-medium text-muted-foreground">No logo yet</span>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-center text-xs text-muted-foreground sm:text-left">
+                      Preview uses your display mode below ({settings.logoDisplayMode === 'contain' ? 'fit entire image' : 'fill frame'}).
+                    </p>
                   </div>
-                  {appLogoHistory.length > 0 && (
-                    <div className="flex w-full flex-col items-center gap-1 sm:items-end">
-                      <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Previous (click to use)</span>
-                      <div className="flex max-w-full flex-wrap justify-center gap-2 sm:justify-end">
-                        {appLogoHistory.map((url, idx) => (
-                          <button
-                            key={`${url}-${idx}`}
-                            type="button"
-                            onClick={() => handleSetAppLogoUrl(url)}
-                            className="h-10 w-10 shrink-0 overflow-hidden rounded-xl border-2 border-border bg-muted/60 transition-colors hover:border-primary"
-                          >
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={url} alt="Previous app logo" className={settings.logoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />
-                          </button>
-                        ))}
+
+                  <div className="flex min-w-0 flex-col gap-5">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        In the app shell
+                      </Label>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={settings.logoDisplayMode === 'contain' ? 'default' : 'outline'}
+                          className="min-w-[7rem]"
+                          aria-pressed={settings.logoDisplayMode === 'contain'}
+                          onClick={() => updateSettings({ logoDisplayMode: 'contain' })}
+                        >
+                          Fit
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={settings.logoDisplayMode === 'cover' ? 'default' : 'outline'}
+                          className="min-w-[7rem]"
+                          aria-pressed={settings.logoDisplayMode === 'cover'}
+                          onClick={() => updateSettings({ logoDisplayMode: 'cover' })}
+                        >
+                          Fill
+                        </Button>
+                      </div>
+                      <p className="text-xs leading-relaxed text-muted-foreground">
+                        <span className="font-medium text-foreground/80">Fit</span> keeps the whole mark visible with padding.
+                        <span className="mx-1 text-border">·</span>
+                        <span className="font-medium text-foreground/80">Fill</span> crops to the frame like a cover photo.
+                      </p>
+                    </div>
+
+                    <Separator />
+
+                    <div className="space-y-2">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Replace logo
+                      </span>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="w-full sm:w-auto"
+                        onClick={handleAppLogoUploadClick}
+                        disabled={isAppLogoUploading}
+                      >
+                        {isAppLogoUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+                        {isAppLogoUploading ? 'Uploading…' : 'Upload new image'}
+                      </Button>
+                      <p className="text-xs text-muted-foreground">
+                        PNG, JPG, or WebP · up to 5 MB · you can crop to a square after choosing a file.
+                      </p>
+                      <input
+                        ref={appLogoInputRef}
+                        type="file"
+                        accept="image/png,image/jpeg,image/jpg,image/webp"
+                        className="sr-only"
+                        tabIndex={-1}
+                        onChange={handleAppLogoUpload}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {appLogoHistory.length > 0 && (
+                  <>
+                    <Separator />
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap items-baseline justify-between gap-2">
+                        <Label className="text-sm font-semibold">Version history</Label>
+                        <span className="text-xs text-muted-foreground">Click to make active</span>
+                      </div>
+                      <div
+                        className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 pt-0.5 [scrollbar-width:thin]"
+                        role="list"
+                        aria-label="Previous app logos"
+                      >
+                        {appLogoHistory.map((url, idx) => {
+                          const isActive = url === appLogoUrl;
+                          return (
+                            <button
+                              key={`${url}-${idx}`}
+                              type="button"
+                              role="listitem"
+                              title={isActive ? 'Current logo' : 'Restore this logo'}
+                              onClick={() => handleSetAppLogoUrl(url)}
+                              className={cn(
+                                'relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border-2 bg-muted/80 transition-shadow hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                                isActive ? 'border-primary shadow-md ring-2 ring-primary/30' : 'border-border',
+                              )}
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={url}
+                                alt=""
+                                className={settings.logoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain p-1.5'}
+                              />
+                              {isActive && (
+                                <span className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full border border-primary/20 bg-primary text-primary-foreground shadow-md" title="Currently active">
+                                  <Check className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
-                  )}
-                  <div className="w-full space-y-1">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Display</span>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => updateSettings({ logoDisplayMode: 'contain' })}
-                        className={`flex-1 rounded-md px-3 py-1.5 text-sm font-bold ${settings.logoDisplayMode === 'contain' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
-                      >
-                        Fit
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => updateSettings({ logoDisplayMode: 'cover' })}
-                        className={`flex-1 rounded-md px-3 py-1.5 text-sm font-bold ${settings.logoDisplayMode === 'cover' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
-                      >
-                        Fill (crop)
-                      </button>
-                    </div>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="rounded-full"
-                    onClick={handleAppLogoUploadClick}
-                    disabled={isAppLogoUploading}
-                  >
-                    {isAppLogoUploading ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Upload className="mr-1 h-4 w-4" />}
-                    Upload Logo
-                  </Button>
-                  <input
-                    ref={appLogoInputRef}
-                    type="file"
-                    accept="image/png,image/jpeg,image/jpg,image/webp"
-                    className="hidden"
-                    onChange={handleAppLogoUpload}
-                  />
-                </div>
+                  </>
+                )}
               </CardContent>
             </Card>
 

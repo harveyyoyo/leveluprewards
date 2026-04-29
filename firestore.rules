@@ -24,6 +24,18 @@ service cloud.firestore {
         && teacherRoleData(schoolId).role == 'teacher';
     }
 
+    function isSecretary(schoolId) {
+      return isAuth()
+        && exists(/databases/$(database)/documents/schools/$(schoolId)/roles_secretary/$(request.auth.uid))
+        && get(/databases/$(database)/documents/schools/$(schoolId)/roles_secretary/$(request.auth.uid)).data.role == 'secretary';
+    }
+
+    function isPrizeClerk(schoolId) {
+      return isAuth()
+        && exists(/databases/$(database)/documents/schools/$(schoolId)/roles_prizeClerk/$(request.auth.uid))
+        && get(/databases/$(database)/documents/schools/$(schoolId)/roles_prizeClerk/$(request.auth.uid)).data.role == 'prizeClerk';
+    }
+
     function teacherIdFor(schoolId) {
       return teacherRoleData(schoolId).teacherId;
     }
@@ -81,7 +93,7 @@ service cloud.firestore {
     }
     
     match /schools/{schoolId} {
-      allow read: if isDeveloper() || isAdmin(schoolId) || isTeacher(schoolId);
+      allow read: if isDeveloper() || isAdmin(schoolId) || isTeacher(schoolId) || isSecretary(schoolId) || isPrizeClerk(schoolId);
       allow create: if isDeveloper();
       allow update, delete: if isAdmin(schoolId) || isDeveloper();
 
@@ -89,13 +101,13 @@ service cloud.firestore {
       // Students and anonymous users use `schoolPublic/{schoolId}` instead.
 
       match /students/{studentId} {
-        allow read: if isAdmin(schoolId) || isTeacher(schoolId);
+        allow read: if isAdmin(schoolId) || isTeacher(schoolId) || isPrizeClerk(schoolId);
         allow create, delete: if isAdmin(schoolId);
-        allow update: if isAdmin(schoolId) || isTeacher(schoolId);
+        allow update: if isAdmin(schoolId) || isTeacher(schoolId) || isPrizeClerk(schoolId);
 
         match /activities/{activityId} {
-          allow read: if isAdmin(schoolId) || isTeacher(schoolId);
-          allow create, update: if isAdmin(schoolId) || isTeacher(schoolId);
+          allow read: if isAdmin(schoolId) || isTeacher(schoolId) || isPrizeClerk(schoolId);
+          allow create, update: if isAdmin(schoolId) || isTeacher(schoolId) || isPrizeClerk(schoolId);
           allow delete: if isAdmin(schoolId);
         }
       }
@@ -124,13 +136,13 @@ service cloud.firestore {
       }
       
       match /classes/{classId} {
-        allow read: if isAdmin(schoolId) || isTeacher(schoolId);
+        allow read: if isAdmin(schoolId) || isTeacher(schoolId) || isPrizeClerk(schoolId);
         allow write: if isAdmin(schoolId);
       }
       
       match /categories/{categoryId} {
         // Categories are used by teachers in the UI.
-        allow read: if isAdmin(schoolId) || isTeacher(schoolId);
+        allow read: if isAdmin(schoolId) || isTeacher(schoolId) || isSecretary(schoolId);
         allow create: if isAdmin(schoolId) || isDeveloper()
           || isTeacherOwnedCreate(schoolId);
         allow update: if isAdmin(schoolId) || isDeveloper()
@@ -156,9 +168,13 @@ service cloud.firestore {
       }
 
       match /prizes/{prizeId} {
-        allow read: if isAdmin(schoolId) || isTeacher(schoolId);
+        allow read: if isAdmin(schoolId) || isTeacher(schoolId) || isPrizeClerk(schoolId);
         allow create: if isAdmin(schoolId) || isTeacherOwnedPrizeCreate(schoolId);
-        allow update: if isAdmin(schoolId) || isTeacherOwnedPrizeUpdate(schoolId);
+        allow update: if isAdmin(schoolId) || isTeacherOwnedPrizeUpdate(schoolId)
+          || (
+            isPrizeClerk(schoolId)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stockCount', 'inStock'])
+          );
         allow delete: if isAdmin(schoolId)
           || (
             isTeacher(schoolId)
@@ -170,8 +186,13 @@ service cloud.firestore {
       }
       
       match /coupons/{couponId} {
-        allow read: if isAdmin(schoolId) || isTeacher(schoolId);
-        allow write: if isAdmin(schoolId) || isTeacher(schoolId);
+        allow read: if isAdmin(schoolId) || isTeacher(schoolId) || isSecretary(schoolId);
+        allow write: if isAdmin(schoolId) || isTeacher(schoolId) || isSecretary(schoolId);
+      }
+
+      // Desk staff logins (admin-managed). No client reads except school admins.
+      match /staffAccounts/{accountId} {
+        allow read, write: if isAdmin(schoolId);
       }
       
       match /roles_admin/{uid} {
@@ -182,6 +203,16 @@ service cloud.firestore {
       }
 
       match /roles_teacher/{uid} {
+        allow read: if isAuth() && request.auth.uid == uid;
+        allow write: if false;
+      }
+
+      match /roles_secretary/{uid} {
+        allow read: if isAuth() && request.auth.uid == uid;
+        allow write: if false;
+      }
+
+      match /roles_prizeClerk/{uid} {
         allow read: if isAuth() && request.auth.uid == uid;
         allow write: if false;
       }

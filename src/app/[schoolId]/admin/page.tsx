@@ -15,14 +15,14 @@ import { collection, doc, updateDoc, setDoc, deleteDoc, getDocs, query, orderBy,
 import {
   Users, Gift, BookOpen, Trash2, Edit, Plus, UploadCloud, Printer, LayoutDashboard, Database,
   Settings, History, Award, CheckCircle, Tag, Trophy, ArrowRight, Loader2, Play, ShieldCheck,
-  User, Ticket, Upload, Download, Activity, Zap, Clock, Palette, Wand2, TableProperties
+  User, Ticket, Upload, Download, Activity, Zap, Clock, Palette, Wand2, TableProperties, Headset,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import type { Student, Prize, Coupon, Category, Class, Teacher, BackupInfo, Achievement, Badge, AttendanceScheduleSlot, TeacherBudgetPeriod } from '@/lib/types';
+import type { Student, Prize, Coupon, Category, Class, Teacher, BackupInfo, Achievement, Badge, AttendanceScheduleSlot, TeacherBudgetPeriod, StaffAccount } from '@/lib/types';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StudentModal } from '@/components/StudentModal';
@@ -79,7 +79,7 @@ const ThemeGeneratorModal = dynamic(
   () => import('@/components/ThemeGeneratorModal').then((m) => m.ThemeGeneratorModal),
   { ssr: false },
 );
-import { addAchievement, updateAchievement, deleteAchievement, addBadge, updateBadge, deleteBadge } from '@/lib/db';
+import { addAchievement, updateAchievement, deleteAchievement, addBadge, updateBadge, deleteBadge, addStaffAccount, updateStaffAccount, deleteStaffAccount } from '@/lib/db';
 import { SAMPLE_BADGES, getSampleCategoryBadges } from '@/lib/sample-badges';
 // The Students tab is the default tab, so keep it eager. Every other tab is
 // code-split with `next/dynamic` so its chunk is only fetched when the admin
@@ -105,6 +105,10 @@ const AdminClassesTab = dynamic(
 );
 const AdminTeachersTab = dynamic(
   () => import('./sections/AdminTeachersTab').then((m) => m.AdminTeachersTab),
+  { loading: tabLoader, ssr: false },
+);
+const AdminStaffAccountsTab = dynamic(
+  () => import('./sections/AdminStaffAccountsTab').then((m) => m.AdminStaffAccountsTab),
   { loading: tabLoader, ssr: false },
 );
 const AdminCategoriesTab = dynamic(
@@ -227,6 +231,7 @@ function AdminDashboardInner() {
     students, studentsLoading, studentsError,
     classes, classesLoading, classesError,
     teachers, teachersLoading, teachersError,
+    staffAccounts, staffAccountsLoading, staffAccountsError,
     categories, categoriesLoading, categoriesError,
     prizes, prizesLoading, prizesError,
     coupons, couponsLoading, couponsError,
@@ -343,12 +348,13 @@ function AdminDashboardInner() {
     listTeacherAttendanceLog,
   });
 
-  const isDbLoading = studentsLoading || classesLoading || teachersLoading || categoriesLoading || prizesLoading || couponsLoading || backupsLoading;
+  const isDbLoading = studentsLoading || classesLoading || teachersLoading || staffAccountsLoading || categoriesLoading || prizesLoading || couponsLoading || backupsLoading;
 
   const collectionErrors = [
     { name: 'Students', error: studentsError },
     { name: 'Classes', error: classesError },
     { name: 'Teachers', error: teachersError },
+    { name: 'Desk staff', error: staffAccountsError },
     { name: 'Categories', error: categoriesError },
     { name: 'Prizes', error: prizesError },
     { name: 'Coupons', error: couponsError },
@@ -548,7 +554,7 @@ function AdminDashboardInner() {
       toast({
         variant: 'destructive',
         title: 'Failed to import classes',
-        description: getReadableErrorMessage(err),
+        description: getReadableErrorMessage(err, 'Import failed.'),
       });
     }
   };
@@ -564,7 +570,7 @@ function AdminDashboardInner() {
       toast({
         variant: 'destructive',
         title: 'Failed to import teachers',
-        description: getReadableErrorMessage(err),
+        description: getReadableErrorMessage(err, 'Import failed.'),
       });
     }
   };
@@ -580,7 +586,7 @@ function AdminDashboardInner() {
       toast({
         variant: 'destructive',
         title: 'Failed to import students',
-        description: getReadableErrorMessage(err),
+        description: getReadableErrorMessage(err, 'Import failed.'),
       });
     }
   };
@@ -680,6 +686,9 @@ function AdminDashboardInner() {
               </TabsTrigger>
               <TabsTrigger value="teachers" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
                 <User className="w-4 h-4" aria-hidden="true" /> Teachers
+              </TabsTrigger>
+              <TabsTrigger value="desk-staff" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
+                <Headset className="w-4 h-4" aria-hidden="true" /> Desk staff
               </TabsTrigger>
               <TabsTrigger value="categories" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
                 <Tag className="w-4 h-4" aria-hidden="true" /> Categories
@@ -829,6 +838,42 @@ function AdminDashboardInner() {
                 });
                 if (!ok) return;
                 await deleteTeacher(id);
+              }}
+            />
+          </TabsContent>
+
+          <TabsContent value="desk-staff" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <AdminStaffAccountsTab
+              staffAccounts={staffAccounts}
+              onSave={async (account) => {
+                if (!firestore || !schoolId) return;
+                try {
+                  if ('id' in account && account.id) {
+                    await updateStaffAccount(firestore, schoolId, account as StaffAccount);
+                    toast({ title: 'Account updated' });
+                  } else {
+                    await addStaffAccount(firestore, schoolId, account);
+                    toast({ title: 'Account created' });
+                  }
+                } catch (e) {
+                  toast({ variant: 'destructive', title: 'Save failed', description: getReadableErrorMessage(e, 'Save failed.') });
+                }
+              }}
+              onDelete={async (id) => {
+                const row = (staffAccounts || []).find((a) => a.id === id);
+                const ok = await confirm({
+                  title: row ? `Remove ${row.displayName}?` : 'Remove this account?',
+                  description: 'They will no longer be able to sign in until you add them again.',
+                  confirmLabel: 'Remove',
+                  destructive: true,
+                });
+                if (!ok || !firestore || !schoolId) return;
+                try {
+                  await deleteStaffAccount(firestore, schoolId, id);
+                  toast({ title: 'Account removed' });
+                } catch (e) {
+                  toast({ variant: 'destructive', title: 'Delete failed', description: getReadableErrorMessage(e, 'Delete failed.') });
+                }
               }}
             />
           </TabsContent>

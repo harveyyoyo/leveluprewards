@@ -14,6 +14,7 @@ import type {
   Class,
   Coupon,
   Prize,
+  StaffAccount,
   Student,
   Teacher,
 } from '@/lib/types';
@@ -52,6 +53,10 @@ export function useAdminDashboardData(schoolId: string | null) {
     () => (schoolId ? collection(firestore, 'schools', schoolId, 'teachers') : null),
     [firestore, schoolId],
   );
+  const staffAccountsQuery = useMemoFirebase(
+    () => (schoolId ? collection(firestore, 'schools', schoolId, 'staffAccounts') : null),
+    [firestore, schoolId],
+  );
   const categoriesQuery = useMemoFirebase(
     () => (schoolId ? collection(firestore, 'schools', schoolId, 'categories') : null),
     [firestore, schoolId],
@@ -87,6 +92,7 @@ export function useAdminDashboardData(schoolId: string | null) {
   const students = useCollection<Student>(studentsQuery);
   const classes = useCollection<Class>(classesQuery);
   const teachers = useCollection<Teacher>(teachersQuery);
+  const staffAccounts = useCollection<StaffAccount>(staffAccountsQuery);
   const categories = useCollection<Category>(categoriesQuery);
   const prizes = useCollection<Prize>(prizesQuery);
   const coupons = useCollection<Coupon>(couponsQuery);
@@ -106,6 +112,9 @@ export function useAdminDashboardData(schoolId: string | null) {
     teachers: teachers.data,
     teachersLoading: teachers.isLoading,
     teachersError: teachers.error,
+    staffAccounts: staffAccounts.data,
+    staffAccountsLoading: staffAccounts.isLoading,
+    staffAccountsError: staffAccounts.error,
     categories: categories.data,
     categoriesLoading: categories.isLoading,
     categoriesError: categories.error,

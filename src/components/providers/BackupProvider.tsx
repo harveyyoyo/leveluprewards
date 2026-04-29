@@ -11,7 +11,6 @@ import { useFirebase } from '@/firebase';
 import {
     doc,
     setDoc,
-    getDoc,
     deleteDoc,
     updateDoc,
     collection,
@@ -53,7 +52,7 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
     const playSound = useArcadeSound();
 
     const createSchool = useCallback(async (schoolId: string, name?: string, passcode?: string): Promise<{ passcode: string; cleanId: string } | null> => {
-        if (!firestore || !auth.currentUser) return null;
+        if (!functions || !auth.currentUser) return null;
         const cleanId = schoolId.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
         if (!cleanId) {
             playSound('error');
@@ -61,118 +60,28 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
             return null;
         }
 
-        const schoolDocRef = doc(firestore, 'schools', cleanId);
-        const schoolExists = (await getDoc(schoolDocRef)).exists();
-
-        if (schoolExists) {
-            // For all schools (including sample schools), do not overwrite existing data here.
+        try {
+            const createSchoolFn = httpsCallable(functions, 'createSchoolByDeveloper');
+            const result = await createSchoolFn({ schoolId: cleanId, name, passcode });
+            const response = result.data as { cleanId: string; passcode: string; repaired?: boolean };
+            playSound('success');
+            toast({
+                title: response.repaired ? `School "${response.cleanId}" repaired!` : `School "${response.cleanId}" created!`,
+                description: response.repaired ? 'Missing starter data was restored after a partial create.' : undefined,
+            });
+            return { passcode: response.passcode, cleanId: response.cleanId };
+        } catch (e) {
             playSound('error');
-            toast({ variant: 'destructive', title: `School ID "${cleanId}" already exists.` });
+            const code = (e as any)?.code;
+            const message = (e as Error).message || 'Could not create school.';
+            toast({
+                variant: 'destructive',
+                title: code === 'functions/already-exists' ? `School ID "${cleanId}" already exists.` : 'School creation failed',
+                description: message,
+            });
             return null;
         }
-
-
-        let schoolData: Record<string, any>, newPasscode;
-        if (cleanId === 'yeshiva') {
-            newPasscode = passcode || '1234';
-            schoolData = YESHIVA_DATA;
-            if (name) schoolData.name = name;
-        } else if (cleanId === 'schoolabc') {
-            newPasscode = passcode || '1234';
-            schoolData = SCHOOL_DATA;
-            if (name) schoolData.name = name;
-        } else {
-            newPasscode = passcode || Math.floor(1000 + Math.random() * 9000).toString();
-            schoolData = {
-                name: name || cleanId,
-                updatedAt: Date.now(),
-                students: [{
-                    id: '100',
-                    firstName: 'Test',
-                    lastName: 'Student',
-                    nfcId: '100',
-                    points: 0,
-                    classId: '',
-                }],
-                teachers: [{
-                    id: 't1',
-                    name: 'Teacher',
-                    username: 'teacher',
-                    passcode: '1234',
-                }],
-            };
-        }
-
-        const { students, classes, teachers, categories, prizes, coupons, ...schoolDocData } = schoolData;
-        const finalSchoolDocData = {
-            ...schoolDocData,
-            passcode: newPasscode,
-            name: schoolData.name,
-            plan: schoolDocData.plan ?? DEFAULT_PLAN,
-            featureOverrides: schoolDocData.featureOverrides ?? {},
-            hasMigratedStudents: true,
-            hasMigratedClasses: true,
-            hasMigratedTeachers: true,
-            hasMigratedPrizes: true,
-            hasMigratedCoupons: true,
-            hasMigratedCategories: true,
-        };
-
-        const allOps: Array<{ ref: any; data: any }> = [];
-
-        const collectItems = (list: any[] | undefined, collectionName: string) => {
-            if (!list) return;
-            for (const item of list) {
-                const itemRef = doc(firestore, 'schools', cleanId, collectionName, item.id);
-                if (collectionName === 'students') {
-                    const studentData: Student = {
-                        ...item,
-                        points: item.points || 0,
-                        lifetimePoints: item.lifetimePoints || item.points || 0,
-                        categoryPoints: item.categoryPoints || {},
-                        categoryPointsByPeriod: item.categoryPointsByPeriod || {},
-                        earnedAchievements: item.earnedAchievements || [],
-                        earnedBadges: item.earnedBadges || [],
-                    };
-                    allOps.push({ ref: itemRef, data: studentData });
-                } else {
-                    allOps.push({ ref: itemRef, data: item });
-                }
-            }
-        };
-
-        collectItems(students, 'students');
-        collectItems(classes, 'classes');
-        collectItems(teachers, 'teachers');
-        collectItems(categories, 'categories');
-        collectItems(prizes, 'prizes');
-        collectItems(coupons, 'coupons');
-
-        const firstBatch = writeBatch(firestore);
-        firstBatch.set(schoolDocRef, finalSchoolDocData);
-        firstBatch.set(
-            schoolPublicDocRef(firestore, cleanId),
-            mainSchoolDocToPublicPayload(finalSchoolDocData as Record<string, unknown>),
-        );
-        await firstBatch.commit();
-
-        const BATCH_LIMIT = 499;
-        const restOps = allOps;
-        for (let i = 0; i < restOps.length; i += BATCH_LIMIT) {
-            const chunk = restOps.slice(i, i + BATCH_LIMIT);
-            const batch = writeBatch(firestore);
-            for (const op of chunk) {
-                batch.set(op.ref, op.data);
-            }
-            await batch.commit();
-        }
-
-        if (cleanId !== 'yeshiva' && cleanId !== 'schoolabc') {
-            playSound('success');
-            toast({ title: `School "${cleanId}" created!` });
-        }
-        return { passcode: newPasscode, cleanId };
-    }, [firestore, auth, toast, playSound]);
+    }, [functions, auth, toast, playSound]);
 
     const devCreateBackup = useCallback(async (schoolId: string) => {
         const createBackupFn = httpsCallable(functions, 'createBackupTrigger');
