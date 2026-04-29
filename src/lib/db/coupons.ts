@@ -80,6 +80,19 @@ export const redeemCoupon = async (
       if (!studentDoc.exists()) throw new Error("Student not found.");
       const currentStudent = studentDoc.data() as Student;
 
+      let classPrimaryTeacherId: string | null = null;
+      const classId = currentStudent.classId;
+      if (classId) {
+        const classRef = doc(firestore, 'schools', schoolId, 'classes', classId);
+        const classDoc = await transaction.get(classRef);
+        if (classDoc.exists()) {
+          const cl = classDoc.data() as Class;
+          if (cl.primaryTeacherId) classPrimaryTeacherId = cl.primaryTeacherId;
+        }
+      }
+      const gate = studentMayRedeemCoupon(coupon, currentStudent, classPrimaryTeacherId);
+      if (!gate.ok) throw new Error(gate.message || 'Not eligible to redeem this coupon.');
+
       const addedValue = coupon.value;
       const newPoints = currentStudent.points + addedValue;
       const newLifetimePoints = (currentStudent.lifetimePoints || 0) + addedValue;

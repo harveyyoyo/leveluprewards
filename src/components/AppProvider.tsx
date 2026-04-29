@@ -50,15 +50,17 @@ interface AppContextType {
   // Auth
   isInitialized: boolean;
   isUserLoading: boolean;
-  loginState: 'loggedOut' | 'school' | 'developer' | 'student' | 'teacher' | 'admin';
+  loginState: 'loggedOut' | 'school' | 'developer' | 'student' | 'teacher' | 'admin' | 'secretary' | 'prizeClerk';
   isAdmin: boolean;
   isTeacher: boolean;
+  isSecretary: boolean;
+  isPrizeClerk: boolean;
   userName: string | null;
   userId: string | null;
   teacherDocId: string | null;
   schoolId: string | null;
   syncStatus: 'synced' | 'syncing' | 'offline' | 'error';
-  login: (type: 'school' | 'developer' | 'student' | 'teacher' | 'admin', credentials: { schoolId?: string; passcode?: string; username?: string; teacherName?: string; teacherDocId?: string }) => Promise<boolean>;
+  login: (type: 'school' | 'developer' | 'student' | 'teacher' | 'admin' | 'secretary' | 'prizeClerk', credentials: { schoolId?: string; passcode?: string; username?: string; teacherName?: string; teacherDocId?: string; staffRole?: 'secretary' | 'prizeClerk'; }) => Promise<boolean>;
   logout: (options?: LogoutOptions) => void;
   setUserName: (name: string | null) => void;
   isKioskLocked: boolean;
@@ -419,6 +421,8 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     ...authCtx,
     isAdmin: authCtx.isAdmin,
     isTeacher: authCtx.isTeacher,
+    isSecretary: authCtx.isSecretary,
+    isPrizeClerk: authCtx.isPrizeClerk,
     // Print
     ...printCtx,
     printPrizeTickets: printCtx.printPrizeTickets,

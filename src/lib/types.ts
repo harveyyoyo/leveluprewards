@@ -17,6 +17,18 @@ export interface Class {
 /** How often a teacher’s point budget resets (local date on this device). */
 export type TeacherBudgetPeriod = 'day' | 'week' | 'month';
 
+/** Desk staff logins managed in Admin (not full teachers). */
+export type StaffAccountRole = 'secretary' | 'prizeClerk';
+
+export interface StaffAccount {
+  id: string;
+  /** Login id (stored lowercase). */
+  username: string;
+  passcode: string;
+  displayName: string;
+  role: StaffAccountRole;
+}
+
 export interface Teacher {
   id: string;
   name: string;

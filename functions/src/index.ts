@@ -1422,6 +1422,70 @@ exports.verifyTeacherPasscode = functions.https.onCall(
 );
 
 // ========================================================================
+// Callable: Verify desk staff (secretary / prize clerk) username + passcode
+// ========================================================================
+
+exports.verifyStaffAccountPasscode = functions.https.onCall(
+  async (data: any, context: functions.https.CallableContext) => {
+    requireAuth(context);
+    requireString(data.schoolId, "schoolId");
+    requireString(data.username, "username");
+    requireString(data.passcode, "passcode");
+    const role = data.role as string;
+    if (role !== "secretary" && role !== "prizeClerk") {
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "role must be 'secretary' or 'prizeClerk'."
+      );
+    }
+
+    const db = admin.firestore();
+    const schoolId = String(data.schoolId).trim().toLowerCase();
+    const username = String(data.username).trim().toLowerCase();
+
+    const accountsSnap = await db
+      .collection("schools")
+      .doc(schoolId)
+      .collection("staffAccounts")
+      .where("username", "==", username)
+      .limit(5)
+      .get();
+
+    const match = accountsSnap.docs.find((d) => {
+      const row = d.data() as { passcode?: string; role?: string };
+      return row.role === role && row.passcode === data.passcode;
+    });
+
+    if (!match) {
+      throw new functions.https.HttpsError("permission-denied", "Invalid staff login.");
+    }
+
+    const roleCollection =
+      role === "secretary" ? "roles_secretary" : "roles_prizeClerk";
+    const roleRef = db
+      .collection("schools")
+      .doc(schoolId)
+      .collection(roleCollection)
+      .doc(context.auth!.uid);
+
+    const payload =
+      role === "secretary"
+        ? { role: "secretary" as const }
+        : { role: "prizeClerk" as const };
+
+    const row = match.data() as { displayName?: string };
+    const displayName =
+      typeof row.displayName === "string" && row.displayName.trim().length > 0
+        ? row.displayName.trim()
+        : username;
+
+    await roleRef.set(payload);
+
+    return { success: true, displayName };
+  }
+);
+
+// ========================================================================
 // Migration functions — consolidated into a single generic helper.
 // The exported callable names are unchanged for backward compatibility.
 // ========================================================================

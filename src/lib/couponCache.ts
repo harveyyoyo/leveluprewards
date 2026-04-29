@@ -1,3 +1,6 @@
+import type { Coupon } from './types';
+import { couponRequiresOnlineRedemption } from './couponRedemptionRules';
+
 export type CachedCoupon = {
   code: string;
   value?: number;
@@ -5,6 +8,10 @@ export type CachedCoupon = {
   /** When set, redemption is blocked before this time (ms epoch). */
   startsAt?: number;
   expiresAt?: number;
+  redemptionScope?: Coupon['redemptionScope'];
+  createdByTeacherId?: string;
+  allowedClassIds?: string[];
+  allowedTeacherIds?: string[];
 };
 
 export type CouponSnapshot = {
@@ -47,6 +54,12 @@ export function couponIsKnownAndValidOffline(schoolId: string, couponCode: strin
   const now = Date.now();
   if (typeof c.startsAt === 'number' && now < c.startsAt) return { ok: false, reason: 'This coupon is not valid yet.' };
   if (typeof c.expiresAt === 'number' && now > c.expiresAt) return { ok: false, reason: 'This coupon has expired.' };
+  if (couponRequiresOnlineRedemption({ redemptionScope: c.redemptionScope })) {
+    return {
+      ok: false,
+      reason: 'This coupon must be redeemed while online so eligibility can be checked.',
+    };
+  }
   return { ok: true };
 }
 

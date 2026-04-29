@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import type { Coupon, Category, Teacher, Student, Class, HistoryItem, Prize, AttendanceSettings, AttendanceLogEntry, AttendanceScheduleSlot, AttendanceRewardRule } from '@/lib/types';
+import type { Coupon, Category, Teacher, Student, Class, HistoryItem, Prize, AttendanceSettings, AttendanceLogEntry, AttendanceScheduleSlot, AttendanceRewardRule, CouponRedemptionScope } from '@/lib/types';
 import { ArrowLeft, Printer, Plus, LogIn, LogOut, UserCheck, Award, User, Search, Users, Minus, Gift, Loader2, Trash2, Edit, Filter, Ticket, Clock, ChevronRight, History } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import {
@@ -32,6 +32,7 @@ import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import DynamicIcon from '@/components/DynamicIcon';
@@ -50,6 +51,7 @@ import { getReadableErrorMessage } from '@/lib/errorMessage';
 import { AdminPrizesTab } from '@/app/[schoolId]/admin/sections/AdminPrizesTab';
 import { PrizeModal } from '@/components/PrizeModal';
 import { COUPONS_PER_PRINT_PAGE, generateUniqueCouponCodes } from '@/lib/coupon-print';
+import { describeCouponRedemptionSummary } from '@/lib/couponRedemptionRules';
 
 /** Max sheets per run (12 coupons per sheet). Bounded for sensible printer jobs and UI. */
 const MAX_COUPON_PRINT_SHEETS = 100;
@@ -260,7 +262,7 @@ function TeacherPrizeManager({
     );
 }
 
-function MyCoupons({ schoolId, teacherName, students }: { schoolId: string; teacherName: string; students: Student[] }) {
+function MyCoupons({ schoolId, teacherId, teacherName, students }: { schoolId: string; teacherId: string; teacherName: string; students: Student[] }) {
     const firestore = useFirestore();
     const couponsQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'coupons') : null, [firestore, schoolId]);
     const { data: coupons, isLoading } = useCollection<Coupon>(couponsQuery);
@@ -273,8 +275,10 @@ function MyCoupons({ schoolId, teacherName, students }: { schoolId: string; teac
   
     const myCoupons = useMemo(() => {
       if (!coupons) return [];
-      return coupons.filter(c => c.teacher === teacherName).sort((a, b) => b.createdAt - a.createdAt);
-    }, [coupons, teacherName]);
+      return coupons
+        .filter((c) => (c.createdByTeacherId ? c.createdByTeacherId === teacherId : c.teacher === teacherName))
+        .sort((a, b) => b.createdAt - a.createdAt);
+    }, [coupons, teacherId, teacherName]);
   
     const available = myCoupons.filter(c => !c.used);
     const redeemed = myCoupons.filter(c => c.used);
@@ -298,7 +302,9 @@ function MyCoupons({ schoolId, teacherName, students }: { schoolId: string; teac
             <ScrollArea className="h-72 border border-border/60 rounded-xl bg-background/50 backdrop-blur-sm">
               {isLoading ? <div className="p-8 text-center text-sm text-muted-foreground">Loading coupons...</div> : available.length > 0 ? (
                 <ul className="p-3 space-y-2">
-                  {available.map(coupon => (
+                  {available.map((coupon) => {
+                    const scopeLine = describeCouponRedemptionSummary(coupon);
+                    return (
                     <li key={coupon.id} className="p-4 bg-card rounded-xl border border-border/40 shadow-sm transition-all hover:shadow-md hover:border-primary/20 group">
                       <div className="flex justify-between items-center">
                         <span className="font-mono text-xs font-black bg-primary/10 text-primary px-2.5 py-1 rounded-md tracking-wider group-hover:bg-primary/20 transition-colors uppercase">{coupon.code}</span>
@@ -315,8 +321,13 @@ function MyCoupons({ schoolId, teacherName, students }: { schoolId: string; teac
                           {coupon.expiresAt && <>Ends {new Date(coupon.expiresAt).toLocaleDateString()}</>}
                         </p>
                       )}
+                      {scopeLine && (
+                        <p className="text-[10px] text-amber-700 dark:text-amber-400/90 mt-1 font-medium">
+                          {scopeLine}
+                        </p>
+                      )}
                     </li>
-                  ))}
+                  );})}
                 </ul>
               ) : <p className="p-8 text-center text-sm text-muted-foreground font-medium italic">No available coupons created by you.</p>}
             </ScrollArea>
@@ -1177,7 +1188,7 @@ function TeacherAttendanceRewardsPanel({
   );
 }
 
-function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName: string, teacherId: string, onLogout: () => void }) {
+function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretaryMode = false }: { teacherName: string, teacherId: string, onLogout: () => void, secretaryMode?: boolean }) {
     const { updateTeacher, addCoupons, setCouponsToPrint, addCategory, schoolId, awardPointsToMultipleStudents, deductPointsFromMultipleStudents, addPrize, updatePrize, deletePrize, getTeacherAttendanceConfig, setTeacherAttendanceConfig, listTeacherAttendanceLog, categories: globalCategories } = useAppContext();
     const { toast } = useToast();
     const firestore = useFirestore();
@@ -1208,6 +1219,9 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
     const [printStartsOn, setPrintStartsOn] = useState(''); // yyyy-mm-dd, optional — coupon valid from start of this day
     const [printExpiresOn, setPrintExpiresOn] = useState(''); // yyyy-mm-dd
     const [printSheetCount, setPrintSheetCount] = useState('1');
+    const [printRedemptionScope, setPrintRedemptionScope] = useState<CouponRedemptionScope>('school');
+    const [printScopeClassIds, setPrintScopeClassIds] = useState<string[]>([]);
+    const [printScopeTeacherIds, setPrintScopeTeacherIds] = useState<string[]>([]);
     const [isPrintCategoryDialogOpen, setIsPrintCategoryDialogOpen] = useState(false);
     const [newPrintCategoryName, setNewPrintCategoryName] = useState('');
     const [newPrintCategoryPoints, setNewPrintCategoryPoints] = useState('10');
@@ -1366,6 +1380,34 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
             return;
         }
 
+        if (printRedemptionScope === 'classes' && printScopeClassIds.length === 0) {
+            playSound('error');
+            toast({
+                variant: 'destructive',
+                title: 'Select classes',
+                description: 'Choose at least one class, or switch redemption to another option.',
+            });
+            return;
+        }
+        if (printRedemptionScope === 'teachers' && printScopeTeacherIds.length === 0) {
+            playSound('error');
+            toast({
+                variant: 'destructive',
+                title: 'Select teachers',
+                description: 'Choose at least one teacher, or switch redemption to another option.',
+            });
+            return;
+        }
+        if (printRedemptionScope === 'creator' && !currentTeacher?.id) {
+            playSound('error');
+            toast({
+                variant: 'destructive',
+                title: 'Profile not ready',
+                description: 'Wait for your teacher profile to load, or choose school-wide coupons.',
+            });
+            return;
+        }
+
         const startsAt = computeStartsAt();
         const expiresAt = computeExpiresAt();
         if (startsAt !== undefined && expiresAt !== undefined && startsAt >= expiresAt) {
@@ -1379,6 +1421,15 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
         }
 
         const codes = generateUniqueCouponCodes(couponCount);
+        const scopeExtra: Partial<Pick<Coupon, 'redemptionScope' | 'allowedClassIds' | 'allowedTeacherIds'>> =
+            printRedemptionScope === 'school'
+                ? {}
+                : printRedemptionScope === 'creator'
+                    ? { redemptionScope: 'creator' }
+                    : printRedemptionScope === 'classes'
+                        ? { redemptionScope: 'classes', allowedClassIds: [...printScopeClassIds] }
+                        : { redemptionScope: 'teachers', allowedTeacherIds: [...printScopeTeacherIds] };
+
         const couponsToCreate: Coupon[] = codes.map((code) => ({
             id: code,
             code,
@@ -1388,11 +1439,13 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
             used: false,
             createdAt: Date.now(),
             color: selectedCategory.color,
+            ...(currentTeacher?.id ? { createdByTeacherId: currentTeacher.id } : {}),
+            ...scopeExtra,
             ...(startsAt !== undefined ? { startsAt } : {}),
             ...(expiresAt ? { expiresAt } : {}),
         }));
         await addCoupons(couponsToCreate);
-        if (settings.enableTeacherBudgets && currentTeacher) {
+        if (!secretaryMode && settings.enableTeacherBudgets && currentTeacher) {
             const next =
                 currentTeacher.monthlyBudget !== undefined
                     ? teacherWithBudgetAfterSpend(currentTeacher, totalCost)
@@ -1499,6 +1552,14 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
         used: false,
         createdAt: Date.now(),
         color: selectedCategoryForPreview?.color,
+        ...(currentTeacher?.id ? { createdByTeacherId: currentTeacher.id } : {}),
+        ...(printRedemptionScope === 'school'
+            ? {}
+            : printRedemptionScope === 'creator'
+                ? { redemptionScope: 'creator' as const }
+                : printRedemptionScope === 'classes'
+                    ? { redemptionScope: 'classes' as const, allowedClassIds: [...printScopeClassIds] }
+                    : { redemptionScope: 'teachers' as const, allowedTeacherIds: [...printScopeTeacherIds] }),
         ...(computeStartsAt() !== undefined ? { startsAt: computeStartsAt() } : {}),
         expiresAt: computeExpiresAt(),
     };
@@ -1574,12 +1635,14 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
                     )}
                 >
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                        <Helper content="Print coupons, award points, manage prizes, and take attendance from one place.">
+                        <Helper content={secretaryMode ? 'Generate coupon sheets for teachers to hand out. You cannot award points or edit prizes from here.' : 'Print coupons, award points, manage prizes, and take attendance from one place.'}>
                             <h2 className="text-2xl font-bold tracking-tight" style={{ color: teacherAccent }}>
-                                Teacher Portal
+                                {secretaryMode ? 'Secretary — coupon printing' : 'Teacher Portal'}
                             </h2>
                             <p className="text-muted-foreground">
-                                Generate coupon sheets or award points directly to your students.
+                                {secretaryMode
+                                    ? 'Create printable coupon batches using the school’s incentive categories.'
+                                    : 'Generate coupon sheets or award points directly to your students.'}
                             </p>
                             {teacherName ? (
                                 <p className="text-sm text-muted-foreground mt-1">
@@ -1597,11 +1660,12 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
                         </Helper>
                         <Button variant="outline" onClick={onLogout} className="gap-2 rounded-lg h-10 shrink-0 sm:self-start">
                             <LogOut className="w-4 h-4" />
-                            <span className="hidden sm:inline">Switch Teacher</span>
+                            <span className="hidden sm:inline">{secretaryMode ? 'Log out' : 'Switch Teacher'}</span>
                         </Button>
                     </div>
 
                     <Tabs defaultValue="coupons" className="space-y-6 w-full">
+                        {!secretaryMode && (
                         <div className="flex overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 justify-center">
                             <TabsList
                                 className="bg-muted/50 p-1.5 rounded-2xl inline-flex w-max border shadow-sm sm:mx-auto"
@@ -1760,6 +1824,104 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
                                             </div>
                                         </div>
 
+                                        <div className={cn('rounded-2xl border p-4 space-y-4', isGraphic ? 'border-white/10 bg-foreground/5' : 'border-border/60 bg-muted/10')}>
+                                            <Label className={cn('text-xs font-semibold uppercase tracking-wide ml-0.5', isGraphic ? 'text-muted-foreground' : 'text-muted-foreground')}>
+                                                Who can redeem these codes
+                                            </Label>
+                                            <RadioGroup
+                                                value={printRedemptionScope}
+                                                onValueChange={(v) => setPrintRedemptionScope(v as CouponRedemptionScope)}
+                                                className="grid gap-3 sm:grid-cols-2"
+                                            >
+                                                <div className={cn('flex items-start gap-2 rounded-xl border p-3', isGraphic ? 'border-white/10 bg-card/40' : 'bg-background/80')}>
+                                                    <RadioGroupItem value="school" id="crs-school" className="mt-1" />
+                                                    <label htmlFor="crs-school" className="text-sm leading-snug cursor-pointer">
+                                                        <span className="font-bold">Any student</span>
+                                                        <span className={cn('block text-xs mt-0.5', isGraphic ? 'text-muted-foreground' : 'text-muted-foreground')}>
+                                                            Anyone at this school can enter the code at the kiosk.
+                                                        </span>
+                                                    </label>
+                                                </div>
+                                                <div className={cn('flex items-start gap-2 rounded-xl border p-3', isGraphic ? 'border-white/10 bg-card/40' : 'bg-background/80')}>
+                                                    <RadioGroupItem value="creator" id="crs-creator" className="mt-1" />
+                                                    <label htmlFor="crs-creator" className="text-sm leading-snug cursor-pointer">
+                                                        <span className="font-bold">Only my students</span>
+                                                        <span className={cn('block text-xs mt-0.5', isGraphic ? 'text-muted-foreground' : 'text-muted-foreground')}>
+                                                            Students on your roster (or in your class as primary teacher) can redeem.
+                                                        </span>
+                                                    </label>
+                                                </div>
+                                                <div className={cn('flex items-start gap-2 rounded-xl border p-3', isGraphic ? 'border-white/10 bg-card/40' : 'bg-background/80')}>
+                                                    <RadioGroupItem value="classes" id="crs-classes" className="mt-1" />
+                                                    <label htmlFor="crs-classes" className="text-sm leading-snug cursor-pointer">
+                                                        <span className="font-bold">Selected classes</span>
+                                                        <span className={cn('block text-xs mt-0.5', isGraphic ? 'text-muted-foreground' : 'text-muted-foreground')}>
+                                                            Only students in the classes you select below.
+                                                        </span>
+                                                    </label>
+                                                </div>
+                                                <div className={cn('flex items-start gap-2 rounded-xl border p-3', isGraphic ? 'border-white/10 bg-card/40' : 'bg-background/80')}>
+                                                    <RadioGroupItem value="teachers" id="crs-teachers" className="mt-1" />
+                                                    <label htmlFor="crs-teachers" className="text-sm leading-snug cursor-pointer">
+                                                        <span className="font-bold">Selected teachers’ students</span>
+                                                        <span className={cn('block text-xs mt-0.5', isGraphic ? 'text-muted-foreground' : 'text-muted-foreground')}>
+                                                            Students linked to any teacher you pick (or their primary class) can redeem.
+                                                        </span>
+                                                    </label>
+                                                </div>
+                                            </RadioGroup>
+                                            {printRedemptionScope === 'classes' && (
+                                                <div className="space-y-2">
+                                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Classes</p>
+                                                    <ScrollArea className={cn('h-40 rounded-xl border p-2', isGraphic ? 'border-white/10 bg-card/30' : 'bg-background')}>
+                                                        <div className="space-y-2 pr-3">
+                                                            {(classes || []).slice().sort((a, b) => a.name.localeCompare(b.name)).map((cl) => (
+                                                                <label key={cl.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                                                                    <Checkbox
+                                                                        checked={printScopeClassIds.includes(cl.id)}
+                                                                        onCheckedChange={(ch: boolean | 'indeterminate') =>
+                                                                            setPrintScopeClassIds((prev) =>
+                                                                                ch === true ? [...prev, cl.id] : prev.filter((id) => id !== cl.id)
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                    <span>{cl.name}</span>
+                                                                </label>
+                                                            ))}
+                                                            {(classes || []).length === 0 && (
+                                                                <p className="text-xs text-muted-foreground px-1 py-2">No classes yet. Add classes in Admin.</p>
+                                                            )}
+                                                        </div>
+                                                    </ScrollArea>
+                                                </div>
+                                            )}
+                                            {printRedemptionScope === 'teachers' && (
+                                                <div className="space-y-2">
+                                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Teachers</p>
+                                                    <ScrollArea className={cn('h-40 rounded-xl border p-2', isGraphic ? 'border-white/10 bg-card/30' : 'bg-background')}>
+                                                        <div className="space-y-2 pr-3">
+                                                            {(teachers || []).slice().sort((a, b) => a.name.localeCompare(b.name)).map((t) => (
+                                                                <label key={t.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                                                                    <Checkbox
+                                                                        checked={printScopeTeacherIds.includes(t.id)}
+                                                                        onCheckedChange={(ch: boolean | 'indeterminate') =>
+                                                                            setPrintScopeTeacherIds((prev) =>
+                                                                                ch === true ? [...prev, t.id] : prev.filter((id) => id !== t.id)
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                    <span>{t.name}</span>
+                                                                </label>
+                                                            ))}
+                                                            {(teachers || []).length === 0 && (
+                                                                <p className="text-xs text-muted-foreground px-1 py-2">No teachers listed.</p>
+                                                            )}
+                                                        </div>
+                                                    </ScrollArea>
+                                                </div>
+                                            )}
+                                        </div>
+
                                         <Button
                                             onClick={handlePrintSheet}
                                             className={cn(
@@ -1792,7 +1954,7 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
                                 </div>
 
                                 <div className="mt-8">
-                                  <MyCoupons schoolId={schoolId!} teacherName={teacherName} students={students || []} />
+                                  <MyCoupons schoolId={schoolId!} teacherId={teacherId} teacherName={teacherName} students={students || []} />
                                 </div>
                             </TabsContent>
 

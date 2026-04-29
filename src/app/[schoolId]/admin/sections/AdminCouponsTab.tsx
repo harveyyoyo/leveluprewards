@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Helper } from '@/components/ui/helper';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { Coupon } from '@/lib/types';
+import { describeCouponRedemptionSummary } from '@/lib/couponRedemptionRules';
 
 export function AdminCouponsTab({
   availableCoupons,
@@ -31,7 +32,9 @@ export function AdminCouponsTab({
           <ScrollArea className="h-[500px] border rounded-lg bg-background/50">
             {availableCoupons.length >= 1 ? (
               <ul className="p-3 space-y-2">
-                {availableCoupons.map((coupon) => (
+                {availableCoupons.map((coupon) => {
+                  const scopeLine = describeCouponRedemptionSummary(coupon);
+                  return (
                   <li key={coupon.id} className="p-3 bg-card rounded-lg border">
                     <div className="flex justify-between items-center font-bold">
                       <span className="font-code text-primary">{coupon.code}</span>
@@ -49,9 +52,14 @@ export function AdminCouponsTab({
                           {coupon.expiresAt && <>Expires {new Date(coupon.expiresAt).toLocaleDateString()}</>}
                         </p>
                       )}
+                      {scopeLine && (
+                        <p className="text-amber-800 dark:text-amber-400/90 font-medium">
+                          {scopeLine}
+                        </p>
+                      )}
                     </div>
                   </li>
-                ))}
+                );})}
               </ul>
             ) : (
               <p className="text-center text-sm text-muted-foreground p-8">No available coupons.</p>

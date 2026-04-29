@@ -742,6 +742,21 @@ exports.syncPendingRedemptions = functions.https.onCall(async (data, context) =>
                 if (!studentSnap.exists)
                     throw new functions.https.HttpsError("not-found", "Student not found.");
                 const s = studentSnap.data();
+                const classId = typeof s.classId === "string" ? s.classId : "";
+                let classPrimaryTeacherId = null;
+                if (classId) {
+                    const classRef = db.collection("schools").doc(schoolId).collection("classes").doc(classId);
+                    const classSnap = await tx.get(classRef);
+                    if (classSnap.exists) {
+                        const cd = classSnap.data();
+                        if (typeof cd.primaryTeacherId === "string")
+                            classPrimaryTeacherId = cd.primaryTeacherId;
+                    }
+                }
+                const gate = (0, couponRedemption_1.studentMayRedeemCouponData)(coupon, s, classPrimaryTeacherId);
+                if (!gate.ok) {
+                    throw new functions.https.HttpsError("failed-precondition", gate.message || "Not eligible to redeem this coupon.");
+                }
                 const value = typeof coupon.value === "number" ? coupon.value : Number(coupon.value || 0);
                 tx.update(studentRef, { points: Number(s.points || 0) + value, lifetimePoints: Number(s.lifetimePoints || 0) + value });
                 const activityRef = studentRef.collection("activities").doc();
@@ -786,6 +801,10 @@ exports.getCouponSnapshot = functions.https.onCall(async (data, context) => {
             category: typeof c.category === "string" ? c.category : undefined,
             startsAt: typeof c.startsAt === "number" ? c.startsAt : undefined,
             expiresAt: typeof c.expiresAt === "number" ? c.expiresAt : undefined,
+            redemptionScope: typeof c.redemptionScope === "string" ? c.redemptionScope : undefined,
+            createdByTeacherId: typeof c.createdByTeacherId === "string" ? c.createdByTeacherId : undefined,
+            allowedClassIds: Array.isArray(c.allowedClassIds) ? c.allowedClassIds : undefined,
+            allowedTeacherIds: Array.isArray(c.allowedTeacherIds) ? c.allowedTeacherIds : undefined,
         });
     }
     return { updatedAt: now, coupons };
@@ -1113,6 +1132,47 @@ exports.verifyTeacherPasscode = functions.https.onCall(async (data, context) => 
     // permissions from this document instead of relying on admin escalation.
     const teacherRoleRef = db.collection("schools").doc(data.schoolId).collection("roles_teacher").doc(context.auth.uid);
     await teacherRoleRef.set({ role: 'teacher', teacherId: teacherDoc.id });
+    return { success: true };
+});
+// ========================================================================
+// Callable: Verify desk staff (secretary / prize clerk) username + passcode
+// ========================================================================
+exports.verifyStaffAccountPasscode = functions.https.onCall(async (data, context) => {
+    requireAuth(context);
+    requireString(data.schoolId, "schoolId");
+    requireString(data.username, "username");
+    requireString(data.passcode, "passcode");
+    const role = data.role;
+    if (role !== "secretary" && role !== "prizeClerk") {
+        throw new functions.https.HttpsError("invalid-argument", "role must be 'secretary' or 'prizeClerk'.");
+    }
+    const db = admin.firestore();
+    const schoolId = String(data.schoolId).trim().toLowerCase();
+    const username = String(data.username).trim().toLowerCase();
+    const accountsSnap = await db
+        .collection("schools")
+        .doc(schoolId)
+        .collection("staffAccounts")
+        .where("username", "==", username)
+        .limit(5)
+        .get();
+    const match = accountsSnap.docs.find((d) => {
+        const row = d.data();
+        return row.role === role && row.passcode === data.passcode;
+    });
+    if (!match) {
+        throw new functions.https.HttpsError("permission-denied", "Invalid staff login.");
+    }
+    const roleCollection = role === "secretary" ? "roles_secretary" : "roles_prizeClerk";
+    const roleRef = db
+        .collection("schools")
+        .doc(schoolId)
+        .collection(roleCollection)
+        .doc(context.auth.uid);
+    const payload = role === "secretary"
+        ? { role: "secretary" }
+        : { role: "prizeClerk" };
+    await roleRef.set(payload);
     return { success: true };
 });
 // ========================================================================
