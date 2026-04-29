@@ -2,14 +2,14 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { collection } from 'firebase/firestore';
+import { doc } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAppContext } from '@/components/AppProvider';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { LogIn, LogOut, UserCheck, Loader2 } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
@@ -23,6 +23,10 @@ type StaffPortalLoginOption = {
     type: 'teacher' | 'secretary' | 'prizeClerk';
     label: string;
     username: string;
+};
+
+type SchoolPublicStaffDirectory = {
+    staffDirectory?: StaffPortalLoginOption[];
 };
 
 function staffLoginKey(option: StaffPortalLoginOption) {
@@ -88,16 +92,26 @@ export default function TeacherPage() {
     const [passcode, setPasscode] = useState('');
     const directAccountKey = searchParams.get('account') || '';
 
-    const staffDirectoryQuery = useMemoFirebase(
-        () => (schoolId ? collection(firestore, 'schoolPublic', schoolId, 'staffDirectory') : null),
+    const schoolPublicRef = useMemoFirebase(
+        () => (schoolId ? doc(firestore, 'schoolPublic', schoolId) : null),
         [firestore, schoolId],
     );
     const {
-        data: loginOptions,
+        data: schoolPublic,
         isLoading: optionsLoading,
         error: optionsError,
-    } = useCollection<Omit<StaffPortalLoginOption, 'id'>>(staffDirectoryQuery);
-    const staffOptions = useMemo(() => loginOptions || [], [loginOptions]);
+    } = useDoc<SchoolPublicStaffDirectory>(schoolPublicRef);
+    const staffOptions = useMemo(
+        () =>
+            (schoolPublic?.staffDirectory || []).filter(
+                (option) =>
+                    option?.id &&
+                    option?.username &&
+                    option?.label &&
+                    (option.type === 'teacher' || option.type === 'secretary' || option.type === 'prizeClerk'),
+            ),
+        [schoolPublic],
+    );
 
     useEffect(() => {
         if (!isInitialized || !schoolId) return;
@@ -129,7 +143,7 @@ export default function TeacherPage() {
         if (match) {
             setSelectedLoginKey(staffLoginKey(match));
         }
-    }, [directAccountKey, loginOptions, staffOptions]);
+    }, [directAccountKey, staffOptions]);
 
     const handleLogin = async () => {
         if (!selectedLoginKey || !passcode) {

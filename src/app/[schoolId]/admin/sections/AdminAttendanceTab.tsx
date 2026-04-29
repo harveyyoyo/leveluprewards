@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Clock, History, Loader2, Trash2, Users } from 'lucide-react';
+import { Clock, Globe, History, Loader2, Trash2, Users, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import type { AttendanceRewardRule } from '@/lib/types';
 import { AttendanceSetupWizard } from '@/components/attendance/AttendanceSetupWizard';
+import { AttendanceTimeZoneField } from '@/components/attendance/AttendanceTimeZoneField';
 
 export function AdminAttendanceTab(props: any) {
   const {
@@ -41,6 +42,12 @@ export function AdminAttendanceTab(props: any) {
     loadStudentActivityLog,
     setTeacherAttendanceConfigState,
     UniversalPeriodsAdmin,
+    attendanceConfig,
+    setAttendanceConfigState,
+    attendanceConfigSaving,
+    handleSaveAttendanceConfig,
+    getAttendanceConfig,
+    setAttendanceConfig,
   } = props;
 
   const dayOptions = [
@@ -117,6 +124,78 @@ export function AdminAttendanceTab(props: any) {
         </div>
         <AttendanceSetupWizard variant="admin" />
       </div>
+      <Card className="border-t-4 border-primary/60 shadow-md">
+        <CardHeader className="py-6">
+          <CardTitle className="flex items-center gap-2">
+            <Zap className="w-5 h-5 text-primary" /> Default School-wide Points
+          </CardTitle>
+          <CardDescription>
+            These values are used as a fallback if no specific teacher reward rules or class assignments exist.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="school-points-signin">Default Sign-in Points</Label>
+              <Input
+                id="school-points-signin"
+                type="number"
+                min={0}
+                value={attendanceConfig?.pointsForSignIn ?? 1}
+                onChange={(e) => setAttendanceConfigState({
+                  ...(attendanceConfig || {}),
+                  pointsForSignIn: parseInt(e.target.value, 10) || 0
+                })}
+              />
+              <p className="text-xs text-muted-foreground">Standard points for showing up.</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="school-points-ontime">Default On-time Bonus</Label>
+              <Input
+                id="school-points-ontime"
+                type="number"
+                min={0}
+                value={attendanceConfig?.pointsForOnTime ?? 5}
+                onChange={(e) => setAttendanceConfigState({
+                  ...(attendanceConfig || {}),
+                  pointsForOnTime: parseInt(e.target.value, 10) || 0
+                })}
+              />
+              <p className="text-xs text-muted-foreground">Extra points for arriving early.</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="school-ontime-window">On-time Window (min)</Label>
+              <Input
+                id="school-ontime-window"
+                type="number"
+                min={1}
+                value={attendanceConfig?.onTimeWindowMinutes ?? 5}
+                onChange={(e) => setAttendanceConfigState({
+                  ...(attendanceConfig || {}),
+                  onTimeWindowMinutes: parseInt(e.target.value, 10) || 1
+                })}
+              />
+              <p className="text-xs text-muted-foreground">Minutes after start to count as on-time.</p>
+            </div>
+          </div>
+          <div className="pt-2 border-t">
+            <AttendanceTimeZoneField
+              schoolId={schoolId}
+              getAttendanceConfig={getAttendanceConfig}
+              setAttendanceConfig={setAttendanceConfig}
+            />
+          </div>
+          <Button 
+            onClick={handleSaveAttendanceConfig} 
+            disabled={attendanceConfigSaving}
+            className="w-full md:w-auto"
+          >
+            {attendanceConfigSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+            Save School Defaults
+          </Button>
+        </CardContent>
+      </Card>
+
       <Card className="border-t-4 border-primary/60 shadow-md">
         <CardHeader className="py-6">
           <CardTitle className="flex items-center gap-2">

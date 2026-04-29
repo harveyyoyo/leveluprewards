@@ -74,3 +74,125 @@ FirebaseClientProvider: Initializing Firebase...
  GET /_next/static/webpack/d115e09fcabf5cbd.webpack.hot-update.json 404 in 1502ms
 FirebaseClientProvider: Initializing Firebase...
  GET /schoolabc/student 200 in 939ms
+FirebaseClientProvider: Initializing Firebase...
+ GET /schoolabc/student 200 in 45ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 11.4s (6024 modules)
+FirebaseClientProvider: Initializing Firebase...
+ GET /_next/static/webpack/cc3e6dd73d8cc714.webpack.hot-update.json 404 in 8870ms
+FirebaseClientProvider: Initializing Firebase...
+ GET /schoolabc/student 200 in 2304ms
+ ✓ Compiled in 4.7s (6038 modules)
+ ✓ Compiled in 4.2s (2991 modules)
+FirebaseClientProvider: Initializing Firebase...
+ GET /schoolabc/student 200 in 356ms
+ ✓ Compiled in 2.2s (2989 modules)
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 3.3s (6024 modules)
+FirebaseClientProvider: Initializing Firebase...
+FirebaseClientProvider: Initializing Firebase...
+ GET /_next/static/webpack/2f66313899d01fcd.webpack.hot-update.json 404 in 3612ms
+ GET /_next/static/css/app/layout.css?v=1777433078192 404 in 3008ms
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 1986ms (6026 modules)
+ GET /schoolabc/student 500 in 2856ms
+FirebaseClientProvider: Initializing Firebase...
+ GET /schoolabc/student 500 in 593ms
+ GET /schoolabc/student 500 in 692ms
+ GET /schoolabc/student 500 in 674ms
+ GET /schoolabc/student 500 in 616ms
+ GET /schoolabc/student 500 in 784ms
+ GET /schoolabc/student 500 in 779ms
+ GET /schoolabc/student 500 in 1324ms
+ GET /schoolabc/student 500 in 829ms
+ ✓ Compiled in 2.1s (2992 modules)
+ GET /schoolabc/student 500 in 1654ms
+ GET /schoolabc/student 500 in 1068ms
+ GET /schoolabc/student 500 in 901ms
+ GET /schoolabc/student 404 in 26ms
+ GET /schoolabc/student 404 in 48ms
+ GET /schoolabc/student 404 in 20ms
+ GET /schoolabc/student 404 in 27ms
+ GET /schoolabc/student 404 in 27ms
+ ✓ Compiled in 1603ms (2992 modules)
+ GET /schoolabc/student 404 in 852ms
+ GET /schoolabc/student 404 in 36ms
+ GET /schoolabc/student 404 in 32ms
+ GET /schoolabc/student 500 in 1001ms
+ GET /schoolabc/student 500 in 724ms
+ GET /schoolabc/student 500 in 741ms
+ GET /schoolabc/student 500 in 835ms
+ GET /schoolabc/student 404 in 23ms
+ GET /schoolabc/student 404 in 21ms
+ GET /schoolabc/student 404 in 24ms
+ GET /schoolabc/student 404 in 19ms
+ GET /schoolabc/student 404 in 16ms
+ GET /schoolabc/student 404 in 18ms
+ GET /schoolabc/student 404 in 21ms
+ GET /schoolabc/student 404 in 22ms
+ GET /schoolabc/student 404 in 13ms
+ GET /schoolabc/student 404 in 26ms
+ GET /schoolabc/student 404 in 19ms
+ GET /schoolabc/student 404 in 21ms
+ GET /schoolabc/student 404 in 29ms
+ GET /schoolabc/student 404 in 28ms
+ GET /schoolabc/student 404 in 24ms
+ GET /schoolabc/student 404 in 76ms
+ GET /schoolabc/student 404 in 59ms
+ GET /schoolabc/student 404 in 23ms
+ GET /schoolabc/student 404 in 27ms
+ GET /schoolabc/student 404 in 40ms
+ GET /schoolabc/student 404 in 21ms
+ GET /schoolabc/student 404 in 24ms
+ GET /schoolabc/student 404 in 15ms
+ ✓ Compiled in 4.7s (6040 modules)
+ GET /schoolabc/student 500 in 7385ms
+ GET /schoolabc/student 500 in 1260ms
+ GET /schoolabc/student 500 in 795ms
+ GET /schoolabc/student 500 in 1269ms
+ GET /schoolabc/student 500 in 804ms
+ GET /schoolabc/student 500 in 1078ms
+ GET /schoolabc/student 500 in 884ms
+ GET /schoolabc/student 500 in 871ms
+ GET /schoolabc/student 500 in 936ms
+ GET /schoolabc/student 500 in 845ms
+ GET /schoolabc/student 500 in 1159ms
+FirebaseClientProvider: Initializing Firebase...
+ GET /schoolabc/student 200 in 1581ms
+ ✓ Compiled in 1809ms (2992 modules)
+ ✓ Compiled in 2s (2990 modules)
+ ✓ Compiled in 9.6s (6035 modules)
+ ✓ Compiled in 3.8s (6035 modules)
+ ✓ Compiled in 6.3s (6035 modules)
+ ✓ Compiled in 2.9s (6031 modules)
+ ✓ Compiled in 1168ms (2987 modules)
+ ✓ Compiled in 1568ms (2987 modules)
+ ✓ Compiled in 1271ms (2987 modules)
+ ✓ Compiled in 2.3s (6031 modules)
+ ✓ Compiled in 2.1s (6031 modules)
+ ✓ Compiled in 1244ms (2987 modules)
+ ✓ Compiled in 1103ms (2987 modules)
+ ✓ Compiled in 1293ms (2987 modules)
+ ✓ Compiled in 4.5s (6017 modules)
+ ✓ Compiled in 2s (6017 modules)
+ ✓ Compiled in 2.7s (6017 modules)
+ ✓ Compiled in 2.2s (6017 modules)
+ ✓ Compiled in 2.8s (6031 modules)
+ ✓ Compiled in 1222ms (2987 modules)
+ ✓ Compiled in 4.8s (6031 modules)
+ ✓ Compiled in 1429ms (2987 modules)
+ ✓ Compiled in 3.9s (6031 modules)
+ ✓ Compiled in 3.6s (6031 modules)
+ ✓ Compiled in 1925ms (2987 modules)
+ ✓ Compiled in 4s (6031 modules)
+ ✓ Compiled in 1604ms (2987 modules)
+ ✓ Compiled in 24.9s (6031 modules)
+ ✓ Compiled in 5.3s (6031 modules)
+ ✓ Compiled in 5.6s (6031 modules)
+ ✓ Compiled in 4.8s (6031 modules)
+  ▲ Next.js 14.2.35
+  - Local:        http://localhost:3003
+  - Environments: .env.local, .env
+
+ ✓ Starting...
+ ✓ Ready in 4.6s

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Copy, Edit, Gift, Plus, Printer, Trash2, User } from 'lucide-react';
-import { collection, deleteDoc, doc, getDocs, setDoc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Helper } from '@/components/ui/helper';
@@ -61,13 +61,13 @@ export function AdminTeachersTab({
     if (!teachers || !staffAccounts) return;
 
     const syncDirectory = async () => {
-      const directoryRef = collection(firestore, 'schoolPublic', schoolId, 'staffDirectory');
       const expected = new Map<string, Record<string, unknown>>();
 
       for (const teacher of teachers) {
         const username = (teacher.username || teacher.id).trim();
         if (!teacher.name?.trim() || !username) continue;
         expected.set(`teacher:${teacher.id}`, {
+          id: `teacher:${teacher.id}`,
           sourceId: teacher.id,
           type: 'teacher',
           label: teacher.name.trim(),
@@ -81,6 +81,7 @@ export function AdminTeachersTab({
         const label = account.displayName.trim();
         if (!username || !label) continue;
         expected.set(`${account.role}:${account.id}`, {
+          id: `${account.role}:${account.id}`,
           sourceId: account.id,
           type: account.role,
           label,
@@ -89,15 +90,16 @@ export function AdminTeachersTab({
         });
       }
 
-      const existing = await getDocs(directoryRef);
-      await Promise.all([
-        ...Array.from(expected.entries()).map(([id, payload]) =>
-          setDoc(doc(directoryRef, id), payload, { merge: true }),
-        ),
-        ...existing.docs
-          .filter((entry) => !expected.has(entry.id))
-          .map((entry) => deleteDoc(entry.ref)),
-      ]);
+      await setDoc(
+        doc(firestore, 'schoolPublic', schoolId),
+        {
+          active: true,
+          staffDirectory: Array.from(expected.values()),
+          staffDirectoryUpdatedAt: Date.now(),
+          updatedAt: Date.now(),
+        },
+        { merge: true },
+      );
     };
 
     void syncDirectory().catch(() => {

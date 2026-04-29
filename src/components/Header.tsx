@@ -34,6 +34,7 @@ import { useDoc, useFirebase, useMemoFirebase } from '@/firebase';
 import { useSchoolMetadataDocRef } from '@/hooks/useSchoolMetadataDocRef';
 import Logo from './Logo';
 import { portalHoverTextClass, portalTextClass, type PortalColorKey } from '@/lib/portalColors';
+import { AdminLoginButton } from './AdminLoginButton';
 
 
 export default function Header() {
@@ -121,6 +122,7 @@ export default function Header() {
                 </span>
               </div>
             )}
+            <AdminLoginButton />
             <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl sm:h-9 sm:w-9" onClick={handleLogout}>
               <LogOut className="w-4 h-4" />
             </Button>
@@ -232,6 +234,8 @@ export default function Header() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
+
+              {loginState === 'student' && <AdminLoginButton />}
 
               <div className="h-8 w-px bg-primary/20" />
 

@@ -37,6 +37,7 @@ const nextConfig = {
   },
   env: {
     NEXT_PUBLIC_VERSION: `beta-1.1.0`,
+    NEXT_PUBLIC_BUILD_TIME: new Date().toLocaleString(),
   },
 };
 

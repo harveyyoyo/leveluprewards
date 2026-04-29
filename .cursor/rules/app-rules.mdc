@@ -1,0 +1,18 @@
+---
+description: General application rules and requirements for the School Arcade Rewards system.
+globs: src/app/**/*.tsx, next.config.js
+alwaysApply: true
+---
+
+# App Rules: General Requirements
+
+This rule defines general requirements and standards for the application UI and configuration.
+
+## Build Information
+- **Build Timestamp**: Every build must include a build timestamp. This is managed in `next.config.js` via the `NEXT_PUBLIC_BUILD_TIME` environment variable.
+- **Footer Display**: The build timestamp must be displayed in the application footer (specifically on the Portal page) near the version number.
+- **Version info**: The version is managed in `next.config.js` via `NEXT_PUBLIC_VERSION`.
+
+## UI Consistency
+- Follow the premium, modern aesthetic defined in `docs/blueprint.md`.
+- Ensure high contrast and readability as defined in `theme-readability.mdc`.

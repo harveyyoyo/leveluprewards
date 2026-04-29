@@ -31,6 +31,47 @@ interface StudentScannerProps {
     isActive?: boolean;
 }
 
+function getStudentLookupFailure(error: unknown, user: unknown, isUserLoading: boolean) {
+    const err = (error ?? {}) as { code?: string; message?: string };
+    const code = String(err.code ?? '').toLowerCase();
+    const codeTail = code.split('/').pop() ?? '';
+    const message = String(err.message ?? '').trim();
+    const lowerMessage = message.toLowerCase();
+
+    if (isUserLoading) {
+        return {
+            title: 'Account Still Connecting',
+            description: 'Wait a few seconds for the account connection to finish, then scan the student ID again.',
+        };
+    }
+
+    if (!user || codeTail === 'unauthenticated') {
+        return {
+            title: 'Account Not Signed In',
+            description: 'Refresh this page. If this keeps happening, ask an admin to enable Anonymous sign-in in Firebase Auth, then try again.',
+        };
+    }
+
+    if (lowerMessage.includes('school entry required')) {
+        return {
+            title: 'School Entry Required',
+            description: 'Open the school link again or re-enter the school entry code on this device, then scan the student ID.',
+        };
+    }
+
+    if (codeTail === 'permission-denied' || lowerMessage.includes('missing or insufficient permissions')) {
+        return {
+            title: 'Account Permission Issue',
+            description: 'Sign out, then sign in through the correct school, teacher, admin, or prize desk account before scanning again.',
+        };
+    }
+
+    return {
+        title: 'Student Lookup Failed',
+        description: getReadableErrorMessage(error, 'Could not look up student.'),
+    };
+}
+
 export function StudentScanner({
     onStudentFound,
     title = "Student Identification",
@@ -287,15 +328,16 @@ export function StudentScanner({
                 });
             }
         } catch (error) {
+            const failure = getStudentLookupFailure(error, user, isUserLoading);
             playSound('error');
             toast({
                 variant: 'destructive',
-                title: 'Error',
-                description: 'Could not look up student.'
+                title: failure.title,
+                description: failure.description,
             });
         }
         setNfcId('');
-    }, [firestore, schoolId, playSound, onStudentFound, toast]);
+    }, [firestore, schoolId, user, isUserLoading, playSound, onStudentFound, toast]);
 
     const { videoRef, hasCameraPermission: hookHasPermission } = useBarcodeScanner(
         isActive && loginTab === 'camera',

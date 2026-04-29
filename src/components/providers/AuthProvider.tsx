@@ -108,13 +108,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             sessionEndAt = Date.now() + IDLE_MS;
             if (timer) clearTimeout(timer);
             timer = setTimeout(() => {
+                // If settings modal is open, don't auto-logout.
+                if (typeof document !== 'undefined' && document.querySelector('[data-settings-open="true"]')) {
+                    arm();
+                    return;
+                }
                 logout();
             }, IDLE_MS);
         };
 
         const checkExpired = () => {
             if (Date.now() >= sessionEndAt) {
-                logout();
+                if (typeof document !== 'undefined' && document.querySelector('[data-settings-open="true"]')) {
+                    arm();
+                } else {
+                    logout();
+                }
             }
         };
 

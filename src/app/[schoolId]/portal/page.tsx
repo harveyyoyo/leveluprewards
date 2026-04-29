@@ -269,7 +269,9 @@ export default function PortalPage() {
                 )}
 
                 <div className="mt-16 text-center">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground/60">beta · {process.env.NEXT_PUBLIC_VERSION || 'beta-1.1.0'}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground/60">
+                        beta · {process.env.NEXT_PUBLIC_VERSION || 'beta-1.1.0'} · {process.env.NEXT_PUBLIC_BUILD_TIME}
+                    </p>
                 </div>
             </div>
         </div>

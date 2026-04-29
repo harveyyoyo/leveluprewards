@@ -373,7 +373,7 @@ export function ThemeGeneratorModal({
 
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent wide className="max-h-[min(92dvh,92vh)]">
+      <DialogContent wide className="max-h-[min(92dvh,92vh)]" data-settings-open="true">
                 <DialogHeader>
                     <DialogTitle>Generate theme for {displayTitleName}</DialogTitle>
                     <DialogDescription>

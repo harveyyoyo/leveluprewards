@@ -90,11 +90,6 @@ service cloud.firestore {
       allow list: if false;
       allow create, update: if isAdmin(schoolId) || isDeveloper();
       allow delete: if isDeveloper();
-
-      match /staffDirectory/{entryId} {
-        allow read: if isAuth();
-        allow write: if isAdmin(schoolId) || isDeveloper();
-      }
     }
     
     match /schools/{schoolId} {

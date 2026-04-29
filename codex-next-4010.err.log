@@ -26,3 +26,64 @@
 <w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, stat 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\5.pack.gz'
 <w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: EPERM: operation not permitted, rename 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\2.pack.gz_' -> 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\2.pack.gz'
 <w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: invalid stored block lengths
+ ⨯ ./src/components/ui/SettingsModal.tsx
+Error: 
+  [31mx[0m Expression expected
+     ,-[[36;1;4mC:\Users\Administrator\school arcade reward antigravity\studio\src\components\ui\SettingsModal.tsx[0m:168:1]
+ [2m168[0m |     };
+ [2m169[0m | 
+ [2m170[0m |     return (
+ [2m171[0m |         <>
+     : [31;1m         ^[0m
+ [2m172[0m |         <Dialog open={open} onOpenChange={handleOpenChange}>
+ [2m173[0m |             <DialogTrigger asChild>
+ [2m174[0m |                 <Button
+     `----
+
+  [31mx[0m Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+     ,-[[36;1;4mC:\Users\Administrator\school arcade reward antigravity\studio\src\components\ui\SettingsModal.tsx[0m:784:1]
+ [2m784[0m |             </DialogContent>
+ [2m785[0m | 
+ [2m786[0m |     );
+ [2m787[0m | }
+     : [31;1m^[0m
+     `----
+
+  [31mx[0m Unexpected eof
+     ,-[[36;1;4mC:\Users\Administrator\school arcade reward antigravity\studio\src\components\ui\SettingsModal.tsx[0m:785:1]
+ [2m785[0m | 
+ [2m786[0m |     );
+ [2m787[0m | }
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/components/ui/SettingsModal.tsx
+./src/components/Header.tsx
+./src/components/LayoutClientWrapper.tsx
+ ⨯ ./src/components/Header.tsx
+Error: 
+  [31mx[0m Unexpected token `header`. Expected jsx identifier
+     ,-[[36;1;4mC:\Users\Administrator\school arcade reward antigravity\studio\src\components\Header.tsx[0m:155:1]
+ [2m155[0m | 
+ [2m156[0m |   // --- WEB MODE HEADER ---
+ [2m157[0m |   return (
+ [2m158[0m |     <header className={cn(
+     : [31;1m     ^^^^^^[0m
+ [2m159[0m |       "no-print w-full z-50 transition-colors border-b border-primary/10 sticky top-0",
+ [2m160[0m |             </div>
+ [2m160[0m |           </Link>
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/components/Header.tsx
+./src/components/LayoutClientWrapper.tsx
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\0.pack.gz_' -> 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\0.pack.gz'
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\0.pack.gz_' -> 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\0.pack.gz'
+ ⚠ Found a change in next.config.js. Restarting the server to apply the changes...
+<w> [webpack.cache.PackFileCacheStrategy] Restoring pack from C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\server-development.pack.gz failed: TypeError: Cannot read properties of undefined (reading 'hasStartTime')

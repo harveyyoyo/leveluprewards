@@ -1087,6 +1087,12 @@ function AdminDashboardInner() {
                 loadStudentActivityLog={loadStudentActivityLog}
                 setTeacherAttendanceConfigState={setTeacherAttendanceConfigState}
                 UniversalPeriodsAdmin={UniversalPeriodsAdmin}
+                attendanceConfig={attendanceConfig}
+                setAttendanceConfigState={setAttendanceConfigState}
+                attendanceConfigSaving={attendanceConfigSaving}
+                handleSaveAttendanceConfig={handleSaveAttendanceConfig}
+                getAttendanceConfig={getAttendanceConfig}
+                setAttendanceConfig={setAttendanceConfig}
               />
             </TabsContent>
           )}
