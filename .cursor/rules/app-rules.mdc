@@ -16,3 +16,8 @@ This rule defines general requirements and standards for the application UI and 
 ## UI Consistency
 - Follow the premium, modern aesthetic defined in `docs/blueprint.md`.
 - Ensure high contrast and readability as defined in `theme-readability.mdc`.
+
+## Deployment & Stability
+- **Pre-Deployment Check**: Before any deployment, the site must be verified to be working well.
+- **Login Verification**: Specifically ensure that account login functionality (School, Student, Teacher, Admin) is fully operational.
+- **Notes**: Refer to `.agent/knowledge/deployment.md` for the full pre-deployment checklist.
