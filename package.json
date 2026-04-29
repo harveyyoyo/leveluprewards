@@ -15,6 +15,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:themes": "node scripts/validate-themes.mjs",
     "backup:code": "node scripts/backup-code.mjs"
   },
   "dependencies": {

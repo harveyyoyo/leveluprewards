@@ -18,7 +18,7 @@ const firestore_1 = require("firebase-admin/firestore");
 const signInAttendance_1 = require("./signInAttendance");
 const couponRedemption_1 = require("./couponRedemption");
 admin.initializeApp();
-const SUBCOLLECTIONS = ["students", "classes", "teachers", "categories", "prizes", "coupons"];
+const SUBCOLLECTIONS = ["students", "classes", "teachers", "staffAccounts", "categories", "prizes", "coupons"];
 const RETENTION_DAYS = 30;
 // ========================================================================
 // Auth helpers
@@ -1135,6 +1135,58 @@ exports.verifyTeacherPasscode = functions.https.onCall(async (data, context) => 
     return { success: true };
 });
 // ========================================================================
+// Callable: Staff portal login options (safe public directory)
+// ========================================================================
+exports.getStaffPortalLoginOptions = functions.https.onCall(async (data, context) => {
+    requireAuth(context);
+    requireString(data.schoolId, "schoolId");
+    const schoolId = String(data.schoolId).trim().toLowerCase();
+    const db = admin.firestore();
+    const schoolRef = db.collection("schools").doc(schoolId);
+    const schoolDoc = await schoolRef.get();
+    if (!schoolDoc.exists) {
+        throw new functions.https.HttpsError("not-found", "School not found.");
+    }
+    const [teachersSnap, staffSnap] = await Promise.all([
+        schoolRef.collection("teachers").get(),
+        schoolRef.collection("staffAccounts").get(),
+    ]);
+    const teachers = teachersSnap.docs
+        .map((docSnap) => {
+        const row = docSnap.data();
+        const name = typeof row.name === "string" ? row.name.trim() : "";
+        const username = typeof row.username === "string" && row.username.trim()
+            ? row.username.trim()
+            : docSnap.id;
+        if (!name || !username)
+            return null;
+        return {
+            id: docSnap.id,
+            type: "teacher",
+            label: name,
+            username,
+        };
+    })
+        .filter(Boolean);
+    const staff = staffSnap.docs
+        .map((docSnap) => {
+        const row = docSnap.data();
+        const role = row.role === "secretary" || row.role === "prizeClerk" ? row.role : null;
+        const username = typeof row.username === "string" ? row.username.trim().toLowerCase() : "";
+        const displayName = typeof row.displayName === "string" ? row.displayName.trim() : "";
+        if (!role || !username || !displayName)
+            return null;
+        return {
+            id: docSnap.id,
+            type: role,
+            label: displayName,
+            username,
+        };
+    })
+        .filter(Boolean);
+    return { options: [...teachers, ...staff] };
+});
+// ========================================================================
 // Callable: Verify desk staff (secretary / prize clerk) username + passcode
 // ========================================================================
 exports.verifyStaffAccountPasscode = functions.https.onCall(async (data, context) => {
@@ -1172,8 +1224,12 @@ exports.verifyStaffAccountPasscode = functions.https.onCall(async (data, context
     const payload = role === "secretary"
         ? { role: "secretary" }
         : { role: "prizeClerk" };
+    const row = match.data();
+    const displayName = typeof row.displayName === "string" && row.displayName.trim().length > 0
+        ? row.displayName.trim()
+        : username;
     await roleRef.set(payload);
-    return { success: true };
+    return { success: true, displayName };
 });
 // ========================================================================
 // Migration functions — consolidated into a single generic helper.

@@ -15,3 +15,537 @@ FirebaseClientProvider: Initializing Firebase...
  ✓ Compiled in 1161ms (2514 modules)
 FirebaseClientProvider: Initializing Firebase...
  GET / 200 in 33ms
+ ✓ Compiled in 1149ms (2500 modules)
+ ✓ Compiled in 484ms (2500 modules)
+ ✓ Compiled in 1108ms (2514 modules)
+ ✓ Compiled in 615ms (2514 modules)
+ ✓ Compiled in 810ms (2514 modules)
+ ✓ Compiled in 775ms (2514 modules)
+ ✓ Compiled in 879ms (2514 modules)
+ ✓ Compiled in 627ms (2514 modules)
+ ✓ Compiled in 792ms (2514 modules)
+ ✓ Compiled in 650ms (2514 modules)
+ ✓ Compiled in 762ms (2514 modules)
+ ✓ Compiled in 675ms (2514 modules)
+ ○ Compiling / ...
+ ✓ Compiled / in 973ms (2711 modules)
+FirebaseClientProvider: Initializing Firebase...
+ GET / 200 in 1554ms
+ ○ Compiling /login ...
+ ✓ Compiled /login in 1560ms (5233 modules)
+FirebaseClientProvider: Initializing Firebase...
+ GET /login 200 in 1996ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 1104ms (5222 modules)
+FirebaseClientProvider: Initializing Firebase...
+ ○ Compiling /[schoolId]/portal ...
+ ✓ Compiled /[schoolId]/portal in 2s (5243 modules)
+FirebaseClientProvider: Initializing Firebase...
+ GET /login 200 in 422ms
+FirebaseClientProvider: Initializing Firebase...
+ GET /schoolabc/portal 200 in 94ms
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 2.3s (5469 modules)
+ GET /login 404 in 2798ms
+ ✓ Compiled in 1311ms (2711 modules)
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 7.7s (5483 modules)
+FirebaseClientProvider: Initializing Firebase...
+ GET /schoolabc/portal 404 in 794ms
+FirebaseClientProvider: Initializing Firebase...
+ GET /schoolabc/portal 404 in 36ms
+FirebaseClientProvider: Initializing Firebase...
+ GET /schoolabc/portal 404 in 35ms
+FirebaseClientProvider: Initializing Firebase...
+ GET /schoolabc/portal 404 in 37ms
+FirebaseClientProvider: Initializing Firebase...
+ GET /schoolabc/portal 404 in 29ms
+FirebaseClientProvider: Initializing Firebase...
+ GET /schoolabc/portal 404 in 29ms
+FirebaseClientProvider: Initializing Firebase...
+ GET /schoolabc/portal 404 in 37ms
+FirebaseClientProvider: Initializing Firebase...
+ GET /schoolabc/portal 404 in 32ms
+FirebaseClientProvider: Initializing Firebase...
+ GET /schoolabc/portal 404 in 26ms
+FirebaseClientProvider: Initializing Firebase...
+ GET /schoolabc/portal 404 in 31ms
+FirebaseClientProvider: Initializing Firebase...
+ GET /schoolabc/portal 404 in 26ms
+FirebaseClientProvider: Initializing Firebase...
+ GET /schoolabc/portal 404 in 21ms
+FirebaseClientProvider: Initializing Firebase...
+ GET /schoolabc/portal 404 in 28ms
+ ✓ Compiled in 2.2s (5469 modules)
+FirebaseClientProvider: Initializing Firebase...
+ GET /schoolabc/portal 404 in 2097ms
+FirebaseClientProvider: Initializing Firebase...
+ GET /schoolabc/portal 404 in 31ms
+ ✓ Compiled in 2.2s (5483 modules)
+FirebaseClientProvider: Initializing Firebase...
+ GET /schoolabc/portal 404 in 1931ms
+FirebaseClientProvider: Initializing Firebase...
+ GET /schoolabc/portal 404 in 31ms
+FirebaseClientProvider: Initializing Firebase...
+ GET /schoolabc/portal 404 in 26ms
+FirebaseClientProvider: Initializing Firebase...
+ GET / 404 in 29ms
+ ✓ Compiled in 2.8s (5483 modules)
+FirebaseClientProvider: Initializing Firebase...
+ GET / 200 in 1530ms
+ ✓ Compiled in 2.6s (5482 modules)
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 1192ms (5469 modules)
+ GET / 404 in 26ms
+ GET / 404 in 15ms
+ GET / 404 in 14ms
+ GET / 404 in 14ms
+ GET / 404 in 14ms
+ GET / 404 in 18ms
+ GET / 500 in 1832ms
+ GET / 500 in 96ms
+ GET / 500 in 33ms
+ ✓ Compiled in 2.4s (5483 modules)
+FirebaseClientProvider: Initializing Firebase...
+ GET / 404 in 2099ms
+FirebaseClientProvider: Initializing Firebase...
+ GET / 404 in 34ms
+FirebaseClientProvider: Initializing Firebase...
+ GET / 404 in 26ms
+FirebaseClientProvider: Initializing Firebase...
+ GET / 404 in 44ms
+FirebaseClientProvider: Initializing Firebase...
+ GET / 404 in 34ms
+FirebaseClientProvider: Initializing Firebase...
+ GET / 404 in 25ms
+FirebaseClientProvider: Initializing Firebase...
+ GET / 404 in 29ms
+FirebaseClientProvider: Initializing Firebase...
+ GET / 404 in 26ms
+FirebaseClientProvider: Initializing Firebase...
+ GET / 404 in 48ms
+FirebaseClientProvider: Initializing Firebase...
+ GET / 404 in 38ms
+FirebaseClientProvider: Initializing Firebase...
+ GET / 404 in 54ms
+FirebaseClientProvider: Initializing Firebase...
+ GET / 404 in 32ms
+FirebaseClientProvider: Initializing Firebase...
+ GET / 404 in 32ms
+FirebaseClientProvider: Initializing Firebase...
+ GET / 404 in 30ms
+FirebaseClientProvider: Initializing Firebase...
+ GET / 404 in 30ms
+FirebaseClientProvider: Initializing Firebase...
+ GET / 404 in 152ms
+FirebaseClientProvider: Initializing Firebase...
+ GET / 404 in 28ms
+FirebaseClientProvider: Initializing Firebase...
+ GET / 404 in 23ms
+FirebaseClientProvider: Initializing Firebase...
+ GET / 404 in 22ms
+FirebaseClientProvider: Initializing Firebase...
+ GET / 404 in 48ms
+FirebaseClientProvider: Initializing Firebase...
+ GET / 404 in 33ms
+FirebaseClientProvider: Initializing Firebase...
+ GET / 404 in 30ms
+FirebaseClientProvider: Initializing Firebase...
+ GET / 404 in 25ms
+FirebaseClientProvider: Initializing Firebase...
+ GET / 404 in 23ms
+FirebaseClientProvider: Initializing Firebase...
+ GET / 404 in 24ms
+FirebaseClientProvider: Initializing Firebase...
+ GET / 404 in 21ms
+FirebaseClientProvider: Initializing Firebase...
+ GET / 404 in 19ms
+FirebaseClientProvider: Initializing Firebase...
+ GET / 404 in 26ms
+FirebaseClientProvider: Initializing Firebase...
+ GET / 404 in 26ms
+FirebaseClientProvider: Initializing Firebase...
+ GET / 404 in 25ms
+FirebaseClientProvider: Initializing Firebase...
+ GET / 404 in 27ms
+ ✓ Compiled in 2.8s (5469 modules)
+FirebaseClientProvider: Initializing Firebase...
+ GET /_next/static/webpack/23e7157bd542ad2b.webpack.hot-update.json 404 in 2197ms
+FirebaseClientProvider: Initializing Firebase...
+ GET / 200 in 102ms
+FirebaseClientProvider: Initializing Firebase...
+ GET /schoolabc/portal 200 in 212ms
+ ✓ Compiled in 2.8s (5466 modules)
+FirebaseClientProvider: Initializing Firebase...
+ GET /schoolabc/portal 200 in 894ms
+ ✓ Compiled in 5s (5466 modules)
+   Reload env: .env.local
+ ✓ Compiled in 37s (5583 modules)
+ GET /schoolabc/portal 500 in 39489ms
+ ✓ Compiled in 1308ms (2711 modules)
+ ○ Compiling /_not-found ...
+FirebaseClientProvider: Initializing Firebase...
+ GET /schoolabc/portal 200 in 3851ms
+ ✓ Compiled /_not-found in 4.8s (5483 modules)
+FirebaseClientProvider: Initializing Firebase...
+ ✓ Compiled in 4.5s (5466 modules)
+FirebaseClientProvider: Initializing Firebase...
+ GET /schoolabc/portal 200 in 1152ms
+ ✓ Compiled in 5.6s (5597 modules)
+ ✓ Compiled in 1123ms (2711 modules)
+ ✓ Compiled in 807ms (2711 modules)
+ ✓ Compiled in 1062ms (2711 modules)
+ ✓ Compiled in 741ms (2711 modules)
+ ✓ Compiled in 685ms (2711 modules)
+ ✓ Compiled in 830ms (2711 modules)
+ ✓ Compiled in 897ms (2711 modules)
+ ✓ Compiled in 1098ms (2711 modules)
+ ✓ Compiled in 956ms (2711 modules)
+ ✓ Compiled in 971ms (2711 modules)
+ ✓ Compiled in 756ms (2711 modules)
+ ✓ Compiled in 922ms (2711 modules)
+ ✓ Compiled in 960ms (2711 modules)
+ ✓ Compiled in 1125ms (2711 modules)
+ ✓ Compiled in 975ms (2711 modules)
+ ✓ Compiled in 1556ms (2711 modules)
+ ✓ Compiled in 945ms (2711 modules)
+ ✓ Compiled in 6.2s (5480 modules)
+ ✓ Compiled in 1023ms (2711 modules)
+ ✓ Compiled in 1819ms (5480 modules)
+ ✓ Compiled in 904ms (2711 modules)
+ ✓ Compiled in 1685ms (5466 modules)
+ ✓ Compiled in 832ms (2711 modules)
+ ✓ Compiled in 719ms (2711 modules)
+ ✓ Compiled in 700ms (2711 modules)
+ ✓ Compiled in 945ms (2711 modules)
+ ✓ Compiled in 815ms (2711 modules)
+ ✓ Compiled in 870ms (2711 modules)
+ ✓ Compiled in 1246ms (2711 modules)
+ ✓ Compiled in 805ms (2711 modules)
+ ✓ Compiled in 675ms (2711 modules)
+ ✓ Compiled in 812ms (2711 modules)
+ ✓ Compiled in 1068ms (2711 modules)
+ ✓ Compiled in 1507ms (2711 modules)
+ ✓ Compiled in 1092ms (2711 modules)
+ ✓ Compiled in 1166ms (2711 modules)
+ ✓ Compiled in 824ms (2711 modules)
+ ✓ Compiled in 953ms (2711 modules)
+ ✓ Compiled in 4.8s (5466 modules)
+ ✓ Compiled in 1564ms (5466 modules)
+ ✓ Compiled in 1508ms (5466 modules)
+ ✓ Compiled in 1085ms (5466 modules)
+ ✓ Compiled in 2.2s (5480 modules)
+ ✓ Compiled in 1393ms (5480 modules)
+ ✓ Compiled in 1766ms (5480 modules)
+ ✓ Compiled in 1812ms (5480 modules)
+ ✓ Compiled in 1974ms (5480 modules)
+ ✓ Compiled in 988ms (2711 modules)
+ ✓ Compiled in 1331ms (2711 modules)
+ ✓ Compiled in 790ms (2711 modules)
+ ✓ Compiled in 856ms (2711 modules)
+ ✓ Compiled in 933ms (2711 modules)
+ ✓ Compiled in 801ms (2711 modules)
+ ✓ Compiled in 749ms (2711 modules)
+ ✓ Compiled in 841ms (2711 modules)
+ ✓ Compiled in 1030ms (2711 modules)
+ ✓ Compiled in 968ms (2711 modules)
+ ✓ Compiled in 947ms (2711 modules)
+ ✓ Compiled in 878ms (2711 modules)
+ ✓ Compiled in 3.3s (2711 modules)
+ ✓ Compiled in 814ms (2711 modules)
+ ✓ Compiled in 7.6s (5480 modules)
+ ✓ Compiled in 7.9s (5480 modules)
+ ✓ Compiled in 941ms (2711 modules)
+ ✓ Compiled in 1819ms (2711 modules)
+ ✓ Compiled in 976ms (2711 modules)
+ ✓ Compiled in 1164ms (2711 modules)
+ ✓ Compiled in 814ms (2711 modules)
+ ✓ Compiled in 815ms (2711 modules)
+ ✓ Compiled in 1265ms (2711 modules)
+ ✓ Compiled in 738ms (2711 modules)
+ ✓ Compiled in 1696ms (2711 modules)
+ ✓ Compiled in 1046ms (2711 modules)
+ ✓ Compiled in 929ms (2711 modules)
+ ✓ Compiled in 1752ms (2711 modules)
+ ✓ Compiled in 2.1s (2711 modules)
+ ✓ Compiled in 498ms (2711 modules)
+ ✓ Compiled in 855ms (2711 modules)
+ ✓ Compiled in 560ms (2711 modules)
+ ✓ Compiled in 544ms (2711 modules)
+ ✓ Compiled in 614ms (2711 modules)
+ ✓ Compiled in 683ms (2711 modules)
+ ✓ Compiled in 724ms (2711 modules)
+ ✓ Compiled in 1303ms (5480 modules)
+ ✓ Compiled in 1678ms (5480 modules)
+ ✓ Compiled in 2.2s (5480 modules)
+ ✓ Compiled in 2.4s (5480 modules)
+ ✓ Compiled in 12.9s (5480 modules)
+ ✓ Compiled in 4.5s (5480 modules)
+ ✓ Compiled in 1066ms (2711 modules)
+ ✓ Compiled in 1995ms (2711 modules)
+ ✓ Compiled in 1057ms (2711 modules)
+ ✓ Compiled in 1068ms (2711 modules)
+ ✓ Compiled in 1210ms (2711 modules)
+ ✓ Compiled in 848ms (2711 modules)
+ ✓ Compiled in 628ms (2711 modules)
+ ✓ Compiled in 814ms (2711 modules)
+ ✓ Compiled in 1156ms (2711 modules)
+ ✓ Compiled in 2.6s (5480 modules)
+ ✓ Compiled in 1422ms (2711 modules)
+ ✓ Compiled in 1383ms (2711 modules)
+ ✓ Compiled in 6.2s (5480 modules)
+ ✓ Compiled in 1126ms (2711 modules)
+ ✓ Compiled in 4.2s (2711 modules)
+ ✓ Compiled in 876ms (2711 modules)
+ ✓ Compiled in 1292ms (2711 modules)
+ ✓ Compiled in 870ms (2711 modules)
+ ✓ Compiled in 935ms (2711 modules)
+ ✓ Compiled in 3.2s (2711 modules)
+ ✓ Compiled in 743ms (2711 modules)
+ ✓ Compiled in 1184ms (2711 modules)
+ ✓ Compiled in 860ms (2711 modules)
+ ✓ Compiled in 7.2s (5480 modules)
+ ✓ Compiled in 777ms (2711 modules)
+ ✓ Compiled in 3s (5480 modules)
+ ✓ Compiled in 2.5s (5482 modules)
+ ✓ Compiled in 744ms (2712 modules)
+ ✓ Compiled in 843ms (2712 modules)
+ ✓ Compiled in 4.7s (5488 modules)
+ ✓ Compiled in 1241ms (2715 modules)
+ ✓ Compiled in 984ms (2715 modules)
+ ✓ Compiled in 984ms (2715 modules)
+ ✓ Compiled in 1522ms (5488 modules)
+ ✓ Compiled in 1221ms (5474 modules)
+ ✓ Compiled in 1604ms (5474 modules)
+ ✓ Compiled in 5.7s (5488 modules)
+ ✓ Compiled in 1026ms (2715 modules)
+ ✓ Compiled in 3.1s (5488 modules)
+ ✓ Compiled in 1072ms (2715 modules)
+ ✓ Compiled in 780ms (2715 modules)
+ ✓ Compiled in 778ms (2715 modules)
+ ✓ Compiled in 795ms (2715 modules)
+ ✓ Compiled in 915ms (2715 modules)
+ ✓ Compiled in 639ms (2715 modules)
+ ✓ Compiled in 819ms (2715 modules)
+ ✓ Compiled in 788ms (2715 modules)
+ ✓ Compiled in 2.4s (5488 modules)
+ ✓ Compiled in 1854ms (5488 modules)
+ ✓ Compiled in 822ms (2715 modules)
+ ✓ Compiled in 1000ms (2715 modules)
+ ✓ Compiled in 683ms (2715 modules)
+ ✓ Compiled in 822ms (2715 modules)
+ ✓ Compiled in 994ms (2715 modules)
+ ✓ Compiled in 885ms (2715 modules)
+ ✓ Compiled in 5s (5488 modules)
+ ✓ Compiled in 756ms (2715 modules)
+ ✓ Compiled in 702ms (2715 modules)
+ ✓ Compiled in 951ms (2715 modules)
+ ✓ Compiled in 876ms (2715 modules)
+ ✓ Compiled in 1091ms (2715 modules)
+ ✓ Compiled in 1495ms (5488 modules)
+ ✓ Compiled in 10.3s (5488 modules)
+ ✓ Compiled in 7.2s (5488 modules)
+ ✓ Compiled in 1656ms (5474 modules)
+ ✓ Compiled in 740ms (2715 modules)
+ ✓ Compiled in 895ms (2715 modules)
+ ✓ Compiled in 886ms (2715 modules)
+ ✓ Compiled in 735ms (2715 modules)
+ ✓ Compiled in 766ms (2715 modules)
+ ✓ Compiled in 939ms (2715 modules)
+ ✓ Compiled in 920ms (2715 modules)
+ ✓ Compiled in 793ms (2715 modules)
+ ✓ Compiled in 726ms (2715 modules)
+ ✓ Compiled in 806ms (2715 modules)
+ ✓ Compiled in 931ms (2715 modules)
+ ✓ Compiled in 1637ms (5488 modules)
+ ✓ Compiled in 922ms (2715 modules)
+ ✓ Compiled in 4.6s (5474 modules)
+ ✓ Compiled in 843ms (2715 modules)
+ ✓ Compiled in 1967ms (5488 modules)
+ ✓ Compiled in 1159ms (2715 modules)
+ ✓ Compiled in 19.3s (5488 modules)
+ ✓ Compiled in 2s (5488 modules)
+ ✓ Compiled in 1917ms (2715 modules)
+ ✓ Compiled in 1791ms (5488 modules)
+ ✓ Compiled in 734ms (2715 modules)
+ ✓ Compiled in 1964ms (5488 modules)
+ ✓ Compiled in 2.3s (5488 modules)
+ ✓ Compiled in 926ms (2715 modules)
+ ✓ Compiled in 1257ms (2715 modules)
+ ✓ Compiled in 2.9s (5488 modules)
+ ✓ Compiled in 1403ms (5488 modules)
+ ✓ Compiled in 3.2s (5488 modules)
+ ✓ Compiled in 2.1s (5474 modules)
+ ✓ Compiled in 7.3s (5488 modules)
+ ✓ Compiled in 49.5s (5490 modules)
+ ✓ Compiled in 909ms (2716 modules)
+ ✓ Compiled in 1325ms (2716 modules)
+ ✓ Compiled in 1194ms (2716 modules)
+ ✓ Compiled in 1085ms (2716 modules)
+ ✓ Compiled in 1024ms (2716 modules)
+ ✓ Compiled in 1422ms (2716 modules)
+ ✓ Compiled in 910ms (2716 modules)
+ ✓ Compiled in 1448ms (2716 modules)
+ ✓ Compiled in 905ms (2716 modules)
+ ✓ Compiled in 1280ms (2716 modules)
+ ✓ Compiled in 1268ms (2716 modules)
+ ✓ Compiled in 1010ms (2716 modules)
+ ✓ Compiled in 1112ms (2716 modules)
+ ✓ Compiled in 1328ms (2716 modules)
+ ✓ Compiled in 3s (5476 modules)
+ ✓ Compiled in 1413ms (2716 modules)
+ ✓ Compiled in 1437ms (2716 modules)
+ ✓ Compiled in 1503ms (5476 modules)
+ ✓ Compiled in 1092ms (5476 modules)
+ ✓ Compiled in 1936ms (5478 modules)
+ ✓ Compiled in 1842ms (5492 modules)
+ ✓ Compiled in 1971ms (5478 modules)
+ ✓ Compiled in 835ms (2717 modules)
+ ✓ Compiled in 1089ms (2717 modules)
+ ✓ Compiled in 894ms (2717 modules)
+ ✓ Compiled in 910ms (2717 modules)
+ ✓ Compiled in 897ms (2717 modules)
+ ✓ Compiled in 1587ms (5480 modules)
+ ✓ Compiled in 1045ms (2718 modules)
+ ✓ Compiled in 907ms (2718 modules)
+ ✓ Compiled in 754ms (2718 modules)
+ ✓ Compiled in 835ms (2718 modules)
+ ✓ Compiled in 1016ms (2718 modules)
+ ✓ Compiled in 974ms (2718 modules)
+ ✓ Compiled in 10.3s (5494 modules)
+ ✓ Compiled in 3.9s (2718 modules)
+ ✓ Compiled in 10.5s (5494 modules)
+ ✓ Compiled in 6.2s (5494 modules)
+ ✓ Compiled in 8.3s (5494 modules)
+ ✓ Compiled in 2.8s (5494 modules)
+ ✓ Compiled in 2.4s (5494 modules)
+ ✓ Compiled in 1379ms (2718 modules)
+ ✓ Compiled in 4.9s (5494 modules)
+ ✓ Compiled in 12.2s (5494 modules)
+ ✓ Compiled in 4.9s (2718 modules)
+ ✓ Compiled in 940ms (2718 modules)
+ ✓ Compiled in 1271ms (2718 modules)
+ ✓ Compiled in 1353ms (2718 modules)
+ ✓ Compiled in 806ms (2718 modules)
+ ✓ Compiled in 1783ms (2718 modules)
+ ✓ Compiled in 928ms (2718 modules)
+ ✓ Compiled in 754ms (2718 modules)
+ ✓ Compiled in 730ms (2718 modules)
+ ✓ Compiled in 798ms (2718 modules)
+ ✓ Compiled in 729ms (2718 modules)
+ ✓ Compiled in 743ms (2718 modules)
+ ✓ Compiled in 721ms (2718 modules)
+ ✓ Compiled in 967ms (2718 modules)
+ ✓ Compiled in 814ms (2718 modules)
+ ✓ Compiled in 755ms (2718 modules)
+ ✓ Compiled in 785ms (2718 modules)
+ ✓ Compiled in 1472ms (2718 modules)
+ ✓ Compiled in 788ms (2718 modules)
+ ✓ Compiled in 958ms (2718 modules)
+ ✓ Compiled in 1110ms (2718 modules)
+ ✓ Compiled in 735ms (2718 modules)
+ ✓ Compiled in 555ms (2718 modules)
+ ✓ Compiled in 940ms (2718 modules)
+ ✓ Compiled in 1554ms (2718 modules)
+ ✓ Compiled in 661ms (2718 modules)
+ ✓ Compiled in 640ms (2718 modules)
+ ✓ Compiled in 1457ms (2718 modules)
+ ✓ Compiled in 533ms (2718 modules)
+ ✓ Compiled in 970ms (2718 modules)
+ ✓ Compiled in 693ms (2718 modules)
+ ✓ Compiled in 2.3s (2718 modules)
+ ✓ Compiled in 845ms (2718 modules)
+ ✓ Compiled in 992ms (2718 modules)
+ ✓ Compiled in 1051ms (2718 modules)
+ ✓ Compiled in 965ms (2718 modules)
+ ✓ Compiled in 580ms (2718 modules)
+ ✓ Compiled in 848ms (2718 modules)
+ ✓ Compiled in 908ms (2718 modules)
+ ✓ Compiled in 681ms (2718 modules)
+ ✓ Compiled in 710ms (2718 modules)
+ ✓ Compiled in 691ms (2718 modules)
+ ✓ Compiled in 620ms (2718 modules)
+ ✓ Compiled in 1148ms (2718 modules)
+ ✓ Compiled in 763ms (2718 modules)
+ ✓ Compiled in 819ms (2718 modules)
+ ✓ Compiled in 1193ms (2718 modules)
+ ✓ Compiled in 881ms (2718 modules)
+ ✓ Compiled in 944ms (2718 modules)
+ ✓ Compiled in 852ms (2718 modules)
+ ✓ Compiled in 1164ms (2718 modules)
+ ✓ Compiled in 1626ms (2718 modules)
+ ✓ Compiled in 1315ms (2718 modules)
+ ✓ Compiled in 638ms (2718 modules)
+ ✓ Compiled in 1365ms (2718 modules)
+ ✓ Compiled in 772ms (2718 modules)
+ ✓ Compiled in 865ms (2718 modules)
+ ✓ Compiled in 799ms (2718 modules)
+ ✓ Compiled in 801ms (2718 modules)
+ ✓ Compiled in 607ms (2718 modules)
+ ✓ Compiled in 893ms (2718 modules)
+ ✓ Compiled in 774ms (2718 modules)
+ ✓ Compiled in 760ms (2718 modules)
+ ✓ Compiled in 1056ms (2718 modules)
+ ✓ Compiled in 814ms (2718 modules)
+ ✓ Compiled in 898ms (2718 modules)
+ ✓ Compiled in 945ms (2718 modules)
+ ✓ Compiled in 1226ms (2718 modules)
+ ✓ Compiled in 618ms (2718 modules)
+ ✓ Compiled in 556ms (2718 modules)
+ ✓ Compiled in 840ms (2718 modules)
+ ✓ Compiled in 681ms (2718 modules)
+ ✓ Compiled in 731ms (2718 modules)
+ ✓ Compiled in 672ms (2718 modules)
+ ✓ Compiled in 681ms (2718 modules)
+ ✓ Compiled in 1302ms (2718 modules)
+ ✓ Compiled in 3.2s (5494 modules)
+ ✓ Compiled in 3.4s (5494 modules)
+ ✓ Compiled in 944ms (2718 modules)
+ ✓ Compiled in 937ms (2718 modules)
+ ✓ Compiled in 869ms (2718 modules)
+ ✓ Compiled in 841ms (2718 modules)
+ ✓ Compiled in 843ms (2718 modules)
+ ✓ Compiled in 1056ms (2718 modules)
+ ✓ Compiled in 1563ms (2718 modules)
+ ✓ Compiled in 721ms (2718 modules)
+ ✓ Compiled in 838ms (2718 modules)
+ ✓ Compiled in 741ms (2718 modules)
+ ✓ Compiled in 2.7s (5494 modules)
+ ✓ Compiled in 4.9s (5494 modules)
+ ✓ Compiled in 1571ms (5494 modules)
+ ✓ Compiled in 722ms (2718 modules)
+ ✓ Compiled in 711ms (2718 modules)
+ ✓ Compiled in 907ms (2718 modules)
+ ✓ Compiled in 867ms (2718 modules)
+ ✓ Compiled in 797ms (2718 modules)
+ ✓ Compiled in 679ms (2718 modules)
+ ✓ Compiled in 1104ms (2718 modules)
+ ✓ Compiled in 1009ms (2718 modules)
+   Reload env: .env.local
+ ✓ Compiled in 30.2s (5611 modules)
+ ✓ Compiled in 6.8s (5611 modules)
+ ✓ Compiled in 1775ms (5480 modules)
+ ✓ Compiled in 4s (5480 modules)
+ ✓ Compiled in 3.3s (5480 modules)
+ ✓ Compiled in 2.8s (5480 modules)
+ ✓ Compiled in 755ms (2718 modules)
+ ✓ Compiled in 709ms (2718 modules)
+ ✓ Compiled in 1119ms (2718 modules)
+ ✓ Compiled in 599ms (2718 modules)
+ ✓ Compiled in 947ms (2718 modules)
+ ✓ Compiled in 1100ms (2718 modules)
+ ✓ Compiled in 770ms (2718 modules)
+ ✓ Compiled in 738ms (2718 modules)
+ ✓ Compiled in 1776ms (2718 modules)
+ ✓ Compiled in 994ms (2718 modules)
+ ✓ Compiled in 3.8s (2718 modules)
+ ✓ Compiled in 1236ms (2718 modules)
+ ✓ Compiled in 1316ms (5480 modules)
+ ✓ Compiled in 1044ms (2718 modules)
+ ✓ Compiled in 2.5s (5611 modules)
+ ✓ Compiled in 654ms (2718 modules)
+ ✓ Compiled in 1835ms (5494 modules)
+ ✓ Compiled in 860ms (2718 modules)
+ ✓ Compiled in 1418ms (2718 modules)
+ ✓ Compiled in 940ms (2718 modules)
+[?25h

@@ -522,7 +522,6 @@ export function PrizeDashboard({
                 setAiSurpriseErr(null);
                 setAiSurpriseBody(null);
                 setAiSurpriseLoading(true);
-                setAiSurpriseOpen(true);
                 try {
                     const res = await authFetch('/api/prize-ai-fun', {
                         method: 'POST',
@@ -538,8 +537,10 @@ export function PrizeDashboard({
                         text: typeof j.text === 'string' ? j.text : '',
                         answer: typeof j.answer === 'string' ? j.answer : undefined,
                     });
+                    setAiSurpriseOpen(true);
                 } catch (e: unknown) {
-                    setAiSurpriseErr(getReadableErrorMessage(e, 'Something went wrong loading your surprise.'));
+                    console.warn('Prize AI surprise unavailable:', e);
+                    flushPendingTicketAfterAi();
                 } finally {
                     setAiSurpriseLoading(false);
                 }

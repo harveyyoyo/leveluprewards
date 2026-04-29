@@ -74,6 +74,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -237,7 +246,7 @@ function StudentDashboardInner({
   onRequestExit: () => void;
 }) {
   const router = useRouter();
-  const { redeemCoupon, schoolId, isKioskLocked, achievements, badges } = useAppContext();
+  const { redeemCoupon, redeemPrize, schoolId, isKioskLocked, achievements, badges } = useAppContext();
   const firestore = useFirestore();
   const { functions } = useFirebase();
   const { toast } = useToast();
@@ -319,6 +328,8 @@ function StudentDashboardInner({
 
   const [showRedeem, setShowRedeem] = useState(true);
   const [isIdPreviewOpen, setIsIdPreviewOpen] = useState(false);
+  const [confirmingPrize, setConfirmingPrize] = useState<Prize | null>(null);
+  const [isRedeemingPrize, setIsRedeemingPrize] = useState(false);
 
   const [activeTab, setActiveTab] = useState('manual');
   const [hasCameraPermission, setHasCameraPermission] = useState(true);
@@ -455,6 +466,43 @@ function StudentDashboardInner({
       setCouponCode('');
     }
   }, [couponCode, resetTimer, redeemCoupon, student, toast, playSound]);
+
+  const handleRedeemPrize = useCallback(async () => {
+    if (!student || !confirmingPrize) return;
+    resetTimer();
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      playSound('error');
+      toast({
+        variant: 'destructive',
+        title: 'No connection',
+        description: 'Connect to the internet, then try redeeming again.',
+      });
+      return;
+    }
+
+    setIsRedeemingPrize(true);
+    try {
+      const result = await redeemPrize(student.id, confirmingPrize, 1);
+      if (!result.success) {
+        throw new Error(result.message || 'Could not redeem this prize.');
+      }
+      playSound('redeem');
+      toast({
+        title: 'Prize Redeemed!',
+        description: `Successfully redeemed ${confirmingPrize.name}.`,
+      });
+      setConfirmingPrize(null);
+    } catch (e: unknown) {
+      playSound('error');
+      toast({
+        variant: 'destructive',
+        title: 'Redemption Failed',
+        description: getReadableErrorMessage(e, 'Could not redeem this prize.'),
+      });
+    } finally {
+      setIsRedeemingPrize(false);
+    }
+  }, [confirmingPrize, playSound, redeemPrize, resetTimer, student, toast]);
 
   // Celebrate on login if new badges / bonus milestones were earned since last time this student opened the portal.
   useEffect(() => {
@@ -893,14 +941,14 @@ function StudentDashboardInner({
               style={activeTheme ? { backgroundColor: 'var(--theme-card)', color: 'var(--theme-text)' } : undefined}
             >
               <CardHeader className="pb-2 pt-4">
-                <Helper content="Prizes you can afford right now. Tap one to open the same redeem confirmation as in the Prize Shop, or use Redeem Prize now to browse the full shop.">
+                <Helper content="Prizes you can afford right now. Tap one to redeem it here, or use See all prizes to browse the full prize shop.">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={activeTheme ? { backgroundColor: 'var(--theme-bg)' } : undefined}>
                       <Award className="w-4 h-4" style={activeTheme ? { color: 'var(--theme-primary)' } : undefined} />
                     </div>
                     <div>
                       <CardTitle className="text-sm font-black">Eligible Rewards</CardTitle>
-                      <CardDescription className="text-[10px] font-medium leading-snug" style={activeTheme ? { color: 'var(--theme-text)', opacity: 0.7 } : undefined}>Tap a reward to redeem — same as the Prize Shop.</CardDescription>
+                      <CardDescription className="text-[10px] font-medium leading-snug" style={activeTheme ? { color: 'var(--theme-text)', opacity: 0.7 } : undefined}>Tap a reward to redeem it here.</CardDescription>
                     </div>
                   </div>
                 </Helper>
@@ -914,11 +962,14 @@ function StudentDashboardInner({
                     .sort((a, b) => b.points - a.points)
                     .slice(0, 3)
                     .map((reward) => (
-                      <Link
+                      <button
+                        type="button"
                         key={reward.id}
-                        href={`/${schoolId}/prize?student=${encodeURIComponent(student.id)}&redeem=${encodeURIComponent(reward.id)}`}
-                        onClick={() => playSound('click')}
-                        aria-label={`Redeem ${reward.name || 'prize'} in Prize Shop`}
+                        onClick={() => {
+                          playSound('click');
+                          setConfirmingPrize(reward);
+                        }}
+                        aria-label={`Redeem ${reward.name || 'prize'}`}
                         className={cn(
                           "p-2.5 rounded-lg transition-all flex flex-col items-center text-center gap-1 shadow-sm hover:shadow-md hover:-translate-y-0.5 transform duration-300 group relative overflow-hidden cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
                           !activeTheme && "border border-slate-100 dark:border-slate-800 bg-white/40 dark:bg-slate-800/40",
@@ -964,7 +1015,7 @@ function StudentDashboardInner({
                         >
                           {(reward.points || 0).toLocaleString()} PTS
                         </Badge>
-                      </Link>
+                      </button>
                     ))}
                   {!prizesLoading && (prizes || []).filter(p => prizeIsListed(p) && p.points <= student.points).length === 0 && (
                     <div
@@ -1008,12 +1059,39 @@ function StudentDashboardInner({
                     className="flex items-center justify-center gap-2"
                   >
                     <Gift className="h-5 w-5 md:h-6 md:w-6 shrink-0" aria-hidden />
-                    Redeem Prize now
+                    See all prizes
                     <ChevronRight className="h-4 w-4 md:h-5 md:w-5 shrink-0 opacity-90" aria-hidden />
                   </Link>
                 </Button>
               </CardContent>
             </Card>
+
+            <AlertDialog open={!!confirmingPrize} onOpenChange={(open) => {
+              if (!open && !isRedeemingPrize) setConfirmingPrize(null);
+            }}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Redeem prize?</AlertDialogTitle>
+                  <AlertDialogDescription className="break-words [overflow-wrap:anywhere]">
+                    Redeem <span className="font-bold">{confirmingPrize?.name}</span>
+                    {confirmingPrize ? ` for ${(confirmingPrize.points || 0).toLocaleString()} points` : ''}?
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={isRedeemingPrize}>Cancel</AlertDialogCancel>
+                  <Button type="button" onClick={handleRedeemPrize} disabled={isRedeemingPrize}>
+                    {isRedeemingPrize ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+                        Redeeming...
+                      </>
+                    ) : (
+                      'Redeem'
+                    )}
+                  </Button>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
 
             <BadgeShowcase
               student={student}

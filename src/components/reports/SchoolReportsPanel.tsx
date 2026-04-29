@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { FileText, Printer } from 'lucide-react';
+import { Download, FileText, Printer, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -22,16 +24,113 @@ import {
   studentsInTeacherScope,
 } from '@/lib/reportsScope';
 
-export type ReportKind = 'summary' | 'roster' | 'coupons' | 'prizes' | 'classes';
+export type ReportKind = 'summary' | 'roster' | 'balances' | 'redemptions' | 'coupons' | 'prizes' | 'classes';
+
+type RosterSort = 'class-name' | 'name' | 'points-desc' | 'lifetime-desc';
+type CouponStatusFilter = 'all' | 'unused' | 'redeemed' | 'expired';
+type PrizeStockFilter = 'all' | 'in-stock' | 'out-of-stock' | 'limited';
+type DateRangeFilter = 'all' | 'today' | '7-days' | '30-days' | 'custom';
+
+const DASH = '-';
 
 function classNameForStudent(classId: string | undefined, classes: Class[]): string {
-  if (!classId) return '—';
-  return classes.find((c) => c.id === classId)?.name ?? '—';
+  if (!classId) return DASH;
+  return classes.find((c) => c.id === classId)?.name ?? DASH;
 }
 
 function teacherNameById(teachers: Teacher[], id: string | undefined): string {
-  if (!id) return '—';
-  return teachers.find((t) => t.id === id)?.name ?? '—';
+  if (!id) return DASH;
+  return teachers.find((t) => t.id === id)?.name ?? DASH;
+}
+
+function studentDisplayName(student: Student | undefined): string {
+  if (!student) return DASH;
+  return `${getStudentNickname(student)} ${student.lastName}`.trim() || student.firstName || DASH;
+}
+
+function safePoints(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+}
+
+function formatDateTime(value: unknown): string {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) return DASH;
+  return new Date(value).toLocaleString();
+}
+
+function formatDate(value: unknown): string {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) return DASH;
+  return new Date(value).toLocaleDateString();
+}
+
+function startOfLocalDay(date: Date): number {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+}
+
+function endOfLocalDay(date: Date): number {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999).getTime();
+}
+
+function parseDateInput(value: string, boundary: 'start' | 'end'): number | null {
+  if (!value) return null;
+  const [year, month, day] = value.split('-').map(Number);
+  if (!year || !month || !day) return null;
+  const date = new Date(year, month - 1, day);
+  if (Number.isNaN(date.getTime())) return null;
+  return boundary === 'start' ? startOfLocalDay(date) : endOfLocalDay(date);
+}
+
+function dateRangeBounds(range: DateRangeFilter, customStart: string, customEnd: string): { start: number | null; end: number | null } {
+  const now = new Date();
+  if (range === 'today') return { start: startOfLocalDay(now), end: endOfLocalDay(now) };
+  if (range === '7-days') return { start: startOfLocalDay(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6)), end: endOfLocalDay(now) };
+  if (range === '30-days') return { start: startOfLocalDay(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 29)), end: endOfLocalDay(now) };
+  if (range === 'custom') return { start: parseDateInput(customStart, 'start'), end: parseDateInput(customEnd, 'end') };
+  return { start: null, end: null };
+}
+
+function isInDateRange(value: unknown, bounds: { start: number | null; end: number | null }): boolean {
+  if (bounds.start == null && bounds.end == null) return true;
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) return false;
+  if (bounds.start != null && value < bounds.start) return false;
+  if (bounds.end != null && value > bounds.end) return false;
+  return true;
+}
+
+function csvEscape(value: unknown): string {
+  const text = value == null ? '' : String(value);
+  return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+function downloadCsv(filename: string, rows: unknown[][]) {
+  const csv = rows.map((row) => row.map(csvEscape).join(',')).join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function reportTitle(kind: ReportKind): string {
+  switch (kind) {
+    case 'summary':
+      return 'Executive summary';
+    case 'roster':
+      return 'Student roster';
+    case 'balances':
+      return 'Student balances';
+    case 'redemptions':
+      return 'Coupon redemptions';
+    case 'coupons':
+      return 'Coupon inventory';
+    case 'prizes':
+      return 'Prize catalog';
+    case 'classes':
+      return 'Classes overview';
+  }
 }
 
 export function SchoolReportsPanel({
@@ -58,14 +157,51 @@ export function SchoolReportsPanel({
   categories: Category[];
 }) {
   const [reportKind, setReportKind] = useState<ReportKind>('summary');
+  const [classFilter, setClassFilter] = useState('all');
+  const [rosterSort, setRosterSort] = useState<RosterSort>('class-name');
+  const [couponStatus, setCouponStatus] = useState<CouponStatusFilter>('all');
+  const [prizeStock, setPrizeStock] = useState<PrizeStockFilter>('all');
+  const [dateRange, setDateRange] = useState<DateRangeFilter>('all');
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
+  const [includeIds, setIncludeIds] = useState(true);
+  const [includeDates, setIncludeDates] = useState(true);
+  const [includeCategoryColumns, setIncludeCategoryColumns] = useState(false);
 
-  const students = useMemo(() => {
+  const dateBounds = useMemo(
+    () => dateRangeBounds(dateRange, customStartDate, customEndDate),
+    [dateRange, customStartDate, customEndDate],
+  );
+
+  const dateRangeLabel = useMemo(() => {
+    if (dateRange === 'all') return 'All dates';
+    if (dateRange === 'today') return 'Today';
+    if (dateRange === '7-days') return 'Last 7 days';
+    if (dateRange === '30-days') return 'Last 30 days';
+    const start = customStartDate || 'Any start';
+    const end = customEndDate || 'Any end';
+    return `${start} to ${end}`;
+  }, [dateRange, customStartDate, customEndDate]);
+
+  const scopedStudents = useMemo(() => {
     if (scope === 'school') return allStudents;
     if (!teacherId) return [];
     return studentsInTeacherScope(teacherId, allStudents, classes);
   }, [scope, teacherId, allStudents, classes]);
 
-  const coupons = useMemo(
+  const students = useMemo(() => {
+    const classFiltered =
+      classFilter === 'all'
+        ? scopedStudents
+        : classFilter === 'unassigned'
+          ? scopedStudents.filter((s) => !s.classId)
+          : scopedStudents.filter((s) => s.classId === classFilter);
+    return classFiltered.filter((student) => isInDateRange(student.createdAt, dateBounds));
+  }, [scopedStudents, classFilter, dateBounds]);
+
+  const studentById = useMemo(() => new Map(allStudents.map((s) => [s.id, s])), [allStudents]);
+
+  const couponsInScope = useMemo(
     () =>
       scope === 'school'
         ? allCoupons
@@ -75,11 +211,34 @@ export function SchoolReportsPanel({
     [scope, teacherId, allCoupons],
   );
 
-  const prizes = useMemo(() => {
+  const coupons = useMemo(() => {
+    const now = Date.now();
+    return couponsInScope.filter((coupon) => {
+      if (couponStatus === 'unused' && coupon.used) return false;
+      if (couponStatus === 'redeemed' && !coupon.used) return false;
+      if (couponStatus === 'expired' && (!coupon.expiresAt || coupon.expiresAt >= now)) return false;
+      const relevantDate = reportKind === 'redemptions' ? coupon.usedAt : coupon.createdAt;
+      if (!isInDateRange(relevantDate, dateBounds)) return false;
+      return true;
+    });
+  }, [couponsInScope, couponStatus, dateBounds, reportKind]);
+
+  const prizesInScope = useMemo(() => {
     if (scope === 'school') return allPrizes;
     if (!teacherId) return [];
     return prizesForTeacherReport(teacherId, allPrizes);
   }, [scope, teacherId, allPrizes]);
+
+  const prizes = useMemo(
+    () =>
+      prizesInScope.filter((prize) => {
+        if (prizeStock === 'in-stock') return prize.inStock && (typeof prize.stockCount !== 'number' || prize.stockCount > 0);
+        if (prizeStock === 'out-of-stock') return !prize.inStock || prize.stockCount === 0;
+        if (prizeStock === 'limited') return prize.inStock && typeof prize.stockCount === 'number';
+        return true;
+      }),
+    [prizesInScope, prizeStock],
+  );
 
   const categoriesInScope = useMemo(() => {
     if (scope === 'school') return categories;
@@ -87,56 +246,131 @@ export function SchoolReportsPanel({
     return categories.filter((c) => !c.teacherId || c.teacherId === teacherId);
   }, [scope, teacherId, categories]);
 
-  const usedCouponsCount = useMemo(() => coupons.filter((c) => c.used).length, [coupons]);
+  const redeemedCouponsInDateRange = useMemo(
+    () => couponsInScope.filter((c) => c.used && isInDateRange(c.usedAt, dateBounds)),
+    [couponsInScope, dateBounds],
+  );
+
+  const usedCouponsCount = useMemo(() => redeemedCouponsInDateRange.length, [redeemedCouponsInDateRange]);
   const totalCouponValueRedeemed = useMemo(
-    () => coupons.filter((c) => c.used).reduce((sum, c) => sum + c.value, 0),
-    [coupons],
+    () => redeemedCouponsInDateRange.reduce((sum, c) => sum + safePoints(c.value), 0),
+    [redeemedCouponsInDateRange],
   );
 
   const lifetimeIssued = useMemo(
-    () => students.reduce((sum, s) => sum + (s.lifetimePoints ?? s.points ?? 0), 0),
+    () => students.reduce((sum, s) => sum + safePoints(s.lifetimePoints ?? s.points), 0),
     [students],
   );
-
-  const rosterRows = useMemo(() => {
-    const sorted = [...students].sort((a, b) => {
-      const ca = classNameForStudent(a.classId, classes);
-      const cb = classNameForStudent(b.classId, classes);
-      if (ca !== cb) return ca.localeCompare(cb);
-      return `${getStudentNickname(a)} ${a.lastName}`.localeCompare(`${getStudentNickname(b)} ${b.lastName}`);
-    });
-    return sorted.map((s) => ({
-      id: s.id,
-      name: `${getStudentNickname(s)} ${s.lastName}`.trim(),
-      cls: classNameForStudent(s.classId, classes),
-      points: s.points ?? 0,
-      lifetime: s.lifetimePoints ?? s.points ?? 0,
-      nfc: s.nfcId || '—',
-    }));
-  }, [students, classes]);
-
-  const couponAgg = useMemo(() => {
-    const byCat = new Map<string, { unused: number; used: number; valueUnused: number; valueUsed: number }>();
-    for (const c of coupons) {
-      const k = c.category || 'Other';
-      const cur = byCat.get(k) ?? { unused: 0, used: 0, valueUnused: 0, valueUsed: 0 };
-      if (c.used) {
-        cur.used += 1;
-        cur.valueUsed += c.value;
-      } else {
-        cur.unused += 1;
-        cur.valueUnused += c.value;
-      }
-      byCat.set(k, cur);
-    }
-    return [...byCat.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-  }, [coupons]);
 
   const classesForScope = useMemo(() => {
     if (scope === 'school') return classes;
     if (!teacherId) return [];
     return classes.filter((c) => c.primaryTeacherId === teacherId);
   }, [scope, teacherId, classes]);
+
+  const classOptions = useMemo(() => {
+    const classIdsWithStudents = new Set(scopedStudents.map((s) => s.classId).filter(Boolean));
+    const allowedClasses = (scope === 'school' ? classes : classesForScope).filter((c) => classIdsWithStudents.has(c.id));
+    return [...allowedClasses].sort((a, b) => a.name.localeCompare(b.name));
+  }, [scope, classes, classesForScope, scopedStudents]);
+
+  useEffect(() => {
+    if (classFilter === 'all' || classFilter === 'unassigned') return;
+    if (!classOptions.some((c) => c.id === classFilter)) setClassFilter('all');
+  }, [classFilter, classOptions]);
+
+  const rosterRows = useMemo(() => {
+    const sorted = [...students].sort((a, b) => {
+      if (rosterSort === 'points-desc') return safePoints(b.points) - safePoints(a.points);
+      if (rosterSort === 'lifetime-desc') return safePoints(b.lifetimePoints ?? b.points) - safePoints(a.lifetimePoints ?? a.points);
+      if (rosterSort === 'name') return studentDisplayName(a).localeCompare(studentDisplayName(b));
+      const ca = classNameForStudent(a.classId, classes);
+      const cb = classNameForStudent(b.classId, classes);
+      if (ca !== cb) return ca.localeCompare(cb);
+      return studentDisplayName(a).localeCompare(studentDisplayName(b));
+    });
+    return sorted.map((s) => ({
+      id: s.id,
+      name: studentDisplayName(s),
+      cls: classNameForStudent(s.classId, classes),
+      points: safePoints(s.points),
+      lifetime: safePoints(s.lifetimePoints ?? s.points),
+      nfc: s.nfcId || DASH,
+      createdAt: formatDate(s.createdAt),
+      categoryPoints: s.categoryPoints ?? {},
+    }));
+  }, [students, classes, rosterSort]);
+
+  const couponAgg = useMemo(() => {
+    const byCat = new Map<
+      string,
+      {
+        unused: number;
+        used: number;
+        expired: number;
+        valueUnused: number;
+        valueUsed: number;
+        firstCreatedAt: number | null;
+        lastCreatedAt: number | null;
+        firstExpiresAt: number | null;
+        lastExpiresAt: number | null;
+      }
+    >();
+    const now = Date.now();
+    for (const c of coupons) {
+      const k = c.category || 'Other';
+      const cur = byCat.get(k) ?? {
+        unused: 0,
+        used: 0,
+        expired: 0,
+        valueUnused: 0,
+        valueUsed: 0,
+        firstCreatedAt: null,
+        lastCreatedAt: null,
+        firstExpiresAt: null,
+        lastExpiresAt: null,
+      };
+      if (typeof c.createdAt === 'number' && Number.isFinite(c.createdAt) && c.createdAt > 0) {
+        cur.firstCreatedAt = cur.firstCreatedAt == null ? c.createdAt : Math.min(cur.firstCreatedAt, c.createdAt);
+        cur.lastCreatedAt = cur.lastCreatedAt == null ? c.createdAt : Math.max(cur.lastCreatedAt, c.createdAt);
+      }
+      if (typeof c.expiresAt === 'number' && Number.isFinite(c.expiresAt) && c.expiresAt > 0) {
+        cur.firstExpiresAt = cur.firstExpiresAt == null ? c.expiresAt : Math.min(cur.firstExpiresAt, c.expiresAt);
+        cur.lastExpiresAt = cur.lastExpiresAt == null ? c.expiresAt : Math.max(cur.lastExpiresAt, c.expiresAt);
+      }
+      if (c.expiresAt && c.expiresAt < now) cur.expired += 1;
+      if (c.used) {
+        cur.used += 1;
+        cur.valueUsed += safePoints(c.value);
+      } else {
+        cur.unused += 1;
+        cur.valueUnused += safePoints(c.value);
+      }
+      byCat.set(k, cur);
+    }
+    return [...byCat.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  }, [coupons]);
+
+  const redemptionRows = useMemo(
+    () =>
+      coupons
+        .filter((c) => c.used)
+        .sort((a, b) => safePoints(b.usedAt) - safePoints(a.usedAt))
+        .map((c) => {
+          const student = c.usedBy ? studentById.get(c.usedBy) : undefined;
+          return {
+            id: c.id,
+            code: c.code || c.id,
+            category: c.category || 'Other',
+            value: safePoints(c.value),
+            teacher: c.teacher || DASH,
+            student: studentDisplayName(student),
+            usedAt: formatDateTime(c.usedAt),
+            createdAt: formatDate(c.createdAt),
+          };
+        }),
+    [coupons, studentById],
+  );
 
   const classRows = useMemo(() => {
     const list = scope === 'school' ? classes : classesForScope;
@@ -147,8 +381,23 @@ export function SchoolReportsPanel({
         name: cl.name,
         primary: teacherNameById(teachers, cl.primaryTeacherId),
         count: students.filter((s) => s.classId === cl.id).length,
+        points: students.filter((s) => s.classId === cl.id).reduce((sum, s) => sum + safePoints(s.points), 0),
+        lifetime: students.filter((s) => s.classId === cl.id).reduce((sum, s) => sum + safePoints(s.lifetimePoints ?? s.points), 0),
       }));
   }, [scope, classes, classesForScope, teachers, students]);
+
+  const categoryTotals = useMemo(
+    () =>
+      categoriesInScope
+        .map((category) => ({
+          id: category.id,
+          name: category.name,
+          points: students.reduce((sum, student) => sum + safePoints(student.categoryPoints?.[category.name]), 0),
+        }))
+        .filter((row) => row.points > 0)
+        .sort((a, b) => b.points - a.points),
+    [categoriesInScope, students],
+  );
 
   const scopeLabel =
     scope === 'school'
@@ -156,6 +405,13 @@ export function SchoolReportsPanel({
       : teacherName
         ? `Teacher: ${teacherName}`
         : 'My classes & students';
+
+  const selectedClassLabel =
+    classFilter === 'all'
+      ? 'All classes'
+      : classFilter === 'unassigned'
+        ? 'Unassigned students'
+        : classes.find((c) => c.id === classFilter)?.name ?? 'Selected class';
 
   const [printing, setPrinting] = useState(false);
   const [generatedAt, setGeneratedAt] = useState('');
@@ -165,21 +421,287 @@ export function SchoolReportsPanel({
     setPrinting(true);
   }, []);
 
+  const runCsvExport = useCallback(() => {
+    const baseName = `${(schoolName || 'school').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase()}-${reportKind}`;
+    const generated = new Date().toISOString().slice(0, 10);
+    const meta = [
+      ['School', schoolName || 'School'],
+      ['Scope', scopeLabel],
+      ['Class filter', selectedClassLabel],
+      ['Date range', dateRangeLabel],
+      ['Generated', new Date().toLocaleString()],
+      [],
+    ];
+
+    if (reportKind === 'summary') {
+      downloadCsv(`${baseName}-${generated}.csv`, [
+        ...meta,
+        ['Metric', 'Value'],
+        ['Students in scope', students.length],
+        [scope === 'school' ? 'Classes' : 'My classes', scope === 'school' ? classes.length : classesForScope.length],
+        ['Teachers', scope === 'school' ? teachers.length : DASH],
+        ['Total current points', students.reduce((sum, s) => sum + safePoints(s.points), 0)],
+        ['Total lifetime points', lifetimeIssued],
+        ['Coupons redeemed', usedCouponsCount],
+        ['Coupon point value redeemed', totalCouponValueRedeemed],
+        ['Incentive categories', categoriesInScope.length],
+        ['Prizes listed', prizesInScope.length],
+      ]);
+      return;
+    }
+
+    if (reportKind === 'roster' || reportKind === 'balances') {
+      const categoryNames = includeCategoryColumns ? categoriesInScope.map((c) => c.name) : [];
+      downloadCsv(`${baseName}-${generated}.csv`, [
+        ...meta,
+        [
+          'Student',
+          'Class',
+          ...(includeDates ? ['Student created'] : []),
+          'Current points',
+          'Lifetime points',
+          ...(includeIds ? ['ID / NFC'] : []),
+          ...categoryNames,
+        ],
+        ...rosterRows.map((row) => [
+          row.name,
+          row.cls,
+          ...(includeDates ? [row.createdAt] : []),
+          row.points,
+          row.lifetime,
+          ...(includeIds ? [row.nfc] : []),
+          ...categoryNames.map((name) => safePoints(row.categoryPoints[name])),
+        ]),
+      ]);
+      return;
+    }
+
+    if (reportKind === 'redemptions') {
+      downloadCsv(`${baseName}-${generated}.csv`, [
+        ...meta,
+        ['Redeemed date', ...(includeDates ? ['Created date'] : []), 'Student', 'Category', 'Value', 'Teacher', 'Code'],
+        ...redemptionRows.map((row) => [
+          row.usedAt,
+          ...(includeDates ? [row.createdAt] : []),
+          row.student,
+          row.category,
+          row.value,
+          row.teacher,
+          row.code,
+        ]),
+      ]);
+      return;
+    }
+
+    if (reportKind === 'coupons') {
+      downloadCsv(`${baseName}-${generated}.csv`, [
+        ...meta,
+        [
+          'Category',
+          ...(includeDates ? ['First created', 'Last created', 'First expiration', 'Last expiration'] : []),
+          'Unused count',
+          'Redeemed count',
+          'Expired count',
+          'Unused face value',
+          'Redeemed value',
+        ],
+        ...couponAgg.map(([cat, row]) => [
+          cat,
+          ...(includeDates
+            ? [formatDate(row.firstCreatedAt), formatDate(row.lastCreatedAt), formatDate(row.firstExpiresAt), formatDate(row.lastExpiresAt)]
+            : []),
+          row.unused,
+          row.used,
+          row.expired,
+          row.valueUnused,
+          row.valueUsed,
+        ]),
+      ]);
+      return;
+    }
+
+    if (reportKind === 'prizes') {
+      downloadCsv(`${baseName}-${generated}.csv`, [
+        ...meta,
+        ['Prize', 'Cost', 'Stock status', 'Quantity'],
+        ...prizes
+          .sort((a, b) => a.name.localeCompare(b.name))
+          .map((p) => [p.name, safePoints(p.points), p.inStock ? 'In stock' : 'Out of stock', typeof p.stockCount === 'number' ? p.stockCount : 'Unlimited']),
+      ]);
+      return;
+    }
+
+    downloadCsv(`${baseName}-${generated}.csv`, [
+      ...meta,
+      ['Class', 'Primary teacher', 'Students in scope', 'Current points', 'Lifetime points'],
+      ...classRows.map((row) => [row.name, row.primary, row.count, row.points, row.lifetime]),
+    ]);
+  }, [
+    reportKind,
+    schoolName,
+    scopeLabel,
+    selectedClassLabel,
+    students,
+    scope,
+    classes.length,
+    classesForScope.length,
+    teachers.length,
+    lifetimeIssued,
+    usedCouponsCount,
+    totalCouponValueRedeemed,
+    categoriesInScope,
+    prizesInScope.length,
+    includeCategoryColumns,
+    includeDates,
+    includeIds,
+    dateRangeLabel,
+    rosterRows,
+    redemptionRows,
+    couponAgg,
+    prizes,
+    classRows,
+  ]);
+
   useEffect(() => {
     if (!printing) return;
+    let settled = false;
     document.body.classList.add('school-reports-printing');
-    const timer = window.setTimeout(() => window.print(), 150);
+
     const done = () => {
+      if (settled) return;
+      settled = true;
       document.body.classList.remove('school-reports-printing');
       setPrinting(false);
     };
+
+    const printTimer = window.setTimeout(() => {
+      try {
+        window.print();
+      } catch {
+        done();
+      }
+    }, 150);
+    const fallbackTimer = window.setTimeout(done, 60000);
+
     window.addEventListener('afterprint', done);
     return () => {
-      window.clearTimeout(timer);
+      window.clearTimeout(printTimer);
+      window.clearTimeout(fallbackTimer);
       window.removeEventListener('afterprint', done);
       document.body.classList.remove('school-reports-printing');
     };
   }, [printing]);
+
+  const SummaryReport = () => (
+    <section className="space-y-4">
+      <h2 className="text-lg font-bold border-b border-neutral-400 pb-1">Executive summary</h2>
+      <table className="w-full border-collapse border border-black text-sm">
+        <tbody>
+          <tr>
+            <td className="border border-black p-2 font-semibold">Students in scope</td>
+            <td className="border border-black p-2 text-right">{students.length}</td>
+          </tr>
+          <tr>
+            <td className="border border-black p-2 font-semibold">{scope === 'school' ? 'Classes' : 'My classes'}</td>
+            <td className="border border-black p-2 text-right">{scope === 'school' ? classes.length : classesForScope.length}</td>
+          </tr>
+          {scope === 'school' ? (
+            <tr>
+              <td className="border border-black p-2 font-semibold">Teachers</td>
+              <td className="border border-black p-2 text-right">{teachers.length}</td>
+            </tr>
+          ) : null}
+          <tr>
+            <td className="border border-black p-2 font-semibold">Current points held</td>
+            <td className="border border-black p-2 text-right">{students.reduce((sum, s) => sum + safePoints(s.points), 0).toLocaleString()} pts</td>
+          </tr>
+          <tr>
+            <td className="border border-black p-2 font-semibold">Total lifetime points</td>
+            <td className="border border-black p-2 text-right">{lifetimeIssued.toLocaleString()} pts</td>
+          </tr>
+          <tr>
+            <td className="border border-black p-2 font-semibold">Coupons redeemed</td>
+            <td className="border border-black p-2 text-right">{usedCouponsCount.toLocaleString()}</td>
+          </tr>
+          <tr>
+            <td className="border border-black p-2 font-semibold">Coupon point value redeemed</td>
+            <td className="border border-black p-2 text-right">{totalCouponValueRedeemed.toLocaleString()} pts</td>
+          </tr>
+          <tr>
+            <td className="border border-black p-2 font-semibold">Incentive categories</td>
+            <td className="border border-black p-2 text-right">{categoriesInScope.length}</td>
+          </tr>
+          <tr>
+            <td className="border border-black p-2 font-semibold">Prizes listed</td>
+            <td className="border border-black p-2 text-right">{prizesInScope.length}</td>
+          </tr>
+        </tbody>
+      </table>
+      {categoryTotals.length > 0 ? (
+        <table className="w-full border-collapse border border-black text-[10pt]">
+          <thead>
+            <tr className="bg-neutral-100">
+              <th className="border border-black p-1.5 text-left">Top category balances</th>
+              <th className="border border-black p-1.5 text-right">Points</th>
+            </tr>
+          </thead>
+          <tbody>
+            {categoryTotals.slice(0, 8).map((row) => (
+              <tr key={row.id}>
+                <td className="border border-black p-1.5">{row.name}</td>
+                <td className="border border-black p-1.5 text-right">{row.points.toLocaleString()}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : null}
+    </section>
+  );
+
+  const RosterReport = ({ balancesOnly = false }: { balancesOnly?: boolean }) => (
+    <section className="space-y-3">
+      <h2 className="text-lg font-bold border-b border-neutral-400 pb-1">{balancesOnly ? 'Student balances' : 'Student roster'}</h2>
+      <table className="w-full border-collapse border border-black text-[10pt]">
+        <thead>
+          <tr className="bg-neutral-100">
+            <th className="border border-black p-1.5 text-left">Student</th>
+            <th className="border border-black p-1.5 text-left">Class</th>
+            {includeDates ? <th className="border border-black p-1.5 text-left">Created</th> : null}
+            <th className="border border-black p-1.5 text-right">Points</th>
+            <th className="border border-black p-1.5 text-right">Lifetime</th>
+            {!balancesOnly && includeIds ? <th className="border border-black p-1.5 text-left">ID / NFC</th> : null}
+            {includeCategoryColumns
+              ? categoriesInScope.map((category) => (
+                  <th key={category.id} className="border border-black p-1.5 text-right">
+                    {category.name}
+                  </th>
+                ))
+              : null}
+          </tr>
+        </thead>
+        <tbody>
+          {rosterRows.map((row) => (
+            <tr key={row.id}>
+              <td className="border border-black p-1.5">{row.name}</td>
+              <td className="border border-black p-1.5">{row.cls}</td>
+              {includeDates ? <td className="border border-black p-1.5">{row.createdAt}</td> : null}
+              <td className="border border-black p-1.5 text-right">{row.points.toLocaleString()}</td>
+              <td className="border border-black p-1.5 text-right">{row.lifetime.toLocaleString()}</td>
+              {!balancesOnly && includeIds ? <td className="border border-black p-1.5 font-mono text-[9pt]">{row.nfc}</td> : null}
+              {includeCategoryColumns
+                ? categoriesInScope.map((category) => (
+                    <td key={category.id} className="border border-black p-1.5 text-right">
+                      {safePoints(row.categoryPoints[category.name]).toLocaleString()}
+                    </td>
+                  ))
+                : null}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {rosterRows.length === 0 ? <p className="text-sm italic">No students match this report.</p> : null}
+    </section>
+  );
 
   const printNode =
     printing && typeof document !== 'undefined'
@@ -189,102 +711,64 @@ export function SchoolReportsPanel({
             className="school-reports-print-root bg-white text-black text-[11pt] leading-snug"
           >
             <header className="border-b border-black pb-3 mb-4">
-              <h1 className="text-xl font-bold">{schoolName || 'School'} — Reports</h1>
+              <h1 className="text-xl font-bold">{schoolName || 'School'} - Reports</h1>
               <p className="text-sm mt-1">{scopeLabel}</p>
-              <p className="text-xs text-neutral-700 mt-2">Generated {generatedAt}</p>
+              <p className="text-xs text-neutral-700 mt-1">Class filter: {selectedClassLabel}</p>
+              <p className="text-xs text-neutral-700 mt-1">Date range: {dateRangeLabel}</p>
+              <p className="text-xs text-neutral-700 mt-1">Generated {generatedAt}</p>
             </header>
 
-            {reportKind === 'summary' && (
-              <section className="space-y-4">
-                <h2 className="text-lg font-bold border-b border-neutral-400 pb-1">Executive summary</h2>
-                <table className="w-full border-collapse border border-black text-sm">
-                  <tbody>
-                    <tr>
-                      <td className="border border-black p-2 font-semibold">Students in scope</td>
-                      <td className="border border-black p-2 text-right">{students.length}</td>
-                    </tr>
-                    <tr>
-                      <td className="border border-black p-2 font-semibold">
-                        {scope === 'school' ? 'Classes' : 'My classes'}
-                      </td>
-                      <td className="border border-black p-2 text-right">
-                        {scope === 'school' ? classes.length : classesForScope.length}
-                      </td>
-                    </tr>
-                    {scope === 'school' ? (
-                      <tr>
-                        <td className="border border-black p-2 font-semibold">Teachers</td>
-                        <td className="border border-black p-2 text-right">{teachers.length}</td>
-                      </tr>
-                    ) : null}
-                    <tr>
-                      <td className="border border-black p-2 font-semibold">Total lifetime points (issued, in scope)</td>
-                      <td className="border border-black p-2 text-right">{lifetimeIssued.toLocaleString()} pts</td>
-                    </tr>
-                    <tr>
-                      <td className="border border-black p-2 font-semibold">Coupons redeemed (in scope)</td>
-                      <td className="border border-black p-2 text-right">{usedCouponsCount.toLocaleString()}</td>
-                    </tr>
-                    <tr>
-                      <td className="border border-black p-2 font-semibold">Coupon point value redeemed</td>
-                      <td className="border border-black p-2 text-right">{totalCouponValueRedeemed.toLocaleString()} pts</td>
-                    </tr>
-                    <tr>
-                      <td className="border border-black p-2 font-semibold">Incentive categories</td>
-                      <td className="border border-black p-2 text-right">{categoriesInScope.length}</td>
-                    </tr>
-                    <tr>
-                      <td className="border border-black p-2 font-semibold">Prizes listed (in scope)</td>
-                      <td className="border border-black p-2 text-right">{prizes.length}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </section>
-            )}
-
-            {reportKind === 'roster' && (
+            {reportKind === 'summary' && <SummaryReport />}
+            {reportKind === 'roster' && <RosterReport />}
+            {reportKind === 'balances' && <RosterReport balancesOnly />}
+            {reportKind === 'redemptions' && (
               <section className="space-y-3">
-                <h2 className="text-lg font-bold border-b border-neutral-400 pb-1">Student roster</h2>
+                <h2 className="text-lg font-bold border-b border-neutral-400 pb-1">Coupon redemptions</h2>
                 <table className="w-full border-collapse border border-black text-[10pt]">
                   <thead>
                     <tr className="bg-neutral-100">
+                      <th className="border border-black p-1.5 text-left">Redeemed</th>
+                      {includeDates ? <th className="border border-black p-1.5 text-left">Created</th> : null}
                       <th className="border border-black p-1.5 text-left">Student</th>
-                      <th className="border border-black p-1.5 text-left">Class</th>
-                      <th className="border border-black p-1.5 text-right">Points</th>
-                      <th className="border border-black p-1.5 text-right">Lifetime</th>
-                      <th className="border border-black p-1.5 text-left">ID / NFC</th>
+                      <th className="border border-black p-1.5 text-left">Category</th>
+                      <th className="border border-black p-1.5 text-right">Value</th>
+                      <th className="border border-black p-1.5 text-left">Teacher</th>
+                      <th className="border border-black p-1.5 text-left">Code</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {rosterRows.map((row) => (
+                    {redemptionRows.map((row) => (
                       <tr key={row.id}>
-                        <td className="border border-black p-1.5">{row.name}</td>
-                        <td className="border border-black p-1.5">{row.cls}</td>
-                        <td className="border border-black p-1.5 text-right">{row.points}</td>
-                        <td className="border border-black p-1.5 text-right">{row.lifetime}</td>
-                        <td className="border border-black p-1.5 font-mono text-[9pt]">{row.nfc}</td>
+                        <td className="border border-black p-1.5">{row.usedAt}</td>
+                        {includeDates ? <td className="border border-black p-1.5">{row.createdAt}</td> : null}
+                        <td className="border border-black p-1.5">{row.student}</td>
+                        <td className="border border-black p-1.5">{row.category}</td>
+                        <td className="border border-black p-1.5 text-right">{row.value.toLocaleString()}</td>
+                        <td className="border border-black p-1.5">{row.teacher}</td>
+                        <td className="border border-black p-1.5 font-mono text-[9pt]">{row.code}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-                {rosterRows.length === 0 ? <p className="text-sm italic">No students in this scope.</p> : null}
+                {redemptionRows.length === 0 ? <p className="text-sm italic">No redeemed coupons match this report.</p> : null}
               </section>
             )}
-
             {reportKind === 'coupons' && (
               <section className="space-y-3">
                 <h2 className="text-lg font-bold border-b border-neutral-400 pb-1">Coupon inventory</h2>
                 <p className="text-sm">
-                  Total coupons in scope: {coupons.length} ({coupons.filter((c) => !c.used).length} unused,{' '}
-                  {usedCouponsCount} redeemed).
+                  Showing {coupons.length} of {couponsInScope.length} coupons in scope.
                 </p>
                 <table className="w-full border-collapse border border-black text-[10pt]">
                   <thead>
                     <tr className="bg-neutral-100">
                       <th className="border border-black p-1.5 text-left">Category</th>
+                      {includeDates ? <th className="border border-black p-1.5 text-left">Created range</th> : null}
+                      {includeDates ? <th className="border border-black p-1.5 text-left">Expiration range</th> : null}
                       <th className="border border-black p-1.5 text-right">Unused #</th>
                       <th className="border border-black p-1.5 text-right">Redeemed #</th>
-                      <th className="border border-black p-1.5 text-right">Pts (unused face value)</th>
+                      <th className="border border-black p-1.5 text-right">Expired #</th>
+                      <th className="border border-black p-1.5 text-right">Pts unused</th>
                       <th className="border border-black p-1.5 text-right">Pts redeemed</th>
                     </tr>
                   </thead>
@@ -292,18 +776,28 @@ export function SchoolReportsPanel({
                     {couponAgg.map(([cat, v]) => (
                       <tr key={cat}>
                         <td className="border border-black p-1.5">{cat}</td>
+                        {includeDates ? (
+                          <td className="border border-black p-1.5">
+                            {formatDate(v.firstCreatedAt)} to {formatDate(v.lastCreatedAt)}
+                          </td>
+                        ) : null}
+                        {includeDates ? (
+                          <td className="border border-black p-1.5">
+                            {formatDate(v.firstExpiresAt)} to {formatDate(v.lastExpiresAt)}
+                          </td>
+                        ) : null}
                         <td className="border border-black p-1.5 text-right">{v.unused}</td>
                         <td className="border border-black p-1.5 text-right">{v.used}</td>
+                        <td className="border border-black p-1.5 text-right">{v.expired}</td>
                         <td className="border border-black p-1.5 text-right">{v.valueUnused.toLocaleString()}</td>
                         <td className="border border-black p-1.5 text-right">{v.valueUsed.toLocaleString()}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-                {couponAgg.length === 0 ? <p className="text-sm italic">No coupons in this scope.</p> : null}
+                {couponAgg.length === 0 ? <p className="text-sm italic">No coupons match this report.</p> : null}
               </section>
             )}
-
             {reportKind === 'prizes' && (
               <section className="space-y-3">
                 <h2 className="text-lg font-bold border-b border-neutral-400 pb-1">Prize catalog</h2>
@@ -311,28 +805,25 @@ export function SchoolReportsPanel({
                   <thead>
                     <tr className="bg-neutral-100">
                       <th className="border border-black p-1.5 text-left">Prize</th>
-                      <th className="border border-black p-1.5 text-right">Cost (pts)</th>
+                      <th className="border border-black p-1.5 text-right">Cost</th>
                       <th className="border border-black p-1.5 text-left">Stock</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {[...prizes]
-                      .sort((a, b) => a.name.localeCompare(b.name))
-                      .map((p) => (
-                        <tr key={p.id}>
-                          <td className="border border-black p-1.5">{p.name}</td>
-                          <td className="border border-black p-1.5 text-right">{p.points}</td>
-                          <td className="border border-black p-1.5">
-                            {!p.inStock ? 'Out of stock' : typeof p.stockCount === 'number' ? p.stockCount : 'Unlimited'}
-                          </td>
-                        </tr>
-                      ))}
+                    {[...prizes].sort((a, b) => a.name.localeCompare(b.name)).map((p) => (
+                      <tr key={p.id}>
+                        <td className="border border-black p-1.5">{p.name}</td>
+                        <td className="border border-black p-1.5 text-right">{safePoints(p.points).toLocaleString()}</td>
+                        <td className="border border-black p-1.5">
+                          {!p.inStock ? 'Out of stock' : typeof p.stockCount === 'number' ? p.stockCount : 'Unlimited'}
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
-                {prizes.length === 0 ? <p className="text-sm italic">No prizes in this scope.</p> : null}
+                {prizes.length === 0 ? <p className="text-sm italic">No prizes match this report.</p> : null}
               </section>
             )}
-
             {reportKind === 'classes' && (
               <section className="space-y-3">
                 <h2 className="text-lg font-bold border-b border-neutral-400 pb-1">Classes overview</h2>
@@ -341,7 +832,9 @@ export function SchoolReportsPanel({
                     <tr className="bg-neutral-100">
                       <th className="border border-black p-1.5 text-left">Class</th>
                       <th className="border border-black p-1.5 text-left">Primary teacher</th>
-                      <th className="border border-black p-1.5 text-right">Students (in scope)</th>
+                      <th className="border border-black p-1.5 text-right">Students</th>
+                      <th className="border border-black p-1.5 text-right">Current points</th>
+                      <th className="border border-black p-1.5 text-right">Lifetime points</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -350,15 +843,12 @@ export function SchoolReportsPanel({
                         <td className="border border-black p-1.5">{row.name}</td>
                         <td className="border border-black p-1.5">{row.primary}</td>
                         <td className="border border-black p-1.5 text-right">{row.count}</td>
+                        <td className="border border-black p-1.5 text-right">{row.points.toLocaleString()}</td>
+                        <td className="border border-black p-1.5 text-right">{row.lifetime.toLocaleString()}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-                {scope === 'teacher' ? (
-                  <p className="text-xs text-neutral-600 mt-2">
-                    Student counts include only students assigned to you or your classes.
-                  </p>
-                ) : null}
               </section>
             )}
           </div>,
@@ -375,17 +865,17 @@ export function SchoolReportsPanel({
             Reports
           </CardTitle>
           <CardDescription>
-            Printable summaries for documentation and meetings ({scopeLabel}). Choose a report below, then use Print / PDF.
+            Printable and exportable summaries for documentation and meetings ({scopeLabel}).
           </CardDescription>
           <p className="text-xs text-muted-foreground mt-2">
-            <Helper content="Opens your browser print dialog — you can print to paper or choose Save as PDF.">
-              Tip: Save as PDF from the print dialog for a digital copy.
+            <Helper content="Print opens your browser dialog. CSV downloads the currently selected report with the filters shown here.">
+              Print to paper, save as PDF, or export the current report as CSV.
             </Helper>
           </p>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-end gap-4">
-            <div className="space-y-2 flex-1 max-w-md">
+          <div className="grid gap-4 lg:grid-cols-[minmax(220px,1fr)_minmax(180px,0.8fr)_auto] lg:items-end">
+            <div className="space-y-2">
               <Label htmlFor="report-kind">Report type</Label>
               <Select value={reportKind} onValueChange={(v) => setReportKind(v as ReportKind)}>
                 <SelectTrigger id="report-kind" className="rounded-xl h-11">
@@ -394,25 +884,160 @@ export function SchoolReportsPanel({
                 <SelectContent>
                   <SelectItem value="summary">Executive summary</SelectItem>
                   <SelectItem value="roster">Student roster</SelectItem>
+                  <SelectItem value="balances">Student balances</SelectItem>
+                  <SelectItem value="redemptions">Coupon redemptions</SelectItem>
                   <SelectItem value="coupons">Coupon inventory</SelectItem>
                   <SelectItem value="prizes">Prize catalog</SelectItem>
                   <SelectItem value="classes">Classes overview</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <Button type="button" className="rounded-xl gap-2 h-11 shrink-0" onClick={runPrint}>
-              <Printer className="w-4 h-4" aria-hidden />
-              Print / PDF
-            </Button>
+            <div className="space-y-2">
+              <Label htmlFor="class-filter">Class filter</Label>
+              <Select value={classFilter} onValueChange={setClassFilter}>
+                <SelectTrigger id="class-filter" className="rounded-xl h-11">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All classes</SelectItem>
+                  <SelectItem value="unassigned">Unassigned students</SelectItem>
+                  {classOptions.map((cl) => (
+                    <SelectItem key={cl.id} value={cl.id}>
+                      {cl.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button type="button" variant="outline" className="rounded-xl gap-2 h-11 shrink-0" onClick={runCsvExport}>
+                <Download className="w-4 h-4" aria-hidden />
+                CSV
+              </Button>
+              <Button type="button" className="rounded-xl gap-2 h-11 shrink-0" onClick={runPrint}>
+                <Printer className="w-4 h-4" aria-hidden />
+                Print / PDF
+              </Button>
+            </div>
           </div>
 
-          {/* Screen preview (mirrors print layout) */}
+          <div className="rounded-xl border bg-background p-4">
+            <div className="flex items-center gap-2 text-sm font-bold mb-4">
+              <SlidersHorizontal className="w-4 h-4 text-primary" aria-hidden />
+              Options
+            </div>
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+              <div className="space-y-2">
+                <Label htmlFor="roster-sort">Student sort</Label>
+                <Select value={rosterSort} onValueChange={(v) => setRosterSort(v as RosterSort)}>
+                  <SelectTrigger id="roster-sort" className="rounded-xl h-10">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="class-name">Class, then name</SelectItem>
+                    <SelectItem value="name">Student name</SelectItem>
+                    <SelectItem value="points-desc">Current points high to low</SelectItem>
+                    <SelectItem value="lifetime-desc">Lifetime points high to low</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="date-range">Date range</Label>
+                <Select value={dateRange} onValueChange={(v) => setDateRange(v as DateRangeFilter)}>
+                  <SelectTrigger id="date-range" className="rounded-xl h-10">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All dates</SelectItem>
+                    <SelectItem value="today">Today</SelectItem>
+                    <SelectItem value="7-days">Last 7 days</SelectItem>
+                    <SelectItem value="30-days">Last 30 days</SelectItem>
+                    <SelectItem value="custom">Custom range</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="coupon-status">Coupon status</Label>
+                <Select value={couponStatus} onValueChange={(v) => setCouponStatus(v as CouponStatusFilter)}>
+                  <SelectTrigger id="coupon-status" className="rounded-xl h-10">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All coupons</SelectItem>
+                    <SelectItem value="unused">Unused only</SelectItem>
+                    <SelectItem value="redeemed">Redeemed only</SelectItem>
+                    <SelectItem value="expired">Expired only</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="prize-stock">Prize stock</Label>
+                <Select value={prizeStock} onValueChange={(v) => setPrizeStock(v as PrizeStockFilter)}>
+                  <SelectTrigger id="prize-stock" className="rounded-xl h-10">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All prizes</SelectItem>
+                    <SelectItem value="in-stock">In stock</SelectItem>
+                    <SelectItem value="out-of-stock">Out of stock</SelectItem>
+                    <SelectItem value="limited">Limited quantity</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-3 pt-1">
+                <label className="flex items-center gap-2 text-sm">
+                  <Checkbox checked={includeIds} onCheckedChange={(checked) => setIncludeIds(checked === true)} />
+                  Include student ID / NFC
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <Checkbox checked={includeDates} onCheckedChange={(checked) => setIncludeDates(checked === true)} />
+                  Include date columns
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={includeCategoryColumns}
+                    onCheckedChange={(checked) => setIncludeCategoryColumns(checked === true)}
+                  />
+                  Include category columns
+                </label>
+              </div>
+            </div>
+            {dateRange === 'custom' ? (
+              <div className="grid gap-4 md:grid-cols-2 mt-4 max-w-xl">
+                <div className="space-y-2">
+                  <Label htmlFor="report-start-date">Start date</Label>
+                  <Input
+                    id="report-start-date"
+                    type="date"
+                    value={customStartDate}
+                    onChange={(event) => setCustomStartDate(event.target.value)}
+                    className="rounded-xl h-10"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="report-end-date">End date</Label>
+                  <Input
+                    id="report-end-date"
+                    type="date"
+                    value={customEndDate}
+                    onChange={(event) => setCustomEndDate(event.target.value)}
+                    className="rounded-xl h-10"
+                  />
+                </div>
+              </div>
+            ) : null}
+          </div>
+
           <div className="rounded-xl border bg-muted/30 p-4 overflow-x-auto">
             <div className="min-w-[640px] bg-white text-foreground rounded-lg border p-6 shadow-sm">
               <header className="border-b pb-3 mb-4">
-                <h2 className="text-lg font-bold">{schoolName || 'School'} — Reports</h2>
-                <p className="text-sm text-muted-foreground mt-1">{scopeLabel}</p>
-                <p className="text-xs text-muted-foreground mt-2">Preview — use Print / PDF for a clean copy</p>
+                <h2 className="text-lg font-bold">{schoolName || 'School'} - Reports</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {scopeLabel} - {selectedClassLabel}
+                </p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  {reportTitle(reportKind)} preview - {dateRangeLabel}
+                </p>
               </header>
               {reportKind === 'summary' && (
                 <ul className="grid sm:grid-cols-2 gap-3 text-sm">
@@ -425,7 +1050,7 @@ export function SchoolReportsPanel({
                     <span className="font-bold">{usedCouponsCount}</span>
                   </li>
                   <li className="flex justify-between border-b border-dashed pb-2">
-                    <span>Lifetime points (in scope)</span>
+                    <span>Lifetime points</span>
                     <span className="font-bold">{lifetimeIssued.toLocaleString()} pts</span>
                   </li>
                   <li className="flex justify-between border-b border-dashed pb-2">
@@ -436,22 +1061,33 @@ export function SchoolReportsPanel({
               )}
               {reportKind === 'roster' && (
                 <p className="text-sm text-muted-foreground">
-                  {rosterRows.length} student{rosterRows.length === 1 ? '' : 's'} — full table in printout.
+                  {rosterRows.length} student{rosterRows.length === 1 ? '' : 's'} - sorted by {rosterSort.replace('-', ' ')}.
+                </p>
+              )}
+              {reportKind === 'balances' && (
+                <p className="text-sm text-muted-foreground">
+                  {rosterRows.length} student balance row{rosterRows.length === 1 ? '' : 's'}
+                  {includeCategoryColumns ? ` with ${categoriesInScope.length} category column${categoriesInScope.length === 1 ? '' : 's'}` : ''}.
+                </p>
+              )}
+              {reportKind === 'redemptions' && (
+                <p className="text-sm text-muted-foreground">
+                  {redemptionRows.length} redeemed coupon{redemptionRows.length === 1 ? '' : 's'} match the current status filter.
                 </p>
               )}
               {reportKind === 'coupons' && (
                 <p className="text-sm text-muted-foreground">
-                  {coupons.length} coupon{coupons.length === 1 ? '' : 's'} — breakdown by category in printout.
+                  {coupons.length} coupon{coupons.length === 1 ? '' : 's'} - {couponAgg.length} category row{couponAgg.length === 1 ? '' : 's'}.
                 </p>
               )}
               {reportKind === 'prizes' && (
                 <p className="text-sm text-muted-foreground">
-                  {prizes.length} prize{prizes.length === 1 ? '' : 's'} — full list in printout.
+                  {prizes.length} prize{prizes.length === 1 ? '' : 's'} match the current stock filter.
                 </p>
               )}
               {reportKind === 'classes' && (
                 <p className="text-sm text-muted-foreground">
-                  {classRows.length} class{classRows.length === 1 ? '' : 'es'} — details in printout.
+                  {classRows.length} class{classRows.length === 1 ? '' : 'es'} with student counts and point totals.
                 </p>
               )}
             </div>

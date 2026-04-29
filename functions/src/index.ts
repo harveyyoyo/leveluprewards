@@ -1422,6 +1422,70 @@ exports.verifyTeacherPasscode = functions.https.onCall(
 );
 
 // ========================================================================
+// Callable: Staff portal login options (safe public directory)
+// ========================================================================
+
+exports.getStaffPortalLoginOptions = functions.https.onCall(
+  async (data: any, context: functions.https.CallableContext) => {
+    requireAuth(context);
+    requireString(data.schoolId, "schoolId");
+
+    const schoolId = String(data.schoolId).trim().toLowerCase();
+    const db = admin.firestore();
+    const schoolRef = db.collection("schools").doc(schoolId);
+    const schoolDoc = await schoolRef.get();
+
+    if (!schoolDoc.exists) {
+      throw new functions.https.HttpsError("not-found", "School not found.");
+    }
+
+    const [teachersSnap, staffSnap] = await Promise.all([
+      schoolRef.collection("teachers").get(),
+      schoolRef.collection("staffAccounts").get(),
+    ]);
+
+    const teachers = teachersSnap.docs
+      .map((docSnap) => {
+        const row = docSnap.data() as { name?: string; username?: string };
+        const name = typeof row.name === "string" ? row.name.trim() : "";
+        const username = typeof row.username === "string" && row.username.trim()
+          ? row.username.trim()
+          : docSnap.id;
+        if (!name || !username) return null;
+        return {
+          id: docSnap.id,
+          type: "teacher" as const,
+          label: name,
+          username,
+        };
+      })
+      .filter(Boolean);
+
+    const staff = staffSnap.docs
+      .map((docSnap) => {
+        const row = docSnap.data() as {
+          displayName?: string;
+          username?: string;
+          role?: string;
+        };
+        const role = row.role === "secretary" || row.role === "prizeClerk" ? row.role : null;
+        const username = typeof row.username === "string" ? row.username.trim().toLowerCase() : "";
+        const displayName = typeof row.displayName === "string" ? row.displayName.trim() : "";
+        if (!role || !username || !displayName) return null;
+        return {
+          id: docSnap.id,
+          type: role,
+          label: displayName,
+          username,
+        };
+      })
+      .filter(Boolean);
+
+    return { options: [...teachers, ...staff] };
+  }
+);
+
+// ========================================================================
 // Callable: Verify desk staff (secretary / prize clerk) username + passcode
 // ========================================================================
 

@@ -1,24 +1,38 @@
-
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { useAppContext } from '@/components/AppProvider';
+import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { httpsCallable } from 'firebase/functions';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useAppContext } from '@/components/AppProvider';
+import { useFunctions } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import type { Teacher } from '@/lib/types';
 import { LogIn, LogOut, UserCheck, Loader2 } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { TeacherPrinterInner } from './TeacherPrinterInner';
+
+type StaffPortalLoginOption = {
+    id: string;
+    type: 'teacher' | 'secretary' | 'prizeClerk';
+    label: string;
+    username: string;
+};
+
+function staffLoginKey(option: StaffPortalLoginOption) {
+    return `${option.type}:${option.id}`;
+}
+
+function roleLabel(type: StaffPortalLoginOption['type']) {
+    if (type === 'teacher') return 'Teacher';
+    if (type === 'secretary') return 'Coupon printing';
+    return 'Prize desk';
+}
 
 function TeacherPrinterSkeleton() {
     return (
@@ -62,17 +76,18 @@ function TeacherPrinter(props: { teacherName: string; teacherId: string; onLogou
 export default function TeacherPage() {
     const { loginState, isInitialized, schoolId, login, logout, isAdmin, isTeacher, userName, userId, teacherDocId } = useAppContext();
     const router = useRouter();
-    const firestore = useFirestore();
+    const searchParams = useSearchParams();
+    const functions = useFunctions();
     const { settings } = useSettings();
     const isGraphic = settings.graphicMode === 'graphics';
     const playSound = useArcadeSound();
     const { toast } = useToast();
 
-    const [selectedLoginName, setSelectedLoginName] = useState('');
+    const [loginOptions, setLoginOptions] = useState<StaffPortalLoginOption[]>([]);
+    const [optionsLoading, setOptionsLoading] = useState(true);
+    const [selectedLoginKey, setSelectedLoginKey] = useState('');
     const [passcode, setPasscode] = useState('');
-
-    const teachersQuery = useMemoFirebase(() => (schoolId ? collection(firestore, 'schools', schoolId, 'teachers') : null), [firestore, schoolId]);
-    const { data: teachers, isLoading: teachersLoading } = useCollection<Teacher>(teachersQuery);
+    const directAccountKey = searchParams.get('account') || '';
 
     useEffect(() => {
         if (!isInitialized || !schoolId) return;
@@ -89,24 +104,79 @@ export default function TeacherPage() {
         }
     }, [isInitialized, loginState, router]);
 
+    useEffect(() => {
+        if (!schoolId) return;
+        let cancelled = false;
+
+        const loadOptions = async () => {
+            setOptionsLoading(true);
+            try {
+                const getOptions = httpsCallable(functions, 'getStaffPortalLoginOptions');
+                const result = await getOptions({ schoolId });
+                const options = ((result.data as { options?: StaffPortalLoginOption[] })?.options || []).filter(
+                    (option) => option?.id && option?.type && option?.label && option?.username,
+                );
+                if (!cancelled) {
+                    setLoginOptions(options);
+                }
+            } catch (error) {
+                if (!cancelled) {
+                    setLoginOptions([]);
+                    toast({
+                        variant: 'destructive',
+                        title: 'Could not load staff list',
+                        description: error instanceof Error ? error.message : 'Try refreshing the page.',
+                    });
+                }
+            } finally {
+                if (!cancelled) setOptionsLoading(false);
+            }
+        };
+
+        void loadOptions();
+        return () => {
+            cancelled = true;
+        };
+    }, [functions, schoolId, toast]);
+
+    useEffect(() => {
+        if (!directAccountKey || loginOptions.length === 0) return;
+        const match = loginOptions.find((option) => staffLoginKey(option) === directAccountKey);
+        if (match) {
+            setSelectedLoginKey(staffLoginKey(match));
+        }
+    }, [directAccountKey, loginOptions]);
+
     const handleLogin = async () => {
-        if (!selectedLoginName || !passcode) {
+        if (!selectedLoginKey || !passcode) {
             playSound('error');
             toast({ variant: 'destructive', title: 'Please select your name and enter a passcode.' });
             return;
         }
 
-        const teacher = teachers?.find((t) => (t.username || t.id) === selectedLoginName);
-        const result = await login('teacher', {
+        const selected = loginOptions.find((option) => staffLoginKey(option) === selectedLoginKey);
+        if (!selected) {
+            playSound('error');
+            toast({ variant: 'destructive', title: 'Choose a staff account from the list.' });
+            return;
+        }
+
+        const result = await login(selected.type, {
             schoolId: schoolId || undefined,
-            username: selectedLoginName,
+            username: selected.username,
             passcode,
-            teacherName: teacher?.name,
-            teacherDocId: teacher?.id,
+            teacherName: selected.label,
+            teacherDocId: selected.type === 'teacher' ? selected.id : undefined,
         });
+
         if (result) {
             playSound('login');
             toast({ title: 'Logged in successfully.' });
+            if (selected.type === 'secretary') {
+                router.replace(`/${schoolId}/secretary`);
+            } else if (selected.type === 'prizeClerk') {
+                router.replace(`/${schoolId}/prize-clerk`);
+            }
         } else {
             playSound('error');
             toast({ variant: 'destructive', title: 'Login failed', description: 'Check your passcode and try again.' });
@@ -136,6 +206,9 @@ export default function TeacherPage() {
         return <TeacherPrinter teacherName={displayName} teacherId={validTeacherId} onLogout={handleLogout} />;
     }
 
+    const selectedOption = loginOptions.find((option) => staffLoginKey(option) === selectedLoginKey);
+    const directAccountSelected = !!directAccountKey && !!selectedOption && staffLoginKey(selectedOption) === directAccountKey;
+
     return (
         <ErrorBoundary name="TeacherPage">
             <div className={`min-h-screen flex flex-col items-center justify-center transition-colors duration-500 py-10 px-4 ${isGraphic ? 'bg-gradient-to-br from-indigo-950/20 to-slate-900/20' : 'bg-slate-100'}`}>
@@ -148,8 +221,8 @@ export default function TeacherPage() {
                             <UserCheck className="w-10 h-10" />
                         </div>
                         <div>
-                            <CardTitle className={`text-2xl font-black tracking-tight ${isGraphic ? 'text-foreground' : 'text-slate-800'}`}>Teacher Portal</CardTitle>
-                            <CardDescription className={isGraphic ? 'text-muted-foreground' : ''}>Login to grant rewards and print coupons.</CardDescription>
+                            <CardTitle className={`text-2xl font-black tracking-tight ${isGraphic ? 'text-foreground' : 'text-slate-800'}`}>Teacher and Staff Portal</CardTitle>
+                            <CardDescription className={isGraphic ? 'text-muted-foreground' : ''}>Login to use your school staff tools.</CardDescription>
                         </div>
                     </CardHeader>
                     <CardContent className="space-y-6">
@@ -162,22 +235,29 @@ export default function TeacherPage() {
                         >
                             <div className="space-y-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="teacher-username" className={`text-xs font-semibold uppercase tracking-wide ${isGraphic ? 'text-muted-foreground' : 'text-slate-500'}`}>Teacher Name</Label>
-                                    <Select value={selectedLoginName} onValueChange={setSelectedLoginName}>
-                                        <SelectTrigger
-                                            id="teacher-username"
-                                            className={`h-14 rounded-xl text-lg font-bold ${isGraphic ? 'bg-foreground/5 border-border' : 'bg-slate-50'}`}
-                                        >
-                                            <SelectValue placeholder="Select your name..." />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {teachers?.map((t) => (
-                                                <SelectItem key={t.id} value={t.username || t.id}>
-                                                    {t.name}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                    <Label htmlFor="staff-account" className={`text-xs font-semibold uppercase tracking-wide ${isGraphic ? 'text-muted-foreground' : 'text-slate-500'}`}>Staff member</Label>
+                                    {directAccountSelected ? (
+                                        <div className={`min-h-14 rounded-xl border px-4 py-3 ${isGraphic ? 'bg-foreground/5 border-border' : 'bg-slate-50'}`}>
+                                            <p className="text-lg font-bold leading-tight">{selectedOption.label}</p>
+                                            <p className="text-xs text-muted-foreground">{roleLabel(selectedOption.type)}</p>
+                                        </div>
+                                    ) : (
+                                        <Select value={selectedLoginKey} onValueChange={setSelectedLoginKey} disabled={optionsLoading}>
+                                            <SelectTrigger
+                                                id="staff-account"
+                                                className={`h-14 rounded-xl text-lg font-bold ${isGraphic ? 'bg-foreground/5 border-border' : 'bg-slate-50'}`}
+                                            >
+                                                <SelectValue placeholder={optionsLoading ? 'Loading staff...' : 'Select your name...'} />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {loginOptions.map((option) => (
+                                                    <SelectItem key={staffLoginKey(option)} value={staffLoginKey(option)}>
+                                                        {option.label}{option.type === 'teacher' ? '' : ` - ${roleLabel(option.type)}`}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    )}
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="teacher-passcode" className={`text-xs font-semibold uppercase tracking-wide ${isGraphic ? 'text-muted-foreground' : 'text-slate-500'}`}>Passcode</Label>
@@ -192,25 +272,10 @@ export default function TeacherPage() {
                                 </div>
                             </div>
 
-                            <Button type="submit" className="w-full h-16 rounded-2xl font-black text-lg uppercase tracking-widest shadow-xl transition-all active:scale-95 text-primary-foreground bg-primary hover:bg-primary/90 shadow-primary/20" disabled={teachersLoading}>
+                            <Button type="submit" className="w-full h-16 rounded-2xl font-black text-lg uppercase tracking-widest shadow-xl transition-all active:scale-95 text-primary-foreground bg-primary hover:bg-primary/90 shadow-primary/20" disabled={optionsLoading}>
                                 <LogIn className="mr-3 w-6 h-6" /> Login
                             </Button>
                         </form>
-
-                        <div className="text-center pt-4 border-t border-dashed border-border/50 space-y-2 text-xs text-muted-foreground">
-                            <p>Other staff sign-in:</p>
-                            <div className="flex flex-col sm:flex-row gap-2 justify-center">
-                                <Button variant="link" className="h-auto p-0 text-xs" asChild>
-                                    <Link href={`/${schoolId}/secretary`}>Secretary (print coupons)</Link>
-                                </Button>
-                                <span className="hidden sm:inline" aria-hidden="true">
-                                    ·
-                                </span>
-                                <Button variant="link" className="h-auto p-0 text-xs" asChild>
-                                    <Link href={`/${schoolId}/prize-clerk`}>Prize desk</Link>
-                                </Button>
-                            </div>
-                        </div>
                     </CardContent>
                 </Card>
             </div>

@@ -898,6 +898,7 @@ function AdminDashboardInner() {
             <AdminTeachersTab
               teachers={teachers}
               staffAccounts={staffAccounts}
+              schoolId={schoolId!}
               onAddTeacher={() => setIsTeacherModalOpen(true)}
               onEditTeacher={(t) => {
                 setEditingTeacher(t);

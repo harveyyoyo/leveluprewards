@@ -8,3 +8,52 @@
 
  ✓ Starting...
  ✓ Ready in 3.2s
+   Reload env: .env.local
+   Reload env: .env.local
+  ▲ Next.js 14.2.35
+  - Local:        http://localhost:4010
+  - Environments: .env.local, .env
+
+ ✓ Starting...
+ ✓ Ready in 4.6s
+ ○ Compiling /src/middleware ...
+ ✓ Compiled /src/middleware in 1045ms (117 modules)
+ ○ Compiling / ...
+ ✓ Compiled / in 17.2s (5239 modules)
+FirebaseClientProvider: Initializing Firebase...
+ ✓ Compiled in 1806ms (2521 modules)
+ ✓ Compiled in 3.6s (2521 modules)
+ ✓ Compiled in 1734ms (2521 modules)
+ ✓ Compiled in 1047ms (2521 modules)
+ ✓ Compiled in 5.3s (2521 modules)
+ ✓ Compiled in 430ms (2507 modules)
+ ✓ Compiled in 503ms (2507 modules)
+ ✓ Compiled in 1083ms (2521 modules)
+ ✓ Compiled in 517ms (2507 modules)
+ ✓ Compiled in 1297ms (2521 modules)
+ ✓ Compiled in 2s (2521 modules)
+ ✓ Compiled in 893ms (2521 modules)
+ ✓ Compiled in 1000ms (2521 modules)
+ ✓ Compiled in 807ms (2521 modules)
+ ✓ Compiled in 1246ms (2521 modules)
+ ✓ Compiled in 2.9s (2521 modules)
+ ✓ Compiled in 1234ms (2521 modules)
+ ✓ Compiled in 7.4s (2521 modules)
+ ✓ Compiled in 3.8s (2521 modules)
+ ✓ Compiled in 1950ms (2521 modules)
+ ✓ Compiled in 1318ms (2521 modules)
+ ✓ Compiled in 1279ms (2521 modules)
+ ✓ Compiled in 935ms (2521 modules)
+ ✓ Compiled in 1362ms (2521 modules)
+ ✓ Compiled in 896ms (2521 modules)
+ ✓ Compiled in 1053ms (2521 modules)
+ ✓ Compiled in 1970ms (2521 modules)
+ ✓ Compiled in 1569ms (2521 modules)
+ ✓ Compiled in 1345ms (2521 modules)
+ ✓ Compiled in 945ms (2521 modules)
+ ✓ Compiled in 977ms (2521 modules)
+ ✓ Compiled in 1102ms (2521 modules)
+ ✓ Compiled in 2.8s (2521 modules)
+ ✓ Compiled in 965ms (2521 modules)
+ ✓ Compiled in 952ms (2521 modules)
+ ✓ Compiled in 1111ms (2521 modules)

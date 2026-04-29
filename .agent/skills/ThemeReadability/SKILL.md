@@ -1,0 +1,38 @@
+---
+name: ThemeReadability
+description: Enforces strict WCAG AA contrast rules for all new and modified themes to ensure they are easily readable.
+---
+
+# Theme Readability
+
+This skill ensures that all color themes in the application adhere to strict accessibility rules, specifically WCAG AA standards for contrast ratios. This guarantees that themes are easily readable by all users.
+
+## Purpose
+- Prevent the creation of low-contrast, unreadable themes.
+- Enforce mathematically sound color pairings in `globals.css`.
+- Ensure dark mode variations of themes are also accessible.
+
+## Contrast Rules
+The following contrast ratios MUST be met for any new or modified theme:
+1. **Normal Text**: The contrast ratio between text and its background MUST be at least **4.5:1**.
+2. **Large Text**: For large text (bold or > 18pt), the contrast ratio MUST be at least **3.0:1**.
+
+### Key Variable Pairings
+When creating or modifying a theme block (e.g., `[data-color-scheme="new-theme"]`), you must ensure the following CSS variable pairings meet the 4.5:1 ratio:
+- `--background` vs `--foreground`
+- `--primary` vs `--primary-foreground`
+- `--card` vs `--card-foreground`
+- `--popover` vs `--popover-foreground`
+- `--secondary` vs `--secondary-foreground`
+- `--muted` vs `--muted-foreground`
+- `--accent` vs `--accent-foreground`
+- `--destructive` vs `--destructive-foreground`
+
+## Workflow for Adding Themes
+1. Define the theme using the exact HSL format expected by the project (e.g., `--primary: 199 89% 48%;`). Do NOT use commas or the `hsl()` wrapper inside the variable definition.
+2. Ensure both the light mode variant (`[data-color-scheme="your-theme"]`) and dark mode variant (`.dark[data-color-scheme="your-theme"]`) are defined.
+3. Validate the theme by running the theme validation script:
+   ```bash
+   npm run test:themes
+   ```
+4. If the script fails, adjust the lightness (the third value in the HSL string) of the foreground or background variable until the test passes. Never push a failing theme.

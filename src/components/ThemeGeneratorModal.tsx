@@ -126,7 +126,7 @@ export function ThemeGeneratorModal({
     const [previewTheme, setPreviewTheme] = useState<StudentTheme | undefined>(currentTheme);
     const [previousTheme, setPreviousTheme] = useState<StudentTheme | undefined>(currentTheme);
     const [model, setModel] = useState<string>('gpt-4o-mini');
-    const [animatePreview, setAnimatePreview] = useState(true);
+    const [animatePreview, setAnimatePreview] = useState(false);
     const { toast } = useToast();
     const { settings } = useSettings();
     const { schoolId } = useAppContext();

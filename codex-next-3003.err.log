@@ -1,0 +1,47 @@
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\server-development\0.pack.gz_' -> 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\server-development\0.pack.gz'
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\server-development\3.pack.gz_' -> 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\server-development\3.pack.gz'
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+<w> [webpack.cache.PackFileCacheStrategy] Restoring pack from C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\server-development.pack.gz failed: TypeError: Cannot read properties of undefined (reading 'hasStartTime')
+ ⨯ TypeError: Cannot read properties of undefined (reading 'run')
+    at Object.wrap (C:\Users\Administrator\school arcade reward antigravity\studio\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:36:16929)
+    at nt (C:\Users\Administrator\school arcade reward antigravity\studio\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:43:543)
+    at lazyRenderAppPage (C:\Users\Administrator\school arcade reward antigravity\studio\node_modules\next\dist\server\future\route-modules\app-page\module.render.js:16:16)
+    at DevServer.renderHTMLImpl (C:\Users\Administrator\school arcade reward antigravity\studio\node_modules\next\dist\server\next-server.js:631:60)
+    at C:\Users\Administrator\school arcade reward antigravity\studio\node_modules\next\dist\server\next-server.js:619:105
+    at NextTracerImpl.trace (C:\Users\Administrator\school arcade reward antigravity\studio\node_modules\next\dist\server\lib\trace\tracer.js:105:20)
+    at DevServer.renderHTML (C:\Users\Administrator\school arcade reward antigravity\studio\node_modules\next\dist\server\next-server.js:619:41)
+    at doRender (C:\Users\Administrator\school arcade reward antigravity\studio\node_modules\next\dist\server\base-server.js:1439:37)
+    at cacheEntry.responseCache.get.routeKind (C:\Users\Administrator\school arcade reward antigravity\studio\node_modules\next\dist\server\base-server.js:1576:46)
+    at ResponseCache.get (C:\Users\Administrator\school arcade reward antigravity\studio\node_modules\next\dist\server\response-cache\index.js:49:26)
+    at DevServer.renderToResponseWithComponentsImpl (C:\Users\Administrator\school arcade reward antigravity\studio\node_modules\next\dist\server\base-server.js:1496:53)
+    at async DevServer.renderPageComponent (C:\Users\Administrator\school arcade reward antigravity\studio\node_modules\next\dist\server\base-server.js:1924:24)
+    at async DevServer.renderToResponseImpl (C:\Users\Administrator\school arcade reward antigravity\studio\node_modules\next\dist\server\base-server.js:1962:32)
+    at async DevServer.pipeImpl (C:\Users\Administrator\school arcade reward antigravity\studio\node_modules\next\dist\server\base-server.js:922:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\Users\Administrator\school arcade reward antigravity\studio\node_modules\next\dist\server\next-server.js:272:17)
+    at async DevServer.handleRequestImpl (C:\Users\Administrator\school arcade reward antigravity\studio\node_modules\next\dist\server\base-server.js:818:17)
+    at async C:\Users\Administrator\school arcade reward antigravity\studio\node_modules\next\dist\server\dev\next-dev-server.js:339:20
+    at async Span.traceAsyncFn (C:\Users\Administrator\school arcade reward antigravity\studio\node_modules\next\dist\trace\trace.js:154:20)
+    at async DevServer.handleRequest (C:\Users\Administrator\school arcade reward antigravity\studio\node_modules\next\dist\server\dev\next-dev-server.js:336:24)
+    at async invokeRender (C:\Users\Administrator\school arcade reward antigravity\studio\node_modules\next\dist\server\lib\router-server.js:179:21)
+    at async handleRequest (C:\Users\Administrator\school arcade reward antigravity\studio\node_modules\next\dist\server\lib\router-server.js:359:24)
+    at async requestHandlerImpl (C:\Users\Administrator\school arcade reward antigravity\studio\node_modules\next\dist\server\lib\router-server.js:383:13)
+    at async Server.requestListener (C:\Users\Administrator\school arcade reward antigravity\studio\node_modules\next\dist\server\lib\start-server.js:141:13) {
+  page: '/schoolabc/student'
+}
+Watchpack Error (initial scan): Error: EINVAL: invalid argument, lstat 'C:\DumpStack.log.tmp'
+Watchpack Error (initial scan): Error: EINVAL: invalid argument, lstat 'C:\System Volume Information'
+Watchpack Error (initial scan): Error: EINVAL: invalid argument, lstat 'C:\hiberfil.sys'
+Watchpack Error (initial scan): Error: EINVAL: invalid argument, lstat 'C:\pagefile.sys'
+Watchpack Error (initial scan): Error: EINVAL: invalid argument, lstat 'C:\swapfile.sys'
+Watchpack Error (initial scan): Error: EINVAL: invalid argument, lstat 'C:\DumpStack.log.tmp'
+Watchpack Error (initial scan): Error: EINVAL: invalid argument, lstat 'C:\System Volume Information'
+Watchpack Error (initial scan): Error: EINVAL: invalid argument, lstat 'C:\hiberfil.sys'
+Watchpack Error (initial scan): Error: EINVAL: invalid argument, lstat 'C:\pagefile.sys'
+Watchpack Error (initial scan): Error: EINVAL: invalid argument, lstat 'C:\swapfile.sys'
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\server-development\0.pack.gz_' -> 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\server-development\0.pack.gz'
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\1.pack.gz_' -> 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\1.pack.gz'
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\0.pack.gz_' -> 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\0.pack.gz'
+<w> [webpack.cache.PackFileCacheStrategy] Restoring pack from C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\server-development.pack.gz failed: TypeError: Cannot read properties of undefined (reading 'hasStartTime')
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload

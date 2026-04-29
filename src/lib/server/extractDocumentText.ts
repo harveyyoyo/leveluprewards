@@ -5,9 +5,14 @@ export async function extractTextFromDocumentBuffer(filename: string, buffer: Bu
   const lower = filename.toLowerCase();
 
   if (lower.endsWith('.pdf')) {
-    const pdfParse = (await import('pdf-parse')).default as (b: Buffer) => Promise<{ text?: string }>;
-    const data = await pdfParse(buffer);
-    return (data.text || '').trim();
+    const { PDFParse } = await import('pdf-parse');
+    const parser = new PDFParse({ data: new Uint8Array(buffer) });
+    try {
+      const data = await parser.getText();
+      return (data.text || '').trim();
+    } finally {
+      await parser.destroy();
+    }
   }
 
   if (lower.endsWith('.docx')) {
