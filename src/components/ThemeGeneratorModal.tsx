@@ -223,6 +223,7 @@ export function ThemeGeneratorModal({
         setGradientA(cssColorToHexForPicker(parsed.colorA, previewTheme.primary || '#0ea5e9'));
         setGradientB(cssColorToHexForPicker(parsed.colorB, previewTheme.accent || '#22c55e'));
     }, [
+        previewTheme,
         previewTheme?.backgroundStyle,
         previewTheme?.primary,
         previewTheme?.accent,

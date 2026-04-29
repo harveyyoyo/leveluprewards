@@ -262,6 +262,7 @@ export function StudentScanner({
         isUserLoading,
         user,
         startFaceCamera,
+        ensureFaceApiReady,
         captureFaceDescriptor,
         toast,
         playSound,

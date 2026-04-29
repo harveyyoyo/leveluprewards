@@ -298,6 +298,7 @@ export function AdminFaceEnrollmentPanel({ studentId, studentLabel }: AdminFaceE
     userError,
     isUserLoading,
     startCamera,
+    ensureFaceApiReady,
     captureFaceDescriptor,
     averageDescriptor,
     toast,
