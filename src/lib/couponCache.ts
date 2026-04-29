@@ -2,6 +2,8 @@ export type CachedCoupon = {
   code: string;
   value?: number;
   category?: string;
+  /** When set, redemption is blocked before this time (ms epoch). */
+  startsAt?: number;
   expiresAt?: number;
 };
 
@@ -42,7 +44,9 @@ export function couponIsKnownAndValidOffline(schoolId: string, couponCode: strin
   const code = couponCode.toUpperCase();
   const c = snap.couponsByCode[code];
   if (!c) return { ok: false, reason: 'Coupon not recognized (offline).' };
-  if (typeof c.expiresAt === 'number' && Date.now() > c.expiresAt) return { ok: false, reason: 'This coupon has expired.' };
+  const now = Date.now();
+  if (typeof c.startsAt === 'number' && now < c.startsAt) return { ok: false, reason: 'This coupon is not valid yet.' };
+  if (typeof c.expiresAt === 'number' && now > c.expiresAt) return { ok: false, reason: 'This coupon has expired.' };
   return { ok: true };
 }
 

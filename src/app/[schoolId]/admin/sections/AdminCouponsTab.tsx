@@ -42,6 +42,13 @@ export function AdminCouponsTab({
                         {coupon.category} / by {coupon.teacher}
                       </p>
                       <p>Created on {new Date(coupon.createdAt).toLocaleDateString()}</p>
+                      {(coupon.startsAt || coupon.expiresAt) && (
+                        <p>
+                          {coupon.startsAt && <>Valid from {new Date(coupon.startsAt).toLocaleDateString()}</>}
+                          {coupon.startsAt && coupon.expiresAt && ' · '}
+                          {coupon.expiresAt && <>Expires {new Date(coupon.expiresAt).toLocaleDateString()}</>}
+                        </p>
+                      )}
                     </div>
                   </li>
                 ))}

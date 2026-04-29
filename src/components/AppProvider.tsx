@@ -177,6 +177,10 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
             category: typeof c?.category === 'string' ? c.category : undefined,
             startsAt: typeof c?.startsAt === 'number' ? c.startsAt : undefined,
             expiresAt: typeof c?.expiresAt === 'number' ? c.expiresAt : undefined,
+            redemptionScope: typeof c?.redemptionScope === 'string' ? c.redemptionScope : undefined,
+            createdByTeacherId: typeof c?.createdByTeacherId === 'string' ? c.createdByTeacherId : undefined,
+            allowedClassIds: Array.isArray(c?.allowedClassIds) ? c.allowedClassIds : undefined,
+            allowedTeacherIds: Array.isArray(c?.allowedTeacherIds) ? c.allowedTeacherIds : undefined,
           };
         }
         saveCouponSnapshot(schoolId, { updatedAt, couponsByCode });

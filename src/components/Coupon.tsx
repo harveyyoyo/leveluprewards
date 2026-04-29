@@ -53,9 +53,14 @@ export function Coupon({ coupon, schoolId, isNew = false }: { coupon: Coupon, sc
         <div className="font-barcode text-[1.25em] leading-none text-black tracking-wider max-w-full overflow-hidden flex items-end">
           *{coupon.code}*
         </div>
-        {coupon.expiresAt && (
-          <div className="text-[0.35em] mt-[0.125em] uppercase tracking-[0.18em] opacity-70 leading-none">
-            Expires {new Date(coupon.expiresAt).toLocaleDateString()}
+        {(coupon.startsAt || coupon.expiresAt) && (
+          <div className="text-[0.35em] mt-[0.125em] uppercase tracking-[0.18em] opacity-70 leading-none flex flex-col gap-[0.125em]">
+            {coupon.startsAt && (
+              <span>Valid from {new Date(coupon.startsAt).toLocaleDateString()}</span>
+            )}
+            {coupon.expiresAt && (
+              <span>Expires {new Date(coupon.expiresAt).toLocaleDateString()}</span>
+            )}
           </div>
         )}
       </div>

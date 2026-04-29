@@ -101,6 +101,9 @@ export interface Student {
   theme?: StudentTheme;
 }
 
+/** Who may redeem the coupon at the student kiosk. Omit or `school` = any student. */
+export type CouponRedemptionScope = 'school' | 'creator' | 'classes' | 'teachers';
+
 export interface Coupon {
   id: string;
   code: string;
@@ -113,8 +116,18 @@ export interface Coupon {
   usedAt?: number;
   usedBy?: string;
   color?: string;
+  /** When set, the coupon cannot be redeemed before this timestamp (ms since epoch). */
+  startsAt?: number;
   /** When set, the coupon cannot be redeemed after this timestamp (ms since epoch). */
   expiresAt?: number;
+  /** Firestore teacher id of the teacher who printed this coupon (for ownership and “creator” scope). */
+  createdByTeacherId?: string;
+  /** Defaults to school-wide when omitted (legacy coupons). */
+  redemptionScope?: CouponRedemptionScope;
+  /** When `redemptionScope` is `classes`, student’s `classId` must be in this list. */
+  allowedClassIds?: string[];
+  /** When `redemptionScope` is `teachers`, student must match via `teacherIds` or class `primaryTeacherId`. */
+  allowedTeacherIds?: string[];
 }
 
 /**

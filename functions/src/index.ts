@@ -2,7 +2,9 @@
 import * as functions from "firebase-functions/v1";
 import * as admin from "firebase-admin";
 import * as crypto from "crypto";
+import { FieldValue } from "firebase-admin/firestore";
 import { signInAttendance } from "./signInAttendance";
+import { studentMayRedeemCouponData } from "./couponRedemption";
 
 admin.initializeApp();
 
@@ -507,6 +509,16 @@ async function isDeveloper(context: functions.https.CallableContext): Promise<bo
   return Array.isArray(list) && list.includes(context.auth!.uid);
 }
 
+async function requireDeveloper(context: functions.https.CallableContext): Promise<void> {
+  requireAuth(context);
+  if (!(await isDeveloper(context))) {
+    throw new functions.https.HttpsError(
+      "permission-denied",
+      "Developer access is required."
+    );
+  }
+}
+
 /** Callable: add current user to developer allow-list after verifying dev passcode. */
 exports.addDeveloperMe = functions.https.onCall(
   async (data: any, context: functions.https.CallableContext) => {
@@ -521,10 +533,122 @@ exports.addDeveloperMe = functions.https.onCall(
     const db = admin.firestore();
     const globalRef = db.collection("appConfig").doc(APP_CONFIG_GLOBAL);
     await globalRef.set(
-      { developerUids: admin.firestore.FieldValue.arrayUnion(context.auth!.uid) },
+      { developerUids: FieldValue.arrayUnion(context.auth!.uid) },
       { merge: true }
     );
     return { success: true };
+  }
+);
+
+/** Callable: create or repair a school shell using the Admin SDK. */
+exports.createSchoolByDeveloper = functions.https.onCall(
+  async (data: any, context: functions.https.CallableContext) => {
+    await requireDeveloper(context);
+    requireString(data.schoolId, "schoolId");
+
+    const cleanId = String(data.schoolId).trim().toLowerCase().replace(/[^a-z0-9_]/g, "");
+    if (!cleanId) {
+      throw new functions.https.HttpsError("invalid-argument", "School ID is invalid.");
+    }
+
+    const now = Date.now();
+    const providedName = typeof data.name === "string" ? data.name.trim() : "";
+    const providedPasscode = typeof data.passcode === "string" ? data.passcode.trim() : "";
+    const defaultPasscode = Math.floor(1000 + Math.random() * 9000).toString();
+
+    const schoolDocData: Record<string, any> = {
+      name: providedName || cleanId,
+      updatedAt: now,
+      passcode: providedPasscode || defaultPasscode,
+      plan: "free",
+      featureOverrides: {},
+      hasMigratedStudents: true,
+      hasMigratedClasses: true,
+      hasMigratedTeachers: true,
+      hasMigratedPrizes: true,
+      hasMigratedCoupons: true,
+      hasMigratedCategories: true,
+    };
+
+    const seedStudent = {
+      id: "100",
+      firstName: "Test",
+      lastName: "Student",
+      nfcId: "100",
+      points: 0,
+      lifetimePoints: 0,
+      classId: "",
+      categoryPoints: {},
+      categoryPointsByPeriod: {},
+      earnedAchievements: [],
+      earnedBadges: [],
+    };
+    const seedTeacher = {
+      id: "t1",
+      name: "Teacher",
+      username: "teacher",
+      passcode: "1234",
+    };
+
+    const db = admin.firestore();
+    const schoolRef = db.collection("schools").doc(cleanId);
+    const schoolSnap = await schoolRef.get();
+    const studentsSnap = await schoolRef.collection("students").limit(1).get();
+    const teachersSnap = await schoolRef.collection("teachers").limit(1).get();
+
+    if (schoolSnap.exists && (!studentsSnap.empty || !teachersSnap.empty)) {
+      throw new functions.https.HttpsError(
+        "already-exists",
+        `School ID "${cleanId}" already exists.`
+      );
+    }
+
+    const existing = schoolSnap.exists ? schoolSnap.data() ?? {} : {};
+    const finalSchoolDocData = {
+      ...schoolDocData,
+      ...existing,
+      name: providedName || existing.name || schoolDocData.name,
+      passcode: providedPasscode || existing.passcode || schoolDocData.passcode,
+      updatedAt: now,
+      plan: existing.plan || schoolDocData.plan,
+      featureOverrides: existing.featureOverrides || schoolDocData.featureOverrides,
+      hasMigratedStudents: true,
+      hasMigratedClasses: true,
+      hasMigratedTeachers: true,
+      hasMigratedPrizes: true,
+      hasMigratedCoupons: true,
+      hasMigratedCategories: true,
+    };
+
+    const batch = db.batch();
+    batch.set(schoolRef, finalSchoolDocData, { merge: true });
+    if (studentsSnap.empty) {
+      const { id, ...studentData } = seedStudent;
+      batch.set(schoolRef.collection("students").doc(id), studentData);
+    }
+    if (teachersSnap.empty) {
+      const { id, ...teacherData } = seedTeacher;
+      batch.set(schoolRef.collection("teachers").doc(id), teacherData);
+    }
+    batch.set(
+      db.collection("schoolPublic").doc(cleanId),
+      {
+        active: true,
+        name: finalSchoolDocData.name,
+        plan: finalSchoolDocData.plan,
+        featureOverrides: finalSchoolDocData.featureOverrides,
+        updatedAt: now,
+      },
+      { merge: true }
+    );
+    await batch.commit();
+
+    return {
+      success: true,
+      cleanId,
+      passcode: finalSchoolDocData.passcode,
+      repaired: schoolSnap.exists,
+    };
   }
 );
 
@@ -705,6 +829,9 @@ exports.redeemCouponServer = functions.https.onCall(
       const couponSnap = await tx.get(couponRef);
       if (!couponSnap.exists) throw new functions.https.HttpsError("not-found", "Coupon code not found.");
       const coupon = couponSnap.data() as any;
+      if (coupon.startsAt && typeof coupon.startsAt === "number" && now < coupon.startsAt) {
+        throw new functions.https.HttpsError("failed-precondition", "This coupon is not valid yet.");
+      }
       if (coupon.expiresAt && typeof coupon.expiresAt === "number" && now > coupon.expiresAt) {
         throw new functions.https.HttpsError("failed-precondition", "This coupon has expired.");
       }
@@ -715,6 +842,20 @@ exports.redeemCouponServer = functions.https.onCall(
       const studentSnap = await tx.get(studentRef);
       if (!studentSnap.exists) throw new functions.https.HttpsError("not-found", "Student not found.");
       const s = studentSnap.data() as any;
+      const classId = typeof s.classId === "string" ? s.classId : "";
+      let classPrimaryTeacherId: string | null = null;
+      if (classId) {
+        const classRef = db.collection("schools").doc(schoolId).collection("classes").doc(classId);
+        const classSnap = await tx.get(classRef);
+        if (classSnap.exists) {
+          const cd = classSnap.data() as any;
+          if (typeof cd.primaryTeacherId === "string") classPrimaryTeacherId = cd.primaryTeacherId;
+        }
+      }
+      const gate = studentMayRedeemCouponData(coupon, s, classPrimaryTeacherId);
+      if (!gate.ok) {
+        throw new functions.https.HttpsError("failed-precondition", gate.message || "Not eligible to redeem this coupon.");
+      }
       const value = typeof coupon.value === "number" ? coupon.value : Number(coupon.value || 0);
 
       tx.update(studentRef, {
@@ -766,6 +907,9 @@ exports.syncPendingRedemptions = functions.https.onCall(
           const couponSnap = await tx.get(couponRef);
           if (!couponSnap.exists) throw new functions.https.HttpsError("not-found", "Coupon code not found.");
           const coupon = couponSnap.data() as any;
+          if (coupon.startsAt && typeof coupon.startsAt === "number" && now < coupon.startsAt) {
+            throw new functions.https.HttpsError("failed-precondition", "This coupon is not valid yet.");
+          }
           if (coupon.expiresAt && typeof coupon.expiresAt === "number" && now > coupon.expiresAt) {
             throw new functions.https.HttpsError("failed-precondition", "This coupon has expired.");
           }
@@ -773,6 +917,20 @@ exports.syncPendingRedemptions = functions.https.onCall(
           const studentSnap = await tx.get(studentRef);
           if (!studentSnap.exists) throw new functions.https.HttpsError("not-found", "Student not found.");
           const s = studentSnap.data() as any;
+          const classId = typeof s.classId === "string" ? s.classId : "";
+          let classPrimaryTeacherId: string | null = null;
+          if (classId) {
+            const classRef = db.collection("schools").doc(schoolId).collection("classes").doc(classId);
+            const classSnap = await tx.get(classRef);
+            if (classSnap.exists) {
+              const cd = classSnap.data() as any;
+              if (typeof cd.primaryTeacherId === "string") classPrimaryTeacherId = cd.primaryTeacherId;
+            }
+          }
+          const gate = studentMayRedeemCouponData(coupon, s, classPrimaryTeacherId);
+          if (!gate.ok) {
+            throw new functions.https.HttpsError("failed-precondition", gate.message || "Not eligible to redeem this coupon.");
+          }
           const value = typeof coupon.value === "number" ? coupon.value : Number(coupon.value || 0);
           tx.update(studentRef, { points: Number(s.points || 0) + value, lifetimePoints: Number(s.lifetimePoints || 0) + value });
           const activityRef = studentRef.collection("activities").doc();
@@ -818,7 +976,12 @@ exports.getCouponSnapshot = functions.https.onCall(
         code: String(c.code || d.id).toUpperCase(),
         value: typeof c.value === "number" ? c.value : Number(c.value || 0),
         category: typeof c.category === "string" ? c.category : undefined,
+        startsAt: typeof c.startsAt === "number" ? c.startsAt : undefined,
         expiresAt: typeof c.expiresAt === "number" ? c.expiresAt : undefined,
+        redemptionScope: typeof c.redemptionScope === "string" ? c.redemptionScope : undefined,
+        createdByTeacherId: typeof c.createdByTeacherId === "string" ? c.createdByTeacherId : undefined,
+        allowedClassIds: Array.isArray(c.allowedClassIds) ? c.allowedClassIds : undefined,
+        allowedTeacherIds: Array.isArray(c.allowedTeacherIds) ? c.allowedTeacherIds : undefined,
       });
     }
     return { updatedAt: now, coupons };
@@ -903,7 +1066,7 @@ exports.uploadSchoolLogo = functions.https.onCall(
         };
         await db.collection("schools").doc(schoolId).update({
           logoUrl,
-          logoHistory: admin.firestore.FieldValue.arrayUnion(logoHistoryEntry),
+          logoHistory: FieldValue.arrayUnion(logoHistoryEntry),
         });
         await db.collection("schoolPublic").doc(schoolId).set(
           {
@@ -998,7 +1161,7 @@ exports.uploadAppLogo = functions.https.onCall(
         await db.collection("appConfig").doc("global").set(
           {
             appLogoUrl: logoUrl,
-            appLogoHistory: admin.firestore.FieldValue.arrayUnion({
+            appLogoHistory: FieldValue.arrayUnion({
               url: logoUrl,
               uploadedAt: Date.now(),
               uploadedBy: context.auth!.uid,
@@ -1143,7 +1306,7 @@ exports.uploadStudentPhoto = functions.https.onCall(
   }
 );
 
-/** Callable: student kiosk uploads a personal sticker/emoji image (requires school entry like coupon redeem). */
+/** Callable: admin uploads a student sticker/emoji image (same auth as profile photo). */
 exports.uploadStudentCustomEmoji = functions.https.onCall(
   async (data: any, context: functions.https.CallableContext) => {
     try {
@@ -1152,24 +1315,14 @@ exports.uploadStudentCustomEmoji = functions.https.onCall(
       requireString(data.studentId, "studentId");
       const schoolId = String(data.schoolId).trim().toLowerCase();
       const studentId = String(data.studentId).trim();
-      const clear = data.clear === true;
+
+      await requireSchoolAdmin(schoolId, context);
 
       const db = admin.firestore();
-      const memberRef = db.collection("schools").doc(schoolId).collection("kioskMembers").doc(context.auth!.uid);
-      const memberSnap = await memberRef.get();
-      if (!memberSnap.exists) {
-        throw new functions.https.HttpsError("permission-denied", "School entry required.");
-      }
-
       const studentRef = db.collection("schools").doc(schoolId).collection("students").doc(studentId);
       const studentSnap = await studentRef.get();
       if (!studentSnap.exists) {
         throw new functions.https.HttpsError("not-found", "Student not found.");
-      }
-
-      if (clear) {
-        await studentRef.update({ customEmojiUrl: admin.firestore.FieldValue.delete() });
-        return { customEmojiUrl: null as string | null };
       }
 
       if (typeof data.imageBase64 !== "string" || data.imageBase64.length === 0) {
@@ -1317,7 +1470,7 @@ async function migrateCollectionToSubcollection(
       if (i + BATCH_LIMIT >= items.length) {
         batch.update(schoolDocRef, {
           [flagField]: true,
-          [collectionName]: admin.firestore.FieldValue.delete(),
+          [collectionName]: FieldValue.delete(),
         });
       }
 
