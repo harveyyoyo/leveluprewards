@@ -190,9 +190,10 @@ service cloud.firestore {
         allow write: if isAdmin(schoolId) || isTeacher(schoolId) || isSecretary(schoolId);
       }
 
-      // Desk staff logins (admin-managed). No client reads except school admins.
+      // Desk staff logins (admin-managed). School admins + platform developers
+      // (developer UI uses the same dashboard queries as admins).
       match /staffAccounts/{accountId} {
-        allow read, write: if isAdmin(schoolId);
+        allow read, write: if isAdmin(schoolId) || isDeveloper();
       }
       
       match /roles_admin/{uid} {
@@ -225,8 +226,8 @@ service cloud.firestore {
       }
 
       match /backups/{backupId} {
-        allow read: if isAdmin(schoolId);
-        allow write: if isAdmin(schoolId);
+        allow read: if isAdmin(schoolId) || isDeveloper();
+        allow write: if isAdmin(schoolId) || isDeveloper();
       }
 
       match /attendance/{docId} {
