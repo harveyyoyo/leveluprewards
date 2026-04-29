@@ -4,6 +4,7 @@ import { useState, useEffect, type ComponentType, type CSSProperties } from 'rea
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
+import { LevelUpKioskLogo } from '@/components/LevelUpKioskLogo';
 import { GraduationCap, Printer, Gift, UserCog, Trophy, ChevronRight, Loader2, Home } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useArcadeSound } from '@/hooks/useArcadeSound';

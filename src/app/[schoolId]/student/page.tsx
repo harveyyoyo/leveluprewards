@@ -17,6 +17,7 @@ import { lookupStudentId } from '@/lib/db';
 import dynamic from 'next/dynamic';
 import { StudentIdCard } from '@/components/StudentIdCard';
 import type { StudentFoundMeta } from '@/components/StudentScanner';
+import { LevelUpKioskLogo } from '@/components/LevelUpKioskLogo';
 
 // ~32 KB (plus @vladmandic/face-api on the face tab). Load only when the
 // kiosk actually needs to scan a student.
@@ -1220,6 +1221,13 @@ export default function StudentLoginPage() {
   const { settings } = useSettings();
   const isGraphic = settings.graphicMode === 'graphics';
   const animBackdrop = globalAnimatedBackdropActive(settings);
+  const { firestore } = useFirebase();
+  const appConfigDocRef = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return doc(firestore, 'appConfig', 'global');
+  }, [firestore]);
+
+  const { data: appConfig } = useDoc<{ appLogoUrl?: string }>(appConfigDocRef);
 
   const { activeStudentId, setActiveStudentId, handleDone, loginMeta, setLoginMeta } = useActiveStudentSession();
   const activeStudentIdRef = useRef<string | null>(null);
@@ -1309,7 +1317,7 @@ export default function StudentLoginPage() {
           <StudentScanner
             onStudentFound={onScannerStudent}
             title="Student Portal"
-            icon={<GraduationCap className="w-8 h-8" />}
+            icon={<LevelUpKioskLogo className="w-20 h-20" src={appConfig?.appLogoUrl} />}
           />
         </div>
       </TooltipProvider>

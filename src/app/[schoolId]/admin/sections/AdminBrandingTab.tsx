@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2, Trash2, UploadCloud, Palette } from 'lucide-react';
+import { Loader2, Trash2, UploadCloud, Palette, User } from 'lucide-react';
 import type { DocumentReference, Firestore } from 'firebase/firestore';
 import { updateDoc, setDoc } from 'firebase/firestore';
 import { schoolPublicDocRef } from '@/lib/schoolPublic';
@@ -15,6 +15,7 @@ import { useSettings } from '@/components/providers/SettingsProvider';
 import { ThemeGeneratorModal } from '@/components/ThemeGeneratorModal';
 import { normalizeStudentTheme } from '@/lib/themeContrast';
 import type { StudentTheme } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
 export function AdminBrandingTab({
   schoolId,

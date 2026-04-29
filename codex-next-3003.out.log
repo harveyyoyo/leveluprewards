@@ -196,3 +196,9 @@ FirebaseClientProvider: Initializing Firebase...
 
  ✓ Starting...
  ✓ Ready in 4.6s
+  ▲ Next.js 14.2.35
+  - Local:        http://localhost:3003
+  - Environments: .env.local, .env
+
+ ✓ Starting...
+ ✓ Ready in 7.2s

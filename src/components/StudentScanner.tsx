@@ -402,8 +402,8 @@ export function StudentScanner({
             )}>
                 {/* Kiosk lock removed */}
                 <div className={cn(
-                    "w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center shadow-lg transform rotate-3 transition-transform hover:rotate-0",
-                    isGraphic ? 'bg-primary text-primary-foreground animate-pulse-glow' : 'bg-primary/10'
+                    "w-20 h-20 mx-auto mb-4 flex items-center justify-center transition-all duration-500",
+                    isGraphic ? 'scale-110' : 'bg-primary/10 rounded-2xl shadow-lg transform rotate-3 hover:rotate-0'
                 )}>
                     {icon}
                 </div>
