@@ -166,9 +166,27 @@ export default function Header() {
         <div className="flex items-center gap-4 flex-1">
           <Link href={logoLink} className="flex items-center gap-4 group" data-home-button="true">
             {appLogoUrl ? (
-              <span className="inline-flex h-10 w-auto max-w-[200px] shrink-0 drop-shadow-md items-center justify-center">
+              <span className={cn(
+                "inline-flex h-10 w-auto max-w-[200px] shrink-0 items-center justify-center transition-all duration-300",
+                settings.logoDropShadow === 'sm' && 'drop-shadow-sm',
+                settings.logoDropShadow === 'md' && 'drop-shadow-md',
+                settings.logoDropShadow === 'lg' && 'drop-shadow-xl',
+                settings.logoDropShadow === 'none' && 'drop-shadow-none',
+              )}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={appLogoUrl} alt="App logo" className={settings.logoDisplayMode === 'cover' ? 'h-full w-full object-cover rounded-md' : 'h-full w-auto object-contain'} />
+                <img 
+                  src={appLogoUrl} 
+                  alt="App logo" 
+                  className={cn(
+                    "h-full w-auto object-contain transition-all duration-300",
+                    settings.logoDisplayMode === 'cover' && 'w-full object-cover',
+                    settings.logoBorderRadius === 'sm' && 'rounded-sm',
+                    settings.logoBorderRadius === 'md' && 'rounded-md',
+                    settings.logoBorderRadius === 'lg' && 'rounded-2xl',
+                    settings.logoBorderRadius === 'full' && 'rounded-full',
+                    settings.logoBorderRadius === 'none' && 'rounded-none',
+                  )} 
+                />
               </span>
             ) : (
               <Logo className="h-10 w-auto" />
@@ -185,12 +203,26 @@ export default function Header() {
           <Link href={centerHref} className="flex-1 flex justify-center text-center no-underline hidden lg:inline-flex">
             <span className="inline-flex items-center gap-3">
               {schoolData?.logoUrl && (
-                <span className="inline-flex h-10 w-auto max-w-[200px] shrink-0 drop-shadow-md items-center justify-center">
+                <span className={cn(
+                  "inline-flex h-10 w-auto max-w-[200px] shrink-0 items-center justify-center transition-all duration-300",
+                  settings.logoDropShadow === 'sm' && 'drop-shadow-sm',
+                  settings.logoDropShadow === 'md' && 'drop-shadow-md',
+                  settings.logoDropShadow === 'lg' && 'drop-shadow-xl',
+                  settings.logoDropShadow === 'none' && 'drop-shadow-none',
+                )}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={schoolData.logoUrl}
                     alt="Logo"
-                    className={settings.logoDisplayMode === 'cover' ? 'h-full w-full object-cover rounded-md' : 'h-full w-auto object-contain'}
+                    className={cn(
+                      "h-full w-auto object-contain transition-all duration-300",
+                      settings.logoDisplayMode === 'cover' && 'w-full object-cover',
+                      settings.logoBorderRadius === 'sm' && 'rounded-sm',
+                      settings.logoBorderRadius === 'md' && 'rounded-md',
+                      settings.logoBorderRadius === 'lg' && 'rounded-2xl',
+                      settings.logoBorderRadius === 'full' && 'rounded-full',
+                      settings.logoBorderRadius === 'none' && 'rounded-none',
+                    )}
                   />
                 </span>
               )}

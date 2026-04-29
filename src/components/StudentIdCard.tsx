@@ -172,10 +172,24 @@ export function StudentIdCard({
       
       <div className="print-id-main" style={mainStyle}>
         <div className="print-id-left flex items-center" style={{ marginLeft: '0.1in', gap: '0.12in' }}>
-          <div className="print-id-avatar" style={avatarStyle}>
+          <div className={cn(
+            "print-id-avatar transition-all duration-300",
+            settings.photoBorderRadius === 'sm' && 'rounded-sm',
+            settings.photoBorderRadius === 'md' && 'rounded-md',
+            settings.photoBorderRadius === 'lg' && 'rounded-2xl',
+            settings.photoBorderRadius === 'full' && 'rounded-full',
+            settings.photoBorderRadius === 'none' && 'rounded-none',
+            settings.photoDropShadow === 'sm' && 'drop-shadow-sm',
+            settings.photoDropShadow === 'md' && 'drop-shadow-md',
+            settings.photoDropShadow === 'lg' && 'drop-shadow-xl',
+            settings.photoDropShadow === 'none' && 'drop-shadow-none',
+          )} style={avatarStyle}>
             {student.photoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={student.photoUrl} alt="" className={settings.photoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />
+              <img src={student.photoUrl} alt="" className={cn(
+                "h-full w-full transition-all duration-300",
+                settings.photoDisplayMode === 'cover' ? 'object-cover' : 'object-contain'
+              )} />
             ) : (
               <span style={{...nameStyle, fontSize: '20pt', fontWeight: 800 }}>{(student.firstName[0] || '')}{(student.lastName[0] || '')}</span>
             )}

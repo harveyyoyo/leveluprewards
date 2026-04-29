@@ -85,13 +85,25 @@ export function AdminBrandingTab({
         <CardContent className="flex flex-col sm:flex-row items-center gap-6">
           <div className="flex flex-col items-center gap-1">
             <div className="relative group">
-              <div className="h-20 w-auto min-w-[5rem] max-w-[200px] bg-transparent flex items-center justify-center text-xs font-semibold text-muted-foreground drop-shadow-md">
+              <div className={cn(
+                "h-24 w-auto min-w-[6rem] max-w-[240px] bg-transparent flex items-center justify-center text-xs font-semibold text-muted-foreground transition-all duration-300",
+                settings.logoDropShadow === 'sm' && 'drop-shadow-sm',
+                settings.logoDropShadow === 'md' && 'drop-shadow-md',
+                settings.logoDropShadow === 'lg' && 'drop-shadow-xl',
+              )}>
                 {currentLogo ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={currentLogo}
                     alt="Current school logo"
-                    className={logoDisplayMode === 'cover' ? 'h-full w-full object-cover rounded-md' : 'h-full w-auto object-contain'}
+                    className={cn(
+                      "h-full w-auto object-contain transition-all duration-300",
+                      logoDisplayMode === 'cover' && 'w-full object-cover',
+                      settings.logoBorderRadius === 'sm' && 'rounded-sm',
+                      settings.logoBorderRadius === 'md' && 'rounded-md',
+                      settings.logoBorderRadius === 'lg' && 'rounded-2xl',
+                      settings.logoBorderRadius === 'full' && 'rounded-full'
+                    )}
                   />
                 ) : (
                   <span className="h-20 w-20 rounded-full bg-muted border border-border/60 flex items-center justify-center shadow-lg shadow-primary/30">No logo</span>
@@ -108,7 +120,7 @@ export function AdminBrandingTab({
                 </button>
               )}
             </div>
-            <span className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Current</span>
+            <span className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground mt-2">Current</span>
             <div className="mt-2 flex flex-col items-center gap-1">
               {previousSchoolLogos.length >= 1 ? (
                 <>
@@ -175,42 +187,171 @@ export function AdminBrandingTab({
             </div>
           </div>
 
-          <div className="space-y-2 flex-1 max-w-sm">
-            <Label className="text-xs font-bold uppercase text-muted-foreground">Display</Label>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setLogoDisplayMode('contain')}
-                className={`flex-1 py-1.5 px-3 rounded-md text-sm font-bold ${
-                  logoDisplayMode === 'contain' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-                }`}
-              >
-                Fit
-              </button>
-              <button
-                type="button"
-                onClick={() => setLogoDisplayMode('cover')}
-                className={`flex-1 py-1.5 px-3 rounded-md text-sm font-bold ${
-                  logoDisplayMode === 'cover' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-                }`}
-              >
-                Fill (crop)
-              </button>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase text-muted-foreground">Display Mode</Label>
+              <div className="flex gap-2">
+                {(['contain', 'cover'] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setLogoDisplayMode(mode)}
+                    className={`flex-1 py-1.5 px-3 rounded-md text-sm font-bold transition-all ${
+                      logoDisplayMode === mode ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                    }`}
+                  >
+                    {mode === 'contain' ? 'Fit' : 'Fill'}
+                  </button>
+                ))}
+              </div>
+
+              <Label className="text-xs font-bold uppercase text-muted-foreground pt-2 block">Rounding</Label>
+              <div className="flex flex-wrap gap-1">
+                {(['none', 'sm', 'md', 'lg', 'full'] as const).map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => updateSettings({ logoBorderRadius: r })}
+                    className={`px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider transition-all ${
+                      settings.logoBorderRadius === r ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                    }`}
+                  >
+                    {r}
+                  </button>
+                ))}
+              </div>
+
+              <Label className="text-xs font-bold uppercase text-muted-foreground pt-2 block">Shadow</Label>
+              <div className="flex flex-wrap gap-1">
+                {(['none', 'sm', 'md', 'lg'] as const).map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => updateSettings({ logoDropShadow: s })}
+                    className={`px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider transition-all ${
+                      settings.logoDropShadow === s ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                    }`}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
             </div>
-            <Label htmlFor="school-logo">Upload new logo</Label>
-            <Input
-              id="school-logo"
-              type="file"
-              accept="image/png,image/jpeg,image/jpg,image/webp"
-              onChange={handleLogoUpload}
-              disabled={!schoolId || isLogoUploading}
-            />
-            {isLogoUploading && (
-              <p className="text-sm text-muted-foreground flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" /> Uploading…
+            <div className="space-y-2">
+              <Label htmlFor="school-logo">Upload new logo</Label>
+              <Input
+                id="school-logo"
+                type="file"
+                className="text-xs"
+                accept="image/png,image/jpeg,image/jpg,image/webp"
+                onChange={handleLogoUpload}
+                disabled={!schoolId || isLogoUploading}
+              />
+              {isLogoUploading && (
+                <p className="text-sm text-muted-foreground flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Uploading…
+                </p>
+              )}
+              <p className="text-[11px] text-muted-foreground mt-1">Square image recommended, at least 128×128px.</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* STUDENT PHOTO STYLING */}
+      <Card className="shadow-md border-l-4 border-indigo-500">
+        <CardContent className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <User className="w-5 h-5 text-indigo-500" />
+                <h3 className="font-bold text-lg">Student Photo Styling</h3>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Customize how student profile photos appear across the app and on ID cards.
               </p>
-            )}
-            <p className="text-[11px] text-muted-foreground mt-1">Square image recommended, at least 128×128px.</p>
+
+              <div className="space-y-4 pt-2">
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase text-muted-foreground">Display Mode</Label>
+                  <div className="flex gap-1">
+                    {(['contain', 'cover'] as const).map((mode) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => updateSettings({ photoDisplayMode: mode })}
+                        className={`px-3 py-1.5 rounded-md text-[11px] font-bold uppercase tracking-wider transition-all ${
+                          settings.photoDisplayMode === mode ? 'bg-indigo-600 text-white' : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                        }`}
+                      >
+                        {mode === 'contain' ? 'Fit' : 'Fill'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase text-muted-foreground">Rounding</Label>
+                  <div className="flex flex-wrap gap-1">
+                    {(['none', 'sm', 'md', 'lg', 'full'] as const).map((r) => (
+                      <button
+                        key={r}
+                        type="button"
+                        onClick={() => updateSettings({ photoBorderRadius: r })}
+                        className={`px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider transition-all ${
+                          settings.photoBorderRadius === r ? 'bg-indigo-600 text-white' : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                        }`}
+                      >
+                        {r}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase text-muted-foreground">Shadow</Label>
+                  <div className="flex flex-wrap gap-1">
+                    {(['none', 'sm', 'md', 'lg'] as const).map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => updateSettings({ photoDropShadow: s })}
+                        className={`px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider transition-all ${
+                          settings.photoDropShadow === s ? 'bg-indigo-600 text-white' : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                        }`}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col items-center justify-center p-8 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800">
+              <div className={cn(
+                "w-32 h-32 bg-white dark:bg-slate-800 border-2 border-indigo-500/20 overflow-hidden transition-all duration-300",
+                settings.photoBorderRadius === 'none' && 'rounded-none',
+                settings.photoBorderRadius === 'sm' && 'rounded-sm',
+                settings.photoBorderRadius === 'md' && 'rounded-md',
+                settings.photoBorderRadius === 'lg' && 'rounded-2xl',
+                settings.photoBorderRadius === 'full' && 'rounded-full',
+                settings.photoDropShadow === 'none' && 'drop-shadow-none',
+                settings.photoDropShadow === 'sm' && 'drop-shadow-sm',
+                settings.photoDropShadow === 'md' && 'drop-shadow-md',
+                settings.photoDropShadow === 'lg' && 'drop-shadow-xl',
+              )}>
+                <img 
+                  src="https://api.dicebear.com/9.x/avataaars/svg?seed=Felix" 
+                  alt="Preview" 
+                  className={cn(
+                    "w-full h-full transition-all duration-300",
+                    settings.photoDisplayMode === 'cover' ? 'object-cover' : 'object-contain'
+                  )}
+                />
+              </div>
+              <p className="mt-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Photo Preview</p>
+            </div>
           </div>
         </CardContent>
       </Card>

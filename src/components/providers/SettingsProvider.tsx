@@ -82,6 +82,11 @@ interface Settings {
     // Image display: how logos and photos are fitted in their boxes
     logoDisplayMode: 'contain' | 'cover';
     photoDisplayMode: 'contain' | 'cover';
+    // Upload styles
+    logoBorderRadius: 'none' | 'sm' | 'md' | 'lg' | 'full';
+    logoDropShadow: 'none' | 'sm' | 'md' | 'lg';
+    photoBorderRadius: 'none' | 'sm' | 'md' | 'lg' | 'full';
+    photoDropShadow: 'none' | 'sm' | 'md' | 'lg';
     // Visuals
     animatedBackgroundStyle: string;
     hiddenAnimatedBackgroundIds: string[];
@@ -156,6 +161,10 @@ const defaultSettings: Settings = {
     calmMode: false,
     logoDisplayMode: 'contain',
     photoDisplayMode: 'cover',
+    logoBorderRadius: 'md',
+    logoDropShadow: 'md',
+    photoBorderRadius: 'full',
+    photoDropShadow: 'md',
     animatedBackgroundStyle: 'arcade',
     hiddenAnimatedBackgroundIds: [],
 };
