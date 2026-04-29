@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Helper } from '@/components/ui/helper';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { Coupon } from '@/lib/types';
-import { describeCouponRedemptionSummary } from '@/lib/couponRedemptionRules';
+import { couponRedemptionLabelForPrint } from '@/lib/couponRedemptionRules';
 
 export function AdminCouponsTab({
   availableCoupons,
@@ -33,7 +33,7 @@ export function AdminCouponsTab({
             {availableCoupons.length >= 1 ? (
               <ul className="p-3 space-y-2">
                 {availableCoupons.map((coupon) => {
-                  const scopeLine = describeCouponRedemptionSummary(coupon);
+                  const scopeLine = couponRedemptionLabelForPrint(coupon);
                   return (
                   <li key={coupon.id} className="p-3 bg-card rounded-lg border">
                     <div className="flex justify-between items-center font-bold">

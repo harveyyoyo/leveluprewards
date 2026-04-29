@@ -140,6 +140,8 @@ export interface Coupon {
   allowedClassIds?: string[];
   /** When `redemptionScope` is `teachers`, student must match via `teacherIds` or class `primaryTeacherId`. */
   allowedTeacherIds?: string[];
+  /** Human-readable redemption limits for printing on the coupon (set when generated). */
+  redemptionPrintNote?: string;
 }
 
 /**

@@ -51,7 +51,7 @@ import { getReadableErrorMessage } from '@/lib/errorMessage';
 import { AdminPrizesTab } from '@/app/[schoolId]/admin/sections/AdminPrizesTab';
 import { PrizeModal } from '@/components/PrizeModal';
 import { COUPONS_PER_PRINT_PAGE, generateUniqueCouponCodes } from '@/lib/coupon-print';
-import { describeCouponRedemptionSummary } from '@/lib/couponRedemptionRules';
+import { buildRedemptionPrintNote, couponRedemptionLabelForPrint } from '@/lib/couponRedemptionRules';
 import { SchoolReportsPanel } from '@/components/reports/SchoolReportsPanel';
 
 /** Max sheets per run (12 coupons per sheet). Bounded for sensible printer jobs and UI. */
@@ -305,7 +305,7 @@ function MyCoupons({ schoolId, teacherId, teacherName, students }: { schoolId: s
               {isLoading ? <div className="p-8 text-center text-sm text-muted-foreground">Loading coupons...</div> : available.length > 0 ? (
                 <ul className="p-3 space-y-2">
                   {available.map((coupon) => {
-                    const scopeLine = describeCouponRedemptionSummary(coupon);
+                    const scopeLine = couponRedemptionLabelForPrint(coupon);
                     return (
                     <li key={coupon.id} className="p-4 bg-card rounded-xl border border-border/40 shadow-sm transition-all hover:shadow-md hover:border-primary/20 group">
                       <div className="flex justify-between items-center">
@@ -319,7 +319,7 @@ function MyCoupons({ schoolId, teacherId, teacherName, students }: { schoolId: s
                       {(coupon.startsAt || coupon.expiresAt) && (
                         <p className="text-[10px] text-muted-foreground mt-1">
                           {coupon.startsAt && <>Starts {new Date(coupon.startsAt).toLocaleDateString()}</>}
-                          {coupon.startsAt && coupon.expiresAt && ' Â· '}
+                          {coupon.startsAt && coupon.expiresAt && ' · '}
                           {coupon.expiresAt && <>Ends {new Date(coupon.expiresAt).toLocaleDateString()}</>}
                         </p>
                       )}
@@ -1448,6 +1448,22 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                         ? { redemptionScope: 'classes', allowedClassIds: [...printScopeClassIds] }
                         : { redemptionScope: 'teachers', allowedTeacherIds: [...printScopeTeacherIds] };
 
+        const redemptionPrintNote =
+            secretaryMode
+                ? undefined
+                : buildRedemptionPrintNote({
+                    scope: printRedemptionScope,
+                    issuingTeacherDisplayName: teacherName,
+                    classNamesInOrder: (classes || [])
+                        .filter((c) => printScopeClassIds.includes(c.id))
+                        .sort((a, b) => a.name.localeCompare(b.name))
+                        .map((c) => c.name),
+                    teacherNamesInOrder: (teachers || [])
+                        .filter((t) => printScopeTeacherIds.includes(t.id))
+                        .sort((a, b) => a.name.localeCompare(b.name))
+                        .map((t) => t.name),
+                });
+
         const couponsToCreate: Coupon[] = codes.map((code) => ({
             id: code,
             code,
@@ -1459,6 +1475,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
             color: selectedCategory.color,
             ...(!secretaryMode && currentTeacher?.id ? { createdByTeacherId: currentTeacher.id } : {}),
             ...scopeExtra,
+            ...(redemptionPrintNote ? { redemptionPrintNote } : {}),
             ...(startsAt !== undefined ? { startsAt } : {}),
             ...(expiresAt ? { expiresAt } : {}),
         }));
@@ -1561,6 +1578,21 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
     };
 
     const selectedCategoryForPreview = categories?.find(c => c.id === printCategoryId);
+    const redemptionPreviewNote =
+        secretaryMode
+            ? undefined
+            : buildRedemptionPrintNote({
+                scope: printRedemptionScope,
+                issuingTeacherDisplayName: teacherName,
+                classNamesInOrder: (classes || [])
+                    .filter((c) => printScopeClassIds.includes(c.id))
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .map((c) => c.name),
+                teacherNamesInOrder: (teachers || [])
+                    .filter((t) => printScopeTeacherIds.includes(t.id))
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .map((t) => t.name),
+            });
     const previewCoupon: Coupon = {
         id: 'PREVIEW',
         code: '123456',
@@ -1580,6 +1612,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                 : printRedemptionScope === 'classes'
                     ? { redemptionScope: 'classes' as const, allowedClassIds: [...printScopeClassIds] }
                     : { redemptionScope: 'teachers' as const, allowedTeacherIds: [...printScopeTeacherIds] }),
+        ...(redemptionPreviewNote ? { redemptionPrintNote: redemptionPreviewNote } : {}),
         ...(computeStartsAt() !== undefined ? { startsAt: computeStartsAt() } : {}),
         expiresAt: computeExpiresAt(),
     };
@@ -1663,11 +1696,11 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                         <Helper content={secretaryMode ? 'Generate coupon sheets for teachers to hand out. You cannot award points or edit prizes from here.' : 'Print coupons, award points, manage prizes, and take attendance from one place.'}>
                             <h2 className="text-2xl font-bold tracking-tight" style={{ color: teacherAccent }}>
-                                {secretaryMode ? 'Secretary â€” coupon printing' : 'Teacher Portal'}
+                                {secretaryMode ? 'Secretary - coupon printing' : 'Teacher Portal'}
                             </h2>
                             <p className="text-muted-foreground">
                                 {secretaryMode
-                                    ? 'Create printable coupon batches using the schoolâ€™s incentive categories.'
+                                    ? 'Create printable coupon batches using the school\'s incentive categories.'
                                     : 'Generate coupon sheets or award points directly to your students.'}
                             </p>
                             {teacherName ? (

@@ -1,4 +1,4 @@
-import type { Coupon, Student } from './types';
+import type { Coupon, CouponRedemptionScope, Student } from './types';
 
 export function normalizeRedemptionScope(
   coupon: Pick<Coupon, 'redemptionScope'>
@@ -73,4 +73,48 @@ export function describeCouponRedemptionSummary(coupon: Coupon): string | null {
   }
   const n = coupon.allowedTeacherIds?.length ?? 0;
   return n ? `Redeem: ${n} selected teacher(s) only` : 'Redeem: selected teachers';
+}
+
+/** Short text for the physical coupon; prefers stored note from print time, else generic summary. */
+export function couponRedemptionLabelForPrint(coupon: Coupon): string | undefined {
+  const explicit = coupon.redemptionPrintNote?.trim();
+  if (explicit) return explicit;
+  return describeCouponRedemptionSummary(coupon) ?? undefined;
+}
+
+/** Build the note stored on each coupon when the teacher prints (includes class/teacher names). */
+export function buildRedemptionPrintNote(input: {
+  scope: CouponRedemptionScope;
+  issuingTeacherDisplayName: string;
+  classNamesInOrder: string[];
+  teacherNamesInOrder: string[];
+  maxLength?: number;
+}): string | undefined {
+  const max = input.maxLength ?? 118;
+  if (input.scope === 'school') return undefined;
+
+  let s: string;
+  if (input.scope === 'creator') {
+    const name = input.issuingTeacherDisplayName.trim() || 'Issuing teacher';
+    s = `Redeem only on ${name}'s roster.`;
+  } else if (input.scope === 'classes') {
+    const names = input.classNamesInOrder.filter(Boolean);
+    if (names.length === 0) s = 'Redeem only in selected classes.';
+    else {
+      const lead = names.slice(0, 4).join(', ');
+      const extra = names.length > 4 ? ` (+${names.length - 4} more)` : '';
+      s = `Redeem only if your class is: ${lead}${extra}`;
+    }
+  } else {
+    const names = input.teacherNamesInOrder.filter(Boolean);
+    if (names.length === 0) s = 'Redeem only for students of selected teachers.';
+    else {
+      const lead = names.slice(0, 3).join(', ');
+      const extra = names.length > 3 ? ` (+${names.length - 3} more)` : '';
+      s = `Redeem only if assigned to: ${lead}${extra}`;
+    }
+  }
+
+  if (s.length <= max) return s;
+  return `${s.slice(0, Math.max(0, max - 3))}...`;
 }

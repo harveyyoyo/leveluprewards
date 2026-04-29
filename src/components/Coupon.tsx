@@ -1,6 +1,7 @@
 'use client';
 
 import type { Coupon } from '@/lib/types';
+import { couponRedemptionLabelForPrint } from '@/lib/couponRedemptionRules';
 import { useSettings } from './providers/SettingsProvider';
 import { cn } from '@/lib/utils';
 import { APP_NAME } from '@/lib/app-branding';
@@ -11,6 +12,7 @@ export function Coupon({ coupon, schoolId, isNew = false }: { coupon: Coupon, sc
   const title = schoolName ? `${APP_NAME} - ${schoolName}` : APP_NAME;
 
   const isColored = settings.enableColorPrinting && coupon.color;
+  const redemptionLabel = couponRedemptionLabelForPrint(coupon);
 
   const style = isColored ? {
     borderColor: coupon.color,
@@ -21,7 +23,7 @@ export function Coupon({ coupon, schoolId, isNew = false }: { coupon: Coupon, sc
     <div
       style={style}
       className={cn(
-        "coupon-scalable py-[0.25em] px-[0.5em] border border-dotted rounded-[0.75em] bg-white shadow-sm inline-flex flex-col items-center justify-between text-center h-[5em] w-[9.5em] relative overflow-hidden",
+        'coupon-scalable py-[0.2em] px-[0.45em] border border-dotted rounded-[0.75em] bg-white shadow-sm inline-flex flex-col items-center justify-between text-center min-h-[5em] w-[9.5em] max-h-[6.2em] relative overflow-hidden',
         !isColored && "border-slate-400 text-slate-800"
       )}
     >
@@ -49,12 +51,20 @@ export function Coupon({ coupon, schoolId, isNew = false }: { coupon: Coupon, sc
           </div>
         </div>
       </div>
-      <div className="flex flex-col items-center w-full mt-[0.125em]">
-        <div className="font-barcode text-[1.25em] leading-none text-black tracking-wider max-w-full overflow-hidden flex items-end">
+      <div className="flex flex-col items-center w-full mt-[0.08em] min-h-0 flex-1 justify-end gap-[0.08em]">
+        {redemptionLabel && (
+          <div
+            className="text-[0.28em] leading-[1.1] text-black font-bold text-center w-full px-[0.15em] line-clamp-2 break-words hyphens-auto"
+            title={redemptionLabel}
+          >
+            {redemptionLabel}
+          </div>
+        )}
+        <div className="font-barcode text-[1.15em] leading-none text-black tracking-wider max-w-full overflow-hidden flex items-end shrink-0">
           *{coupon.code}*
         </div>
         {(coupon.startsAt || coupon.expiresAt) && (
-          <div className="text-[0.35em] mt-[0.125em] uppercase tracking-[0.18em] opacity-70 leading-none flex flex-col gap-[0.125em]">
+          <div className="text-[0.32em] uppercase tracking-[0.16em] opacity-70 leading-none flex flex-col gap-[0.06em] shrink-0">
             {coupon.startsAt && (
               <span>Valid from {new Date(coupon.startsAt).toLocaleDateString()}</span>
             )}
