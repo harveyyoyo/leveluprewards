@@ -68,6 +68,87 @@ function allocateUsername(base: string, taken: Set<string>): string {
   return candidate;
 }
 
+async function persistTeacherDocuments(firestore: Firestore, schoolId: string, teachersToCreate: Teacher[]) {
+  if (teachersToCreate.length === 0) return;
+  const BATCH_LIMIT = 499;
+  try {
+    for (let i = 0; i < teachersToCreate.length; i += BATCH_LIMIT) {
+      const chunk = teachersToCreate.slice(i, i + BATCH_LIMIT);
+      const batch = writeBatch(firestore);
+      for (const t of chunk) {
+        const teacherDocRef = doc(firestore, 'schools', schoolId, 'teachers', t.id);
+        batch.set(teacherDocRef, removeUndefined(t as unknown as Record<string, unknown>));
+      }
+      await batch.commit();
+    }
+  } catch (error) {
+    reportFirestorePermissionError(error, {
+      path: `schools/${schoolId}/teachers`,
+      operation: 'write',
+    });
+    throw error;
+  }
+}
+
+/** Import teachers from structured rows (e.g. AI-parsed). Usernames and passcodes are filled in when omitted. */
+export const importTeachersFromParsedRows = async (
+  firestore: Firestore,
+  schoolId: string,
+  rows: { name: string; username?: string; passcode?: string }[],
+  currentTeachers: Teacher[],
+): Promise<{ success: number; failed: number; errors: string[] }> => {
+  const errors: string[] = [];
+  const takenLower = new Set(
+    currentTeachers
+      .map((t) => (t.username || '').trim().toLowerCase())
+      .filter(Boolean),
+  );
+
+  const teachersToCreate: Teacher[] = [];
+
+  rows.forEach((row, index) => {
+    const fullName = (row.name || '').trim();
+    if (!fullName) {
+      errors.push(`Row ${index + 1}: Missing name.`);
+      return;
+    }
+
+    let username = (row.username || '').trim();
+    let passcode = (row.passcode || '').trim();
+
+    if (!username) {
+      const base = slugifyUsername(fullName);
+      username = allocateUsername(base, takenLower);
+    } else {
+      const key = username.toLowerCase();
+      if (takenLower.has(key)) {
+        errors.push(`Row ${index + 1}: Username "${username}" is already in use.`);
+        return;
+      }
+      takenLower.add(key);
+    }
+
+    if (!passcode) {
+      passcode = String(Math.floor(1000 + Math.random() * 9000));
+    }
+
+    const newId = `t_${Date.now()}_${index}_${Math.random().toString(36).substring(2, 9)}`;
+    teachersToCreate.push({
+      id: newId,
+      name: fullName,
+      username,
+      passcode,
+    });
+  });
+
+  await persistTeacherDocuments(firestore, schoolId, teachersToCreate);
+
+  const successCount = teachersToCreate.length;
+  const attempted = rows.filter((r) => (r.name || '').trim()).length;
+  const failedCount = attempted - successCount;
+  return { success: successCount, failed: failedCount, errors };
+};
+
 /** Import teachers from CSV: Full Name, Username, Passcode (header optional). Username and passcode are generated when omitted; usernames must stay unique. */
 export const uploadTeachersFromCsv = async (
   firestore: Firestore,
@@ -137,26 +218,7 @@ export const uploadTeachersFromCsv = async (
     });
   });
 
-  if (teachersToCreate.length > 0) {
-    const BATCH_LIMIT = 499;
-    try {
-      for (let i = 0; i < teachersToCreate.length; i += BATCH_LIMIT) {
-        const chunk = teachersToCreate.slice(i, i + BATCH_LIMIT);
-        const batch = writeBatch(firestore);
-        for (const t of chunk) {
-          const teacherDocRef = doc(firestore, 'schools', schoolId, 'teachers', t.id);
-          batch.set(teacherDocRef, removeUndefined(t as unknown as Record<string, unknown>));
-        }
-        await batch.commit();
-      }
-    } catch (error) {
-      reportFirestorePermissionError(error, {
-        path: `schools/${schoolId}/teachers`,
-        operation: 'write',
-      });
-      throw error;
-    }
-  }
+  await persistTeacherDocuments(firestore, schoolId, teachersToCreate);
 
   const successCount = teachersToCreate.length;
   const nonemptyLines = dataLines.filter((r) => r.trim()).length;

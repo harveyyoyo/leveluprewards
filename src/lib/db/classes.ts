@@ -123,3 +123,56 @@ export const uploadClassesFromCsv = async (
   const failedCount = nonemptyLines - successCount;
   return { success: successCount, failed: failedCount, errors };
 };
+
+/** Create classes from a list of names (e.g. AI-parsed). Skips empties and duplicates. */
+export const importClassNames = async (
+  firestore: Firestore,
+  schoolId: string,
+  rawNames: string[],
+  currentClasses: Class[],
+): Promise<{ success: number; failed: number; errors: string[] }> => {
+  const errors: string[] = [];
+  const existingLower = new Set(currentClasses.map((c) => c.name.trim().toLowerCase()));
+  const seenInFile = new Set<string>();
+  const classesToCreate: Class[] = [];
+
+  rawNames.forEach((raw, index) => {
+    const name = (raw || '').trim();
+    if (!name) {
+      errors.push(`Row ${index + 1}: Missing class name.`);
+      return;
+    }
+    const key = name.toLowerCase();
+    if (existingLower.has(key) || seenInFile.has(key)) return;
+    seenInFile.add(key);
+    existingLower.add(key);
+    const newId = `c_${Date.now()}_${index}_${Math.random().toString(36).substring(2, 9)}`;
+    classesToCreate.push({ id: newId, name });
+  });
+
+  if (classesToCreate.length > 0) {
+    const BATCH_LIMIT = 499;
+    try {
+      for (let i = 0; i < classesToCreate.length; i += BATCH_LIMIT) {
+        const chunk = classesToCreate.slice(i, i + BATCH_LIMIT);
+        const batch = writeBatch(firestore);
+        for (const c of chunk) {
+          const ref = doc(firestore, 'schools', schoolId, 'classes', c.id);
+          batch.set(ref, removeUndefined(c as unknown as Record<string, unknown>));
+        }
+        await batch.commit();
+      }
+    } catch (error) {
+      reportFirestorePermissionError(error, {
+        path: `schools/${schoolId}/classes`,
+        operation: 'write',
+      });
+      throw error;
+    }
+  }
+
+  const successCount = classesToCreate.length;
+  const attempted = rawNames.filter((r) => (r || '').trim()).length;
+  const failedCount = attempted - successCount;
+  return { success: successCount, failed: failedCount, errors };
+};

@@ -80,7 +80,7 @@ const ThemeGeneratorModal = dynamic(
   () => import('@/components/ThemeGeneratorModal').then((m) => m.ThemeGeneratorModal),
   { ssr: false },
 );
-import { addAchievement, updateAchievement, deleteAchievement, addBadge, updateBadge, deleteBadge, addStaffAccount, updateStaffAccount, deleteStaffAccount } from '@/lib/db';
+import { addAchievement, updateAchievement, deleteAchievement, addBadge, updateBadge, deleteBadge, addStaffAccount, updateStaffAccount, deleteStaffAccount, importClassNames, importTeachersFromParsedRows, importStudentsFromParsedRows } from '@/lib/db';
 import { SAMPLE_BADGES, getSampleCategoryBadges } from '@/lib/sample-badges';
 // The Students tab is the default tab, so keep it eager. Every other tab is
 // code-split with `next/dynamic` so its chunk is only fetched when the admin
@@ -596,6 +596,57 @@ function AdminDashboardInner() {
     }
   };
 
+  const handleAiCommitClasses = async (names: string[]) => {
+    if (!firestore || !schoolId) return;
+    try {
+      const report = await importClassNames(firestore, schoolId, names, classes || []);
+      playSound(report.success > 0 ? 'success' : 'error');
+      const msg = describeCsvImportReport(report, 'Classes');
+      toast({ variant: msg.variant, title: msg.title, description: msg.description });
+    } catch (err: unknown) {
+      playSound('error');
+      toast({
+        variant: 'destructive',
+        title: 'Failed to import classes',
+        description: getReadableErrorMessage(err, 'Import failed.'),
+      });
+    }
+  };
+
+  const handleAiCommitTeachers = async (rows: { name: string; username?: string; passcode?: string }[]) => {
+    if (!firestore || !schoolId) return;
+    try {
+      const report = await importTeachersFromParsedRows(firestore, schoolId, rows, teachers || []);
+      playSound(report.success > 0 ? 'success' : 'error');
+      const msg = describeCsvImportReport(report, 'Teachers');
+      toast({ variant: msg.variant, title: msg.title, description: msg.description });
+    } catch (err: unknown) {
+      playSound('error');
+      toast({
+        variant: 'destructive',
+        title: 'Failed to import teachers',
+        description: getReadableErrorMessage(err, 'Import failed.'),
+      });
+    }
+  };
+
+  const handleAiCommitStudents = async (rows: { firstName: string; lastName: string; className?: string }[]) => {
+    if (!firestore || !schoolId) return;
+    try {
+      const report = await importStudentsFromParsedRows(firestore, schoolId, rows, students || [], classes || []);
+      playSound(report.success > 0 ? 'success' : 'error');
+      const msg = describeCsvImportReport(report, 'Students');
+      toast({ variant: msg.variant, title: msg.title, description: msg.description });
+    } catch (err: unknown) {
+      playSound('error');
+      toast({
+        variant: 'destructive',
+        title: 'Failed to import students',
+        description: getReadableErrorMessage(err, 'Import failed.'),
+      });
+    }
+  };
+
   const usedCouponsCount = coupons?.filter((c) => c.used).length || 0;
   const totalPointsAwarded = coupons?.filter((c) => c.used).reduce((sum, c) => sum + c.value, 0) || 0;
 
@@ -660,9 +711,13 @@ function AdminDashboardInner() {
         <BulkRosterSetupDialog
           open={bulkRosterOpen}
           onOpenChange={setBulkRosterOpen}
+          aiClassNames={(classes || []).map((c) => c.name)}
           onClassesCsv={handleBulkClassesCsv}
           onTeachersCsv={handleBulkTeachersCsv}
           onStudentsCsv={handleBulkStudentsCsv}
+          onAiCommitClasses={handleAiCommitClasses}
+          onAiCommitTeachers={handleAiCommitTeachers}
+          onAiCommitStudents={handleAiCommitStudents}
         />
 
         <Tabs key={`${String(settings.enableAchievements)}:${String(settings.enableBadges)}`} defaultValue="students" className="space-y-6">

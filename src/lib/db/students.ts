@@ -404,6 +404,85 @@ export const purgeStudentProgress = async (firestore: Firestore, schoolId: strin
   }
 };
 
+async function persistStudentDocuments(firestore: Firestore, schoolId: string, studentsToCreate: Student[]) {
+  if (studentsToCreate.length === 0) return;
+  const BATCH_LIMIT = 499;
+  try {
+    for (let i = 0; i < studentsToCreate.length; i += BATCH_LIMIT) {
+      const chunk = studentsToCreate.slice(i, i + BATCH_LIMIT);
+      const batch = writeBatch(firestore);
+      for (const student of chunk) {
+        const studentDocRef = doc(firestore, 'schools', schoolId, 'students', student.id);
+        batch.set(studentDocRef, removeUndefined(student as unknown as Record<string, unknown>));
+      }
+      await batch.commit();
+    }
+  } catch (error) {
+    reportFirestorePermissionError(error, {
+      path: `schools/${schoolId}/students`,
+      operation: 'write',
+    });
+    throw error;
+  }
+}
+
+/** Import students from structured rows (e.g. AI-parsed). Matches className to existing classes case-insensitively. */
+export const importStudentsFromParsedRows = async (
+  firestore: Firestore,
+  schoolId: string,
+  rows: { firstName: string; lastName: string; className?: string }[],
+  currentStudents: Student[],
+  allClasses: Class[],
+): Promise<{ success: number; failed: number; errors: string[] }> => {
+  const errors: string[] = [];
+  const existingNfcIds = new Set(currentStudents.map((s) => s.nfcId || s.id));
+  const studentsToCreate: Student[] = [];
+
+  rows.forEach((row, index) => {
+    const rawFn = (row.firstName || '').trim();
+    const rawLn = (row.lastName || '').trim();
+    const firstName = rawFn === '—' ? '' : rawFn;
+    const lastName = rawLn === '—' ? '' : rawLn;
+    const studentClassName = (row.className || '').trim();
+
+    if (!firstName || !lastName) {
+      errors.push(`Row ${index + 1}: Missing first or last name.`);
+      return;
+    }
+
+    let newStudentId: string;
+    do {
+      newStudentId = Math.floor(10000000 + Math.random() * 90000000).toString();
+    } while (existingNfcIds.has(newStudentId));
+    existingNfcIds.add(newStudentId);
+
+    const classObj = allClasses.find(
+      (c) => studentClassName && c.name.toLowerCase() === studentClassName.toLowerCase(),
+    );
+
+    studentsToCreate.push({
+      id: newStudentId,
+      nfcId: newStudentId,
+      firstName,
+      lastName,
+      createdAt: Date.now(),
+      points: 0,
+      lifetimePoints: 0,
+      classId: classObj?.id || '',
+      categoryPoints: {},
+      categoryPointsByPeriod: {},
+      earnedAchievements: [],
+      earnedBadges: [],
+    });
+  });
+
+  await persistStudentDocuments(firestore, schoolId, studentsToCreate);
+
+  const successCount = studentsToCreate.length;
+  const failedCount = rows.length - successCount;
+  return { success: successCount, failed: failedCount, errors };
+};
+
 export const uploadStudents = async (firestore: Firestore, schoolId: string, csvContent: string, currentStudents: Student[], allClasses: Class[]): Promise<{ success: number, failed: number, errors: string[] }> => {
   const lines = csvContent.replace(/\r\n/g, '\n').split('\n').filter(line => line.trim() !== '');
   const errors: string[] = [];
@@ -459,27 +538,7 @@ export const uploadStudents = async (firestore: Firestore, schoolId: string, csv
     successCount++;
   });
 
-  // Chunk batch operations to respect the 500-operation Firestore limit
-  if (studentsToCreate.length > 0) {
-    const BATCH_LIMIT = 499;
-    try {
-      for (let i = 0; i < studentsToCreate.length; i += BATCH_LIMIT) {
-        const chunk = studentsToCreate.slice(i, i + BATCH_LIMIT);
-        const batch = writeBatch(firestore);
-        for (const student of chunk) {
-          const studentDocRef = doc(firestore, 'schools', schoolId, 'students', student.id);
-          batch.set(studentDocRef, removeUndefined(student as unknown as Record<string, unknown>));
-        }
-        await batch.commit();
-      }
-    } catch (error) {
-      reportFirestorePermissionError(error, {
-        path: `schools/${schoolId}/students`,
-        operation: 'write',
-      });
-      throw error;
-    }
-  }
+  await persistStudentDocuments(firestore, schoolId, studentsToCreate);
 
   const failedCount = dataLines.length - successCount;
   return { success: successCount, failed: failedCount, errors };

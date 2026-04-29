@@ -18,16 +18,17 @@ export {
   deductPointsFromMultipleStudents,
   purgeStudentProgress,
   uploadStudents,
+  importStudentsFromParsedRows,
 } from './students';
 
 // Lookup
 export { lookupStudentId } from './lookup';
 
 // Classes
-export { addClass, updateClass, deleteClass, uploadClassesFromCsv } from './classes';
+export { addClass, updateClass, deleteClass, uploadClassesFromCsv, importClassNames } from './classes';
 
 // Teachers
-export { addTeacher, updateTeacher, deleteTeacher, uploadTeachersFromCsv } from './teachers';
+export { addTeacher, updateTeacher, deleteTeacher, uploadTeachersFromCsv, importTeachersFromParsedRows } from './teachers';
 
 // Staff accounts (secretary / prize desk)
 export { addStaffAccount, updateStaffAccount, deleteStaffAccount, staffAccountsCollectionRef } from './staffAccounts';
