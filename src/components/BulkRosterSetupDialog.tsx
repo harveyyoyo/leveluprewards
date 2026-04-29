@@ -15,13 +15,20 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { BookOpen, Download, Loader2, UploadCloud, User, Users, Wand2, FileSpreadsheet } from 'lucide-react';
+  BookOpen,
+  Download,
+  Loader2,
+  UploadCloud,
+  User,
+  Users,
+  Wand2,
+  FileSpreadsheet,
+  Paperclip,
+  Tags,
+  Clock,
+  Gift,
+  Headset,
+} from 'lucide-react';
 import {
   downloadUtf8Csv,
   ROSTER_CLASSES_TEMPLATE,
@@ -31,24 +38,35 @@ import {
 import { useAuthFetch } from '@/lib/authFetch';
 import { useAppContext } from '@/components/AppProvider';
 import { useToast } from '@/hooks/use-toast';
+import type { ParsedSchoolSnapshot } from '@/lib/schoolDataImport';
 
 export type BulkRosterKind = 'classes' | 'teachers' | 'students';
-
-type ParsedTeacher = { name: string; username?: string; passcode?: string };
-type ParsedStudent = { firstName: string; lastName: string; className?: string };
 
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Known class names (helps AI match student homerooms). */
   aiClassNames: string[];
   onClassesCsv: (text: string) => Promise<void>;
   onTeachersCsv: (text: string) => Promise<void>;
   onStudentsCsv: (text: string) => Promise<void>;
-  onAiCommitClasses: (names: string[]) => Promise<void>;
-  onAiCommitTeachers: (rows: ParsedTeacher[]) => Promise<void>;
-  onAiCommitStudents: (rows: ParsedStudent[]) => Promise<void>;
+  onAiCommitSnapshot: (snapshot: ParsedSchoolSnapshot) => Promise<void>;
 };
+
+function snapshotCounts(s: ParsedSchoolSnapshot): Record<string, number> {
+  const o: Record<string, number> = {};
+  if (s.classes?.length) o.classes = s.classes.length;
+  if (s.teachers?.length) o.teachers = s.teachers.length;
+  if (s.students?.length) o.students = s.students.length;
+  if (s.periods?.length) o.periods = s.periods.length;
+  if (s.categories?.length) o.categories = s.categories.length;
+  if (s.prizes?.length) o.prizes = s.prizes.length;
+  if (s.staffAccounts?.length) o.staffAccounts = s.staffAccounts.length;
+  return o;
+}
+
+function totalInSnapshot(s: ParsedSchoolSnapshot): number {
+  return Object.values(snapshotCounts(s)).reduce((a, b) => a + b, 0);
+}
 
 export function BulkRosterSetupDialog({
   open,
@@ -57,31 +75,31 @@ export function BulkRosterSetupDialog({
   onClassesCsv,
   onTeachersCsv,
   onStudentsCsv,
-  onAiCommitClasses,
-  onAiCommitTeachers,
-  onAiCommitStudents,
+  onAiCommitSnapshot,
 }: Props) {
   const classesRef = useRef<HTMLInputElement>(null);
   const teachersRef = useRef<HTMLInputElement>(null);
   const studentsRef = useRef<HTMLInputElement>(null);
+  const docInputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState<BulkRosterKind | null>(null);
 
   const authFetch = useAuthFetch();
   const { schoolId } = useAppContext();
   const { toast } = useToast();
 
-  const [aiKind, setAiKind] = useState<BulkRosterKind>('classes');
   const [aiPaste, setAiPaste] = useState('');
+  const [extractedDocText, setExtractedDocText] = useState('');
+  const [extractedDocName, setExtractedDocName] = useState('');
+  const [extractingDoc, setExtractingDoc] = useState(false);
   const [aiParsing, setAiParsing] = useState(false);
   const [aiImporting, setAiImporting] = useState(false);
-  const [aiPreviewClasses, setAiPreviewClasses] = useState<{ name: string }[]>([]);
-  const [aiPreviewTeachers, setAiPreviewTeachers] = useState<ParsedTeacher[]>([]);
-  const [aiPreviewStudents, setAiPreviewStudents] = useState<ParsedStudent[]>([]);
+  const [aiSnapshot, setAiSnapshot] = useState<ParsedSchoolSnapshot | null>(null);
 
-  const resetAiPreview = () => {
-    setAiPreviewClasses([]);
-    setAiPreviewTeachers([]);
-    setAiPreviewStudents([]);
+  const resetAi = () => {
+    setAiPaste('');
+    setExtractedDocText('');
+    setExtractedDocName('');
+    setAiSnapshot(null);
   };
 
   const wrap =
@@ -99,114 +117,140 @@ export function BulkRosterSetupDialog({
       }
     };
 
+  const buildCombinedPrompt = () => {
+    const parts: string[] = [];
+    if (extractedDocText.trim()) {
+      parts.push(`### Uploaded document: ${extractedDocName || 'file'}\n${extractedDocText}`);
+    }
+    if (aiPaste.trim()) {
+      parts.push(aiPaste.trim());
+    }
+    return parts.join('\n\n---\n\n');
+  };
+
+  const handleDocFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !schoolId) return;
+    setExtractingDoc(true);
+    try {
+      const fd = new FormData();
+      fd.set('schoolId', schoolId);
+      fd.set('file', file);
+      const res = await authFetch('/api/extract-document', {
+        method: 'POST',
+        body: fd,
+      });
+      const raw = await res.text();
+      let data: { text?: string; filename?: string; error?: string };
+      try {
+        data = JSON.parse(raw) as typeof data;
+      } catch {
+        throw new Error(raw.slice(0, 200) || 'Upload failed.');
+      }
+      if (!res.ok) {
+        throw new Error(typeof data.error === 'string' ? data.error : 'Could not read document.');
+      }
+      setExtractedDocText(data.text || '');
+      setExtractedDocName(data.filename || file.name);
+      setAiSnapshot(null);
+      toast({ title: 'Document loaded', description: `Extracted ${(data.text || '').length} characters.` });
+    } catch (err: unknown) {
+      toast({
+        variant: 'destructive',
+        title: 'Document upload failed',
+        description: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setExtractingDoc(false);
+      e.target.value = '';
+    }
+  };
+
   const handleAiParse = async () => {
-    if (!aiPaste.trim() || !schoolId) return;
+    const combined = buildCombinedPrompt();
+    if (!combined.trim() || !schoolId) return;
     setAiParsing(true);
-    resetAiPreview();
+    setAiSnapshot(null);
     try {
       const res = await authFetch('/api/parse-roster', {
         method: 'POST',
         body: JSON.stringify({
           schoolId,
-          kind: aiKind,
-          prompt: aiPaste,
+          kind: 'auto',
+          prompt: combined,
           model: typeof window !== 'undefined' ? localStorage.getItem('arcade_ai_model') || 'gemini-2.5-flash' : 'gemini-2.5-flash',
           classNames: aiClassNames,
         }),
       });
       const bodyText = await res.text();
-      let data: Record<string, unknown>;
+      let data: { mode?: string; snapshot?: ParsedSchoolSnapshot; error?: string };
       try {
-        data = JSON.parse(bodyText) as Record<string, unknown>;
+        data = JSON.parse(bodyText) as typeof data;
       } catch {
-        throw new Error(bodyText?.slice(0, 200) || 'Could not parse server response.');
+        throw new Error(bodyText.slice(0, 200) || 'Bad response.');
       }
       if (!res.ok) {
         throw new Error(typeof data.error === 'string' ? data.error : 'AI parse failed.');
       }
-
-      let count = 0;
-      if (aiKind === 'classes') {
-        const classes = (data.classes as { name: string }[]) || [];
-        const filtered = classes.filter((c) => c?.name?.trim());
-        setAiPreviewClasses(filtered);
-        count = filtered.length;
-      } else if (aiKind === 'teachers') {
-        const teachers = (data.teachers as ParsedTeacher[]) || [];
-        const filtered = teachers.filter((t) => t?.name?.trim());
-        setAiPreviewTeachers(filtered);
-        count = filtered.length;
-      } else {
-        const students = (data.students as ParsedStudent[]) || [];
-        const filtered = students.filter(
-          (s) => (s?.firstName || '').trim() && (s?.lastName || '').trim(),
-        );
-        setAiPreviewStudents(filtered);
-        count = filtered.length;
-      }
-
-      if (count === 0) {
+      const snap = data.snapshot || {};
+      setAiSnapshot(snap);
+      const n = totalInSnapshot(snap);
+      if (n === 0) {
         toast({
-          title: 'Nothing extracted',
-          description: 'Try pasting more rows or a clearer table. Check API keys if this keeps failing.',
+          title: 'Nothing recognized',
+          description: 'Try more detail, another export, or paste additional rows.',
         });
       } else {
         toast({
-          title: 'Roster understood',
-          description: `Review the preview, then import ${count} ${aiKind === 'classes' ? 'classes' : aiKind === 'teachers' ? 'teachers' : 'students'}.`,
+          title: 'Data understood',
+          description: `Review ${n} item(s) below, then import.`,
         });
       }
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
-      toast({ variant: 'destructive', title: 'Could not parse text', description: msg });
+    } catch (err: unknown) {
+      toast({
+        variant: 'destructive',
+        title: 'Could not parse',
+        description: err instanceof Error ? err.message : String(err),
+      });
     } finally {
       setAiParsing(false);
     }
   };
 
   const handleAiImport = async () => {
+    if (!aiSnapshot || totalInSnapshot(aiSnapshot) === 0) return;
     setAiImporting(true);
     try {
-      if (aiKind === 'classes' && aiPreviewClasses.length > 0) {
-        await onAiCommitClasses(aiPreviewClasses.map((c) => c.name.trim()));
-      } else if (aiKind === 'teachers' && aiPreviewTeachers.length > 0) {
-        await onAiCommitTeachers(aiPreviewTeachers);
-      } else if (aiKind === 'students' && aiPreviewStudents.length > 0) {
-        await onAiCommitStudents(aiPreviewStudents);
-      }
-      resetAiPreview();
-      setAiPaste('');
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
-      toast({ variant: 'destructive', title: 'Import failed', description: msg });
+      await onAiCommitSnapshot(aiSnapshot);
+      resetAi();
+    } catch (err: unknown) {
+      toast({
+        variant: 'destructive',
+        title: 'Import failed',
+        description: err instanceof Error ? err.message : String(err),
+      });
     } finally {
       setAiImporting(false);
     }
   };
 
-  const previewCount =
-    aiKind === 'classes'
-      ? aiPreviewClasses.length
-      : aiKind === 'teachers'
-        ? aiPreviewTeachers.length
-        : aiPreviewStudents.length;
+  const counts = aiSnapshot ? snapshotCounts(aiSnapshot) : {};
+  const previewTotal = aiSnapshot ? totalInSnapshot(aiSnapshot) : 0;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(o) => { if (!o) resetAi(); onOpenChange(o); }}>
       <DialogContent className="sm:max-w-2xl rounded-2xl max-h-[92vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl">Bulk roster setup</DialogTitle>
           <DialogDescription>
-            Import from CSV files, or paste any roster export, spreadsheet slice, or list and let AI interpret the columns.
+            CSV templates for precise columns, or paste/upload anything and let AI detect classes, people, periods, categories, prizes, and desk staff.
           </DialogDescription>
         </DialogHeader>
 
         <Alert className="rounded-xl border-primary/30 bg-primary/5">
-          <AlertTitle className="text-sm font-semibold">Suggested order</AlertTitle>
+          <AlertTitle className="text-sm font-semibold">Tip</AlertTitle>
           <AlertDescription className="text-xs leading-relaxed pt-1">
-            <strong className="font-semibold text-foreground">1.</strong> Classes{' '}
-            <strong className="font-semibold text-foreground">2.</strong> Teachers{' '}
-            <strong className="font-semibold text-foreground">3.</strong> Students (class column matches existing classes).
+            Paste exports and notes together, or attach a PDF/DOCX. You do not need to say what kind of data it is—the model sorts it into the right lists.
           </AlertDescription>
         </Alert>
 
@@ -218,7 +262,7 @@ export function BulkRosterSetupDialog({
             </TabsTrigger>
             <TabsTrigger value="ai" className="rounded-lg gap-2">
               <Wand2 className="w-4 h-4" />
-              AI (any format)
+              AI import
             </TabsTrigger>
           </TabsList>
 
@@ -367,41 +411,49 @@ export function BulkRosterSetupDialog({
           <TabsContent value="ai" className="space-y-4 pt-4 outline-none">
             <div className="space-y-2">
               <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                What are you importing?
+                Attach document (optional)
               </Label>
-              <Select
-                value={aiKind}
-                onValueChange={(v) => {
-                  setAiKind(v as BulkRosterKind);
-                  resetAiPreview();
-                }}
-              >
-                <SelectTrigger className="rounded-xl">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="classes">Classes / groups / homerooms</SelectItem>
-                  <SelectItem value="teachers">Teachers / staff logins</SelectItem>
-                  <SelectItem value="students">Students</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex flex-wrap gap-2 items-center">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="rounded-xl gap-2"
+                  disabled={extractingDoc || !schoolId}
+                  onClick={() => docInputRef.current?.click()}
+                >
+                  {extractingDoc ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
+                  PDF, DOCX, TXT, CSV
+                </Button>
+                {extractedDocName ? (
+                  <span className="text-xs text-muted-foreground truncate max-w-[200px]" title={extractedDocName}>
+                    {extractedDocName}
+                  </span>
+                ) : null}
+                {extractedDocText ? (
+                  <Button type="button" variant="ghost" size="sm" className="text-xs h-8" onClick={() => { setExtractedDocText(''); setExtractedDocName(''); }}>
+                    Remove file
+                  </Button>
+                ) : null}
+              </div>
+              <input
+                ref={docInputRef}
+                type="file"
+                accept=".pdf,.docx,.txt,.csv,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/csv"
+                className="hidden"
+                onChange={(e) => void handleDocFile(e)}
+              />
             </div>
 
             <div className="space-y-2">
               <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Paste text (any format)
+                Paste anything (optional)
               </Label>
               <Textarea
                 value={aiPaste}
                 onChange={(e) => setAiPaste(e.target.value)}
-                placeholder={
-                  aiKind === 'classes'
-                    ? 'Paste a column from Excel, a bullet list, SIS export, or a whole table…'
-                    : aiKind === 'teachers'
-                      ? 'Paste staff lists, HR CSV exports, or schedules with names…'
-                      : 'Paste rosters with any column headers (First/Given/Last, homeroom, etc.)…'
-                }
-                className="min-h-[140px] rounded-xl text-sm font-mono"
+                placeholder="Spreadsheets, schedules, mixed lists, emails… Everything above is sent together to the model."
+                className="min-h-[120px] rounded-xl text-sm font-mono"
               />
             </div>
 
@@ -409,7 +461,7 @@ export function BulkRosterSetupDialog({
               <Button
                 type="button"
                 className="rounded-xl gap-2"
-                disabled={aiParsing || !aiPaste.trim() || !schoolId}
+                disabled={aiParsing || (!buildCombinedPrompt().trim()) || !schoolId}
                 onClick={() => void handleAiParse()}
               >
                 {aiParsing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
@@ -419,48 +471,58 @@ export function BulkRosterSetupDialog({
                 type="button"
                 variant="secondary"
                 className="rounded-xl"
-                disabled={aiImporting || previewCount === 0}
+                disabled={aiImporting || previewTotal === 0}
                 onClick={() => void handleAiImport()}
               >
                 {aiImporting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                Import {previewCount > 0 ? `${previewCount} ` : ''}
-                {aiKind === 'classes' ? 'classes' : aiKind === 'teachers' ? 'teachers' : 'students'}
+                Import all ({previewTotal})
               </Button>
             </div>
 
-            {previewCount > 0 && (
-              <div className="rounded-xl border bg-muted/30 p-3 space-y-2">
+            {previewTotal > 0 && aiSnapshot && (
+              <div className="rounded-xl border bg-muted/30 p-3 space-y-3">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Preview</p>
-                <ScrollArea className="h-[min(200px,35vh)] pr-3">
-                  <ul className="text-sm space-y-1.5 font-mono">
-                    {aiKind === 'classes' &&
-                      aiPreviewClasses.map((c, i) => (
-                        <li key={i} className="truncate border-b border-border/40 pb-1">
-                          {c.name}
-                        </li>
-                      ))}
-                    {aiKind === 'teachers' &&
-                      aiPreviewTeachers.map((t, i) => (
-                        <li key={i} className="border-b border-border/40 pb-1">
-                          <span className="font-semibold">{t.name}</span>
-                          {t.username ? (
-                            <span className="text-muted-foreground text-xs ml-2">
-                              @{t.username}
-                              {t.passcode ? ` · PIN ${t.passcode}` : ''}
-                            </span>
-                          ) : null}
-                        </li>
-                      ))}
-                    {aiKind === 'students' &&
-                      aiPreviewStudents.map((s, i) => (
-                        <li key={i} className="border-b border-border/40 pb-1 truncate">
-                          {s.firstName} {s.lastName}
-                          {s.className ? (
-                            <span className="text-muted-foreground text-xs ml-2">· {s.className}</span>
-                          ) : null}
-                        </li>
-                      ))}
-                  </ul>
+                <div className="flex flex-wrap gap-2 text-xs">
+                  {counts.classes ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-background px-2 py-0.5 border">
+                      <BookOpen className="w-3 h-3" /> {counts.classes} classes
+                    </span>
+                  ) : null}
+                  {counts.teachers ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-background px-2 py-0.5 border">
+                      <User className="w-3 h-3" /> {counts.teachers} teachers
+                    </span>
+                  ) : null}
+                  {counts.students ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-background px-2 py-0.5 border">
+                      <Users className="w-3 h-3" /> {counts.students} students
+                    </span>
+                  ) : null}
+                  {counts.periods ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-background px-2 py-0.5 border">
+                      <Clock className="w-3 h-3" /> {counts.periods} periods
+                    </span>
+                  ) : null}
+                  {counts.categories ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-background px-2 py-0.5 border">
+                      <Tags className="w-3 h-3" /> {counts.categories} categories
+                    </span>
+                  ) : null}
+                  {counts.prizes ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-background px-2 py-0.5 border">
+                      <Gift className="w-3 h-3" /> {counts.prizes} prizes
+                    </span>
+                  ) : null}
+                  {counts.staffAccounts ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-background px-2 py-0.5 border">
+                      <Headset className="w-3 h-3" /> {counts.staffAccounts} desk staff
+                    </span>
+                  ) : null}
+                </div>
+                <ScrollArea className="h-[min(220px,38vh)] pr-3">
+                  <pre className="text-[11px] font-mono whitespace-pre-wrap break-words text-muted-foreground">
+                    {JSON.stringify(aiSnapshot, null, 2)}
+                  </pre>
                 </ScrollArea>
               </div>
             )}

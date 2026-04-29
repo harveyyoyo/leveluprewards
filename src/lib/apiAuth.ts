@@ -263,6 +263,66 @@ export interface GuardContext {
   schoolId: string | null;
 }
 
+/**
+ * Verify Authorization Bearer + school staff (or developer allowlist) without reading a JSON body.
+ * Use for multipart routes (file upload) after reading `schoolId` from form fields.
+ */
+export async function verifyBearerSchoolStaff(
+  req: NextRequest,
+  schoolId: string,
+  options: Pick<GuardOptions, 'maxRequests' | 'windowMs'> = {},
+): Promise<{ ok: true; uid: string } | { ok: false; response: NextResponse }> {
+  const windowMs = options.windowMs ?? DEFAULT_WINDOW_MS;
+  const maxRequests = options.maxRequests ?? DEFAULT_MAX_REQUESTS;
+
+  if (!sameOrigin(req)) {
+    return { ok: false, response: jsonError(403, 'Cross-origin requests are not allowed.') };
+  }
+
+  const authHeader = req.headers.get('authorization') || '';
+  const match = /^Bearer\s+(.+)$/i.exec(authHeader);
+  if (!match) {
+    return { ok: false, response: jsonError(401, 'Authentication required.') };
+  }
+  const idToken = match[1]!;
+
+  const verified = await verifyIdToken(idToken);
+  if (!verified) {
+    return { ok: false, response: jsonError(401, 'Invalid or expired session.') };
+  }
+
+  sweepBuckets();
+  const userLimit = checkRateLimit(`uid:${verified.uid}`, maxRequests, windowMs);
+  if (!userLimit.allowed) {
+    const res = jsonError(429, 'Too many requests. Please slow down.');
+    res.headers.set('Retry-After', String(userLimit.retryAfterSec));
+    return { ok: false, response: res };
+  }
+
+  const ipLimit = checkRateLimit(`ip:${getClientIp(req)}`, maxRequests * 3, windowMs);
+  if (!ipLimit.allowed) {
+    const res = jsonError(429, 'Too many requests from this network.');
+    res.headers.set('Retry-After', String(ipLimit.retryAfterSec));
+    return { ok: false, response: res };
+  }
+
+  const sid = schoolId.trim().toLowerCase();
+  if (!sid) {
+    return { ok: false, response: jsonError(400, 'schoolId is required.') };
+  }
+
+  const staff = await checkSchoolRole(idToken, verified.uid, sid);
+  const developer = staff ? false : await checkDeveloperAllowlist(idToken, verified.uid);
+  if (!staff && !developer) {
+    return {
+      ok: false,
+      response: jsonError(403, 'You do not have permission to use this feature.'),
+    };
+  }
+
+  return { ok: true, uid: verified.uid };
+}
+
 export async function guardAiRoute(
   req: NextRequest,
   options: GuardOptions = {}

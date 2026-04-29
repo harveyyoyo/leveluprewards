@@ -1,6 +1,9 @@
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  experimental: {
+    serverComponentsExternalPackages: ['pdf-parse', 'mammoth'],
+  },
   /* config options here */
   webpack: (config, { isServer }) => {
     // @vladmandic/face-api uses dynamic requires; webpack warns but the bundle works.

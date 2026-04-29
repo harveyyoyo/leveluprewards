@@ -15,7 +15,7 @@ import { collection, doc, updateDoc, setDoc, deleteDoc, getDocs, query, orderBy,
 import {
   Users, Gift, BookOpen, Trash2, Edit, Plus, UploadCloud, Printer, LayoutDashboard, Database,
   Settings, History, Award, CheckCircle, Tag, Trophy, ArrowRight, Loader2, Play, ShieldCheck,
-  User, Ticket, Upload, Download, Activity, Zap, Clock, Palette, Wand2, TableProperties, Headset,
+  User, Ticket, Upload, Download, Activity, Zap, Clock, Palette, Wand2, TableProperties,
   FileText,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -80,7 +80,12 @@ const ThemeGeneratorModal = dynamic(
   () => import('@/components/ThemeGeneratorModal').then((m) => m.ThemeGeneratorModal),
   { ssr: false },
 );
-import { addAchievement, updateAchievement, deleteAchievement, addBadge, updateBadge, deleteBadge, addStaffAccount, updateStaffAccount, deleteStaffAccount, importClassNames, importTeachersFromParsedRows, importStudentsFromParsedRows } from '@/lib/db';
+import { addAchievement, updateAchievement, deleteAchievement, addBadge, updateBadge, deleteBadge, addStaffAccount, updateStaffAccount, deleteStaffAccount } from '@/lib/db';
+import {
+  importParsedSchoolSnapshot,
+  type ParsedSchoolSnapshot,
+  type SchoolSnapshotImportResult,
+} from '@/lib/schoolDataImport';
 import { SAMPLE_BADGES, getSampleCategoryBadges } from '@/lib/sample-badges';
 // The Students tab is the default tab, so keep it eager. Every other tab is
 // code-split with `next/dynamic` so its chunk is only fetched when the admin
@@ -106,10 +111,6 @@ const AdminClassesTab = dynamic(
 );
 const AdminTeachersTab = dynamic(
   () => import('./sections/AdminTeachersTab').then((m) => m.AdminTeachersTab),
-  { loading: tabLoader, ssr: false },
-);
-const AdminStaffAccountsTab = dynamic(
-  () => import('./sections/AdminStaffAccountsTab').then((m) => m.AdminStaffAccountsTab),
   { loading: tabLoader, ssr: false },
 );
 const AdminCategoriesTab = dynamic(
@@ -160,6 +161,39 @@ function describeCsvImportReport(
   const title = report.success > 0 ? `${noun} imported` : `No ${noun.toLowerCase()} imported`;
   const variant =
     report.success === 0 && (report.failed > 0 || report.errors.length > 0) ? 'destructive' : 'default';
+  return { title, description, variant };
+}
+
+function describeSnapshotImport(result: SchoolSnapshotImportResult): {
+  title: string;
+  description: string;
+  variant: 'default' | 'destructive';
+} {
+  const lines: string[] = [];
+  let totalAdded = 0;
+  let anyErr = false;
+  const rows: [string, keyof SchoolSnapshotImportResult][] = [
+    ['Classes', 'classes'],
+    ['Teachers', 'teachers'],
+    ['Students', 'students'],
+    ['Periods', 'periods'],
+    ['Categories', 'categories'],
+    ['Prizes', 'prizes'],
+    ['Desk staff', 'staffAccounts'],
+  ];
+  for (const [label, key] of rows) {
+    const r = result[key];
+    if (!r) continue;
+    totalAdded += r.success;
+    if (r.errors.length) anyErr = true;
+    lines.push(`${label}: +${r.success}${r.failed > 0 ? ` (${r.failed} skipped)` : ''}`);
+    const errPreview = r.errors.slice(0, 5).join('\n');
+    if (errPreview) lines.push(errPreview);
+  }
+  const description = lines.join('\n') || 'Nothing was written.';
+  const title = totalAdded > 0 ? 'School data imported' : 'Nothing new imported';
+  const variant =
+    totalAdded === 0 && anyErr ? 'destructive' : 'default';
   return { title, description, variant };
 }
 
@@ -596,52 +630,27 @@ function AdminDashboardInner() {
     }
   };
 
-  const handleAiCommitClasses = async (names: string[]) => {
+  const handleAiCommitSnapshot = async (snapshot: ParsedSchoolSnapshot) => {
     if (!firestore || !schoolId) return;
     try {
-      const report = await importClassNames(firestore, schoolId, names, classes || []);
-      playSound(report.success > 0 ? 'success' : 'error');
-      const msg = describeCsvImportReport(report, 'Classes');
-      toast({ variant: msg.variant, title: msg.title, description: msg.description });
-    } catch (err: unknown) {
-      playSound('error');
-      toast({
-        variant: 'destructive',
-        title: 'Failed to import classes',
-        description: getReadableErrorMessage(err, 'Import failed.'),
+      const result = await importParsedSchoolSnapshot(firestore, schoolId, snapshot, {
+        classes: classes || [],
+        teachers: teachers || [],
+        students: students || [],
+        periods: attendancePeriods || [],
+        categories: categories || [],
+        prizes: prizes || [],
+        staffAccounts: staffAccounts || [],
       });
-    }
-  };
-
-  const handleAiCommitTeachers = async (rows: { name: string; username?: string; passcode?: string }[]) => {
-    if (!firestore || !schoolId) return;
-    try {
-      const report = await importTeachersFromParsedRows(firestore, schoolId, rows, teachers || []);
-      playSound(report.success > 0 ? 'success' : 'error');
-      const msg = describeCsvImportReport(report, 'Teachers');
+      const anySuccess = Object.values(result).some((r) => r && r.success > 0);
+      playSound(anySuccess ? 'success' : 'error');
+      const msg = describeSnapshotImport(result);
       toast({ variant: msg.variant, title: msg.title, description: msg.description });
     } catch (err: unknown) {
       playSound('error');
       toast({
         variant: 'destructive',
-        title: 'Failed to import teachers',
-        description: getReadableErrorMessage(err, 'Import failed.'),
-      });
-    }
-  };
-
-  const handleAiCommitStudents = async (rows: { firstName: string; lastName: string; className?: string }[]) => {
-    if (!firestore || !schoolId) return;
-    try {
-      const report = await importStudentsFromParsedRows(firestore, schoolId, rows, students || [], classes || []);
-      playSound(report.success > 0 ? 'success' : 'error');
-      const msg = describeCsvImportReport(report, 'Students');
-      toast({ variant: msg.variant, title: msg.title, description: msg.description });
-    } catch (err: unknown) {
-      playSound('error');
-      toast({
-        variant: 'destructive',
-        title: 'Failed to import students',
+        title: 'Import failed',
         description: getReadableErrorMessage(err, 'Import failed.'),
       });
     }
@@ -715,9 +724,7 @@ function AdminDashboardInner() {
           onClassesCsv={handleBulkClassesCsv}
           onTeachersCsv={handleBulkTeachersCsv}
           onStudentsCsv={handleBulkStudentsCsv}
-          onAiCommitClasses={handleAiCommitClasses}
-          onAiCommitTeachers={handleAiCommitTeachers}
-          onAiCommitStudents={handleAiCommitStudents}
+          onAiCommitSnapshot={handleAiCommitSnapshot}
         />
 
         <Tabs key={`${String(settings.enableAchievements)}:${String(settings.enableBadges)}`} defaultValue="students" className="space-y-6">
@@ -749,10 +756,7 @@ function AdminDashboardInner() {
                 <BookOpen className="w-4 h-4" aria-hidden="true" /> Classes
               </TabsTrigger>
               <TabsTrigger value="teachers" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
-                <User className="w-4 h-4" aria-hidden="true" /> Teachers
-              </TabsTrigger>
-              <TabsTrigger value="desk-staff" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
-                <Headset className="w-4 h-4" aria-hidden="true" /> Desk staff
+                <User className="w-4 h-4" aria-hidden="true" /> Staff
               </TabsTrigger>
               <TabsTrigger value="categories" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
                 <Tag className="w-4 h-4" aria-hidden="true" /> Categories
@@ -893,6 +897,7 @@ function AdminDashboardInner() {
           <TabsContent value="teachers" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <AdminTeachersTab
               teachers={teachers}
+              staffAccounts={staffAccounts}
               onAddTeacher={() => setIsTeacherModalOpen(true)}
               onEditTeacher={(t) => {
                 setEditingTeacher(t);
@@ -915,13 +920,7 @@ function AdminDashboardInner() {
                 if (!ok) return;
                 await deleteTeacher(id);
               }}
-            />
-          </TabsContent>
-
-          <TabsContent value="desk-staff" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <AdminStaffAccountsTab
-              staffAccounts={staffAccounts}
-              onSave={async (account) => {
+              onSaveStaffAccount={async (account) => {
                 if (!firestore || !schoolId) return;
                 try {
                   if ('id' in account && account.id) {
@@ -935,7 +934,7 @@ function AdminDashboardInner() {
                   toast({ variant: 'destructive', title: 'Save failed', description: getReadableErrorMessage(e, 'Save failed.') });
                 }
               }}
-              onDelete={async (id) => {
+              onDeleteStaffAccount={async (id) => {
                 const row = (staffAccounts || []).find((a) => a.id === id);
                 const ok = await confirm({
                   title: row ? `Remove ${row.displayName}?` : 'Remove this account?',
