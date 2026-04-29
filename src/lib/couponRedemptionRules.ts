@@ -90,7 +90,8 @@ export function buildRedemptionPrintNote(input: {
   teacherNamesInOrder: string[];
   maxLength?: number;
 }): string | undefined {
-  const max = input.maxLength ?? 118;
+  /** Short enough to fit one line on the physical coupon (em-scaled cell). */
+  const max = input.maxLength ?? 72;
   if (input.scope === 'school') return undefined;
 
   let s: string;

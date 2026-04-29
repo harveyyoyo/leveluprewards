@@ -63,7 +63,11 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
             };
             window.addEventListener('afterprint', afterPrint);
             playSound('swoosh');
-            document.fonts.load('38pt "Libre Barcode 39"').finally(window.print);
+            document.fonts.load('38pt "Libre Barcode 39"').finally(() => {
+              requestAnimationFrame(() => {
+                requestAnimationFrame(() => window.print());
+              });
+            });
         }
     }, [couponsToPrint, playSound]);
 
