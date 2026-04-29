@@ -1,8 +1,9 @@
 
 'use client';
 import type { CSSProperties } from 'react';
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import dynamic from 'next/dynamic';
+import { useSearchParams } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -24,11 +25,19 @@ const StudentScanner = dynamic(
 
 export default function PrizePage() {
     const { loginState, isInitialized } = useAppContext();
+    const searchParams = useSearchParams();
     const { toast } = useToast();
     const { settings } = useSettings();
 
     const { activeStudentId, setActiveStudentId, handleDone, loginMeta, setLoginMeta } = useActiveStudentSession();
     const playSound = useArcadeSound();
+
+    useEffect(() => {
+        const linkedStudentId = searchParams.get('student')?.trim();
+        if (!linkedStudentId || activeStudentId === linkedStudentId) return;
+        setActiveStudentId(linkedStudentId);
+        setLoginMeta({ source: 'manual' });
+    }, [activeStudentId, searchParams, setActiveStudentId, setLoginMeta]);
 
     const handlePrizeSessionExit = useCallback(() => {
         playSound('swoosh');

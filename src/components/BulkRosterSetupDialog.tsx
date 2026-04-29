@@ -178,7 +178,7 @@ export function BulkRosterSetupDialog({
           schoolId,
           kind: 'auto',
           prompt: combined,
-          model: typeof window !== 'undefined' ? localStorage.getItem('arcade_ai_model') || 'gemini-2.5-flash' : 'gemini-2.5-flash',
+          model: typeof window !== 'undefined' ? localStorage.getItem('arcade_ai_model') || 'gemini-2.5-pro' : 'gemini-2.5-pro',
           classNames: aiClassNames,
         }),
       });

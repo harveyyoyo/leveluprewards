@@ -916,7 +916,7 @@ function StudentDashboardInner({
                     .map((reward) => (
                       <Link
                         key={reward.id}
-                        href={`/${schoolId}/prize?redeem=${encodeURIComponent(reward.id)}`}
+                        href={`/${schoolId}/prize?student=${encodeURIComponent(student.id)}&redeem=${encodeURIComponent(reward.id)}`}
                         onClick={() => playSound('click')}
                         aria-label={`Redeem ${reward.name || 'prize'} in Prize Shop`}
                         className={cn(
@@ -1003,7 +1003,7 @@ function StudentDashboardInner({
                   }
                 >
                   <Link
-                    href={`/${schoolId}/prize`}
+                    href={`/${schoolId}/prize?student=${encodeURIComponent(student.id)}`}
                     onClick={() => playSound('click')}
                     className="flex items-center justify-center gap-2"
                   >
