@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
   Award,
@@ -12,18 +12,20 @@ import {
   ListTree,
   Mail,
   MessageSquare,
+  RefreshCw,
   Shield,
   Sparkles,
   User,
   Users,
   X,
 } from 'lucide-react';
-import { collection, limit, query, where } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Table,
@@ -35,20 +37,19 @@ import {
 } from '@/components/ui/table';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useAuth } from '@/components/providers/AuthProvider';
-import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import { useFirebase } from '@/firebase';
 import {
   buildNotificationDiagnostics,
-  maskRecipient,
   type ActiveNotificationRow,
   type DiagnosticLine,
 } from './notificationDiagnostics';
 
-type MailOutDoc = {
-  schoolId?: string;
+type MailQueueRow = {
+  id: string;
+  toMasked: string;
+  subject: string;
+  delivery: string;
   studentId?: string;
-  to?: string;
-  message?: { subject?: string; text?: string };
-  delivery?: { state?: string; error?: string; message?: string; startTime?: string };
 };
 
 function LogIcon({ level }: { level: DiagnosticLine['level'] }) {
@@ -102,8 +103,12 @@ function statusBadge(headlineStatus: 'blocked' | 'limited' | 'active') {
 export function AdminNotificationsTab() {
   const { settings, updateSettings, isFeatureAllowed, planLabel } = useSettings();
   const { schoolId, loginState } = useAuth();
-  const { firestore } = useFirebase();
+  const { functions } = useFirebase();
   const notificationsPlanOk = isFeatureAllowed('enableNotifications');
+
+  const [mailRows, setMailRows] = useState<MailQueueRow[] | null>(null);
+  const [mailLoading, setMailLoading] = useState(false);
+  const [mailError, setMailError] = useState<string | null>(null);
 
   const { lines: diagnosticLines, activeRows, headlineStatus } = useMemo(
     () =>
@@ -115,14 +120,34 @@ export function AdminNotificationsTab() {
     [settings, notificationsPlanOk, planLabel],
   );
 
-  const mailQuery = useMemoFirebase(() => {
-    if (!firestore || !schoolId) return null;
-    if (loginState !== 'admin' && loginState !== 'developer') return null;
-    const sid = schoolId.trim().toLowerCase();
-    return query(collection(firestore, 'mail'), where('schoolId', '==', sid), limit(40));
-  }, [firestore, schoolId, loginState]);
+  const loadMailQueue = useCallback(async () => {
+    if (!functions || !schoolId) return;
+    if (loginState !== 'admin' && loginState !== 'developer') return;
+    setMailLoading(true);
+    setMailError(null);
+    try {
+      const fn = httpsCallable<{ schoolId: string; limit?: number }, { items: MailQueueRow[] }>(
+        functions,
+        'adminListMailQueue',
+      );
+      const res = await fn({ schoolId: schoolId.trim().toLowerCase(), limit: 40 });
+      const items = res.data?.items;
+      setMailRows(Array.isArray(items) ? items : []);
+    } catch (e: unknown) {
+      const msg =
+        e && typeof e === 'object' && 'message' in e && typeof (e as { message: unknown }).message === 'string'
+          ? (e as { message: string }).message
+          : 'Request failed';
+      setMailError(msg);
+      setMailRows(null);
+    } finally {
+      setMailLoading(false);
+    }
+  }, [functions, schoolId, loginState]);
 
-  const { data: mailRows, isLoading: mailLoading, error: mailError } = useCollection<MailOutDoc>(mailQuery);
+  useEffect(() => {
+    void loadMailQueue();
+  }, [loadMailQueue]);
 
   const sortedMail = useMemo(() => {
     if (!mailRows?.length) return [];
@@ -236,29 +261,44 @@ export function AdminNotificationsTab() {
         </Card>
 
         <Card className="shadow-md">
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Mail className="w-4 h-4 text-primary" /> Recent mail queue (this school)
-            </CardTitle>
-            <CardDescription>
-              Documents the Cloud Function appends to the top-level <code className="text-xs">mail</code> collection.
-              If redemption works, new rows should appear here before the Trigger Email extension sends (or marks
-              delivery). Requires updated Firestore rules so school admins can read their school&apos;s rows.
-            </CardDescription>
+          <CardHeader className="space-y-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Mail className="w-4 h-4 text-primary" /> Recent mail queue (this school)
+                </CardTitle>
+                <CardDescription className="mt-1.5">
+                  Loaded via the <code className="text-xs">adminListMailQueue</code> Cloud Function (Admin SDK), so it
+                  does not depend on Firestore client rules for the <code className="text-xs">mail</code> collection.
+                  Deploy functions after updating. Optional: deploy <code className="text-xs">firestore.rules</code>{' '}
+                  if you also want direct client reads.
+                </CardDescription>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="shrink-0 gap-1.5"
+                disabled={mailLoading || !functions || !schoolId}
+                onClick={() => void loadMailQueue()}
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${mailLoading ? 'animate-spin' : ''}`} aria-hidden="true" />
+                Refresh
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="space-y-3">
             {mailError ? (
               <Alert variant="destructive">
                 <AlertTitle>Could not load mail queue</AlertTitle>
                 <AlertDescription className="text-xs leading-relaxed">
-                  {(mailError as Error)?.message || String(mailError)}. Deploy the latest{' '}
-                  <code className="text-[10px]">firestore.rules</code> (mail read for admins) or confirm you are signed in
-                  as admin for this school.
+                  {mailError}. Deploy Cloud Functions that include <code className="text-[10px]">adminListMailQueue</code>,
+                  confirm you are signed in as admin (or developer) for this school, and try Refresh.
                 </AlertDescription>
               </Alert>
-            ) : mailLoading ? (
+            ) : mailLoading && mailRows === null ? (
               <p className="text-sm text-muted-foreground">Loading mail queue…</p>
-            ) : !sortedMail.length ? (
+            ) : mailRows !== null && !sortedMail.length ? (
               <p className="text-sm text-muted-foreground">
                 No mail documents for this school yet. Trigger a redemption with notifications enabled, then refresh —
                 if still empty, check Functions deployment and logs for <code className="text-xs">onStudentActivityCreated</code>.
@@ -275,18 +315,14 @@ export function AdminNotificationsTab() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {sortedMail.map((row) => {
-                      const subj = row.message?.subject ?? '—';
-                      const del = row.delivery?.state ?? row.delivery?.error ?? '—';
-                      return (
-                        <TableRow key={row.id}>
-                          <TableCell className="font-mono text-[10px] align-top">{row.id.slice(0, 8)}…</TableCell>
-                          <TableCell className="text-xs align-top">{maskRecipient(row.to)}</TableCell>
-                          <TableCell className="text-xs align-top max-w-[200px] break-words">{subj}</TableCell>
-                          <TableCell className="text-[10px] align-top text-muted-foreground break-words">{del}</TableCell>
-                        </TableRow>
-                      );
-                    })}
+                    {sortedMail.map((row) => (
+                      <TableRow key={row.id}>
+                        <TableCell className="font-mono text-[10px] align-top">{row.id.slice(0, 8)}…</TableCell>
+                        <TableCell className="text-xs align-top">{row.toMasked}</TableCell>
+                        <TableCell className="text-xs align-top max-w-[200px] break-words">{row.subject}</TableCell>
+                        <TableCell className="text-[10px] align-top text-muted-foreground break-words">{row.delivery}</TableCell>
+                      </TableRow>
+                    ))}
                   </TableBody>
                 </Table>
               </ScrollArea>

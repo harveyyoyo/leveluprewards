@@ -1718,6 +1718,49 @@ exports.onAttendanceLogCreated = functions.firestore
     }
     await Promise.all(alerts);
 });
-exports.onStudentActivityCreated = exports.onStudentActivityCreated;
-exports.onAttendanceLogCreated = exports.onAttendanceLogCreated;
+/** Callable: list recent mail queue rows for a school (Admin SDK; bypasses client Firestore rules on `mail`). */
+exports.adminListMailQueue = functions.https.onCall(async (data, context) => {
+    requireAuth(context);
+    requireString(data.schoolId, "schoolId");
+    const schoolId = String(data.schoolId).trim().toLowerCase();
+    if (!(await isDeveloper(context))) {
+        await requireSchoolAdmin(schoolId, context);
+    }
+    const limitRaw = data.limit;
+    const limitN = typeof limitRaw === "number" && limitRaw > 0 && limitRaw <= 100
+        ? Math.floor(limitRaw)
+        : 40;
+    const db = admin.firestore();
+    const snap = await db.collection("mail").where("schoolId", "==", schoolId).limit(limitN).get();
+    const items = snap.docs.map((d) => {
+        const v = d.data();
+        const message = v.message;
+        const delivery = v.delivery;
+        const subj = (message === null || message === void 0 ? void 0 : message.subject) != null ? String(message.subject) : "";
+        const del = (delivery === null || delivery === void 0 ? void 0 : delivery.state) != null
+            ? String(delivery.state)
+            : (delivery === null || delivery === void 0 ? void 0 : delivery.error) != null
+                ? String(delivery.error)
+                : (delivery === null || delivery === void 0 ? void 0 : delivery.message) != null
+                    ? String(delivery.message)
+                    : "";
+        const to = v.to;
+        const toStr = typeof to === "string" ? to.trim() : "";
+        let toMasked = "—";
+        if (toStr) {
+            const at = toStr.indexOf("@");
+            toMasked = at < 1 ? `${toStr.slice(0, 2)}…` : `${toStr.slice(0, 2)}***${toStr.slice(at)}`;
+        }
+        return {
+            id: d.id,
+            toMasked,
+            subject: subj || "—",
+            delivery: del || "—",
+            studentId: typeof v.studentId === "string" ? v.studentId : undefined,
+        };
+    });
+    return { items };
+});
+// Note: onStudentActivityCreated and onAttendanceLogCreated are exported via
+// `export const` above (ES module syntax). No duplicate CommonJS assignment needed.
 //# sourceMappingURL=index.js.map
