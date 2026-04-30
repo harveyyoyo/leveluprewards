@@ -1614,7 +1614,9 @@ function TeacherAttendanceRewardsPanel({
 }
 
 export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretaryMode = false }: { teacherName: string, teacherId: string, onLogout: () => void, secretaryMode?: boolean }) {
-    const { updateTeacher, addCoupons, setCouponsToPrint, addCategory, schoolId, awardPointsToMultipleStudents, deductPointsFromMultipleStudents, addPrize, updatePrize, deletePrize, getTeacherAttendanceConfig, setTeacherAttendanceConfig, listTeacherAttendanceLog, categories: globalCategories } = useAppContext();
+    const { updateTeacher, addCoupons, setCouponsToPrint, addCategory, schoolId, awardPointsToMultipleStudents, deductPointsFromMultipleStudents, addPrize, updatePrize, deletePrize, getTeacherAttendanceConfig, setTeacherAttendanceConfig, listTeacherAttendanceLog, categories: globalCategories, isAdmin } = useAppContext();
+    /** Admin using the teacher portal can act on the whole school (like secretary data scope) while keeping teacher tabs/tools. */
+    const schoolWideTeacherScope = secretaryMode || isAdmin;
     const { toast } = useToast();
     const firestore = useFirestore();
     const { settings, isFeatureAllowed } = useSettings();
@@ -1639,14 +1641,18 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
     const currentTeacher = teachers?.find(t => t.id === teacherId);
 
     const studentsForTeacherActions = useMemo(() => {
-        if (secretaryMode) return students ?? [];
+        if (schoolWideTeacherScope) return students ?? [];
         if (!teacherId) return students ?? [];
         return studentsInTeacherScope(teacherId, students ?? [], classes ?? []);
-    }, [secretaryMode, teacherId, students, classes]);
+    }, [schoolWideTeacherScope, teacherId, students, classes]);
 
     /** Class filters and coupon class lists: students’ classes plus classes this teacher owns as primary. */
     const classesForTeacherUi = useMemo(() => {
         if (secretaryMode) return classes ?? [];
+        if (isAdmin) {
+            const cls = classes ?? [];
+            return cls.slice().sort((a, b) => a.name.localeCompare(b.name));
+        }
         const cls = classes ?? [];
         const fromStudents = new Set(
             studentsForTeacherActions.map((s) => s.classId).filter((id): id is string => Boolean(id)),
@@ -1655,7 +1661,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
             .filter((c) => fromStudents.has(c.id) || c.primaryTeacherId === teacherId)
             .slice()
             .sort((a, b) => a.name.localeCompare(b.name));
-    }, [secretaryMode, classes, studentsForTeacherActions, teacherId]);
+    }, [secretaryMode, isAdmin, classes, studentsForTeacherActions, teacherId]);
 
     const schoolDocRef = useMemoFirebase(
         () => (schoolId && firestore ? doc(firestore, 'schools', schoolId) : null),
@@ -1830,7 +1836,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
         }
 
         const totalCost = value * couponCount;
-        if (!secretaryMode && settings.enableTeacherBudgets && currentTeacher && currentTeacher.monthlyBudget !== undefined) {
+        if (!secretaryMode && !isAdmin && settings.enableTeacherBudgets && currentTeacher && currentTeacher.monthlyBudget !== undefined) {
             const remaining = remainingTeacherBudgetPoints(currentTeacher);
             if (remaining !== null && totalCost > remaining) {
                 const phrase = teacherBudgetRemainingPhrase(resolveTeacherBudgetPeriod(currentTeacher));
@@ -1937,7 +1943,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
             ...(expiresAt ? { expiresAt } : {}),
         }));
         await addCoupons(couponsToCreate);
-        if (!secretaryMode && settings.enableTeacherBudgets && currentTeacher) {
+        if (!secretaryMode && !isAdmin && settings.enableTeacherBudgets && currentTeacher) {
             const next =
                 currentTeacher.monthlyBudget !== undefined
                     ? teacherWithBudgetAfterSpend(currentTeacher, totalCost)
@@ -1966,7 +1972,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
             return;
         }
 
-        if (!secretaryMode && teacherId) {
+        if (!schoolWideTeacherScope && teacherId) {
             const allowed = new Set(studentsForTeacherActions.map((s) => s.id));
             if (selectedStudentIds.some((id) => !allowed.has(id))) {
                 playSound('error');
@@ -1980,7 +1986,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
         }
 
         const totalCost = points * selectedStudentIds.length;
-        if (settings.enableTeacherBudgets && currentTeacher && currentTeacher.monthlyBudget !== undefined) {
+        if (!isAdmin && settings.enableTeacherBudgets && currentTeacher && currentTeacher.monthlyBudget !== undefined) {
             const remainingPts = remainingTeacherBudgetPoints(currentTeacher);
             if (remainingPts !== null && totalCost > remainingPts) {
                 const phrase = teacherBudgetRemainingPhrase(resolveTeacherBudgetPeriod(currentTeacher));
@@ -1997,7 +2003,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
         const result = await awardPointsToMultipleStudents(selectedStudentIds, points, selectedCategory.name);
 
         if (result.success) {
-            if (settings.enableTeacherBudgets && currentTeacher) {
+            if (!isAdmin && settings.enableTeacherBudgets && currentTeacher) {
                 const next =
                     currentTeacher.monthlyBudget !== undefined
                         ? teacherWithBudgetAfterSpend(currentTeacher, totalCost)
@@ -2034,7 +2040,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
             return;
         }
 
-        if (!secretaryMode && teacherId) {
+        if (!schoolWideTeacherScope && teacherId) {
             const allowed = new Set(studentsForTeacherActions.map((s) => s.id));
             if (selectedStudentIds.some((id) => !allowed.has(id))) {
                 playSound('error');
@@ -2097,12 +2103,15 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
     };
 
     const filteredCategories = useMemo(() => {
+        if (isAdmin && !secretaryMode) {
+            return categories ?? [];
+        }
         const list = categories?.filter(c => !c.teacherId || (currentTeacher && c.teacherId === currentTeacher.id)) || [];
         if (secretaryMode) {
             return list.filter(c => !c.teacherId);
         }
         return list;
-    }, [categories, currentTeacher, secretaryMode]);
+    }, [categories, currentTeacher, secretaryMode, isAdmin]);
 
     const filteredStudents = useMemo(() => {
         return studentsForTeacherActions.filter((s) => {
@@ -2759,7 +2768,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                                 schoolId={schoolId!}
                                                 variant="teacher"
                                                 teacherId={teacherId}
-                                                secretaryMode={secretaryMode}
+                                                secretaryMode={schoolWideTeacherScope}
                                                 students={studentsForTeacherActions}
                                                 classes={classesForTeacherUi}
                                                 categories={categories ?? []}
