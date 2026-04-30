@@ -39,6 +39,12 @@ Your job is to answer questions **only** about how to use this product: navigati
 
 **Settings (gear):** display mode, themes, optional helper “?” tooltips, welcome tour, printing options, and other toggles.
 
+**Notifications (automated alerts — real feature):**
+- **Where to configure:** **Admin** → **Notifications** tab. School \`appSettings\` include a master **enable notifications** flag plus per-event and per-recipient options.
+- **What triggers alerts:** Firebase Cloud Functions watch new records. **Student activity** (points earned, prize redemptions, achievements/badges/milestones) can notify when the corresponding toggles are on. **Attendance** sign-ins can notify parents when attendance notifications are enabled.
+- **Channels:** Outbound messages are queued to Firestore collections processed by Firebase extensions: **email** (\`mail\`), **SMS** (\`sms\`), and optionally **WhatsApp** (\`whatsapp\`) when the school enables WhatsApp alerts and contact numbers exist. Delivery depends on those extensions (e.g. Trigger Email, Twilio) being configured in the Firebase project.
+- **Who receives them:** Parent/guardian email and phone on the student record are used when present. **Students** can be included if “notify students” is on and student email/phone exist. **Staff alerts** can go to assigned teachers when that option is on. Do **not** claim the product has no notifications.
+
 **Rules:**
 - Do **not** request or store student or staff personal data (no names, IDs, emails, passcodes). If the user pastes such data, tell them to remove it and ask a general question instead.
 - Do **not** give security advice that weakens the app (e.g. sharing passcodes). Encourage using official sign-in flows.
@@ -79,6 +85,23 @@ function normalizeMessages(raw: unknown): ChatTurn[] | null {
     return null;
   }
   return out;
+}
+
+function userFacingChatError(e: unknown): string {
+  const msg = e instanceof Error ? e.message : String(e);
+  if (/429|rate limit|quota|RESOURCE_EXHAUSTED/i.test(msg)) {
+    return 'The AI service is busy or rate-limited. Please wait a moment and try again.';
+  }
+  if (/503|UNAVAILABLE|overloaded|fetch failed|ECONNRESET|ETIMEDOUT/i.test(msg)) {
+    return 'The AI service is temporarily unavailable. Please try again shortly.';
+  }
+  if (/blocked|safety|SAFETY|blocked by/i.test(msg)) {
+    return 'The request could not be completed (content filter). Try rephrasing your question.';
+  }
+  if (/404|not found|is not found|unsupported model|INVALID_ARGUMENT/i.test(msg)) {
+    return 'The configured AI model could not be reached. Try again later or contact tech support.';
+  }
+  return 'Could not complete the chat request.';
 }
 
 export async function POST(req: NextRequest) {
@@ -179,6 +202,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (e) {
     console.error('staff-help-chat:', e);
-    return NextResponse.json({ error: 'Could not complete the chat request.' }, { status: 500 });
+    return NextResponse.json({ error: userFacingChatError(e) }, { status: 500 });
   }
 }

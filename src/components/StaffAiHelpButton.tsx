@@ -25,7 +25,7 @@ type ChatMessage = { role: 'user' | 'assistant'; content: string };
 const WELCOME: ChatMessage = {
   role: 'assistant',
   content:
-    'Hi! I can help you use levelUp EDU—where to find Admin, Teacher, and student tools, printing coupons, the prize shop, and settings. What would you like to know?',
+    'Hi! I can help you use levelUp EDU—Admin, Teacher, and student tools, printing coupons, the prize/rewards shop, settings, and Admin → Notifications (email/SMS/WhatsApp alerts). What would you like to know?',
 };
 
 /** Admin, teacher, and other staff sign-in roles (not students). */
