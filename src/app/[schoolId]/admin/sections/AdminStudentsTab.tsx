@@ -1,6 +1,6 @@
 'use client';
 
-import { Award, Edit, History, IdCard, LayoutDashboard, Plus, Printer, Trash2, UploadCloud, Users, Wand2, X, Zap } from 'lucide-react';
+import { Award, Edit, History, IdCard, LayoutDashboard, Mail, Phone, Plus, Printer, ScanFace, Trash2, UploadCloud, Users, Wand2, X, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Helper } from '@/components/ui/helper';
 import { cn } from '@/lib/utils';
 import type { Class, Student, Teacher } from '@/lib/types';
+
+function formatAssignedTeachers(student: Student, teachers: Teacher[]): string | null {
+  const ids = student.teacherIds;
+  if (!ids?.length) return null;
+  const names = ids.map((id) => teachers.find((t) => t.id === id)?.name).filter((n): n is string => !!n?.trim());
+  if (names.length === 0) return `${ids.length} teacher link${ids.length === 1 ? '' : 's'}`;
+  if (names.length === 1) return names[0];
+  if (names.length === 2) return `${names[0]} · ${names[1]}`;
+  return `${names.length} teachers`;
+}
 
 export function AdminStudentsTab({
   settings,
@@ -33,6 +43,7 @@ export function AdminStudentsTab({
   setStudentsToPrint,
   handleDtcPrintClick,
   getClassName,
+  teachers,
   handleOpenStudentModal,
   handleOpenActivityModal,
   setThemeStudent,
@@ -41,7 +52,7 @@ export function AdminStudentsTab({
   setStudentToPurge,
   previewIdCardStudent,
 }: {
-  settings: { photoDisplayMode?: 'cover' | 'contain'; enableBadges?: boolean };
+  settings: { photoDisplayMode?: 'cover' | 'contain'; enableBadges?: boolean; enableFaceLogin?: boolean };
   classes: Class[] | null | undefined;
   students: Student[] | null | undefined;
   filteredStudents: Student[];
@@ -63,7 +74,8 @@ export function AdminStudentsTab({
   setStudentsToPrint: (args: { students: Student[]; classes: Class[]; printerType?: 'dtc4500e' }) => void;
   handleDtcPrintClick: () => void;
   getClassName: (id: string) => string;
-  handleOpenStudentModal: (s: Student | null) => void;
+  teachers: Teacher[];
+  handleOpenStudentModal: (s: Student | null, opts?: { faceTraining?: boolean }) => void;
   handleOpenActivityModal: (s: Student) => void;
   setThemeStudent: (s: Student) => void;
   setBadgesStudent: (s: Student) => void;
@@ -191,11 +203,16 @@ export function AdminStudentsTab({
 
         <ScrollArea className="h-[min(520px,70vh)]">
           <ul className="flex flex-col gap-1.5 pr-4">
-            {filteredStudents.map((s) => (
+            {filteredStudents.map((s) => {
+              const teacherLine = formatAssignedTeachers(s, teachers);
+              const hasParentContact = !!(s.parentEmail?.trim() || s.parentPhone?.trim());
+              const hasStudentContact = !!(s.studentEmail?.trim() || s.studentPhone?.trim());
+              const middle = s.middleName?.trim();
+              return (
               <li
                 key={s.id}
                 className={cn(
-                  'flex flex-row items-center gap-2 sm:gap-3 py-2.5 px-3 rounded-xl border transition-all',
+                  'flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 py-2.5 px-3 rounded-xl border transition-all',
                   selectionMode && 'cursor-pointer',
                   selectedStudentIds.has(s.id)
                     ? 'bg-primary/5 border-primary/40 ring-1 ring-primary/20 hover:bg-primary/10 hover:border-primary/50 hover:ring-primary/30'
@@ -245,8 +262,14 @@ export function AdminStudentsTab({
                     <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0">
                       <p className="font-bold text-sm sm:text-base leading-tight truncate max-w-full">
                         {s.lastName}, {s.firstName}
+                        {middle ? <span className="font-medium text-muted-foreground"> {middle}</span> : null}
                       </p>
                       <span className="text-primary font-bold text-xs tabular-nums">{s.points} pts</span>
+                      {typeof s.lifetimePoints === 'number' && s.lifetimePoints !== s.points ? (
+                        <span className="text-muted-foreground font-semibold text-[11px] tabular-nums" title="Lifetime points awarded">
+                          · {s.lifetimePoints} career
+                        </span>
+                      ) : null}
                     </div>
                     <p className="text-[11px] sm:text-xs text-muted-foreground leading-snug truncate mt-0.5">
                       {getClassName(s.classId || '')}
@@ -271,9 +294,48 @@ export function AdminStudentsTab({
                         </>
                       ) : null}
                     </p>
+                    {(teacherLine || hasParentContact || hasStudentContact || s.birthday) ? (
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 text-[10px] sm:text-[11px] text-muted-foreground">
+                        {teacherLine ? (
+                          <span className="truncate max-w-full" title={teacherLine}>
+                            <span className="font-semibold text-foreground/80">Teachers:</span> {teacherLine}
+                          </span>
+                        ) : null}
+                        {s.birthday ? (
+                          <span className="tabular-nums shrink-0" title="Birthday on file">
+                            <span className="font-semibold text-foreground/80">DOB:</span> {s.birthday}
+                          </span>
+                        ) : null}
+                        <span className="flex items-center gap-1 shrink-0" aria-label="Contact on file">
+                          {hasParentContact ? (
+                            <span className="inline-flex items-center gap-0.5 rounded-full bg-muted/80 px-1.5 py-px" title="Parent/guardian email or phone on file">
+                              <Mail className="w-3 h-3" />
+                              <Phone className="w-3 h-3" />
+                            </span>
+                          ) : null}
+                          {hasStudentContact ? (
+                            <span className="inline-flex items-center gap-0.5 rounded-full bg-muted/80 px-1.5 py-px" title="Student email or phone on file">
+                              <span className="text-[9px] font-bold text-foreground/70">Stu</span>
+                              <Mail className="w-3 h-3" />
+                            </span>
+                          ) : null}
+                        </span>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-1 justify-end shrink-0" onClick={(e) => e.stopPropagation()}>
+                <div className="flex flex-wrap gap-1 justify-end sm:justify-end shrink-0 sm:pl-1" onClick={(e) => e.stopPropagation()}>
+                  {settings.enableFaceLogin ? (
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8 sm:h-9 sm:w-9 rounded-full"
+                      onClick={() => handleOpenStudentModal(s, { faceTraining: true })}
+                      title="Face login training"
+                    >
+                      <ScanFace className="w-4 h-4 text-sky-600 dark:text-sky-400" />
+                    </Button>
+                  ) : null}
                   <Button
                     variant="outline"
                     size="icon"
@@ -297,6 +359,7 @@ export function AdminStudentsTab({
                     size="icon"
                     className="h-8 w-8 sm:h-9 sm:w-9 rounded-full"
                     onClick={() => handleOpenActivityModal(s)}
+                    title="Activity history"
                   >
                     <History className="w-4 h-4" />
                   </Button>
@@ -325,6 +388,7 @@ export function AdminStudentsTab({
                     size="icon"
                     className="h-8 w-8 sm:h-9 sm:w-9 rounded-full"
                     onClick={() => handleOpenStudentModal(s)}
+                    title="Edit student"
                   >
                     <Edit className="w-4 h-4 text-primary" />
                   </Button>
@@ -342,12 +406,14 @@ export function AdminStudentsTab({
                     size="icon"
                     className="h-8 w-8 sm:h-9 sm:w-9 rounded-full text-destructive hover:bg-destructive/10"
                     onClick={() => deleteStudent(s.id)}
+                    title="Delete student"
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>
               </li>
-            ))}
+            );
+            })}
           </ul>
         </ScrollArea>
       </CardContent>

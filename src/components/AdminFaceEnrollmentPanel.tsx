@@ -26,6 +26,8 @@ import { cn } from '@/lib/utils';
 interface AdminFaceEnrollmentPanelProps {
   studentId: string;
   studentLabel?: string;
+  /** When true (e.g. after opening student edit from a “Face train” shortcut), opens the camera training dialog once. */
+  autoOpenTrainingDialog?: boolean;
 }
 
 type FaceAuthStatus = {
@@ -43,7 +45,7 @@ type FaceAuthStatus = {
  *  - Opens a dedicated dialog for camera capture, Train/Retrain, and Remove —
  *    so face training does not stay embedded in the student edit dialog.
  */
-export function AdminFaceEnrollmentPanel({ studentId, studentLabel }: AdminFaceEnrollmentPanelProps) {
+export function AdminFaceEnrollmentPanel({ studentId, studentLabel, autoOpenTrainingDialog }: AdminFaceEnrollmentPanelProps) {
   const { schoolId } = useAppContext();
   const { functions, user, isUserLoading, userError } = useFirebase();
   const confirm = useConfirm();
@@ -52,6 +54,7 @@ export function AdminFaceEnrollmentPanel({ studentId, studentLabel }: AdminFaceE
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const autoFaceOpenDoneRef = useRef(false);
   const [trainingDialogOpen, setTrainingDialogOpen] = useState(false);
   const [cameraOn, setCameraOn] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -87,6 +90,16 @@ export function AdminFaceEnrollmentPanel({ studentId, studentLabel }: AdminFaceE
   useEffect(() => {
     void refreshStatus();
   }, [refreshStatus]);
+
+  useEffect(() => {
+    if (!autoOpenTrainingDialog) {
+      autoFaceOpenDoneRef.current = false;
+      return;
+    }
+    if (autoFaceOpenDoneRef.current) return;
+    autoFaceOpenDoneRef.current = true;
+    setTrainingDialogOpen(true);
+  }, [autoOpenTrainingDialog]);
 
   const enrolled = faceStatus.enrolled;
   const scanCount = faceStatus.scanCount;

@@ -324,6 +324,7 @@ function AdminDashboardInner() {
   const [isTeacherModalOpen, setIsTeacherModalOpen] = useState(false);
 
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
+  const [studentModalFaceTraining, setStudentModalFaceTraining] = useState(false);
   const [isPrizeModalOpen, setIsPrizeModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
@@ -549,8 +550,9 @@ function AdminDashboardInner() {
     setIsCategoryModalOpen(true);
   };
 
-  const handleOpenStudentModal = (student: Student | null) => {
+  const handleOpenStudentModal = (student: Student | null, opts?: { faceTraining?: boolean }) => {
     setEditingStudent(student);
+    setStudentModalFaceTraining(!!opts?.faceTraining && !!student);
     setIsStudentModalOpen(true);
   };
 
@@ -838,7 +840,7 @@ function AdminDashboardInner() {
               <span aria-hidden="true" className="self-stretch w-px bg-border/60 mx-1" />
 
               <TabsTrigger value="prizes" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
-                <Gift className="w-4 h-4" aria-hidden="true" /> Prizes
+                <Gift className="w-4 h-4" aria-hidden="true" /> Prize/Rewards shop
               </TabsTrigger>
                             <TabsTrigger value="coupons" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
                 <Ticket className="w-4 h-4" aria-hidden="true" /> Coupons
@@ -936,6 +938,7 @@ function AdminDashboardInner() {
               setStudentsToPrint={(args) => setStudentsToPrint(args as any)}
               handleDtcPrintClick={handleDtcPrintClick}
               getClassName={getClassName}
+              teachers={teachers || []}
               handleOpenStudentModal={handleOpenStudentModal}
               handleOpenActivityModal={handleOpenActivityModal}
               setThemeStudent={(s) => setThemeStudent(s)}
@@ -1383,6 +1386,8 @@ function AdminDashboardInner() {
           allStudents={students || []}
           allClasses={classes || []}
           allTeachers={teachers || []}
+          requestFaceTrainingOnOpen={studentModalFaceTraining}
+          onFaceTrainingRequestConsumed={() => setStudentModalFaceTraining(false)}
         />
         <PrizeModal
           isOpen={isPrizeModalOpen}

@@ -41,9 +41,21 @@ interface StudentModalProps {
   allStudents: Student[];
   allClasses: Class[];
   allTeachers: Teacher[];
+  /** When the modal opens, jump straight into the face-login training dialog (edit mode + face login enabled only). */
+  requestFaceTrainingOnOpen?: boolean;
+  onFaceTrainingRequestConsumed?: () => void;
 }
 
-export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClasses, allTeachers }: StudentModalProps) {
+export function StudentModal({
+  isOpen,
+  setIsOpen,
+  student,
+  allStudents,
+  allClasses,
+  allTeachers,
+  requestFaceTrainingOnOpen,
+  onFaceTrainingRequestConsumed,
+}: StudentModalProps) {
   const { addStudent, updateStudent, schoolId } = useAppContext();
   const { settings } = useSettings();
   const firestore = useFirestore();
@@ -63,8 +75,10 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
   const [isPhotoUploading, setIsPhotoUploading] = useState(false);
   const [isCustomEmojiUploading, setIsCustomEmojiUploading] = useState(false);
   const [theme, setTheme] = useState<StudentTheme | undefined>(undefined);
+  const [birthday, setBirthday] = useState('');
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
+  const [faceTrainingDialogRequested, setFaceTrainingDialogRequested] = useState(false);
   const { toast } = useToast();
   const playSound = useArcadeSound();
 
@@ -86,6 +100,7 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
         setStudentPhone(decryptField(student.studentPhone) || '');
         setSelectedTeacherIds(student.teacherIds || []);
         setTheme(student.theme);
+        setBirthday(student.birthday || '');
       } else { // Create mode
         setFirstName('');
         setMiddleName('');
@@ -100,9 +115,21 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
         setStudentPhone('');
         setSelectedTeacherIds([]);
         setTheme(undefined);
+        setBirthday('');
       }
     }
   }, [student, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setFaceTrainingDialogRequested(false);
+      return;
+    }
+    if (requestFaceTrainingOnOpen && student?.id && settings.enableFaceLogin) {
+      setFaceTrainingDialogRequested(true);
+      onFaceTrainingRequestConsumed?.();
+    }
+  }, [isOpen, requestFaceTrainingOnOpen, student?.id, settings.enableFaceLogin, onFaceTrainingRequestConsumed]);
 
   const handlePhotoUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -344,6 +371,7 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
         parentPhone: encryptField(parentPhone.trim()) || undefined,
         studentEmail: encryptField(studentEmail.trim()) || undefined,
         studentPhone: encryptField(studentPhone.trim()) || undefined,
+        birthday: birthday || undefined,
       };
       await updateStudent(updatedStudent);
       playSound('success');
@@ -363,6 +391,7 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
         parentPhone: encryptField(parentPhone.trim()) || undefined,
         studentEmail: encryptField(studentEmail.trim()) || undefined,
         studentPhone: encryptField(studentPhone.trim()) || undefined,
+        birthday: birthday || undefined,
       };
       await addStudent(newStudent);
       playSound('success');
@@ -448,7 +477,7 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
                     onChange={(e) => void handleCustomEmojiUpload(e)}
                     disabled={isCustomEmojiUploading}
                   />
-                  <p className="text-[11px] text-muted-foreground mt-1">PNG/JPG/WebP/GIF under 2MB. Shown next to their name on the student portal, prize shop, and ID card.</p>
+                  <p className="text-[11px] text-muted-foreground mt-1">PNG/JPG/WebP/GIF under 2MB. Shown next to their name on the student portal, prize/rewards shop, and ID card.</p>
                 </div>
               </div>
               {isCustomEmojiUploading ? (
@@ -478,6 +507,10 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
               <Label htmlFor="nickname">Nickname (Optional)</Label>
               <Input id="nickname" value={nickname} onChange={e => setNickname(e.target.value)} />
             </div>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="birthday">Birthday (Optional)</Label>
+            <Input id="birthday" type="date" value={birthday} onChange={e => setBirthday(e.target.value)} />
           </div>
           <div className="space-y-1">
             <Label htmlFor="student-id">Student ID (for scanning)</Label>
@@ -610,8 +643,10 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
           </div>
           {isEditing && student?.id && settings.enableFaceLogin ? (
             <AdminFaceEnrollmentPanel
+              key={student.id}
               studentId={student.id}
               studentLabel={[firstName, lastName].filter(Boolean).join(' ').trim() || undefined}
+              autoOpenTrainingDialog={faceTrainingDialogRequested}
             />
           ) : null}
         </div>
