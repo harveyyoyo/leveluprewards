@@ -117,6 +117,21 @@ export function StudentScanner({
         }
     }, []);
 
+    const waitForFaceVideoElement = useCallback(async (): Promise<HTMLVideoElement | null> => {
+        for (let attempt = 0; attempt < 20; attempt++) {
+            const video = faceVideoRef.current;
+            if (video) return video;
+            await new Promise<void>((resolve) => {
+                if (typeof window === 'undefined') {
+                    resolve();
+                    return;
+                }
+                window.requestAnimationFrame(() => resolve());
+            });
+        }
+        return faceVideoRef.current;
+    }, []);
+
     useEffect(() => {
         return () => {
             stopFaceCamera();
@@ -124,7 +139,7 @@ export function StudentScanner({
     }, [stopFaceCamera]);
 
     const startFaceCamera = useCallback(async (): Promise<HTMLVideoElement | null> => {
-        const video = faceVideoRef.current;
+        const video = await waitForFaceVideoElement();
         if (!video) return null;
         try {
             if (!faceStreamRef.current) {
@@ -193,7 +208,7 @@ export function StudentScanner({
             });
             return null;
         }
-    }, [toast]);
+    }, [toast, waitForFaceVideoElement]);
 
     // Face tab: open camera and continuously try to match (no sign-in button).
     useEffect(() => {
