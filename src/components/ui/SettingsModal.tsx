@@ -21,7 +21,8 @@ import {
     Bell, Shield, Moon, Sun, ArrowLeft, Palette, Zap, Trophy,
     BarChart3, MessageSquare, ShoppingBag, ShieldCheck, Star,
     Users, Database, Printer, LayoutDashboard, History, HelpCircle,
-    Cpu, Award, Clock, Cog, Lock, Sparkles, ArrowRightLeft, Trash2, RotateCcw, Smile, BookOpen, Target, Megaphone
+    Cpu, Award, Clock, Cog, Lock, Sparkles, ArrowRightLeft, Trash2, RotateCcw, Smile, BookOpen, Target, Megaphone,
+    Layers, UsersRound
 } from 'lucide-react';
 import { useSettings, colorSchemes, type ColorScheme, type Settings as AppSettings } from '../providers/SettingsProvider';
 import type { StudentTheme } from '@/lib/types';
@@ -521,7 +522,7 @@ export function SettingsModal() {
                                     id="enableBulkPoints"
                                     label="Bulk Class Points (Soon)"
                                     desc="Award points to an entire class at once instead of one student at a time."
-                                    icon={<Users className="w-5 h-5" />}
+                                    icon={<Layers className="w-5 h-5" />}
                                     settings={local}
                                     onToggle={handleToggle}
                                     isImplemented={false}
@@ -529,10 +530,6 @@ export function SettingsModal() {
                                     isAllowed={isFeatureAllowed('enableBulkPoints')}
                                     planLabel={planLabel}
                                 />
-                            </div>
-
-                            <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
-                                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><BarChart3 className="w-3.5 h-3.5" /> Analytics & Reports</p>
                                 <FeatureRow
                                     id="enableAdminAnalytics"
                                     label="Admin Analytics"
@@ -591,7 +588,7 @@ export function SettingsModal() {
                                 <FeatureRow
                                     id="enableStudentPortal"
                                     label="Student Home Portal (Soon)"
-                                    desc="Placeholder for future home access. Students should use the in-school kiosk and prize shop for now."
+                                    desc="Placeholder for future home access. Students should use the in-school kiosk and prize/rewards shop for now."
                                     icon={<Smartphone className="w-5 h-5" />}
                                     settings={local}
                                     onToggle={handleToggle}
@@ -764,11 +761,101 @@ export function SettingsModal() {
                                     isAllowed={isFeatureAllowed('enableGoals')}
                                     planLabel={planLabel}
                                 />
+                                <FeatureRow
+                                    id="enableClassAccumulations"
+                                    label="Class Accumulations"
+                                    desc="Let classes or groups compete on the kiosk: standings use the sum of each group&apos;s student point balances."
+                                    icon={<UsersRound className="w-5 h-5" />}
+                                    settings={local}
+                                    onToggle={handleToggle}
+                                    isImplemented={true}
+                                    isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableClassAccumulations')}
+                                    planLabel={planLabel}
+                                />
                             </div>
 
 
+                            </div>
+
                             <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
-                                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><ShoppingBag className="w-3.5 h-3.5" /> Prize Shop</p>
+                                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><Sparkles className="w-3.5 h-3.5" /> Special Occasions</p>
+                                <FeatureRow
+                                    id="enableBirthdayPoints"
+                                    label="Birthday Points"
+                                    desc="Award bonus points to students on their birthday when they log in to the kiosk."
+                                    icon={<Smile className="w-5 h-5" />}
+                                    settings={local}
+                                    onToggle={handleToggle}
+                                    isImplemented={true}
+                                    isAdmin={isAdmin}
+                                    isAllowed={true}
+                                />
+                                {local.enableBirthdayPoints && (
+                                    <div className="px-3 pb-4 space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <Label htmlFor="birthdayPointsAmount" className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Points Amount</Label>
+                                            <Input
+                                                id="birthdayPointsAmount"
+                                                type="number"
+                                                className="w-24 h-9 rounded-xl text-center font-bold bg-background/50 border-border/50"
+                                                value={local.birthdayPointsAmount}
+                                                onChange={(e) => handleToggle('birthdayPointsAmount', parseInt(e.target.value) || 0)}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+                                <FeatureRow
+                                    id="enableSpecialDayPoints"
+                                    label="School Special Day"
+                                    desc="Award points to every student who logs in on a specific school-wide special day."
+                                    icon={<Star className="w-5 h-5" />}
+                                    settings={local}
+                                    onToggle={handleToggle}
+                                    isImplemented={true}
+                                    isAdmin={isAdmin}
+                                    isAllowed={true}
+                                />
+                                {local.enableSpecialDayPoints && (
+                                    <div className="px-3 pb-4 space-y-4 pt-1">
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="specialDayLabel" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Event Label</Label>
+                                                <Input
+                                                    id="specialDayLabel"
+                                                    placeholder="Founder's Day"
+                                                    className="h-9 rounded-xl text-xs bg-background/50 border-border/50"
+                                                    value={local.specialDayLabel}
+                                                    onChange={(e) => handleToggle('specialDayLabel', e.target.value)}
+                                                />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="specialDayDate" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Date (MM-DD)</Label>
+                                                <Input
+                                                    id="specialDayDate"
+                                                    placeholder="12-25"
+                                                    className="h-9 rounded-xl text-xs text-center bg-background/50 border-border/50"
+                                                    value={local.specialDayDate}
+                                                    onChange={(e) => handleToggle('specialDayDate', e.target.value)}
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <Label htmlFor="specialDayPointsAmount" className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Points Amount</Label>
+                                            <Input
+                                                id="specialDayPointsAmount"
+                                                type="number"
+                                                className="w-24 h-9 rounded-xl text-center font-bold bg-background/50 border-border/50"
+                                                value={local.specialDayPointsAmount}
+                                                onChange={(e) => handleToggle('specialDayPointsAmount', parseInt(e.target.value) || 0)}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
+                                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><ShoppingBag className="w-3.5 h-3.5" /> Prize/Rewards shop</p>
                                 <FeatureRow
                                     id="enablePrizeAiSurprise"
                                     label="AI Prize Surprise"
@@ -803,6 +890,20 @@ export function SettingsModal() {
                                     onToggle={handleToggle}
                                     isImplemented={true}
                                     isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableStudentEmojiOnPrizeTickets')}
+                                    planLabel={planLabel}
+                                />
+                                <FeatureRow
+                                    id="enableDoubleOrNothing"
+                                    label="Double or Nothing"
+                                    desc="Allow students to gamble their redeemed prize for a chance to win double or lose it all via a spinning wheel."
+                                    icon={<RotateCcw className="w-5 h-5" />}
+                                    settings={local}
+                                    onToggle={handleToggle}
+                                    isImplemented={true}
+                                    isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableDoubleOrNothing')}
+                                    planLabel={planLabel}
                                 />
                             </div>
 
@@ -840,7 +941,6 @@ export function SettingsModal() {
                                 />
                             </div>
                         </div>
-                    </div>
                 )}
 
                 {view === 'library' && (

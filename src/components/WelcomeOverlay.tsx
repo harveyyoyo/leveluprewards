@@ -5,6 +5,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Star, Sparkles, Trophy, Ticket } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import type { SoundEffect } from '@/hooks/useArcadeSound';
 
 interface WelcomeOverlayProps {
   studentName: string;
@@ -17,7 +18,7 @@ interface WelcomeOverlayProps {
     emoji?: string;
   };
   onClose: () => void;
-  playSound?: (name: string) => void;
+  playSound?: (name: SoundEffect) => void;
 }
 
 export const WelcomeOverlay: React.FC<WelcomeOverlayProps> = ({

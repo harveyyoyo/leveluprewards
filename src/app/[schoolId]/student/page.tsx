@@ -92,6 +92,7 @@ import { Helper } from '@/components/ui/helper';
 import { Skeleton } from '@/components/ui/skeleton';
 import { BadgeShowcase } from '@/components/BadgeShowcase';
 import { StudentGoalsCard } from '@/components/goals/StudentGoalsCard';
+import { ClassAccumulationsCard } from '@/components/ClassAccumulationsCard';
 import { EarnedBadgesShowcase } from '@/components/EarnedBadgesShowcase';
 import { useActiveStudentSession } from '@/hooks/useActiveStudentSession';
 import { FaceMismatchBanner } from '@/components/FaceMismatchBanner';
@@ -514,6 +515,69 @@ function StudentDashboardInner({
       }
     })();
   }, [settings.enableClassSignIn, student, schoolId, functions, toast, playSound]);
+ 
+  // --- Special Occasions (Birthday & School Special Day) ---
+  useEffect(() => {
+    if (!student || !schoolId || !firestore) return;
+    
+    const todayFull = format(new Date(), 'yyyy-MM-dd');
+    const todayMD = format(new Date(), 'MM-dd');
+    const lastAwarded = student.lastSpecialDayAwarded || {};
+    
+    let totalAward = 0;
+    const descriptions: string[] = [];
+    const newLastAwarded = { ...lastAwarded };
+
+    // 1. Birthday Check
+    if (settings.enableBirthdayPoints && student.birthday) {
+        // student.birthday is YYYY-MM-DD, we only care about MM-DD matching today
+        const birthMD = student.birthday.substring(5); // MM-DD
+        if (birthMD === todayMD && lastAwarded.birthday !== todayFull) {
+            totalAward += settings.birthdayPointsAmount || 0;
+            descriptions.push(`Happy Birthday! 🎉 (+${settings.birthdayPointsAmount} pts)`);
+            newLastAwarded.birthday = todayFull;
+        }
+    }
+
+    // 2. Special Day Check
+    if (settings.enableSpecialDayPoints && settings.specialDayDate) {
+        if (settings.specialDayDate === todayMD && lastAwarded.specialDay !== todayFull) {
+            totalAward += settings.specialDayPointsAmount || 0;
+            const label = settings.specialDayLabel || 'Special Day';
+            descriptions.push(`${label}! ⭐ (+${settings.specialDayPointsAmount} pts)`);
+            newLastAwarded.specialDay = todayFull;
+        }
+    }
+
+    if (totalAward > 0) {
+        void (async () => {
+            try {
+                const studentRef = doc(firestore, 'schools', schoolId, 'students', student.id);
+                await updateDoc(studentRef, {
+                    points: (student.points || 0) + totalAward,
+                    lastSpecialDayAwarded: newLastAwarded
+                });
+                
+                // Add activity logs
+                for (const desc of descriptions) {
+                    await addDoc(collection(firestore, 'schools', schoolId, 'students', student.id, 'activities'), {
+                        desc,
+                        amount: totalAward / descriptions.length, // Split amount if multiple events (rare)
+                        date: Date.now()
+                    });
+                    queueCelebration(desc);
+                }
+                
+                playSound('success');
+                animationKey.current += 1;
+                setFlyPointsValue(totalAward);
+                setTimeout(() => { setFlyPointsValue(null); }, 2000);
+            } catch (err) {
+                console.error('Failed to award special day points', err);
+            }
+        })();
+    }
+  }, [student?.id, settings.enableBirthdayPoints, settings.enableSpecialDayPoints, schoolId, firestore, playSound, queueCelebration]);
 
   const resetTimer = useCallback(() => {
     if (!isKioskLocked) {
@@ -1083,6 +1147,14 @@ function StudentDashboardInner({
               themed={!!activeTheme}
               themeForeground={activeTheme ? 'var(--theme-primary)' : undefined}
             />
+            <ClassAccumulationsCard
+              schoolId={schoolId!}
+              classes={classes ?? undefined}
+              studentClassId={student.classId}
+              enabled={settings.enableClassAccumulations && isFeatureAllowed('enableClassAccumulations')}
+              themed={!!activeTheme}
+              themeForeground={activeTheme ? 'var(--theme-primary)' : undefined}
+            />
             <Card
               className={cn("border-none shadow-lg overflow-hidden", !activeTheme ? "bg-white dark:bg-slate-900" : "")}
               style={activeTheme ? { backgroundColor: 'var(--theme-card)', color: 'var(--theme-text)' } : undefined}
@@ -1236,7 +1308,7 @@ function StudentDashboardInner({
               style={activeTheme ? { backgroundColor: 'var(--theme-card)', color: 'var(--theme-text)' } : undefined}
             >
               <CardHeader className="pb-2 pt-4">
-                <Helper content="Prizes you can afford right now. Tap one to redeem it here, or use See all prizes to browse the full prize shop.">
+                <Helper content="Prizes you can afford right now. Tap one to redeem it here, or use See all prizes to browse the full prize/rewards shop.">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={activeTheme ? { backgroundColor: 'var(--theme-bg)' } : undefined}>
                       <Award className="w-4 h-4" style={activeTheme ? { color: 'var(--theme-primary)' } : undefined} />

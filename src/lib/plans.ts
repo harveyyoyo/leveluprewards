@@ -43,6 +43,7 @@ export type PlanFeatureKey =
   | 'enableMultiAdmin'
   | 'enableNotifications'
   | 'enableClassLeaderboard'
+  | 'enableClassAccumulations'
   | 'enableShoutouts'
   | 'enableHomework'
   | 'enableSeasonalPrizes'
@@ -76,9 +77,9 @@ export const PLAN_FEATURE_KEYS: PlanFeatureKey[] = [
   'enableMultiAdmin',
   'enableNotifications',
   'enableClassLeaderboard',
+  'enableClassAccumulations',
   'enableShoutouts',
   'enableHomework',
-      'enableLibrary',
   'enableSeasonalPrizes',
   'enableLibrary',
 ];
@@ -100,7 +101,7 @@ export const PLANS: Record<PlanTier, PlanInfo> = {
     id: 'free',
     label: 'Free',
     description:
-      'Core classroom essentials: students, classes, teachers, categories, prizes and coupons.',
+      'Core classroom essentials: students, classes, teachers, categories, prize/rewards shop and coupons.',
     features: [],
   },
   basic: {
@@ -138,6 +139,7 @@ export const PLANS: Record<PlanTier, PlanInfo> = {
       'enableBulkPoints',
       'enablePdfExport',
       'enableClassLeaderboard',
+      'enableClassAccumulations',
       'enableHomework',
       'enableLibrary',
     ],
@@ -164,8 +166,8 @@ export const PLAN_FEATURE_LABELS: Record<PlanFeatureKey, string> = {
   enableStudentPortal: 'Student Home Portal',
   enableFaceLogin: 'Face Login',
   enableQrLogin: 'QR Code Login',
-  enablePrizeImages: 'Prize Photos',
-  enablePrizeAiSurprise: 'AI Prize Surprise',
+  enablePrizeImages: 'Prize/Rewards shop Photos',
+  enablePrizeAiSurprise: 'AI Prize/Rewards shop Surprise',
   enableVendingMachine: 'Vending Machine',
   enableWishlist: 'Student Wishlists',
   enableAchievements: 'Bonus Points',
@@ -183,9 +185,10 @@ export const PLAN_FEATURE_LABELS: Record<PlanFeatureKey, string> = {
   enableMultiAdmin: 'Multi-Admin',
   enableNotifications: 'Notifications',
   enableClassLeaderboard: 'Class Leaderboard',
+  enableClassAccumulations: 'Class Accumulations',
   enableShoutouts: 'Shoutouts',
   enableHomework: 'Homework Rewards',
-  enableSeasonalPrizes: 'Seasonal Prizes',
+  enableSeasonalPrizes: 'Seasonal Prize/Rewards shop Items',
   enableLibrary: 'Library Checkout',
 };
 

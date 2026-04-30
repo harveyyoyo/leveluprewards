@@ -58,6 +58,7 @@ import { useActiveStudentSession } from '@/hooks/useActiveStudentSession';
 import type { StudentFoundMeta } from '@/components/StudentScanner';
 import { rainbowTripletForNavId, complementTripletForNavId } from '@/lib/rainbowNav';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
+import { DoubleOrNothingWheel } from '@/components/DoubleOrNothingWheel';
 import { prizeIsListed, stripLeadingEmojiFromPrizeName, studentSeesPrizeByTeachers } from '@/lib/prize-utils';
 import { runMotor as runVendingMotor, isConnected as motorIsConnected } from '@/lib/vendingMotor';
 import { useAuthFetch } from '@/lib/authFetch';
@@ -351,6 +352,11 @@ export function PrizeDashboard({
     } | null>(null);
 
     const [aiSurpriseOpen, setAiSurpriseOpen] = useState(false);
+    const [doubleOrNothingOpen, setDoubleOrNothingOpen] = useState(false);
+    const [doubleOrNothingPrize, setDoubleOrNothingPrize] = useState<Prize | null>(null);
+    const [doubleOrNothingQuantity, setDoubleOrNothingQuantity] = useState(1);
+    const [doubleOrNothingOriginalActivityId, setDoubleOrNothingOriginalActivityId] = useState<string | null>(null);
+    const pendingTicketRef = useRef<any>(null);
     const [aiSurpriseLoading, setAiSurpriseLoading] = useState(false);
     const [aiSurpriseErr, setAiSurpriseErr] = useState<string | null>(null);
     const [aiSurpriseBody, setAiSurpriseBody] = useState<{ kind: string; text: string; answer?: string } | null>(null);
@@ -403,6 +409,15 @@ export function PrizeDashboard({
             setLogoutTimer(settings.kioskSessionTimeoutSec ?? 15);
         }
     }, [isKioskLocked, settings.kioskSessionTimeoutSec]);
+
+    const closeAiSurprise = useCallback(() => {
+        flushPendingTicketAfterAi();
+        setAiSurpriseOpen(false);
+        setAiSurpriseLoading(false);
+        setAiSurpriseErr(null);
+        setAiSurpriseBody(null);
+        resetTimer();
+    }, [flushPendingTicketAfterAi, resetTimer]);
 
     useEffect(() => {
         if (isKioskLocked) return;
@@ -515,6 +530,15 @@ export function PrizeDashboard({
                 };
             }
 
+            if (settings.enableDoubleOrNothing && prize.points > 0) {
+                setDoubleOrNothingPrize(prize);
+                setDoubleOrNothingQuantity(quantity);
+                setDoubleOrNothingOriginalActivityId(activityId || null);
+                pendingTicketRef.current = ticketPayload;
+                setDoubleOrNothingOpen(true);
+                return;
+            }
+
             if (prize.aiFunReward && schoolId && settings.enablePrizeAiSurprise === true) {
                 pendingTicketAfterAiRef.current = ticketPayload;
                 setAiSurpriseErr(null);
@@ -557,6 +581,52 @@ export function PrizeDashboard({
         }
     };
 
+    const handleDoubleOrNothingResult = async (res: 'double' | 'nothing' | 'cancel') => {
+        if (!student || !doubleOrNothingPrize || !schoolId || !student.id) {
+            setDoubleOrNothingOpen(false);
+            return;
+        }
+
+        if (res === 'double') {
+            // Award a second prize for free
+            try {
+                const { activityId, redeemedAt } = await redeemPrize(student.id, doubleOrNothingPrize, doubleOrNothingQuantity, 0);
+                
+                // Show doubled ticket
+                if (pendingTicketRef.current) {
+                    const doubledTicket = {
+                        ...pendingTicketRef.current,
+                        quantity: doubleOrNothingQuantity * 2,
+                        totalCost: pendingTicketRef.current.totalCost, // cost stays the same
+                    };
+                    setTicketData(doubledTicket);
+                }
+            } catch (err) {
+                console.error("Failed to award double prize:", err);
+                // Still show the original ticket at least?
+                if (pendingTicketRef.current) setTicketData(pendingTicketRef.current);
+            }
+        } else if (res === 'nothing') {
+            // They lost it all. 
+            // We don't refund points, we just don't give the prize.
+            // In a real system we might want to mark the activity as "LOST".
+            toast({
+                title: "Bad Luck!",
+                description: `You lost your ${doubleOrNothingPrize.name}. Better luck next time!`,
+                duration: 5000,
+            });
+        } else if (res === 'cancel') {
+            // They decided not to play. Show the original ticket.
+            if (pendingTicketRef.current) {
+                setTicketData(pendingTicketRef.current);
+            }
+        }
+
+        setDoubleOrNothingOpen(false);
+        setDoubleOrNothingPrize(null);
+        pendingTicketRef.current = null;
+    };
+
     const handlePrintTicket = useCallback(() => {
         if (!ticketData || !schoolId) return;
         setTicketData(null);
@@ -588,7 +658,7 @@ export function PrizeDashboard({
                 className="space-y-6 p-8"
                 role="status"
                 aria-live="polite"
-                aria-label="Loading prize shop"
+                aria-label="Loading prize/rewards shop"
             >
                 <Skeleton className="h-32 w-full rounded-3xl" />
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -601,7 +671,7 @@ export function PrizeDashboard({
                         </div>
                     ))}
                 </div>
-                <span className="sr-only">Loading prize shopâ€¦</span>
+                <span className="sr-only">Loading prize/rewards shop...</span>
             </div>
         );
     }
@@ -612,7 +682,7 @@ export function PrizeDashboard({
             <div className="min-h-[50vh] flex items-center justify-center p-6">
                 <Card className="max-w-md w-full border-destructive/30 shadow-lg">
                     <CardHeader className="text-center space-y-2">
-                        <CardTitle className="text-xl">Can&apos;t load the prize shop</CardTitle>
+                        <CardTitle className="text-xl">Can&apos;t load the prize/rewards shop</CardTitle>
                         <CardDescription className="text-base leading-relaxed">
                             {getReadableErrorMessage(loadErr, 'Something went wrong while loading. Please try again.')}
                         </CardDescription>
@@ -783,7 +853,7 @@ export function PrizeDashboard({
                                         ) : (
                                             <ShoppingBag className="w-12 h-12 text-primary" />
                                         )}
-                                        <span style={{ color: activeTheme ? 'var(--theme-primary)' : 'hsl(var(--primary))' }}>Prize Shop</span>
+                                        <span style={{ color: activeTheme ? 'var(--theme-primary)' : 'hsl(var(--primary))' }}>Prize/Rewards shop</span>
                                     </h2>
                                     <p className="text-sm font-bold uppercase tracking-[0.3em]" style={{ color: activeTheme ? 'var(--theme-text)' : undefined, opacity: 0.7 }}>
                                         Redeem your points for rewards
@@ -1148,6 +1218,18 @@ export function PrizeDashboard({
                         </CardContent>
                     </Card>
                 </div>
+
+                <Dialog open={doubleOrNothingOpen} onOpenChange={(open) => { if (!open) handleDoubleOrNothingResult('cancel'); }}>
+                    <DialogContent className="sm:max-w-md p-0 overflow-hidden border-none bg-transparent shadow-none">
+                        <DoubleOrNothingWheel
+                            prizeName={doubleOrNothingPrize?.name || ''}
+                            onResult={(res) => handleDoubleOrNothingResult(res)}
+                            onCancel={() => handleDoubleOrNothingResult('cancel')}
+                            primaryColor={activeTheme ? 'var(--theme-primary)' : undefined}
+                        />
+                    </DialogContent>
+                </Dialog>
+
                 <ConfirmRedemptionDialog
                     isOpen={!!confirmingPrize}
                     onOpenChange={(open: boolean) => {
@@ -1178,8 +1260,9 @@ export function PrizeDashboard({
                     open={aiSurpriseOpen}
                     onOpenChange={(open) => {
                         if (!open) {
-                            flushPendingTicketAfterAi();
-                            setAiSurpriseOpen(false);
+                            closeAiSurprise();
+                        } else {
+                            setAiSurpriseOpen(true);
                         }
                     }}
                 >
@@ -1220,7 +1303,7 @@ export function PrizeDashboard({
                                 type="button"
                                 variant="default"
                                 className="w-full sm:w-auto"
-                                onClick={() => setAiSurpriseOpen(false)}
+                                onClick={closeAiSurprise}
                                 disabled={aiSurpriseLoading}
                             >
                                 {aiSurpriseLoading ? 'Please wait…' : 'Awesome'}

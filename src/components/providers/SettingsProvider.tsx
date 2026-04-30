@@ -52,8 +52,10 @@ interface Settings {
     notificationStaffAlertsEnabled: boolean;
     notificationWhatsAppEnabled: boolean;
     enableClassLeaderboard: boolean;
+    /** Sum student balances by class/group and show friendly competition on the kiosk. */
+    enableClassAccumulations: boolean;
     enableShoutouts: boolean;
-    // Prize Shop
+    // Prize/Rewards shop
     enablePrizeImages: boolean;
     enablePrizeAiSurprise: boolean;
     enablePrizeCategories: boolean;
@@ -99,7 +101,7 @@ interface Settings {
     // Visuals
     animatedBackgroundStyle: string;
     hiddenAnimatedBackgroundIds: string[];
-    /** Admin-set palette for students with no individual `student.theme` (kiosk, shop, ID card). */
+    /** Admin-set palette for students with no individual `student.theme` (kiosk, prize/rewards shop, ID card). */
     defaultStudentTheme?: StudentTheme | null;
     // Security & Session
     adminSessionTimeoutMs?: number;
@@ -107,6 +109,14 @@ interface Settings {
     // Sponsor Banner (displayed at the bottom of student kiosk screens)
     kioskSponsorEnabled: boolean;
     kioskSponsorMessage: string;
+    enableDoubleOrNothing: boolean;
+    // Special Occasions
+    enableBirthdayPoints: boolean;
+    birthdayPointsAmount: number;
+    enableSpecialDayPoints: boolean;
+    specialDayPointsAmount: number;
+    specialDayLabel: string;
+    specialDayDate: string;
 }
 
 interface SettingsContextType {
@@ -154,6 +164,7 @@ const defaultSettings: Settings = {
     notificationStaffAlertsEnabled: true,
     notificationWhatsAppEnabled: false,
     enableClassLeaderboard: false,
+    enableClassAccumulations: false,
     enableShoutouts: false,
     enablePrizeImages: false,
     enablePrizeAiSurprise: false,
@@ -203,6 +214,13 @@ const defaultSettings: Settings = {
     kioskSessionTimeoutSec: 15,
     kioskSponsorEnabled: false,
     kioskSponsorMessage: '',
+    enableDoubleOrNothing: false,
+    enableBirthdayPoints: false,
+    birthdayPointsAmount: 100,
+    enableSpecialDayPoints: false,
+    specialDayPointsAmount: 50,
+    specialDayLabel: 'School Spirit Day',
+    specialDayDate: '',
 };
 
 const publicLoginSettings: Partial<Settings> = {
