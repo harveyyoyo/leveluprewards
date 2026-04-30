@@ -99,6 +99,7 @@ import { rainbowTripletForNavId, complementTripletForNavId } from '@/lib/rainbow
 import { STUDENT_KIOSK_REQUEST_EXIT_EVENT } from '@/lib/student-kiosk';
 import { prizeIsListed, studentSeesPrizeByTeachers } from '@/lib/prize-utils';
 import { useAuthFetch } from '@/lib/authFetch';
+import { WelcomeOverlay } from '@/components/WelcomeOverlay';
 
 const AI_SURPRISE_KIND_LABEL: Record<string, string> = {
   joke: 'Your joke',
@@ -313,6 +314,16 @@ function StudentDashboardInner({
   const isGraphic = settings.graphicMode === 'graphics';
   const animBackdrop = globalAnimatedBackdropActive(settings);
   const signInRecordedRef = useRef(false);
+  const [showWelcome, setShowWelcome] = useState(true);
+  const hasShownWelcomeRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    // Only show welcome if it's a new student ID session
+    if (hasShownWelcomeRef.current !== studentId) {
+      setShowWelcome(true);
+      hasShownWelcomeRef.current = studentId;
+    }
+  }, [studentId]);
 
   useEffect(() => {
     signInRecordedRef.current = false;
@@ -883,6 +894,22 @@ function StudentDashboardInner({
         } as any)}
       >
         {activeTheme?.fontFamily && <GoogleFontLoader fontFamily={activeTheme.fontFamily} />}
+
+        {showWelcome && student && (
+          <WelcomeOverlay
+            studentName={`${student.firstName} ${student.lastName}`}
+            points={student.points || 0}
+            photoUrl={student.photoUrl}
+            theme={activeTheme ? {
+              primary: activeTheme.primary,
+              text: computedThemeText,
+              background: activeTheme.background,
+              emoji: student.customEmojiUrl || activeTheme.emoji,
+            } : undefined}
+            onClose={() => setShowWelcome(false)}
+            playSound={playSound}
+          />
+        )}
 
         <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
           {celebrationMessage || (flyPointsValue !== null ? `You earned ${flyPointsValue} points` : '')}
