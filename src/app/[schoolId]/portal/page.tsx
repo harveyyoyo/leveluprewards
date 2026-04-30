@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from '@/components/ui/button';
 import { rainbowByIndex, rainbowForPortalId } from '@/lib/rainbowNav';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
+import { KioskSponsorBanner } from '@/components/KioskSponsorBanner';
 
 type PortalArea = {
     id: string;
@@ -92,6 +93,7 @@ export default function PortalPage() {
     ];
 
     return (
+        <>
         <div className={cn(
                 "min-h-[calc(100vh-5rem)] text-foreground relative font-sans flex flex-col items-center pt-2 sm:pt-6",
                 animBackdrop ? "bg-transparent" : "bg-background",
@@ -276,5 +278,7 @@ export default function PortalPage() {
                 </div>
             </div>
         </div>
+        <KioskSponsorBanner />
+        </>
     );
 }

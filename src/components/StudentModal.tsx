@@ -57,6 +57,8 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
   const [classId, setClassId] = useState('none');
   const [parentEmail, setParentEmail] = useState('');
   const [parentPhone, setParentPhone] = useState('');
+  const [studentEmail, setStudentEmail] = useState('');
+  const [studentPhone, setStudentPhone] = useState('');
   const [selectedTeacherIds, setSelectedTeacherIds] = useState<string[]>([]);
   const [isPhotoUploading, setIsPhotoUploading] = useState(false);
   const [isCustomEmojiUploading, setIsCustomEmojiUploading] = useState(false);
@@ -80,6 +82,8 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
         setClassId(student.classId || 'none');
         setParentEmail(decryptField(student.parentEmail) || '');
         setParentPhone(decryptField(student.parentPhone) || '');
+        setStudentEmail(decryptField(student.studentEmail) || '');
+        setStudentPhone(decryptField(student.studentPhone) || '');
         setSelectedTeacherIds(student.teacherIds || []);
         setTheme(student.theme);
       } else { // Create mode
@@ -92,6 +96,8 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
         setClassId('none');
         setParentEmail('');
         setParentPhone('');
+        setStudentEmail('');
+        setStudentPhone('');
         setSelectedTeacherIds([]);
         setTheme(undefined);
       }
@@ -336,6 +342,8 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
         theme,
         parentEmail: encryptField(parentEmail.trim()) || undefined,
         parentPhone: encryptField(parentPhone.trim()) || undefined,
+        studentEmail: encryptField(studentEmail.trim()) || undefined,
+        studentPhone: encryptField(studentPhone.trim()) || undefined,
       };
       await updateStudent(updatedStudent);
       playSound('success');
@@ -353,6 +361,8 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
         ...(theme ? { theme } : {}),
         parentEmail: encryptField(parentEmail.trim()) || undefined,
         parentPhone: encryptField(parentPhone.trim()) || undefined,
+        studentEmail: encryptField(studentEmail.trim()) || undefined,
+        studentPhone: encryptField(studentPhone.trim()) || undefined,
       };
       await addStudent(newStudent);
       playSound('success');
@@ -513,6 +523,28 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
                 type="tel"
                 value={parentPhone}
                 onChange={e => setParentPhone(e.target.value)}
+                placeholder="555-0123"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <Label htmlFor="studentEmail">Student Email (Optional)</Label>
+              <Input
+                id="studentEmail"
+                type="email"
+                value={studentEmail}
+                onChange={e => setStudentEmail(e.target.value)}
+                placeholder="student@school.edu"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="studentPhone">Student Phone (Optional)</Label>
+              <Input
+                id="studentPhone"
+                type="tel"
+                value={studentPhone}
+                onChange={e => setStudentPhone(e.target.value)}
                 placeholder="555-0123"
               />
             </div>

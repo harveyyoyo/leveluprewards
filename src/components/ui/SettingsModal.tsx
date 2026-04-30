@@ -21,7 +21,7 @@ import {
     Bell, Shield, Moon, Sun, ArrowLeft, Palette, Zap, Trophy,
     BarChart3, MessageSquare, ShoppingBag, ShieldCheck, Star,
     Users, Database, Printer, LayoutDashboard, History, HelpCircle,
-    Cpu, Award, Clock, Cog, Lock, Sparkles, ArrowRightLeft, Trash2, RotateCcw, Smile, BookOpen, Target
+    Cpu, Award, Clock, Cog, Lock, Sparkles, ArrowRightLeft, Trash2, RotateCcw, Smile, BookOpen, Target, Megaphone
 } from 'lucide-react';
 import { useSettings, colorSchemes, type ColorScheme, type Settings as AppSettings } from '../providers/SettingsProvider';
 import type { StudentTheme } from '@/lib/types';
@@ -661,6 +661,47 @@ export function SettingsModal() {
                                 />
                             </div>
 
+                            {/* Sponsor Banner */}
+                            <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
+                                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><Megaphone className="w-3.5 h-3.5" /> Sponsor Banner</p>
+
+                                {/* Enable toggle */}
+                                <div className="flex items-start justify-between py-4 px-3 border-b border-border/40 hover:bg-muted/30 rounded-xl transition-colors">
+                                    <div className="flex items-start gap-4 mr-6">
+                                        <div className={`p-2.5 rounded-xl transition-colors shrink-0 mt-0.5 ${local.kioskSponsorEnabled ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                                            <Megaphone className="w-5 h-5" />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <Label className="font-bold text-sm block text-foreground mb-1" htmlFor="kioskSponsorEnabled">Show Sponsor Message</Label>
+                                            <p className="text-xs text-muted-foreground leading-relaxed w-full pr-4">Display a scrolling sponsor or announcement banner along the bottom of all student kiosk screens.</p>
+                                        </div>
+                                    </div>
+                                    <Switch
+                                        id="kioskSponsorEnabled"
+                                        checked={!!local.kioskSponsorEnabled}
+                                        onCheckedChange={(checked) => handleToggle('kioskSponsorEnabled', checked)}
+                                        disabled={!isAdmin}
+                                    />
+                                </div>
+
+                                {/* Message input — only shown when enabled */}
+                                {local.kioskSponsorEnabled && (
+                                    <div className="px-3 py-4">
+                                        <Label htmlFor="kioskSponsorMessage" className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2 block">Banner Message</Label>
+                                        <Input
+                                            id="kioskSponsorMessage"
+                                            placeholder="e.g. Proudly sponsored by Acme Corp · Visit us at acme.com"
+                                            value={local.kioskSponsorMessage || ''}
+                                            onChange={(e) => handleToggle('kioskSponsorMessage', e.target.value)}
+                                            disabled={!isAdmin}
+                                            className="rounded-xl text-sm bg-background/50 border-border/50"
+                                            maxLength={300}
+                                        />
+                                        <p className="text-[10px] text-muted-foreground mt-1.5">{(local.kioskSponsorMessage || '').length}/300 characters · Message scrolls continuously across the screen.</p>
+                                    </div>
+                                )}
+                            </div>
+
                             <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
                                 <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><Trophy className="w-3.5 h-3.5" /> Recognition</p>
                                 <FeatureRow
@@ -755,8 +796,8 @@ export function SettingsModal() {
                                 />
                                 <FeatureRow
                                     id="enableStudentEmojiOnPrizeTickets"
-                                    label="Student emoji on prize tickets"
-                                    desc="When printing a redeem ticket, show the student theme emoji (or school default theme emoji) next to their name."
+                                    label="Student emoji on prize vouchers"
+                                    desc="When printing a redeem voucher, show the student theme emoji (or school default theme emoji) next to their name."
                                     icon={<Smile className="w-5 h-5" />}
                                     settings={local}
                                     onToggle={handleToggle}

@@ -18,6 +18,7 @@ import dynamic from 'next/dynamic';
 import { StudentIdCard } from '@/components/StudentIdCard';
 import type { StudentFoundMeta } from '@/components/StudentScanner';
 import { LevelUpKioskLogo } from '@/components/LevelUpKioskLogo';
+import { KioskSponsorBanner } from '@/components/KioskSponsorBanner';
 
 // ~32 KB (plus @vladmandic/face-api on the face tab). Load only when the
 // kiosk actually needs to scan a student.
@@ -1364,15 +1365,15 @@ function StudentDashboardInner({
             }}>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Print redeem ticket?</AlertDialogTitle>
+                  <AlertDialogTitle>Print redeem voucher?</AlertDialogTitle>
                   <AlertDialogDescription className="break-words [overflow-wrap:anywhere]">
-                    Print a ticket for <span className="font-bold">{prizeTicketData?.prizeName}</span>?
+                    Print a voucher for <span className="font-bold">{prizeTicketData?.prizeName}</span>?
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>No Thanks</AlertDialogCancel>
                   <Button type="button" onClick={handlePrintPrizeTicket}>
-                    Print Ticket
+                    Print Voucher
                   </Button>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -1546,6 +1547,7 @@ export default function StudentLoginPage() {
             />
           </SchoolGate>
         </ErrorBoundary>
+        <KioskSponsorBanner />
       </>
     );
   }
@@ -1576,6 +1578,7 @@ export default function StudentLoginPage() {
           />
         </div>
       </TooltipProvider>
+      <KioskSponsorBanner />
     </ErrorBoundary>
   );
 }

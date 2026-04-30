@@ -106,6 +106,10 @@ export default {
             '0%': { filter: 'blur(12px)', opacity: '0', transform: 'scale(0.95)' },
             '100%': { filter: 'blur(0)', opacity: '1', transform: 'scale(1)' },
         },
+        'sponsor-scroll': {
+            '0%': { transform: 'translateX(0)' },
+            '100%': { transform: 'translateX(-50%)' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
@@ -114,6 +118,7 @@ export default {
         'pulse-glow': 'pulse-glow 4s ease-in-out infinite',
         'bounce-short': 'bounce-short 0.6s ease-out',
         'blur-in': 'blur-in 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+        'sponsor-scroll': 'sponsor-scroll 20s linear infinite',
       },
     },
   },

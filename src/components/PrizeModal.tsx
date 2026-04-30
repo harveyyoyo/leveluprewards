@@ -297,9 +297,9 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses, cre
           </div>
           <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
             <div className="space-y-0.5">
-              <Label htmlFor="print-ticket">Print redeem ticket</Label>
+              <Label htmlFor="print-ticket">Print redeem voucher</Label>
               <p className="text-xs text-muted-foreground">
-                After a student redeems, offer to print a ticket in the Prize Shop.
+                After a student redeems, offer to print a voucher in the Prize Shop.
               </p>
             </div>
             <Switch

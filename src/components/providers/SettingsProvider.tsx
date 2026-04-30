@@ -42,10 +42,13 @@ interface Settings {
     // Analytics
     enableTeacherCharts: boolean;
     enableAdminAnalytics: boolean;
-      // Social & Communication
+    // Social & Communication
     enableNotifications: boolean;
     notificationRewardsEnabled: boolean;
     notificationAttendanceEnabled: boolean;
+    notificationMilestonesEnabled: boolean;
+    notificationStudentsEnabled: boolean;
+    notificationArtworkEnabled: boolean;
     notificationStaffAlertsEnabled: boolean;
     notificationWhatsAppEnabled: boolean;
     enableClassLeaderboard: boolean;
@@ -57,7 +60,7 @@ interface Settings {
     enableWishlist: boolean;
     enableSeasonalPrizes: boolean;
     enableVendingMachine: boolean;
-    /** When on, include the student’s theme emoji (or school default theme) on printed prize redeem tickets. */
+    /** When on, include the student's theme emoji (or school default theme) on printed prize redeem vouchers. */
     enableStudentEmojiOnPrizeTickets: boolean;
     enableColorPrinting: boolean;
     // Admin Tools
@@ -101,6 +104,9 @@ interface Settings {
     // Security & Session
     adminSessionTimeoutMs?: number;
     kioskSessionTimeoutSec?: number;
+    // Sponsor Banner (displayed at the bottom of student kiosk screens)
+    kioskSponsorEnabled: boolean;
+    kioskSponsorMessage: string;
 }
 
 interface SettingsContextType {
@@ -142,6 +148,9 @@ const defaultSettings: Settings = {
     enableNotifications: true,
     notificationRewardsEnabled: true,
     notificationAttendanceEnabled: true,
+    notificationMilestonesEnabled: true,
+    notificationStudentsEnabled: false,
+    notificationArtworkEnabled: true,
     notificationStaffAlertsEnabled: true,
     notificationWhatsAppEnabled: false,
     enableClassLeaderboard: false,
@@ -192,6 +201,8 @@ const defaultSettings: Settings = {
     },
     adminSessionTimeoutMs: 5 * 60 * 1000,
     kioskSessionTimeoutSec: 15,
+    kioskSponsorEnabled: false,
+    kioskSponsorMessage: '',
 };
 
 const publicLoginSettings: Partial<Settings> = {
@@ -426,4 +437,3 @@ export function useSettings() {
     if (!ctx) throw new Error('useSettings must be used within SettingsProvider');
     return ctx;
 }
-

@@ -1902,6 +1902,101 @@ exports.signInAttendance = signInAttendance;
 // Notifications & Alerts
 // ========================================================================
 
+function escapeHtml(value: unknown): string {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function buildCelebrationEmailHtml(args: {
+  title: string;
+  subtitle: string;
+  message: string;
+  studentName: string;
+  accent: string;
+  icon: string;
+  showArtwork: boolean;
+}): string {
+  const title = escapeHtml(args.title);
+  const subtitle = escapeHtml(args.subtitle);
+  const message = escapeHtml(args.message);
+  const studentName = escapeHtml(args.studentName);
+  const icon = escapeHtml(args.icon);
+  const accent = escapeHtml(args.accent || "#2563eb");
+
+  if (!args.showArtwork) {
+    return `<div style="font-family:Arial,sans-serif;padding:20px;border:1px solid #e5e7eb;border-radius:12px;">
+      <h2 style="margin:0 0 12px;color:${accent};">${title}</h2>
+      <p style="margin:0 0 8px;">${message}</p>
+      <p style="margin:16px 0 0;font-size:12px;color:#64748b;">This is an automated alert from your school's reward system.</p>
+    </div>`;
+  }
+
+  return `<div style="font-family:Arial,sans-serif;background:#f8fafc;padding:24px;">
+    <div style="max-width:520px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:22px;overflow:hidden;box-shadow:0 20px 45px rgba(15,23,42,0.14);">
+      <div style="background:linear-gradient(135deg,${accent},#0f172a);padding:26px 24px;color:#ffffff;text-align:center;">
+        <div style="display:inline-flex;width:72px;height:72px;border-radius:999px;background:rgba(255,255,255,0.18);border:2px solid rgba(255,255,255,0.45);align-items:center;justify-content:center;font-size:38px;line-height:72px;">${icon}</div>
+        <p style="margin:18px 0 6px;font-size:12px;letter-spacing:0.18em;text-transform:uppercase;font-weight:800;opacity:0.82;">${subtitle}</p>
+        <h1 style="margin:0;font-size:30px;line-height:1.1;font-weight:900;">${title}</h1>
+      </div>
+      <div style="padding:24px;text-align:center;">
+        <p style="margin:0 0 12px;font-size:16px;color:#0f172a;font-weight:700;">${studentName}</p>
+        <p style="margin:0;color:#334155;font-size:15px;line-height:1.6;">${message}</p>
+        <div style="margin:22px auto 0;width:86%;height:10px;border-radius:999px;background:linear-gradient(90deg,#38bdf8,#facc15,#34d399);"></div>
+        <p style="margin:18px 0 0;font-size:12px;color:#64748b;">This is an automated celebration from your school's reward system.</p>
+      </div>
+    </div>
+  </div>`;
+}
+
+function queueContactAlerts(args: {
+  alerts: Promise<any>[];
+  db: admin.firestore.Firestore;
+  email?: string;
+  phone?: string;
+  subject: string;
+  message: string;
+  html?: string;
+  fromEmail: string;
+  schoolId: string;
+  studentId?: string;
+  whatsappEnabled?: boolean;
+}): void {
+  const { alerts, db, email, phone, subject, message, html, fromEmail, schoolId, studentId, whatsappEnabled } = args;
+  if (email) {
+    alerts.push(db.collection("mail").add({
+      to: email,
+      from: fromEmail,
+      message: {
+        subject,
+        text: message,
+        ...(html ? { html } : {}),
+      },
+      schoolId,
+      ...(studentId ? { studentId } : {}),
+    }));
+  }
+  if (phone) {
+    alerts.push(db.collection("sms").add({
+      to: phone,
+      body: message,
+      schoolId,
+      ...(studentId ? { studentId } : {}),
+    }));
+    if (whatsappEnabled) {
+      alerts.push(db.collection("whatsapp").add({
+        to: phone,
+        body: message,
+        schoolId,
+        ...(studentId ? { studentId } : {}),
+      }));
+    }
+  }
+}
+
 /** Triggered when a student earns points or redeems a prize. */
 export const onStudentActivityCreated = functions.firestore
   .document("schools/{schoolId}/students/{studentId}/activities/{activityId}")
@@ -1916,7 +2011,7 @@ export const onStudentActivityCreated = functions.firestore
     const schoolSnap = await db.collection("schools").doc(schoolId).get();
     const settings = schoolSnap.data()?.appSettings;
     
-    if (!settings?.enableNotifications || !settings?.notificationRewardsEnabled) {
+    if (!settings?.enableNotifications) {
       return;
     }
 
@@ -1928,53 +2023,56 @@ export const onStudentActivityCreated = functions.firestore
     const studentName = [studentData.firstName, studentData.lastName].filter(Boolean).join(" ") || "A student";
     const isRedemption = activityData.amount < 0;
     const amountAbs = Math.abs(activityData.amount);
+    const desc = String(activityData.desc || "");
+    const isAchievement = desc.startsWith("Achievement earned:");
+    const isBadge = desc.startsWith("Badge earned:");
+    const isMilestone = isAchievement || isBadge;
+
+    if (isMilestone && settings.notificationMilestonesEnabled === false) return;
+    if (!isMilestone && !settings.notificationRewardsEnabled) return;
     
-    const subject = isRedemption ? "Reward Redemption Alert" : "Point Award Alert";
-    const message = isRedemption 
-      ? `${studentName} just redeemed ${amountAbs} points for: ${activityData.desc}`
-      : `${studentName} just earned ${amountAbs} points for: ${activityData.desc}`;
+    const unlockedName = desc.replace(/^Achievement earned:\s*/i, "").replace(/^Badge earned:\s*/i, "").trim();
+    const subject = isBadge
+      ? "Badge Unlocked"
+      : isAchievement
+        ? "Milestone Unlocked"
+        : isRedemption
+          ? "Reward Redemption Alert"
+          : "Point Award Alert";
+    const message = isMilestone
+      ? `${studentName} unlocked ${unlockedName || "a new achievement"}${amountAbs ? ` and earned ${amountAbs} bonus points` : ""}.`
+      : isRedemption
+        ? `${studentName} just redeemed ${amountAbs} points for: ${desc}`
+        : `${studentName} just earned ${amountAbs} points for: ${desc}`;
 
     const alerts: Promise<any>[] = [];
 
-    // Notify Parent
     const pEmail = decryptField(studentData.parentEmail);
     const pPhone = decryptField(studentData.parentPhone);
+    const sEmail = decryptField(studentData.studentEmail);
+    const sPhone = decryptField(studentData.studentPhone);
 
-    const fromEmail = "sdeichemed@gmail.com";
+    const schoolName = schoolSnap.data()?.name || "School";
+    const fromEmail = `"${schoolName} Alerts" <alerts@levelup-edu.com>`;
+    const html = buildCelebrationEmailHtml({
+      title: isMilestone ? unlockedName || subject : subject,
+      subtitle: isBadge ? "Badge unlocked" : isAchievement ? "Milestone reached" : isRedemption ? "Reward redeemed" : "Points earned",
+      message,
+      studentName,
+      accent: isBadge ? "#f59e0b" : isAchievement ? "#2563eb" : isRedemption ? "#db2777" : "#16a34a",
+      icon: isBadge ? "*" : isAchievement ? "T" : isRedemption ? "!" : "+",
+      showArtwork: settings.notificationArtworkEnabled !== false && isMilestone,
+    });
 
-    if (pEmail) {
-      alerts.push(db.collection("mail").add({
-        to: pEmail,
-        from: fromEmail,
-        message: {
-          subject: `${subject}: ${studentName}`,
-          text: message,
-          html: `<div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-                  <h2 style="color: #3b82f6;">${subject}</h2>
-                  <p>${message}</p>
-                  <hr style="border: 0; border-top: 1px solid #eee;" />
-                  <p style="font-size: 12px; color: #999;">This is an automated alert from your school's reward system.</p>
-                </div>`,
-        },
-        schoolId,
-        studentId,
-      }));
-    }
-
-    if (pPhone) {
-      alerts.push(db.collection("sms").add({
-        to: pPhone,
-        body: message,
-        schoolId,
-      }));
-
-      if (settings.notificationWhatsAppEnabled) {
-        alerts.push(db.collection("whatsapp").add({
-          to: pPhone,
-          body: message,
-          schoolId,
-        }));
-      }
+    queueContactAlerts({
+      alerts, db, email: pEmail, phone: pPhone, subject: `${subject}: ${studentName}`,
+      message, html, fromEmail, schoolId, studentId, whatsappEnabled: settings.notificationWhatsAppEnabled,
+    });
+    if (settings.notificationStudentsEnabled) {
+      queueContactAlerts({
+        alerts, db, email: sEmail, phone: sPhone, subject,
+        message, html, fromEmail, schoolId, studentId, whatsappEnabled: settings.notificationWhatsAppEnabled,
+      });
     }
 
     // Notify Staff if enabled
@@ -1986,24 +2084,14 @@ export const onStudentActivityCreated = functions.firestore
         const tEmail = decryptField(tData?.email);
         const tPhone = decryptField(tData?.phone);
 
-        if (tEmail) {
-          alerts.push(db.collection("mail").add({
-            to: tEmail,
-            from: fromEmail,
-            message: {
-              subject: `Staff Alert: ${studentName}`,
-              text: message,
-            },
-            schoolId,
-          }));
-        }
-        if (tPhone && settings.notificationWhatsAppEnabled) {
-          alerts.push(db.collection("whatsapp").add({
-            to: tPhone,
-            body: `Staff Alert: ${message}`,
-            schoolId,
-          }));
-        }
+        queueContactAlerts({
+          alerts, db, email: tEmail, phone: settings.notificationWhatsAppEnabled ? tPhone : undefined,
+          subject: `Staff Alert: ${studentName}`,
+          message: `Staff Alert: ${message}`,
+          fromEmail,
+          schoolId,
+          whatsappEnabled: settings.notificationWhatsAppEnabled,
+        });
       }
     }
 
@@ -2040,48 +2128,36 @@ export const onAttendanceLogCreated = functions.firestore
 
     const alerts: Promise<any>[] = [];
 
-    // Notify Parent
     const pEmail = decryptField(studentData.parentEmail);
     const pPhone = decryptField(studentData.parentPhone);
+    const sEmail = decryptField(studentData.studentEmail);
+    const sPhone = decryptField(studentData.studentPhone);
 
     const schoolName = schoolSnap.data()?.name || "School";
     const fromEmail = `"${schoolName} Alerts" <alerts@levelup-edu.com>`;
+    const html = buildCelebrationEmailHtml({
+      title: "Attendance Alert",
+      subtitle: "Class sign-in",
+      message,
+      studentName,
+      accent: "#10b981",
+      icon: "OK",
+      showArtwork: false,
+    });
 
-    if (pEmail) {
-      alerts.push(db.collection("mail").add({
-        to: pEmail,
-        from: fromEmail,
-        message: {
-          subject: `Attendance Alert: ${studentName}`,
-          text: message,
-          html: `<div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-                  <h2 style="color: #10b981;">Attendance Alert</h2>
-                  <p>${message}</p>
-                </div>`,
-        },
-        schoolId,
-        studentId,
-      }));
-    }
-
-    if (pPhone) {
-      alerts.push(db.collection("sms").add({
-        to: pPhone,
-        body: message,
-        schoolId,
-      }));
-
-      if (settings.notificationWhatsAppEnabled) {
-        alerts.push(db.collection("whatsapp").add({
-          to: pPhone,
-          body: message,
-          schoolId,
-        }));
-      }
+    queueContactAlerts({
+      alerts, db, email: pEmail, phone: pPhone, subject: `Attendance Alert: ${studentName}`,
+      message, html, fromEmail, schoolId, studentId, whatsappEnabled: settings.notificationWhatsAppEnabled,
+    });
+    if (settings.notificationStudentsEnabled) {
+      queueContactAlerts({
+        alerts, db, email: sEmail, phone: sPhone, subject: "Attendance Alert",
+        message, html, fromEmail, schoolId, studentId, whatsappEnabled: settings.notificationWhatsAppEnabled,
+      });
     }
 
     await Promise.all(alerts);
   });
 
-exports.onStudentActivityCreated = onStudentActivityCreated;
-exports.onAttendanceLogCreated = onAttendanceLogCreated;
+// Note: onStudentActivityCreated and onAttendanceLogCreated are exported via
+// `export const` above (ES module syntax). No duplicate CommonJS assignment needed.

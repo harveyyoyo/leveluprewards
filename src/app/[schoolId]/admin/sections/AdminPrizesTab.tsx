@@ -558,7 +558,7 @@ export function AdminPrizesTab({
               <li><span className="font-bold">Points</span>: cost per redemption.</li>
               <li><span className="font-bold">In Stock</span>: whether it appears in the shop.</li>
               <li><span className="font-bold">Qty</span>: optional inventory. Blank = unlimited.</li>
-              <li><span className="font-bold">Print</span>: if on, the shop offers a redeem ticket after redemption.</li>
+              <li><span className="font-bold">Print</span>: if on, the shop offers a redeem voucher after redemption.</li>
               <li><span className="font-bold">Teachers</span>: pick multiple teachers or school-wide.</li>
               <li><span className="font-bold">Class</span>: optionally restrict by class.</li>
               <li><span className="font-bold">Vending motor</span>: enable the Vending Machine feature in settings, then use the prize motor button to pick axis X/Y/Z/E.</li>
@@ -639,8 +639,8 @@ export function AdminPrizesTab({
             <div className="grid gap-4">
               <div className="flex items-center justify-between rounded-lg border p-3">
                 <div className="space-y-0.5">
-                  <Label>Print redeem ticket</Label>
-                  <p className="text-xs text-muted-foreground">Offer to print a ticket after redemption.</p>
+                  <Label>Print redeem voucher</Label>
+                  <p className="text-xs text-muted-foreground">Offer to print a voucher after redemption.</p>
                 </div>
                 <Switch checked={wOfferPrint} onCheckedChange={setWOfferPrint} />
               </div>
@@ -736,7 +736,7 @@ export function AdminPrizesTab({
                   <li><span className="font-bold">Points</span>: {Math.max(0, parseInt(wPoints || '0', 10) || 0)}</li>
                   <li><span className="font-bold">In stock</span>: {wInStock ? 'Yes' : 'No'}</li>
                   <li><span className="font-bold">Qty</span>: {wStockCount.trim() ? wStockCount.trim() : 'Unlimited'}</li>
-                  <li><span className="font-bold">Print ticket</span>: {wOfferPrint ? 'Yes' : 'No'}</li>
+                  <li><span className="font-bold">Print voucher</span>: {wOfferPrint ? 'Yes' : 'No'}</li>
                   {prizeAiSurpriseEnabled ? (
                   <li>
                     <span className="font-bold">AI surprise</span>:{' '}
@@ -761,7 +761,7 @@ export function AdminPrizesTab({
                   <li>Points are deducted based on cost × quantity.</li>
                   <li>An activity log entry is created.</li>
                   <li>If Qty is set, it decreases until it reaches 0.</li>
-                  <li>If Print is on, the shop offers a print ticket right after redeeming.</li>
+                  <li>If Print is on, the shop offers a print voucher right after redeeming.</li>
                   {prizeAiSurpriseEnabled ? (
                   <li>If AI surprise is on, the kiosk shows one generated joke, riddle, or fortune after redeeming.</li>
                   ) : null}

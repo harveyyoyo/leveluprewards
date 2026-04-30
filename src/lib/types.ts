@@ -112,6 +112,10 @@ export interface Student {
   photoUrl?: string;
   parentEmail?: string;
   parentPhone?: string;
+  /** Optional student-owned contact address for direct alerts. */
+  studentEmail?: string;
+  /** Optional student-owned phone number for direct alerts. */
+  studentPhone?: string;
   /** Optional image URL for a sticker shown by the student's name (set in admin, Students). */
   customEmojiUrl?: string;
   /** When the student record was created (ms since epoch). */
@@ -200,7 +204,7 @@ export interface Prize {
   inStock: boolean;
   /** Optional quantity on hand. Omit for unlimited. When set, listing requires count above zero; redeem decrements until empty. */
   stockCount?: number;
-  /** When true, after redemption the shop offers to print a redeem ticket. Default is off when unset. */
+  /** When true, after redemption the shop offers to print a redeem voucher. Default is off when unset. */
   offerPrintTicketOnRedeem?: boolean;
   /** Optional physical vending motor trigger run on the kiosk browser after a successful redemption. */
   vendingMotor?: VendingMotorConfig;

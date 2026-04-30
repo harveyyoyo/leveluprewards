@@ -11,6 +11,12 @@ const nextConfig = {
       ...(config.ignoreWarnings || []),
       { module: /@vladmandic\/face-api/ },
     ];
+    if (isServer && config.output && typeof config.output.chunkFilename === 'string') {
+      const chunkFilename = config.output.chunkFilename;
+      config.output.chunkFilename = chunkFilename.startsWith('chunks/')
+        ? chunkFilename
+        : `chunks/${chunkFilename}`;
+    }
     return config;
   },
   images: {

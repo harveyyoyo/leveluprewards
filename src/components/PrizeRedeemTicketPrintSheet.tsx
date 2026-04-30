@@ -123,7 +123,7 @@ export function PrizeRedeemTicketPrintSheet({
             </div>
 
             <div className="prize-ticket__banner" role="group" aria-label="Ticket reference">
-              <span className="prize-ticket__banner-title">PRIZE TICKET</span>
+              <span className="prize-ticket__banner-title">VOUCHER</span>
               <span className="prize-ticket__banner-sep" aria-hidden>
                 •
               </span>

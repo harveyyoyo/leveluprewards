@@ -1614,7 +1614,7 @@ function TeacherAttendanceRewardsPanel({
 }
 
 export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretaryMode = false }: { teacherName: string, teacherId: string, onLogout: () => void, secretaryMode?: boolean }) {
-    const { updateTeacher, addCoupons, setCouponsToPrint, addCategory, schoolId, awardPointsToMultipleStudents, deductPointsFromMultipleStudents, addPrize, updatePrize, deletePrize, getTeacherAttendanceConfig, setTeacherAttendanceConfig, listTeacherAttendanceLog, categories: globalCategories, isAdmin } = useAppContext();
+    const { updateTeacher, addCoupons, setCouponsToPrint, addCategory, schoolId, awardPointsToMultipleStudents, deductPointsFromMultipleStudents, addPrize, updatePrize, deletePrize, getTeacherAttendanceConfig, setTeacherAttendanceConfig, listTeacherAttendanceLog, categories: globalCategories, isAdmin, isTeacher } = useAppContext();
     /** Admin using the teacher portal can act on the whole school (like secretary data scope) while keeping teacher tabs/tools. */
     const schoolWideTeacherScope = secretaryMode || isAdmin;
     const { toast } = useToast();
@@ -2150,6 +2150,57 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
         : categoriesLoading || studentsLoading || classesLoading || periodsLoading;
     const teacherAccent = rainbowForNavId('print', settings.colorScheme);
     const teacherAccentTriplet = rainbowTripletForNavId('print', settings.colorScheme);
+
+    const { teacherDocId, userId } = useAppContext();
+
+    // Debugging logs to help troubleshoot missing students
+    useEffect(() => {
+        if (studentsLoading) return;
+        console.log('[TeacherPortal] Debug Info:', {
+            schoolId,
+            teacherId,
+            isAdmin,
+            isTeacher,
+            secretaryMode,
+            schoolWideTeacherScope,
+            studentsCount: students?.length ?? 0,
+            classesCount: classes?.length ?? 0,
+            teacherDocFound: !!currentTeacher,
+            studentsInScopeCount: studentsForTeacherActions.length,
+            teacherDocIdContext: teacherDocId,
+            userId
+        });
+    }, [studentsLoading, schoolId, teacherId, isAdmin, isTeacher, secretaryMode, schoolWideTeacherScope, students, classes, currentTeacher, studentsForTeacherActions, teacherDocId, userId]);
+
+    if (isTeacher && !isAdmin && !secretaryMode && !currentTeacher && !studentsLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px] p-6">
+                <Card className="w-full max-w-md border-t-8 border-destructive shadow-2xl">
+                    <CardHeader className="text-center">
+                        <div className="w-16 h-16 bg-destructive/10 text-destructive rounded-2xl flex items-center justify-center mx-auto mb-4">
+                            <UserCheck className="w-8 h-8" />
+                        </div>
+                        <CardTitle className="text-xl font-bold">Profile Linking Error</CardTitle>
+                        <CardDescription>
+                            Your staff account is not correctly linked to a teacher profile in this school. 
+                            This prevents your students from appearing in your roster.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="bg-slate-50 p-4 rounded-xl text-xs font-mono break-all space-y-1">
+                            <p><span className="text-muted-foreground">School:</span> {schoolId}</p>
+                            <p><span className="text-muted-foreground">User ID:</span> {userId}</p>
+                            <p><span className="text-muted-foreground">Teacher ID:</span> {teacherId}</p>
+                            <p><span className="text-muted-foreground">Context Doc ID:</span> {teacherDocId || 'none'}</p>
+                        </div>
+                        <Button variant="outline" className="w-full rounded-xl" onClick={onLogout}>
+                            Logout and Try Again
+                        </Button>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
 
     return (
         <TooltipProvider>

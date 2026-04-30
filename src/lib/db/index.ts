@@ -58,6 +58,7 @@ export {
   recordClassSignIn,
   listAttendanceLog,
   listTeacherAttendanceLog,
+  ensureDefaultAttendanceRules,
 } from './attendance';
 
 // Homework

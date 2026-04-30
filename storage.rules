@@ -1,13 +1,30 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    match /school-logos/{schoolId} {
+    // School logos — public read; writes are handled via Cloud Functions (Admin SDK).
+    match /school-logos/{fileName} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if false;
     }
+    // Prize images — public read; writes are handled via Cloud Functions (Admin SDK).
     match /schools/{schoolId}/prizes/{prizeId}/{fileName} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if false;
+    }
+    // Student profile photos — public read for ID cards; writes via Cloud Functions.
+    match /student-photos/{schoolId}/{studentId} {
+      allow read: if true;
+      allow write: if false;
+    }
+    // Student custom emoji/sticker images — public read; writes via Cloud Functions.
+    match /student-custom-emojis/{schoolId}/{studentId} {
+      allow read: if true;
+      allow write: if false;
+    }
+    // App-wide branding assets — public read; writes via Cloud Functions.
+    match /app-branding/{fileName} {
+      allow read: if true;
+      allow write: if false;
     }
     match /backups/{allPaths=**} {
       // Backups are managed exclusively through Cloud Functions (admin SDK).

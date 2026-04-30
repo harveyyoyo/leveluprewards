@@ -1,12 +1,10 @@
 'use client';
 
-import { Bell, Mail, MessageSquare, Shield, User, Users, CheckCircle2 } from 'lucide-react';
+import { Award, Bell, CheckCircle2, Image, Mail, MessageSquare, Shield, Sparkles, User, Users } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useSettings } from '@/components/providers/SettingsProvider';
-import { Helper } from '@/components/ui/helper';
-import { cn } from '@/lib/utils';
 
 export function AdminNotificationsTab() {
   const { settings, updateSettings } = useSettings();
@@ -39,7 +37,7 @@ export function AdminNotificationsTab() {
               <div className="space-y-1">
                 <p className="font-bold text-sm">Email Alerts</p>
                 <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  Send activity summaries and milestone alerts to parent and staff email addresses.
+                  Send activity summaries and milestone alerts to parent, student, and staff email addresses.
                 </p>
               </div>
             </div>
@@ -106,6 +104,32 @@ export function AdminNotificationsTab() {
             <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
               <div className="space-y-0.5">
                 <Label className="text-sm font-bold flex items-center gap-2">
+                  Milestones & Badges <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                </Label>
+                <p className="text-[11px] text-muted-foreground">Notify when a student unlocks bonus milestones or category badges.</p>
+              </div>
+              <Switch
+                checked={settings.notificationMilestonesEnabled}
+                onCheckedChange={(checked) => updateSettings({ notificationMilestonesEnabled: checked })}
+              />
+            </div>
+
+            <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+              <div className="space-y-0.5">
+                <Label className="text-sm font-bold flex items-center gap-2">
+                  Celebration Artwork <Image className="w-3.5 h-3.5 text-sky-500" />
+                </Label>
+                <p className="text-[11px] text-muted-foreground">Include badge-style artwork in milestone and badge emails.</p>
+              </div>
+              <Switch
+                checked={settings.notificationArtworkEnabled}
+                onCheckedChange={(checked) => updateSettings({ notificationArtworkEnabled: checked })}
+              />
+            </div>
+
+            <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+              <div className="space-y-0.5">
+                <Label className="text-sm font-bold flex items-center gap-2">
                   WhatsApp Alerts <span className="text-[10px] bg-green-500 text-white px-1.5 py-0.5 rounded font-black uppercase tracking-tighter">New</span>
                 </Label>
                 <p className="text-[11px] text-muted-foreground">Enable instant notifications via WhatsApp Business API.</p>
@@ -137,6 +161,19 @@ export function AdminNotificationsTab() {
 
             <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
               <div className="space-y-0.5">
+                <Label className="text-sm font-bold flex items-center gap-2">
+                  Students <User className="w-3.5 h-3.5 text-primary" />
+                </Label>
+                <p className="text-[11px] text-muted-foreground">Notify students directly when their student email or phone is saved.</p>
+              </div>
+              <Switch
+                checked={settings.notificationStudentsEnabled}
+                onCheckedChange={(checked) => updateSettings({ notificationStudentsEnabled: checked })}
+              />
+            </div>
+
+            <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+              <div className="space-y-0.5">
                 <Label className="text-sm font-bold">Staff Alerts</Label>
                 <p className="text-[11px] text-muted-foreground">Notify assigned teachers and administrators.</p>
               </div>
@@ -148,6 +185,33 @@ export function AdminNotificationsTab() {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="shadow-md overflow-hidden">
+        <CardContent className="p-0">
+          <div className="grid md:grid-cols-[1.1fr_1.4fr]">
+            <div className="p-6 bg-slate-950 text-white">
+              <div className="flex items-center gap-2 text-amber-300">
+                <Award className="w-5 h-5" />
+                <span className="text-xs font-black uppercase tracking-[0.2em]">Artwork preview</span>
+              </div>
+              <h3 className="mt-3 text-xl font-black">Milestone and badge emails now feel earned.</h3>
+              <p className="mt-2 text-sm text-slate-300 leading-relaxed">
+                Email alerts can include a polished celebration panel with the student name, achievement title, points, and badge icon.
+              </p>
+            </div>
+            <div className="p-6 bg-gradient-to-br from-sky-50 via-white to-amber-50 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900">
+              <div className="mx-auto max-w-sm rounded-2xl border border-amber-200 bg-white p-5 text-center shadow-xl dark:bg-slate-900 dark:border-amber-500/30">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 text-amber-600 ring-8 ring-amber-50 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/10">
+                  <Sparkles className="h-8 w-8" />
+                </div>
+                <p className="mt-4 text-xs font-black uppercase tracking-[0.2em] text-sky-600">Badge unlocked</p>
+                <p className="mt-1 text-2xl font-black text-slate-950 dark:text-white">Monthly Champion</p>
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">Beautiful email artwork celebrates milestones and badges.</p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card className="border-l-4 border-amber-500 shadow-md">
         <CardContent className="py-6 flex gap-4 items-start">

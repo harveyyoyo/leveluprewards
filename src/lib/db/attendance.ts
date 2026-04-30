@@ -9,9 +9,10 @@ import {
   where,
   orderBy,
   limit,
+  writeBatch,
   Firestore,
 } from 'firebase/firestore';
-import type { Student, AttendanceSettings, AttendanceLogEntry, AttendanceScheduleSlot, HistoryItem, RecordClassSignInResult } from '../types';
+import type { Student, AttendanceSettings, AttendanceLogEntry, AttendanceScheduleSlot, HistoryItem, RecordClassSignInResult, Class, AttendanceRewardRule } from '../types';
 import { reportFirestorePermissionError } from '@/firebase/error-emitter';
 import { getSchoolDayClock } from '@/lib/attendance/schoolDayClock';
 import { removeUndefined } from './helpers';
@@ -309,3 +310,77 @@ export const listTeacherAttendanceLog = async (
     };
   });
 };
+
+/**
+ * Ensures default AttendanceRewardRule documents exist for the given period IDs
+ * across all classes that have a primary teacher.
+ * 
+ * Uses deterministic IDs to prevent duplicates and skips existing rules.
+ */
+export const ensureDefaultAttendanceRules = async (
+  firestore: Firestore,
+  schoolId: string,
+  periodIds: string[]
+): Promise<{ created: number; skipped: number }> => {
+  if (!schoolId || !periodIds.length) return { created: 0, skipped: 0 };
+
+  // 1. Get school-wide defaults
+  const schoolConfig = await getAttendanceConfig(firestore, schoolId);
+  
+  // 2. Get all classes
+  const classesRef = collection(firestore, 'schools', schoolId, 'classes');
+  const classesSnap = await getDocs(classesRef);
+  const classes = classesSnap.docs.map(d => ({ id: d.id, ...d.data() } as Class));
+
+  const results = { created: 0, skipped: 0 };
+  let batch = writeBatch(firestore);
+  let batchCount = 0;
+
+  for (const cls of classes) {
+    if (!cls.primaryTeacherId) continue;
+
+    for (const periodId of periodIds) {
+      // Deterministic ID: "default_{classId}_{periodId}"
+      const ruleId = `default_${cls.id}_${periodId}`;
+      const ruleRef = doc(firestore, 'schools', schoolId, 'teachers', cls.primaryTeacherId, 'attendanceRewards', ruleId);
+      
+      // Check if it already exists
+      const ruleSnap = await getDoc(ruleRef);
+      if (ruleSnap.exists()) {
+        results.skipped++;
+        continue;
+      }
+
+      const rule: AttendanceRewardRule = {
+        id: ruleId,
+        teacherId: cls.primaryTeacherId,
+        classId: cls.id,
+        className: cls.name,
+        periodId: periodId,
+        pointsForSignIn: schoolConfig?.pointsForSignIn ?? 1,
+        pointsForOnTime: schoolConfig?.pointsForOnTime ?? 5,
+        onTimeWindowMinutes: schoolConfig?.onTimeWindowMinutes ?? 5,
+        categoryId: schoolConfig?.categoryId,
+        enabled: true,
+        createdAt: Date.now(),
+      };
+
+      batch.set(ruleRef, rule);
+      batchCount++;
+      results.created++;
+
+      if (batchCount >= 400) {
+        await batch.commit();
+        batch = writeBatch(firestore);
+        batchCount = 0;
+      }
+    }
+  }
+
+  if (batchCount > 0) {
+    await batch.commit();
+  }
+
+  return results;
+};
+

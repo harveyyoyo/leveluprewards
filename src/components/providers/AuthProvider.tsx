@@ -171,6 +171,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                                 setIsAdmin(false);
                                 setIsSecretary(false);
                                 setIsPrizeClerk(false);
+                                const idFromDb = roleDoc.data().teacherId;
+                                if (idFromDb) {
+                                    setTeacherDocId(idFromDb);
+                                    localStorage.setItem('teacherDocId', idFromDb);
+                                }
                             } else {
                                 setIsTeacher(false);
                                 setIsAdmin(false);
@@ -450,11 +455,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     // Poll the server to confirm the teacher role is readable
                     const teacherRoleRef = doc(firestore, 'schools', lowerSchoolId, 'roles_teacher', auth.currentUser.uid);
                     let roleConfirmed = false;
+                    let teacherIdFromDb = null;
                     for (let i = 0; i < 15; i++) {
                         try {
                             const roleDoc = await getDocFromServer(teacherRoleRef);
                             if (roleDoc.exists() && roleDoc.data().role === 'teacher') {
                                 roleConfirmed = true;
+                                teacherIdFromDb = roleDoc.data().teacherId;
                                 break;
                             }
                         } catch (e) { }
@@ -475,10 +482,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     const name = credentials.teacherName || credentials.username || 'Teacher';
                     setUserName(name);
                     setUserId(auth.currentUser.uid);
-                    if (credentials.teacherDocId) {
-                        setTeacherDocId(credentials.teacherDocId);
-                        localStorage.setItem('teacherDocId', credentials.teacherDocId);
+                    
+                    const finalTeacherDocId = teacherIdFromDb || credentials.teacherDocId;
+                    if (finalTeacherDocId) {
+                        setTeacherDocId(finalTeacherDocId);
+                        localStorage.setItem('teacherDocId', finalTeacherDocId);
                     }
+                    
                     localStorage.setItem('loginState', 'teacher');
                     localStorage.setItem('schoolId', lowerSchoolId);
                     localStorage.setItem('userName', name);

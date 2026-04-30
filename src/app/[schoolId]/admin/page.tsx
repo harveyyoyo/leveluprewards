@@ -81,7 +81,7 @@ const ThemeGeneratorModal = dynamic(
   () => import('@/components/ThemeGeneratorModal').then((m) => m.ThemeGeneratorModal),
   { ssr: false },
 );
-import { addAchievement, updateAchievement, deleteAchievement, addBadge, updateBadge, deleteBadge, addStaffAccount, updateStaffAccount, deleteStaffAccount } from '@/lib/db';
+import { addAchievement, updateAchievement, deleteAchievement, addBadge, updateBadge, deleteBadge, addStaffAccount, updateStaffAccount, deleteStaffAccount, ensureDefaultAttendanceRules } from '@/lib/db';
 import {
   importParsedSchoolSnapshot,
   type ParsedSchoolSnapshot,
@@ -1926,6 +1926,7 @@ function UniversalPeriodsAdmin({ schoolId }: { schoolId: string }) {
         });
       }
 
+      await syncDefaultRules(mapped.map(p => p.id));
       toast({
         title: 'Periods imported',
         description:
@@ -1951,6 +1952,7 @@ function UniversalPeriodsAdmin({ schoolId }: { schoolId: string }) {
       }
       const id = `p_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
       await setDoc(doc(firestore, 'schools', schoolId, 'periods', id), { id, label, startTime: start, endTime: end });
+      await syncDefaultRules([id]);
       toast({ title: 'Period added' });
     } catch (e) {
       toast({ variant: 'destructive', title: 'Failed to add period', description: (e as Error).message });
@@ -1984,6 +1986,27 @@ function UniversalPeriodsAdmin({ schoolId }: { schoolId: string }) {
       toast({ title: 'Period deleted' });
     } catch (e) {
       toast({ variant: 'destructive', title: 'Failed to delete period', description: (e as Error).message });
+    }
+  };
+
+  const syncDefaultRules = async (specificPeriodIds?: string[]) => {
+    try {
+      const targetIds = specificPeriodIds || (periods || []).map(p => p.id);
+      if (!targetIds.length) {
+        if (!specificPeriodIds) toast({ variant: 'destructive', title: 'No periods found to sync' });
+        return;
+      }
+      
+      const { created, skipped } = await ensureDefaultAttendanceRules(firestore, schoolId, targetIds);
+      if (!specificPeriodIds) {
+        toast({ 
+          title: 'Attendance rules synced', 
+          description: `Created ${created} default rules. ${skipped} rules already existed and were skipped.` 
+        });
+      }
+    } catch (e: any) {
+      console.error('[attendance] Sync failed:', e);
+      toast({ variant: 'destructive', title: 'Failed to sync rules', description: e?.message || String(e) });
     }
   };
 
@@ -2092,6 +2115,21 @@ function UniversalPeriodsAdmin({ schoolId }: { schoolId: string }) {
           />
         </div>
         <Button onClick={addPeriod} className="rounded-xl">Add</Button>
+      </div>
+
+      <div className="flex items-center justify-between gap-4 mt-6">
+        <h3 className="text-sm font-black uppercase tracking-widest text-muted-foreground/80 flex items-center gap-2">
+          <Clock className="w-4 h-4" /> Attendance Periods
+        </h3>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="h-8 rounded-lg text-[10px] font-black uppercase tracking-widest gap-2"
+          onClick={() => syncDefaultRules()}
+          disabled={!periods?.length}
+        >
+          <Zap className="w-3 h-3" /> Sync Default Rules
+        </Button>
       </div>
 
       <div className="space-y-2">

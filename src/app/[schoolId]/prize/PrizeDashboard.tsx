@@ -1163,14 +1163,14 @@ export function PrizeDashboard({
                 <AlertDialog open={!!ticketData} onOpenChange={(open) => { if (!open) setTicketData(null); }}>
                     <AlertDialogContent className="no-print">
                         <AlertDialogHeader>
-                            <AlertDialogTitle>Print redeem ticket?</AlertDialogTitle>
+                            <AlertDialogTitle>Print redeem voucher?</AlertDialogTitle>
                             <AlertDialogDescription>
-                                Print a ticket for <span className="font-bold">{ticketData?.prizeName}</span>{ticketData && ticketData.quantity > 1 ? ` (x${ticketData.quantity})` : ''}.
+                                Print a voucher for <span className="font-bold">{ticketData?.prizeName}</span>{ticketData && ticketData.quantity > 1 ? ` (x${ticketData.quantity})` : ''}.
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter className="flex-col gap-2 sm:flex-col sm:justify-end sm:space-x-0">
                             <AlertDialogCancel onClick={() => setTicketData(null)}>No Thanks</AlertDialogCancel>
-                            <AlertDialogAction className="w-full sm:w-auto" onClick={handlePrintTicket}>Print Ticket</AlertDialogAction>
+                            <AlertDialogAction className="w-full sm:w-auto" onClick={handlePrintTicket}>Print Voucher</AlertDialogAction>
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>
