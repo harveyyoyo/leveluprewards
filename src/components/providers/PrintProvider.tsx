@@ -18,9 +18,10 @@ import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useAuth } from './AuthProvider';
 import { useDoc } from '@/firebase';
 import { useSchoolMetadataDocRef } from '@/hooks/useSchoolMetadataDocRef';
+import type { CouponPrintPageSize } from '@/lib/coupon-print';
 
 interface PrintContextType {
-    setCouponsToPrint: (coupons: Coupon[]) => void;
+    setCouponsToPrint: (coupons: Coupon[], options?: { couponsPerPage?: CouponPrintPageSize }) => void;
     setStudentsToPrint: (data: { students: Student[]; classes: Class[]; printerType?: 'dtc4500e' }) => void;
     printPrizeTickets: (tickets: PrizeRedeemTicket[]) => void;
 }
@@ -42,7 +43,7 @@ async function ensurePrizeTicketFontsLoaded(): Promise<void> {
 }
 
 export function PrintProvider({ children }: { children: React.ReactNode }) {
-    const [couponsToPrint, setCouponsToPrint] = useState<Coupon[]>([]);
+    const [couponPrintJob, setCouponPrintJob] = useState<{ coupons: Coupon[]; couponsPerPage: CouponPrintPageSize } | null>(null);
     const [printData, setPrintData] = useState<{ students: Student[]; classes: Class[]; printerType?: 'dtc4500e' } | null>(null);
     const [prizeTicketsToPrint, setPrizeTicketsToPrint] = useState<PrizeRedeemTicket[]>([]);
     const playSound = useArcadeSound();
@@ -54,10 +55,10 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
 
     const printTriggered = useRef(false);
     useEffect(() => {
-        if (couponsToPrint.length > 0 && !printTriggered.current) {
+        if (couponPrintJob && couponPrintJob.coupons.length > 0 && !printTriggered.current) {
             printTriggered.current = true;
             const afterPrint = () => {
-                setCouponsToPrint([]);
+                setCouponPrintJob(null);
                 printTriggered.current = false;
                 window.removeEventListener('afterprint', afterPrint);
             };
@@ -69,7 +70,7 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
               });
             });
         }
-    }, [couponsToPrint, playSound]);
+    }, [couponPrintJob, playSound]);
 
     const studentPrintTriggered = useRef(false);
     const triggerStudentPrint = React.useCallback(() => {
@@ -108,7 +109,9 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
 
     const value = useMemo(
         () => ({ 
-            setCouponsToPrint, 
+            setCouponsToPrint: (coupons: Coupon[], options?: { couponsPerPage?: CouponPrintPageSize }) => {
+                setCouponPrintJob({ coupons, couponsPerPage: options?.couponsPerPage ?? 10 });
+            }, 
             setStudentsToPrint: setPrintData,
             printPrizeTickets: setPrizeTicketsToPrint
         }),
@@ -118,7 +121,13 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
     return (
         <PrintContext.Provider value={value}>
             {children}
-            {couponsToPrint.length > 0 && <PrintSheet coupons={couponsToPrint} schoolId={schoolId} />}
+            {couponPrintJob && couponPrintJob.coupons.length > 0 && (
+                <PrintSheet
+                    coupons={couponPrintJob.coupons}
+                    couponsPerPage={couponPrintJob.couponsPerPage}
+                    schoolId={schoolId}
+                />
+            )}
             {printData && printData.students.length > 0 && printData.printerType !== 'dtc4500e' && <StudentIdPrintSheet students={printData.students} classes={printData.classes} schoolId={schoolId} onReady={triggerStudentPrint} />}
             {printData && printData.students.length > 0 && printData.printerType === 'dtc4500e' && <StudentIdDTCPrintSheet students={printData.students} classes={printData.classes} schoolId={schoolId} onReady={triggerStudentPrint} />}
             {prizeTicketsToPrint.length > 0 && (

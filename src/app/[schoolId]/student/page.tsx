@@ -11,7 +11,7 @@ import { useSettings } from '@/components/providers/SettingsProvider';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirestore, useFirebase, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { useSchoolMetadataDocRef } from '@/hooks/useSchoolMetadataDocRef';
-import { collection, query, orderBy, limit, doc } from 'firebase/firestore';
+import { collection, query, orderBy, limit, doc, where, getDocs, updateDoc, addDoc } from 'firebase/firestore';
 import { SchoolGate } from '@/components/SchoolGate';
 import { lookupStudentId } from '@/lib/db';
 import dynamic from 'next/dynamic';
@@ -30,7 +30,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import type { Student, Prize, HistoryItem, AttendanceScheduleSlot, Class, AttendanceRewardRule } from '@/lib/types';
+import type { Student, Prize, HistoryItem, AttendanceScheduleSlot, Class, AttendanceRewardRule, LibraryItem } from '@/lib/types';
 import { performKioskAttendanceSignIn, describeAttendanceKioskOutcome } from '@/lib/attendance/kioskSignIn';
 import DynamicIcon from '@/components/DynamicIcon';
 import { Progress } from '@/components/ui/progress';
@@ -44,7 +44,6 @@ import {
   Type,
   Camera,
   Star,
-  BookOpen,
   Award,
   FlaskConical,
   Home,
@@ -97,6 +96,60 @@ import { FaceMismatchBanner } from '@/components/FaceMismatchBanner';
 import { rainbowTripletForNavId, complementTripletForNavId } from '@/lib/rainbowNav';
 import { STUDENT_KIOSK_REQUEST_EXIT_EVENT } from '@/lib/student-kiosk';
 import { prizeIsListed, studentSeesPrizeByTeachers } from '@/lib/prize-utils';
+import { useAuthFetch } from '@/lib/authFetch';
+
+const AI_SURPRISE_KIND_LABEL: Record<string, string> = {
+  joke: 'Your joke',
+  riddle: 'Your riddle',
+  fortune: 'Your fortune',
+};
+
+type PrizeSurprise = { kind: 'joke' | 'riddle' | 'fortune'; text: string; answer?: string };
+
+const FALLBACK_PRIZE_SURPRISES: Record<'joke' | 'riddle' | 'fortune', PrizeSurprise[]> = {
+  joke: [
+    { kind: 'joke', text: 'Why did the student bring a ladder to school? Because they wanted to go to high school!' },
+    { kind: 'joke', text: 'Why was the math book so good at telling stories? It had a lot of problems to solve.' },
+    { kind: 'joke', text: 'What did one pencil say to the other? You are looking sharp today!' },
+    { kind: 'joke', text: 'Why did the crayon win an award? It drew the biggest crowd.' },
+    { kind: 'joke', text: 'Why did the notebook go to the doctor? It had too many notes.' },
+    { kind: 'joke', text: 'Why did the clock do well in class? It was always on time.' },
+    { kind: 'joke', text: "What is a teacher's favorite kind of music? Class-ical." },
+    { kind: 'joke', text: 'Why did the student bring a spoon to class? They heard learning was sweet.' },
+  ],
+  riddle: [
+    { kind: 'riddle', text: 'I get bigger the more you take away. What am I?', answer: 'A hole' },
+    { kind: 'riddle', text: 'What has pages, tells stories, and never speaks out loud?', answer: 'A book' },
+    { kind: 'riddle', text: 'What can you catch but never throw?', answer: 'A cold' },
+    { kind: 'riddle', text: 'What has hands but cannot clap?', answer: 'A clock' },
+    { kind: 'riddle', text: 'What has many teeth but cannot bite?', answer: 'A comb' },
+  ],
+  fortune: [
+    { kind: 'fortune', text: 'A bright surprise is waiting in your next reward moment.' },
+    { kind: 'fortune', text: 'Your next brave try may turn into your best win yet.' },
+    { kind: 'fortune', text: 'A kind choice today will come back as a smile.' },
+    { kind: 'fortune', text: 'Small steps are quietly building something awesome.' },
+    { kind: 'fortune', text: 'Good effort has a way of opening new doors.' },
+  ],
+};
+
+function fallbackPrizeSurprise(
+  mode: Prize['aiFunReward'],
+  prizeName: string,
+  previousText?: string,
+): PrizeSurprise {
+  const kind = mode === 'riddle' || mode === 'fortune' ? mode : 'joke';
+  const options = FALLBACK_PRIZE_SURPRISES[kind];
+  const freshOptions = previousText ? options.filter((item) => item.text !== previousText) : options;
+  const selected = (freshOptions.length ? freshOptions : options)[Math.floor(Math.random() * (freshOptions.length || options.length))];
+  if (kind === 'fortune' && prizeName) {
+    return {
+      ...selected,
+      text: selected.text.replace('reward moment', `${prizeName} moment`),
+    };
+  }
+  return selected;
+}
 
 function StudentActivityList({ schoolId, studentId, themed = false }: { schoolId: string; studentId: string; themed?: boolean }) {
   const firestore = useFirestore();
@@ -130,6 +183,7 @@ function StudentActivityList({ schoolId, studentId, themed = false }: { schoolId
       </div>
     );
   }
+
 
   return (
     <ScrollArea className="w-full min-h-[50dvh] h-[min(85dvh,calc(100dvh-9rem))] lg:min-h-[calc(100dvh-12rem)] lg:max-h-[calc(100dvh-8rem)] pr-4">
@@ -238,6 +292,7 @@ function StudentActivityList({ schoolId, studentId, themed = false }: { schoolId
 }
 
 function StudentDashboardInner({
+
   studentId,
   onDone,
   onRequestExit,
@@ -252,6 +307,7 @@ function StudentDashboardInner({
   const { functions } = useFirebase();
   const { toast } = useToast();
   const { settings } = useSettings();
+  const authFetch = useAuthFetch();
   const isGraphic = settings.graphicMode === 'graphics';
   const animBackdrop = globalAnimatedBackdropActive(settings);
   const signInRecordedRef = useRef(false);
@@ -294,7 +350,7 @@ function StudentDashboardInner({
   const { data: teacherRewards } = useCollection<AttendanceRewardRule>(teacherRewardsQuery);
 
   const [couponCode, setCouponCode] = useState('');
-  const [logoutTimer, setLogoutTimer] = useState(15);
+  const [logoutTimer, setLogoutTimer] = useState(settings.kioskSessionTimeoutSec ?? 15);
   const [flyPointsValue, setFlyPointsValue] = useState<number | null>(null);
   const [celebrationMessage, setCelebrationMessage] = useState<string | null>(null);
   const celebrationQueueRef = useRef<string[]>([]);
@@ -344,6 +400,35 @@ function StudentDashboardInner({
     quantity: number;
     totalCost: number;
   } | null>(null);
+  const pendingPrizeTicketAfterAiRef = useRef<typeof prizeTicketData>(null);
+  const lastAiSurpriseTextRef = useRef<string | undefined>(undefined);
+  const aiSurpriseRequestIdRef = useRef(0);
+  const [aiSurpriseOpen, setAiSurpriseOpen] = useState(false);
+  const [aiSurpriseLoading, setAiSurpriseLoading] = useState(false);
+  const [aiSurpriseBody, setAiSurpriseBody] = useState<PrizeSurprise | null>(null);
+
+  const flushPendingPrizeTicketAfterAi = useCallback(() => {
+    const pending = pendingPrizeTicketAfterAiRef.current;
+    pendingPrizeTicketAfterAiRef.current = null;
+    if (pending) setPrizeTicketData(pending);
+  }, []);
+
+  const closeAiSurprise = useCallback(() => {
+    setAiSurpriseOpen(false);
+    flushPendingPrizeTicketAfterAi();
+  }, [flushPendingPrizeTicketAfterAi]);
+
+  useEffect(() => {
+    if (!aiSurpriseOpen || aiSurpriseLoading || !aiSurpriseBody) return;
+    const timerId = window.setTimeout(closeAiSurprise, 5000);
+    return () => window.clearTimeout(timerId);
+  }, [aiSurpriseBody, aiSurpriseLoading, aiSurpriseOpen, closeAiSurprise]);
+
+  const handleManualLogout = useCallback(() => {
+    playSound('swoosh');
+    onDone();
+    toast({ title: 'Logged Out', description: 'Returning to kiosk home.' });
+  }, [onDone, playSound, toast]);
 
   const [activeTab, setActiveTab] = useState('manual');
   const [hasCameraPermission, setHasCameraPermission] = useState(true);
@@ -419,12 +504,12 @@ function StudentDashboardInner({
 
   const resetTimer = useCallback(() => {
     if (!isKioskLocked) {
-      setLogoutTimer(15);
+      setLogoutTimer(settings.kioskSessionTimeoutSec ?? 15);
     }
-  }, [isKioskLocked]);
+  }, [isKioskLocked, settings.kioskSessionTimeoutSec]);
 
   useEffect(() => {
-    if (isKioskLocked || confirmingPrize || isRedeemingPrize || prizeTicketData) return;
+    if (isKioskLocked || confirmingPrize || isRedeemingPrize || prizeTicketData || aiSurpriseOpen) return;
     if (logoutTimer <= 0) {
       onDone();
       return;
@@ -434,7 +519,7 @@ function StudentDashboardInner({
     }, 1000);
 
     return () => clearTimeout(timerId);
-  }, [logoutTimer, onDone, isKioskLocked, confirmingPrize, isRedeemingPrize, prizeTicketData]);
+  }, [logoutTimer, onDone, isKioskLocked, confirmingPrize, isRedeemingPrize, prizeTicketData, aiSurpriseOpen]);
 
   // Also reset auto‑logout timer when there is general user activity (mouse / keyboard / touch).
   useEffect(() => {
@@ -455,6 +540,56 @@ function StudentDashboardInner({
     if (!code) return;
     resetTimer();
 
+    // 1. Check Library Item first (if enabled)
+    if (settings.enableLibrary && firestore && schoolId) {
+      try {
+        const libraryQuery = query(collection(firestore, 'schools', schoolId, 'library'), where('upc', '==', code), limit(1));
+        const librarySnap = await getDocs(libraryQuery);
+        if (!librarySnap.empty) {
+          const itemDoc = librarySnap.docs[0];
+          const item = itemDoc.data() as LibraryItem;
+          
+          if (item.status === 'available') {
+            await updateDoc(doc(firestore, 'schools', schoolId, 'library', itemDoc.id), {
+              status: 'checked_out',
+              checkedOutTo: student.id,
+              checkedOutAt: Date.now()
+            });
+            await addDoc(collection(firestore, 'schools', schoolId, 'students', student.id, 'activities'), {
+              desc: `Checked out library item: ${item.name}`,
+              amount: 0,
+              date: Date.now()
+            });
+            playSound('success');
+            toast({ title: 'Checked Out', description: `You have successfully checked out: ${item.name}` });
+          } else if (item.status === 'checked_out') {
+            if (item.checkedOutTo === student.id) {
+              await updateDoc(doc(firestore, 'schools', schoolId, 'library', itemDoc.id), {
+                status: 'available',
+                checkedOutTo: null,
+                checkedOutAt: null
+              });
+              await addDoc(collection(firestore, 'schools', schoolId, 'students', student.id, 'activities'), {
+                desc: `Returned library item: ${item.name}`,
+                amount: 0,
+                date: Date.now()
+              });
+              playSound('success');
+              toast({ title: 'Returned', description: `You have successfully returned: ${item.name}` });
+            } else {
+              playSound('error');
+              toast({ variant: 'destructive', title: 'Action Denied', description: 'This item is checked out to someone else.' });
+            }
+          }
+          if (activeTab === 'manual') setCouponCode('');
+          return;
+        }
+      } catch (e) {
+        console.error('Library scan error:', e);
+      }
+    }
+
+    // 2. Fall back to coupon redemption
     try {
       const result = await redeemCoupon(student.id, code);
 
@@ -477,9 +612,9 @@ function StudentDashboardInner({
         description: getReadableErrorMessage(e, 'Could not redeem this coupon. Check your connection and try again.'),
       });
     } finally {
-      setCouponCode('');
+      if (activeTab === 'manual') setCouponCode('');
     }
-  }, [couponCode, resetTimer, redeemCoupon, student, toast, playSound]);
+  }, [couponCode, resetTimer, redeemCoupon, student, toast, playSound, activeTab, settings.enableLibrary, firestore, schoolId]);
 
   const handleRedeemPrize = useCallback(async () => {
     if (!student || !confirmingPrize) return;
@@ -507,6 +642,7 @@ function StudentDashboardInner({
       });
 
       const { activityId, redeemedAt, totalCost } = result;
+      let ticketPayload: typeof prizeTicketData = null;
       if (
         confirmingPrize.offerPrintTicketOnRedeem === true &&
         activityId &&
@@ -519,7 +655,7 @@ function StudentDashboardInner({
         const themeForTicket = resolveStudentThemeWithSchoolDefault(student.theme, settings.defaultStudentTheme);
         const emojiRaw = settings.enableStudentEmojiOnPrizeTickets === true ? themeForTicket?.emoji : undefined;
         const studentEmoji = typeof emojiRaw === 'string' && emojiRaw.trim() ? emojiRaw.trim() : undefined;
-        setPrizeTicketData({
+        ticketPayload = {
           activityId,
           ticketNo: String(redeemedAt).replace(/\D/g, '').slice(-6) || String(redeemedAt).slice(-6),
           redeemedAt,
@@ -531,7 +667,57 @@ function StudentDashboardInner({
           prizeIcon: confirmingPrize.icon || 'Gift',
           quantity: 1,
           totalCost,
-        });
+        };
+      }
+
+      if (confirmingPrize.aiFunReward && schoolId && settings.enablePrizeAiSurprise === true) {
+        pendingPrizeTicketAfterAiRef.current = ticketPayload;
+        const requestId = aiSurpriseRequestIdRef.current + 1;
+        aiSurpriseRequestIdRef.current = requestId;
+        const instantSurprise = fallbackPrizeSurprise(
+          confirmingPrize.aiFunReward,
+          confirmingPrize.name,
+          lastAiSurpriseTextRef.current,
+        );
+        lastAiSurpriseTextRef.current = instantSurprise.text;
+        setAiSurpriseBody(instantSurprise);
+        setAiSurpriseLoading(false);
+        setAiSurpriseOpen(true);
+        const prizeMode = confirmingPrize.aiFunReward;
+        const prizeName = confirmingPrize.name;
+        void (async () => {
+          const controller = new AbortController();
+          const timeoutId = window.setTimeout(() => controller.abort(), 1200);
+          try {
+            const res = await authFetch('/api/prize-ai-fun', {
+              method: 'POST',
+              signal: controller.signal,
+              body: JSON.stringify({
+                schoolId,
+                mode: prizeMode,
+              }),
+            });
+            const j = (await res.json()) as { error?: string; kind?: string; text?: string; answer?: string };
+            if (!res.ok) throw new Error(j.error || 'Could not load joke.');
+            const kind = j.kind === 'riddle' || j.kind === 'fortune' ? j.kind : 'joke';
+            const text = typeof j.text === 'string' ? j.text.trim() : '';
+            if (!text || aiSurpriseRequestIdRef.current !== requestId) return;
+            lastAiSurpriseTextRef.current = text;
+            setAiSurpriseBody({
+              kind,
+              text,
+              answer: kind === 'riddle' && typeof j.answer === 'string' ? j.answer : undefined,
+            });
+          } catch (e: unknown) {
+            if ((e as { name?: string })?.name !== 'AbortError') {
+              console.warn(`Prize AI surprise unavailable for ${prizeName}:`, e);
+            }
+          } finally {
+            window.clearTimeout(timeoutId);
+          }
+        })();
+      } else if (ticketPayload) {
+        setPrizeTicketData(ticketPayload);
       }
       setConfirmingPrize(null);
     } catch (e: unknown) {
@@ -544,7 +730,7 @@ function StudentDashboardInner({
     } finally {
       setIsRedeemingPrize(false);
     }
-  }, [confirmingPrize, playSound, redeemPrize, resetTimer, settings.defaultStudentTheme, settings.enableStudentEmojiOnPrizeTickets, student, toast]);
+  }, [authFetch, confirmingPrize, playSound, redeemPrize, resetTimer, schoolId, settings.defaultStudentTheme, settings.enablePrizeAiSurprise, settings.enableStudentEmojiOnPrizeTickets, student, toast]);
 
   const handlePrintPrizeTicket = useCallback(() => {
     if (!prizeTicketData) return;
@@ -646,7 +832,7 @@ function StudentDashboardInner({
 
   // Normalize: per-student theme, else school default from admin settings.
   const activeTheme = resolveStudentThemeWithSchoolDefault(student.theme, settings.defaultStudentTheme);
-  const fontScale = activeTheme?.fontScale ?? 1;
+  const fontScale = activeTheme?.fontScale ?? 1.15;
   const themeBg = activeTheme?.background || '#020617';
   const computedThemeText = activeTheme?.text || (getContrastColor(themeBg) === 'black' ? '#020617' : '#ffffff');
   const primaryForeground = activeTheme ? primaryForegroundFor(activeTheme) : '#ffffff';
@@ -664,14 +850,16 @@ function StudentDashboardInner({
         style={activeTheme ? ({
           '--theme-bg': themeBg,
           '--theme-text': computedThemeText,
-          '--theme-primary': activeTheme.primary,
-          '--theme-card': activeTheme.cardBackground,
-          '--theme-accent': activeTheme.accent,
-          ...(activeTheme.backgroundStyle ? { background: activeTheme.backgroundStyle } : { backgroundColor: 'var(--theme-bg)' }),
+          '--theme-primary': activeTheme.primary || 'hsl(var(--primary))',
+          '--theme-primary-foreground': primaryForeground,
+          '--theme-card': activeTheme.cardBackground || 'hsl(var(--card))',
+          '--theme-accent': activeTheme.accent || 'hsl(var(--accent))',
+          background: activeTheme.backgroundStyle || `radial-gradient(circle at top left, ${activeTheme.primary || 'hsl(var(--primary))'}22 0, transparent 45%), radial-gradient(circle at bottom right, ${activeTheme.accent || 'hsl(var(--accent))'}22 0, ${themeBg || 'transparent'} 55%)`,
           color: 'var(--theme-text)',
           fontFamily: activeTheme.fontFamily || 'inherit',
           fontSize: fontScale !== 1 ? `${fontScale}em` : undefined,
         } as unknown as React.CSSProperties) : ({
+          fontSize: '1.15em',
           ['--primary' as any]: rainbowTripletForNavId('redeem', settings.colorScheme),
           ['--chart-1' as any]: rainbowTripletForNavId('redeem', settings.colorScheme),
           ['--chart-2' as any]: complementTripletForNavId('redeem', settings.colorScheme),
@@ -914,7 +1102,7 @@ function StudentDashboardInner({
                           variant="outline"
                           size="sm"
                           className="relative h-8 px-3.5 rounded-full text-[11px] font-bold uppercase tracking-widest whitespace-nowrap"
-                          onClick={() => onRequestExit()}
+                          onClick={handleManualLogout}
                           aria-label={`Log out now. Auto logout in ${logoutTimer} seconds.`}
                         >
                           Logout
@@ -1171,6 +1359,54 @@ function StudentDashboardInner({
               </AlertDialogContent>
             </AlertDialog>
 
+            <Dialog
+              open={aiSurpriseOpen}
+              onOpenChange={(open) => {
+                if (!open) {
+                  closeAiSurprise();
+                }
+              }}
+            >
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>
+                    {aiSurpriseLoading
+                      ? 'Your surprise'
+                      : (AI_SURPRISE_KIND_LABEL[aiSurpriseBody?.kind ?? ''] ?? 'Your surprise')}
+                  </DialogTitle>
+                  <DialogDescription className="sr-only">
+                    Joke, riddle, or fortune shown after redeeming a prize.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="min-h-[100px] py-1">
+                  {aiSurpriseLoading ? (
+                    <div className="flex flex-col items-center justify-center gap-3 py-8 text-muted-foreground">
+                      <Loader2 className="h-10 w-10 animate-spin" aria-hidden />
+                      <p className="text-sm font-medium">Loading your joke...</p>
+                    </div>
+                  ) : aiSurpriseBody ? (
+                    <div className="space-y-4 text-base leading-relaxed">
+                      <p className="font-medium">{aiSurpriseBody.text}</p>
+                      {aiSurpriseBody.kind === 'riddle' && aiSurpriseBody.answer ? (
+                        <p className="rounded-lg border border-border bg-muted/80 px-3 py-2 text-sm">
+                          <span className="font-semibold text-muted-foreground">Answer: </span>
+                          {aiSurpriseBody.answer}
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+                <Button
+                  type="button"
+                  className="w-full sm:w-auto sm:justify-self-end"
+                  onClick={closeAiSurprise}
+                  disabled={aiSurpriseLoading}
+                >
+                  {aiSurpriseLoading ? 'Please wait...' : 'Awesome'}
+                </Button>
+              </DialogContent>
+            </Dialog>
+
             <BadgeShowcase
               student={student}
               achievements={achievements || []}
@@ -1251,9 +1487,9 @@ export default function StudentLoginPage() {
       handleDone();
       toast({ title: 'Logged Out', description: 'Returning to kiosk home.' });
     } else {
-      router.push('/portal');
+      router.push(schoolId ? `/${schoolId}/portal` : '/login');
     }
-  }, [handleDone, playSound, router, toast]);
+  }, [handleDone, playSound, router, schoolId, toast]);
 
   useEffect(() => {
     window.addEventListener(STUDENT_KIOSK_REQUEST_EXIT_EVENT, handleStudentLogout);
@@ -1317,10 +1553,15 @@ export default function StudentLoginPage() {
           <StudentScanner
             onStudentFound={onScannerStudent}
             title="Student Portal"
-            icon={<LevelUpKioskLogo className="w-20 h-20" src={appConfig?.appLogoUrl} />}
+            icon={<LevelUpKioskLogo className="" src={appConfig?.appLogoUrl} />}
           />
         </div>
       </TooltipProvider>
     </ErrorBoundary>
   );
 }
+
+
+
+
+

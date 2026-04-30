@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useAppContext } from '@/components/AppProvider';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
     Dialog,
     DialogContent,
@@ -21,7 +21,7 @@ import {
     Bell, Shield, Moon, Sun, ArrowLeft, Palette, Zap, Trophy,
     BarChart3, MessageSquare, ShoppingBag, ShieldCheck, Star,
     Users, Database, Printer, LayoutDashboard, History, HelpCircle,
-    Cpu, Award, Clock, Cog, Lock, Sparkles, ArrowRightLeft, Trash2, RotateCcw, Smile
+    Cpu, Award, Clock, Cog, Lock, Sparkles, ArrowRightLeft, Trash2, RotateCcw, Smile, BookOpen, Target, LogOut
 } from 'lucide-react';
 import { useSettings, colorSchemes, type ColorScheme, type Settings as AppSettings } from '../providers/SettingsProvider';
 import type { StudentTheme } from '@/lib/types';
@@ -96,7 +96,7 @@ function FeatureRow({ id, label, desc, icon, settings, onToggle, onConfigure, is
 }
 
 export function SettingsModal() {
-    const { loginState, getAttendanceConfig, setAttendanceConfig, schoolId: appSchoolId } = useAppContext();
+    const { loginState, getAttendanceConfig, setAttendanceConfig, schoolId: appSchoolId, logout } = useAppContext();
     const isAdmin = loginState === 'admin' || loginState === 'developer';
     const { settings, updateSettings, isFeatureAllowed, planLabel } = useSettings();
     const playSound = useArcadeSound();
@@ -106,10 +106,10 @@ export function SettingsModal() {
     const [vendingSettingsOpen, setVendingSettingsOpen] = useState(false);
     const local = draft ?? settings;
     const pathname = usePathname();
+    const router = useRouter();
 
     // For short-link kiosk entry routes, keep the UI minimal.
     if (typeof pathname === 'string' && pathname.startsWith('/s/')) return null;
-    if (loginState === 'student') return null;
 
     const handleToggle = (key: string, value: any) => {
         setDraft((prev) => {
@@ -165,19 +165,42 @@ export function SettingsModal() {
         setOpen(false);
     };
 
+    const trigger = (
+        <Button
+            variant="ghost"
+            size="icon"
+            className={cn(
+                "hover:bg-muted rounded-xl group relative z-50 transition-all active:scale-90",
+                !isAdmin && "text-muted-foreground/60"
+            )}
+            aria-label="Open settings"
+            onClick={(e) => {
+                if (!isAdmin) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    playSound('click');
+                    // Use a safe school ID or the one from context
+                    const sid = appSchoolId || (typeof window !== 'undefined' ? window.location.pathname.split('/')[1] : '');
+                    router.push(`/login?school=${encodeURIComponent(sid)}&redirect=${encodeURIComponent(pathname)}`);
+                }
+            }}
+        >
+            <Settings className="w-5 h-5 text-muted-foreground group-hover:rotate-45 transition-transform duration-300" />
+            {!isAdmin && (
+                <div className="absolute -top-1 -right-1 bg-primary w-2 h-2 rounded-full border border-background" title="Admin required" />
+            )}
+        </Button>
+    );
+
     return (
-        <>
         <Dialog open={open} onOpenChange={handleOpenChange}>
-            <DialogTrigger asChild>
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className="hover:bg-muted rounded-xl group relative z-50"
-                    aria-label="Open settings"
-                >
-                    <Settings className="w-5 h-5 text-muted-foreground group-hover:rotate-45 transition-transform duration-300" />
-                </Button>
-            </DialogTrigger>
+            {isAdmin ? (
+                <DialogTrigger asChild>
+                    {trigger}
+                </DialogTrigger>
+            ) : (
+                trigger
+            )}
       <DialogContent size="lg" className="p-0 overflow-hidden border border-border bg-background flex flex-col shadow-2xl" data-settings-open="true">
                 {/* Header */}
                 <div className="px-6 pt-6 pb-4 border-b border-border/40 bg-card/30 backdrop-blur-md">
@@ -382,6 +405,63 @@ export function SettingsModal() {
                                     </button>
                                 </div>
                             </div>
+                            {/* SECURITY */}
+                            <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 mb-4 border border-slate-100 dark:border-slate-800/50">
+                                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 pb-3 flex items-center gap-2">
+                                    <Shield className="w-3.5 h-3.5" /> Security
+                                </p>
+
+                                <div className="space-y-4 mt-1">
+                                    {/* Admin Timeout */}
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-bold">Admin Auto-Logout</span>
+                                            <p className="text-[11px] text-muted-foreground">Session duration (minutes)</p>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Input
+                                                type="number"
+                                                className="w-20 h-9 rounded-xl text-center font-bold bg-background/50 border-border/50"
+                                                value={Math.round((local.adminSessionTimeoutMs || 0) / 60000)}
+                                                onChange={(e) => handleToggle('adminSessionTimeoutMs', Math.max(1, parseInt(e.target.value) || 1) * 60000)}
+                                                min={1}
+                                                max={1440}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Kiosk Timeout */}
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-bold">Kiosk Auto-Logout</span>
+                                            <p className="text-[11px] text-muted-foreground">Idle time (seconds)</p>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Input
+                                                type="number"
+                                                className="w-20 h-9 rounded-xl text-center font-bold bg-background/50 border-border/50"
+                                                value={local.kioskSessionTimeoutSec || 0}
+                                                onChange={(e) => handleToggle('kioskSessionTimeoutSec', Math.max(5, parseInt(e.target.value) || 5))}
+                                                min={5}
+                                                max={300}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Logout Button */}
+                                    <Button
+                                        variant="destructive"
+                                        className="w-full h-11 rounded-xl font-bold gap-2 mt-2 bg-rose-500 hover:bg-rose-600 border-0 shadow-lg shadow-rose-500/20"
+                                        onClick={() => {
+                                            if (local.soundEnabled) playSound('swoosh');
+                                            setOpen(false);
+                                            logout();
+                                        }}
+                                    >
+                                        <LogOut className="w-4 h-4" /> Sign Out
+                                    </Button>
+                                </div>
+                            </div>
 
                             {/* Features Button */}
                             <Button
@@ -421,8 +501,24 @@ export function SettingsModal() {
 
                             <div className="space-y-4">
 
-                            <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
-                                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><Settings className="w-3.5 h-3.5" /> Core Workflow</p>
+                             <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
+                                 <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><MessageSquare className="w-3.5 h-3.5" /> Communication</p>
+                                 <FeatureRow
+                                     id="enableNotifications"
+                                     label="Notifications & Alerts"
+                                     desc="Send automated email and SMS alerts to parents and staff for student activity, rewards, and attendance events."
+                                     icon={<Bell className="w-5 h-5" />}
+                                     settings={local}
+                                     onToggle={handleToggle}
+                                     isImplemented={true}
+                                     isAdmin={isAdmin}
+                                     isAllowed={isFeatureAllowed('enableNotifications')}
+                                     planLabel={planLabel}
+                                 />
+                             </div>
+
+                             <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
+                                 <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><Settings className="w-3.5 h-3.5" /> Core Workflow</p>
                                 <FeatureRow
                                     id="enableTeacherBudgets"
                                     label="Teacher Budgets"
@@ -433,6 +529,18 @@ export function SettingsModal() {
                                     isImplemented={true}
                                     isAdmin={isAdmin}
                                     isAllowed={isFeatureAllowed('enableTeacherBudgets')}
+                                    planLabel={planLabel}
+                                />
+                                <FeatureRow
+                                    id="enableHomework"
+                                    label="Homework Rewards"
+                                    desc="Allow teacher-side homework rewards. Students do not see homework in the portal."
+                                    icon={<BookOpen className="w-5 h-5" />}
+                                    settings={local}
+                                    onToggle={handleToggle}
+                                    isImplemented={true}
+                                    isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableHomework')}
                                     planLabel={planLabel}
                                 />
                                 <FeatureRow
@@ -473,18 +581,6 @@ export function SettingsModal() {
                                     isImplemented={false}
                                     isAdmin={isAdmin}
                                     isAllowed={isFeatureAllowed('enableTeacherCharts')}
-                                    planLabel={planLabel}
-                                />
-                                <FeatureRow
-                                    id="enableStudentReports"
-                                    label="Printable Reports (Soon)"
-                                    desc="Generate PDF-style reports for a student that can be shared with families or staff."
-                                    icon={<Printer className="w-5 h-5" />}
-                                    settings={local}
-                                    onToggle={handleToggle}
-                                    isImplemented={false}
-                                    isAdmin={isAdmin}
-                                    isAllowed={isFeatureAllowed('enableStudentReports')}
                                     planLabel={planLabel}
                                 />
                             </div>
@@ -554,7 +650,18 @@ export function SettingsModal() {
                                     isAllowed={isFeatureAllowed('enableQrLogin')}
                                     planLabel={planLabel}
                                 />
-                                <FeatureRow
+                                                                <FeatureRow
+                                    id="enableLibrary"
+                                    label="Library Checkout"
+                                    desc="Allow students to scan items (via UPC) and check them out/return them from the kiosk."
+                                    icon={<ShoppingBag className="w-5 h-5" />}
+                                    settings={local}
+                                    onToggle={handleToggle}
+                                    isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableLibrary')}
+                                    planLabel={planLabel}
+                                />
+                                  <FeatureRow
                                     id="enablePrizeImages"
                                     label="Prize Photos"
                                     desc="Show real photos of prizes in the shop, not only icons."
@@ -628,6 +735,18 @@ export function SettingsModal() {
                                     isImplemented={false}
                                     isAdmin={isAdmin}
                                     isAllowed={isFeatureAllowed('enableStreaks')}
+                                    planLabel={planLabel}
+                                />
+                                <FeatureRow
+                                    id="enableGoals"
+                                    label="Goals (Soon)"
+                                    desc="Set personal point goals for students to reach over time."
+                                    icon={<Target className="w-5 h-5" />}
+                                    settings={local}
+                                    onToggle={handleToggle}
+                                    isImplemented={false}
+                                    isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableGoals')}
                                     planLabel={planLabel}
                                 />
                             </div>
@@ -781,6 +900,6 @@ export function SettingsModal() {
                 </Dialog>
             </DialogContent>
         </Dialog>
-        </>
     );
 }
+

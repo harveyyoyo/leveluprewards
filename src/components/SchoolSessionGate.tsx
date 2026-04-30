@@ -1,10 +1,30 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
 
-const ALLOWED = new Set(['school', 'student', 'teacher', 'admin', 'developer']);
+const ALLOWED = new Set(['school', 'student', 'teacher', 'admin', 'developer', 'secretary', 'prizeClerk', 'reports']);
+
+function canUseRoute(pathname: string, routeSchoolId: string, loginState: string) {
+  if (loginState === 'developer') return true;
+
+  const prefix = `/${routeSchoolId}/`;
+  const section = pathname.startsWith(prefix) ? pathname.slice(prefix.length).split('/')[0] : '';
+
+  if (section === 'admin') return loginState === 'admin';
+  if (section === 'teacher') {
+    // Allow reaching the staff sign-in screen while in a student/public session.
+    // The page itself will show a login form unless you already have a staff role.
+    if (pathname === `/${routeSchoolId}/teacher`) return true;
+    return loginState === 'teacher' || loginState === 'admin';
+  }
+  if (section === 'secretary') return loginState === 'secretary' || loginState === 'admin';
+  if (section === 'prize-clerk') return loginState === 'prizeClerk' || loginState === 'admin';
+  if (section === 'reports') return loginState === 'reports' || loginState === 'admin';
+
+  return true;
+}
 
 /**
  * Ensures `/{schoolId}/…` is only reachable with a matching session (or developer).
@@ -17,14 +37,21 @@ export function SchoolSessionGate({
   routeSchoolId: string;
   children: React.ReactNode;
 }) {
-  const { schoolId, loginState, isInitialized, isUserLoading } = useAppContext();
+  const { schoolId, loginState, isInitialized, isUserLoading, login } = useAppContext();
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const route = routeSchoolId.trim().toLowerCase();
+  const isStaffSignInLink = pathname === `/${route}/teacher` && !!searchParams.get('account');
 
   useEffect(() => {
     if (!isInitialized || isUserLoading) return;
 
     if (loginState === 'loggedOut' || !ALLOWED.has(loginState)) {
+      if (loginState === 'loggedOut' && isStaffSignInLink) {
+        void login('student', { schoolId: route });
+        return;
+      }
       router.replace(`/login?school=${encodeURIComponent(route)}`);
       return;
     }
@@ -34,8 +61,13 @@ export function SchoolSessionGate({
     const sessionSchool = schoolId?.trim().toLowerCase();
     if (!sessionSchool || sessionSchool !== route) {
       router.replace(`/login?school=${encodeURIComponent(route)}`);
+      return;
     }
-  }, [isInitialized, isUserLoading, loginState, schoolId, route, router]);
+
+    if (!canUseRoute(pathname, route, loginState)) {
+      router.replace(`/login?school=${encodeURIComponent(route)}`);
+    }
+  }, [isInitialized, isStaffSignInLink, isUserLoading, login, loginState, schoolId, route, router, pathname]);
 
   if (!isInitialized || isUserLoading) {
     return (
@@ -46,12 +78,23 @@ export function SchoolSessionGate({
   }
 
   if (loginState === 'loggedOut' || !ALLOWED.has(loginState)) {
+    if (loginState === 'loggedOut' && isStaffSignInLink) {
+      return (
+        <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-2 text-muted-foreground text-sm">
+          <div className="animate-pulse font-semibold text-foreground">Loading...</div>
+        </div>
+      );
+    }
     return null;
   }
 
   if (loginState !== 'developer') {
     const sessionSchool = schoolId?.trim().toLowerCase();
     if (!sessionSchool || sessionSchool !== route) {
+      return null;
+    }
+
+    if (!canUseRoute(pathname, route, loginState)) {
       return null;
     }
   }

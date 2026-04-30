@@ -72,8 +72,6 @@ const AI_SURPRISE_KIND_LABEL: Record<string, string> = {
     fortune: 'Your fortune',
 };
 
-/** Inactivity before returning to the student scanner (same as the student / redeem kiosk). */
-const KIOSK_AUTO_LOGOUT_SEC = 15;
 
 function ConfirmRedemptionDialog({
     student,
@@ -398,13 +396,13 @@ export function PrizeDashboard({
         router,
     ]);
 
-    const [logoutTimer, setLogoutTimer] = useState(KIOSK_AUTO_LOGOUT_SEC);
+    const [logoutTimer, setLogoutTimer] = useState(settings.kioskSessionTimeoutSec ?? 15);
 
     const resetTimer = useCallback(() => {
         if (!isKioskLocked) {
-            setLogoutTimer(KIOSK_AUTO_LOGOUT_SEC);
+            setLogoutTimer(settings.kioskSessionTimeoutSec ?? 15);
         }
-    }, [isKioskLocked]);
+    }, [isKioskLocked, settings.kioskSessionTimeoutSec]);
 
     useEffect(() => {
         if (isKioskLocked) return;
@@ -689,7 +687,7 @@ export function PrizeDashboard({
     // hand-picked. Uses per-student theme, else admin default from school
     // settings. Downstream reads `activeTheme` instead of `student.theme`.
     const activeTheme = resolveStudentThemeWithSchoolDefault(student.theme, settings.defaultStudentTheme);
-    const fontScale = activeTheme?.fontScale ?? 1;
+    const fontScale = activeTheme?.fontScale ?? 1.15;
     const themeBg = activeTheme?.background || 'transparent';
     const computedThemeText = activeTheme?.text || (getContrastColor(activeTheme?.background || activeTheme?.cardBackground || activeTheme?.primary || '#0ea5e9') === 'black' ? '#020617' : '#ffffff');
     // Readable foreground for anything rendered on top of `--theme-primary`
@@ -701,6 +699,7 @@ export function PrizeDashboard({
     const complementAccentTriplet = complementTripletForNavId('prize', settings.colorScheme);
 
     const fallbackStyle: CSSProperties = {
+        fontSize: '1.15em',
         ['--primary' as any]: prizeAccentTriplet,
         ['--chart-1' as any]: prizeAccentTriplet,
         ['--chart-2' as any]: complementAccentTriplet,
@@ -834,7 +833,7 @@ export function PrizeDashboard({
                                                             2 *
                                                             Math.PI *
                                                             16 *
-                                                            (1 - Math.max(0, Math.min(1, logoutTimer / KIOSK_AUTO_LOGOUT_SEC)))
+                                                            (1 - Math.max(0, Math.min(1, logoutTimer / (settings.kioskSessionTimeoutSec || 15))))
                                                         }
                                                         transform="rotate(-90 18 18)"
                                                         className={cn(

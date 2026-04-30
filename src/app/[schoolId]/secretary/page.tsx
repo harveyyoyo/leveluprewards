@@ -15,7 +15,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { TeacherPrinterInner } from '@/app/[schoolId]/teacher/TeacherPrinterInner';
 
 export default function SecretaryPage() {
-    const { loginState, isInitialized, schoolId, login, logout, userName } = useAppContext();
+    const { loginState, isInitialized, schoolId, login, logout, userName, isSecretary } = useAppContext();
     const router = useRouter();
     const { settings } = useSettings();
     const isGraphic = settings.graphicMode === 'graphics';
@@ -32,12 +32,14 @@ export default function SecretaryPage() {
 
     useEffect(() => {
         if (!isInitialized || !schoolId) return;
-        if (loginState === 'prizeClerk') {
+        if (loginState === 'prizeClerk' && !isSecretary) {
             router.replace(`/${schoolId}/prize-clerk`);
+        } else if (loginState === 'reports' && !isSecretary) {
+            router.replace(`/${schoolId}/reports`);
         } else if (loginState === 'admin' || loginState === 'developer') {
             router.replace(`/${schoolId}/admin`);
         }
-    }, [isInitialized, loginState, schoolId, router]);
+    }, [isInitialized, isSecretary, loginState, schoolId, router]);
 
     const handleLogin = async () => {
         if (!schoolId || !username.trim() || !passcode) {
@@ -76,7 +78,7 @@ export default function SecretaryPage() {
         );
     }
 
-    if (loginState === 'secretary') {
+    if (isSecretary) {
         return (
             <ErrorBoundary name="SecretarySession">
                 <TeacherPrinterInner

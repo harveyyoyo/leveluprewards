@@ -84,7 +84,7 @@
   }
 
   .print-coupon-wrapper .coupon-scalable {
-    font-size: 34px;
+    font-size: 24px;
   }
 
   /* Teacher "Print preview" (same em-based coupon as the sheet) — was inheriting ~16px; scale to match print. */
@@ -97,7 +97,7 @@
 
   .coupon-print-match-wrapper .coupon-scalable {
     /* Same as .print-coupon-wrapper — em-based coupon scales with this root */
-    font-size: 34px;
+    font-size: 24px;
   }
 }
 
@@ -242,7 +242,7 @@
    Single physical size: ISO/IEC 7810 ID-1 (85.6mm × 53.98mm) — matches DTC/card printer output and Avery print below. */
 .print-id-card {
   /* Set inline from StudentIdCard when a theme uses fontScale (default 1). */
-  --print-id-font-scale: 1;
+  --print-id-font-scale: 1.15;
   border: 1px solid hsl(var(--border));
   padding: 12px 14px;
   text-align: center;
@@ -672,12 +672,15 @@
   }
 
   /* Scorched Earth: Hide EVERYTHING on body */
+  body.coupon-printing *,
   body.prize-ticket-printing *,
   body.id-card-printing * {
     visibility: hidden !important;
   }
 
   /* Whitelist the print wrappers and their children */
+  body.coupon-printing #coupon-print-root,
+  body.coupon-printing #coupon-print-root *,
   body.prize-ticket-printing #prize-ticket-print-wrapper,
   body.prize-ticket-printing #prize-ticket-print-wrapper *,
   body.id-card-printing #student-id-print-wrapper,
@@ -717,6 +720,7 @@
   }
 
   /* Whitelist the print wrappers - PRODUCTION VERBATIM */
+  body.coupon-printing #coupon-print-root,
   body.prize-ticket-printing #prize-ticket-print-wrapper,
   body.id-card-printing #student-id-print-wrapper {
     display: flex !important;
@@ -733,6 +737,13 @@
     overflow: hidden !important;
     transform: scale(var(--prize-print-scale, 1)) !important;
     transform-origin: left top !important;
+  }
+
+  body.coupon-printing #coupon-print-root {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+    transform: none !important;
   }
 
   /* Prize tickets should not be stretched to full-page height (creates huge gaps). */
@@ -896,15 +907,20 @@
 
   .coupon-print-page {
     display: grid !important;
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: repeat(4, 1fr);
-    gap: 0;
+    grid-template-columns: repeat(2, 4.25in);
+    grid-template-rows: repeat(5, 2.2in);
+    gap: 0 !important;
     width: 8.5in;
     height: 11in;
-    padding: 0.5in;
+    padding: 0;
     box-sizing: border-box;
     page-break-after: always;
     page-break-inside: avoid;
+  }
+
+  .coupon-print-page--30 {
+    grid-template-columns: repeat(3, 2.8333in);
+    grid-template-rows: repeat(10, 1.1in);
   }
 
   .coupon-print-page:last-child {
@@ -912,14 +928,31 @@
   }
 
   .print-coupon-wrapper {
-    height: 2.5in;
-    width: 2.5in;
+    height: 2.2in;
+    width: 4.25in;
     page-break-inside: avoid;
     box-sizing: border-box;
-    padding: 0.04in;
+    padding: 0;
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+
+  .coupon-print-page--30 .print-coupon-wrapper {
+    width: 2.8333in;
+    height: 1.1in;
+  }
+
+  .print-coupon-wrapper .coupon-scalable {
+    font-size: 42px !important;
+    width: 100% !important;
+    height: 100% !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .coupon-print-page--30 .print-coupon-wrapper .coupon-scalable {
+    font-size: 18px !important;
   }
 
   #student-id-print-wrapper {
@@ -952,9 +985,9 @@
   }
 
   .print-id-card {
-    /* Same aspect ratio and flex distribution as the on-screen ID card; scale with label cell width. */
-    border: none !important;
-    padding: 4mm 5mm !important;
+    /* Preserve the physical print slot, but keep the card formatted like the screen preview. */
+    border: 1px solid hsl(var(--border)) !important;
+    padding: 12px 14px !important;
     text-align: center !important;
     width: 100% !important;
     max-width: 100% !important;
@@ -971,7 +1004,7 @@
     align-items: stretch;
     justify-content: flex-start;
     position: relative;
-    border-radius: 0; /* Remove for full-paper labels */
+    border-radius: 12px !important;
     overflow: hidden !important;
   }
 
@@ -980,19 +1013,19 @@
     justify-content: space-between;
     align-items: flex-start;
     border-bottom: 1px solid rgba(0,0,0,0.15);
-    padding-bottom: 0.04in;
-    margin-bottom: 0.04in;
+    padding-bottom: 4px;
+    margin-bottom: 4px;
   }
 
   .print-id-app {
     display: flex;
     align-items: center;
-    gap: 0.06in;
+    gap: 6px;
   }
   .print-id-app-logo {
-    width: 0.25in;
-    height: 0.25in;
-    border-radius: 0.02in;
+    width: auto;
+    height: 24px;
+    border-radius: 0;
     overflow: hidden;
     flex-shrink: 0;
     background: #f3f4f6;
@@ -1009,13 +1042,13 @@
     text-align: left;
   }
   .print-id-app-name {
-    font-size: calc(8pt * var(--print-id-font-scale));
+    font-size: calc(10px * var(--print-id-font-scale));
     font-weight: 800;
     letter-spacing: 0.02em;
     line-height: 1.2;
   }
   .print-id-app-tagline {
-    font-size: calc(6pt * var(--print-id-font-scale));
+    font-size: calc(8px * var(--print-id-font-scale));
     font-weight: 600;
     opacity: 0.85;
     line-height: 1.2;
@@ -1023,13 +1056,13 @@
   .print-id-school {
     display: flex;
     align-items: center;
-    gap: 0.06in;
+    gap: 6px;
     text-align: right;
   }
   .print-id-school-logo {
-    width: 0.25in;
-    height: 0.25in;
-    border-radius: 0.02in;
+    width: auto;
+    height: 24px;
+    border-radius: 0;
     overflow: hidden;
     flex-shrink: 0;
     background: #f3f4f6;
@@ -1041,7 +1074,7 @@
     display: block;
   }
   .print-id-header {
-    font-size: calc(8pt * var(--print-id-font-scale));
+    font-size: calc(10px * var(--print-id-font-scale));
     font-weight: 800;
     letter-spacing: 0.02em;
     font-family: 'Ubuntu', sans-serif;
@@ -1051,8 +1084,8 @@
     flex: 1;
     display: flex;
     align-items: center;
-    gap: 0.12in;
-    padding: 0.04in 0;
+    gap: 12px;
+    padding: 4px 0;
     justify-content: space-between;
   }
 
@@ -1062,7 +1095,7 @@
   }
 
   .print-id-theme-emoji-center {
-    font-size: calc(34pt * var(--print-id-font-scale));
+    font-size: calc(44px * var(--print-id-font-scale));
     line-height: 1;
     flex-shrink: 0;
     margin-left: auto;
@@ -1077,9 +1110,9 @@
   }
 
   .print-id-avatar {
-    width: 1.2in; /* Upscaled */
-    height: 1.2in;
-    border-radius: 0.2in; /* More modern */
+    width: 54px;
+    height: 54px;
+    border-radius: 999px;
     overflow: hidden;
     background: #f3f4f6;
     border: 1px solid rgba(0,0,0,0.1);
@@ -1087,7 +1120,7 @@
     align-items: center;
     justify-content: center;
     font-weight: 800;
-    font-size: calc(0.3in * var(--print-id-font-scale));
+    font-size: calc(20pt * var(--print-id-font-scale));
     color: #4b5563;
     flex-shrink: 0;
   }
@@ -1101,24 +1134,24 @@
   .print-id-text {
     display: flex;
     flex-direction: column;
-    gap: 0.02in;
+    gap: 2px;
     text-align: left;
     min-width: 0;
   }
 
   .print-id-name {
     font-weight: 800;
-    font-size: calc(14pt * var(--print-id-font-scale)); /* Upscaled */
+    font-size: calc(14px * var(--print-id-font-scale));
     letter-spacing: 0.03em;
     line-height: 1.05;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    text-transform: uppercase;
+    text-transform: none;
   }
 
   .print-id-nickname {
-    font-size: calc(9pt * var(--print-id-font-scale));
+    font-size: calc(12px * var(--print-id-font-scale));
     font-weight: 800;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -1129,13 +1162,13 @@
   }
 
   .print-id-class {
-    font-size: calc(9pt * var(--print-id-font-scale));
+    font-size: calc(12px * var(--print-id-font-scale));
     color: #4b5563;
     font-weight: 600;
   }
 
   .print-id-number {
-    font-size: calc(8pt * var(--print-id-font-scale));
+    font-size: calc(10px * var(--print-id-font-scale));
     color: #6b7280;
     font-weight: 600;
     letter-spacing: 0.08em;
@@ -1151,17 +1184,18 @@
     border-top: none;
     background: #ffffff !important;
     color: #000000 !important;
-    padding-top: 0.12in;
-    padding-bottom: 0.06in;
-    border-radius: 0.06in;
-    margin-top: 0.04in;
+    padding-top: 10px;
+    padding-bottom: 6px;
+    border-radius: 10px;
+    margin-top: 4px;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
   }
 
   .print-id-card .print-id-barcode-container .font-barcode,
   .print-id-card .font-barcode {
     font-weight: 400;
     font-style: normal;
-    font-size: calc(26pt * var(--print-id-font-scale));
+    font-size: calc(30px * var(--print-id-font-scale));
     line-height: 0.7;
     color: #000000 !important;
     transform: scaleY(1.5);

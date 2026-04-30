@@ -8,6 +8,7 @@ export type StaffAccountInput = {
   passcode: string;
   displayName: string;
   role: StaffAccountRole;
+  roles?: StaffAccountRole[];
 };
 
 function normalizeUsername(username: string): string {
@@ -27,6 +28,7 @@ export const addStaffAccount = async (
     passcode: input.passcode.trim(),
     displayName: input.displayName.trim(),
     role: input.role,
+    roles: input.roles?.length ? Array.from(new Set(input.roles)) : [input.role],
   };
   const ref = doc(firestore, 'schools', schoolId, 'staffAccounts', id);
   try {
@@ -49,6 +51,7 @@ export const updateStaffAccount = async (
     username: normalizeUsername(account.username),
     passcode: account.passcode.trim(),
     displayName: account.displayName.trim(),
+    roles: account.roles?.length ? Array.from(new Set(account.roles)) : [account.role],
   };
   try {
     await updateDoc(ref, removeUndefined(payload as unknown as Record<string, unknown>));

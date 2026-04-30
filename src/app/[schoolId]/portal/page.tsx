@@ -169,10 +169,10 @@ export default function PortalPage() {
                                     onMouseLeave={() => !isDisabled && setHoveredIndex(null)}
                                     className={cn(
                                         "relative flex w-full items-center justify-between rounded-2xl border-2 px-6 py-4 md:px-8 md:py-5 text-left transition-all duration-300",
-                                        isDisabled ? "cursor-not-allowed opacity-70" : "hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1",
+                                        isDisabled ? "cursor-not-allowed opacity-70" : "hover:shadow-2xl hover:shadow-primary/20 hover:-translate-y-1 shadow-md",
                                         animBackdrop
                                             ? "border-border/50 bg-card/90 backdrop-blur-md shadow-sm hover:bg-card hover:border-border"
-                                            : "border-transparent bg-card/40 backdrop-blur-sm hover:bg-card",
+                                            : "border-transparent bg-card/85 backdrop-blur-sm hover:bg-card",
                                     )}
                                 >
                                     {/* Fixed Vertical Color Bar - Increased visibility when inactive */}

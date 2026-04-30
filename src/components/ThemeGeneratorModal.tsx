@@ -123,8 +123,8 @@ export function ThemeGeneratorModal({
 }: ThemeGeneratorModalProps) {
     const [prompt, setPrompt] = useState('');
     const [isGenerating, setIsGenerating] = useState(false);
-    const [previewTheme, setPreviewTheme] = useState<StudentTheme | undefined>(currentTheme);
-    const [previousTheme, setPreviousTheme] = useState<StudentTheme | undefined>(currentTheme);
+    const [previewTheme, setPreviewTheme] = useState<StudentTheme | undefined>(currentTheme || settings.defaultStudentTheme);
+    const [previousTheme, setPreviousTheme] = useState<StudentTheme | undefined>(currentTheme || settings.defaultStudentTheme);
     const [model, setModel] = useState<string>('gpt-4o-mini');
     const [animatePreview, setAnimatePreview] = useState(false);
     const { toast } = useToast();
@@ -154,10 +154,10 @@ export function ThemeGeneratorModal({
     const previewWrapRef = useRef<HTMLDivElement | null>(null);
     const [idPreviewScale, setIdPreviewScale] = useState(1.35);
     const [gradientAngle, setGradientAngle] = useState('135');
-    const [gradientA, setGradientA] = useState(currentTheme?.primary || '#0ea5e9');
-    const [gradientB, setGradientB] = useState(currentTheme?.accent || '#22c55e');
+    const [gradientA, setGradientA] = useState((currentTheme || settings.defaultStudentTheme)?.primary || '#0ea5e9');
+    const [gradientB, setGradientB] = useState((currentTheme || settings.defaultStudentTheme)?.accent || '#22c55e');
     const [backgroundMode, setBackgroundMode] = useState<'solid' | 'gradient' | 'custom'>(() =>
-        inferBackgroundMode(currentTheme),
+        inferBackgroundMode(currentTheme || settings.defaultStudentTheme),
     );
     const [isRemovingTheme, setIsRemovingTheme] = useState(false);
 
@@ -205,11 +205,12 @@ export function ThemeGeneratorModal({
     // When the dialog opens, reset preview from the latest saved theme (per student / school default).
     useEffect(() => {
         if (!isOpen) return;
-        setPreviewTheme(currentTheme);
-        setPreviousTheme(currentTheme);
+        const initial = currentTheme || settings.defaultStudentTheme;
+        setPreviewTheme(initial);
+        setPreviousTheme(initial);
         setPrompt('');
-        setBackgroundMode(inferBackgroundMode(currentTheme));
-    }, [isOpen, currentTheme]);
+        setBackgroundMode(inferBackgroundMode(initial));
+    }, [isOpen, currentTheme, settings.defaultStudentTheme]);
 
     // Keep gradient controls and background mode in sync with the active preview theme.
     useEffect(() => {
@@ -488,7 +489,7 @@ export function ThemeGeneratorModal({
                                         <div className="space-y-1">
                                             <Label htmlFor="theme-font-scale">Text size</Label>
                                             <Select
-                                                value={String(previewTheme.fontScale ?? 1)}
+                                                value={String(previewTheme.fontScale ?? 1.15)}
                                                 onValueChange={(v) => updateTheme({ fontScale: parseFloat(v) })}
                                             >
                                                 <SelectTrigger id="theme-font-scale">
@@ -496,14 +497,12 @@ export function ThemeGeneratorModal({
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     <SelectItem value="0.85">Extra small</SelectItem>
-                                                    <SelectItem value="0.9">Smaller</SelectItem>
-                                                    <SelectItem value="0.95">Slight small</SelectItem>
-                                                    <SelectItem value="1">Default</SelectItem>
-                                                    <SelectItem value="1.05">+1 step</SelectItem>
-                                                    <SelectItem value="1.1">+2 steps</SelectItem>
-                                                    <SelectItem value="1.15">+3 steps</SelectItem>
-                                                    <SelectItem value="1.2">Large</SelectItem>
-                                                    <SelectItem value="1.25">Extra large</SelectItem>
+                                                    <SelectItem value="1">Standard (Smaller)</SelectItem>
+                                                    <SelectItem value="1.1">+1 step</SelectItem>
+                                                    <SelectItem value="1.15">Default (Bigger)</SelectItem>
+                                                    <SelectItem value="1.2">+1 step</SelectItem>
+                                                    <SelectItem value="1.25">Large</SelectItem>
+                                                    <SelectItem value="1.3">Extra large</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>
@@ -887,7 +886,7 @@ export function ThemeGeneratorModal({
                     </div>
                 </div>
 
-                <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-between sm:items-center">
+                <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-between sm:items-center pb-24 md:pb-16">
                     <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
                         {canRemoveThemeFromWizard ? (
                             <Button

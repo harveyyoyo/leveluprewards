@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { doc } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,12 +16,16 @@ import { LogIn, LogOut, UserCheck, Loader2 } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { TeacherPrinterInner } from './TeacherPrinterInner';
+
+const TeacherPrinterInner = dynamic(
+    () => import('./TeacherPrinterInner').then((module) => module.TeacherPrinterInner),
+    { ssr: false, loading: () => <TeacherPrinterSkeleton /> },
+);
 
 type StaffPortalLoginOption = {
     id: string;
     sourceId?: string;
-    type: 'teacher' | 'secretary' | 'prizeClerk';
+    type: 'teacher' | 'secretary' | 'prizeClerk' | 'reports';
     label: string;
     username: string;
 };
@@ -36,7 +41,15 @@ function staffLoginKey(option: StaffPortalLoginOption) {
 function roleLabel(type: StaffPortalLoginOption['type']) {
     if (type === 'teacher') return 'Teacher';
     if (type === 'secretary') return 'Coupon printing';
-    return 'Prize desk';
+    if (type === 'prizeClerk') return 'Prize desk';
+    return 'Reports';
+}
+
+function staffLandingPath(schoolId: string, type: StaffPortalLoginOption['type']) {
+    if (type === 'secretary') return `/${schoolId}/secretary`;
+    if (type === 'prizeClerk') return `/${schoolId}/prize-clerk`;
+    if (type === 'reports') return `/${schoolId}/reports`;
+    return `/${schoolId}/teacher`;
 }
 
 function TeacherPrinterSkeleton() {
@@ -108,22 +121,25 @@ export default function TeacherPage() {
                     option?.id &&
                     option?.username &&
                     option?.label &&
-                    (option.type === 'teacher' || option.type === 'secretary' || option.type === 'prizeClerk'),
+                    (option.type === 'teacher' || option.type === 'secretary' || option.type === 'prizeClerk' || option.type === 'reports'),
             ),
         [schoolPublic],
     );
 
     useEffect(() => {
         if (!isInitialized || !schoolId) return;
+        if (directAccountKey) return;
         if (loginState === 'secretary') {
             router.replace(`/${schoolId}/secretary`);
         } else if (loginState === 'prizeClerk') {
             router.replace(`/${schoolId}/prize-clerk`);
+        } else if (loginState === 'reports') {
+            router.replace(`/${schoolId}/reports`);
         }
-    }, [isInitialized, loginState, schoolId, router]);
+    }, [directAccountKey, isInitialized, loginState, schoolId, router]);
 
     useEffect(() => {
-        if (isInitialized && !['student', 'teacher', 'admin', 'school', 'developer', 'secretary', 'prizeClerk'].includes(loginState)) {
+        if (isInitialized && !['student', 'teacher', 'admin', 'school', 'developer', 'secretary', 'prizeClerk', 'reports'].includes(loginState)) {
             router.replace('/');
         }
     }, [isInitialized, loginState, router]);
@@ -146,7 +162,7 @@ export default function TeacherPage() {
     }, [directAccountKey, staffOptions]);
 
     const handleLogin = async () => {
-        if (!selectedLoginKey || !passcode) {
+        if (!schoolId || !selectedLoginKey || !passcode) {
             playSound('error');
             toast({ variant: 'destructive', title: 'Please select your name and enter a passcode.' });
             return;
@@ -170,11 +186,7 @@ export default function TeacherPage() {
         if (result) {
             playSound('login');
             toast({ title: 'Logged in successfully.' });
-            if (selected.type === 'secretary') {
-                router.replace(`/${schoolId}/secretary`);
-            } else if (selected.type === 'prizeClerk') {
-                router.replace(`/${schoolId}/prize-clerk`);
-            }
+            router.replace(staffLandingPath(schoolId, selected.type));
         } else {
             playSound('error');
             toast({ variant: 'destructive', title: 'Login failed', description: 'Check your passcode and try again.' });
@@ -198,7 +210,7 @@ export default function TeacherPage() {
         );
     }
 
-    if (loginState === 'teacher' || loginState === 'admin' || loginState === 'developer') {
+    if (!directAccountKey && (loginState === 'teacher' || loginState === 'admin' || loginState === 'developer')) {
         const displayName = userName || (loginState === 'admin' || loginState === 'developer' ? 'Admin' : 'Teacher');
         const validTeacherId = teacherDocId || userId || '';
         return <TeacherPrinter teacherName={displayName} teacherId={validTeacherId} onLogout={handleLogout} />;

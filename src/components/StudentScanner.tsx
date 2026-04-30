@@ -389,7 +389,7 @@ export function StudentScanner({
     return (
         <div className={cn(
             "w-full max-w-md rounded-[2.5rem] p-6 transition-all duration-700 relative z-10",
-            isGraphic ? 'bg-card/5 backdrop-blur-2xl border border-border shadow-2xl shadow-primary/10' : 'bg-card shadow-2xl border border-border'
+            isGraphic ? 'bg-card/90 backdrop-blur-2xl border border-border shadow-xl shadow-primary/10' : 'bg-card shadow-lg border border-border'
         )}>
             {/* Mascot Decoration for Graphic Mode */}
             {isGraphic && (
@@ -401,10 +401,7 @@ export function StudentScanner({
                 isGraphic ? 'border-b border-border' : 'bg-muted/30 border-b border-border'
             )}>
                 {/* Kiosk lock removed */}
-                <div className={cn(
-                    "w-20 h-20 mx-auto mb-4 flex items-center justify-center transition-all duration-500",
-                    isGraphic ? 'scale-110' : 'bg-primary/10 rounded-2xl shadow-lg transform rotate-3 hover:rotate-0'
-                )}>
+                <div className="mx-auto mb-4 flex items-center justify-center transition-all duration-500">
                     {icon}
                 </div>
                 <div className="space-y-1 mb-4">
@@ -415,7 +412,7 @@ export function StudentScanner({
 
             <div className="p-5">
                 <Tabs defaultValue="nfc" className="w-full" value={loginTab} onValueChange={setLoginTab}>
-                    <TabsList className={cn("grid w-full p-1 rounded-xl mb-6", tabsColsClass, isGraphic ? 'bg-foreground/5' : 'bg-muted/50')}>
+                    <TabsList className={cn("grid w-full p-1 rounded-xl mb-6", tabsColsClass, isGraphic ? 'bg-muted/50' : 'bg-muted/50')}>
                         <TabsTrigger value="nfc" onClick={() => nfcInputRef.current?.focus()} className="rounded-xl font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-md transition-all">
                             <Nfc className="mr-2 h-4 w-4" /> Card
                         </TabsTrigger>
@@ -458,7 +455,7 @@ export function StudentScanner({
 
                     <TabsContent value="manual">
                         <div className="space-y-4 py-2">
-                            <div className={cn("flex items-center gap-4 p-4 rounded-2xl border border-dashed transition-all hover:border-primary/50", isGraphic ? 'bg-foreground/5' : 'bg-secondary/50')}>
+                            <div className={cn("flex items-center gap-4 p-4 rounded-2xl border border-dashed transition-all hover:border-primary/50", isGraphic ? 'bg-background/50' : 'bg-secondary/50')}>
                                 <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0", isGraphic ? 'bg-primary text-primary-foreground' : 'bg-primary/10 text-primary')}>
                                     <User className="w-5 h-5" />
                                 </div>
@@ -471,7 +468,7 @@ export function StudentScanner({
                                 <Input
                                     value={nfcId}
                                     onChange={e => setNfcId(e.target.value)}
-                                    className={cn("h-20 text-4xl font-black text-center tracking-[0.5em] rounded-2xl transition-all", isGraphic ? 'bg-foreground/5 border-border text-foreground' : 'border-border bg-muted/30 text-foreground')}
+                                    className={cn("h-20 text-4xl font-black text-center tracking-[0.5em] rounded-2xl transition-all", isGraphic ? 'bg-background/50 border-border text-foreground' : 'border-border bg-muted/30 text-foreground')}
                                     placeholder="----"
                                     autoFocus
                                 />

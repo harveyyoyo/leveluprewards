@@ -19,7 +19,6 @@ export type PlanTier = 'free' | 'basic' | 'pro' | 'enterprise';
 export type PlanFeatureKey =
   | 'enableAdminAnalytics'
   | 'enableTeacherCharts'
-  | 'enableStudentReports'
   | 'enableAttendance'
   | 'enableClassSignIn'
   | 'enableStudentPortal'
@@ -33,6 +32,7 @@ export type PlanFeatureKey =
   | 'enableBadges'
   | 'enableLevels'
   | 'enableStreaks'
+  | 'enableGoals'
   | 'enableChallenges'
   | 'enableTeacherBudgets'
   | 'enableBulkPoints'
@@ -44,13 +44,14 @@ export type PlanFeatureKey =
   | 'enableNotifications'
   | 'enableClassLeaderboard'
   | 'enableShoutouts'
-  | 'enableSeasonalPrizes';
+  | 'enableHomework'
+  | 'enableSeasonalPrizes'
+  | 'enableLibrary';
 
 /** Ordered list of all gated features (used for UI iteration). */
 export const PLAN_FEATURE_KEYS: PlanFeatureKey[] = [
   'enableAdminAnalytics',
   'enableTeacherCharts',
-  'enableStudentReports',
   'enableAttendance',
   'enableClassSignIn',
   'enableStudentPortal',
@@ -64,6 +65,7 @@ export const PLAN_FEATURE_KEYS: PlanFeatureKey[] = [
   'enableBadges',
   'enableLevels',
   'enableStreaks',
+  'enableGoals',
   'enableChallenges',
   'enableTeacherBudgets',
   'enableBulkPoints',
@@ -75,7 +77,10 @@ export const PLAN_FEATURE_KEYS: PlanFeatureKey[] = [
   'enableNotifications',
   'enableClassLeaderboard',
   'enableShoutouts',
+  'enableHomework',
+      'enableLibrary',
   'enableSeasonalPrizes',
+  'enableLibrary',
 ];
 
 export interface PlanInfo {
@@ -119,7 +124,6 @@ export const PLANS: Record<PlanTier, PlanInfo> = {
     features: [
       'enableAdminAnalytics',
       'enableTeacherCharts',
-      'enableStudentReports',
       'enableAttendance',
       'enableClassSignIn',
       'enableStudentPortal',
@@ -129,10 +133,13 @@ export const PLANS: Record<PlanTier, PlanInfo> = {
       'enableWishlist',
       'enableAchievements',
       'enableBadges',
+      'enableGoals',
       'enableTeacherBudgets',
       'enableBulkPoints',
       'enablePdfExport',
       'enableClassLeaderboard',
+      'enableHomework',
+      'enableLibrary',
     ],
   },
   enterprise: {
@@ -152,7 +159,6 @@ export const PLAN_TIERS: PlanTier[] = ['free', 'basic', 'pro', 'enterprise'];
 export const PLAN_FEATURE_LABELS: Record<PlanFeatureKey, string> = {
   enableAdminAnalytics: 'Admin Analytics',
   enableTeacherCharts: 'Teacher Analytics',
-  enableStudentReports: 'Printable Reports',
   enableAttendance: 'Attendance',
   enableClassSignIn: 'Class Sign-In',
   enableStudentPortal: 'Student Home Portal',
@@ -166,6 +172,7 @@ export const PLAN_FEATURE_LABELS: Record<PlanFeatureKey, string> = {
   enableBadges: 'Badges',
   enableLevels: 'Levels',
   enableStreaks: 'Daily Streaks',
+  enableGoals: 'Goals',
   enableChallenges: 'Challenges',
   enableTeacherBudgets: 'Teacher Budgets',
   enableBulkPoints: 'Bulk Class Points',
@@ -177,7 +184,9 @@ export const PLAN_FEATURE_LABELS: Record<PlanFeatureKey, string> = {
   enableNotifications: 'Notifications',
   enableClassLeaderboard: 'Class Leaderboard',
   enableShoutouts: 'Shoutouts',
+  enableHomework: 'Homework Rewards',
   enableSeasonalPrizes: 'Seasonal Prizes',
+  enableLibrary: 'Library Checkout',
 };
 
 export interface SchoolPlanConfig {
@@ -229,3 +238,4 @@ export function isFeatureAllowed(
 export function isPlanFeatureKey(key: string): key is PlanFeatureKey {
   return (PLAN_FEATURE_KEYS as string[]).includes(key);
 }
+

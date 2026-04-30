@@ -89,3 +89,285 @@ Import trace for requested module:
 <w> [webpack.cache.PackFileCacheStrategy] Restoring pack from C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\server-development.pack.gz failed: TypeError: Cannot read properties of undefined (reading 'hasStartTime')
  ⚠ Found a change in next.config.js. Restarting the server to apply the changes...
 <w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\0.pack.gz_' -> 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\0.pack.gz'
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\1.pack.gz_' -> 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\1.pack.gz'
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\0.pack.gz_' -> 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\0.pack.gz'
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\0.pack.gz_' -> 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\0.pack.gz'
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: EPERM: operation not permitted, rename 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\0.pack.gz_' -> 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\0.pack.gz'
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\0.pack.gz_' -> 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\0.pack.gz'
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\0.pack.gz_' -> 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\0.pack.gz'
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\0.pack.gz_' -> 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\0.pack.gz'
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\0.pack.gz_' -> 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\0.pack.gz'
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: EPERM: operation not permitted, rename 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\0.pack.gz_' -> 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\0.pack.gz'
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\0.pack.gz_' -> 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\0.pack.gz'
+ ⨯ ./src/components/ui/SettingsModal.tsx
+Error: 
+  [31mx[0m Expression expected
+     ,-[[36;1;4mC:\Users\Administrator\school arcade reward antigravity\studio\src\components\ui\SettingsModal.tsx[0m:166:1]
+ [2m166[0m |     };
+ [2m167[0m | 
+ [2m168[0m |     return (
+ [2m169[0m |         <>
+     : [31;1m         ^[0m
+ [2m170[0m |         <Dialog open={open} onOpenChange={handleOpenChange}>
+ [2m171[0m |     const trigger = (
+ [2m172[0m |         <Button
+     `----
+
+  [31mx[0m Expected corresponding JSX closing tag for <Dialog>
+     ,-[[36;1;4mC:\Users\Administrator\school arcade reward antigravity\studio\src\components\ui\SettingsModal.tsx[0m:807:1]
+ [2m807[0m |                 </Dialog>
+ [2m808[0m |             </DialogContent>
+ [2m809[0m |         </Dialog>
+ [2m810[0m |         </>
+     : [31;1m        ^^^[0m
+ [2m811[0m |     );
+ [2m812[0m | }
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/components/ui/SettingsModal.tsx
+./src/components/Header.tsx
+./src/components/LayoutClientWrapper.tsx
+ ⨯ ./src/components/LayoutClientWrapper.tsx
+Error: 
+  [31mx[0m the name `usePathname` is defined multiple times
+    ,-[[36;1;4mC:\Users\Administrator\school arcade reward antigravity\studio\src\components\LayoutClientWrapper.tsx[0m:1:1]
+ [2m 1[0m | 
+ [2m 2[0m | 'use client';
+ [2m 3[0m | 
+ [2m 4[0m | import { usePathname } from 'next/navigation';
+    : [31;1m         ^^^^^|^^^^^[0m
+    :               [31;1m`-- [31;1mprevious definition of `usePathname` here[0m[0m
+ [2m 5[0m | import { useEffect } from 'react';
+ [2m 6[0m | import Header from "@/components/Header";
+ [2m 7[0m | 'use client';
+ [2m 8[0m | 
+ [2m 9[0m | import { usePathname } from 'next/navigation';
+    : [33;1m         ^^^^^|^^^^^[0m
+    :               [33;1m`-- [33;1m`usePathname` redefined here[0m[0m
+ [2m10[0m | import { useEffect } from 'react';
+ [2m11[0m | import Header from "@/components/Header";
+ [2m12[0m | import { Toaster } from "@/components/ui/toaster";
+    `----
+
+  [31mx[0m the name `useEffect` is defined multiple times
+    ,-[[36;1;4mC:\Users\Administrator\school arcade reward antigravity\studio\src\components\LayoutClientWrapper.tsx[0m:2:1]
+ [2m 2[0m | 'use client';
+ [2m 3[0m | 
+ [2m 4[0m | import { usePathname } from 'next/navigation';
+ [2m 5[0m | import { useEffect } from 'react';
+    : [31;1m         ^^^^|^^^^[0m
+    :              [31;1m`-- [31;1mprevious definition of `useEffect` here[0m[0m
+ [2m 6[0m | import Header from "@/components/Header";
+ [2m 7[0m | 'use client';
+ [2m 8[0m | 
+ [2m 9[0m | import { usePathname } from 'next/navigation';
+ [2m10[0m | import { useEffect } from 'react';
+    : [33;1m         ^^^^|^^^^[0m
+    :              [33;1m`-- [33;1m`useEffect` redefined here[0m[0m
+ [2m11[0m | import Header from "@/components/Header";
+ [2m12[0m | import { Toaster } from "@/components/ui/toaster";
+ [2m13[0m | import { TooltipProvider } from "@/components/ui/tooltip";
+    `----
+
+  [31mx[0m the name `Header` is defined multiple times
+    ,-[[36;1;4mC:\Users\Administrator\school arcade reward antigravity\studio\src\components\LayoutClientWrapper.tsx[0m:3:1]
+ [2m 3[0m | 
+ [2m 4[0m | import { usePathname } from 'next/navigation';
+ [2m 5[0m | import { useEffect } from 'react';
+ [2m 6[0m | import Header from "@/components/Header";
+    : [31;1m       ^^^|^^[0m
+    :           [31;1m`-- [31;1mprevious definition of `Header` here[0m[0m
+ [2m 7[0m | 'use client';
+ [2m 8[0m | 
+ [2m 9[0m | import { usePathname } from 'next/navigation';
+ [2m10[0m | import { useEffect } from 'react';
+ [2m11[0m | import Header from "@/components/Header";
+    : [33;1m       ^^^|^^[0m
+    :           [33;1m`-- [33;1m`Header` redefined here[0m[0m
+ [2m12[0m | import { Toaster } from "@/components/ui/toaster";
+ [2m13[0m | import { TooltipProvider } from "@/components/ui/tooltip";
+ [2m14[0m | import { IntroWizard } from './IntroWizard';
+    `----
+
+  [31mx[0m The "use client" directive must be placed before other expressions. Move it to the top of the file to resolve this issue.
+    ,-[[36;1;4mC:\Users\Administrator\school arcade reward antigravity\studio\src\components\LayoutClientWrapper.tsx[0m:4:1]
+ [2m 4[0m | import { usePathname } from 'next/navigation';
+ [2m 5[0m | import { useEffect } from 'react';
+ [2m 6[0m | import Header from "@/components/Header";
+ [2m 7[0m | 'use client';
+    : [31;1m^^^^^^^^^^^^^[0m
+ [2m 8[0m | 
+ [2m 9[0m | import { usePathname } from 'next/navigation';
+ [2m10[0m | import { useEffect } from 'react';
+    `----
+
+Import trace for requested module:
+./src/components/LayoutClientWrapper.tsx
+ ⨯ ./src/components/LayoutClientWrapper.tsx
+Error: 
+  [31mx[0m the name `usePathname` is defined multiple times
+    ,-[[36;1;4mC:\Users\Administrator\school arcade reward antigravity\studio\src\components\LayoutClientWrapper.tsx[0m:1:1]
+ [2m 1[0m | 
+ [2m 2[0m | 'use client';
+ [2m 3[0m | 
+ [2m 4[0m | import { usePathname } from 'next/navigation';
+    : [31;1m         ^^^^^|^^^^^[0m
+    :               [31;1m`-- [31;1mprevious definition of `usePathname` here[0m[0m
+ [2m 5[0m | import { useEffect } from 'react';
+ [2m 6[0m | import Header from "@/components/Header";
+ [2m 7[0m | 'use client';
+ [2m 8[0m | 
+ [2m 9[0m | import { usePathname } from 'next/navigation';
+    : [33;1m         ^^^^^|^^^^^[0m
+    :               [33;1m`-- [33;1m`usePathname` redefined here[0m[0m
+ [2m10[0m | import { useEffect } from 'react';
+ [2m11[0m | import Header from "@/components/Header";
+ [2m12[0m | import { Toaster } from "@/components/ui/toaster";
+    `----
+
+  [31mx[0m the name `useEffect` is defined multiple times
+    ,-[[36;1;4mC:\Users\Administrator\school arcade reward antigravity\studio\src\components\LayoutClientWrapper.tsx[0m:2:1]
+ [2m 2[0m | 'use client';
+ [2m 3[0m | 
+ [2m 4[0m | import { usePathname } from 'next/navigation';
+ [2m 5[0m | import { useEffect } from 'react';
+    : [31;1m         ^^^^|^^^^[0m
+    :              [31;1m`-- [31;1mprevious definition of `useEffect` here[0m[0m
+ [2m 6[0m | import Header from "@/components/Header";
+ [2m 7[0m | 'use client';
+ [2m 8[0m | 
+ [2m 9[0m | import { usePathname } from 'next/navigation';
+ [2m10[0m | import { useEffect } from 'react';
+    : [33;1m         ^^^^|^^^^[0m
+    :              [33;1m`-- [33;1m`useEffect` redefined here[0m[0m
+ [2m11[0m | import Header from "@/components/Header";
+ [2m12[0m | import { Toaster } from "@/components/ui/toaster";
+ [2m13[0m | import { TooltipProvider } from "@/components/ui/tooltip";
+    `----
+
+  [31mx[0m the name `Header` is defined multiple times
+    ,-[[36;1;4mC:\Users\Administrator\school arcade reward antigravity\studio\src\components\LayoutClientWrapper.tsx[0m:3:1]
+ [2m 3[0m | 
+ [2m 4[0m | import { usePathname } from 'next/navigation';
+ [2m 5[0m | import { useEffect } from 'react';
+ [2m 6[0m | import Header from "@/components/Header";
+    : [31;1m       ^^^|^^[0m
+    :           [31;1m`-- [31;1mprevious definition of `Header` here[0m[0m
+ [2m 7[0m | 'use client';
+ [2m 8[0m | 
+ [2m 9[0m | import { usePathname } from 'next/navigation';
+ [2m10[0m | import { useEffect } from 'react';
+ [2m11[0m | import Header from "@/components/Header";
+    : [33;1m       ^^^|^^[0m
+    :           [33;1m`-- [33;1m`Header` redefined here[0m[0m
+ [2m12[0m | import { Toaster } from "@/components/ui/toaster";
+ [2m13[0m | import { TooltipProvider } from "@/components/ui/tooltip";
+ [2m14[0m | import { IntroWizard } from './IntroWizard';
+    `----
+
+  [31mx[0m The "use client" directive must be placed before other expressions. Move it to the top of the file to resolve this issue.
+    ,-[[36;1;4mC:\Users\Administrator\school arcade reward antigravity\studio\src\components\LayoutClientWrapper.tsx[0m:4:1]
+ [2m 4[0m | import { usePathname } from 'next/navigation';
+ [2m 5[0m | import { useEffect } from 'react';
+ [2m 6[0m | import Header from "@/components/Header";
+ [2m 7[0m | 'use client';
+    : [31;1m^^^^^^^^^^^^^[0m
+ [2m 8[0m | 
+ [2m 9[0m | import { usePathname } from 'next/navigation';
+ [2m10[0m | import { useEffect } from 'react';
+    `----
+
+Import trace for requested module:
+./src/components/LayoutClientWrapper.tsx
+ ⨯ ./src/components/LayoutClientWrapper.tsx
+Error: 
+  [31mx[0m the name `usePathname` is defined multiple times
+    ,-[[36;1;4mC:\Users\Administrator\school arcade reward antigravity\studio\src\components\LayoutClientWrapper.tsx[0m:1:1]
+ [2m 1[0m | 
+ [2m 2[0m | 'use client';
+ [2m 3[0m | 
+ [2m 4[0m | import { usePathname } from 'next/navigation';
+    : [31;1m         ^^^^^|^^^^^[0m
+    :               [31;1m`-- [31;1mprevious definition of `usePathname` here[0m[0m
+ [2m 5[0m | import { useEffect } from 'react';
+ [2m 6[0m | import Header from "@/components/Header";
+ [2m 7[0m | 'use client';
+ [2m 8[0m | 
+ [2m 9[0m | import { usePathname } from 'next/navigation';
+    : [33;1m         ^^^^^|^^^^^[0m
+    :               [33;1m`-- [33;1m`usePathname` redefined here[0m[0m
+ [2m10[0m | import { useEffect } from 'react';
+ [2m11[0m | import Header from "@/components/Header";
+ [2m12[0m | import { Toaster } from "@/components/ui/toaster";
+    `----
+
+  [31mx[0m the name `useEffect` is defined multiple times
+    ,-[[36;1;4mC:\Users\Administrator\school arcade reward antigravity\studio\src\components\LayoutClientWrapper.tsx[0m:2:1]
+ [2m 2[0m | 'use client';
+ [2m 3[0m | 
+ [2m 4[0m | import { usePathname } from 'next/navigation';
+ [2m 5[0m | import { useEffect } from 'react';
+    : [31;1m         ^^^^|^^^^[0m
+    :              [31;1m`-- [31;1mprevious definition of `useEffect` here[0m[0m
+ [2m 6[0m | import Header from "@/components/Header";
+ [2m 7[0m | 'use client';
+ [2m 8[0m | 
+ [2m 9[0m | import { usePathname } from 'next/navigation';
+ [2m10[0m | import { useEffect } from 'react';
+    : [33;1m         ^^^^|^^^^[0m
+    :              [33;1m`-- [33;1m`useEffect` redefined here[0m[0m
+ [2m11[0m | import Header from "@/components/Header";
+ [2m12[0m | import { Toaster } from "@/components/ui/toaster";
+ [2m13[0m | import { TooltipProvider } from "@/components/ui/tooltip";
+    `----
+
+  [31mx[0m the name `Header` is defined multiple times
+    ,-[[36;1;4mC:\Users\Administrator\school arcade reward antigravity\studio\src\components\LayoutClientWrapper.tsx[0m:3:1]
+ [2m 3[0m | 
+ [2m 4[0m | import { usePathname } from 'next/navigation';
+ [2m 5[0m | import { useEffect } from 'react';
+ [2m 6[0m | import Header from "@/components/Header";
+    : [31;1m       ^^^|^^[0m
+    :           [31;1m`-- [31;1mprevious definition of `Header` here[0m[0m
+ [2m 7[0m | 'use client';
+ [2m 8[0m | 
+ [2m 9[0m | import { usePathname } from 'next/navigation';
+ [2m10[0m | import { useEffect } from 'react';
+ [2m11[0m | import Header from "@/components/Header";
+    : [33;1m       ^^^|^^[0m
+    :           [33;1m`-- [33;1m`Header` redefined here[0m[0m
+ [2m12[0m | import { Toaster } from "@/components/ui/toaster";
+ [2m13[0m | import { TooltipProvider } from "@/components/ui/tooltip";
+ [2m14[0m | import { IntroWizard } from './IntroWizard';
+    `----
+
+  [31mx[0m The "use client" directive must be placed before other expressions. Move it to the top of the file to resolve this issue.
+    ,-[[36;1;4mC:\Users\Administrator\school arcade reward antigravity\studio\src\components\LayoutClientWrapper.tsx[0m:4:1]
+ [2m 4[0m | import { usePathname } from 'next/navigation';
+ [2m 5[0m | import { useEffect } from 'react';
+ [2m 6[0m | import Header from "@/components/Header";
+ [2m 7[0m | 'use client';
+    : [31;1m^^^^^^^^^^^^^[0m
+ [2m 8[0m | 
+ [2m 9[0m | import { usePathname } from 'next/navigation';
+ [2m10[0m | import { useEffect } from 'react';
+    `----
+
+Import trace for requested module:
+./src/components/LayoutClientWrapper.tsx
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\0.pack.gz_' -> 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\0.pack.gz'
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\0.pack.gz_' -> 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\0.pack.gz'
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\0.pack.gz_' -> 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\0.pack.gz'
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\3.pack.gz_' -> 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\3.pack.gz'
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\0.pack.gz_' -> 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\0.pack.gz'
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\1.pack.gz_' -> 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\1.pack.gz'
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\0.pack.gz_' -> 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\0.pack.gz'
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\0.pack.gz_' -> 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\0.pack.gz'
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\0.pack.gz_' -> 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\0.pack.gz'
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\0.pack.gz_' -> 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\0.pack.gz'
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOSPC: no space left on device, write
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOSPC: no space left on device, open 'C:\Users\Administrator\school arcade reward antigravity\studio\.next\cache\webpack\client-development\0.pack.gz_'

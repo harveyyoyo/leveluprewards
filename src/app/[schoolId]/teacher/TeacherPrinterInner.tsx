@@ -10,9 +10,11 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import type { Coupon, Category, Teacher, Student, Class, HistoryItem, Prize, AttendanceSettings, AttendanceLogEntry, AttendanceScheduleSlot, AttendanceRewardRule, CouponRedemptionScope } from '@/lib/types';
-import { ArrowLeft, Printer, Plus, LogIn, LogOut, UserCheck, Award, User, Search, Users, Minus, Gift, Loader2, Trash2, Edit, Filter, Ticket, Clock, ChevronRight, History, FileText } from 'lucide-react';
+import type { Coupon, Category, Teacher, Student, Class, HistoryItem, Prize, AttendanceSettings, AttendanceLogEntry, AttendanceScheduleSlot, AttendanceRewardRule, CouponRedemptionScope, HomeworkAssignment } from '@/lib/types';
+import { ArrowLeft, Printer, Plus, LogIn, LogOut, UserCheck, Award, User, Search, Users, Minus, Gift, Loader2, Trash2, Edit, Filter, Ticket, Clock, ChevronRight, History, FileText, BookOpen } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import {
     Dialog,
@@ -29,12 +31,12 @@ import { useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase
 import { collection, query, where, getDocs, doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
-import { ScrollArea } from '@/components/ui/scroll-area';
+
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
+
 import DynamicIcon from '@/components/DynamicIcon';
 import { getStudentNickname } from '@/lib/utils';
 import { rainbowForNavId, rainbowTripletForNavId } from '@/lib/rainbowNav';
@@ -50,13 +52,268 @@ import { AttendanceSetupWizard } from '@/components/attendance/AttendanceSetupWi
 import { getReadableErrorMessage } from '@/lib/errorMessage';
 import { AdminPrizesTab } from '@/app/[schoolId]/admin/sections/AdminPrizesTab';
 import { PrizeModal } from '@/components/PrizeModal';
-import { COUPONS_PER_PRINT_PAGE, generateUniqueCouponCodes } from '@/lib/coupon-print';
+import {
+    COUPONS_PER_PRINT_PAGE,
+    COUPON_PRINT_PAGE_SIZE_OPTIONS,
+    generateUniqueCouponCodes,
+    normalizeCouponPrintPageSize,
+    type CouponPrintPageSize,
+} from '@/lib/coupon-print';
 import { buildRedemptionPrintNote, couponRedemptionLabelForPrint } from '@/lib/couponRedemptionRules';
 import { SchoolReportsPanel } from '@/components/reports/SchoolReportsPanel';
+import { homeworkRewardCategoryKey } from '@/lib/homeworkRewards';
+import { studentsInTeacherScope } from '@/lib/reportsScope';
 
-/** Max sheets per run (12 coupons per sheet). Bounded for sensible printer jobs and UI. */
+/** Max sheets per run. Bounded for sensible printer jobs and UI. */
 const MAX_COUPON_PRINT_SHEETS = 100;
 
+
+function TeacherHomeworkTab({ schoolId, teacherId, students, classes }: { schoolId: string; teacherId: string; students: Student[]; classes: Class[] }) {
+    const { addHomeworkAssignment, deleteHomeworkAssignment, awardPointsToMultipleStudents } = useAppContext();
+    const { toast } = useToast();
+    const firestore = useFirestore();
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [newReward, setNewReward] = useState({ title: '', description: '', points: 10, classId: 'all' });
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
+    const [filterClassId, setFilterClassId] = useState('all');
+    const [isAwarding, setIsAwarding] = useState<string | null>(null);
+
+    const assignmentsQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'homework') : null, [firestore, schoolId]);
+    const { data: assignments, isLoading: assignmentsLoading } = useCollection<HomeworkAssignment>(assignmentsQuery);
+
+    const myAssignments = useMemo(() => assignments?.filter(a => a.teacherId === teacherId) || [], [assignments, teacherId]);
+    const filteredStudents = useMemo(() => {
+        return students.filter((student) => filterClassId === 'all' || student.classId === filterClassId);
+    }, [students, filterClassId]);
+
+    const toggleStudent = (studentId: string) => {
+        setSelectedStudentIds((prev) => prev.includes(studentId) ? prev.filter((id) => id !== studentId) : [...prev, studentId]);
+    };
+
+    const toggleAllVisibleStudents = () => {
+        const visibleIds = filteredStudents.map((student) => student.id);
+        const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedStudentIds.includes(id));
+        setSelectedStudentIds((prev) => {
+            if (allVisibleSelected) return prev.filter((id) => !visibleIds.includes(id));
+            return Array.from(new Set([...prev, ...visibleIds]));
+        });
+    };
+
+    const handleCreateReward = async () => {
+        if (!newReward.title) return;
+        setIsSubmitting(true);
+        try {
+            await addHomeworkAssignment({
+                ...newReward,
+                teacherId,
+                createdAt: Date.now(),
+                points: Number(newReward.points)
+            } as any);
+            setIsCreateModalOpen(false);
+            setNewReward({ title: '', description: '', points: 10, classId: 'all' });
+            toast({ title: 'Homework reward saved' });
+        } catch (e) {
+            toast({ variant: 'destructive', title: 'Error', description: (e as Error).message });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleDeleteReward = async (id: string) => {
+        if (!confirm('Delete this homework reward?')) return;
+        try {
+            await deleteHomeworkAssignment(id);
+            toast({ title: 'Homework reward deleted' });
+        } catch (e) {
+            toast({ variant: 'destructive', title: 'Error', description: (e as Error).message });
+        }
+    };
+
+    const handleAwardReward = async (reward: HomeworkAssignment, targetIds = selectedStudentIds) => {
+        const points = Number(reward.points);
+        const eligibleIds = targetIds.filter((studentId) => {
+            if (reward.classId === 'all' || !reward.classId) return true;
+            return students.find((student) => student.id === studentId)?.classId === reward.classId;
+        });
+        if (!eligibleIds.length) {
+            toast({ variant: 'destructive', title: 'No students selected', description: 'Choose students who should receive this homework reward.' });
+            return;
+        }
+        if (!Number.isFinite(points) || points <= 0) {
+            toast({ variant: 'destructive', title: 'Invalid points', description: 'Homework rewards need a positive point value.' });
+            return;
+        }
+
+        setIsAwarding(reward.id);
+        try {
+            const result = await awardPointsToMultipleStudents(eligibleIds, points, homeworkRewardCategoryKey(reward.title));
+            if (result.success) {
+                toast({ title: 'Homework reward awarded', description: `Awarded ${points} points to ${result.count} student(s).` });
+                setSelectedStudentIds((prev) => prev.filter((id) => !eligibleIds.includes(id)));
+            } else {
+                toast({ variant: 'destructive', title: 'Could not award reward', description: result.message });
+            }
+        } finally {
+            setIsAwarding(null);
+        }
+    };
+
+    return (
+        <div className="space-y-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                <div>
+                    <h3 className="text-lg font-black flex items-center gap-2">
+                        <BookOpen className="w-5 h-5 text-primary" />
+                        Homework Rewards
+                    </h3>
+                    <p className="text-sm text-muted-foreground font-medium">Give quick points for completed homework without adding anything to the student portal.</p>
+                </div>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <Select value={filterClassId} onValueChange={setFilterClassId}>
+                        <SelectTrigger className="h-11 w-full sm:w-52 rounded-xl font-bold">
+                            <SelectValue placeholder="All classes" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Classes</SelectItem>
+                            {classes.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                    <Button variant="outline" className="h-11 rounded-xl font-black uppercase tracking-widest text-xs" onClick={toggleAllVisibleStudents}>
+                        {filteredStudents.length > 0 && filteredStudents.every((student) => selectedStudentIds.includes(student.id)) ? 'Deselect visible' : 'Select visible'}
+                    </Button>
+                </div>
+                <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+                    <DialogTrigger asChild>
+                        <Button className="rounded-xl font-black uppercase tracking-widest gap-2">
+                            <Plus className="w-4 h-4" />
+                            New Reward
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Create Homework Reward</DialogTitle>
+                            <DialogDescription>Save a quick reward teachers can award after checking work.</DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                            <div className="space-y-2">
+                                <Label>Reward Name</Label>
+                                <Input value={newReward.title} onChange={e => setNewReward({ ...newReward, title: e.target.value })} placeholder="e.g. Homework Complete" />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Note</Label>
+                                <Input value={newReward.description} onChange={e => setNewReward({ ...newReward, description: e.target.value })} placeholder="Optional teacher note" />
+                            </div>
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                <div className="space-y-2">
+                                    <Label>Points</Label>
+                                    <Input type="number" min={1} value={newReward.points} onChange={e => setNewReward({ ...newReward, points: Number(e.target.value) })} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Limit to Class</Label>
+                                    <Select value={newReward.classId} onValueChange={v => setNewReward({ ...newReward, classId: v })}>
+                                    <SelectTrigger>
+                                            <SelectValue placeholder="All Classes" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All Classes</SelectItem>
+                                        {classes.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                                </div>
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <Button onClick={handleCreateReward} disabled={isSubmitting || !newReward.title} className="w-full h-12 rounded-xl font-black uppercase tracking-widest">
+                                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Reward'}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+            </div>
+
+            <Card className="border-dashed">
+                <CardHeader className="pb-3">
+                    <CardTitle className="text-base font-black">Students to Reward</CardTitle>
+                    <CardDescription>{selectedStudentIds.length} selected</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {filteredStudents.length > 0 ? (
+                        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                            {filteredStudents.map((student) => {
+                                const checked = selectedStudentIds.includes(student.id);
+                                return (
+                                    <button
+                                        type="button"
+                                        key={student.id}
+                                        onClick={() => toggleStudent(student.id)}
+                                        className={cn(
+                                            "flex items-center justify-between gap-3 rounded-xl border p-3 text-left transition-colors",
+                                            checked ? "border-primary bg-primary/5" : "hover:bg-muted/60"
+                                        )}
+                                    >
+                                        <span>
+                                            <span className="block text-sm font-black">{getStudentNickname(student)}</span>
+                                            <span className="block text-[11px] font-bold text-muted-foreground">
+                                                {student.classId ? (classes.find((c) => c.id === student.classId)?.name || 'Unassigned') : 'Unassigned'}
+                                            </span>
+                                        </span>
+                                        <Checkbox checked={checked} aria-label={`Select ${getStudentNickname(student)}`} />
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <p className="py-8 text-center text-sm font-bold text-muted-foreground">No students found for this class.</p>
+                    )}
+                </CardContent>
+            </Card>
+
+            {assignmentsLoading ? (
+                <div className="grid gap-4 md:grid-cols-2">
+                    {[...Array(2)].map((_, i) => <Skeleton key={i} className="h-40 w-full rounded-2xl" />)}
+                </div>
+            ) : myAssignments.length > 0 ? (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {myAssignments.map(assignment => (
+                        <Card key={assignment.id} className="border-t-4 border-primary">
+                            <CardHeader className="pb-2">
+                                <div className="flex justify-between items-start">
+                                    <CardTitle className="text-lg font-black">{assignment.title}</CardTitle>
+                                    <Button variant="ghost" size="icon" onClick={() => handleDeleteReward(assignment.id)} className="text-destructive hover:bg-destructive/10">
+                                        <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                </div>
+                                <CardDescription className="font-medium line-clamp-2">{assignment.description || 'No description provided.'}</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="flex flex-wrap gap-2">
+                                    <Badge variant="outline" className="font-black bg-primary/5 border-primary/20">{assignment.points} pts</Badge>
+                                    <Badge variant="outline" className="font-bold">
+                                        {assignment.classId === 'all' ? 'All Classes' : (classes.find(c => c.id === assignment.classId)?.name || 'Class Unknown')}
+                                    </Badge>
+                                </div>
+                                <Button
+                                    className="w-full rounded-xl font-black uppercase tracking-widest text-xs gap-2"
+                                    onClick={() => handleAwardReward(assignment)}
+                                    disabled={isAwarding === assignment.id || selectedStudentIds.length === 0}
+                                >
+                                    {isAwarding === assignment.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Award className="w-4 h-4" />}
+                                    Award Selected
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+            ) : (
+                <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 opacity-40 bg-muted/20 rounded-3xl border-2 border-dashed">
+                    <BookOpen className="w-16 h-16 text-slate-300" />
+                    <p className="text-sm font-bold uppercase tracking-widest">No homework rewards saved yet</p>
+                </div>
+            )}
+        </div>
+    );
+}
 
 function RecentRedemptions({ schoolId, students, classes, teacherId }: { schoolId: string; students: Student[], classes: Class[], teacherId: string }) {
     const [redemptions, setRedemptions] = useState<(HistoryItem & { id: string; studentId: string; studentName: string; studentClass: string })[]>([]);
@@ -1215,6 +1472,25 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
     const { data: teachers } = useCollection<Teacher>(teachersQuery);
     const currentTeacher = teachers?.find(t => t.id === teacherId);
 
+    const studentsForTeacherActions = useMemo(() => {
+        if (secretaryMode) return students ?? [];
+        if (!teacherId) return students ?? [];
+        return studentsInTeacherScope(teacherId, students ?? [], classes ?? []);
+    }, [secretaryMode, teacherId, students, classes]);
+
+    /** Class filters and coupon class lists: students’ classes plus classes this teacher owns as primary. */
+    const classesForTeacherUi = useMemo(() => {
+        if (secretaryMode) return classes ?? [];
+        const cls = classes ?? [];
+        const fromStudents = new Set(
+            studentsForTeacherActions.map((s) => s.classId).filter((id): id is string => Boolean(id)),
+        );
+        return cls
+            .filter((c) => fromStudents.has(c.id) || c.primaryTeacherId === teacherId)
+            .slice()
+            .sort((a, b) => a.name.localeCompare(b.name));
+    }, [secretaryMode, classes, studentsForTeacherActions, teacherId]);
+
     const schoolDocRef = useMemoFirebase(
         () => (schoolId && firestore ? doc(firestore, 'schools', schoolId) : null),
         [firestore, schoolId],
@@ -1233,7 +1509,10 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
     const [printStartsOn, setPrintStartsOn] = useState(''); // yyyy-mm-dd, optional â€” coupon valid from start of this day
     const [printExpiresOn, setPrintExpiresOn] = useState(''); // yyyy-mm-dd
     const [printSheetCount, setPrintSheetCount] = useState('1');
-    const [printRedemptionScope, setPrintRedemptionScope] = useState<CouponRedemptionScope>('school');
+    const [printCouponsPerPage, setPrintCouponsPerPage] = useState<CouponPrintPageSize>(COUPONS_PER_PRINT_PAGE);
+    const [printRedemptionScope, setPrintRedemptionScope] = useState<CouponRedemptionScope>(() =>
+        secretaryMode ? 'school' : 'creator',
+    );
     const [printScopeClassIds, setPrintScopeClassIds] = useState<string[]>([]);
     const [printScopeTeacherIds, setPrintScopeTeacherIds] = useState<string[]>([]);
     const [isPrintCategoryDialogOpen, setIsPrintCategoryDialogOpen] = useState(false);
@@ -1270,7 +1549,33 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
         }
     }, [awardCategoryId, categories]);
 
-    const handleAddPrintCategory = async () => {
+    useEffect(() => {
+        if (secretaryMode) return;
+        if (printRedemptionScope === 'school' || printRedemptionScope === 'teachers') {
+            setPrintRedemptionScope('creator');
+        }
+    }, [secretaryMode, printRedemptionScope]);
+
+    useEffect(() => {
+        if (filterClassId === 'all') return;
+        if (!classesForTeacherUi.some((c) => c.id === filterClassId)) {
+            setFilterClassId('all');
+        }
+    }, [filterClassId, classesForTeacherUi]);
+
+    useEffect(() => {
+        const allowed = new Set(studentsForTeacherActions.map((s) => s.id));
+        setSelectedStudentIds((prev) => prev.filter((id) => allowed.has(id)));
+    }, [studentsForTeacherActions]);
+
+    useEffect(() => {
+        if (secretaryMode) return;
+        const valid = new Set(classesForTeacherUi.map((c) => c.id));
+        setPrintScopeClassIds((prev) => prev.filter((id) => valid.has(id)));
+    }, [secretaryMode, classesForTeacherUi]);
+
+
+
         if (!newPrintCategoryName || !newPrintCategoryPoints) {
             playSound('error');
             toast({
@@ -1343,11 +1648,11 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
             toast({
                 variant: 'destructive',
                 title: 'Invalid sheet count',
-                description: `Enter between 1 and ${MAX_COUPON_PRINT_SHEETS} sheets (${COUPONS_PER_PRINT_PAGE} coupons per sheet).`,
+                description: `Enter between 1 and ${MAX_COUPON_PRINT_SHEETS} sheets (${printCouponsPerPage} coupons per sheet).`,
             });
             return;
         }
-        const couponCount = sheets * COUPONS_PER_PRINT_PAGE;
+        const couponCount = sheets * printCouponsPerPage;
         const selectedCategory = categories?.find(c => c.id === printCategoryId);
         if (!selectedCategory) {
             playSound('error');
@@ -1395,33 +1700,24 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
         }
 
         if (!secretaryMode) {
-        if (printRedemptionScope === 'classes' && printScopeClassIds.length === 0) {
-            playSound('error');
-            toast({
-                variant: 'destructive',
-                title: 'Select classes',
-                description: 'Choose at least one class, or switch redemption to another option.',
-            });
-            return;
-        }
-        if (printRedemptionScope === 'teachers' && printScopeTeacherIds.length === 0) {
-            playSound('error');
-            toast({
-                variant: 'destructive',
-                title: 'Select teachers',
-                description: 'Choose at least one teacher, or switch redemption to another option.',
-            });
-            return;
-        }
-        if (printRedemptionScope === 'creator' && !currentTeacher?.id) {
-            playSound('error');
-            toast({
-                variant: 'destructive',
-                title: 'Profile not ready',
-                description: 'Wait for your teacher profile to load, or choose school-wide coupons.',
-            });
-            return;
-        }
+            if (printRedemptionScope === 'classes' && printScopeClassIds.length === 0) {
+                playSound('error');
+                toast({
+                    variant: 'destructive',
+                    title: 'Select classes',
+                    description: 'Choose at least one class, or switch redemption to “Only my students”.',
+                });
+                return;
+            }
+            if (printRedemptionScope === 'creator' && !currentTeacher?.id) {
+                playSound('error');
+                toast({
+                    variant: 'destructive',
+                    title: 'Profile not ready',
+                    description: 'Wait for your teacher profile to load, then try again.',
+                });
+                return;
+            }
         }
 
         const startsAt = computeStartsAt();
@@ -1440,13 +1736,9 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
         const scopeExtra: Partial<Pick<Coupon, 'redemptionScope' | 'allowedClassIds' | 'allowedTeacherIds'>> =
             secretaryMode
                 ? {}
-                : printRedemptionScope === 'school'
-                ? {}
-                : printRedemptionScope === 'creator'
-                    ? { redemptionScope: 'creator' }
-                    : printRedemptionScope === 'classes'
-                        ? { redemptionScope: 'classes', allowedClassIds: [...printScopeClassIds] }
-                        : { redemptionScope: 'teachers', allowedTeacherIds: [...printScopeTeacherIds] };
+                : printRedemptionScope === 'classes'
+                    ? { redemptionScope: 'classes', allowedClassIds: [...printScopeClassIds] }
+                    : { redemptionScope: 'creator' };
 
         const redemptionPrintNote =
             secretaryMode
@@ -1487,7 +1779,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                     : { ...currentTeacher, spentThisMonth: (currentTeacher.spentThisMonth || 0) + totalCost };
             await updateTeacher(next);
         }
-        setCouponsToPrint(couponsToCreate);
+        setCouponsToPrint(couponsToCreate, { couponsPerPage: printCouponsPerPage });
     };
 
     const handleAwardPoints = async () => {
@@ -1507,6 +1799,19 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
             playSound('error');
             toast({ variant: 'destructive', title: 'Points must be a positive number.' });
             return;
+        }
+
+        if (!secretaryMode && teacherId) {
+            const allowed = new Set(studentsForTeacherActions.map((s) => s.id));
+            if (selectedStudentIds.some((id) => !allowed.has(id))) {
+                playSound('error');
+                toast({
+                    variant: 'destructive',
+                    title: 'Invalid selection',
+                    description: 'You can only award points to students on your roster.',
+                });
+                return;
+            }
         }
 
         const totalCost = points * selectedStudentIds.length;
@@ -1564,6 +1869,19 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
             return;
         }
 
+        if (!secretaryMode && teacherId) {
+            const allowed = new Set(studentsForTeacherActions.map((s) => s.id));
+            if (selectedStudentIds.some((id) => !allowed.has(id))) {
+                playSound('error');
+                toast({
+                    variant: 'destructive',
+                    title: 'Invalid selection',
+                    description: 'You can only deduct points from students on your roster.',
+                });
+                return;
+            }
+        }
+
         const result = await deductPointsFromMultipleStudents(selectedStudentIds, points, awardReason);
 
         if (result.success) {
@@ -1605,13 +1923,9 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
         ...(currentTeacher?.id && !secretaryMode ? { createdByTeacherId: currentTeacher.id } : {}),
         ...(secretaryMode
             ? {}
-            : printRedemptionScope === 'school'
-            ? {}
-            : printRedemptionScope === 'creator'
-                ? { redemptionScope: 'creator' as const }
-                : printRedemptionScope === 'classes'
-                    ? { redemptionScope: 'classes' as const, allowedClassIds: [...printScopeClassIds] }
-                    : { redemptionScope: 'teachers' as const, allowedTeacherIds: [...printScopeTeacherIds] }),
+            : printRedemptionScope === 'classes'
+                ? { redemptionScope: 'classes' as const, allowedClassIds: [...printScopeClassIds] }
+                : { redemptionScope: 'creator' as const }),
         ...(redemptionPreviewNote ? { redemptionPrintNote: redemptionPreviewNote } : {}),
         ...(computeStartsAt() !== undefined ? { startsAt: computeStartsAt() } : {}),
         expiresAt: computeExpiresAt(),
@@ -1626,13 +1940,13 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
     }, [categories, currentTeacher, secretaryMode]);
 
     const filteredStudents = useMemo(() => {
-        return (students || []).filter(s => {
+        return studentsForTeacherActions.filter((s) => {
             const computedName = `${getStudentNickname(s)} ${s.lastName}`.toLowerCase();
             const nameMatch = computedName.includes(studentSearch.toLowerCase());
             const classMatch = filterClassId === 'all' || s.classId === filterClassId;
             return nameMatch && classMatch;
         }).sort((a, b) => a.lastName.localeCompare(b.lastName));
-    }, [students, studentSearch, filterClassId]);
+    }, [studentsForTeacherActions, studentSearch, filterClassId]);
 
     useEffect(() => {
         if (filteredStudents.length === 1) {
@@ -1781,6 +2095,18 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                     <FileText className="w-4 h-4 shrink-0 opacity-80" />
                                     Reports
                                 </TabsTrigger>
+                                {settings.enableHomework && (
+                                    <>
+                                        <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground/45 pointer-events-none" aria-hidden />
+                                        <TabsTrigger
+                                            value="homework"
+                                            className="rounded-xl px-3 py-2 font-bold text-sm flex items-center gap-1.5 text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--teacher-accent)]"
+                                        >
+                                            <BookOpen className="w-4 h-4 shrink-0 opacity-80" />
+                                            Homework Rewards
+                                        </TabsTrigger>
+                                    </>
+                                )}
                             </TabsList>
                         </div>
                         )}
@@ -1802,231 +2128,218 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                     Print Coupons
                                 </CardTitle>
                                 <CardDescription className={isGraphic ? 'text-muted-foreground/80' : ''}>
-                                    {COUPONS_PER_PRINT_PAGE} coupons per letter page (3Ã—4 grid). Set sheets to mass-print; each cell matches the preview below.
+                                    Choose 10 or 30 coupons per letter page. Set sheets to mass-print; each cell matches the selected layout.
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="p-4 md:p-6">
-                                {isLoading ? <Skeleton className="h-48 w-full rounded-xl" /> : (
-                                    <div className="space-y-6">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
-                                            <div className="space-y-2 md:col-span-1">
-                                                <Label className={cn("text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1", isGraphic ? 'text-muted-foreground' : 'text-slate-500')}>Incentive Category</Label>
-                                                <div className="flex items-center gap-2">
-                                                    <Select value={printCategoryId} onValueChange={setPrintCategoryId}>
-                                                        <SelectTrigger className={cn("rounded-xl h-12 transition-all", isGraphic ? 'bg-foreground/5 border-white/10 hover:bg-foreground/10 text-foreground' : 'bg-slate-50 border-slate-200')}>
-                                                            <SelectValue placeholder="Select..." />
+                                                    <div className="flex flex-col lg:flex-row gap-8 items-start">
+                                        <div className="flex-1 w-full space-y-6">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                                                <div className="space-y-2 md:col-span-1">
+                                                    <Label className={cn("text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1", isGraphic ? 'text-muted-foreground' : 'text-slate-500')}>Incentive Category</Label>
+                                                    <div className="flex items-center gap-2">
+                                                        <Select value={printCategoryId} onValueChange={setPrintCategoryId}>
+                                                            <SelectTrigger className={cn("rounded-xl h-12 transition-all", isGraphic ? 'bg-foreground/5 border-white/10 hover:bg-foreground/10 text-foreground' : 'bg-slate-50 border-slate-200')}>
+                                                                <SelectValue placeholder="Select..." />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                {filteredCategories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                                                            </SelectContent>
+                                                        </Select>
+                                                        {!secretaryMode && (
+                                                        <Dialog open={isPrintCategoryDialogOpen} onOpenChange={setIsPrintCategoryDialogOpen}>
+                                                            <DialogTrigger asChild>
+                                                                <Button variant="outline" size="icon" className={cn("h-12 w-12 rounded-xl shrink-0 transition-all", isGraphic ? 'bg-foreground/5 border-white/10 hover:bg-white/10 text-white' : 'bg-slate-50 border-slate-200')}>
+                                                                    <Plus className="h-4 w-4" />
+                                                                </Button>
+                                                            </DialogTrigger>
+                <DialogContent className={cn(isGraphic ? 'bg-card/90 backdrop-blur-2xl text-foreground border-white/10' : 'bg-white')}>
+                                                                <DialogHeader>
+                                                                    <DialogTitle className="text-2xl font-black">Add Category</DialogTitle>
+                                                                    <DialogDescription>Create a new quick-selection category for rewards.</DialogDescription>
+                                                                </DialogHeader>
+                                                                <div className="grid gap-6 py-6">
+                                                                    <div className="space-y-2">
+                                                                        <Label htmlFor="name" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">Name</Label>
+                                                                        <Input id="name" value={newPrintCategoryName} onChange={e => setNewPrintCategoryName(e.target.value)} className={cn("h-12 rounded-xl", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-slate-50')} placeholder="e.g. Extra Recess" />
+                                                                    </div>
+                                                                    <div className="space-y-2">
+                                                                        <Label htmlFor="pts" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">Default Points</Label>
+                                                                        <Input id="pts" type="number" value={newPrintCategoryPoints} onChange={e => setNewPrintCategoryPoints(e.target.value)} className={cn("h-12 rounded-xl font-bold", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-slate-50')} />
+                                                                    </div>
+                                                                </div>
+                                                                <DialogFooter>
+                                                                    <Button onClick={handleAddPrintCategory} className="rounded-2xl h-12 w-full font-black uppercase tracking-widest">Create Category</Button>
+                                                                </DialogFooter>
+                                                            </DialogContent>
+                                                        </Dialog>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className="space-y-2 md:col-span-1">
+                                                    <Label className={cn("text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1", isGraphic ? 'text-muted-foreground' : 'text-slate-500')}>Point Value</Label>
+                                                    <Input type="number" value={printValue} onChange={(e) => setPrintValue(e.target.value)} className={cn("h-12 rounded-xl text-lg font-black transition-all", isGraphic ? 'bg-foreground/5 border-white/10 text-foreground focus:ring-chart-1/20' : 'bg-slate-50 border-slate-200')} />
+                                                </div>
+                                                <div className="space-y-2 md:col-span-1">
+                                                    <Label className={cn("text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1", isGraphic ? 'text-muted-foreground' : 'text-slate-500')}>
+                                                        Coupons per page
+                                                    </Label>
+                                                    <Select
+                                                        value={String(printCouponsPerPage)}
+                                                        onValueChange={(value) => setPrintCouponsPerPage(normalizeCouponPrintPageSize(Number(value)))}
+                                                    >
+                                                        <SelectTrigger className={cn("h-12 rounded-xl text-lg font-black transition-all", isGraphic ? 'bg-foreground/5 border-white/10 text-foreground focus:ring-chart-1/20' : 'bg-slate-50 border-slate-200')}>
+                                                            <SelectValue />
                                                         </SelectTrigger>
                                                         <SelectContent>
-                                                            {filteredCategories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                                                            {COUPON_PRINT_PAGE_SIZE_OPTIONS.map((size) => (
+                                                                <SelectItem key={size} value={String(size)}>
+                                                                    {size} per page
+                                                                </SelectItem>
+                                                            ))}
                                                         </SelectContent>
                                                     </Select>
-                                                    {!secretaryMode && (
-                                                    <Dialog open={isPrintCategoryDialogOpen} onOpenChange={setIsPrintCategoryDialogOpen}>
-                                                        <DialogTrigger asChild>
-                                                            <Button variant="outline" size="icon" className={cn("h-12 w-12 rounded-xl shrink-0 transition-all", isGraphic ? 'bg-foreground/5 border-white/10 hover:bg-white/10 text-white' : 'bg-slate-50 border-slate-200')}>
-                                                                <Plus className="h-4 w-4" />
-                                                            </Button>
-                                                        </DialogTrigger>
-            <DialogContent className={cn(isGraphic ? 'bg-card/90 backdrop-blur-2xl text-foreground border-white/10' : 'bg-white')}>
-                                                            <DialogHeader>
-                                                                <DialogTitle className="text-2xl font-black">Add Category</DialogTitle>
-                                                                <DialogDescription>Create a new quick-selection category for rewards.</DialogDescription>
-                                                            </DialogHeader>
-                                                            <div className="grid gap-6 py-6">
-                                                                <div className="space-y-2">
-                                                                    <Label htmlFor="name" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">Name</Label>
-                                                                    <Input id="name" value={newPrintCategoryName} onChange={e => setNewPrintCategoryName(e.target.value)} className={cn("h-12 rounded-xl", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-slate-50')} placeholder="e.g. Extra Recess" />
-                                                                </div>
-                                                                <div className="space-y-2">
-                                                                    <Label htmlFor="pts" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">Default Points</Label>
-                                                                    <Input id="pts" type="number" value={newPrintCategoryPoints} onChange={e => setNewPrintCategoryPoints(e.target.value)} className={cn("h-12 rounded-xl font-bold", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-slate-50')} />
-                                                                </div>
-                                                            </div>
-                                                            <DialogFooter>
-                                                                <Button onClick={handleAddPrintCategory} className="rounded-2xl h-12 w-full font-black uppercase tracking-widest">Create Category</Button>
-                                                            </DialogFooter>
-                                                        </DialogContent>
-                                                    </Dialog>
-                                                    )}
+                                                </div>
+                                                <div className="space-y-2 md:col-span-1">
+                                                    <Label className={cn("text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1", isGraphic ? 'text-muted-foreground' : 'text-slate-500')}>
+                                                        Sheets
+                                                    </Label>
+                                                    <Input
+                                                        type="number"
+                                                        min={1}
+                                                        max={MAX_COUPON_PRINT_SHEETS}
+                                                        value={printSheetCount}
+                                                        onChange={(e) => setPrintSheetCount(e.target.value)}
+                                                        className={cn("h-12 rounded-xl text-lg font-black transition-all", isGraphic ? 'bg-foreground/5 border-white/10 text-foreground focus:ring-chart-1/20' : 'bg-slate-50 border-slate-200')}
+                                                    />
+                                                    <p className="text-[11px] text-muted-foreground px-0.5">
+                                                        Total: {(parseInt(printSheetCount, 10) || 0) * printCouponsPerPage} coupons
+                                                        {settings.enableTeacherBudgets && currentTeacher?.monthlyBudget !== undefined && parseInt(printValue, 10) > 0
+                                                            ? ` Â· ${((parseInt(printSheetCount, 10) || 0) * printCouponsPerPage * (parseInt(printValue, 10) || 0)).toLocaleString()} pts from budget`
+                                                            : null}
+                                                    </p>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label className={cn("text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1", isGraphic ? 'text-muted-foreground' : 'text-slate-500')}>Valid from (optional)</Label>
+                                                    <Input
+                                                        type="date"
+                                                        value={printStartsOn}
+                                                        onChange={(e) => setPrintStartsOn(e.target.value)}
+                                                        className={cn("h-12 rounded-xl text-xs font-bold tracking-widest", isGraphic ? 'bg-foreground/5 border-white/10 text-foreground' : 'bg-slate-50 border-slate-200')}
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label className={cn("text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1", isGraphic ? 'text-muted-foreground' : 'text-slate-500')}>Expiration (optional)</Label>
+                                                    <Input
+                                                        type="date"
+                                                        min={localTodayYmd()}
+                                                        value={printExpiresOn}
+                                                        onChange={(e) => setPrintExpiresOn(e.target.value)}
+                                                        className={cn("h-12 rounded-xl text-xs font-bold tracking-widest", isGraphic ? 'bg-foreground/5 border-white/10 text-foreground' : 'bg-slate-50 border-slate-200')}
+                                                    />
                                                 </div>
                                             </div>
-                                            <div className="space-y-2 md:col-span-1">
-                                                <Label className={cn("text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1", isGraphic ? 'text-muted-foreground' : 'text-slate-500')}>Point Value</Label>
-                                                <Input type="number" value={printValue} onChange={(e) => setPrintValue(e.target.value)} className={cn("h-12 rounded-xl text-lg font-black transition-all", isGraphic ? 'bg-foreground/5 border-white/10 text-foreground focus:ring-chart-1/20' : 'bg-slate-50 border-slate-200')} />
-                                            </div>
-                                            <div className="space-y-2 md:col-span-1">
-                                                <Label className={cn("text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1", isGraphic ? 'text-muted-foreground' : 'text-slate-500')}>
-                                                    Sheets ({COUPONS_PER_PRINT_PAGE} per page)
+
+                                            {!secretaryMode && (
+                                            <div className={cn('rounded-2xl border p-4 space-y-4', isGraphic ? 'border-white/10 bg-foreground/5' : 'border-border/60 bg-muted/10')}>
+                                                <Label className={cn('text-xs font-semibold uppercase tracking-wide ml-0.5', isGraphic ? 'text-muted-foreground' : 'text-muted-foreground')}>
+                                                    Who can redeem these codes
                                                 </Label>
-                                                <Input
-                                                    type="number"
-                                                    min={1}
-                                                    max={MAX_COUPON_PRINT_SHEETS}
-                                                    value={printSheetCount}
-                                                    onChange={(e) => setPrintSheetCount(e.target.value)}
-                                                    className={cn("h-12 rounded-xl text-lg font-black transition-all", isGraphic ? 'bg-foreground/5 border-white/10 text-foreground focus:ring-chart-1/20' : 'bg-slate-50 border-slate-200')}
-                                                />
-                                                <p className="text-[11px] text-muted-foreground px-0.5">
-                                                    Total: {(parseInt(printSheetCount, 10) || 0) * COUPONS_PER_PRINT_PAGE} coupons
-                                                    {settings.enableTeacherBudgets && currentTeacher?.monthlyBudget !== undefined && parseInt(printValue, 10) > 0
-                                                        ? ` Â· ${((parseInt(printSheetCount, 10) || 0) * COUPONS_PER_PRINT_PAGE * (parseInt(printValue, 10) || 0)).toLocaleString()} pts from budget`
-                                                        : null}
-                                                </p>
-                                            </div>
-                                            <div className="space-y-2 xl:col-span-1">
-                                                <Label className={cn("text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1", isGraphic ? 'text-muted-foreground' : 'text-slate-500')}>Valid from (optional)</Label>
-                                                <Input
-                                                    type="date"
-                                                    value={printStartsOn}
-                                                    onChange={(e) => setPrintStartsOn(e.target.value)}
-                                                    className={cn("h-12 rounded-xl text-xs font-bold tracking-widest", isGraphic ? 'bg-foreground/5 border-white/10 text-foreground' : 'bg-slate-50 border-slate-200')}
-                                                />
-                                            </div>
-                                            <div className="space-y-2 xl:col-span-1">
-                                                <Label className={cn("text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1", isGraphic ? 'text-muted-foreground' : 'text-slate-500')}>Expiration (optional)</Label>
-                                                <Input
-                                                    type="date"
-                                                    min={localTodayYmd()}
-                                                    value={printExpiresOn}
-                                                    onChange={(e) => setPrintExpiresOn(e.target.value)}
-                                                    className={cn("h-12 rounded-xl text-xs font-bold tracking-widest", isGraphic ? 'bg-foreground/5 border-white/10 text-foreground' : 'bg-slate-50 border-slate-200')}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        {!secretaryMode && (
-                                        <div className={cn('rounded-2xl border p-4 space-y-4', isGraphic ? 'border-white/10 bg-foreground/5' : 'border-border/60 bg-muted/10')}>
-                                            <Label className={cn('text-xs font-semibold uppercase tracking-wide ml-0.5', isGraphic ? 'text-muted-foreground' : 'text-muted-foreground')}>
-                                                Who can redeem these codes
-                                            </Label>
-                                            <RadioGroup
-                                                value={printRedemptionScope}
-                                                onValueChange={(v) => setPrintRedemptionScope(v as CouponRedemptionScope)}
-                                                className="grid gap-3 sm:grid-cols-2"
-                                            >
-                                                <div className={cn('flex items-start gap-2 rounded-xl border p-3', isGraphic ? 'border-white/10 bg-card/40' : 'bg-background/80')}>
-                                                    <RadioGroupItem value="school" id="crs-school" className="mt-1" />
-                                                    <label htmlFor="crs-school" className="text-sm leading-snug cursor-pointer">
-                                                        <span className="font-bold">Any student</span>
-                                                        <span className={cn('block text-xs mt-0.5', isGraphic ? 'text-muted-foreground' : 'text-muted-foreground')}>
-                                                            Anyone at this school can enter the code at the kiosk.
-                                                        </span>
-                                                    </label>
-                                                </div>
-                                                <div className={cn('flex items-start gap-2 rounded-xl border p-3', isGraphic ? 'border-white/10 bg-card/40' : 'bg-background/80')}>
-                                                    <RadioGroupItem value="creator" id="crs-creator" className="mt-1" />
-                                                    <label htmlFor="crs-creator" className="text-sm leading-snug cursor-pointer">
-                                                        <span className="font-bold">Only my students</span>
-                                                        <span className={cn('block text-xs mt-0.5', isGraphic ? 'text-muted-foreground' : 'text-muted-foreground')}>
-                                                            Students on your roster (or in your class as primary teacher) can redeem.
-                                                        </span>
-                                                    </label>
-                                                </div>
-                                                <div className={cn('flex items-start gap-2 rounded-xl border p-3', isGraphic ? 'border-white/10 bg-card/40' : 'bg-background/80')}>
-                                                    <RadioGroupItem value="classes" id="crs-classes" className="mt-1" />
-                                                    <label htmlFor="crs-classes" className="text-sm leading-snug cursor-pointer">
-                                                        <span className="font-bold">Selected classes</span>
-                                                        <span className={cn('block text-xs mt-0.5', isGraphic ? 'text-muted-foreground' : 'text-muted-foreground')}>
-                                                            Only students in the classes you select below.
-                                                        </span>
-                                                    </label>
-                                                </div>
-                                                <div className={cn('flex items-start gap-2 rounded-xl border p-3', isGraphic ? 'border-white/10 bg-card/40' : 'bg-background/80')}>
-                                                    <RadioGroupItem value="teachers" id="crs-teachers" className="mt-1" />
-                                                    <label htmlFor="crs-teachers" className="text-sm leading-snug cursor-pointer">
-                                                        <span className="font-bold">Selected teachersâ€™ students</span>
-                                                        <span className={cn('block text-xs mt-0.5', isGraphic ? 'text-muted-foreground' : 'text-muted-foreground')}>
-                                                            Students linked to any teacher you pick (or their primary class) can redeem.
-                                                        </span>
-                                                    </label>
-                                                </div>
-                                            </RadioGroup>
-                                            {printRedemptionScope === 'classes' && (
-                                                <div className="space-y-2">
-                                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Classes</p>
-                                                    <ScrollArea className={cn('h-40 rounded-xl border p-2', isGraphic ? 'border-white/10 bg-card/30' : 'bg-background')}>
-                                                        <div className="space-y-2 pr-3">
-                                                            {(classes || []).slice().sort((a, b) => a.name.localeCompare(b.name)).map((cl) => (
-                                                                <label key={cl.id} className="flex items-center gap-2 text-sm cursor-pointer">
-                                                                    <Checkbox
-                                                                        checked={printScopeClassIds.includes(cl.id)}
-                                                                        onCheckedChange={(ch: boolean | 'indeterminate') =>
-                                                                            setPrintScopeClassIds((prev) =>
-                                                                                ch === true ? [...prev, cl.id] : prev.filter((id) => id !== cl.id)
-                                                                            )
-                                                                        }
-                                                                    />
-                                                                    <span>{cl.name}</span>
-                                                                </label>
-                                                            ))}
-                                                            {(classes || []).length === 0 && (
-                                                                <p className="text-xs text-muted-foreground px-1 py-2">No classes yet. Add classes in Admin.</p>
-                                                            )}
-                                                        </div>
-                                                    </ScrollArea>
-                                                </div>
-                                            )}
-                                            {printRedemptionScope === 'teachers' && (
-                                                <div className="space-y-2">
-                                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Teachers</p>
-                                                    <ScrollArea className={cn('h-40 rounded-xl border p-2', isGraphic ? 'border-white/10 bg-card/30' : 'bg-background')}>
-                                                        <div className="space-y-2 pr-3">
-                                                            {(teachers || []).slice().sort((a, b) => a.name.localeCompare(b.name)).map((t) => (
-                                                                <label key={t.id} className="flex items-center gap-2 text-sm cursor-pointer">
-                                                                    <Checkbox
-                                                                        checked={printScopeTeacherIds.includes(t.id)}
-                                                                        onCheckedChange={(ch: boolean | 'indeterminate') =>
-                                                                            setPrintScopeTeacherIds((prev) =>
-                                                                                ch === true ? [...prev, t.id] : prev.filter((id) => id !== t.id)
-                                                                            )
-                                                                        }
-                                                                    />
-                                                                    <span>{t.name}</span>
-                                                                </label>
-                                                            ))}
-                                                            {(teachers || []).length === 0 && (
-                                                                <p className="text-xs text-muted-foreground px-1 py-2">No teachers listed.</p>
-                                                            )}
-                                                        </div>
-                                                    </ScrollArea>
-                                                </div>
-                                            )}
-                                        </div>
-                                        )}
-
-                                        <Button
-                                            onClick={handlePrintSheet}
-                                            className={cn(
-                                                "w-full font-black text-lg uppercase tracking-widest h-16 rounded-2xl shadow-xl transition-all active:scale-95 group",
-                                                'text-white'
-                                            )}
-                                            style={{ backgroundColor: teacherAccent }}
-                                        >
-                                            <Printer className="w-6 h-6 mr-3 group-hover:scale-110 transition-transform" />
-                                            Generate & print
-                                        </Button>
-
-                                        <div className="flex flex-col items-center pt-8 border-t border-dashed border-border/50">
-                                            <p className="text-xs font-semibold uppercase tracking-wide mb-4 text-muted-foreground text-center">
-                                                Print preview (same cell as the sheet)
-                                            </p>
-                                            <div
-                                                className={cn(
-                                                    'coupon-print-preview-shell coupon-print-match-wrapper rounded-2xl border shadow-xl',
-                                                    isGraphic ? 'border-white/10 bg-foreground/5' : 'border-border/40 bg-slate-100/80'
+                                                <RadioGroup
+                                                    value={printRedemptionScope}
+                                                    onValueChange={(v) => setPrintRedemptionScope(v as CouponRedemptionScope)}
+                                                    className="grid gap-3 sm:grid-cols-2"
+                                                >
+                                                    <div className={cn('flex items-start gap-2 rounded-xl border p-3', isGraphic ? 'border-white/10 bg-card/40' : 'bg-background/80')}>
+                                                        <RadioGroupItem value="creator" id="crs-creator" className="mt-1" />
+                                                        <label htmlFor="crs-creator" className="text-sm leading-snug cursor-pointer">
+                                                            <span className="font-bold">Only my students</span>
+                                                            <span className={cn('block text-xs mt-0.5', isGraphic ? 'text-muted-foreground' : 'text-muted-foreground')}>
+                                                                Students on your roster (by class primary teacher or explicit assignment) can redeem.
+                                                            </span>
+                                                        </label>
+                                                    </div>
+                                                    <div className={cn('flex items-start gap-2 rounded-xl border p-3', isGraphic ? 'border-white/10 bg-card/40' : 'bg-background/80')}>
+                                                        <RadioGroupItem value="classes" id="crs-classes" className="mt-1" />
+                                                        <label htmlFor="crs-classes" className="text-sm leading-snug cursor-pointer">
+                                                            <span className="font-bold">Selected classes</span>
+                                                            <span className={cn('block text-xs mt-0.5', isGraphic ? 'text-muted-foreground' : 'text-muted-foreground')}>
+                                                                Only students in the classes you pick below (your classes and roster).
+                                                            </span>
+                                                        </label>
+                                                    </div>
+                                                </RadioGroup>
+                                                {printRedemptionScope === 'classes' && (
+                                                    <div className="space-y-2">
+                                                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Classes</p>
+                                                        <ScrollArea className={cn('h-40 rounded-xl border p-2', isGraphic ? 'border-white/10 bg-card/30' : 'bg-background')}>
+                                                            <div className="space-y-2 pr-3">
+                                                                {classesForTeacherUi.map((cl) => (
+                                                                    <label key={cl.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                                                                        <Checkbox
+                                                                            checked={printScopeClassIds.includes(cl.id)}
+                                                                            onCheckedChange={(ch: boolean | 'indeterminate') =>
+                                                                                setPrintScopeClassIds((prev) =>
+                                                                                    ch === true ? [...prev, cl.id] : prev.filter((id) => id !== cl.id)
+                                                                                )
+                                                                            }
+                                                                        />
+                                                                        <span>{cl.name}</span>
+                                                                    </label>
+                                                                ))}
+                                                                {classesForTeacherUi.length === 0 && (
+                                                                    <p className="text-xs text-muted-foreground px-1 py-2">
+                                                                        No classes linked to you yet. Claim a class under Attendance or ask an admin to set a primary teacher.
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                        </ScrollArea>
+                                                    </div>
                                                 )}
+                                            </div>
+                                            )}
+
+                                            <Button
+                                                onClick={handlePrintSheet}
+                                                className={cn(
+                                                    "w-full font-black text-lg uppercase tracking-widest h-16 rounded-2xl shadow-xl transition-all active:scale-95 group",
+                                                    'text-white'
+                                                )}
+                                                style={{ backgroundColor: teacherAccent }}
                                             >
-                                                <CouponPreview coupon={previewCoupon} schoolId={schoolId} />
+                                                <Printer className="w-6 h-6 mr-3 group-hover:scale-110 transition-transform" />
+                                                Generate & print
+                                            </Button>
+                                        </div>
+
+                                        <div className="w-full lg:w-80 lg:sticky lg:top-8 shrink-0">
+                                            <div className={cn(
+                                                'rounded-2xl border p-6 flex flex-col items-center shadow-sm',
+                                                isGraphic ? 'bg-card/40 border-white/10' : 'bg-slate-50/50 border-slate-200'
+                                            )}>
+                                                <p className="text-[10px] font-bold uppercase tracking-widest mb-6 text-muted-foreground opacity-70">
+                                                    Print Preview
+                                                </p>
+                                                <div
+                                                    className={cn(
+                                                        'coupon-print-preview-shell coupon-print-match-wrapper rounded-2xl border shadow-2xl',
+                                                        isGraphic ? 'border-white/10 bg-foreground/5' : 'border-border/40 bg-slate-100/80'
+                                                    )}
+                                                >
+                                                    <CouponPreview coupon={previewCoupon} schoolId={schoolId} />
+                                                </div>
+                                                <p className="text-[10px] text-muted-foreground mt-6 text-center italic opacity-60">
+                                                    Each cell on the printed sheet matches this layout.
+                                                </p>
                                             </div>
                                         </div>
                                     </div>
-                                )}
                             </CardContent>
                         </Card>
                                 </div>
 
                                 <div className="mt-8">
-                                  <MyCoupons schoolId={schoolId!} teacherId={teacherId} teacherName={teacherName} students={students || []} />
+                                  <MyCoupons schoolId={schoolId!} teacherId={teacherId} teacherName={teacherName} students={studentsForTeacherActions} />
                                 </div>
                             </TabsContent>
 
@@ -2044,7 +2357,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                         Award / Deduct Points
                                       </CardTitle>
                                       <CardDescription className={isGraphic ? 'text-muted-foreground/80' : ''}>
-                                        Select students and apply points instantly.
+                                        Select students on your roster and apply points instantly.
                                       </CardDescription>
                                     </CardHeader>
                                     <CardContent className="p-4 md:p-6 space-y-6">
@@ -2090,7 +2403,11 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                           </SelectTrigger>
                                           <SelectContent>
                                             <SelectItem value="all">All Classes</SelectItem>
-                                            {classes?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                                            {classesForTeacherUi.map((c) => (
+                                              <SelectItem key={c.id} value={c.id}>
+                                                {c.name}
+                                              </SelectItem>
+                                            ))}
                                           </SelectContent>
                                         </Select>
                                       </div>
@@ -2217,7 +2534,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
 
                             <TabsContent value="redemptions" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <RecentRedemptions schoolId={schoolId!} students={students || []} classes={classes || []} teacherId={teacherId} />
+                                    <RecentRedemptions schoolId={schoolId!} students={studentsForTeacherActions} classes={classes || []} teacherId={teacherId} />
                                 </div>
                             </TabsContent>
 
@@ -2229,7 +2546,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                             schoolName={schoolDocData?.name?.trim() || 'School'}
                                             teacherId={teacherId}
                                             teacherName={teacherName}
-                                            students={students || []}
+                                            students={studentsForTeacherActions}
                                             classes={classes || []}
                                             teachers={teachers || []}
                                             coupons={coupons || []}
@@ -2239,6 +2556,14 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                     </div>
                                 </div>
                             </TabsContent>
+
+                            {settings.enableHomework && (
+                                <TabsContent value="homework" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                <div className="max-w-6xl mx-auto">
+                                    <TeacherHomeworkTab schoolId={schoolId!} teacherId={teacherId} students={studentsForTeacherActions} classes={classesForTeacherUi} />
+                                </div>
+                            </TabsContent>
+                            )}
 
                     </Tabs>
                 </div>

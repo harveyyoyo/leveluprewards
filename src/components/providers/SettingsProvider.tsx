@@ -37,13 +37,17 @@ interface Settings {
     enableBadges: boolean;
     enableLevels: boolean;
     enableStreaks: boolean;
+    enableGoals: boolean;
     enableChallenges: boolean;
     // Analytics
     enableTeacherCharts: boolean;
     enableAdminAnalytics: boolean;
-    enableStudentReports: boolean;
-    // Social & Communication
+      // Social & Communication
     enableNotifications: boolean;
+    notificationRewardsEnabled: boolean;
+    notificationAttendanceEnabled: boolean;
+    notificationStaffAlertsEnabled: boolean;
+    notificationWhatsAppEnabled: boolean;
     enableClassLeaderboard: boolean;
     enableShoutouts: boolean;
     // Prize Shop
@@ -76,6 +80,8 @@ interface Settings {
     showIntroWizard?: boolean;
     // Workflow
     enableTeacherBudgets: boolean;
+    enableHomework: boolean;
+    enableLibrary: boolean;
     legacyMode: boolean;
     enableAnimatedBackground: boolean;
     calmMode?: boolean;
@@ -92,6 +98,9 @@ interface Settings {
     hiddenAnimatedBackgroundIds: string[];
     /** Admin-set palette for students with no individual `student.theme` (kiosk, shop, ID card). */
     defaultStudentTheme?: StudentTheme | null;
+    // Security & Session
+    adminSessionTimeoutMs?: number;
+    kioskSessionTimeoutSec?: number;
 }
 
 interface SettingsContextType {
@@ -126,11 +135,15 @@ const defaultSettings: Settings = {
     enableBadges: false,
     enableLevels: false,
     enableStreaks: false,
+    enableGoals: false,
     enableChallenges: false,
     enableTeacherCharts: false,
     enableAdminAnalytics: false,
-    enableStudentReports: false,
     enableNotifications: false,
+    notificationRewardsEnabled: true,
+    notificationAttendanceEnabled: true,
+    notificationStaffAlertsEnabled: true,
+    notificationWhatsAppEnabled: false,
     enableClassLeaderboard: false,
     enableShoutouts: false,
     enablePrizeImages: false,
@@ -156,6 +169,8 @@ const defaultSettings: Settings = {
     enableHelperMode: true,
     showIntroWizard: false,
     enableTeacherBudgets: false,
+    enableHomework: false,
+    enableLibrary: false,
     legacyMode: false,
     enableAnimatedBackground: true,
     calmMode: false,
@@ -167,6 +182,16 @@ const defaultSettings: Settings = {
     photoDropShadow: 'md',
     animatedBackgroundStyle: 'arcade',
     hiddenAnimatedBackgroundIds: [],
+    defaultStudentTheme: {
+        fontScale: 1.15,
+        background: '#f8fafc',
+        text: '#020617',
+        primary: '#0ea5e9',
+        cardBackground: '#ffffff',
+        accent: '#64748b',
+    },
+    adminSessionTimeoutMs: 5 * 60 * 1000,
+    kioskSessionTimeoutSec: 15,
 };
 
 const publicLoginSettings: Partial<Settings> = {
@@ -401,3 +426,4 @@ export function useSettings() {
     if (!ctx) throw new Error('useSettings must be used within SettingsProvider');
     return ctx;
 }
+

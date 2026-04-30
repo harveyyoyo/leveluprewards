@@ -27,7 +27,7 @@ export type ParsedSchoolSnapshot = {
     displayName: string;
     username: string;
     passcode: string;
-    role?: 'secretary' | 'prizeClerk';
+    role?: 'secretary' | 'prizeClerk' | 'reports';
   }[];
 };
 
@@ -173,7 +173,7 @@ export async function importParsedSchoolSnapshot(
       const uk = username.toLowerCase();
       if (takenUser.has(uk)) continue;
       takenUser.add(uk);
-      const role = s.role === 'prizeClerk' ? 'prizeClerk' : 'secretary';
+      const role = s.role === 'prizeClerk' || s.role === 'reports' ? s.role : 'secretary';
       await addStaffAccount(firestore, schoolId, {
         displayName,
         username,

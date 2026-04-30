@@ -13,11 +13,11 @@ import { useAuthFetch } from '@/lib/authFetch';
 import { collection, doc, updateDoc, setDoc, deleteDoc, getDocs, query, orderBy, limit } from 'firebase/firestore';
 
 import {
-  Users, Gift, BookOpen, Trash2, Edit, Plus, UploadCloud, Printer, LayoutDashboard, Database,
-  Settings, History, Award, CheckCircle, Tag, Trophy, ArrowRight, Loader2, Play, ShieldCheck,
-  User, Ticket, Upload, Download, Activity, Zap, Clock, Palette, Wand2, TableProperties,
-  FileText,
-} from 'lucide-react';
+   Users, Gift, BookOpen, Trash2, Edit, Plus, UploadCloud, Printer, LayoutDashboard, Database,
+   Settings, History, Award, CheckCircle, Tag, Trophy, ArrowRight, Loader2, Play, ShieldCheck,
+   User, Ticket, Upload, Download, Activity, Zap, Clock, Palette, Wand2, TableProperties,
+   FileText, Bell,
+ } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -87,6 +87,7 @@ import {
   type SchoolSnapshotImportResult,
 } from '@/lib/schoolDataImport';
 import { SAMPLE_BADGES, getSampleCategoryBadges } from '@/lib/sample-badges';
+import { AdminNotificationsTab } from './sections/AdminNotificationsTab';
 // The Students tab is the default tab, so keep it eager. Every other tab is
 // code-split with `next/dynamic` so its chunk is only fetched when the admin
 // actually clicks into it — this dramatically reduces the initial admin JS.
@@ -123,6 +124,10 @@ const AdminPrizesTab = dynamic(
 );
 const AdminCouponsTab = dynamic(
   () => import('./sections/AdminCouponsTab').then((m) => m.AdminCouponsTab),
+  { loading: tabLoader, ssr: false },
+);
+const AdminLibraryTab = dynamic(
+  () => import('./sections/AdminLibraryTab').then((m) => m.AdminLibraryTab),
   { loading: tabLoader, ssr: false },
 );
 const AdminBackupsTab = dynamic(
@@ -272,6 +277,7 @@ function AdminDashboardInner() {
     teachers, teachersLoading, teachersError,
     staffAccounts, staffAccountsLoading, staffAccountsError,
     categories, categoriesLoading, categoriesError,
+    library, libraryLoading, libraryError,
     prizes, prizesLoading, prizesError,
     coupons, couponsLoading, couponsError,
     attendancePeriods, attendancePeriodsLoading,
@@ -307,6 +313,8 @@ function AdminDashboardInner() {
   const [newTeacherPasscode, setNewTeacherPasscode] = useState('');
   const [newTeacherBudget, setNewTeacherBudget] = useState('');
   const [newTeacherBudgetPeriod, setNewTeacherBudgetPeriod] = useState<TeacherBudgetPeriod>('month');
+  const [newTeacherEmail, setNewTeacherEmail] = useState('');
+  const [newTeacherPhone, setNewTeacherPhone] = useState('');
   const [isClassModalOpen, setIsClassModalOpen] = useState(false);
   const [isTeacherModalOpen, setIsTeacherModalOpen] = useState(false);
 
@@ -397,6 +405,7 @@ function AdminDashboardInner() {
     { name: 'Categories', error: categoriesError },
     { name: 'Prizes', error: prizesError },
     { name: 'Coupons', error: couponsError },
+    { name: 'Library', error: libraryError },
     { name: 'Backups', error: backupsError },
   ].filter(c => c.error);
 
@@ -476,7 +485,7 @@ function AdminDashboardInner() {
     if (editingTeacher) {
       if (budgetVal === undefined) {
         updateTeacher(
-          { ...editingTeacher, name: newTeacherName, username, passcode },
+          { ...editingTeacher, name: newTeacherName, username, passcode, email: newTeacherEmail, phone: newTeacherPhone },
           { clearTeacherBudget: true },
         );
       } else {
@@ -490,6 +499,8 @@ function AdminDashboardInner() {
           passcode,
           monthlyBudget: budgetVal,
           budgetPeriod: periodForSave,
+          email: newTeacherEmail,
+          phone: newTeacherPhone,
         };
         if (budgetChanged) {
           updateTeacher({
@@ -502,12 +513,14 @@ function AdminDashboardInner() {
         }
       }
     } else if (budgetVal === undefined) {
-      addTeacher({ name: newTeacherName, username, passcode });
+      addTeacher({ name: newTeacherName, username, passcode, email: newTeacherEmail, phone: newTeacherPhone });
     } else {
       addTeacher({
         name: newTeacherName,
         username,
         passcode,
+        email: newTeacherEmail,
+        phone: newTeacherPhone,
         monthlyBudget: budgetVal,
         budgetPeriod: periodForSave,
         spentThisMonth: 0,
@@ -520,6 +533,8 @@ function AdminDashboardInner() {
     setNewTeacherPasscode('');
     setNewTeacherBudget('');
     setNewTeacherBudgetPeriod('month');
+    setNewTeacherEmail('');
+    setNewTeacherPhone('');
     setEditingTeacher(null);
     setIsTeacherModalOpen(false);
   };
@@ -663,6 +678,59 @@ function AdminDashboardInner() {
     studentCsvInputRef.current?.click();
   };
 
+  const handleAddLibraryItem = () => {
+    if (!firestore || !schoolId) return;
+    const upc = prompt('Enter the UPC or barcode for this item:');
+    if (!upc) return;
+    const name = prompt('Enter the name of this library item:');
+    if (!name) return;
+    
+    setDoc(doc(collection(firestore, 'schools', schoolId, 'library')), {
+      name,
+      upc,
+      status: 'available',
+      addedBy: 'Admin'
+    });
+    playSound('success');
+    toast({ title: 'Item Added', description: 'The library item was added successfully.' });
+  };
+
+  const handleEditLibraryItem = (item: any) => {
+    if (!firestore || !schoolId) return;
+    const newName = prompt('Enter new name:', item.name);
+    if (!newName) return;
+    const newUpc = prompt('Enter new UPC:', item.upc);
+    if (!newUpc) return;
+    updateDoc(doc(firestore, 'schools', schoolId, 'library', item.id), {
+      name: newName,
+      upc: newUpc
+    });
+    playSound('success');
+    toast({ title: 'Item Updated', description: 'The library item was updated successfully.' });
+  };
+
+  const handleDeleteLibraryItem = async (itemId: string) => {
+    if (!firestore || !schoolId) return;
+    if (await confirm({ title: 'Delete Library Item?', description: 'Are you sure you want to remove this item? This cannot be undone.' })) {
+      deleteDoc(doc(firestore, 'schools', schoolId, 'library', itemId));
+      playSound('trash');
+      toast({ title: 'Item Deleted', description: 'The library item has been removed.' });
+    }
+  };
+
+  const handleReturnLibraryItem = async (itemId: string) => {
+    if (!firestore || !schoolId) return;
+    if (await confirm({ title: 'Force Return Item?', description: 'This will forcefully check the item back in. Proceed?' })) {
+      updateDoc(doc(firestore, 'schools', schoolId, 'library', itemId), {
+        status: 'available',
+        checkedOutTo: null,
+        checkedOutAt: null
+      });
+      playSound('success');
+      toast({ title: 'Item Returned', description: 'The item is now available.' });
+    }
+  };
+
   const availableCoupons = coupons?.filter(c => !c.used).sort((a, b) => b.createdAt - a.createdAt) || [];
   const redeemedCoupons = coupons?.filter(c => c.used).sort((a, b) => (b.usedAt ?? 0) - (a.usedAt ?? 0)) || [];
 
@@ -767,9 +835,14 @@ function AdminDashboardInner() {
               <TabsTrigger value="prizes" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
                 <Gift className="w-4 h-4" aria-hidden="true" /> Prizes
               </TabsTrigger>
-              <TabsTrigger value="coupons" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
+                            <TabsTrigger value="coupons" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
                 <Ticket className="w-4 h-4" aria-hidden="true" /> Coupons
               </TabsTrigger>
+              {settings.enableLibrary && (
+                <TabsTrigger value="library" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
+                  <BookOpen className="w-4 h-4" aria-hidden="true" /> Library
+                </TabsTrigger>
+              )}
               {settings.enableAchievements && (
                 <TabsTrigger value="bonuspoints" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
                   <Trophy className="w-4 h-4" aria-hidden="true" /> Bonus Points
@@ -795,6 +868,11 @@ function AdminDashboardInner() {
               <TabsTrigger value="branding" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
                 <UploadCloud className="w-4 h-4" aria-hidden="true" /> Branding
               </TabsTrigger>
+              {settings.enableNotifications && (
+                <TabsTrigger value="notifications" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
+                  <Bell className="w-4 h-4" aria-hidden="true" /> Notifications
+                </TabsTrigger>
+              )}
               <TabsTrigger value="backups" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
                 <Database className="w-4 h-4" aria-hidden="true" /> Backups
               </TabsTrigger>
@@ -898,6 +976,8 @@ function AdminDashboardInner() {
             <AdminTeachersTab
               teachers={teachers}
               staffAccounts={staffAccounts}
+              students={students ?? []}
+              classes={classes ?? []}
               schoolId={schoolId!}
               onAddTeacher={() => setIsTeacherModalOpen(true)}
               onEditTeacher={(t) => {
@@ -908,6 +988,8 @@ function AdminDashboardInner() {
                 setNewTeacherBudget(t.monthlyBudget?.toString() || '');
                 const p = t.budgetPeriod;
                 setNewTeacherBudgetPeriod(p === 'day' || p === 'week' || p === 'month' ? p : 'month');
+                setNewTeacherEmail(t.email || '');
+                setNewTeacherPhone(t.phone || '');
                 setIsTeacherModalOpen(true);
               }}
               onDeleteTeacher={async (id) => {
@@ -1017,9 +1099,22 @@ function AdminDashboardInner() {
           </TabsContent>
 
 
-          <TabsContent value="coupons" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <AdminCouponsTab availableCoupons={availableCoupons} redeemedCoupons={redeemedCoupons} getStudentName={getStudentName} />
-          </TabsContent>
+                      <TabsContent value="coupons" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <AdminCouponsTab availableCoupons={availableCoupons} redeemedCoupons={redeemedCoupons} getStudentName={getStudentName} />
+            </TabsContent>
+
+            {settings.enableLibrary && (
+              <TabsContent value="library" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <AdminLibraryTab
+                  libraryItems={library}
+                  getStudentName={getStudentName}
+                  onAddLibraryItem={handleAddLibraryItem}
+                  onEditLibraryItem={handleEditLibraryItem}
+                  onDeleteLibraryItem={handleDeleteLibraryItem}
+                  onReturnLibraryItem={handleReturnLibraryItem}
+                />
+              </TabsContent>
+            )}
 
           {settings.enableAchievements && (
           <TabsContent value="bonuspoints" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -1086,18 +1181,18 @@ function AdminDashboardInner() {
                 studentActivityLogLoading={studentActivityLogLoading}
                 loadStudentActivityLog={loadStudentActivityLog}
                 setTeacherAttendanceConfigState={setTeacherAttendanceConfigState}
-                UniversalPeriodsAdmin={UniversalPeriodsAdmin}
                 attendanceConfig={attendanceConfig}
                 setAttendanceConfigState={setAttendanceConfigState}
                 attendanceConfigSaving={attendanceConfigSaving}
                 handleSaveAttendanceConfig={handleSaveAttendanceConfig}
                 getAttendanceConfig={getAttendanceConfig}
                 setAttendanceConfig={setAttendanceConfig}
+                UniversalPeriodsAdmin={UniversalPeriodsAdmin}
               />
             </TabsContent>
           )}
 
-          <TabsContent value="branding" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <TabsContent value="branding" className="mt-6">
             <AdminBrandingTab
               schoolId={schoolId}
               firestore={firestore}
@@ -1117,6 +1212,12 @@ function AdminDashboardInner() {
               playSound={(s: any) => playSound(s)}
             />
           </TabsContent>
+
+          {settings.enableNotifications && (
+            <TabsContent value="notifications" className="mt-6">
+              <AdminNotificationsTab />
+            </TabsContent>
+          )}
 
           <TabsContent value="backups" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <AdminBackupsTab
@@ -1157,6 +1258,8 @@ function AdminDashboardInner() {
             setNewTeacherPasscode('');
             setNewTeacherBudget('');
             setNewTeacherBudgetPeriod('month');
+            setNewTeacherEmail('');
+            setNewTeacherPhone('');
           }
         }}>
           <DialogContent>
@@ -1181,6 +1284,16 @@ function AdminDashboardInner() {
                 <div className="space-y-1">
                   <Label htmlFor="new-teacher-passcode">Login Passcode</Label>
                   <Input id="new-teacher-passcode" type="password" value={newTeacherPasscode} onChange={e => setNewTeacherPasscode(e.target.value)} placeholder="Secret passcode" autoComplete="new-password" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <Label htmlFor="new-teacher-email">Email (Optional)</Label>
+                    <Input id="new-teacher-email" type="email" value={newTeacherEmail} onChange={e => setNewTeacherEmail(e.target.value)} placeholder="teacher@school.edu" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="new-teacher-phone">Phone (Optional)</Label>
+                    <Input id="new-teacher-phone" type="tel" value={newTeacherPhone} onChange={e => setNewTeacherPhone(e.target.value)} placeholder="555-0123" />
+                  </div>
                 </div>
                 {settings.enableTeacherBudgets && (
                   <div className="space-y-3">
@@ -1227,6 +1340,8 @@ function AdminDashboardInner() {
                   setNewTeacherPasscode('');
                   setNewTeacherBudget('');
                   setNewTeacherBudgetPeriod('month');
+                  setNewTeacherEmail('');
+                  setNewTeacherPhone('');
                 }}>Cancel</Button>
                 <Button type="submit">{editingTeacher ? 'Save Changes' : 'Add Teacher'}</Button>
               </DialogFooter>
@@ -2089,3 +2204,6 @@ export default function AdminPage() {
     </ErrorBoundary>
   );
 }
+
+
+

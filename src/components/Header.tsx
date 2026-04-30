@@ -123,10 +123,7 @@ export default function Header() {
               </div>
             )}
             <AdminLoginButton />
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl sm:h-9 sm:w-9" onClick={handleLogout}>
-              <LogOut className="w-4 h-4" />
-            </Button>
-            {loginState !== 'student' && <SettingsModal />}
+            <SettingsModal />
           </div>
         </header>
 
@@ -260,8 +257,8 @@ export default function Header() {
                   <DropdownMenuContent align="end">
                     <DropdownMenuLabel>Account</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleLogout} className="text-base py-2 hover:bg-destructive/10 hover:text-destructive cursor-pointer">
-                      <LogOut className="mr-2 h-5 w-5" /> Log Out
+                    <DropdownMenuItem className="text-muted-foreground/50 italic py-2 cursor-default">
+                      Security & logout available in Settings
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -278,7 +275,7 @@ export default function Header() {
 
               <div className="h-8 w-px bg-primary/20" />
 
-              {loginState !== 'student' && <SettingsModal />}
+              <SettingsModal />
             </>
           )}
         </div>

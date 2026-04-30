@@ -6,7 +6,8 @@ import React, {
   useCallback,
   useMemo,
 } from 'react';
-import type { Student, Class, Coupon, Teacher, Prize, Category, HistoryItem, Achievement, Badge, AttendanceSettings, AttendanceLogEntry, RecordClassSignInResult } from '@/lib/types';
+import type { Student, Class, Coupon, Teacher, Prize, Category, HistoryItem, Achievement, Badge, AttendanceSettings, AttendanceLogEntry, RecordClassSignInResult, HomeworkAssignment, HomeworkSubmission } from '@/lib/types';
+import type { CouponPrintPageSize } from '@/lib/coupon-print';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { reportFirestorePermissionError } from '@/firebase/error-emitter';
 import { collection } from 'firebase/firestore';
@@ -32,6 +33,10 @@ import {
   getTeacherAttendanceConfig as dbGetTeacherAttendanceConfig,
   setTeacherAttendanceConfig as dbSetTeacherAttendanceConfig,
   listTeacherAttendanceLog as dbListTeacherAttendanceLog,
+  addHomeworkAssignment as dbAddHomeworkAssignment,
+  deleteHomeworkAssignment as dbDeleteHomeworkAssignment,
+  submitHomework as dbSubmitHomework,
+  approveHomework as dbApproveHomework,
 } from '@/lib/db';
 import { AuthProvider, useAuth } from './providers/AuthProvider';
 import type { LogoutOptions } from './providers/AuthProvider';
@@ -50,23 +55,24 @@ interface AppContextType {
   // Auth
   isInitialized: boolean;
   isUserLoading: boolean;
-  loginState: 'loggedOut' | 'school' | 'developer' | 'student' | 'teacher' | 'admin' | 'secretary' | 'prizeClerk';
+  loginState: 'loggedOut' | 'school' | 'developer' | 'student' | 'teacher' | 'admin' | 'secretary' | 'prizeClerk' | 'reports';
   isAdmin: boolean;
   isTeacher: boolean;
   isSecretary: boolean;
   isPrizeClerk: boolean;
+  isReports: boolean;
   userName: string | null;
   userId: string | null;
   teacherDocId: string | null;
   schoolId: string | null;
   syncStatus: 'synced' | 'syncing' | 'offline' | 'error';
-  login: (type: 'school' | 'developer' | 'student' | 'teacher' | 'admin' | 'secretary' | 'prizeClerk', credentials: { schoolId?: string; passcode?: string; username?: string; teacherName?: string; teacherDocId?: string; staffRole?: 'secretary' | 'prizeClerk'; }) => Promise<boolean>;
+  login: (type: 'school' | 'developer' | 'student' | 'teacher' | 'admin' | 'secretary' | 'prizeClerk' | 'reports', credentials: { schoolId?: string; passcode?: string; username?: string; teacherName?: string; teacherDocId?: string; staffRole?: 'secretary' | 'prizeClerk' | 'reports'; }) => Promise<boolean>;
   logout: (options?: LogoutOptions) => void;
   setUserName: (name: string | null) => void;
   isKioskLocked: boolean;
   setIsKioskLocked: (locked: boolean) => void;
   // Print
-  setCouponsToPrint: (coupons: Coupon[]) => void;
+  setCouponsToPrint: (coupons: Coupon[], options?: { couponsPerPage?: CouponPrintPageSize }) => void;
   setStudentsToPrint: (data: { students: Student[], classes: Class[], printerType?: 'dtc4500e' }) => void;
   printPrizeTickets: (tickets: any[]) => void;
   // CRUD
@@ -123,6 +129,11 @@ interface AppContextType {
   getTeacherAttendanceConfig: (teacherId: string) => Promise<AttendanceSettings | null>;
   setTeacherAttendanceConfig: (teacherId: string, settings: AttendanceSettings) => Promise<void>;
   listTeacherAttendanceLog: (teacherId: string, limitCount?: number) => Promise<AttendanceLogEntry[]>;
+  // Homework
+  addHomeworkAssignment: (assignment: Omit<HomeworkAssignment, 'id'>) => Promise<string>;
+  deleteHomeworkAssignment: (id: string) => Promise<void>;
+  submitHomework: (studentId: string, assignmentId: string) => Promise<void>;
+  approveHomework: (studentId: string, assignmentId: string, points: number, title: string) => Promise<{ success: boolean; message: string; bonusTotal?: number }>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -158,6 +169,76 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
   const { data: badges, isLoading: badgesLoading } = useCollection<Badge>(badgesQuery);
 
   const { settings } = useSettings();
+  const { loginState, logout } = authCtx;
+
+  // Privileged sessions (admin, teacher): auto-logout after idle period.
+  // Consumes configurable timeout from settings (default: 5 min).
+  React.useEffect(() => {
+    if (loginState !== 'admin' && loginState !== 'teacher' && loginState !== 'secretary' && loginState !== 'prizeClerk' && loginState !== 'reports') return;
+
+    const idleMs = settings.adminSessionTimeoutMs ?? (5 * 60 * 1000);
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let sessionEndAt = 0;
+
+    const arm = () => {
+      sessionEndAt = Date.now() + idleMs;
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        // If settings modal is open, don't auto-logout.
+        if (typeof document !== 'undefined' && document.querySelector('[data-settings-open="true"]')) {
+          arm();
+          return;
+        }
+        logout();
+      }, idleMs);
+    };
+
+    const checkExpired = () => {
+      if (Date.now() >= sessionEndAt) {
+        if (typeof document !== 'undefined' && document.querySelector('[data-settings-open="true"]')) {
+          arm();
+        } else {
+          logout();
+        }
+      }
+    };
+
+    const onActivity = () => {
+      if (document.visibilityState === 'visible') {
+        arm();
+      }
+    };
+
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        checkExpired();
+      }
+    };
+
+    const events: string[] = [
+      'mousemove',
+      'mousedown',
+      'keydown',
+      'touchstart',
+      'scroll',
+      'wheel',
+      'pointerdown',
+    ];
+
+    for (const ev of events) {
+      window.addEventListener(ev as any, onActivity, { passive: true } as any);
+    }
+    document.addEventListener('visibilitychange', onVisibility);
+    arm();
+
+    return () => {
+      if (timer) clearTimeout(timer);
+      for (const ev of events) {
+        window.removeEventListener(ev as any, onActivity as any);
+      }
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [loginState, logout, settings.adminSessionTimeoutMs]);
 
   // Background refresh: download coupon snapshot for offline validation.
   React.useEffect(() => {
@@ -416,6 +497,26 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     return dbListTeacherAttendanceLog(firestore, schoolId, teacherId, limitCount);
   }, [firestore, schoolId]);
 
+  const addHomeworkAssignment_ = useCallback((assignment: Omit<HomeworkAssignment, 'id'>) => {
+    if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
+    return dbAddHomeworkAssignment(firestore, schoolId, assignment);
+  }, [firestore, schoolId]);
+
+  const deleteHomeworkAssignment_ = useCallback((id: string) => {
+    if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
+    return dbDeleteHomeworkAssignment(firestore, schoolId, id);
+  }, [firestore, schoolId]);
+
+  const submitHomework_ = useCallback((studentId: string, assignmentId: string) => {
+    if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
+    return dbSubmitHomework(firestore, schoolId, studentId, assignmentId);
+  }, [firestore, schoolId]);
+
+  const approveHomework_ = useCallback((studentId: string, assignmentId: string, points: number, title: string) => {
+    if (!firestore || !schoolId) return Promise.resolve({ success: false, message: "Not logged into a school." });
+    return dbApproveHomework(firestore, schoolId, studentId, assignmentId, points, title, achievements || [], categories || [], badges || []);
+  }, [firestore, schoolId, achievements, categories, badges]);
+
   const value = useMemo(() => ({
     // Auth
     ...authCtx,
@@ -423,6 +524,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     isTeacher: authCtx.isTeacher,
     isSecretary: authCtx.isSecretary,
     isPrizeClerk: authCtx.isPrizeClerk,
+    isReports: authCtx.isReports,
     // Print
     ...printCtx,
     printPrizeTickets: printCtx.printPrizeTickets,
@@ -456,6 +558,11 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     getTeacherAttendanceConfig: getTeacherAttendanceConfig_,
     setTeacherAttendanceConfig: setTeacherAttendanceConfig_,
     listTeacherAttendanceLog: listTeacherAttendanceLog_,
+    // Homework
+    addHomeworkAssignment: addHomeworkAssignment_,
+    deleteHomeworkAssignment: deleteHomeworkAssignment_,
+    submitHomework: submitHomework_,
+    approveHomework: approveHomework_,
   }), [
     authCtx, printCtx, backupCtx,
     addStudent_, updateStudent_, deleteStudent_,
@@ -470,6 +577,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     purgeStudentProgress_,
     getAttendanceConfig_, setAttendanceConfig_, recordClassSignIn_, listAttendanceLog_,
     getTeacherAttendanceConfig_, setTeacherAttendanceConfig_, listTeacherAttendanceLog_,
+    addHomeworkAssignment_, deleteHomeworkAssignment_, submitHomework_, approveHomework_,
     categories, categoriesLoading,
     achievements, achievementsLoading,
     badges, badgesLoading,

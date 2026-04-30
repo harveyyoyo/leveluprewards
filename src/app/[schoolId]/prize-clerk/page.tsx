@@ -25,7 +25,7 @@ const StudentScanner = dynamic(
 );
 
 export default function PrizeClerkPage() {
-    const { loginState, isInitialized, schoolId, login, logout, userName } = useAppContext();
+    const { loginState, isInitialized, schoolId, login, logout, userName, isPrizeClerk } = useAppContext();
     const router = useRouter();
     const { settings } = useSettings();
     const isGraphic = settings.graphicMode === 'graphics';
@@ -37,14 +37,16 @@ export default function PrizeClerkPage() {
 
     useEffect(() => {
         if (!isInitialized || !schoolId) return;
-        if (loginState === 'secretary') {
+        if (loginState === 'secretary' && !isPrizeClerk) {
             router.replace(`/${schoolId}/secretary`);
         } else if (loginState === 'admin' || loginState === 'developer') {
             router.replace(`/${schoolId}/admin`);
         } else if (loginState === 'teacher') {
             router.replace(`/${schoolId}/teacher`);
+        } else if (loginState === 'reports' && !isPrizeClerk) {
+            router.replace(`/${schoolId}/reports`);
         }
-    }, [isInitialized, loginState, schoolId, router]);
+    }, [isInitialized, isPrizeClerk, loginState, schoolId, router]);
 
     const onScannerStudent = useCallback((id: string, _meta?: StudentFoundMeta) => {
         setDeskStudentId(id);
@@ -102,7 +104,7 @@ export default function PrizeClerkPage() {
         );
     }
 
-    if (loginState === 'prizeClerk') {
+    if (isPrizeClerk) {
         if (deskStudentId) {
             return (
                 <ErrorBoundary name="PrizeClerkDesk">

@@ -70,19 +70,20 @@ const steps = [
     hideNext: true,
   },
   {
-    title: 'Step 11: Fulfill the Prize',
-    description: "After the student 'buys' a prize, the teacher needs to actually hand it out. Log out and return to the 'Teacher Portal'. Find the redeemed prize in the 'Prize Redemptions' list, give the prize to the student in real life, and then check the box to mark it as delivered so it disappears from the pending list.",
+    title: 'Step 11: Redeem a Prize',
+    description: "You're in the Prize Shop! Select a prize you can afford and click 'Buy'. Once redeemed, you'll see a success message. Then, return to the 'Teacher Portal' (using the home icon then 'Teacher Portal') to finalize the delivery.",
     target: '/prize',
+    hideNext: true,
   },
   {
-    title: 'Step 12: Hall of Fame',
-    description: 'Great! The final step is to check out the school leaderboards. Navigate back to the main portal and click on the "Hall of Fame".',
+    title: 'Step 12: Fulfill the Prize',
+    description: "Back in the Teacher Portal, find your redemption in the 'Prize Redemptions' list. In a real classroom, you'd hand over the prize now. Click the checkbox to mark it as delivered. Finally, let's see the leaderboards—head to the 'Hall of Fame' from the portal.",
     target: '/teacher',
     hideNext: true,
   },
   {
-    title: "Step 13: You're a Pro!",
-    description: "You've completed the tour of the main features! Feel free to explore the Admin dashboard for more settings. You can turn this wizard off in the settings menu at any time.",
+    title: "Step 13: Hall of Fame",
+    description: "You've made it! This is the school leaderboard. You can see top students by points or period. You've completed the tour and are ready to level up your school!",
     target: '/halloffame',
   },
 ];
@@ -112,6 +113,19 @@ export function IntroWizard() {
       }
     }
   }, [isWizardEnabled]);
+
+  // Auto-advance logic: if we reach the target of the NEXT step, move forward.
+  // This helps when the current step is a "navigation" step (hideNext: true).
+  useEffect(() => {
+    if (!isWizardEnabled || !pathname) return;
+    
+    const nextStep = steps[stepIndex + 1];
+    if (nextStep && (pathname === nextStep.target || pathname.endsWith(nextStep.target))) {
+      // If we landed on the next step's target, advance.
+      setStepIndex(stepIndex + 1);
+      window.localStorage.setItem('arcade_intro_wizard_step', String(stepIndex + 1));
+    }
+  }, [pathname, stepIndex, isWizardEnabled]);
 
   const handleNext = () => {
     if (stepIndex < steps.length - 1) {
@@ -146,6 +160,7 @@ export function IntroWizard() {
     return null;
   }
 
+
   return (
     <AnimatePresence>
       <motion.div
@@ -177,10 +192,12 @@ export function IntroWizard() {
                     Back
                   </Button>
                 )}
-                <Button onClick={handleNext} className="rounded-full shadow-lg">
-                  {stepIndex < steps.length - 1 ? 'Next' : 'Finish'}
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
+                {!currentStep.hideNext && (
+                  <Button onClick={handleNext} className="rounded-full shadow-lg">
+                    {stepIndex < steps.length - 1 ? 'Next' : 'Finish'}
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                )}
               </div>
             </div>
           </CardContent>

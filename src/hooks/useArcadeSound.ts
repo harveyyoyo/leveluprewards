@@ -10,7 +10,8 @@ export type SoundEffect =
   | 'click'
   | 'hover'
   | 'swoosh'
-  | 'redeem';
+  | 'redeem'
+  | 'trash';
 
 const createSynth = () => {
   if (typeof window === 'undefined') return null;
@@ -64,6 +65,7 @@ const createSynth = () => {
         break;
 
       case 'click':
+      case 'trash':
         playNote(800, now, 0.08, 'square', 0.05);
         break;
 

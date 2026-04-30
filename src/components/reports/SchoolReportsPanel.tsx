@@ -23,8 +23,17 @@ import {
   prizesForTeacherReport,
   studentsInTeacherScope,
 } from '@/lib/reportsScope';
+import { HOMEWORK_REWARD_CATEGORY_PREFIX, homeworkRewardCategoryKey } from '@/lib/homeworkRewards';
 
-export type ReportKind = 'summary' | 'roster' | 'balances' | 'redemptions' | 'coupons' | 'prizes' | 'classes';
+export type ReportKind =
+  | 'summary'
+  | 'roster'
+  | 'balances'
+  | 'redemptions'
+  | 'coupons'
+  | 'prizes'
+  | 'classes'
+  | 'homework';
 
 type RosterSort = 'class-name' | 'name' | 'points-desc' | 'lifetime-desc';
 type CouponStatusFilter = 'all' | 'unused' | 'redeemed' | 'expired';
@@ -130,6 +139,8 @@ function reportTitle(kind: ReportKind): string {
       return 'Prize catalog';
     case 'classes':
       return 'Classes overview';
+    case 'homework':
+      return 'Homework rewards';
   }
 }
 
@@ -399,6 +410,54 @@ export function SchoolReportsPanel({
     [categoriesInScope, students],
   );
 
+  /** Reward titles derived from `categoryPoints` keys `Homework: &lt;title&gt;` (same as Homework Rewards payouts). */
+  const homeworkColumnTitles = useMemo(() => {
+    const titles = new Set<string>();
+    for (const s of students) {
+      const cp = s.categoryPoints ?? {};
+      for (const key of Object.keys(cp)) {
+        if (key.startsWith(HOMEWORK_REWARD_CATEGORY_PREFIX)) {
+          titles.add(key.slice(HOMEWORK_REWARD_CATEGORY_PREFIX.length));
+        }
+      }
+    }
+    return [...titles].sort((a, b) => a.localeCompare(b));
+  }, [students]);
+
+  const homeworkRows = useMemo(() => {
+    const sorted = [...students].sort((a, b) => {
+      if (rosterSort === 'points-desc') return safePoints(b.points) - safePoints(a.points);
+      if (rosterSort === 'lifetime-desc') return safePoints(b.lifetimePoints ?? b.points) - safePoints(a.lifetimePoints ?? a.points);
+      if (rosterSort === 'name') return studentDisplayName(a).localeCompare(studentDisplayName(b));
+      const ca = classNameForStudent(a.classId, classes);
+      const cb = classNameForStudent(b.classId, classes);
+      if (ca !== cb) return ca.localeCompare(cb);
+      return studentDisplayName(a).localeCompare(studentDisplayName(b));
+    });
+    return sorted.map((s) => {
+      const byTitle: Record<string, number> = {};
+      let total = 0;
+      for (const title of homeworkColumnTitles) {
+        const key = homeworkRewardCategoryKey(title);
+        const pts = safePoints(s.categoryPoints?.[key]);
+        byTitle[title] = pts;
+        total += pts;
+      }
+      return {
+        id: s.id,
+        name: studentDisplayName(s),
+        cls: classNameForStudent(s.classId, classes),
+        byTitle,
+        total,
+      };
+    });
+  }, [students, classes, rosterSort, homeworkColumnTitles]);
+
+  const homeworkGrandTotal = useMemo(
+    () => homeworkRows.reduce((sum, row) => sum + row.total, 0),
+    [homeworkRows],
+  );
+
   const scopeLabel =
     scope === 'school'
       ? 'School-wide'
@@ -531,6 +590,32 @@ export function SchoolReportsPanel({
       return;
     }
 
+    if (reportKind === 'homework') {
+      if (homeworkColumnTitles.length === 0) {
+        downloadCsv(`${baseName}-${generated}.csv`, [
+          ...meta,
+          ['Note', 'No homework reward totals found. Points from the Homework Rewards tab are stored under category keys Homework: <title>.'],
+        ]);
+        return;
+      }
+      const colHeaders = homeworkColumnTitles.map((t) => homeworkRewardCategoryKey(t));
+      const totalsByTitle = homeworkColumnTitles.map((t) =>
+        homeworkRows.reduce((sum, row) => sum + safePoints(row.byTitle[t]), 0),
+      );
+      downloadCsv(`${baseName}-${generated}.csv`, [
+        ...meta,
+        ['Student', 'Class', ...colHeaders, 'Total homework pts'],
+        ...homeworkRows.map((row) => [
+          row.name,
+          row.cls,
+          ...homeworkColumnTitles.map((t) => safePoints(row.byTitle[t])),
+          row.total,
+        ]),
+        ['TOTAL', '', ...totalsByTitle, homeworkGrandTotal],
+      ]);
+      return;
+    }
+
     downloadCsv(`${baseName}-${generated}.csv`, [
       ...meta,
       ['Class', 'Primary teacher', 'Students in scope', 'Current points', 'Lifetime points'],
@@ -560,6 +645,9 @@ export function SchoolReportsPanel({
     couponAgg,
     prizes,
     classRows,
+    homeworkColumnTitles,
+    homeworkRows,
+    homeworkGrandTotal,
   ]);
 
   useEffect(() => {
@@ -851,6 +939,59 @@ export function SchoolReportsPanel({
                 </table>
               </section>
             )}
+            {reportKind === 'homework' && (
+              <section className="space-y-3">
+                <h2 className="text-lg font-bold border-b border-neutral-400 pb-1">Homework rewards</h2>
+                <p className="text-[10pt] text-neutral-800 max-w-[7in] leading-snug">
+                  Cumulative homework reward points from the Homework Rewards tab (stored per student as{' '}
+                  <span className="font-mono">Homework: …</span> balances). Date range here filters which students are included
+                  (same as other reports), not the date each point was awarded.
+                </p>
+                {homeworkColumnTitles.length === 0 ? (
+                  <p className="text-sm italic">No homework reward totals in this scope.</p>
+                ) : (
+                  <table className="w-full border-collapse border border-black text-[9pt]">
+                    <thead>
+                      <tr className="bg-neutral-100">
+                        <th className="border border-black p-1 text-left">Student</th>
+                        <th className="border border-black p-1 text-left">Class</th>
+                        {homeworkColumnTitles.map((t) => (
+                          <th key={t} className="border border-black p-1 text-right max-w-[120px] break-words">
+                            {t}
+                          </th>
+                        ))}
+                        <th className="border border-black p-1 text-right">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {homeworkRows.map((row) => (
+                        <tr key={row.id}>
+                          <td className="border border-black p-1">{row.name}</td>
+                          <td className="border border-black p-1">{row.cls}</td>
+                          {homeworkColumnTitles.map((t) => (
+                            <td key={t} className="border border-black p-1 text-right">
+                              {safePoints(row.byTitle[t]).toLocaleString()}
+                            </td>
+                          ))}
+                          <td className="border border-black p-1 text-right font-semibold">{row.total.toLocaleString()}</td>
+                        </tr>
+                      ))}
+                      <tr className="bg-neutral-50 font-semibold">
+                        <td className="border border-black p-1" colSpan={2}>
+                          Total
+                        </td>
+                        {homeworkColumnTitles.map((t) => (
+                          <td key={t} className="border border-black p-1 text-right">
+                            {homeworkRows.reduce((sum, r) => sum + safePoints(r.byTitle[t]), 0).toLocaleString()}
+                          </td>
+                        ))}
+                        <td className="border border-black p-1 text-right">{homeworkGrandTotal.toLocaleString()}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                )}
+              </section>
+            )}
           </div>,
           document.body,
         )
@@ -889,6 +1030,7 @@ export function SchoolReportsPanel({
                   <SelectItem value="coupons">Coupon inventory</SelectItem>
                   <SelectItem value="prizes">Prize catalog</SelectItem>
                   <SelectItem value="classes">Classes overview</SelectItem>
+                  <SelectItem value="homework">Homework rewards</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -1089,6 +1231,24 @@ export function SchoolReportsPanel({
                 <p className="text-sm text-muted-foreground">
                   {classRows.length} class{classRows.length === 1 ? '' : 'es'} with student counts and point totals.
                 </p>
+              )}
+              {reportKind === 'homework' && (
+                <div className="space-y-2 text-sm text-muted-foreground">
+                  <Helper content="Uses each student’s running total for category keys named like “Homework:” plus the reward title (same as the Homework Rewards tab). This is cumulative balance per title, not a dated activity log.">
+                    <p>
+                      {homeworkColumnTitles.length === 0 ? (
+                        <>No homework reward buckets yet in this scope.</>
+                      ) : (
+                        <>
+                          <span className="font-semibold text-foreground">{homeworkColumnTitles.length}</span> reward title
+                          {homeworkColumnTitles.length === 1 ? '' : 's'},{' '}
+                          <span className="font-semibold text-foreground">{homeworkGrandTotal.toLocaleString()}</span> homework pts total across{' '}
+                          <span className="font-semibold text-foreground">{homeworkRows.length}</span> student{homeworkRows.length === 1 ? '' : 's'}.
+                        </>
+                      )}
+                    </p>
+                  </Helper>
+                </div>
               )}
             </div>
           </div>

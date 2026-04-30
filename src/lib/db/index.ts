@@ -58,3 +58,19 @@ export {
   listAttendanceLog,
   listTeacherAttendanceLog,
 } from './attendance';
+
+// Homework
+export {
+  addHomeworkAssignment,
+  deleteHomeworkAssignment,
+  submitHomework,
+  approveHomework,
+} from './homework';
+
+// Goals
+export {
+  addGoal,
+  updateGoal,
+  deleteGoal,
+} from './goals';
+

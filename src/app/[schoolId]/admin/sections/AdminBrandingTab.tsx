@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2, Trash2, UploadCloud, Palette, User } from 'lucide-react';
+import { Loader2, Trash2, UploadCloud, Palette, User, Shield, Clock } from 'lucide-react';
 import type { DocumentReference, Firestore } from 'firebase/firestore';
 import { updateDoc, setDoc } from 'firebase/firestore';
 import { schoolPublicDocRef } from '@/lib/schoolPublic';
@@ -408,6 +408,75 @@ export function AdminBrandingTab({
           handleClearSchoolDefaultTheme();
         }}
       />
+
+      {/* SECURITY & SESSION CARD */}
+      <Card className="border-t-4 border-amber-500 shadow-md">
+        <CardHeader className="py-6">
+          <Helper content="Configure session timeouts for admin and kiosk access.">
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="w-5 h-5 text-amber-500" /> Security & Session
+            </CardTitle>
+          </Helper>
+          <CardDescription>
+            Manage how long sessions stay active before requiring re-authentication or returning to home.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="admin-timeout" className="text-sm font-bold flex items-center gap-2">
+                  <Clock className="w-4 h-4" /> Admin Session Timeout
+                </Label>
+                <div className="flex items-center gap-3">
+                  <Input
+                    id="admin-timeout"
+                    type="number"
+                    min={1}
+                    max={1440}
+                    value={Math.round((settings.adminSessionTimeoutMs ?? 300000) / 60000)}
+                    onChange={(e) => {
+                      const mins = Math.max(1, parseInt(e.target.value) || 1);
+                      updateSettings({ adminSessionTimeoutMs: mins * 60000 });
+                    }}
+                    className="w-24 font-bold"
+                  />
+                  <span className="text-sm font-medium text-muted-foreground">minutes</span>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Inactivity before an admin/teacher is automatically logged out.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="kiosk-timeout" className="text-sm font-bold flex items-center gap-2">
+                  <Clock className="w-4 h-4" /> Kiosk Session Timeout
+                </Label>
+                <div className="flex items-center gap-3">
+                  <Input
+                    id="kiosk-timeout"
+                    type="number"
+                    min={5}
+                    max={300}
+                    value={settings.kioskSessionTimeoutSec ?? 15}
+                    onChange={(e) => {
+                      const secs = Math.max(5, parseInt(e.target.value) || 5);
+                      updateSettings({ kioskSessionTimeoutSec: secs });
+                    }}
+                    className="w-24 font-bold"
+                  />
+                  <span className="text-sm font-medium text-muted-foreground">seconds</span>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Inactivity before the student dashboard or prize shop returns to the home screen.
+                </p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

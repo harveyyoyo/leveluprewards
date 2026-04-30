@@ -7,6 +7,16 @@ export interface HistoryItem {
   teacherId?: string;
 }
 
+export interface LibraryItem {
+  id: string;
+  name: string;
+  upc: string;
+  status: 'available' | 'checked_out';
+  checkedOutTo?: string | null;
+  checkedOutAt?: number | null;
+  addedBy?: string;
+}
+
 export interface Class {
   id: string;
   name: string;
@@ -34,6 +44,8 @@ export interface Teacher {
   name: string;
   username?: string;
   passcode?: string;
+  email?: string;
+  phone?: string;
   /** Max points this teacher may issue per `budgetPeriod` window (still named for Firestore compatibility). */
   monthlyBudget?: number;
   /** Defaults to `month` when `monthlyBudget` is set. */
@@ -348,6 +360,9 @@ export interface Database {
   categories?: Category[];
   coupons?: Coupon[];
   prizes?: Prize[];
+  library?: LibraryItem[];
+  homework?: HomeworkAssignment[];
+  goals?: Goal[];
   updatedAt: number;
   hasMigratedStudents?: boolean;
   hasMigratedClasses?: boolean;
@@ -355,4 +370,59 @@ export interface Database {
   hasMigratedPrizes?: boolean;
   hasMigratedCoupons?: boolean;
   hasMigratedCategories?: boolean;
+}
+
+export type GoalType = 'personal' | 'prize_savings' | 'class';
+
+export interface Goal {
+  id: string;
+  title: string;
+  description?: string;
+  type: GoalType;
+  
+  // The target metric to reach
+  targetPoints: number;
+  
+  // Optional: Restrict to a specific category (e.g., only "Good Behavior" points count)
+  categoryId?: string; 
+  
+  // Who is this goal for?
+  studentId?: string; // For personal/prize goals
+  classId?: string;   // For class-wide goals
+  teacherId?: string; // The teacher who created the goal
+  prizeId?: string;   // If this is a prize savings goal
+  
+  // Time limits
+  startDate?: number;
+  endDate?: number;
+  
+  // Reward upon completion
+  bonusPointsReward?: number;
+  
+  // Status tracking
+  status: 'active' | 'completed' | 'expired';
+  createdAt: number;
+}
+
+export interface HomeworkAssignment {
+  id: string;
+  teacherId: string;
+  teacherName: string;
+  title: string;
+  description: string;
+  points: number;
+  dueDate?: number;
+  createdAt: number;
+  classId?: string;
+}
+
+export interface HomeworkSubmission {
+  id: string; // matches assignmentId
+  assignmentId: string;
+  studentId: string;
+  status: 'pending' | 'submitted' | 'completed';
+  submissionDate?: number;
+  completedAt?: number;
+  pointsAwarded?: number;
+  teacherNote?: string;
 }

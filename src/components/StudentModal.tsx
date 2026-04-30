@@ -54,6 +54,8 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
   const [points, setPoints] = useState('0');
   const [nfcId, setNfcId] = useState('');
   const [classId, setClassId] = useState('none');
+  const [parentEmail, setParentEmail] = useState('');
+  const [parentPhone, setParentPhone] = useState('');
   const [selectedTeacherIds, setSelectedTeacherIds] = useState<string[]>([]);
   const [isPhotoUploading, setIsPhotoUploading] = useState(false);
   const [isCustomEmojiUploading, setIsCustomEmojiUploading] = useState(false);
@@ -75,6 +77,8 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
         setPoints(student.points.toString());
         setNfcId(student.nfcId || student.id);
         setClassId(student.classId || 'none');
+        setParentEmail(student.parentEmail || '');
+        setParentPhone(student.parentPhone || '');
         setSelectedTeacherIds(student.teacherIds || []);
         setTheme(student.theme);
       } else { // Create mode
@@ -85,6 +89,8 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
         setPoints('0');
         setNfcId(Math.floor(10000000 + Math.random() * 90000000).toString());
         setClassId('none');
+        setParentEmail('');
+        setParentPhone('');
         setSelectedTeacherIds([]);
         setTheme(undefined);
       }
@@ -327,6 +333,8 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
         nfcId,
         teacherIds: selectedTeacherIds,
         theme,
+        parentEmail: parentEmail.trim() || undefined,
+        parentPhone: parentPhone.trim() || undefined,
       };
       await updateStudent(updatedStudent);
       playSound('success');
@@ -342,6 +350,8 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
         classId: finalClassId,
         teacherIds: selectedTeacherIds,
         ...(theme ? { theme } : {}),
+        parentEmail: parentEmail.trim() || undefined,
+        parentPhone: parentPhone.trim() || undefined,
       };
       await addStudent(newStudent);
       playSound('success');
@@ -483,6 +493,28 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
           <div className="space-y-1">
             <Label htmlFor="points">Points</Label>
             <Input id="points" type="number" value={points} onChange={e => setPoints(e.target.value)} />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <Label htmlFor="parentEmail">Parent Email (Optional)</Label>
+              <Input
+                id="parentEmail"
+                type="email"
+                value={parentEmail}
+                onChange={e => setParentEmail(e.target.value)}
+                placeholder="alerts@parents.com"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="parentPhone">Parent Phone (Optional)</Label>
+              <Input
+                id="parentPhone"
+                type="tel"
+                value={parentPhone}
+                onChange={e => setParentPhone(e.target.value)}
+                placeholder="555-0123"
+              />
+            </div>
           </div>
           <div className="space-y-1">
             <Label htmlFor="class">Assign to Class</Label>

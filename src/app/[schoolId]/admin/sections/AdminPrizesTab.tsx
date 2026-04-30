@@ -194,39 +194,35 @@ export function AdminPrizesTab({
               <li
                 key={p.id}
                 className={cn(
-                  "flex flex-wrap items-end gap-x-2 gap-y-3 rounded-2xl border bg-secondary/30 p-3 transition-all hover:bg-background group min-w-0",
+                  "flex items-center gap-x-2 rounded-2xl border bg-secondary/30 p-1.5 transition-all hover:bg-background group min-w-0",
                   rowDimmed && "opacity-60"
                 )}
               >
-                <div className="flex shrink-0 flex-col items-center w-[4.5rem]">
+                <div className="flex shrink-0 flex-col items-center w-12">
+                    <Label className="text-[8px] font-bold uppercase tracking-tighter opacity-50 leading-none mb-1">Stock</Label>
                     <Switch
                       checked={p.inStock}
                       disabled={!canEditFull}
                       onCheckedChange={(checked) => onUpdatePrize({ ...p, inStock: checked })}
                       className="data-[state=checked]:bg-primary scale-75"
                     />
-                    <p className="text-[9px] font-bold mt-1 tracking-tighter opacity-50 text-center leading-tight max-w-[4.5rem]">
-                      {p.inStock ? 'In stock' : 'Out of stock'}
-                    </p>
                 </div>
-                <div className="flex shrink-0 flex-col items-center w-[5.25rem]">
+                <div className="flex shrink-0 flex-col items-center w-12">
+                    <Label className="text-[8px] font-bold uppercase tracking-tighter opacity-50 leading-none mb-1">Print</Label>
                     <Switch
                       checked={p.offerPrintTicketOnRedeem === true}
                       disabled={!canEditFull}
                       onCheckedChange={(checked) => onUpdatePrize({ ...p, offerPrintTicketOnRedeem: checked })}
                       className="data-[state=checked]:bg-primary scale-75"
                     />
-                    <p className="text-[10px] font-bold mt-1 uppercase tracking-tighter opacity-50">
-                      Print
-                    </p>
                 </div>
-                <div className="flex shrink-0 flex-col gap-0.5 w-[5.25rem]">
-                  <Label className="text-[9px] font-bold uppercase tracking-tighter opacity-50 leading-none">Qty</Label>
+                <div className="flex shrink-0 flex-col gap-0.5 w-14">
+                  <Label className="text-[8px] font-bold uppercase tracking-tighter opacity-50 leading-none">Qty</Label>
                   <Input
                     type="number"
                     min={0}
                     disabled={!canEditFull}
-                    className="h-8 text-xs px-2"
+                    className="h-7 text-[10px] px-1"
                     placeholder="∞"
                     title="Leave blank for unlimited stock"
                     defaultValue={p.stockCount === undefined ? '' : String(p.stockCount)}
@@ -238,13 +234,13 @@ export function AdminPrizesTab({
                     }}
                   />
                 </div>
-                <div className="flex shrink-0 flex-col gap-0.5 w-[4.5rem]">
-                  <Label className="text-[9px] font-bold uppercase tracking-tighter opacity-50 leading-none">Points</Label>
+                <div className="flex shrink-0 flex-col gap-0.5 w-14">
+                  <Label className="text-[8px] font-bold uppercase tracking-tighter opacity-50 leading-none">Points</Label>
                   <Input
                     type="number"
                     min={0}
                     disabled={!canEditFull}
-                    className="h-8 text-xs px-2"
+                    className="h-7 text-[10px] px-1"
                     defaultValue={String(p.points ?? 0)}
                     key={`points-${p.id}-${p.points}`}
                     onBlur={(e) => {
@@ -254,7 +250,7 @@ export function AdminPrizesTab({
                     }}
                   />
                 </div>
-                <div className={cn("size-12 shrink-0 rounded-xl flex items-center justify-center bg-background border relative overflow-hidden", !p.inStock && "opacity-40 grayscale")}>
+                <div className={cn("size-9 shrink-0 rounded-lg flex items-center justify-center bg-background border relative overflow-hidden", !p.inStock && "opacity-40 grayscale")}>
                   {p.imageUrl ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img src={p.imageUrl} alt="" className="absolute inset-0 z-[5] size-full object-cover" />
@@ -266,10 +262,10 @@ export function AdminPrizesTab({
                       </div>
                     )
                   )}
-                  <DynamicIcon name={p.icon || 'Gift'} className="w-6 h-6 text-primary relative z-10 drop-shadow-sm" />
+                  <DynamicIcon name={p.icon || 'Gift'} className="w-5 h-5 text-primary relative z-10 drop-shadow-sm" />
                 </div>
-                <div className="min-w-0 flex-1 basis-[min(100%,14rem)] sm:basis-[min(100%,18rem)]">
-                  <Label className="text-[9px] font-bold uppercase tracking-tighter opacity-50 leading-none flex items-center gap-1">
+                <div className="min-w-0 flex-1">
+                  <Label className="text-[8px] font-bold uppercase tracking-tighter opacity-50 leading-none flex items-center gap-1">
                     Name
                     {vendingEnabled && p.vendingMotor?.enabled ? (
                       <span
@@ -282,7 +278,7 @@ export function AdminPrizesTab({
                     ) : null}
                   </Label>
                   <Input
-                    className={cn("h-8 text-xs px-2 w-full min-w-0", !p.inStock && "opacity-70")}
+                    className={cn("h-7 text-[10px] px-1.5 w-full min-w-0", !p.inStock && "opacity-70")}
                     disabled={!canEditFull}
                     defaultValue={p.name}
                     key={`name-${p.id}-${p.name}`}
@@ -292,10 +288,10 @@ export function AdminPrizesTab({
                     }}
                   />
                 </div>
-                <div className="flex shrink-0 flex-col gap-0.5 w-[6.5rem] min-w-0">
-                  <Label className="text-[9px] font-bold uppercase tracking-tighter opacity-50 leading-none">Icon</Label>
+                <div className="flex shrink-0 flex-col gap-0.5 w-16">
+                  <Label className="text-[8px] font-bold uppercase tracking-tighter opacity-50 leading-none">Icon</Label>
                   <Input
-                    className="h-8 text-xs px-2 font-mono w-full"
+                    className="h-7 text-[10px] px-1 font-mono w-full"
                     disabled={!canEditFull}
                     placeholder="Gift"
                     defaultValue={p.icon || 'Gift'}
@@ -306,12 +302,11 @@ export function AdminPrizesTab({
                     }}
                   />
                 </div>
-                <div className="flex shrink-0 flex-col gap-0.5 w-[7.5rem] min-w-0">
+                <div className="flex shrink-0 flex-col gap-0.5 w-14">
                   {mode === 'teacher' ? (
                     <>
-                      <Label className="text-[9px] font-bold uppercase tracking-tighter opacity-50 leading-none">Wide</Label>
-                      <div className="flex items-center justify-between h-8 px-2 rounded-md border bg-background">
-                        <span className="text-[10px] font-bold opacity-70">School</span>
+                      <Label className="text-[8px] font-bold uppercase tracking-tighter opacity-50 leading-none">Wide</Label>
+                      <div className="flex items-center justify-center h-7 rounded-md border bg-background">
                         <Switch
                           checked={schoolWideT}
                           disabled={!canEditFull}
@@ -322,19 +317,19 @@ export function AdminPrizesTab({
                               onUpdatePrize({ ...p, teacherIds: [teacherId], teacherId: undefined });
                             }
                           }}
-                          className="data-[state=checked]:bg-primary scale-75"
+                          className="data-[state=checked]:bg-primary scale-50"
                         />
                       </div>
                     </>
                   ) : (
                     <>
-                      <Label className="text-[9px] font-bold uppercase tracking-tighter opacity-50 leading-none">Teachers</Label>
+                      <Label className="text-[8px] font-bold uppercase tracking-tighter opacity-50 leading-none">Tchrs</Label>
                       <Popover>
                         <PopoverTrigger asChild>
                           <Button
                             type="button"
                             variant="outline"
-                            className="h-8 w-full text-[10px] px-1.5 font-semibold"
+                            className="h-7 w-full text-[10px] px-1 font-semibold"
                             disabled={!canEditFull}
                           >
                             {restrictionIds.length === 0 ? 'All' : `${restrictionIds.length}`}
@@ -382,14 +377,14 @@ export function AdminPrizesTab({
                     </>
                   )}
                 </div>
-                <div className="flex shrink-0 flex-col gap-0.5 w-[6.75rem] min-w-0">
-                  <Label className="text-[9px] font-bold uppercase tracking-tighter opacity-50 leading-none">Class</Label>
+                <div className="flex shrink-0 flex-col gap-0.5 w-16">
+                  <Label className="text-[8px] font-bold uppercase tracking-tighter opacity-50 leading-none">Class</Label>
                   <Select
                     value={p.classId || 'all'}
                     disabled={!canEditFull}
                     onValueChange={(v) => onUpdatePrize({ ...p, classId: v === 'all' ? undefined : v })}
                   >
-                    <SelectTrigger className="h-8 text-xs px-2 w-full">
+                    <SelectTrigger className="h-7 text-[10px] px-1 w-full">
                       <SelectValue placeholder="All" />
                     </SelectTrigger>
                     <SelectContent>
@@ -400,23 +395,23 @@ export function AdminPrizesTab({
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="flex shrink-0 flex-wrap items-center justify-end gap-0.5 basis-full sm:basis-auto sm:ml-auto">
+                <div className="flex shrink-0 items-center justify-end gap-0.5 ml-auto">
                   {prizeAiSurpriseEnabled ? (
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className={cn(
-                          'h-9 w-9 rounded-full hover:bg-muted',
-                          p.aiFunReward ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground',
-                        )}
-                        disabled={!canEditFull}
-                        title="AI joke / riddle / fortune after redeem"
-                      >
-                        <Sparkles className="w-4 h-4" />
-                      </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className={cn(
+                            'h-7 w-7 rounded-full hover:bg-muted',
+                            p.aiFunReward ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground',
+                          )}
+                          disabled={!canEditFull}
+                          title="AI joke / riddle / fortune after redeem"
+                        >
+                          <Sparkles className="w-3.5 h-3.5" />
+                        </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-72 p-3 z-[250]" align="end">
                       <div className="space-y-2">
@@ -453,31 +448,31 @@ export function AdminPrizesTab({
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="h-9 w-9 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+                      className="h-7 w-7 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
                       disabled={!canEditFull}
                       title="Edit prize"
                       onClick={() => onEditPrize(p)}
                     >
-                      <Edit3 className="w-4 h-4" />
+                      <Edit3 className="w-3.5 h-3.5" />
                     </Button>
                   ) : null}
 
                   {vendingEnabled ? (
                     <Popover>
                       <PopoverTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className={cn(
-                            "h-9 w-9 rounded-full hover:bg-muted",
-                            motorEnabled ? "text-emerald-700 dark:text-emerald-300" : "text-muted-foreground",
-                          )}
-                          disabled={!canEditFull}
-                          title="Prize vending motor"
-                        >
-                          <Cog className="w-4 h-4" />
-                        </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className={cn(
+                              "h-7 w-7 rounded-full hover:bg-muted",
+                              motorEnabled ? "text-emerald-700 dark:text-emerald-300" : "text-muted-foreground",
+                            )}
+                            disabled={!canEditFull}
+                            title="Prize vending motor"
+                          >
+                            <Cog className="w-3.5 h-3.5" />
+                          </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-72 p-3 z-[250]" align="end">
                         <div className="space-y-3">
@@ -524,11 +519,11 @@ export function AdminPrizesTab({
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="h-9 w-9 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+                      className="h-7 w-7 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
                       title="Remove from my prizes (others keep access)"
                       onClick={() => onUpdatePrize(removeTeacherFromPrize(p, teacherId))}
                     >
-                      <UserMinus className="w-4 h-4" />
+                      <UserMinus className="w-3.5 h-3.5" />
                     </Button>
                   ) : null}
                   {(mode === 'admin' || canDelete) ? (
@@ -536,12 +531,12 @@ export function AdminPrizesTab({
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="h-9 w-9 rounded-full text-destructive hover:bg-destructive/10"
+                      className="h-7 w-7 rounded-full text-destructive hover:bg-destructive/10"
                       disabled={mode === 'teacher' && !canDelete}
                       title={mode === 'teacher' ? 'Delete prize you created' : 'Delete prize'}
                       onClick={() => onDeletePrize(p.id)}
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </Button>
                   ) : null}
                 </div>

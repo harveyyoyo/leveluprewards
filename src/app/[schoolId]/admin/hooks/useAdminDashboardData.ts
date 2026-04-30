@@ -8,6 +8,7 @@ import {
   useMemoFirebase,
 } from '@/firebase';
 import type {
+  LibraryItem,
   AttendanceScheduleSlot,
   BackupInfo,
   Category,
@@ -65,6 +66,10 @@ export function useAdminDashboardData(schoolId: string | null) {
     () => (schoolId ? collection(firestore, 'schools', schoolId, 'prizes') : null),
     [firestore, schoolId],
   );
+  const libraryQuery = useMemoFirebase(
+    () => (schoolId ? collection(firestore, 'schools', schoolId, 'library') : null),
+    [firestore, schoolId],
+  );
   const couponsQuery = useMemoFirebase(
     () => (schoolId ? collection(firestore, 'schools', schoolId, 'coupons') : null),
     [firestore, schoolId],
@@ -95,6 +100,7 @@ export function useAdminDashboardData(schoolId: string | null) {
   const staffAccounts = useCollection<StaffAccount>(staffAccountsQuery);
   const categories = useCollection<Category>(categoriesQuery);
   const prizes = useCollection<Prize>(prizesQuery);
+  const library = useCollection<LibraryItem>(libraryQuery);
   const coupons = useCollection<Coupon>(couponsQuery);
   const attendancePeriods = useCollection<AttendanceScheduleSlot>(attendancePeriodsQuery);
   const backups = useCollection<BackupInfo>(backupsQuery);
@@ -121,6 +127,9 @@ export function useAdminDashboardData(schoolId: string | null) {
     prizes: prizes.data,
     prizesLoading: prizes.isLoading,
     prizesError: prizes.error,
+    library: library.data,
+    libraryLoading: library.isLoading,
+    libraryError: library.error,
     coupons: coupons.data,
     couponsLoading: coupons.isLoading,
     couponsError: coupons.error,
@@ -137,3 +146,4 @@ export function useAdminDashboardData(schoolId: string | null) {
 }
 
 export type AdminDashboardData = ReturnType<typeof useAdminDashboardData>;
+

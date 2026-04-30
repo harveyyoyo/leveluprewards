@@ -589,12 +589,47 @@ exports.createSchoolByDeveloper = functions.https.onCall(
       username: "teacher",
       passcode: "1234",
     };
+    const seedPrize = {
+      id: "default_prize",
+      name: "Default Prize",
+      points: 10,
+      icon: "Gift",
+      inStock: true,
+    };
+    const seedStaffAccounts = [
+      {
+        id: "default_coupon_staff",
+        displayName: "Coupon Staff",
+        username: "coupon",
+        passcode: "1234",
+        role: "secretary",
+        roles: ["secretary"],
+      },
+      {
+        id: "default_prize_staff",
+        displayName: "Prize Staff",
+        username: "prize",
+        passcode: "1234",
+        role: "prizeClerk",
+        roles: ["prizeClerk"],
+      },
+      {
+        id: "default_reports_staff",
+        displayName: "Reports Staff",
+        username: "reports",
+        passcode: "1234",
+        role: "reports",
+        roles: ["reports"],
+      },
+    ];
 
     const db = admin.firestore();
     const schoolRef = db.collection("schools").doc(cleanId);
     const schoolSnap = await schoolRef.get();
     const studentsSnap = await schoolRef.collection("students").limit(1).get();
     const teachersSnap = await schoolRef.collection("teachers").limit(1).get();
+    const prizesSnap = await schoolRef.collection("prizes").limit(1).get();
+    const staffAccountsSnap = await schoolRef.collection("staffAccounts").limit(1).get();
 
     if (schoolSnap.exists && (!studentsSnap.empty || !teachersSnap.empty)) {
       throw new functions.https.HttpsError(
@@ -630,6 +665,34 @@ exports.createSchoolByDeveloper = functions.https.onCall(
       const { id, ...teacherData } = seedTeacher;
       batch.set(schoolRef.collection("teachers").doc(id), teacherData);
     }
+    if (prizesSnap.empty) {
+      const { id, ...prizeData } = seedPrize;
+      batch.set(schoolRef.collection("prizes").doc(id), prizeData);
+    }
+    if (staffAccountsSnap.empty) {
+      for (const account of seedStaffAccounts) {
+        batch.set(schoolRef.collection("staffAccounts").doc(account.id), account);
+      }
+    }
+    const publicStaffAccounts = staffAccountsSnap.empty ? seedStaffAccounts : [];
+    const staffDirectory = [
+      {
+        id: `teacher:${seedTeacher.username}`,
+        sourceId: seedTeacher.id,
+        type: "teacher",
+        label: seedTeacher.name,
+        username: seedTeacher.username,
+        updatedAt: now,
+      },
+      ...publicStaffAccounts.map((account) => ({
+        id: `${account.role}:${account.id}`,
+        sourceId: account.id,
+        type: account.role,
+        label: account.displayName,
+        username: account.username,
+        updatedAt: now,
+      })),
+    ];
     batch.set(
       db.collection("schoolPublic").doc(cleanId),
       {
@@ -637,6 +700,8 @@ exports.createSchoolByDeveloper = functions.https.onCall(
         name: finalSchoolDocData.name,
         plan: finalSchoolDocData.plan,
         featureOverrides: finalSchoolDocData.featureOverrides,
+        staffDirectory,
+        staffDirectoryUpdatedAt: now,
         updatedAt: now,
       },
       { merge: true }
@@ -1468,7 +1533,10 @@ exports.getStaffPortalLoginOptions = functions.https.onCall(
           username?: string;
           role?: string;
         };
-        const role = row.role === "secretary" || row.role === "prizeClerk" ? row.role : null;
+        const role =
+          row.role === "secretary" || row.role === "prizeClerk" || row.role === "reports"
+            ? row.role
+            : null;
         const username = typeof row.username === "string" ? row.username.trim().toLowerCase() : "";
         const displayName = typeof row.displayName === "string" ? row.displayName.trim() : "";
         if (!role || !username || !displayName) return null;
@@ -1486,7 +1554,7 @@ exports.getStaffPortalLoginOptions = functions.https.onCall(
 );
 
 // ========================================================================
-// Callable: Verify desk staff (secretary / prize clerk) username + passcode
+// Callable: Verify staff (secretary / prize clerk / reports) username + passcode
 // ========================================================================
 
 exports.verifyStaffAccountPasscode = functions.https.onCall(
@@ -1496,10 +1564,10 @@ exports.verifyStaffAccountPasscode = functions.https.onCall(
     requireString(data.username, "username");
     requireString(data.passcode, "passcode");
     const role = data.role as string;
-    if (role !== "secretary" && role !== "prizeClerk") {
+    if (role !== "secretary" && role !== "prizeClerk" && role !== "reports") {
       throw new functions.https.HttpsError(
         "invalid-argument",
-        "role must be 'secretary' or 'prizeClerk'."
+        "role must be 'secretary', 'prizeClerk', or 'reports'."
       );
     }
 
@@ -1516,36 +1584,40 @@ exports.verifyStaffAccountPasscode = functions.https.onCall(
       .get();
 
     const match = accountsSnap.docs.find((d) => {
-      const row = d.data() as { passcode?: string; role?: string };
-      return row.role === role && row.passcode === data.passcode;
+      const row = d.data() as { passcode?: string; role?: string; roles?: string[] };
+      const roles = Array.isArray(row.roles) && row.roles.length > 0 ? row.roles : [row.role];
+      return roles.includes(role) && row.passcode === data.passcode;
     });
 
     if (!match) {
       throw new functions.https.HttpsError("permission-denied", "Invalid staff login.");
     }
 
-    const roleCollection =
-      role === "secretary" ? "roles_secretary" : "roles_prizeClerk";
-    const roleRef = db
-      .collection("schools")
-      .doc(schoolId)
-      .collection(roleCollection)
-      .doc(context.auth!.uid);
-
-    const payload =
-      role === "secretary"
-        ? { role: "secretary" as const }
-        : { role: "prizeClerk" as const };
-
-    const row = match.data() as { displayName?: string };
+    const row = match.data() as { displayName?: string; role?: string; roles?: string[] };
+    const roles = (Array.isArray(row.roles) && row.roles.length > 0 ? row.roles : [row.role])
+      .filter((item): item is string => item === "secretary" || item === "prizeClerk" || item === "reports");
+    const writes = roles.map((staffRole) => {
+      const roleCollection =
+        staffRole === "secretary"
+          ? "roles_secretary"
+          : staffRole === "prizeClerk"
+            ? "roles_prizeClerk"
+            : "roles_reports";
+      return db
+        .collection("schools")
+        .doc(schoolId)
+        .collection(roleCollection)
+        .doc(context.auth!.uid)
+        .set({ role: staffRole });
+    });
     const displayName =
       typeof row.displayName === "string" && row.displayName.trim().length > 0
         ? row.displayName.trim()
         : username;
 
-    await roleRef.set(payload);
+    await Promise.all(writes);
 
-    return { success: true, displayName };
+    return { success: true, displayName, roles };
   }
 );
 
@@ -1825,3 +1897,174 @@ exports.setStudentFaceAutoLogin = functions.https.onCall(
 );
 
 exports.signInAttendance = signInAttendance;
+
+// ========================================================================
+// Notifications & Alerts
+// ========================================================================
+
+/** Triggered when a student earns points or redeems a prize. */
+export const onStudentActivityCreated = functions.firestore
+  .document("schools/{schoolId}/students/{studentId}/activities/{activityId}")
+  .onCreate(async (snapshot, context) => {
+    const { schoolId, studentId } = context.params;
+    const activityData = snapshot.data();
+    if (!activityData) return;
+
+    const db = admin.firestore();
+    
+    // Check school settings
+    const schoolSnap = await db.collection("schools").doc(schoolId).get();
+    const settings = schoolSnap.data()?.appSettings;
+    
+    if (!settings?.enableNotifications || !settings?.notificationRewardsEnabled) {
+      return;
+    }
+
+    // Get student data
+    const studentSnap = await db.collection("schools").doc(schoolId).collection("students").doc(studentId).get();
+    const studentData = studentSnap.data();
+    if (!studentData) return;
+
+    const studentName = [studentData.firstName, studentData.lastName].filter(Boolean).join(" ") || "A student";
+    const isRedemption = activityData.amount < 0;
+    const amountAbs = Math.abs(activityData.amount);
+    
+    const subject = isRedemption ? "Reward Redemption Alert" : "Point Award Alert";
+    const message = isRedemption 
+      ? `${studentName} just redeemed ${amountAbs} points for: ${activityData.desc}`
+      : `${studentName} just earned ${amountAbs} points for: ${activityData.desc}`;
+
+    const alerts: Promise<any>[] = [];
+
+    // Notify Parent
+    if (studentData.parentEmail) {
+      alerts.push(db.collection("mail").add({
+        to: studentData.parentEmail,
+        message: {
+          subject: `${subject}: ${studentName}`,
+          text: message,
+          html: `<div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+                  <h2 style="color: #3b82f6;">${subject}</h2>
+                  <p>${message}</p>
+                  <hr style="border: 0; border-top: 1px solid #eee;" />
+                  <p style="font-size: 12px; color: #999;">This is an automated alert from your school's reward system.</p>
+                </div>`,
+        },
+        schoolId,
+        studentId,
+      }));
+    }
+
+    if (studentData.parentPhone) {
+      alerts.push(db.collection("sms").add({
+        to: studentData.parentPhone,
+        body: message,
+        schoolId,
+      }));
+
+      if (settings.notificationWhatsAppEnabled) {
+        alerts.push(db.collection("whatsapp").add({
+          to: studentData.parentPhone,
+          body: message,
+          schoolId,
+        }));
+      }
+    }
+
+    // Notify Staff if enabled
+    if (settings.notificationStaffAlertsEnabled) {
+      const teacherIds = studentData.teacherIds || [];
+      for (const tid of teacherIds) {
+        const tSnap = await db.collection("schools").doc(schoolId).collection("teachers").doc(tid).get();
+        const tData = tSnap.data();
+        if (tData?.email) {
+          alerts.push(db.collection("mail").add({
+            to: tData.email,
+            message: {
+              subject: `Staff Alert: ${studentName}`,
+              text: message,
+            },
+            schoolId,
+          }));
+        }
+        if (tData?.phone && settings.notificationWhatsAppEnabled) {
+          alerts.push(db.collection("whatsapp").add({
+            to: tData.phone,
+            body: `Staff Alert: ${message}`,
+            schoolId,
+          }));
+        }
+      }
+    }
+
+    await Promise.all(alerts);
+  });
+
+/** Triggered when a student signs in via the attendance kiosk. */
+export const onAttendanceLogCreated = functions.firestore
+  .document("schools/{schoolId}/attendanceLog/{logId}")
+  .onCreate(async (snapshot, context) => {
+    const { schoolId } = context.params;
+    const logData = snapshot.data();
+    if (!logData) return;
+
+    const db = admin.firestore();
+    
+    // Check school settings
+    const schoolSnap = await db.collection("schools").doc(schoolId).get();
+    const settings = schoolSnap.data()?.appSettings;
+    
+    if (!settings?.enableNotifications || !settings?.notificationAttendanceEnabled) {
+      return;
+    }
+
+    const studentId = logData.studentId;
+    const studentSnap = await db.collection("schools").doc(schoolId).collection("students").doc(studentId).get();
+    const studentData = studentSnap.data();
+    if (!studentData) return;
+
+    const studentName = logData.studentName || "A student";
+    const status = logData.onTime ? "on time" : "signed in";
+    const period = logData.periodLabel ? ` for ${logData.periodLabel}` : "";
+    const message = `${studentName} ${status}${period} at ${new Date(logData.signedInAt).toLocaleTimeString()}.`;
+
+    const alerts: Promise<any>[] = [];
+
+    // Notify Parent
+    if (studentData.parentEmail) {
+      alerts.push(db.collection("mail").add({
+        to: studentData.parentEmail,
+        message: {
+          subject: `Attendance Alert: ${studentName}`,
+          text: message,
+          html: `<div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+                  <h2 style="color: #10b981;">Attendance Alert</h2>
+                  <p>${message}</p>
+                </div>`,
+        },
+        schoolId,
+        studentId,
+      }));
+    }
+
+    if (studentData.parentPhone) {
+      alerts.push(db.collection("sms").add({
+        to: studentData.parentPhone,
+        body: message,
+        schoolId,
+      }));
+
+      if (settings.notificationWhatsAppEnabled) {
+        alerts.push(db.collection("whatsapp").add({
+          to: studentData.parentPhone,
+          body: message,
+          schoolId,
+        }));
+      }
+    }
+
+    await Promise.all(alerts);
+  });
+
+exports.onStudentActivityCreated = onStudentActivityCreated;
+exports.onAttendanceLogCreated = onAttendanceLogCreated;

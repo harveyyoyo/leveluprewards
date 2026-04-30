@@ -16,7 +16,7 @@ import { doc, getDocFromServer, onSnapshot } from 'firebase/firestore';
 import { schoolPublicDocRef } from '@/lib/schoolPublic';
 
 export type SyncStatus = 'synced' | 'syncing' | 'offline' | 'error';
-export type LoginState = 'loggedOut' | 'school' | 'developer' | 'student' | 'teacher' | 'admin' | 'secretary' | 'prizeClerk';
+export type LoginState = 'loggedOut' | 'school' | 'developer' | 'student' | 'teacher' | 'admin' | 'secretary' | 'prizeClerk' | 'reports';
 
 /** Optional navigation after ending an admin or teacher session (default: school portal). */
 export type LogoutOptions = {
@@ -31,6 +31,7 @@ interface AuthContextType {
     isTeacher: boolean;
     isSecretary: boolean;
     isPrizeClerk: boolean;
+    isReports: boolean;
     userName: string | null;
     userId: string | null;
     teacherDocId: string | null;
@@ -38,7 +39,7 @@ interface AuthContextType {
     syncStatus: SyncStatus;
     login: (
         type: LoginState,
-        credentials: { schoolId?: string; passcode?: string; username?: string; teacherName?: string; teacherDocId?: string; staffRole?: 'secretary' | 'prizeClerk'; }
+        credentials: { schoolId?: string; passcode?: string; username?: string; teacherName?: string; teacherDocId?: string; staffRole?: 'secretary' | 'prizeClerk' | 'reports'; }
     ) => Promise<boolean>;
     logout: (options?: LogoutOptions) => void;
     setUserName: (name: string | null) => void;
@@ -60,6 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [isTeacher, setIsTeacher] = useState(false);
     const [isSecretary, setIsSecretary] = useState(false);
     const [isPrizeClerk, setIsPrizeClerk] = useState(false);
+    const [isReports, setIsReports] = useState(false);
     const [userName, setUserName] = useState<string | null>(null);
     const [userId, setUserId] = useState<string | null>(null);
     const [teacherDocId, setTeacherDocId] = useState<string | null>(null);
@@ -72,13 +74,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setIsTeacher(false);
         setIsSecretary(false);
         setIsPrizeClerk(false);
+        setIsReports(false);
         setIsKioskLocked(false);
         setUserName(null);
         setTeacherDocId(null);
         localStorage.removeItem('userName');
         localStorage.removeItem('teacherDocId');
 
-        if (loginState === 'admin' || loginState === 'teacher' || loginState === 'secretary' || loginState === 'prizeClerk') {
+        if (loginState === 'admin' || loginState === 'teacher' || loginState === 'secretary' || loginState === 'prizeClerk' || loginState === 'reports') {
             localStorage.setItem('loginState', 'student');
             setLoginState('student');
             if (schoolId) {
@@ -96,73 +99,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     }, [loginState, router, schoolId]);
 
-    // Privileged sessions (admin, teacher): auto-logout after 5 min idle. Hiding the tab does not reset the clock.
-    useEffect(() => {
-        if (loginState !== 'admin' && loginState !== 'teacher' && loginState !== 'secretary' && loginState !== 'prizeClerk') return;
-
-        const IDLE_MS = 5 * 60 * 1000;
-        let timer: ReturnType<typeof setTimeout> | null = null;
-        let sessionEndAt = 0;
-
-        const arm = () => {
-            sessionEndAt = Date.now() + IDLE_MS;
-            if (timer) clearTimeout(timer);
-            timer = setTimeout(() => {
-                // If settings modal is open, don't auto-logout.
-                if (typeof document !== 'undefined' && document.querySelector('[data-settings-open="true"]')) {
-                    arm();
-                    return;
-                }
-                logout();
-            }, IDLE_MS);
-        };
-
-        const checkExpired = () => {
-            if (Date.now() >= sessionEndAt) {
-                if (typeof document !== 'undefined' && document.querySelector('[data-settings-open="true"]')) {
-                    arm();
-                } else {
-                    logout();
-                }
-            }
-        };
-
-        const onActivity = () => {
-            if (document.visibilityState === 'visible') {
-                arm();
-            }
-        };
-
-        const onVisibility = () => {
-            if (document.visibilityState === 'visible') {
-                checkExpired();
-            }
-        };
-
-        const events: string[] = [
-            'mousemove',
-            'mousedown',
-            'keydown',
-            'touchstart',
-            'scroll',
-            'wheel',
-            'pointerdown',
-        ];
-
-        for (const ev of events) {
-            window.addEventListener(ev as any, onActivity, { passive: true } as any);
-        }
-        document.addEventListener('visibilitychange', onVisibility);
-        arm();
-
-        return () => {
-            if (timer) clearTimeout(timer);
-            for (const ev of events) {
-                window.removeEventListener(ev as any, onActivity as any);
-            }
-            document.removeEventListener('visibilitychange', onVisibility);
-        };
-    }, [loginState, logout]);
+    // Auto-logout logic moved to AppContextBridge in AppProvider.tsx to allow for configurable timeouts from SettingsProvider.
 
     useEffect(() => {
         setIsMounted(true);
@@ -287,31 +224,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         setLoginState('student');
                         localStorage.setItem('loginState', 'student');
                     }
-                } else if (savedState === 'prizeClerk') {
-                    setLoginState('prizeClerk');
+                } else if (savedState === 'prizeClerk' || savedState === 'reports') {
+                    setLoginState(savedState);
                     if (auth.currentUser) {
                         try {
-                            const ref = doc(firestore, 'schools', savedSchoolId, 'roles_prizeClerk', auth.currentUser.uid);
+                            const roleCollection = savedState === 'prizeClerk' ? 'roles_prizeClerk' : 'roles_reports';
+                            const ref = doc(firestore, 'schools', savedSchoolId, roleCollection, auth.currentUser.uid);
                             const roleDoc = await getDocFromServer(ref);
-                            if (roleDoc.exists() && roleDoc.data().role === 'prizeClerk') {
-                                setIsPrizeClerk(true);
+                            if (roleDoc.exists() && roleDoc.data().role === savedState) {
+                                setIsPrizeClerk(savedState === 'prizeClerk');
+                                setIsReports(savedState === 'reports');
                                 setIsAdmin(false);
                                 setIsTeacher(false);
                                 setIsSecretary(false);
                             } else {
                                 setIsPrizeClerk(false);
+                                setIsReports(false);
                                 setIsSecretary(false);
                                 setLoginState('student');
                                 localStorage.setItem('loginState', 'student');
                             }
                         } catch {
                             setIsPrizeClerk(false);
+                            setIsReports(false);
                             setIsSecretary(false);
                             setLoginState('student');
                             localStorage.setItem('loginState', 'student');
                         }
                     } else {
                         setIsPrizeClerk(false);
+                        setIsReports(false);
                         setIsSecretary(false);
                         setLoginState('student');
                         localStorage.setItem('loginState', 'student');
@@ -322,6 +264,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     setIsTeacher(false);
                     setIsSecretary(false);
                     setIsPrizeClerk(false);
+                    setIsReports(false);
                 }
             } else if (savedState === 'developer') {
                 localStorage.removeItem('loginState');
@@ -330,12 +273,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 setIsAdmin(false);
                 setIsSecretary(false);
                 setIsPrizeClerk(false);
+                setIsReports(false);
             } else if (savedState) {
                 setLoginState(savedState);
                 setIsAdmin(false);
                 setIsTeacher(false);
                 setIsSecretary(false);
                 setIsPrizeClerk(false);
+                setIsReports(false);
             }
 
             setIsInitialized(true);
@@ -386,7 +331,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const login = useCallback(
         async (
             type: LoginState,
-            credentials: { schoolId?: string; passcode?: string; username?: string; teacherName?: string; teacherDocId?: string; staffRole?: 'secretary' | 'prizeClerk'; }
+            credentials: { schoolId?: string; passcode?: string; username?: string; teacherName?: string; teacherDocId?: string; staffRole?: 'secretary' | 'prizeClerk' | 'reports'; }
         ): Promise<boolean> => {
             if (type === 'developer') {
                 try {
@@ -423,6 +368,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         setIsTeacher(false);
                         setIsSecretary(false);
                         setIsPrizeClerk(false);
+                        setIsReports(false);
                         setUserName('Developer');
                         setUserId(uid);
                         return true;
@@ -439,6 +385,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 setIsTeacher(false);
                 setIsSecretary(false);
                 setIsPrizeClerk(false);
+                setIsReports(false);
                 setUserName(null);
                 localStorage.setItem('loginState', 'student');
                 localStorage.setItem('schoolId', lowerSchoolId);
@@ -479,6 +426,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     setIsTeacher(false);
                     setIsSecretary(false);
                     setIsPrizeClerk(false);
+                    setIsReports(false);
                     setUserName('Admin');
                     setUserId(auth.currentUser.uid);
                     localStorage.setItem('loginState', 'admin');
@@ -523,6 +471,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     setIsTeacher(true);
                     setIsSecretary(false);
                     setIsPrizeClerk(false);
+                    setIsReports(false);
                     const name = credentials.teacherName || credentials.username || 'Teacher';
                     setUserName(name);
                     setUserId(auth.currentUser.uid);
@@ -539,15 +488,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     return false;
                 }
             } else if (
-                (type === 'secretary' || type === 'prizeClerk') &&
+                (type === 'secretary' || type === 'prizeClerk' || type === 'reports') &&
                 credentials.schoolId &&
                 credentials.username &&
                 auth.currentUser
             ) {
                 const lowerSchoolId = credentials.schoolId.trim().toLowerCase();
-                const role = type === 'secretary' ? 'secretary' : 'prizeClerk';
-                const roleCollection = type === 'secretary' ? 'roles_secretary' : 'roles_prizeClerk';
-                const expectedRole = type === 'secretary' ? 'secretary' : 'prizeClerk';
+                const role = type;
+                const roleCollection = type === 'secretary' ? 'roles_secretary' : type === 'prizeClerk' ? 'roles_prizeClerk' : 'roles_reports';
+                const expectedRole = type;
                 try {
                     const verify = httpsCallable(functions, 'verifyStaffAccountPasscode');
                     const res = await verify({
@@ -556,10 +505,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         passcode: credentials.passcode,
                         role,
                     });
+                    const serverData = res.data as { displayName?: string; roles?: string[] };
                     const serverDisplay =
-                        typeof (res.data as { displayName?: string })?.displayName === 'string'
-                            ? (res.data as { displayName: string }).displayName.trim()
+                        typeof serverData?.displayName === 'string'
+                            ? serverData.displayName.trim()
                             : '';
+                    const grantedRoles = Array.isArray(serverData?.roles) ? serverData.roles : [type];
+                    const hasSecretary = grantedRoles.includes('secretary');
+                    const hasPrizeClerk = grantedRoles.includes('prizeClerk');
+                    const hasReports = grantedRoles.includes('reports');
 
                     const roleRef = doc(firestore, 'schools', lowerSchoolId, roleCollection, auth.currentUser.uid);
                     let roleConfirmed = false;
@@ -582,13 +536,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     setLoginState(type);
                     setIsAdmin(false);
                     setIsTeacher(false);
-                    setIsSecretary(type === 'secretary');
-                    setIsPrizeClerk(type === 'prizeClerk');
+                    setIsSecretary(hasSecretary);
+                    setIsPrizeClerk(hasPrizeClerk);
+                    setIsReports(hasReports);
                     const displayName =
                         serverDisplay ||
                         (credentials.teacherName && credentials.teacherName.trim()) ||
                         credentials.username ||
-                        (type === 'secretary' ? 'Secretary' : 'Prize desk');
+                        (type === 'secretary' ? 'Secretary' : type === 'prizeClerk' ? 'Prize desk' : 'Reports');
                     setUserName(displayName);
                     setUserId(auth.currentUser.uid);
                     setTeacherDocId(null);
@@ -616,6 +571,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             isTeacher,
             isSecretary,
             isPrizeClerk,
+            isReports,
             userName,
             userId,
             teacherDocId,
@@ -627,7 +583,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             logout,
             setUserName
         }),
-        [isInitialized, isUserLoading, loginState, isAdmin, isTeacher, isSecretary, isPrizeClerk, userName, userId, teacherDocId, schoolId, syncStatus, isKioskLocked, setIsKioskLocked, login, logout, setUserName]
+        [isInitialized, isUserLoading, loginState, isAdmin, isTeacher, isSecretary, isPrizeClerk, isReports, userName, userId, teacherDocId, schoolId, syncStatus, isKioskLocked, setIsKioskLocked, login, logout, setUserName]
     );
 
     if (!isMounted) {

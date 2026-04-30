@@ -1,0 +1,73 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - generic:
+    - generic:
+      - generic:
+        - img
+        - img
+        - img
+        - img
+        - img
+        - img
+        - img
+        - img
+        - img
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - link "App logo levelUp EDU School Rewards System" [ref=e6] [cursor=pointer]:
+          - /url: /schoolabc/portal
+          - img "App logo" [ref=e8]
+          - generic [ref=e9]:
+            - generic [ref=e10]: levelUp EDU
+            - generic [ref=e11]: School Rewards System
+        - link "Logo School ABC" [ref=e12] [cursor=pointer]:
+          - /url: /schoolabc/portal
+          - generic [ref=e13]:
+            - img "Logo" [ref=e15]
+            - generic [ref=e16]: School ABC
+        - generic [ref=e17]:
+          - generic [ref=e22]: LIVE
+          - button "Admin" [ref=e23] [cursor=pointer]:
+            - img
+            - generic [ref=e24]: Admin
+          - link "Home" [ref=e26] [cursor=pointer]:
+            - /url: /schoolabc/portal
+            - img [ref=e27]
+            - generic [ref=e30]: Home
+          - button "Open settings" [ref=e32] [cursor=pointer]:
+            - img
+    - main [ref=e33]:
+      - generic [ref=e35]:
+        - generic [ref=e36]:
+          - img "LevelUp Logo" [ref=e41]
+          - generic [ref=e43]:
+            - heading "Ready to Scan" [level=2] [ref=e44]
+            - paragraph [ref=e45]: Scan your card
+        - generic [ref=e47]:
+          - tablist [ref=e48]:
+            - tab "Card" [selected] [ref=e49] [cursor=pointer]:
+              - img [ref=e50]
+              - text: Card
+            - tab "Type" [ref=e55] [cursor=pointer]:
+              - img [ref=e56]
+              - text: Type
+            - tab "Scan" [ref=e58] [cursor=pointer]:
+              - img [ref=e59]
+              - text: Scan
+            - tab "Face" [ref=e62] [cursor=pointer]:
+              - img [ref=e63]
+              - text: Face
+          - tabpanel "Card" [ref=e69]:
+            - generic [ref=e70]:
+              - img [ref=e74]
+              - generic [ref=e79]:
+                - paragraph [ref=e80]: System Ready
+                - paragraph [ref=e81]: Please scan your card
+              - textbox [active] [ref=e82]
+    - region "Notifications (F8)":
+      - list
+  - alert [ref=e83]
+```
