@@ -13,6 +13,7 @@ This workflow ensures that all AI assistants are aligned on the latest rules and
    - For each skill in `.agent/skills`, ensure there is a corresponding `.mdc` file in `.cursor/rules/`.
    - Update `.cursor/rules/skillshares.mdc` with the latest "Global Project Context" distilled from Antigravity's Knowledge Items.
 3. **Notify User**: Once synchronization is complete, notify the user of any major rule changes.
+4. **Staff help AI**: If features changed, see `.agent/workflows/update-staff-help-ai.md` and refresh `docs/staff-ai-product-knowledge.md` as needed.
 
 // turbo
-4. **Update Status**: Run `git add .agent .cursor/rules` to stage the shared instructions.
+5. **Update Status**: Run `git add .agent .cursor/rules` to stage the shared instructions.
