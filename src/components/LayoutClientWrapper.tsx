@@ -11,6 +11,7 @@ import { useSettings } from './providers/SettingsProvider';
 import { cn } from '@/lib/utils';
 import { ConfirmProvider } from '@/components/providers/ConfirmProvider';
 import { AnimatedSiteBackground } from '@/components/AnimatedSiteBackground';
+import { StaffAiHelpButton } from '@/components/StaffAiHelpButton';
 
 interface LayoutClientWrapperProps {
     children: React.ReactNode;
@@ -43,6 +44,7 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
                     {children}
                 </main>
                 <IntroWizard />
+                {!isLoginPage && <StaffAiHelpButton />}
                 {!isLoginPage && <AnimatedSiteBackground />}
             </ConfirmProvider>
             <Toaster />
