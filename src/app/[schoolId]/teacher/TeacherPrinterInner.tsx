@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import type { Coupon, Category, Teacher, Student, Class, HistoryItem, Prize, AttendanceSettings, AttendanceLogEntry, AttendanceScheduleSlot, AttendanceRewardRule, CouponRedemptionScope, HomeworkAssignment } from '@/lib/types';
-import { ArrowLeft, Printer, Plus, LogIn, LogOut, UserCheck, Award, User, Search, Users, Minus, Gift, Loader2, Trash2, Edit, Filter, Ticket, Clock, ChevronRight, History, FileText, BookOpen } from 'lucide-react';
+import { ArrowLeft, Printer, Plus, LogIn, LogOut, UserCheck, Award, User, Search, Users, Minus, Gift, Loader2, Trash2, Edit, Filter, Ticket, Clock, ChevronRight, History, FileText, BookOpen, Target } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import {
     Dialog,
@@ -61,6 +61,7 @@ import {
 } from '@/lib/coupon-print';
 import { buildRedemptionPrintNote, couponRedemptionLabelForPrint } from '@/lib/couponRedemptionRules';
 import { SchoolReportsPanel } from '@/components/reports/SchoolReportsPanel';
+import { GoalsManager } from '@/components/goals/GoalsManager';
 import { homeworkRewardCategoryKey } from '@/lib/homeworkRewards';
 import { studentsInTeacherScope } from '@/lib/reportsScope';
 
@@ -1451,7 +1452,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
     const { updateTeacher, addCoupons, setCouponsToPrint, addCategory, schoolId, awardPointsToMultipleStudents, deductPointsFromMultipleStudents, addPrize, updatePrize, deletePrize, getTeacherAttendanceConfig, setTeacherAttendanceConfig, listTeacherAttendanceLog, categories: globalCategories } = useAppContext();
     const { toast } = useToast();
     const firestore = useFirestore();
-    const { settings } = useSettings();
+    const { settings, isFeatureAllowed } = useSettings();
     const isGraphic = settings.graphicMode === 'graphics';
     const animBackdrop = globalAnimatedBackdropActive(settings);
     const playSound = useArcadeSound();
@@ -1574,8 +1575,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
         setPrintScopeClassIds((prev) => prev.filter((id) => valid.has(id)));
     }, [secretaryMode, classesForTeacherUi]);
 
-
-
+    const handleCreatePrintCategory = async () => {
         if (!newPrintCategoryName || !newPrintCategoryPoints) {
             playSound('error');
             toast({
@@ -2095,6 +2095,18 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                     <FileText className="w-4 h-4 shrink-0 opacity-80" />
                                     Reports
                                 </TabsTrigger>
+                                {settings.enableGoals && isFeatureAllowed('enableGoals') && (
+                                    <>
+                                        <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground/45 pointer-events-none" aria-hidden />
+                                        <TabsTrigger
+                                            value="goals"
+                                            className="rounded-xl px-3 py-2 font-bold text-sm flex items-center gap-1.5 text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--teacher-accent)]"
+                                        >
+                                            <Target className="w-4 h-4 shrink-0 opacity-80" />
+                                            Goals
+                                        </TabsTrigger>
+                                    </>
+                                )}
                                 {settings.enableHomework && (
                                     <>
                                         <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground/45 pointer-events-none" aria-hidden />
@@ -2169,7 +2181,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                                                     </div>
                                                                 </div>
                                                                 <DialogFooter>
-                                                                    <Button onClick={handleAddPrintCategory} className="rounded-2xl h-12 w-full font-black uppercase tracking-widest">Create Category</Button>
+                                                                    <Button onClick={handleCreatePrintCategory} className="rounded-2xl h-12 w-full font-black uppercase tracking-widest">Create Category</Button>
                                                                 </DialogFooter>
                                                             </DialogContent>
                                                         </Dialog>
@@ -2555,7 +2567,25 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                         />
                                     </div>
                                 </div>
-                            </TabsContent>
+                                </TabsContent>
+
+                                {settings.enableGoals && isFeatureAllowed('enableGoals') && (
+                                    <TabsContent value="goals" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                        <div className="max-w-6xl mx-auto">
+                                            <GoalsManager
+                                                schoolId={schoolId!}
+                                                variant="teacher"
+                                                teacherId={teacherId}
+                                                secretaryMode={secretaryMode}
+                                                students={studentsForTeacherActions}
+                                                classes={classesForTeacherUi}
+                                                categories={categories ?? []}
+                                                prizes={prizes ?? []}
+                                                isGraphic={isGraphic}
+                                            />
+                                        </div>
+                                    </TabsContent>
+                                )}
 
                             {settings.enableHomework && (
                                 <TabsContent value="homework" className="animate-in fade-in slide-in-from-bottom-2 duration-300">

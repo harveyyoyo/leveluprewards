@@ -16,7 +16,7 @@ import {
    Users, Gift, BookOpen, Trash2, Edit, Plus, UploadCloud, Printer, LayoutDashboard, Database,
    Settings, History, Award, CheckCircle, Tag, Trophy, ArrowRight, Loader2, Play, ShieldCheck,
    User, Ticket, Upload, Download, Activity, Zap, Clock, Palette, Wand2, TableProperties,
-   FileText, Bell,
+   FileText, Bell, Target,
  } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -146,6 +146,10 @@ const AdminBonusPointsTab = dynamic(
   () => import('./sections/AdminBonusPointsTab').then((m) => m.AdminBonusPointsTab),
   { loading: tabLoader, ssr: false },
 );
+const AdminGoalsTab = dynamic(
+  () => import('./sections/AdminGoalsTab').then((m) => m.AdminGoalsTab),
+  { loading: tabLoader, ssr: false },
+);
 const AdminBadgesTab = dynamic(
   () => import('./sections/AdminBadgesTab').then((m) => m.AdminBadgesTab),
   { loading: tabLoader, ssr: false },
@@ -266,7 +270,7 @@ function AdminDashboardInner() {
   const confirm = useConfirm();
   const playSound = useArcadeSound();
   const studentCsvInputRef = useRef<HTMLInputElement>(null);
-  const { settings, updateSettings } = useSettings();
+  const { settings, updateSettings, isFeatureAllowed } = useSettings();
 
   // All Firestore reads the dashboard needs live in a single hook so this
   // component only has to worry about orchestration and UI state.
@@ -853,6 +857,11 @@ function AdminDashboardInner() {
                   <Award className="w-4 h-4" aria-hidden="true" /> Badges
                 </TabsTrigger>
               )}
+              {settings.enableGoals && isFeatureAllowed('enableGoals') && (
+                <TabsTrigger value="goals" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
+                  <Target className="w-4 h-4" aria-hidden="true" /> Goals
+                </TabsTrigger>
+              )}
 
               {settings.enableClassSignIn && (
                 <>
@@ -1151,6 +1160,17 @@ function AdminDashboardInner() {
               isAddingSampleCategoryBadges={isAddingSampleCategoryBadges}
             />
           </TabsContent>
+          )}
+          {settings.enableGoals && isFeatureAllowed('enableGoals') && (
+            <TabsContent value="goals" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <AdminGoalsTab
+                schoolId={schoolId!}
+                students={students || []}
+                classes={classes || []}
+                categories={categories || []}
+                prizes={prizes || []}
+              />
+            </TabsContent>
           )}
  
           {settings.enableClassSignIn && (

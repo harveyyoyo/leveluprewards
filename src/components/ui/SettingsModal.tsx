@@ -739,12 +739,12 @@ export function SettingsModal() {
                                 />
                                 <FeatureRow
                                     id="enableGoals"
-                                    label="Goals (Soon)"
+                                    label="Goals"
                                     desc="Set personal point goals for students to reach over time."
                                     icon={<Target className="w-5 h-5" />}
                                     settings={local}
                                     onToggle={handleToggle}
-                                    isImplemented={false}
+                                    isImplemented={true}
                                     isAdmin={isAdmin}
                                     isAllowed={isFeatureAllowed('enableGoals')}
                                     planLabel={planLabel}

@@ -104,6 +104,11 @@ export const deleteStudent = async (firestore: Firestore, schoolId: string, stud
   }
 };
 
+export type AwardPointsOptions = {
+  /** When true, skip syncing student goals after this award (avoids loops for goal-completion bonuses). */
+  skipGoalSync?: boolean;
+};
+
 export const awardPointsToStudent = async (
   firestore: Firestore,
   schoolId: string,
@@ -112,7 +117,8 @@ export const awardPointsToStudent = async (
   description: string,
   allAchievements: Achievement[] = [],
   allCategories: Category[] = [],
-  allBadges: Badge[] = []
+  allBadges: Badge[] = [],
+  options?: AwardPointsOptions,
 ): Promise<{ success: boolean; message: string; bonusTotal?: number }> => {
   if (points <= 0) {
     return { success: false, message: "Points must be a positive number." };
@@ -170,6 +176,12 @@ export const awardPointsToStudent = async (
       transaction.set(activityRef, { desc: description, amount: points, date: Date.now() });
     });
 
+    if (!options?.skipGoalSync) {
+      void import('@/lib/goalsProgress').then((m) =>
+        m.syncGoalsForStudent(firestore, schoolId, studentId).catch(() => {}),
+      );
+    }
+
     return { success: true, message: bonusTotal > 0 ? `Points awarded! Unlocked ${bonusTotal} bonus points from achievements.` : "Points awarded successfully.", bonusTotal };
   } catch (error: unknown) {
     reportFirestorePermissionError(error, {
@@ -190,7 +202,8 @@ export const awardPointsToMultipleStudents = async (
   description: string,
   allAchievements: Achievement[] = [],
   allCategories: Category[] = [],
-  allBadges: Badge[] = []
+  allBadges: Badge[] = [],
+  options?: AwardPointsOptions,
 ): Promise<{ success: boolean; message: string; count: number }> => {
   if (points <= 0) {
     return { success: false, message: "Points must be a positive number.", count: 0 };
@@ -310,6 +323,13 @@ export const awardPointsToMultipleStudents = async (
       await batch.commit();
     }
 
+    if (!options?.skipGoalSync && processedCount > 0) {
+      const unique = [...new Set(studentIds)];
+      void import('@/lib/goalsProgress').then((m) =>
+        Promise.all(unique.map((id) => m.syncGoalsForStudent(firestore, schoolId, id))).catch(() => {}),
+      );
+    }
+
     return { success: true, message: `Successfully awarded points.`, count: processedCount };
 
   } catch (error: unknown) {
@@ -368,6 +388,13 @@ export const deductPointsFromMultipleStudents = async (firestore: Firestore, sch
         else batch.set(op.ref, op.data);
       }
       await batch.commit();
+    }
+
+    if (processedCount > 0) {
+      const unique = [...new Set(studentIds)];
+      void import('@/lib/goalsProgress').then((m) =>
+        Promise.all(unique.map((id) => m.syncGoalsForStudent(firestore, schoolId, id))).catch(() => {}),
+      );
     }
 
     return { success: true, message: `Successfully deducted points.`, count: processedCount };

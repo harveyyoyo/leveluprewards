@@ -155,6 +155,9 @@ export const redeemPrize = async (
         transaction.update(prizeRef, updates);
       }
     });
+    void import('@/lib/goalsProgress').then((m) =>
+      m.syncGoalsForStudent(firestore, schoolId, studentId).catch(() => {}),
+    );
     return { success: true, activityId: activityRef.id, redeemedAt, totalCost: prize.points * quantity };
   } catch (e) {
     reportFirestorePermissionError(e, { path: studentRef.path, operation: 'update', requestResourceData: { prizeId: prize.id, quantity } });

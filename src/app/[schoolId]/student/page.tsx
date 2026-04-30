@@ -90,6 +90,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Helper } from '@/components/ui/helper';
 import { Skeleton } from '@/components/ui/skeleton';
 import { BadgeShowcase } from '@/components/BadgeShowcase';
+import { StudentGoalsCard } from '@/components/goals/StudentGoalsCard';
 import { EarnedBadgesShowcase } from '@/components/EarnedBadgesShowcase';
 import { useActiveStudentSession } from '@/hooks/useActiveStudentSession';
 import { FaceMismatchBanner } from '@/components/FaceMismatchBanner';
@@ -306,7 +307,7 @@ function StudentDashboardInner({
   const firestore = useFirestore();
   const { functions } = useFirebase();
   const { toast } = useToast();
-  const { settings } = useSettings();
+  const { settings, isFeatureAllowed } = useSettings();
   const authFetch = useAuthFetch();
   const isGraphic = settings.graphicMode === 'graphics';
   const animBackdrop = globalAnimatedBackdropActive(settings);
@@ -599,6 +600,11 @@ function StudentDashboardInner({
         animationKey.current += 1;
         setFlyPointsValue(result.value || null);
         setTimeout(() => { setFlyPointsValue(null); setShowRedeem(false); }, 1500);
+        if (settings.enableGoals && isFeatureAllowed('enableGoals') && schoolId && firestore) {
+          void import('@/lib/goalsProgress').then((m) =>
+            m.syncGoalsForStudent(firestore, schoolId, student.id).catch(() => {}),
+          );
+        }
       } else {
         playSound('error');
         toast({ variant: 'destructive', title: 'Redemption Failed', description: result.message });
@@ -614,7 +620,7 @@ function StudentDashboardInner({
     } finally {
       if (activeTab === 'manual') setCouponCode('');
     }
-  }, [couponCode, resetTimer, redeemCoupon, student, toast, playSound, activeTab, settings.enableLibrary, firestore, schoolId]);
+  }, [couponCode, resetTimer, redeemCoupon, student, toast, playSound, activeTab, settings.enableLibrary, settings.enableGoals, firestore, schoolId, isFeatureAllowed]);
 
   const handleRedeemPrize = useCallback(async () => {
     if (!student || !confirmingPrize) return;
@@ -640,6 +646,12 @@ function StudentDashboardInner({
         title: 'Prize Redeemed!',
         description: `Successfully redeemed ${confirmingPrize.name}.`,
       });
+
+      if (settings.enableGoals && isFeatureAllowed('enableGoals') && schoolId && firestore) {
+        void import('@/lib/goalsProgress').then((m) =>
+          m.syncGoalsForStudent(firestore, schoolId, student.id).catch(() => {}),
+        );
+      }
 
       const { activityId, redeemedAt, totalCost } = result;
       let ticketPayload: typeof prizeTicketData = null;
@@ -730,7 +742,7 @@ function StudentDashboardInner({
     } finally {
       setIsRedeemingPrize(false);
     }
-  }, [authFetch, confirmingPrize, playSound, redeemPrize, resetTimer, schoolId, settings.defaultStudentTheme, settings.enablePrizeAiSurprise, settings.enableStudentEmojiOnPrizeTickets, student, toast]);
+  }, [authFetch, confirmingPrize, playSound, redeemPrize, resetTimer, schoolId, settings.defaultStudentTheme, settings.enablePrizeAiSurprise, settings.enableStudentEmojiOnPrizeTickets, settings.enableGoals, student, toast, firestore, isFeatureAllowed]);
 
   const handlePrintPrizeTicket = useCallback(() => {
     if (!prizeTicketData) return;
@@ -1036,6 +1048,13 @@ function StudentDashboardInner({
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 relative z-10 flex-1 min-h-0 lg:items-stretch">
           {/* Left Section: Content */}
           <div className="lg:col-span-2 space-y-3 flex flex-col min-h-0">
+            <StudentGoalsCard
+              schoolId={schoolId!}
+              student={student}
+              enabled={settings.enableGoals && isFeatureAllowed('enableGoals')}
+              themed={!!activeTheme}
+              themeForeground={activeTheme ? 'var(--theme-primary)' : undefined}
+            />
             <Card
               className={cn("border-none shadow-lg overflow-hidden", !activeTheme ? "bg-white dark:bg-slate-900" : "")}
               style={activeTheme ? { backgroundColor: 'var(--theme-card)', color: 'var(--theme-text)' } : undefined}

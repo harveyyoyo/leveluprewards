@@ -4,6 +4,7 @@ import {
   updateDoc,
   deleteDoc,
   collection,
+  getDocs,
   Firestore,
   type DocumentData,
 } from 'firebase/firestore';
@@ -56,6 +57,14 @@ export const updateGoal = async (
     });
     throw error;
   }
+};
+
+/** List all goals for a school (small/medium lists; client-filter as needed). */
+export const fetchGoals = async (firestore: Firestore, schoolId: string): Promise<Goal[]> => {
+  const snap = await getDocs(collection(firestore, 'schools', schoolId, 'goals'));
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() } as Goal))
+    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 };
 
 /** Delete a goal. */

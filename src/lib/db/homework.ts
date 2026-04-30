@@ -137,6 +137,10 @@ export const approveHomework = async (
       transaction.set(activityRef, { desc: description, amount: points, date: now });
     });
 
+    void import('@/lib/goalsProgress').then((m) =>
+      m.syncGoalsForStudent(firestore, schoolId, studentId).catch(() => {}),
+    );
+
     return { success: true, message: bonusTotal > 0 ? `Approved! Unlocked ${bonusTotal} bonus points.` : "Approved successfully.", bonusTotal };
   } catch (error) {
     const fallback = (error instanceof Error && error.message) || 'An unknown error occurred.';

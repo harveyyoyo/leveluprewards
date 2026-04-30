@@ -20,6 +20,7 @@ export {
   uploadStudents,
   importStudentsFromParsedRows,
 } from './students';
+export type { AwardPointsOptions } from './students';
 
 // Lookup
 export { lookupStudentId } from './lookup';
@@ -72,5 +73,6 @@ export {
   addGoal,
   updateGoal,
   deleteGoal,
+  fetchGoals,
 } from './goals';
 
