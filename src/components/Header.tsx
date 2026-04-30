@@ -72,6 +72,7 @@ export default function Header() {
   const centerLabel = schoolName;
   const centerHref = schoolId ? `/${schoolId}/portal` : '/portal';
   const isStaff = loginState === 'teacher' || loginState === 'admin';
+  const canLogout = loginState !== 'loggedOut' && loginState !== 'student';
   const isDemoSchool = schoolId === 'schoolabc';
 
 
@@ -123,6 +124,19 @@ export default function Header() {
               </div>
             )}
             <AdminLoginButton />
+            {canLogout && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 rounded-xl text-slate-500 hover:bg-primary/10 hover:text-primary"
+                aria-label="Sign out"
+                title="Sign out"
+                onClick={handleLogout}
+              >
+                <LogOut className="h-5 w-5" />
+              </Button>
+            )}
             <SettingsModal />
           </div>
         </header>
@@ -257,7 +271,10 @@ export default function Header() {
                   <DropdownMenuContent align="end">
                     <DropdownMenuLabel>Account</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-
+                    <DropdownMenuItem className="gap-2 font-semibold" onClick={handleLogout}>
+                      <LogOut className="h-4 w-4" />
+                      Sign out
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
