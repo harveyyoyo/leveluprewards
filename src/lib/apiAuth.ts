@@ -4,15 +4,17 @@ import { firebaseConfig } from '@/firebase/config';
 /**
  * Lightweight API auth + abuse controls for Next.js route handlers that call
  * paid AI providers. The AI endpoints are not meant to be public — only
- * admin/teacher users of a school may use them.
+ * school staff (admin, teacher, secretary, prize clerk, reports) may use them
+ * when `requireSchoolStaff` is set.
  *
  * Controls applied:
  *  1. Same-origin check via Origin/Referer header (basic CSRF / direct-curl gate).
  *  2. Firebase ID token required (Authorization: Bearer <token>) and verified
  *     against Google's Identity Toolkit REST API using the project's Web API key.
  *  3. When `requireSchoolStaff` is set, the body must include a `schoolId` and
- *     the caller must have an admin or teacher role doc under that school, or
- *     be listed in `appConfig/global.developerUids` (same anonymous Firebase
+ *     the caller must have a staff role doc (admin, teacher, secretary,
+ *     prizeClerk, or reports) under that school, or be listed in
+ *     `appConfig/global.developerUids` (same anonymous Firebase
  *     UID added by dev login + `addDeveloperMe`). Verified via the Firestore
  *     REST API with the caller's ID token so security rules apply.
  *  4. Per-user + per-IP rate limits (sliding window).
@@ -136,11 +138,16 @@ async function checkSchoolRole(
   const urls = [
     `${base}/roles_admin/${encodeURIComponent(uid)}`,
     `${base}/roles_teacher/${encodeURIComponent(uid)}`,
+    `${base}/roles_secretary/${encodeURIComponent(uid)}`,
+    `${base}/roles_prizeClerk/${encodeURIComponent(uid)}`,
+    `${base}/roles_reports/${encodeURIComponent(uid)}`,
   ];
+
+  const STAFF_ROLES = new Set(['admin', 'teacher', 'secretary', 'prizeClerk', 'reports']);
 
   let allowed = false;
   try {
-    // Run both role lookups in parallel using the user's ID token, so
+    // Run role lookups in parallel using the user's ID token, so
     // Firestore rules (not a service account) decide whether the read is
     // permitted. A 200 with a 'fields.role' string value = authorized.
     const results = await Promise.all(
@@ -156,7 +163,7 @@ async function checkSchoolRole(
       if (!body || typeof body !== 'object') continue;
       const fields = (body as { fields?: { role?: { stringValue?: string } } }).fields;
       const role = fields?.role?.stringValue;
-      if (role === 'admin' || role === 'teacher') {
+      if (role && STAFF_ROLES.has(role)) {
         allowed = true;
         break;
       }
@@ -250,9 +257,10 @@ export interface GuardOptions {
   maxBodyBytes?: number;
   /**
    * When true, the request body must include a `schoolId` string and the
-   * authenticated user must have an `admin` or `teacher` role doc under that
-   * school, or appear in `appConfig/global.developerUids`. Enforced via the
-   * Firestore REST API with the caller's ID token.
+   * authenticated user must have a staff role doc (admin, teacher, secretary,
+   * prizeClerk, or reports) under that school, or appear in
+   * `appConfig/global.developerUids`. Enforced via the Firestore REST API with
+   * the caller's ID token.
    */
   requireSchoolStaff?: boolean;
 }
