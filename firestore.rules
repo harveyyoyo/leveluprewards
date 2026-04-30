@@ -308,5 +308,33 @@ service cloud.firestore {
         allow read, write: if false;
       }
     }
+
+    // Outbound notification queues (created by Cloud Functions; extensions / workers deliver).
+    match /mail/{mailId} {
+      allow read: if isDeveloper()
+        || (isAuth()
+          && resource.data.keys().hasAny(['schoolId'])
+          && resource.data.schoolId is string
+          && isAdmin(resource.data.schoolId));
+      allow write: if false;
+    }
+
+    match /sms/{smsId} {
+      allow read: if isDeveloper()
+        || (isAuth()
+          && resource.data.keys().hasAny(['schoolId'])
+          && resource.data.schoolId is string
+          && isAdmin(resource.data.schoolId));
+      allow write: if false;
+    }
+
+    match /whatsapp/{waId} {
+      allow read: if isDeveloper()
+        || (isAuth()
+          && resource.data.keys().hasAny(['schoolId'])
+          && resource.data.schoolId is string
+          && isAdmin(resource.data.schoolId));
+      allow write: if false;
+    }
   }
 }

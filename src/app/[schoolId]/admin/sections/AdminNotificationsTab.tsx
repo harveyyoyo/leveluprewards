@@ -1,30 +1,171 @@
 'use client';
 
-import { Award, Bell, CheckCircle2, Image, Mail, MessageSquare, Shield, Sparkles, User, Users } from 'lucide-react';
+import { useMemo } from 'react';
+import {
+  AlertTriangle,
+  Award,
+  Bell,
+  Check,
+  CheckCircle2,
+  ClipboardList,
+  Image,
+  ListTree,
+  Mail,
+  MessageSquare,
+  Shield,
+  Sparkles,
+  User,
+  Users,
+  X,
+} from 'lucide-react';
+import { collection, limit, query, where } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { useSettings } from '@/components/providers/SettingsProvider';
+import { useAuth } from '@/components/providers/AuthProvider';
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import {
+  buildNotificationDiagnostics,
+  maskRecipient,
+  type ActiveNotificationRow,
+  type DiagnosticLine,
+} from './notificationDiagnostics';
+
+type MailOutDoc = {
+  schoolId?: string;
+  studentId?: string;
+  to?: string;
+  message?: { subject?: string; text?: string };
+  delivery?: { state?: string; error?: string; message?: string; startTime?: string };
+};
+
+function LogIcon({ level }: { level: DiagnosticLine['level'] }) {
+  switch (level) {
+    case 'pass':
+      return <Check className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" aria-hidden="true" />;
+    case 'warn':
+      return <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" aria-hidden="true" />;
+    case 'fail':
+      return <X className="h-4 w-4 text-destructive shrink-0 mt-0.5" aria-hidden="true" />;
+    default:
+      return <ClipboardList className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" aria-hidden="true" />;
+  }
+}
+
+function QueueCell({ active }: { active: boolean }) {
+  return active ? (
+    <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-semibold text-xs">
+      <Check className="h-3.5 w-3.5" aria-hidden="true" /> Yes
+    </span>
+  ) : (
+    <span className="inline-flex items-center gap-1 text-muted-foreground text-xs">
+      <X className="h-3.5 w-3.5" aria-hidden="true" /> No
+    </span>
+  );
+}
+
+function statusBadge(headlineStatus: 'blocked' | 'limited' | 'active') {
+  switch (headlineStatus) {
+    case 'blocked':
+      return (
+        <Badge variant="destructive" className="uppercase tracking-wider text-[10px]">
+          Blocked
+        </Badge>
+      );
+    case 'limited':
+      return (
+        <Badge variant="outline" className="uppercase tracking-wider text-[10px] border-amber-500 text-amber-800 dark:text-amber-300">
+          Partially on
+        </Badge>
+      );
+    default:
+      return (
+        <Badge className="uppercase tracking-wider text-[10px] bg-emerald-600 hover:bg-emerald-600">
+          Gates open
+        </Badge>
+      );
+  }
+}
 
 export function AdminNotificationsTab() {
-  const { settings, updateSettings } = useSettings();
+  const { settings, updateSettings, isFeatureAllowed, planLabel } = useSettings();
+  const { schoolId, loginState } = useAuth();
+  const { firestore } = useFirebase();
+  const notificationsPlanOk = isFeatureAllowed('enableNotifications');
+
+  const { lines: diagnosticLines, activeRows, headlineStatus } = useMemo(
+    () =>
+      buildNotificationDiagnostics({
+        settings,
+        notificationsPlanOk,
+        planLabel,
+      }),
+    [settings, notificationsPlanOk, planLabel],
+  );
+
+  const mailQuery = useMemoFirebase(() => {
+    if (!firestore || !schoolId) return null;
+    if (loginState !== 'admin' && loginState !== 'developer') return null;
+    const sid = schoolId.trim().toLowerCase();
+    return query(collection(firestore, 'mail'), where('schoolId', '==', sid), limit(40));
+  }, [firestore, schoolId, loginState]);
+
+  const { data: mailRows, isLoading: mailLoading, error: mailError } = useCollection<MailOutDoc>(mailQuery);
+
+  const sortedMail = useMemo(() => {
+    if (!mailRows?.length) return [];
+    return [...mailRows].sort((a, b) => (a.id < b.id ? 1 : a.id > b.id ? -1 : 0));
+  }, [mailRows]);
 
   return (
     <div className="space-y-6">
+      {!notificationsPlanOk && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+          <AlertTitle>Alerts are not active on your plan</AlertTitle>
+          <AlertDescription>
+            Parent and staff messages are handled by Cloud Functions only when the school&apos;s{' '}
+            <strong>Notifications</strong> feature is enabled (included on Enterprise, or granted via a developer
+            override on your school). Turning on &quot;Reward Redemptions&quot; below does not send email until that
+            requirement is met. You must also install the Firebase <strong>Trigger Email</strong> extension (or
+            equivalent) so documents in the <code className="text-xs">mail</code> collection are delivered.
+          </AlertDescription>
+        </Alert>
+      )}
+
       <Card className="border-t-4 border-blue-500 shadow-md">
         <CardHeader className="py-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-1">
               <CardTitle className="flex items-center gap-2">
                 <Bell className="w-5 h-5 text-blue-500" /> Notification System
               </CardTitle>
               <CardDescription>
-                Configure automated alerts for parents, teachers, and administrators.
+                Configure automated alerts for parents, teachers, and administrators. Status below reflects saved
+                school settings and your subscription plan — not Firebase extension health.
               </CardDescription>
             </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20">
-              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-green-600 dark:text-green-400">System Active</span>
+            <div className="flex items-center gap-2 flex-wrap">
+              {statusBadge(headlineStatus)}
+              <span className="text-[11px] text-muted-foreground max-w-[220px] leading-snug">
+                {headlineStatus === 'blocked' && 'Functions will not enqueue outbound messages.'}
+                {headlineStatus === 'limited' &&
+                  'Master switch is on but every event trigger is off — nothing will fire.'}
+                {headlineStatus === 'active' &&
+                  'At least one event path can enqueue mail/SMS when activities occur.'}
+              </span>
             </div>
           </div>
         </CardHeader>
@@ -69,8 +210,136 @@ export function AdminNotificationsTab() {
         </CardContent>
       </Card>
 
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <Card className="shadow-md">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <ListTree className="w-4 h-4 text-primary" /> Delivery diagnostic log
+            </CardTitle>
+            <CardDescription>
+              Plain-language checks that mirror Cloud Function gates in this codebase. Use with Firebase Functions logs
+              and the mail queue on the right.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="h-[min(420px,55vh)] pr-3">
+              <ul className="space-y-3 text-sm">
+                {diagnosticLines.map((line, i) => (
+                  <li key={i} className="flex gap-2 items-start">
+                    <LogIcon level={line.level} />
+                    <span className="text-muted-foreground leading-relaxed">{line.text}</span>
+                  </li>
+                ))}
+              </ul>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-md">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Mail className="w-4 h-4 text-primary" /> Recent mail queue (this school)
+            </CardTitle>
+            <CardDescription>
+              Documents the Cloud Function appends to the top-level <code className="text-xs">mail</code> collection.
+              If redemption works, new rows should appear here before the Trigger Email extension sends (or marks
+              delivery). Requires updated Firestore rules so school admins can read their school&apos;s rows.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {mailError ? (
+              <Alert variant="destructive">
+                <AlertTitle>Could not load mail queue</AlertTitle>
+                <AlertDescription className="text-xs leading-relaxed">
+                  {(mailError as Error)?.message || String(mailError)}. Deploy the latest{' '}
+                  <code className="text-[10px]">firestore.rules</code> (mail read for admins) or confirm you are signed in
+                  as admin for this school.
+                </AlertDescription>
+              </Alert>
+            ) : mailLoading ? (
+              <p className="text-sm text-muted-foreground">Loading mail queue…</p>
+            ) : !sortedMail.length ? (
+              <p className="text-sm text-muted-foreground">
+                No mail documents for this school yet. Trigger a redemption with notifications enabled, then refresh —
+                if still empty, check Functions deployment and logs for <code className="text-xs">onStudentActivityCreated</code>.
+              </p>
+            ) : (
+              <ScrollArea className="h-[min(420px,55vh)] border rounded-md">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[100px]">Doc</TableHead>
+                      <TableHead>To</TableHead>
+                      <TableHead>Subject</TableHead>
+                      <TableHead className="w-[90px]">Delivery</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {sortedMail.map((row) => {
+                      const subj = row.message?.subject ?? '—';
+                      const del = row.delivery?.state ?? row.delivery?.error ?? '—';
+                      return (
+                        <TableRow key={row.id}>
+                          <TableCell className="font-mono text-[10px] align-top">{row.id.slice(0, 8)}…</TableCell>
+                          <TableCell className="text-xs align-top">{maskRecipient(row.to)}</TableCell>
+                          <TableCell className="text-xs align-top max-w-[200px] break-words">{subj}</TableCell>
+                          <TableCell className="text-[10px] align-top text-muted-foreground break-words">{del}</TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="shadow-md">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-primary" /> What can notify as of now
+          </CardTitle>
+          <CardDescription>
+            &quot;Parent / student / staff queue&quot; means the Cloud Function will try to enqueue that channel when
+            the event happens — it still skips missing email or phone on the record.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Event</TableHead>
+                <TableHead>When it fires</TableHead>
+                <TableHead>Parent queue</TableHead>
+                <TableHead>Student queue</TableHead>
+                <TableHead>Staff queue</TableHead>
+                <TableHead className="min-w-[180px]">Notes</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {activeRows.map((row: ActiveNotificationRow) => (
+                <TableRow key={row.id}>
+                  <TableCell className="font-semibold text-sm align-top">{row.label}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground align-top max-w-[220px]">{row.trigger}</TableCell>
+                  <TableCell className="align-top">
+                    <QueueCell active={row.parentQueue} />
+                  </TableCell>
+                  <TableCell className="align-top">
+                    <QueueCell active={row.studentQueue} />
+                  </TableCell>
+                  <TableCell className="align-top">
+                    <QueueCell active={row.staffQueue} />
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground align-top">{row.gateNote}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 transition-opacity">
-        {/* EVENT TRIGGERS */}
         <Card className="shadow-md">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
@@ -142,7 +411,6 @@ export function AdminNotificationsTab() {
           </CardContent>
         </Card>
 
-        {/* RECIPIENT SETTINGS */}
         <Card className="shadow-md">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
@@ -219,10 +487,10 @@ export function AdminNotificationsTab() {
           <div className="space-y-2">
             <h4 className="font-bold text-sm">Privacy & Security Notice</h4>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Alerts are sent via secure Firebase Cloud Functions. Ensure you have the 
-              <strong> "Trigger Email"</strong> or <strong>"Twilio SMS"</strong> extensions configured in 
-              your Firebase Console to enable delivery. Contact information is stored encrypted 
-              within your school's private database.
+              Alerts are sent via secure Firebase Cloud Functions. Ensure you have the
+              <strong> &quot;Trigger Email&quot;</strong> or <strong>&quot;Twilio SMS&quot;</strong> extensions configured in
+              your Firebase Console to enable delivery. Contact information is stored encrypted
+              within your school&apos;s private database.
             </p>
           </div>
         </CardContent>
