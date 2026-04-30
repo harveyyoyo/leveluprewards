@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, Copy, Edit, FileText, Gift, Plus, Printer, Trash2, User } from 'lucide-react';
+import { ChevronDown, Copy, Edit, FileText, Gift, Plus, Printer, Trash2, User, UserMinus, UserPlus } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -64,6 +64,7 @@ export function AdminTeachersTab({
   onAddTeacher,
   onEditTeacher,
   onDeleteTeacher,
+  onUpdateStudent,
   onSaveStaffAccount,
   onDeleteStaffAccount,
 }: {
@@ -75,6 +76,7 @@ export function AdminTeachersTab({
   onAddTeacher: () => void;
   onEditTeacher: (t: Teacher) => void;
   onDeleteTeacher: (teacherId: string) => void;
+  onUpdateStudent: (student: Student) => Promise<void>;
   onSaveStaffAccount: (account: StaffAccount | Omit<StaffAccount, 'id'>) => Promise<void>;
   onDeleteStaffAccount: (accountId: string) => Promise<void>;
 }) {
@@ -90,6 +92,7 @@ export function AdminTeachersTab({
   const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [rosterBusyKey, setRosterBusyKey] = useState('');
   const [copiedKey, setCopiedKey] = useState('');
   const [origin, setOrigin] = useState('');
 
@@ -113,6 +116,30 @@ export function AdminTeachersTab({
     }
     return map;
   }, [teachers, students, classes]);
+
+  const assignStudentToTeacher = async (student: Student, teacherId: string) => {
+    const current = student.teacherIds || [];
+    if (current.includes(teacherId)) return;
+    const busyKey = `${teacherId}:${student.id}`;
+    setRosterBusyKey(busyKey);
+    try {
+      await onUpdateStudent({ ...student, teacherIds: [...current, teacherId] });
+    } finally {
+      setRosterBusyKey('');
+    }
+  };
+
+  const removeStudentFromTeacher = async (student: Student, teacherId: string) => {
+    const current = student.teacherIds || [];
+    if (!current.includes(teacherId)) return;
+    const busyKey = `${teacherId}:${student.id}`;
+    setRosterBusyKey(busyKey);
+    try {
+      await onUpdateStudent({ ...student, teacherIds: current.filter((id) => id !== teacherId) });
+    } finally {
+      setRosterBusyKey('');
+    }
+  };
 
   useEffect(() => {
     if (!schoolId) return;
@@ -350,17 +377,64 @@ export function AdminTeachersTab({
                       <ul className="max-h-44 overflow-y-auto space-y-1 rounded-xl border border-border/50 bg-background/80 p-2 text-sm">
                         {rows.map((s) => {
                           const cls = s.classId ? classNameById.get(s.classId) : undefined;
+                          const directlyLinked = s.teacherIds?.includes(t.id) ?? false;
                           return (
-                            <li key={s.id} className="flex items-baseline justify-between gap-2">
-                              <span className="min-w-0 truncate font-medium text-foreground">{studentRowLabel(s)}</span>
-                              {cls ? (
-                                <span className="shrink-0 text-xs text-muted-foreground">{cls}</span>
+                            <li key={s.id} className="flex items-center justify-between gap-2 rounded-lg px-2 py-1 hover:bg-muted/40">
+                              <span className="min-w-0">
+                                <span className="block truncate font-medium text-foreground">{studentRowLabel(s)}</span>
+                                <span className="block text-xs text-muted-foreground">
+                                  {cls || 'Unassigned'} {directlyLinked ? '· directly linked' : '· class roster'}
+                                </span>
+                              </span>
+                              {directlyLinked ? (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 shrink-0 gap-1 text-destructive hover:bg-destructive/10"
+                                  disabled={rosterBusyKey === `${t.id}:${s.id}`}
+                                  onClick={() => void removeStudentFromTeacher(s, t.id)}
+                                >
+                                  <UserMinus className="h-3.5 w-3.5" />
+                                  Remove
+                                </Button>
                               ) : null}
                             </li>
                           );
                         })}
                       </ul>
                     )}
+                    <div className="mt-3 space-y-2">
+                      <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Add students directly</p>
+                      <ul className="max-h-36 overflow-y-auto space-y-1 rounded-xl border border-border/50 bg-background/80 p-2 text-sm">
+                        {(students || [])
+                          .filter((s) => !(s.teacherIds || []).includes(t.id))
+                          .slice()
+                          .sort(studentSortKey)
+                          .map((s) => {
+                            const cls = s.classId ? classNameById.get(s.classId) : undefined;
+                            return (
+                              <li key={s.id} className="flex items-center justify-between gap-2 rounded-lg px-2 py-1 hover:bg-muted/40">
+                                <span className="min-w-0">
+                                  <span className="block truncate font-medium text-foreground">{studentRowLabel(s)}</span>
+                                  <span className="block text-xs text-muted-foreground">{cls || 'Unassigned'}</span>
+                                </span>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-8 shrink-0 gap-1"
+                                  disabled={rosterBusyKey === `${t.id}:${s.id}`}
+                                  onClick={() => void assignStudentToTeacher(s, t.id)}
+                                >
+                                  <UserPlus className="h-3.5 w-3.5" />
+                                  Add
+                                </Button>
+                              </li>
+                            );
+                          })}
+                      </ul>
+                    </div>
                   </div>
                 </CollapsibleContent>
               </Collapsible>

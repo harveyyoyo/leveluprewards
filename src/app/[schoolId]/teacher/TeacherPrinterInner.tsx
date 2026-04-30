@@ -316,6 +316,171 @@ function TeacherHomeworkTab({ schoolId, teacherId, students, classes }: { school
     );
 }
 
+function TeacherRosterTab({
+    teacherId,
+    allStudents,
+    rosterStudents,
+    classes,
+    isGraphic,
+}: {
+    teacherId: string;
+    allStudents: Student[];
+    rosterStudents: Student[];
+    classes: Class[];
+    isGraphic: boolean;
+}) {
+    const { updateStudent } = useAppContext();
+    const { toast } = useToast();
+    const [search, setSearch] = useState('');
+    const [busyStudentId, setBusyStudentId] = useState<string | null>(null);
+
+    const classMap = useMemo(() => new Map(classes.map((c) => [c.id, c])), [classes]);
+    const classIdsForTeacher = useMemo(
+        () => new Set(classes.filter((c) => c.primaryTeacherId === teacherId).map((c) => c.id)),
+        [classes, teacherId],
+    );
+    const normalizedSearch = search.trim().toLowerCase();
+
+    const matchesSearch = (student: Student) => {
+        if (!normalizedSearch) return true;
+        return `${getStudentNickname(student)} ${student.lastName} ${student.nfcId || student.id}`.toLowerCase().includes(normalizedSearch);
+    };
+
+    const sortedStudents = (list: Student[]) =>
+        list
+            .filter(matchesSearch)
+            .slice()
+            .sort((a, b) => {
+                const ln = a.lastName.localeCompare(b.lastName);
+                if (ln !== 0) return ln;
+                return getStudentNickname(a).localeCompare(getStudentNickname(b));
+            });
+
+    const roster = sortedStudents(rosterStudents);
+    const addable = sortedStudents(allStudents.filter((s) => !(s.teacherIds || []).includes(teacherId)));
+
+    const setTeacherLink = async (student: Student, linked: boolean) => {
+        const current = student.teacherIds || [];
+        const next = linked
+            ? Array.from(new Set([...current, teacherId]))
+            : current.filter((id) => id !== teacherId);
+        setBusyStudentId(student.id);
+        try {
+            await updateStudent({ ...student, teacherIds: next });
+            toast({ title: linked ? 'Student added to your roster' : 'Student removed from your roster' });
+        } catch (e) {
+            toast({ variant: 'destructive', title: 'Roster update failed', description: getReadableErrorMessage(e, 'Could not update this student.') });
+        } finally {
+            setBusyStudentId(null);
+        }
+    };
+
+    const renderClassLabel = (student: Student) => {
+        const cls = student.classId ? classMap.get(student.classId) : undefined;
+        const classOwned = !!student.classId && classIdsForTeacher.has(student.classId);
+        return `${cls?.name || 'Unassigned'}${classOwned ? ' · class roster' : ''}`;
+    };
+
+    return (
+        <div className="flex justify-center">
+            <Card className={cn(
+                "w-full max-w-6xl border-t-8 transition-all duration-500 hover:shadow-2xl hover:-translate-y-1",
+                isGraphic ? 'bg-card/60 backdrop-blur-2xl border-chart-4 shadow-[0_20px_50px_rgba(0,0,0,0.1)]' : 'bg-white border-chart-4 shadow-lg'
+            )}>
+                <CardHeader className="p-4 md:p-6">
+                    <CardTitle className="flex items-center gap-3">
+                        <div className={cn("p-2 rounded-xl", isGraphic ? 'bg-chart-4/20 text-chart-4' : 'bg-primary/10 text-primary')}>
+                            <Users className="w-6 h-6" />
+                        </div>
+                        My Students
+                    </CardTitle>
+                    <CardDescription className={isGraphic ? 'text-muted-foreground/80' : ''}>
+                        Add or remove the direct student links for your teacher account. Students in classes you teach stay visible through that class.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="p-4 md:p-6 space-y-6">
+                    <div className="relative max-w-md">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            placeholder="Search students..."
+                            className={cn("h-11 rounded-xl pl-9", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-slate-50')}
+                        />
+                    </div>
+
+                    <div className="grid gap-6 lg:grid-cols-2">
+                        <div className="space-y-2">
+                            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">On my roster ({roster.length})</Label>
+                            <ScrollArea className={cn("h-[420px] rounded-2xl border p-3", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-muted/20')}>
+                                <div className="space-y-2 pr-3">
+                                    {roster.map((student) => {
+                                        const directlyLinked = (student.teacherIds || []).includes(teacherId);
+                                        return (
+                                            <div key={student.id} className="flex items-center justify-between gap-3 rounded-xl border bg-background/70 p-3">
+                                                <div className="min-w-0">
+                                                    <p className="truncate font-bold">{getStudentNickname(student)} {student.lastName}</p>
+                                                    <p className="text-xs text-muted-foreground">{renderClassLabel(student)}</p>
+                                                </div>
+                                                {directlyLinked ? (
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        className="h-9 shrink-0 gap-2 rounded-xl text-destructive hover:bg-destructive/10"
+                                                        disabled={busyStudentId === student.id}
+                                                        onClick={() => void setTeacherLink(student, false)}
+                                                    >
+                                                        <Minus className="h-4 w-4" />
+                                                        Remove
+                                                    </Button>
+                                                ) : (
+                                                    <Badge variant="outline" className="shrink-0">Class</Badge>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                    {roster.length === 0 ? (
+                                        <p className="py-10 text-center text-sm font-bold text-muted-foreground">No matching students on your roster.</p>
+                                    ) : null}
+                                </div>
+                            </ScrollArea>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Add students ({addable.length})</Label>
+                            <ScrollArea className={cn("h-[420px] rounded-2xl border p-3", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-muted/20')}>
+                                <div className="space-y-2 pr-3">
+                                    {addable.map((student) => (
+                                        <div key={student.id} className="flex items-center justify-between gap-3 rounded-xl border bg-background/70 p-3">
+                                            <div className="min-w-0">
+                                                <p className="truncate font-bold">{getStudentNickname(student)} {student.lastName}</p>
+                                                <p className="text-xs text-muted-foreground">{renderClassLabel(student)}</p>
+                                            </div>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                className="h-9 shrink-0 gap-2 rounded-xl"
+                                                disabled={busyStudentId === student.id}
+                                                onClick={() => void setTeacherLink(student, true)}
+                                            >
+                                                <Plus className="h-4 w-4" />
+                                                Add
+                                            </Button>
+                                        </div>
+                                    ))}
+                                    {addable.length === 0 ? (
+                                        <p className="py-10 text-center text-sm font-bold text-muted-foreground">No matching students to add.</p>
+                                    ) : null}
+                                </div>
+                            </ScrollArea>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+    );
+}
+
 function RecentRedemptions({ schoolId, students, classes, teacherId }: { schoolId: string; students: Student[], classes: Class[], teacherId: string }) {
     const [redemptions, setRedemptions] = useState<(HistoryItem & { id: string; studentId: string; studentName: string; studentClass: string })[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -2059,6 +2224,14 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                     <Award className="w-4 h-4 shrink-0 opacity-80" />
                                     Points
                                 </TabsTrigger>
+                                <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground/45 pointer-events-none" aria-hidden />
+                                <TabsTrigger
+                                    value="roster"
+                                    className="rounded-xl px-3 py-2 font-bold text-sm flex items-center gap-1.5 text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--teacher-accent)]"
+                                >
+                                    <Users className="w-4 h-4 shrink-0 opacity-80" />
+                                    Students
+                                </TabsTrigger>
                                 {settings.enableAttendance && (
                                   <>
                                     <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground/45 pointer-events-none" aria-hidden />
@@ -2493,6 +2666,16 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                     </CardContent>
                                   </Card>
                                 </div>
+                            </TabsContent>
+
+                            <TabsContent value="roster" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                <TeacherRosterTab
+                                    teacherId={teacherId}
+                                    allStudents={students || []}
+                                    rosterStudents={studentsForTeacherActions}
+                                    classes={classes || []}
+                                    isGraphic={isGraphic}
+                                />
                             </TabsContent>
 
                             {settings.enableAttendance && (

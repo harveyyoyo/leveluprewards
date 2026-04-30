@@ -1000,6 +1000,7 @@ function AdminDashboardInner() {
                 setNewTeacherPhone(decryptField(t.phone) || '');
                 setIsTeacherModalOpen(true);
               }}
+              onUpdateStudent={updateStudent}
               onDeleteTeacher={async (id) => {
                 const teacher = (teachers || []).find((t) => t.id === id);
                 const ok = await confirm({
