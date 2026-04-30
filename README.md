@@ -54,7 +54,7 @@ This project uses a unified AI coordination system called **Skillshares**.
 - **Source of Truth**: All AI instructions and project standards are located in the `.agent/` directory.
 - **Cursor Rules**: Synchronization rules for Cursor are in `.cursor/rules/`.
 - **Workflows**: Common AI procedures are documented in `.agent/workflows/`.
-- **Knowledge**: Project-specific quirks and deployment rules are in `.agent/knowledge/`.
+- **Knowledge**: Project-specific quirks, deployment rules, and product scope are in `.agent/knowledge/` (see `product-scope.md`).
 
 All AI assistants (Antigravity, Cursor, Codex) should refer to these directories to ensure consistency.
 
