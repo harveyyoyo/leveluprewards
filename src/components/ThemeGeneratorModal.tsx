@@ -121,14 +121,15 @@ export function ThemeGeneratorModal({
     classLabel = 'Unassigned',
     onRemoveTheme,
 }: ThemeGeneratorModalProps) {
+    const { settings } = useSettings();
+    const initialTheme = currentTheme ?? settings.defaultStudentTheme ?? undefined;
     const [prompt, setPrompt] = useState('');
     const [isGenerating, setIsGenerating] = useState(false);
-    const [previewTheme, setPreviewTheme] = useState<StudentTheme | undefined>(currentTheme || settings.defaultStudentTheme);
-    const [previousTheme, setPreviousTheme] = useState<StudentTheme | undefined>(currentTheme || settings.defaultStudentTheme);
+    const [previewTheme, setPreviewTheme] = useState<StudentTheme | undefined>(initialTheme);
+    const [previousTheme, setPreviousTheme] = useState<StudentTheme | undefined>(initialTheme);
     const [model, setModel] = useState<string>('gpt-4o-mini');
     const [animatePreview, setAnimatePreview] = useState(false);
     const { toast } = useToast();
-    const { settings } = useSettings();
     const { schoolId } = useAppContext();
     const authFetch = useAuthFetch();
     const firestore = useFirestore();
@@ -154,10 +155,10 @@ export function ThemeGeneratorModal({
     const previewWrapRef = useRef<HTMLDivElement | null>(null);
     const [idPreviewScale, setIdPreviewScale] = useState(1.35);
     const [gradientAngle, setGradientAngle] = useState('135');
-    const [gradientA, setGradientA] = useState((currentTheme || settings.defaultStudentTheme)?.primary || '#0ea5e9');
-    const [gradientB, setGradientB] = useState((currentTheme || settings.defaultStudentTheme)?.accent || '#22c55e');
+    const [gradientA, setGradientA] = useState(initialTheme?.primary || '#0ea5e9');
+    const [gradientB, setGradientB] = useState(initialTheme?.accent || '#22c55e');
     const [backgroundMode, setBackgroundMode] = useState<'solid' | 'gradient' | 'custom'>(() =>
-        inferBackgroundMode(currentTheme || settings.defaultStudentTheme),
+        inferBackgroundMode(initialTheme),
     );
     const [isRemovingTheme, setIsRemovingTheme] = useState(false);
 
@@ -205,7 +206,7 @@ export function ThemeGeneratorModal({
     // When the dialog opens, reset preview from the latest saved theme (per student / school default).
     useEffect(() => {
         if (!isOpen) return;
-        const initial = currentTheme || settings.defaultStudentTheme;
+        const initial = currentTheme ?? settings.defaultStudentTheme ?? undefined;
         setPreviewTheme(initial);
         setPreviousTheme(initial);
         setPrompt('');

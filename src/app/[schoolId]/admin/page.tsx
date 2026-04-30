@@ -56,6 +56,7 @@ import DynamicIcon from '@/components/DynamicIcon';
 import { Coupon as CouponPreview } from '@/components/Coupon';
 import { Switch } from '@/components/ui/switch';
 import { cn, getStudentNickname, getRandomColor } from '@/lib/utils';
+import { encryptField, decryptField } from '@/lib/crypto';
 import {
   Tooltip,
   TooltipContent,
@@ -489,7 +490,7 @@ function AdminDashboardInner() {
     if (editingTeacher) {
       if (budgetVal === undefined) {
         updateTeacher(
-          { ...editingTeacher, name: newTeacherName, username, passcode, email: newTeacherEmail, phone: newTeacherPhone },
+          { ...editingTeacher, name: newTeacherName, username, passcode, email: encryptField(newTeacherEmail), phone: encryptField(newTeacherPhone) },
           { clearTeacherBudget: true },
         );
       } else {
@@ -503,8 +504,8 @@ function AdminDashboardInner() {
           passcode,
           monthlyBudget: budgetVal,
           budgetPeriod: periodForSave,
-          email: newTeacherEmail,
-          phone: newTeacherPhone,
+          email: encryptField(newTeacherEmail),
+          phone: encryptField(newTeacherPhone),
         };
         if (budgetChanged) {
           updateTeacher({
@@ -517,14 +518,14 @@ function AdminDashboardInner() {
         }
       }
     } else if (budgetVal === undefined) {
-      addTeacher({ name: newTeacherName, username, passcode, email: newTeacherEmail, phone: newTeacherPhone });
+      addTeacher({ name: newTeacherName, username, passcode, email: encryptField(newTeacherEmail), phone: encryptField(newTeacherPhone) });
     } else {
       addTeacher({
         name: newTeacherName,
         username,
         passcode,
-        email: newTeacherEmail,
-        phone: newTeacherPhone,
+        email: encryptField(newTeacherEmail),
+        phone: encryptField(newTeacherPhone),
         monthlyBudget: budgetVal,
         budgetPeriod: periodForSave,
         spentThisMonth: 0,
@@ -877,11 +878,9 @@ function AdminDashboardInner() {
               <TabsTrigger value="branding" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
                 <UploadCloud className="w-4 h-4" aria-hidden="true" /> Branding
               </TabsTrigger>
-              {settings.enableNotifications && (
-                <TabsTrigger value="notifications" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
-                  <Bell className="w-4 h-4" aria-hidden="true" /> Notifications
-                </TabsTrigger>
-              )}
+              <TabsTrigger value="notifications" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
+                <Bell className="w-4 h-4" aria-hidden="true" /> Notifications
+              </TabsTrigger>
               <TabsTrigger value="backups" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
                 <Database className="w-4 h-4" aria-hidden="true" /> Backups
               </TabsTrigger>
@@ -997,8 +996,8 @@ function AdminDashboardInner() {
                 setNewTeacherBudget(t.monthlyBudget?.toString() || '');
                 const p = t.budgetPeriod;
                 setNewTeacherBudgetPeriod(p === 'day' || p === 'week' || p === 'month' ? p : 'month');
-                setNewTeacherEmail(t.email || '');
-                setNewTeacherPhone(t.phone || '');
+                setNewTeacherEmail(decryptField(t.email) || '');
+                setNewTeacherPhone(decryptField(t.phone) || '');
                 setIsTeacherModalOpen(true);
               }}
               onDeleteTeacher={async (id) => {
@@ -1233,11 +1232,9 @@ function AdminDashboardInner() {
             />
           </TabsContent>
 
-          {settings.enableNotifications && (
             <TabsContent value="notifications" className="mt-6">
               <AdminNotificationsTab />
             </TabsContent>
-          )}
 
           <TabsContent value="backups" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <AdminBackupsTab

@@ -257,9 +257,7 @@ export default function Header() {
                   <DropdownMenuContent align="end">
                     <DropdownMenuLabel>Account</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-muted-foreground/50 italic py-2 cursor-default">
-                      Security & logout available in Settings
-                    </DropdownMenuItem>
+
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}

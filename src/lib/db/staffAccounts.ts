@@ -9,6 +9,8 @@ export type StaffAccountInput = {
   displayName: string;
   role: StaffAccountRole;
   roles?: StaffAccountRole[];
+  email?: string;
+  phone?: string;
 };
 
 function normalizeUsername(username: string): string {
@@ -29,6 +31,8 @@ export const addStaffAccount = async (
     displayName: input.displayName.trim(),
     role: input.role,
     roles: input.roles?.length ? Array.from(new Set(input.roles)) : [input.role],
+    email: input.email?.trim(),
+    phone: input.phone?.trim(),
   };
   const ref = doc(firestore, 'schools', schoolId, 'staffAccounts', id);
   try {

@@ -1,5 +1,12 @@
 # Frontend Gotchas & Best Practices
 
+## Firestore Permission Errors During Local UI Testing
+
+If a local page reports `Missing or insufficient permissions` but the checked-in
+`firestore.rules` already allow the operation, check `.agent/knowledge/deployment.md`
+before changing UI code. This repo often runs against live Firestore while only
+the Functions emulator is active, so the live rules may simply need deployment.
+
 ## Printing and React Lifecycle
 
 ### The "Blank/Missing Data on Second Print" Bug

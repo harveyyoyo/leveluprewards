@@ -18,6 +18,7 @@ const crypto = require("crypto");
 const firestore_1 = require("firebase-admin/firestore");
 const signInAttendance_1 = require("./signInAttendance");
 const couponRedemption_1 = require("./couponRedemption");
+const crypto_1 = require("./crypto");
 admin.initializeApp();
 const SUBCOLLECTIONS = ["students", "classes", "teachers", "staffAccounts", "categories", "prizes", "coupons"];
 const RETENTION_DAYS = 30;
@@ -1553,9 +1554,13 @@ exports.onStudentActivityCreated = functions.firestore
         : `${studentName} just earned ${amountAbs} points for: ${activityData.desc}`;
     const alerts = [];
     // Notify Parent
-    if (studentData.parentEmail) {
+    const pEmail = (0, crypto_1.decryptField)(studentData.parentEmail);
+    const pPhone = (0, crypto_1.decryptField)(studentData.parentPhone);
+    const fromEmail = "sdeichemed@gmail.com";
+    if (pEmail) {
         alerts.push(db.collection("mail").add({
-            to: studentData.parentEmail,
+            to: pEmail,
+            from: fromEmail,
             message: {
                 subject: `${subject}: ${studentName}`,
                 text: message,
@@ -1570,15 +1575,15 @@ exports.onStudentActivityCreated = functions.firestore
             studentId,
         }));
     }
-    if (studentData.parentPhone) {
+    if (pPhone) {
         alerts.push(db.collection("sms").add({
-            to: studentData.parentPhone,
+            to: pPhone,
             body: message,
             schoolId,
         }));
         if (settings.notificationWhatsAppEnabled) {
             alerts.push(db.collection("whatsapp").add({
-                to: studentData.parentPhone,
+                to: pPhone,
                 body: message,
                 schoolId,
             }));
@@ -1590,9 +1595,12 @@ exports.onStudentActivityCreated = functions.firestore
         for (const tid of teacherIds) {
             const tSnap = await db.collection("schools").doc(schoolId).collection("teachers").doc(tid).get();
             const tData = tSnap.data();
-            if (tData === null || tData === void 0 ? void 0 : tData.email) {
+            const tEmail = (0, crypto_1.decryptField)(tData === null || tData === void 0 ? void 0 : tData.email);
+            const tPhone = (0, crypto_1.decryptField)(tData === null || tData === void 0 ? void 0 : tData.phone);
+            if (tEmail) {
                 alerts.push(db.collection("mail").add({
-                    to: tData.email,
+                    to: tEmail,
+                    from: fromEmail,
                     message: {
                         subject: `Staff Alert: ${studentName}`,
                         text: message,
@@ -1600,9 +1608,9 @@ exports.onStudentActivityCreated = functions.firestore
                     schoolId,
                 }));
             }
-            if ((tData === null || tData === void 0 ? void 0 : tData.phone) && settings.notificationWhatsAppEnabled) {
+            if (tPhone && settings.notificationWhatsAppEnabled) {
                 alerts.push(db.collection("whatsapp").add({
-                    to: tData.phone,
+                    to: tPhone,
                     body: `Staff Alert: ${message}`,
                     schoolId,
                 }));
@@ -1615,7 +1623,7 @@ exports.onStudentActivityCreated = functions.firestore
 exports.onAttendanceLogCreated = functions.firestore
     .document("schools/{schoolId}/attendanceLog/{logId}")
     .onCreate(async (snapshot, context) => {
-    var _a;
+    var _a, _b;
     const { schoolId } = context.params;
     const logData = snapshot.data();
     if (!logData)
@@ -1638,9 +1646,14 @@ exports.onAttendanceLogCreated = functions.firestore
     const message = `${studentName} ${status}${period} at ${new Date(logData.signedInAt).toLocaleTimeString()}.`;
     const alerts = [];
     // Notify Parent
-    if (studentData.parentEmail) {
+    const pEmail = (0, crypto_1.decryptField)(studentData.parentEmail);
+    const pPhone = (0, crypto_1.decryptField)(studentData.parentPhone);
+    const schoolName = ((_b = schoolSnap.data()) === null || _b === void 0 ? void 0 : _b.name) || "School";
+    const fromEmail = `"${schoolName} Alerts" <alerts@levelup-edu.com>`;
+    if (pEmail) {
         alerts.push(db.collection("mail").add({
-            to: studentData.parentEmail,
+            to: pEmail,
+            from: fromEmail,
             message: {
                 subject: `Attendance Alert: ${studentName}`,
                 text: message,
@@ -1653,15 +1666,15 @@ exports.onAttendanceLogCreated = functions.firestore
             studentId,
         }));
     }
-    if (studentData.parentPhone) {
+    if (pPhone) {
         alerts.push(db.collection("sms").add({
-            to: studentData.parentPhone,
+            to: pPhone,
             body: message,
             schoolId,
         }));
         if (settings.notificationWhatsAppEnabled) {
             alerts.push(db.collection("whatsapp").add({
-                to: studentData.parentPhone,
+                to: pPhone,
                 body: message,
                 schoolId,
             }));

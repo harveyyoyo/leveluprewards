@@ -17,22 +17,20 @@ export function AdminNotificationsTab() {
         <CardHeader className="py-6">
           <div className="flex items-center justify-between">
             <div className="space-y-1">
-              <Helper content="Master switch for all external alerts. When off, no emails or texts will be sent.">
-                <CardTitle className="flex items-center gap-2">
-                  <Bell className="w-5 h-5 text-blue-500" /> Notification System
-                </CardTitle>
-              </Helper>
+              <CardTitle className="flex items-center gap-2">
+                <Bell className="w-5 h-5 text-blue-500" /> Notification System
+              </CardTitle>
               <CardDescription>
-                Enable automated alerts for parents, teachers, and administrators.
+                Configure automated alerts for parents, teachers, and administrators.
               </CardDescription>
             </div>
-            <Switch
-              checked={settings.enableNotifications}
-              onCheckedChange={(checked) => updateSettings({ enableNotifications: checked })}
-            />
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20">
+              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-green-600 dark:text-green-400">System Active</span>
+            </div>
           </div>
         </CardHeader>
-        <CardContent className={cn("space-y-6 transition-opacity", !settings.enableNotifications && "opacity-50 pointer-events-none")}>
+        <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="flex items-start gap-4 p-4 rounded-xl border bg-card/50">
               <div className="mt-1 bg-blue-100 dark:bg-blue-900/30 p-2 rounded-lg text-blue-600 dark:text-blue-400">
@@ -73,7 +71,7 @@ export function AdminNotificationsTab() {
         </CardContent>
       </Card>
 
-      <div className={cn("grid grid-cols-1 md:grid-cols-2 gap-6 transition-opacity", !settings.enableNotifications && "opacity-50 pointer-events-none")}>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 transition-opacity">
         {/* EVENT TRIGGERS */}
         <Card className="shadow-md">
           <CardHeader>

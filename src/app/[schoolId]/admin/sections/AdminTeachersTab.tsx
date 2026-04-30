@@ -20,6 +20,7 @@ import {
 import { useFirestore } from '@/firebase';
 import { studentsInTeacherScope } from '@/lib/reportsScope';
 import { cn, getStudentNickname } from '@/lib/utils';
+import { encryptField, decryptField } from '@/lib/crypto';
 import type { Class, StaffAccount, StaffAccountRole, Student, Teacher } from '@/lib/types';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
@@ -213,8 +214,8 @@ export function AdminTeachersTab({
     setDisplayName(account.displayName);
     setRole(account.role);
     setRoles(account.roles?.length ? account.roles : [account.role]);
-    setEmail(account.email || '');
-    setPhone(account.phone || '');
+    setEmail(decryptField(account.email) || '');
+    setPhone(decryptField(account.phone) || '');
     setError('');
     setDialogOpen(true);
   };
@@ -240,8 +241,8 @@ export function AdminTeachersTab({
       const primaryRole = cleanRoles[0];
       await onSaveStaffAccount(
         editing
-          ? { ...editing, username: cleanUsername, passcode: cleanPasscode, displayName: cleanDisplayName, role: primaryRole, roles: cleanRoles, email, phone }
-          : { username: cleanUsername, passcode: cleanPasscode, displayName: cleanDisplayName, role: primaryRole, roles: cleanRoles, email, phone },
+          ? { ...editing, username: cleanUsername, passcode: cleanPasscode, displayName: cleanDisplayName, role: primaryRole, roles: cleanRoles, email: encryptField(email), phone: encryptField(phone) }
+          : { username: cleanUsername, passcode: cleanPasscode, displayName: cleanDisplayName, role: primaryRole, roles: cleanRoles, email: encryptField(email), phone: encryptField(phone) },
       );
       setDialogOpen(false);
     } finally {

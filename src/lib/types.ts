@@ -28,7 +28,7 @@ export interface Class {
 export type TeacherBudgetPeriod = 'day' | 'week' | 'month';
 
 /** Desk staff logins managed in Admin (not full teachers). */
-export type StaffAccountRole = 'secretary' | 'prizeClerk';
+export type StaffAccountRole = 'secretary' | 'prizeClerk' | 'reports';
 
 export interface StaffAccount {
   id: string;
@@ -37,6 +37,9 @@ export interface StaffAccount {
   passcode: string;
   displayName: string;
   role: StaffAccountRole;
+  roles?: StaffAccountRole[];
+  email?: string;
+  phone?: string;
 }
 
 export interface Teacher {
@@ -107,6 +110,8 @@ export interface Student {
   lastName: string;
   nickname?: string;
   photoUrl?: string;
+  parentEmail?: string;
+  parentPhone?: string;
   /** Optional image URL for a sticker shown by the student's name (set in admin, Students). */
   customEmojiUrl?: string;
   /** When the student record was created (ms since epoch). */

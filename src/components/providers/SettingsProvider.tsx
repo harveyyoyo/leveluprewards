@@ -139,7 +139,7 @@ const defaultSettings: Settings = {
     enableChallenges: false,
     enableTeacherCharts: false,
     enableAdminAnalytics: false,
-    enableNotifications: false,
+    enableNotifications: true,
     notificationRewardsEnabled: true,
     notificationAttendanceEnabled: true,
     notificationStaffAlertsEnabled: true,

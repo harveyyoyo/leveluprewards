@@ -21,7 +21,7 @@ import {
     Bell, Shield, Moon, Sun, ArrowLeft, Palette, Zap, Trophy,
     BarChart3, MessageSquare, ShoppingBag, ShieldCheck, Star,
     Users, Database, Printer, LayoutDashboard, History, HelpCircle,
-    Cpu, Award, Clock, Cog, Lock, Sparkles, ArrowRightLeft, Trash2, RotateCcw, Smile, BookOpen, Target, LogOut
+    Cpu, Award, Clock, Cog, Lock, Sparkles, ArrowRightLeft, Trash2, RotateCcw, Smile, BookOpen, Target
 } from 'lucide-react';
 import { useSettings, colorSchemes, type ColorScheme, type Settings as AppSettings } from '../providers/SettingsProvider';
 import type { StudentTheme } from '@/lib/types';
@@ -96,7 +96,7 @@ function FeatureRow({ id, label, desc, icon, settings, onToggle, onConfigure, is
 }
 
 export function SettingsModal() {
-    const { loginState, getAttendanceConfig, setAttendanceConfig, schoolId: appSchoolId, logout } = useAppContext();
+    const { loginState, getAttendanceConfig, setAttendanceConfig, schoolId: appSchoolId } = useAppContext();
     const isAdmin = loginState === 'admin' || loginState === 'developer';
     const { settings, updateSettings, isFeatureAllowed, planLabel } = useSettings();
     const playSound = useArcadeSound();
@@ -448,18 +448,7 @@ export function SettingsModal() {
                                         </div>
                                     </div>
 
-                                    {/* Logout Button */}
-                                    <Button
-                                        variant="destructive"
-                                        className="w-full h-11 rounded-xl font-bold gap-2 mt-2 bg-rose-500 hover:bg-rose-600 border-0 shadow-lg shadow-rose-500/20"
-                                        onClick={() => {
-                                            if (local.soundEnabled) playSound('swoosh');
-                                            setOpen(false);
-                                            logout();
-                                        }}
-                                    >
-                                        <LogOut className="w-4 h-4" /> Sign Out
-                                    </Button>
+
                                 </div>
                             </div>
 
@@ -501,21 +490,6 @@ export function SettingsModal() {
 
                             <div className="space-y-4">
 
-                             <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
-                                 <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><MessageSquare className="w-3.5 h-3.5" /> Communication</p>
-                                 <FeatureRow
-                                     id="enableNotifications"
-                                     label="Notifications & Alerts"
-                                     desc="Send automated email and SMS alerts to parents and staff for student activity, rewards, and attendance events."
-                                     icon={<Bell className="w-5 h-5" />}
-                                     settings={local}
-                                     onToggle={handleToggle}
-                                     isImplemented={true}
-                                     isAdmin={isAdmin}
-                                     isAllowed={isFeatureAllowed('enableNotifications')}
-                                     planLabel={planLabel}
-                                 />
-                             </div>
 
                              <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
                                  <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><Settings className="w-3.5 h-3.5" /> Core Workflow</p>

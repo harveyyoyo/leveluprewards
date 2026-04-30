@@ -63,7 +63,7 @@ export function AdminLibraryTab({
                         <span className="font-code text-xs bg-secondary px-2 py-0.5 rounded">{item.upc}</span>
                         {item.status === 'checked_out' ? (
                           <span className="text-amber-600 dark:text-amber-400">
-                            Checked out by {getStudentName(item.checkedOutTo) || 'Unknown Student'}
+                            Checked out by {getStudentName(item.checkedOutTo ?? undefined) || 'Unknown Student'}
                             {item.checkedOutAt && ` on ${new Date(item.checkedOutAt).toLocaleDateString()}`}
                           </span>
                         ) : (

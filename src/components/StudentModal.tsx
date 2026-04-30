@@ -25,13 +25,14 @@ import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { ScrollArea } from './ui/scroll-area';
 import { Checkbox } from './ui/checkbox';
-import { getStudentNickname } from '@/lib/utils';
+
 import { httpsCallable } from 'firebase/functions';
 import { ThemeGeneratorModal } from './ThemeGeneratorModal';
 import { AdminFaceEnrollmentPanel } from './AdminFaceEnrollmentPanel';
 import { Wand2, Trash2, Loader2 } from 'lucide-react';
 import { ImageCropper } from './ImageCropper';
-import { cn } from '@/lib/utils';
+import { cn, getStudentNickname } from '@/lib/utils';
+import { encryptField, decryptField } from '@/lib/crypto';
 
 interface StudentModalProps {
   isOpen: boolean;
@@ -77,8 +78,8 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
         setPoints(student.points.toString());
         setNfcId(student.nfcId || student.id);
         setClassId(student.classId || 'none');
-        setParentEmail(student.parentEmail || '');
-        setParentPhone(student.parentPhone || '');
+        setParentEmail(decryptField(student.parentEmail) || '');
+        setParentPhone(decryptField(student.parentPhone) || '');
         setSelectedTeacherIds(student.teacherIds || []);
         setTheme(student.theme);
       } else { // Create mode
@@ -333,8 +334,8 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
         nfcId,
         teacherIds: selectedTeacherIds,
         theme,
-        parentEmail: parentEmail.trim() || undefined,
-        parentPhone: parentPhone.trim() || undefined,
+        parentEmail: encryptField(parentEmail.trim()) || undefined,
+        parentPhone: encryptField(parentPhone.trim()) || undefined,
       };
       await updateStudent(updatedStudent);
       playSound('success');
@@ -350,8 +351,8 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
         classId: finalClassId,
         teacherIds: selectedTeacherIds,
         ...(theme ? { theme } : {}),
-        parentEmail: parentEmail.trim() || undefined,
-        parentPhone: parentPhone.trim() || undefined,
+        parentEmail: encryptField(parentEmail.trim()) || undefined,
+        parentPhone: encryptField(parentPhone.trim()) || undefined,
       };
       await addStudent(newStudent);
       playSound('success');

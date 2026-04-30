@@ -1,10 +1,10 @@
-
 import * as functions from "firebase-functions/v1";
 import * as admin from "firebase-admin";
 import * as crypto from "crypto";
 import { FieldValue } from "firebase-admin/firestore";
 import { signInAttendance } from "./signInAttendance";
 import { studentMayRedeemCouponData } from "./couponRedemption";
+import { decryptField } from "./crypto";
 
 admin.initializeApp();
 
@@ -1937,9 +1937,15 @@ export const onStudentActivityCreated = functions.firestore
     const alerts: Promise<any>[] = [];
 
     // Notify Parent
-    if (studentData.parentEmail) {
+    const pEmail = decryptField(studentData.parentEmail);
+    const pPhone = decryptField(studentData.parentPhone);
+
+    const fromEmail = "sdeichemed@gmail.com";
+
+    if (pEmail) {
       alerts.push(db.collection("mail").add({
-        to: studentData.parentEmail,
+        to: pEmail,
+        from: fromEmail,
         message: {
           subject: `${subject}: ${studentName}`,
           text: message,
@@ -1955,16 +1961,16 @@ export const onStudentActivityCreated = functions.firestore
       }));
     }
 
-    if (studentData.parentPhone) {
+    if (pPhone) {
       alerts.push(db.collection("sms").add({
-        to: studentData.parentPhone,
+        to: pPhone,
         body: message,
         schoolId,
       }));
 
       if (settings.notificationWhatsAppEnabled) {
         alerts.push(db.collection("whatsapp").add({
-          to: studentData.parentPhone,
+          to: pPhone,
           body: message,
           schoolId,
         }));
@@ -1977,9 +1983,13 @@ export const onStudentActivityCreated = functions.firestore
       for (const tid of teacherIds) {
         const tSnap = await db.collection("schools").doc(schoolId).collection("teachers").doc(tid).get();
         const tData = tSnap.data();
-        if (tData?.email) {
+        const tEmail = decryptField(tData?.email);
+        const tPhone = decryptField(tData?.phone);
+
+        if (tEmail) {
           alerts.push(db.collection("mail").add({
-            to: tData.email,
+            to: tEmail,
+            from: fromEmail,
             message: {
               subject: `Staff Alert: ${studentName}`,
               text: message,
@@ -1987,9 +1997,9 @@ export const onStudentActivityCreated = functions.firestore
             schoolId,
           }));
         }
-        if (tData?.phone && settings.notificationWhatsAppEnabled) {
+        if (tPhone && settings.notificationWhatsAppEnabled) {
           alerts.push(db.collection("whatsapp").add({
-            to: tData.phone,
+            to: tPhone,
             body: `Staff Alert: ${message}`,
             schoolId,
           }));
@@ -2031,9 +2041,16 @@ export const onAttendanceLogCreated = functions.firestore
     const alerts: Promise<any>[] = [];
 
     // Notify Parent
-    if (studentData.parentEmail) {
+    const pEmail = decryptField(studentData.parentEmail);
+    const pPhone = decryptField(studentData.parentPhone);
+
+    const schoolName = schoolSnap.data()?.name || "School";
+    const fromEmail = `"${schoolName} Alerts" <alerts@levelup-edu.com>`;
+
+    if (pEmail) {
       alerts.push(db.collection("mail").add({
-        to: studentData.parentEmail,
+        to: pEmail,
+        from: fromEmail,
         message: {
           subject: `Attendance Alert: ${studentName}`,
           text: message,
@@ -2047,16 +2064,16 @@ export const onAttendanceLogCreated = functions.firestore
       }));
     }
 
-    if (studentData.parentPhone) {
+    if (pPhone) {
       alerts.push(db.collection("sms").add({
-        to: studentData.parentPhone,
+        to: pPhone,
         body: message,
         schoolId,
       }));
 
       if (settings.notificationWhatsAppEnabled) {
         alerts.push(db.collection("whatsapp").add({
-          to: studentData.parentPhone,
+          to: pPhone,
           body: message,
           schoolId,
         }));
