@@ -96,7 +96,7 @@ async function sendViaCallMeBot(body: string): Promise<{ ok: true } | { ok: fals
     return { ok: false, error: `callmebot_http_${res.status}` };
   }
   const t = (await res.text()).trim();
-  if (!/success|sent|ok|message queued/i.test(t) && t.length > 0 && /error|fail|invalid/i.test(t)) {
+  if (/^error/i.test(t)) {
     return { ok: false, error: `callmebot: ${t.slice(0, 120)}` };
   }
   return { ok: true };

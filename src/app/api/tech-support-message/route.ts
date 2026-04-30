@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     });
     if (!guarded.ok) return guarded.response;
 
-    const { body, schoolId } = guarded.value;
+    const { uid, body, schoolId } = guarded.value;
     if (!schoolId) {
       return NextResponse.json({ error: 'schoolId is required.' }, { status: 400 });
     }
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
       loginState,
       pathname,
       userLabel,
-      userId: guarded.value.uid,
+      userId: uid,
     });
 
     if (!result.ok) {
