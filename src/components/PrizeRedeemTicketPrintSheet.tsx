@@ -19,6 +19,16 @@ export type PrizeRedeemTicket = {
   prizeIcon?: string;
   quantity: number;
   totalCost?: number;
+  /** When set (e.g. after AI surprise + print voucher), show on the physical ticket. */
+  aiSurpriseKind?: 'joke' | 'riddle' | 'fortune';
+  aiSurpriseText?: string;
+  aiSurpriseAnswer?: string;
+};
+
+const PRINT_AI_KIND_LABEL: Record<string, string> = {
+  joke: 'Joke',
+  riddle: 'Riddle',
+  fortune: 'Fortune',
 };
 
 export function PrizeRedeemTicketPrintSheet({
@@ -79,8 +89,18 @@ export function PrizeRedeemTicketPrintSheet({
         const showTitle = Boolean(titleText || !leadingEmoji);
         const displayStudent = (t.studentName || t.studentId || '').normalize('NFC');
 
+        const surpriseText = (t.aiSurpriseText || '').trim();
+        const hasSurprise = Boolean(surpriseText);
+        const surpriseKind = t.aiSurpriseKind === 'riddle' || t.aiSurpriseKind === 'fortune' ? t.aiSurpriseKind : 'joke';
+        const surpriseAnswer =
+          surpriseKind === 'riddle' && (t.aiSurpriseAnswer || '').trim() ? (t.aiSurpriseAnswer || '').trim() : '';
+
         return (
-          <article key={`${t.activityId}-${t.ticketNo}`} className="prize-ticket">
+          <article
+            key={`${t.activityId}-${t.ticketNo}`}
+            className="prize-ticket"
+            data-has-ai-surprise={hasSurprise ? 'true' : undefined}
+          >
             <header className="prize-ticket__head">
               <div className="prize-ticket__logo-box">
                 {logoUrl && !logoError ? (
@@ -169,6 +189,21 @@ export function PrizeRedeemTicketPrintSheet({
                   </p>
                 ) : null}
               </div>
+
+              {hasSurprise ? (
+                <div className="prize-ticket__surprise" aria-label="Prize surprise">
+                  <p className="prize-ticket__surprise-kind">
+                    {PRINT_AI_KIND_LABEL[surpriseKind] ?? 'Surprise'}
+                  </p>
+                  <p className="prize-ticket__surprise-text">{surpriseText}</p>
+                  {surpriseAnswer ? (
+                    <p className="prize-ticket__surprise-answer">
+                      <span className="prize-ticket__surprise-answer-label">Answer: </span>
+                      {surpriseAnswer}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           </article>
         );

@@ -531,7 +531,7 @@
   100% { transform: translateX(260%); }
 }
 
-/* Theme element animations (student portal + prize shop): animate emoji + primary accents, not the background. */
+/* Theme element animations (student portal + prize/rewards shop): animate emoji + primary accents, not the background. */
 .theme-theme-elements-animated .theme-animated-emoji {
   animation: theme-emoji-float 2.2s ease-in-out infinite, theme-emoji-wobble 5.2s ease-in-out infinite !important;
   will-change: transform;
@@ -787,6 +787,14 @@
       overflow: hidden !important;
     }
 
+    /* AI joke / riddle / fortune can extend the slip instead of clipping. */
+    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket[data-has-ai-surprise='true'] {
+      height: auto !important;
+      max-height: none !important;
+      min-height: 68mm !important;
+      overflow: visible !important;
+    }
+
     body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__head {
       padding: 1.6mm 2.1mm !important;
       border-bottom-width: 1.8px !important;
@@ -881,6 +889,43 @@
       font-size: 1.95mm !important;
       grid-template-columns: 9.5mm 1fr !important;
       gap: 0.7mm !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__surprise {
+      padding: 0.5mm 2.1mm 1.2mm !important;
+      margin-top: 0.2mm !important;
+      border-top: 1px solid #000 !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__surprise-kind {
+      font-size: 1.85mm !important;
+      font-weight: 800 !important;
+      letter-spacing: 0.06em !important;
+      text-transform: uppercase !important;
+      margin: 0 0 0.35mm !important;
+      color: #000 !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__surprise-text {
+      font-size: 1.85mm !important;
+      font-weight: 600 !important;
+      line-height: 1.25 !important;
+      margin: 0 !important;
+      color: #000 !important;
+      word-break: break-word !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__surprise-answer {
+      font-size: 1.75mm !important;
+      font-weight: 600 !important;
+      line-height: 1.2 !important;
+      margin: 0.4mm 0 0 !important;
+      color: #000 !important;
+      word-break: break-word !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__surprise-answer-label {
+      font-weight: 800 !important;
     }
   }
   
@@ -1643,6 +1688,46 @@
     font-weight: 800;
     text-align: left; /* Production Left Bias */
     color: #000 !important;
+  }
+
+  .prize-ticket__surprise {
+    margin: 0;
+    padding: 2mm 5mm 4mm;
+    width: 100%;
+    box-sizing: border-box;
+    border-top: 2px solid #000;
+  }
+
+  .prize-ticket__surprise-kind {
+    margin: 0 0 1.5mm;
+    font-size: 3.2mm;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #000 !important;
+    line-height: 1.1;
+  }
+
+  .prize-ticket__surprise-text {
+    margin: 0;
+    font-size: 3.8mm;
+    font-weight: 600;
+    line-height: 1.25;
+    color: #000 !important;
+    word-break: break-word;
+  }
+
+  .prize-ticket__surprise-answer {
+    margin: 2mm 0 0;
+    font-size: 3.4mm;
+    font-weight: 600;
+    line-height: 1.2;
+    color: #000 !important;
+    word-break: break-word;
+  }
+
+  .prize-ticket__surprise-answer-label {
+    font-weight: 800;
   }
 }
 

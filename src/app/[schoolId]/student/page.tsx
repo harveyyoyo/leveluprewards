@@ -413,6 +413,9 @@ function StudentDashboardInner({
     prizeIcon?: string;
     quantity: number;
     totalCost: number;
+    aiSurpriseKind?: 'joke' | 'riddle' | 'fortune';
+    aiSurpriseText?: string;
+    aiSurpriseAnswer?: string;
   } | null>(null);
   const pendingPrizeTicketAfterAiRef = useRef<typeof prizeTicketData>(null);
   const lastAiSurpriseTextRef = useRef<string | undefined>(undefined);
@@ -420,11 +423,29 @@ function StudentDashboardInner({
   const [aiSurpriseOpen, setAiSurpriseOpen] = useState(false);
   const [aiSurpriseLoading, setAiSurpriseLoading] = useState(false);
   const [aiSurpriseBody, setAiSurpriseBody] = useState<PrizeSurprise | null>(null);
+  const aiSurpriseBodyRef = useRef<PrizeSurprise | null>(null);
+  useEffect(() => {
+    aiSurpriseBodyRef.current = aiSurpriseBody;
+  }, [aiSurpriseBody]);
 
   const flushPendingPrizeTicketAfterAi = useCallback(() => {
     const pending = pendingPrizeTicketAfterAiRef.current;
     pendingPrizeTicketAfterAiRef.current = null;
-    if (pending) setPrizeTicketData(pending);
+    if (!pending) return;
+    const s = aiSurpriseBodyRef.current;
+    const text = s?.text?.trim() ?? '';
+    if (!text) {
+      setPrizeTicketData(pending);
+      return;
+    }
+    const kind = s!.kind === 'riddle' || s!.kind === 'fortune' ? s!.kind : 'joke';
+    setPrizeTicketData({
+      ...pending,
+      aiSurpriseKind: kind,
+      aiSurpriseText: text,
+      aiSurpriseAnswer:
+        kind === 'riddle' && s!.answer?.trim() ? s!.answer.trim() : undefined,
+    });
   }, []);
 
   const closeAiSurprise = useCallback(() => {
@@ -823,6 +844,17 @@ function StudentDashboardInner({
   const handlePrintPrizeTicket = useCallback(() => {
     if (!prizeTicketData) return;
     setPrizeTicketData(null);
+    const surpriseText = prizeTicketData.aiSurpriseText?.trim();
+    const surpriseExtras = surpriseText
+      ? {
+          aiSurpriseKind: prizeTicketData.aiSurpriseKind ?? 'joke',
+          aiSurpriseText: surpriseText,
+          aiSurpriseAnswer:
+            (prizeTicketData.aiSurpriseKind ?? 'joke') === 'riddle' && prizeTicketData.aiSurpriseAnswer?.trim()
+              ? prizeTicketData.aiSurpriseAnswer.trim()
+              : undefined,
+        }
+      : {};
     printPrizeTickets([{
       activityId: prizeTicketData.activityId,
       ticketNo: prizeTicketData.ticketNo,
@@ -835,6 +867,7 @@ function StudentDashboardInner({
       prizeIcon: prizeTicketData.prizeIcon,
       quantity: 1,
       totalCost: prizeTicketData.totalCost,
+      ...surpriseExtras,
     }]);
   }, [printPrizeTickets, prizeTicketData]);
 

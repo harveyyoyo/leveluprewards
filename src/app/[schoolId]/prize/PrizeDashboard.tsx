@@ -349,6 +349,9 @@ export function PrizeDashboard({
         prizeIcon?: string;
         quantity: number;
         totalCost: number;
+        aiSurpriseKind?: 'joke' | 'riddle' | 'fortune';
+        aiSurpriseText?: string;
+        aiSurpriseAnswer?: string;
     } | null>(null);
 
     const [aiSurpriseOpen, setAiSurpriseOpen] = useState(false);
@@ -360,6 +363,10 @@ export function PrizeDashboard({
     const [aiSurpriseLoading, setAiSurpriseLoading] = useState(false);
     const [aiSurpriseErr, setAiSurpriseErr] = useState<string | null>(null);
     const [aiSurpriseBody, setAiSurpriseBody] = useState<{ kind: string; text: string; answer?: string } | null>(null);
+    const aiSurpriseBodyRef = useRef<typeof aiSurpriseBody>(null);
+    useEffect(() => {
+        aiSurpriseBodyRef.current = aiSurpriseBody;
+    }, [aiSurpriseBody]);
     const pendingTicketAfterAiRef = useRef<typeof ticketData>(null);
 
     const authFetch = useAuthFetch();
@@ -367,7 +374,23 @@ export function PrizeDashboard({
     const flushPendingTicketAfterAi = useCallback(() => {
         const p = pendingTicketAfterAiRef.current;
         pendingTicketAfterAiRef.current = null;
-        if (p) setTicketData(p);
+        if (!p) return;
+        const s = aiSurpriseBodyRef.current;
+        const text = typeof s?.text === 'string' ? s.text.trim() : '';
+        if (!text) {
+            setTicketData(p);
+            return;
+        }
+        const kind = s!.kind === 'riddle' || s!.kind === 'fortune' ? s!.kind : 'joke';
+        setTicketData({
+            ...p,
+            aiSurpriseKind: kind,
+            aiSurpriseText: text,
+            aiSurpriseAnswer:
+                kind === 'riddle' && typeof s!.answer === 'string' && s!.answer.trim()
+                    ? s!.answer.trim()
+                    : undefined,
+        });
     }, []);
 
     const studentDocRef = useMemoFirebase(() => schoolId ? doc(firestore, 'schools', schoolId, 'students', studentId) : null, [firestore, schoolId, studentId]);
@@ -636,6 +659,17 @@ export function PrizeDashboard({
             qty > 0 && typeof ticketData.totalCost === 'number'
                 ? Math.round(ticketData.totalCost / qty)
                 : undefined;
+        const surpriseText = ticketData.aiSurpriseText?.trim();
+        const surpriseExtras = surpriseText
+            ? {
+                  aiSurpriseKind: ticketData.aiSurpriseKind ?? 'joke',
+                  aiSurpriseText: surpriseText,
+                  aiSurpriseAnswer:
+                      (ticketData.aiSurpriseKind ?? 'joke') === 'riddle' && ticketData.aiSurpriseAnswer?.trim()
+                          ? ticketData.aiSurpriseAnswer.trim()
+                          : undefined,
+              }
+            : {};
         const sheets = Array.from({ length: qty }, (_, i) => ({
             activityId: ticketData.activityId,
             ticketNo: qty > 1 ? `${baseNo}-${i + 1}` : baseNo,
@@ -648,6 +682,7 @@ export function PrizeDashboard({
             prizeIcon: ticketData.prizeIcon,
             quantity: 1,
             totalCost: perUnitCost,
+            ...surpriseExtras,
         }));
         printPrizeTickets(sheets);
     }, [ticketData, schoolId, printPrizeTickets]);
