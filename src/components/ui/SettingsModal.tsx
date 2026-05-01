@@ -1,5 +1,4 @@
 
-
 import { useState } from 'react';
 import { useAppContext } from '@/components/AppProvider';
 import { usePathname, useRouter } from 'next/navigation';
@@ -34,6 +33,56 @@ import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
 import { cn } from '@/lib/utils';
 
 type SettingsView = 'hub' | 'interface' | 'security' | 'features' | 'library';
+
+const FEATURE_SECTION_NAV = [
+    { id: 'settings-features-core', label: 'Core' },
+    { id: 'settings-features-attendance', label: 'Attendance' },
+    { id: 'settings-features-students', label: 'Students' },
+    { id: 'settings-features-sponsor', label: 'Sponsor' },
+    { id: 'settings-features-recognition', label: 'Recognition' },
+    { id: 'settings-features-occasions', label: 'Occasions' },
+    { id: 'settings-features-shop', label: 'Shop' },
+    { id: 'settings-features-printing', label: 'Printing' },
+] as const;
+
+const INTERFACE_SECTION_NAV = [
+    { id: 'settings-interface-appearance', label: 'Colors' },
+    { id: 'settings-interface-motion', label: 'Motion' },
+    { id: 'settings-interface-layout', label: 'Layout' },
+] as const;
+
+function SettingsSectionJumpNav({
+    sections,
+    onJump,
+    ariaLabel,
+}: {
+    sections: readonly { readonly id: string; readonly label: string }[];
+    onJump: (id: string) => void;
+    ariaLabel: string;
+}) {
+    return (
+        <div
+            role="navigation"
+            aria-label={ariaLabel}
+            className={cn(
+                'sticky top-0 z-10 -mx-1 mb-3 flex gap-2 overflow-x-auto pb-3 pt-0.5 shrink-0',
+                'border-b border-border/40 bg-background/95 backdrop-blur-md [scrollbar-width:thin]',
+                '[&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border',
+            )}
+        >
+            {sections.map(({ id, label }) => (
+                <button
+                    key={id}
+                    type="button"
+                    onClick={() => onJump(id)}
+                    className="shrink-0 whitespace-nowrap rounded-full border border-border/60 bg-muted/35 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground transition-colors hover:border-primary/45 hover:bg-primary/10 hover:text-foreground"
+                >
+                    {label}
+                </button>
+            ))}
+        </div>
+    );
+}
 
 function cloneSettings(s: AppSettings): AppSettings {
     return JSON.parse(JSON.stringify(s)) as AppSettings;
@@ -149,6 +198,13 @@ export function SettingsModal() {
         const nextIndex = (currentStyleIndex + 1) % visibleStyles.length;
         setDraft((d) => (d ? { ...d, animatedBackgroundStyle: visibleStyles[nextIndex].id } : d));
         if (local.soundEnabled) playSound('click');
+    };
+
+    const jumpToSettingsSection = (id: string) => {
+        if (local.soundEnabled) playSound('click');
+        requestAnimationFrame(() => {
+            document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
     };
 
     const handleOpenChange = (next: boolean) => {
@@ -319,8 +375,17 @@ export function SettingsModal() {
 
                     {view === 'interface' && (
                         <>
+                            <SettingsSectionJumpNav
+                                sections={INTERFACE_SECTION_NAV}
+                                ariaLabel="Interface settings sections"
+                                onJump={jumpToSettingsSection}
+                            />
+
                             {/* APPEARANCE */}
-                            <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 mb-4 border border-slate-100 dark:border-slate-800/50">
+                            <div
+                                id="settings-interface-appearance"
+                                className="scroll-mt-[4.5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 mb-4 border border-slate-100 dark:border-slate-800/50"
+                            >
                                 <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 pb-3 flex items-center gap-2">
                                     <Palette className="w-3.5 h-3.5" /> Appearance
                                 </p>
@@ -342,7 +407,10 @@ export function SettingsModal() {
                             </div>
 
                             {/* MOTION & SOUND */}
-                            <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 mb-4 border border-slate-100 dark:border-slate-800/50">
+                            <div
+                                id="settings-interface-motion"
+                                className="scroll-mt-[4.5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 mb-4 border border-slate-100 dark:border-slate-800/50"
+                            >
                                 <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 pb-3 flex items-center gap-2">
                                     <Zap className="w-3.5 h-3.5" /> Motion & Sound
                                 </p>
@@ -444,7 +512,10 @@ export function SettingsModal() {
                             </div>
 
                             {/* THEME & LAYOUT */}
-                            <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 mb-4 border border-slate-100 dark:border-slate-800/50">
+                            <div
+                                id="settings-interface-layout"
+                                className="scroll-mt-[4.5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 mb-4 border border-slate-100 dark:border-slate-800/50"
+                            >
                                 <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 pb-3 flex items-center gap-2">
                                     <LayoutDashboard className="w-3.5 h-3.5" /> Theme & Layout
                                 </p>
@@ -551,7 +622,7 @@ export function SettingsModal() {
                     )}
 
                     {view === 'features' && (
-                        <div className="flex-1 overflow-y-auto space-y-6 pb-2 -mx-1 px-1">
+                        <div className="space-y-6 pb-2 -mx-1 px-1">
                             {/* Current Plan Banner */}
                             {planLabel === 'Enterprise' && (
                                 <div className="bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800/50 rounded-2xl p-4 flex items-center justify-between shadow-sm">
@@ -570,10 +641,16 @@ export function SettingsModal() {
                                 </div>
                             )}
 
+                            <SettingsSectionJumpNav
+                                sections={FEATURE_SECTION_NAV}
+                                ariaLabel="Feature categories"
+                                onJump={jumpToSettingsSection}
+                            />
+
                             <div className="space-y-4">
 
 
-                             <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
+                             <div id="settings-features-core" className="scroll-mt-[5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
                                  <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><Settings className="w-3.5 h-3.5" /> Core Workflow</p>
                                 <FeatureRow
                                     id="enableTeacherBudgets"
@@ -637,7 +714,7 @@ export function SettingsModal() {
                                 />
                             </div>
 
-                            <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
+                            <div id="settings-features-attendance" className="scroll-mt-[5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
                                 <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><Clock className="w-3.5 h-3.5" /> Attendance</p>
                                 <FeatureRow
                                     id="enableClassSignIn"
@@ -664,7 +741,7 @@ export function SettingsModal() {
                                 ) : null}
                             </div>
 
-                            <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
+                            <div id="settings-features-students" className="scroll-mt-[5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
                                 <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><Smartphone className="w-3.5 h-3.5" /> Student Experience</p>
                                 <FeatureRow
                                     id="enableStudentPortal"
@@ -752,7 +829,7 @@ export function SettingsModal() {
                             </div>
 
                             {/* Sponsor Banner */}
-                            <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
+                            <div id="settings-features-sponsor" className="scroll-mt-[5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
                                 <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><Megaphone className="w-3.5 h-3.5" /> Sponsor Banner</p>
 
                                 {/* Enable toggle */}
@@ -792,7 +869,7 @@ export function SettingsModal() {
                                 )}
                             </div>
 
-                            <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
+                            <div id="settings-features-recognition" className="scroll-mt-[5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
                                 <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><Trophy className="w-3.5 h-3.5" /> Recognition</p>
                                 <FeatureRow
                                     id="enableAchievements"
@@ -868,10 +945,7 @@ export function SettingsModal() {
                                 />
                             </div>
 
-
-                            </div>
-
-                            <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
+                            <div id="settings-features-occasions" className="scroll-mt-[5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
                                 <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><Sparkles className="w-3.5 h-3.5" /> Special Occasions</p>
                                 <FeatureRow
                                     id="enableBirthdayPoints"
@@ -947,7 +1021,7 @@ export function SettingsModal() {
                                 )}
                             </div>
 
-                            <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
+                            <div id="settings-features-shop" className="scroll-mt-[5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
                                 <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><ShoppingBag className="w-3.5 h-3.5" /> Prize/Rewards shop</p>
                                 <FeatureRow
                                     id="enablePrizeAiSurprise"
@@ -1000,7 +1074,7 @@ export function SettingsModal() {
                                 />
                             </div>
 
-                            <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
+                            <div id="settings-features-printing" className="scroll-mt-[5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
                                 <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><Monitor className="w-3.5 h-3.5" /> Printing & Guidance</p>
                                 <FeatureRow
                                     id="enableColorPrinting"
@@ -1032,6 +1106,7 @@ export function SettingsModal() {
                                     isImplemented={true}
                                     isAdmin={true}
                                 />
+                            </div>
                             </div>
                         </div>
                 )}
