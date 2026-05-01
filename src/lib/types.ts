@@ -133,6 +133,10 @@ export interface Student {
   /** Badges earned for reaching category point thresholds in a time period. */
   earnedBadges?: { badgeId: string; earnedAt: number; periodKey: string }[];
   teacherIds?: string[];
+  /** When false, this student cannot open the style welcome page (school must also enable it). */
+  welcomePageEnabled?: boolean;
+  /** Default or admin-set welcome animation style id (`WelcomeGreeting`). */
+  welcomeGreetingStyleId?: string;
   theme?: StudentTheme;
   /** ISO date string (YYYY-MM-DD) for student's birthday. */
   birthday?: string;

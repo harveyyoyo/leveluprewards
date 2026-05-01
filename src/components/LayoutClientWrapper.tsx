@@ -20,7 +20,12 @@ interface LayoutClientWrapperProps {
 export default function LayoutClientWrapper({ children }: LayoutClientWrapperProps) {
     const pathname = usePathname();
     const { settings } = useSettings();
-    const isLoginPage = pathname === '/' || pathname === '/login' || pathname === '/developer' || pathname.startsWith('/s/');
+    const isLoginPage =
+      pathname === '/' ||
+      pathname === '/login' ||
+      pathname === '/developer' ||
+      (typeof pathname === 'string' && pathname.includes('/student/welcome')) ||
+      pathname.startsWith('/s/');
 
     // Unregister service workers to prevent stale cache issues
     useEffect(() => {

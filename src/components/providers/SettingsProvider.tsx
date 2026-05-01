@@ -78,6 +78,8 @@ interface Settings {
     enableStudentPortal: boolean;
     enableClassSignIn: boolean;
     enableFaceLogin: boolean;
+    /** Playful full-screen welcome styles on the student kiosk (`/student/welcome`). */
+    enableStudentWelcome: boolean;
     /** Back-compat alias used by some pages/components. */
     enableAttendance: boolean;
     // Guidance
@@ -185,6 +187,7 @@ const defaultSettings: Settings = {
     enableStudentPortal: false,
     enableClassSignIn: false,
     enableFaceLogin: false,
+    enableStudentWelcome: false,
     enableAttendance: false,
     enableHelperMode: true,
     showIntroWizard: false,

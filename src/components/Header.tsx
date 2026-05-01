@@ -93,7 +93,7 @@ export default function Header() {
     const hoverColorClasses = portalHoverTextClass;
 
     return (
-      <>
+      <div className="w-full">
         <header className="no-print grid grid-cols-[2.5rem_minmax(0,1fr)_auto] sm:grid-cols-[3rem_minmax(0,1fr)_auto] w-full items-center relative z-20 px-3 sm:px-4 pt-3 sm:pt-4 pb-3 sm:pb-4 border-b border-border/10">
           <div className="flex justify-start min-w-0">
             {schoolId && (
@@ -162,7 +162,7 @@ export default function Header() {
             </div>
           </nav>
         )}
-      </>
+      </div>
     );
   }
 
@@ -172,10 +172,10 @@ export default function Header() {
       "no-print w-full z-50 transition-colors border-b border-primary/10 sticky top-0",
       "bg-background/80 backdrop-blur-xl"
     )}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-8 h-20 flex items-center">
+      <div className="max-w-7xl mx-auto px-2 sm:px-8 h-20 flex items-center justify-between gap-1 sm:gap-4">
         {/* Left: Branding */}
-        <div className="flex items-center gap-4 flex-1">
-          <Link href={logoLink} className="flex items-center gap-4 group" data-home-button="true">
+        <div className="flex items-center gap-1 sm:gap-4 shrink-0">
+          <Link href={logoLink} className="flex items-center gap-1 sm:gap-4 group" data-home-button="true">
             {appLogoUrl ? (
               <span className={cn(
                 "inline-flex h-10 w-auto max-w-[200px] shrink-0 items-center justify-center transition-all duration-300",
@@ -245,10 +245,10 @@ export default function Header() {
         )}
 
         {/* Right: Actions */}
-        <div className="flex items-center justify-end gap-2 flex-1">
+        <div className="flex items-center justify-end gap-1 sm:gap-2 flex-1 min-w-0">
           {isInitialized && (
             <>
-                <div className="flex items-center gap-1.5 bg-emerald-500 px-2.5 py-1 rounded-full shadow-sm">
+                <div className="flex items-center gap-1 bg-emerald-500 px-1.5 sm:px-2.5 py-1 rounded-full shadow-sm shrink-0">
                   <span className="relative flex h-1.5 w-1.5">
                     {syncStatus === 'synced' && <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />}
                     <span className={cn("relative inline-flex h-1.5 w-1.5 rounded-full", syncStatus === 'synced' ? "bg-white" : syncStatus === 'syncing' ? "bg-amber-300 animate-pulse" : "bg-slate-300")} />
@@ -261,8 +261,8 @@ export default function Header() {
               {loginState !== 'student' && loginState !== 'loggedOut' && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="font-bold gap-2 h-12 px-4 rounded-xl text-primary">
-                      <User className="w-5 h-5" />
+                    <Button variant="ghost" className="font-bold gap-1 sm:gap-2 h-10 sm:h-12 px-2 sm:px-4 rounded-xl text-primary shrink-0">
+                      <User className="w-4 h-4 sm:w-5 sm:h-5" />
                       <span className="hidden sm:inline">
                         {userName || (loginState === 'admin' ? 'Admin' : loginState === 'teacher' ? 'Teacher' : 'School')}
                       </span>
@@ -281,14 +281,14 @@ export default function Header() {
 
               {loginState === 'student' && <AdminLoginButton />}
 
-              <div className="h-8 w-px bg-primary/20" />
+              <div className="h-6 sm:h-8 w-px bg-primary/20 shrink-0" />
 
-              <Link href={schoolId ? `/${schoolId}/portal` : "/"} data-home-button="true" className="rounded-xl p-3 text-slate-500 hover:text-primary hover:bg-primary/10 transition-all active:scale-90 flex items-center gap-2">
-                <Home className="h-6 w-6" />
+              <Link href={schoolId ? `/${schoolId}/portal` : "/"} data-home-button="true" className="rounded-xl p-2 sm:p-3 text-slate-500 hover:text-primary hover:bg-primary/10 transition-all active:scale-90 flex items-center gap-1 sm:gap-2 shrink-0">
+                <Home className="h-5 w-5 sm:h-6 sm:w-6" />
                 <span className="hidden sm:inline font-bold">Home</span>
               </Link>
 
-              <div className="h-8 w-px bg-primary/20" />
+              <div className="h-6 sm:h-8 w-px bg-primary/20 shrink-0" />
 
               <SettingsModal />
             </>

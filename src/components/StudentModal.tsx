@@ -33,6 +33,7 @@ import { Wand2, Trash2, Loader2 } from 'lucide-react';
 import { ImageCropper } from './ImageCropper';
 import { cn, getStudentNickname } from '@/lib/utils';
 import { encryptField, decryptField } from '@/lib/crypto';
+import { WELCOME_GREETING_STYLES } from '@/components/WelcomeGreeting';
 
 interface StudentModalProps {
   isOpen: boolean;
@@ -76,6 +77,8 @@ export function StudentModal({
   const [isCustomEmojiUploading, setIsCustomEmojiUploading] = useState(false);
   const [theme, setTheme] = useState<StudentTheme | undefined>(undefined);
   const [birthday, setBirthday] = useState('');
+  const [studentWelcomeAllowed, setStudentWelcomeAllowed] = useState(true);
+  const [welcomeGreetingStyleId, setWelcomeGreetingStyleId] = useState('');
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
   const [faceTrainingDialogRequested, setFaceTrainingDialogRequested] = useState(false);
@@ -101,6 +104,8 @@ export function StudentModal({
         setSelectedTeacherIds(student.teacherIds || []);
         setTheme(student.theme);
         setBirthday(student.birthday || '');
+        setStudentWelcomeAllowed(student.welcomePageEnabled !== false);
+        setWelcomeGreetingStyleId(student.welcomeGreetingStyleId || '');
       } else { // Create mode
         setFirstName('');
         setMiddleName('');
@@ -116,6 +121,8 @@ export function StudentModal({
         setSelectedTeacherIds([]);
         setTheme(undefined);
         setBirthday('');
+        setStudentWelcomeAllowed(true);
+        setWelcomeGreetingStyleId('');
       }
     }
   }, [student, isOpen]);
@@ -372,6 +379,8 @@ export function StudentModal({
         studentEmail: encryptField(studentEmail.trim()) || undefined,
         studentPhone: encryptField(studentPhone.trim()) || undefined,
         birthday: birthday || undefined,
+        welcomePageEnabled: studentWelcomeAllowed ? true : false,
+        welcomeGreetingStyleId: welcomeGreetingStyleId.trim() || undefined,
       };
       await updateStudent(updatedStudent);
       playSound('success');
@@ -392,6 +401,8 @@ export function StudentModal({
         studentEmail: encryptField(studentEmail.trim()) || undefined,
         studentPhone: encryptField(studentPhone.trim()) || undefined,
         birthday: birthday || undefined,
+        welcomePageEnabled: studentWelcomeAllowed ? true : false,
+        welcomeGreetingStyleId: welcomeGreetingStyleId.trim() || undefined,
       };
       await addStudent(newStudent);
       playSound('success');
@@ -512,6 +523,39 @@ export function StudentModal({
             <Label htmlFor="birthday">Birthday (Optional)</Label>
             <Input id="birthday" type="date" value={birthday} onChange={e => setBirthday(e.target.value)} />
           </div>
+          {settings.enableStudentWelcome && (
+            <div className="space-y-3 rounded-xl border border-border/60 bg-muted/20 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="space-y-0.5">
+                  <Label htmlFor="student-welcome-allowed">Style welcome page</Label>
+                  <p className="text-xs text-muted-foreground">
+                    When off, this student will not see the welcome style picker on the kiosk (school setting must also be on).
+                  </p>
+                </div>
+                <Checkbox
+                  id="student-welcome-allowed"
+                  checked={studentWelcomeAllowed}
+                  onCheckedChange={(v) => setStudentWelcomeAllowed(v === true)}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="welcome-style">Default welcome style (optional)</Label>
+                <Select value={welcomeGreetingStyleId || '__default__'} onValueChange={(v) => setWelcomeGreetingStyleId(v === '__default__' ? '' : v)}>
+                  <SelectTrigger id="welcome-style">
+                    <SelectValue placeholder="Let student choose on first visit" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__default__">No preset (student picks on kiosk)</SelectItem>
+                    {WELCOME_GREETING_STYLES.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.emoji} {s.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
           <div className="space-y-1">
             <Label htmlFor="student-id">Student ID (for scanning)</Label>
             <div className="flex gap-2">

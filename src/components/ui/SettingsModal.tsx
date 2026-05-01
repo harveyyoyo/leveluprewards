@@ -33,7 +33,7 @@ import { ANIMATED_BACKGROUND_STYLES, type AnimatedBackgroundStyle } from '@/lib/
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
 import { cn } from '@/lib/utils';
 
-type SettingsView = 'main' | 'features' | 'library';
+type SettingsView = 'hub' | 'interface' | 'security' | 'features' | 'library';
 
 function cloneSettings(s: AppSettings): AppSettings {
     return JSON.parse(JSON.stringify(s)) as AppSettings;
@@ -103,7 +103,7 @@ export function SettingsModal() {
     const playSound = useArcadeSound();
     const [open, setOpen] = useState(false);
     const [draft, setDraft] = useState<AppSettings | null>(null);
-    const [view, setView] = useState<SettingsView>('main');
+    const [view, setView] = useState<SettingsView>('hub');
     const [vendingSettingsOpen, setVendingSettingsOpen] = useState(false);
     const local = draft ?? settings;
     const pathname = usePathname();
@@ -129,7 +129,13 @@ export function SettingsModal() {
         }
     };
 
-    const viewTitle = view === 'main' ? 'Interface Settings' : view === 'features' ? 'Features' : 'Background Library';
+    const viewTitle: Record<SettingsView, string> = {
+        hub: 'Settings',
+        interface: 'Interface & display',
+        security: 'Security',
+        features: 'Features & add-ons',
+        library: 'Background library',
+    };
 
     const visibleStyles = ANIMATED_BACKGROUND_STYLES.filter(s => !(local.hiddenAnimatedBackgroundIds || []).includes(s.id));
     const currentStyle = visibleStyles.find(s => s.id === local.animatedBackgroundStyle) || visibleStyles[0] || ANIMATED_BACKGROUND_STYLES[0];
@@ -148,10 +154,10 @@ export function SettingsModal() {
     const handleOpenChange = (next: boolean) => {
         if (next) {
             setDraft(cloneSettings(settings));
-            setView('main');
+            setView('hub');
         } else {
             setDraft(null);
-            setView('main');
+            setView('hub');
         }
         setOpen(next);
     };
@@ -162,7 +168,7 @@ export function SettingsModal() {
             updateSettings({ ...draft });
         }
         setDraft(null);
-        setView('main');
+        setView('hub');
         setOpen(false);
     };
 
@@ -207,20 +213,111 @@ export function SettingsModal() {
                 <div className="px-6 pt-6 pb-4 border-b border-border/40 bg-card/30 backdrop-blur-md">
                     <DialogHeader>
                         <div className="flex items-center gap-2">
-                            {view !== 'main' && (
-                                <Button variant="ghost" size="icon" onClick={() => setView('main')} className="h-8 w-8 -ml-2 rounded-full hover:bg-muted">
+                            {view !== 'hub' && (
+                                <Button variant="ghost" size="icon" onClick={() => setView('hub')} className="h-8 w-8 -ml-2 rounded-full hover:bg-muted" aria-label="Back to settings menu">
                                     <ArrowLeft className="h-4 w-4" />
                                 </Button>
                             )}
                             <DialogTitle className="text-xl font-black tracking-tight text-foreground">
-                                {viewTitle}
+                                {viewTitle[view]}
                             </DialogTitle>
                         </div>
                     </DialogHeader>
                 </div>
 
                 <div key={view} className="px-6 py-4 overflow-y-auto flex-1 min-h-0 flex flex-col pb-4">
-                    {view === 'main' && (
+                    {view === 'hub' && (
+                        <div className="grid gap-3 sm:grid-cols-2 pt-1">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setView('interface');
+                                    if (local.soundEnabled) playSound('click');
+                                }}
+                                className={cn(
+                                    'flex flex-col items-start gap-2 rounded-2xl border p-4 text-left transition-all',
+                                    'border-slate-100 dark:border-slate-800/50 bg-slate-50 dark:bg-slate-800/30',
+                                    'hover:border-primary/40 hover:bg-primary/5',
+                                )}
+                            >
+                                <div className="flex w-full items-start justify-between gap-2">
+                                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                                        <Palette className="h-5 w-5" />
+                                    </span>
+                                    <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground opacity-50" aria-hidden />
+                                </div>
+                                <span className="font-black text-foreground">Interface &amp; display</span>
+                                <span className="text-xs leading-snug text-muted-foreground">Accent colors, dark mode, motion, sound, and Web vs App layout</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setView('security');
+                                    if (local.soundEnabled) playSound('click');
+                                }}
+                                className={cn(
+                                    'flex flex-col items-start gap-2 rounded-2xl border p-4 text-left transition-all',
+                                    'border-slate-100 dark:border-slate-800/50 bg-slate-50 dark:bg-slate-800/30',
+                                    'hover:border-primary/40 hover:bg-primary/5',
+                                )}
+                            >
+                                <div className="flex w-full items-start justify-between gap-2">
+                                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                                        <Shield className="h-5 w-5" />
+                                    </span>
+                                    <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground opacity-50" aria-hidden />
+                                </div>
+                                <span className="font-black text-foreground">Security</span>
+                                <span className="text-xs leading-snug text-muted-foreground">Admin and kiosk session timeouts</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setView('features');
+                                    if (local.soundEnabled) playSound('click');
+                                }}
+                                className={cn(
+                                    'flex flex-col items-start gap-2 rounded-2xl border-2 p-4 text-left transition-all',
+                                    'border-amber-200 dark:border-amber-900/50 bg-amber-50/80 dark:bg-amber-950/20',
+                                    'hover:bg-amber-100/80 dark:hover:bg-amber-950/35',
+                                )}
+                            >
+                                <div className="flex w-full items-start justify-between gap-2">
+                                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white shadow-inner">
+                                        <Zap className="h-5 w-5" />
+                                    </span>
+                                    <ChevronRight className="h-5 w-5 shrink-0 text-amber-700/50 dark:text-amber-400/50" aria-hidden />
+                                </div>
+                                <span className="font-black text-amber-900 dark:text-amber-100">Features &amp; add-ons</span>
+                                <span className="text-xs leading-snug text-amber-800/90 dark:text-amber-200/80">Attendance, shop, recognition, library checkout, and more</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setView('library');
+                                    if (local.soundEnabled) playSound('click');
+                                }}
+                                className={cn(
+                                    'flex flex-col items-start gap-2 rounded-2xl border p-4 text-left transition-all',
+                                    'border-slate-100 dark:border-slate-800/50 bg-slate-50 dark:bg-slate-800/30',
+                                    'hover:border-emerald-500/30 hover:bg-emerald-500/5',
+                                )}
+                            >
+                                <div className="flex w-full items-start justify-between gap-2">
+                                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                                        <LayoutDashboard className="h-5 w-5" />
+                                    </span>
+                                    <div className="text-[10px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2 py-1 rounded">
+                                        {visibleStyles.length}/{ANIMATED_BACKGROUND_STYLES.length}
+                                    </div>
+                                </div>
+                                <span className="font-black text-foreground">Background library</span>
+                                <span className="text-xs leading-snug text-muted-foreground">Show or hide animated backdrop styles in the picker</span>
+                            </button>
+                        </div>
+                    )}
+
+                    {view === 'interface' && (
                         <>
                             {/* APPEARANCE */}
                             <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 mb-4 border border-slate-100 dark:border-slate-800/50">
@@ -406,71 +503,55 @@ export function SettingsModal() {
                                     </button>
                                 </div>
                             </div>
-                            {/* SECURITY */}
-                            <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 mb-4 border border-slate-100 dark:border-slate-800/50">
-                                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 pb-3 flex items-center gap-2">
-                                    <Shield className="w-3.5 h-3.5" /> Security
-                                </p>
-
-                                <div className="space-y-4 mt-1">
-                                    {/* Admin Timeout */}
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex flex-col">
-                                            <span className="text-sm font-bold">Admin Auto-Logout</span>
-                                            <p className="text-[11px] text-muted-foreground">Session duration (minutes)</p>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <Input
-                                                type="number"
-                                                className="w-20 h-9 rounded-xl text-center font-bold bg-background/50 border-border/50"
-                                                value={Math.round((local.adminSessionTimeoutMs || 0) / 60000)}
-                                                onChange={(e) => handleToggle('adminSessionTimeoutMs', Math.max(1, parseInt(e.target.value) || 1) * 60000)}
-                                                min={1}
-                                                max={1440}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* Kiosk Timeout */}
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex flex-col">
-                                            <span className="text-sm font-bold">Kiosk Auto-Logout</span>
-                                            <p className="text-[11px] text-muted-foreground">Idle time (seconds)</p>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <Input
-                                                type="number"
-                                                className="w-20 h-9 rounded-xl text-center font-bold bg-background/50 border-border/50"
-                                                value={local.kioskSessionTimeoutSec || 0}
-                                                onChange={(e) => handleToggle('kioskSessionTimeoutSec', Math.max(5, parseInt(e.target.value) || 5))}
-                                                min={5}
-                                                max={300}
-                                            />
-                                        </div>
-                                    </div>
-
-
-                                </div>
-                            </div>
-
-                            {/* Features Button */}
-                            <Button
-                                variant="outline"
-                                onClick={() => setView('features')}
-                                className="w-full flex justify-between items-center py-6 px-4 rounded-xl border-2 hover:bg-amber-50 dark:hover:bg-amber-950/20 border-amber-200 dark:border-amber-900/50 text-amber-700 dark:text-amber-400 mb-4"
-                            >
-                                <div className="flex items-center gap-3">
-                                    <Zap className="w-5 h-5" />
-                                    <span className="font-bold">Features & Add-ons</span>
-                                </div>
-                                <ChevronRight className="w-5 h-5 opacity-50" />
-                            </Button>
-
                         </>
                     )}
 
+                    {view === 'security' && (
+                        <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 mb-4 border border-slate-100 dark:border-slate-800/50">
+                            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 pb-3 flex items-center gap-2">
+                                <Shield className="w-3.5 h-3.5" /> Security
+                            </p>
+
+                            <div className="space-y-4 mt-1">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex flex-col">
+                                        <span className="text-sm font-bold">Admin Auto-Logout</span>
+                                        <p className="text-[11px] text-muted-foreground">Session duration (minutes)</p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Input
+                                            type="number"
+                                            className="w-20 h-9 rounded-xl text-center font-bold bg-background/50 border-border/50"
+                                            value={Math.round((local.adminSessionTimeoutMs || 0) / 60000)}
+                                            onChange={(e) => handleToggle('adminSessionTimeoutMs', Math.max(1, parseInt(e.target.value) || 1) * 60000)}
+                                            min={1}
+                                            max={1440}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center justify-between">
+                                    <div className="flex flex-col">
+                                        <span className="text-sm font-bold">Kiosk Auto-Logout</span>
+                                        <p className="text-[11px] text-muted-foreground">Idle time (seconds)</p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Input
+                                            type="number"
+                                            className="w-20 h-9 rounded-xl text-center font-bold bg-background/50 border-border/50"
+                                            value={local.kioskSessionTimeoutSec || 0}
+                                            onChange={(e) => handleToggle('kioskSessionTimeoutSec', Math.max(5, parseInt(e.target.value) || 5))}
+                                            min={5}
+                                            max={300}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {view === 'features' && (
-                        <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6 pb-4">
+                        <div className="flex-1 overflow-y-auto space-y-6 pb-2 -mx-1 px-1">
                             {/* Current Plan Banner */}
                             {planLabel === 'Enterprise' && (
                                 <div className="bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800/50 rounded-2xl p-4 flex items-center justify-between shadow-sm">
@@ -595,6 +676,18 @@ export function SettingsModal() {
                                     isImplemented={false}
                                     isAdmin={isAdmin}
                                     isAllowed={isFeatureAllowed('enableStudentPortal')}
+                                    planLabel={planLabel}
+                                />
+                                <FeatureRow
+                                    id="enableStudentWelcome"
+                                    label="Student welcome styles"
+                                    desc="Let students open a full-screen welcome experience on the kiosk to pick animated greeting styles. Can be turned off per student in Admin → Students."
+                                    icon={<Sparkles className="w-5 h-5" />}
+                                    settings={local}
+                                    onToggle={handleToggle}
+                                    isImplemented={true}
+                                    isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableStudentWelcome')}
                                     planLabel={planLabel}
                                 />
                                 <FeatureRow
@@ -944,7 +1037,7 @@ export function SettingsModal() {
                 )}
 
                 {view === 'library' && (
-                    <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4 pb-4">
+                    <div className="flex-1 overflow-y-auto space-y-4 pb-2 -mx-1 px-1">
                         <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 mb-2 border border-slate-100 dark:border-slate-800/50">
                             <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 pb-3 flex items-center gap-2">
                                 <LayoutDashboard className="w-3.5 h-3.5" /> Background Library

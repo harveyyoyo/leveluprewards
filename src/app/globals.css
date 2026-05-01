@@ -1863,3 +1863,8 @@
 .dark.legacy .backdrop-blur-2xl {
   background-color: hsl(var(--background)) !important;
 }
+
+/* WelcomeGreeting (leveluphello): wave emoji pivot matches source styles.css */
+.animate-wiggle {
+  transform-origin: 70% 70%;
+}

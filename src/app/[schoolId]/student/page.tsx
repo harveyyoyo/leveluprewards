@@ -61,7 +61,8 @@ import {
   Gift,
   Ticket,
   CheckCircle2,
-  LogOut
+  LogOut,
+  Sparkles,
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -94,10 +95,11 @@ import { BadgeShowcase } from '@/components/BadgeShowcase';
 import { StudentGoalsCard } from '@/components/goals/StudentGoalsCard';
 import { ClassAccumulationsCard } from '@/components/ClassAccumulationsCard';
 import { EarnedBadgesShowcase } from '@/components/EarnedBadgesShowcase';
-import { useActiveStudentSession } from '@/hooks/useActiveStudentSession';
+import { useStudentKioskSession } from '@/components/providers/StudentKioskSessionProvider';
 import { FaceMismatchBanner } from '@/components/FaceMismatchBanner';
 import { rainbowTripletForNavId, complementTripletForNavId } from '@/lib/rainbowNav';
 import { STUDENT_KIOSK_REQUEST_EXIT_EVENT } from '@/lib/student-kiosk';
+import { studentSeesWelcomePage } from '@/lib/studentWelcome';
 import { prizeIsListed, studentSeesPrizeByTeachers } from '@/lib/prize-utils';
 import { useAuthFetch } from '@/lib/authFetch';
 import { WelcomeOverlay } from '@/components/WelcomeOverlay';
@@ -598,6 +600,7 @@ function StudentDashboardInner({
             }
         })();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [student?.id, settings.enableBirthdayPoints, settings.enableSpecialDayPoints, schoolId, firestore, playSound, queueCelebration]);
 
   const resetTimer = useCallback(() => {
@@ -1121,7 +1124,7 @@ function StudentDashboardInner({
                 </span>
                 <span className="text-lg md:text-xl font-bold uppercase tracking-widest" style={{ color: activeTheme ? 'var(--theme-primary)' : 'hsl(var(--primary) / 0.6)', opacity: 0.6 }}>pts</span>
               </div>
-              <div className="mt-3">
+              <div className="mt-3 flex flex-wrap items-center justify-center gap-2 md:justify-end">
                 <Button
                   type="button"
                   variant="outline"
@@ -1140,6 +1143,29 @@ function StudentDashboardInner({
                 >
                   Preview ID
                 </Button>
+                {studentSeesWelcomePage(settings, student) && schoolId && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-9 gap-1.5 rounded-full text-[11px] font-bold uppercase tracking-widest"
+                    style={
+                      activeTheme
+                        ? {
+                            borderColor: 'var(--theme-primary)',
+                            backgroundColor: 'transparent',
+                            color: 'var(--theme-primary)',
+                          }
+                        : undefined
+                    }
+                    asChild
+                  >
+                    <Link href={`/${schoolId}/student/welcome`}>
+                      <Sparkles className="h-3.5 w-3.5" aria-hidden />
+                      Welcome styles
+                    </Link>
+                  </Button>
+                )}
               </div>
             </div>
           </CardContent>
@@ -1617,7 +1643,7 @@ export default function StudentLoginPage() {
 
   const { data: appConfig } = useDoc<{ appLogoUrl?: string }>(appConfigDocRef);
 
-  const { activeStudentId, setActiveStudentId, handleDone, loginMeta, setLoginMeta } = useActiveStudentSession();
+  const { activeStudentId, setActiveStudentId, handleDone, loginMeta, setLoginMeta } = useStudentKioskSession();
   const activeStudentIdRef = useRef<string | null>(null);
   activeStudentIdRef.current = activeStudentId;
 
