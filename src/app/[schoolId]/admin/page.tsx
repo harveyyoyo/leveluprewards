@@ -845,11 +845,9 @@ function AdminDashboardInner() {
                             <TabsTrigger value="coupons" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
                 <Ticket className="w-4 h-4" aria-hidden="true" /> Coupons
               </TabsTrigger>
-              {settings.enableLibrary && (
-                <TabsTrigger value="library" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
-                  <BookOpen className="w-4 h-4" aria-hidden="true" /> Library
-                </TabsTrigger>
-              )}
+              <TabsTrigger value="library" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
+                <BookOpen className="w-4 h-4" aria-hidden="true" /> Library
+              </TabsTrigger>
               {settings.enableAchievements && (
                 <TabsTrigger value="bonuspoints" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
                   <Trophy className="w-4 h-4" aria-hidden="true" /> Bonus Points
@@ -1115,18 +1113,16 @@ function AdminDashboardInner() {
               <AdminCouponsTab availableCoupons={availableCoupons} redeemedCoupons={redeemedCoupons} getStudentName={getStudentName} />
             </TabsContent>
 
-            {settings.enableLibrary && (
-              <TabsContent value="library" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                <AdminLibraryTab
-                  libraryItems={library}
-                  getStudentName={getStudentName}
-                  onAddLibraryItem={handleAddLibraryItem}
-                  onEditLibraryItem={handleEditLibraryItem}
-                  onDeleteLibraryItem={handleDeleteLibraryItem}
-                  onReturnLibraryItem={handleReturnLibraryItem}
-                />
-              </TabsContent>
-            )}
+            <TabsContent value="library" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <AdminLibraryTab
+                libraryItems={library}
+                getStudentName={getStudentName}
+                onAddLibraryItem={handleAddLibraryItem}
+                onEditLibraryItem={handleEditLibraryItem}
+                onDeleteLibraryItem={handleDeleteLibraryItem}
+                onReturnLibraryItem={handleReturnLibraryItem}
+              />
+            </TabsContent>
 
           {settings.enableAchievements && (
           <TabsContent value="bonuspoints" className="animate-in fade-in slide-in-from-bottom-2 duration-300">

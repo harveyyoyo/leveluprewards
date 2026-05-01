@@ -309,10 +309,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         const sid = schoolId.trim().toLowerCase();
-        const metadataRef =
-            loginState === 'student'
-                ? schoolPublicDocRef(firestore, sid)
-                : doc(firestore, 'schools', sid);
+        const isStaff = loginState === 'admin' || loginState === 'developer' || loginState === 'teacher' || loginState === 'secretary' || loginState === 'prizeClerk' || loginState === 'reports';
+        const metadataRef = isStaff
+            ? doc(firestore, 'schools', sid)
+            : schoolPublicDocRef(firestore, sid);
         const unsubscribe = onSnapshot(
             metadataRef,
             { includeMetadataChanges: true },

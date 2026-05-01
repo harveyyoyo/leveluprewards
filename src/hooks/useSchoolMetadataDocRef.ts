@@ -9,10 +9,17 @@ import { schoolPublicDocRef } from '@/lib/schoolPublic';
 export function useSchoolMetadataDocRef() {
   const { firestore } = useFirebase();
   const { schoolId, loginState } = useAuth();
+  const isStaff =
+    loginState === 'admin' ||
+    loginState === 'developer' ||
+    loginState === 'teacher' ||
+    loginState === 'secretary' ||
+    loginState === 'prizeClerk' ||
+    loginState === 'reports';
   return useMemoFirebase(() => {
     if (!firestore || !schoolId) return null;
     const sid = schoolId.trim().toLowerCase();
-    if (loginState === 'student') return schoolPublicDocRef(firestore, sid);
-    return doc(firestore, 'schools', sid);
-  }, [firestore, schoolId, loginState]);
+    if (isStaff) return doc(firestore, 'schools', sid);
+    return schoolPublicDocRef(firestore, sid);
+  }, [firestore, schoolId, isStaff]);
 }

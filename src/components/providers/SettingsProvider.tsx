@@ -110,9 +110,26 @@ interface Settings {
     // Security & Session
     adminSessionTimeoutMs?: number;
     kioskSessionTimeoutSec?: number;
-    // Sponsor Banner (displayed at the bottom of student kiosk screens)
+    // Sponsor Banner (displayed at the bottom/top of student kiosk screens)
     kioskSponsorEnabled: boolean;
     kioskSponsorMessage: string;
+    kioskSponsorLogoUrl?: string;
+    kioskSponsorLink?: string;
+    kioskSponsorSpeed?: 'slow' | 'normal' | 'fast' | 'very_fast' | 'static';
+    kioskSponsorPosition?: 'top' | 'bottom';
+    kioskSponsorBannerStyle?: 'primary' | 'subtle' | 'neon_gold' | 'electric' | 'gradient' | 'glass';
+    kioskSponsorIcon?: string;
+    kioskSponsorSchedules?: {
+        id: string;
+        date: string;
+        message: string;
+        link?: string;
+        logoUrl?: string;
+        bannerStyle?: 'primary' | 'subtle' | 'neon_gold' | 'electric' | 'gradient' | 'glass';
+        speed?: 'slow' | 'normal' | 'fast' | 'very_fast' | 'static';
+        position?: 'top' | 'bottom';
+        icon?: string;
+    }[];
     enableDoubleOrNothing: boolean;
     // Special Occasions
     enableBirthdayPoints: boolean;
@@ -220,6 +237,13 @@ const defaultSettings: Settings = {
     kioskSessionTimeoutSec: 15,
     kioskSponsorEnabled: false,
     kioskSponsorMessage: '',
+    kioskSponsorLogoUrl: '',
+    kioskSponsorLink: '',
+    kioskSponsorSpeed: 'normal',
+    kioskSponsorPosition: 'bottom',
+    kioskSponsorBannerStyle: 'primary',
+    kioskSponsorIcon: '🎉',
+    kioskSponsorSchedules: [],
     enableDoubleOrNothing: false,
     enableBirthdayPoints: false,
     birthdayPointsAmount: 100,
@@ -258,12 +282,13 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     const [isLoaded, setIsLoaded] = useState(false);
     const isMobile = useIsMobile();
     const pathname = usePathname();
+    const isStaff = loginState === 'admin' || loginState === 'developer' || loginState === 'teacher' || loginState === 'secretary' || loginState === 'prizeClerk' || loginState === 'reports';
     const schoolDocRef = useMemoFirebase(() => {
         if (!firestore || !schoolId) return null;
         const sid = schoolId.trim().toLowerCase();
-        if (loginState === 'student') return schoolPublicDocRef(firestore, sid);
-        return doc(firestore, 'schools', sid);
-    }, [firestore, schoolId, loginState]);
+        if (isStaff) return doc(firestore, 'schools', sid);
+        return schoolPublicDocRef(firestore, sid);
+    }, [firestore, schoolId, isStaff]);
     const { data: schoolData } = useDoc<SchoolPlanConfig & { appSettings?: Partial<Settings> }>(schoolDocRef);
     const planTier = useMemo(
         () => (schoolId ? normalizePlan(schoolData?.plan) : 'enterprise'),

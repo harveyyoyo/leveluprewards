@@ -23,8 +23,16 @@ import { KioskSponsorBanner } from '@/components/KioskSponsorBanner';
 // ~32 KB (plus @vladmandic/face-api on the face tab). Load only when the
 // kiosk actually needs to scan a student.
 const StudentScanner = dynamic(
-    () => import('@/components/StudentScanner').then((m) => m.StudentScanner),
-    { ssr: false },
+  () =>
+    import('@/components/StudentScanner')
+      .then((m) => m.StudentScanner)
+      .catch((err) => {
+        if (typeof window !== 'undefined' && (err.message?.includes('Loading chunk') || err.name === 'ChunkLoadError')) {
+          window.location.reload();
+        }
+        throw err;
+      }),
+  { ssr: false },
 );
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';

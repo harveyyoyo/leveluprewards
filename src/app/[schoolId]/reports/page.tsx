@@ -18,7 +18,15 @@ type SchoolDoc = {
 };
 
 const SchoolReportsPanel = dynamic(
-  () => import('@/components/reports/SchoolReportsPanel').then((module) => module.SchoolReportsPanel),
+  () =>
+    import('@/components/reports/SchoolReportsPanel')
+      .then((module) => module.SchoolReportsPanel)
+      .catch((err) => {
+        if (typeof window !== 'undefined' && (err.message?.includes('Loading chunk') || err.name === 'ChunkLoadError')) {
+          window.location.reload();
+        }
+        throw err;
+      }),
   { ssr: false },
 );
 

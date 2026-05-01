@@ -211,8 +211,8 @@ export default function Header() {
 
         {/* Center: School Name */}
         {schoolId && (
-          <Link href={centerHref} className="flex-1 flex justify-center text-center no-underline hidden lg:inline-flex">
-            <span className="inline-flex items-center gap-3">
+          <Link href={centerHref} className="flex-1 flex justify-center text-center no-underline min-w-0 px-2">
+            <span className="inline-flex items-center gap-2 sm:gap-3">
               {schoolData?.logoUrl && (
                 <span className={cn(
                   "inline-flex h-10 w-auto max-w-[200px] shrink-0 items-center justify-center transition-all duration-300",
@@ -237,7 +237,7 @@ export default function Header() {
                   />
                 </span>
               )}
-              <span className="text-3xl lg:text-3xl xl:text-4xl font-headline font-bold text-foreground truncate">
+              <span className="text-sm min-[400px]:text-base sm:text-2xl md:text-3xl lg:text-3xl xl:text-4xl font-headline font-bold text-foreground truncate">
                 {centerLabel}
               </span>
             </span>

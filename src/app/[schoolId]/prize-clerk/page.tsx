@@ -20,7 +20,15 @@ import { PrizeDashboard } from '@/app/[schoolId]/prize/PrizeDashboard';
 import type { StudentFoundMeta } from '@/components/StudentScanner';
 
 const StudentScanner = dynamic(
-    () => import('@/components/StudentScanner').then((m) => m.StudentScanner),
+    () =>
+        import('@/components/StudentScanner')
+            .then((m) => m.StudentScanner)
+            .catch((err) => {
+                if (typeof window !== 'undefined' && (err.message?.includes('Loading chunk') || err.name === 'ChunkLoadError')) {
+                    window.location.reload();
+                }
+                throw err;
+            }),
     { ssr: false },
 );
 

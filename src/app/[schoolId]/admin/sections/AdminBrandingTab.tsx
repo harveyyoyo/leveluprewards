@@ -1,11 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2, Trash2, UploadCloud, Palette, User, Shield, Clock } from 'lucide-react';
+import { Loader2, Trash2, UploadCloud, Palette, User, Shield, Clock, Megaphone } from 'lucide-react';
 import type { DocumentReference, Firestore } from 'firebase/firestore';
 import { updateDoc, setDoc } from 'firebase/firestore';
 import { schoolPublicDocRef } from '@/lib/schoolPublic';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -16,6 +18,7 @@ import { ThemeGeneratorModal } from '@/components/ThemeGeneratorModal';
 import { normalizeStudentTheme } from '@/lib/themeContrast';
 import type { StudentTheme } from '@/lib/types';
 import { cn } from '@/lib/utils';
+
 
 export function AdminBrandingTab({
   schoolId,
@@ -55,6 +58,14 @@ export function AdminBrandingTab({
   const currentLogo = logoPreviewUrl ?? schoolData?.logoUrl;
   const { settings, updateSettings } = useSettings();
   const [isDefaultThemeModalOpen, setIsDefaultThemeModalOpen] = useState(false);
+  const [newSponsorDate, setNewSponsorDate] = useState('');
+  const [newSponsorMessage, setNewSponsorMessage] = useState('');
+  const [newSponsorLink, setNewSponsorLink] = useState('');
+  const [newSponsorLogo, setNewSponsorLogo] = useState('');
+  const [newSponsorStyle, setNewSponsorStyle] = useState<'primary' | 'subtle' | 'neon_gold' | 'electric' | 'gradient' | 'glass'>('primary');
+  const [newSponsorSpeed, setNewSponsorSpeed] = useState<'slow' | 'normal' | 'fast' | 'very_fast' | 'static'>('normal');
+  const [newSponsorPosition, setNewSponsorPosition] = useState<'top' | 'bottom'>('bottom');
+  const [newSponsorIcon, setNewSponsorIcon] = useState('🎉');
 
   const handleSchoolDefaultThemeSave = (theme: StudentTheme) => {
     const normalized = normalizeStudentTheme(theme);
@@ -475,6 +486,329 @@ export function AdminBrandingTab({
               </div>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-t-4 border-indigo-500 shadow-md">
+        <CardHeader className="py-6">
+          <Helper content="Configure the scrolling sponsor banner message.">
+            <CardTitle className="flex items-center gap-2">
+              <Megaphone className="w-5 h-5 text-indigo-500" /> Sponsor Banner
+            </CardTitle>
+          </Helper>
+          <CardDescription>
+            Show a scrolling message at the bottom or top of the student kiosk and portal screens.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex items-start justify-between py-4 border-b border-border/40 transition-colors">
+            <div className="flex items-start gap-4 mr-6">
+              <div className="flex flex-col">
+                <Label className="font-bold text-base block text-foreground mb-1" htmlFor="kioskSponsorEnabledBranding">
+                  Enable Sponsor Message
+                </Label>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Display a scrolling sponsor or announcement banner on all student kiosk screens.
+                </p>
+              </div>
+            </div>
+            <Switch
+              id="kioskSponsorEnabledBranding"
+              checked={!!settings.kioskSponsorEnabled}
+              onCheckedChange={(checked) => updateSettings({ kioskSponsorEnabled: checked })}
+            />
+          </div>
+
+          {settings.kioskSponsorEnabled && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+              <div className="space-y-3 col-span-2">
+                <Label htmlFor="kioskSponsorMessageBranding" className="text-xs font-bold text-muted-foreground uppercase tracking-widest block">
+                  Sponsor Message
+                </Label>
+                <Input
+                  id="kioskSponsorMessageBranding"
+                  placeholder="e.g. Proudly sponsored by Acme Corp · Visit us at acme.com"
+                  value={settings.kioskSponsorMessage || ''}
+                  onChange={(e) => updateSettings({ kioskSponsorMessage: e.target.value })}
+                  className="text-sm rounded-xl"
+                  maxLength={300}
+                />
+                <p className="text-[10px] text-muted-foreground">
+                  {(settings.kioskSponsorMessage || '').length}/300 characters
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <Label htmlFor="kioskSponsorLinkBranding" className="text-xs font-bold text-muted-foreground uppercase tracking-widest block">
+                  Sponsor Website / Call to Action
+                </Label>
+                <Input
+                  id="kioskSponsorLinkBranding"
+                  placeholder="e.g. https://acme.com or @AcmeCorp"
+                  value={settings.kioskSponsorLink || ''}
+                  onChange={(e) => updateSettings({ kioskSponsorLink: e.target.value })}
+                  className="text-sm rounded-xl"
+                />
+              </div>
+
+              <div className="space-y-3">
+                <Label htmlFor="kioskSponsorLogoUrlBranding" className="text-xs font-bold text-muted-foreground uppercase tracking-widest block">
+                  Sponsor Logo URL
+                </Label>
+                <Input
+                  id="kioskSponsorLogoUrlBranding"
+                  placeholder="e.g. https://example.com/logo.png"
+                  value={settings.kioskSponsorLogoUrl || ''}
+                  onChange={(e) => updateSettings({ kioskSponsorLogoUrl: e.target.value })}
+                  className="text-sm rounded-xl"
+                />
+              </div>
+
+              <div className="space-y-3">
+                <Label htmlFor="kioskSponsorBannerStyleBranding" className="text-xs font-bold text-muted-foreground uppercase tracking-widest block">
+                  Visual Theme / Banner Style
+                </Label>
+                <Select
+                  value={settings.kioskSponsorBannerStyle || 'primary'}
+                  onValueChange={(val: any) => updateSettings({ kioskSponsorBannerStyle: val })}
+                >
+                  <SelectTrigger className="rounded-xl">
+                    <SelectValue placeholder="Style" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="primary">Primary Brand Color</SelectItem>
+                    <SelectItem value="subtle">Subtle Slate</SelectItem>
+                    <SelectItem value="neon_gold">Neon Gold</SelectItem>
+                    <SelectItem value="electric">Electric Blue</SelectItem>
+                    <SelectItem value="gradient">Hyper Gradient</SelectItem>
+                    <SelectItem value="glass">Glassmorphic Blur</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-3">
+                <Label htmlFor="kioskSponsorSpeedBranding" className="text-xs font-bold text-muted-foreground uppercase tracking-widest block">
+                  Scroll Speed
+                </Label>
+                <Select
+                  value={settings.kioskSponsorSpeed || 'normal'}
+                  onValueChange={(val: any) => updateSettings({ kioskSponsorSpeed: val })}
+                >
+                  <SelectTrigger className="rounded-xl">
+                    <SelectValue placeholder="Speed" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="slow">Slow</SelectItem>
+                    <SelectItem value="normal">Normal</SelectItem>
+                    <SelectItem value="fast">Fast</SelectItem>
+                    <SelectItem value="very_fast">Very Fast</SelectItem>
+                    <SelectItem value="static">Static (Fixed Banner)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-3">
+                <Label htmlFor="kioskSponsorPositionBranding" className="text-xs font-bold text-muted-foreground uppercase tracking-widest block">
+                  Banner Position
+                </Label>
+                <Select
+                  value={settings.kioskSponsorPosition || 'bottom'}
+                  onValueChange={(val: any) => updateSettings({ kioskSponsorPosition: val })}
+                >
+                  <SelectTrigger className="rounded-xl">
+                    <SelectValue placeholder="Position" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="bottom">Bottom of screen</SelectItem>
+                    <SelectItem value="top">Top of screen</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-3">
+                <Label htmlFor="kioskSponsorIconBranding" className="text-xs font-bold text-muted-foreground uppercase tracking-widest block">
+                  Emoji / Icon Prefix
+                </Label>
+                <Input
+                  id="kioskSponsorIconBranding"
+                  placeholder="e.g. 🎉, 🌟, 💡, 🏫, 🍎, etc."
+                  value={settings.kioskSponsorIcon || ''}
+                  onChange={(e) => updateSettings({ kioskSponsorIcon: e.target.value })}
+                  className="text-sm rounded-xl"
+                  maxLength={10}
+                />
+              </div>
+
+              {/* Sponsor Schedules Sub-Section */}
+              <div className="col-span-2 pt-6 border-t border-border/40 space-y-6">
+                <div>
+                  <h4 className="text-sm font-bold text-foreground">Future & Date-Specific Sponsors</h4>
+                  <p className="text-xs text-muted-foreground">Schedule upcoming sponsors or special announcement messages for specific days.</p>
+                </div>
+
+                {/* Form to add a new schedule */}
+                <div className="p-4 bg-muted/40 rounded-2xl border border-border/40 space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-bold text-muted-foreground uppercase">Target Date</Label>
+                      <Input
+                        type="date"
+                        value={newSponsorDate}
+                        onChange={(e) => setNewSponsorDate(e.target.value)}
+                        className="text-sm rounded-xl"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-bold text-muted-foreground uppercase">Prefix Emoji</Label>
+                      <Input
+                        placeholder="🎉"
+                        value={newSponsorIcon}
+                        onChange={(e) => setNewSponsorIcon(e.target.value)}
+                        className="text-sm rounded-xl"
+                        maxLength={10}
+                      />
+                    </div>
+                    <div className="space-y-2 col-span-2">
+                      <Label className="text-xs font-bold text-muted-foreground uppercase">Scheduled Message</Label>
+                      <Input
+                        placeholder="e.g. Happy Teacher Appreciation Day from the PTA"
+                        value={newSponsorMessage}
+                        onChange={(e) => setNewSponsorMessage(e.target.value)}
+                        className="text-sm rounded-xl"
+                        maxLength={300}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-bold text-muted-foreground uppercase">Custom Logo URL</Label>
+                      <Input
+                        placeholder="https://example.com/sponsor-logo.png"
+                        value={newSponsorLogo}
+                        onChange={(e) => setNewSponsorLogo(e.target.value)}
+                        className="text-sm rounded-xl"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-bold text-muted-foreground uppercase">Sponsor Website</Label>
+                      <Input
+                        placeholder="https://acme.com"
+                        value={newSponsorLink}
+                        onChange={(e) => setNewSponsorLink(e.target.value)}
+                        className="text-sm rounded-xl"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-bold text-muted-foreground uppercase">Theme Style</Label>
+                      <Select value={newSponsorStyle} onValueChange={(val: any) => setNewSponsorStyle(val)}>
+                        <SelectTrigger className="rounded-xl">
+                          <SelectValue placeholder="Style" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="primary">Primary Brand Color</SelectItem>
+                          <SelectItem value="subtle">Subtle Slate</SelectItem>
+                          <SelectItem value="neon_gold">Neon Gold</SelectItem>
+                          <SelectItem value="electric">Electric Blue</SelectItem>
+                          <SelectItem value="gradient">Hyper Gradient</SelectItem>
+                          <SelectItem value="glass">Glassmorphic Blur</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-bold text-muted-foreground uppercase">Scroll Speed</Label>
+                      <Select value={newSponsorSpeed} onValueChange={(val: any) => setNewSponsorSpeed(val)}>
+                        <SelectTrigger className="rounded-xl">
+                          <SelectValue placeholder="Speed" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="slow">Slow</SelectItem>
+                          <SelectItem value="normal">Normal</SelectItem>
+                          <SelectItem value="fast">Fast</SelectItem>
+                          <SelectItem value="very_fast">Very Fast</SelectItem>
+                          <SelectItem value="static">Static (Fixed Banner)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => {
+                      if (!newSponsorDate || !newSponsorMessage) {
+                        toast({ variant: 'destructive', title: 'Missing fields', description: 'Date and message are required.' });
+                        return;
+                      }
+                      const newItem = {
+                        id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
+                        date: newSponsorDate,
+                        message: newSponsorMessage,
+                        link: newSponsorLink || undefined,
+                        logoUrl: newSponsorLogo || undefined,
+                        bannerStyle: newSponsorStyle,
+                        speed: newSponsorSpeed,
+                        position: newSponsorPosition,
+                        icon: newSponsorIcon || undefined,
+                      };
+                      updateSettings({
+                        kioskSponsorSchedules: [...(settings.kioskSponsorSchedules || []), newItem],
+                      });
+                      setNewSponsorDate('');
+                      setNewSponsorMessage('');
+                      setNewSponsorLink('');
+                      setNewSponsorLogo('');
+                      setNewSponsorIcon('🎉');
+                      toast({ title: 'Schedule Added', description: `Sponsor message scheduled for ${newSponsorDate}` });
+                    }}
+                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold py-2.5 transition-all shadow-md flex items-center justify-center gap-2"
+                  >
+                    <span>+ Add This Sponsor Schedule</span>
+                  </Button>
+                </div>
+
+                {/* List of Scheduled Items */}
+                <div className="space-y-3">
+                  <h5 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Active & Future Schedules</h5>
+                  {(settings.kioskSponsorSchedules || []).length === 0 ? (
+                    <div className="text-xs text-muted-foreground bg-muted/20 border border-border/40 p-4 rounded-xl text-center">
+                      No future date-specific schedules configured.
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {(settings.kioskSponsorSchedules || []).map((s) => (
+                        <div key={s.id} className="flex items-center justify-between p-3.5 bg-muted/30 border border-border/30 rounded-2xl hover:bg-muted/40 transition-colors">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 font-bold text-xs px-2.5 py-1 rounded-lg">
+                                {s.date}
+                              </span>
+                              <span className="text-xs font-semibold text-foreground truncate max-w-xs">
+                                {s.message}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-3 text-[10px] text-muted-foreground mt-1.5 flex-wrap">
+                              <span>Style: <span className="font-semibold text-foreground/80">{s.bannerStyle || 'primary'}</span></span>
+                              <span>Speed: <span className="font-semibold text-foreground/80">{s.speed || 'normal'}</span></span>
+                              {s.link && <span>Link: <span className="font-semibold text-foreground/80">{s.link}</span></span>}
+                              {s.logoUrl && <span>Logo: <span className="font-semibold text-foreground/80">Custom</span></span>}
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive hover:bg-destructive/10 shrink-0 h-9 w-9 rounded-xl"
+                            onClick={() => {
+                              updateSettings({
+                                kioskSponsorSchedules: (settings.kioskSponsorSchedules || []).filter(item => item.id !== s.id),
+                              });
+                              toast({ title: 'Schedule Removed', description: 'The sponsor schedule has been removed.' });
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

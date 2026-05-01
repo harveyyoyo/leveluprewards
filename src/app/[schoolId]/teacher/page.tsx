@@ -18,7 +18,15 @@ import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 const TeacherPrinterInner = dynamic(
-    () => import('./TeacherPrinterInner').then((module) => module.TeacherPrinterInner),
+    () =>
+        import('./TeacherPrinterInner')
+            .then((module) => module.TeacherPrinterInner)
+            .catch((err) => {
+                if (typeof window !== 'undefined' && (err.message?.includes('Loading chunk') || err.name === 'ChunkLoadError')) {
+                    window.location.reload();
+                }
+                throw err;
+            }),
     { ssr: false, loading: () => <TeacherPrinterSkeleton /> },
 );
 
