@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import confetti from "canvas-confetti";
 import { Button } from "@/components/ui/button";
 
@@ -89,6 +89,11 @@ const STYLES: StyleMeta[] = [
 function isValidStyleId(id: string | undefined | null): id is StyleId {
   if (!id) return false;
   return STYLES.some((s) => s.id === id);
+}
+
+/** Hydration-safe default (never read sessionStorage/localStorage synchronously — that breaks SSR/client match). */
+function styleFallbackFromProps(initialStyleId: string | undefined): StyleId {
+  return isValidStyleId(initialStyleId) ? initialStyleId : "confetti";
 }
 
 /* ============== PALETTES ==============
@@ -2921,14 +2926,7 @@ export function WelcomeGreeting({
   persistStyleStorageKey = null,
   hideStylePicker = false,
 }: WelcomeGreetingProps) {
-  const [styleId, setStyleId] = useState<StyleId>(() => {
-    if (typeof window !== "undefined" && persistStyleStorageKey) {
-      const raw = localStorage.getItem(persistStyleStorageKey);
-      if (isValidStyleId(raw)) return raw;
-    }
-    if (isValidStyleId(initialStyleId)) return initialStyleId;
-    return "confetti";
-  });
+  const [styleId, setStyleId] = useState<StyleId>(() => styleFallbackFromProps(initialStyleId));
   const [paletteIds, setPaletteIds] = useState<Record<StyleId, string>>(() =>
     Object.fromEntries(
       (Object.keys(PALETTES) as StyleId[]).map((k) => [k, PALETTES[k][0].id]),
@@ -2939,6 +2937,21 @@ export function WelcomeGreeting({
   useEffect(() => {
     setHour(new Date().getHours());
   }, []);
+
+  /** Apply kiosk preference after hydration, before persistence effect (avoids overwriting LS with stale SSR state). */
+  useLayoutEffect(() => {
+    if (!persistStyleStorageKey || typeof window === "undefined") return;
+    try {
+      const raw = localStorage.getItem(persistStyleStorageKey);
+      if (isValidStyleId(raw)) {
+        setStyleId(raw);
+        return;
+      }
+    } catch {
+      /* private mode */
+    }
+    setStyleId(styleFallbackFromProps(initialStyleId));
+  }, [persistStyleStorageKey, initialStyleId]);
 
   useEffect(() => {
     if (!persistStyleStorageKey || typeof window === "undefined") return;
