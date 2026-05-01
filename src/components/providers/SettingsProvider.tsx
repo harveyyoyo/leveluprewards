@@ -80,6 +80,8 @@ interface Settings {
     enableFaceLogin: boolean;
     /** Playful full-screen welcome styles on the student kiosk (`/student/welcome`). */
     enableStudentWelcome: boolean;
+    /** School-wide default welcome style (used when student has no override). Empty = confetti. */
+    defaultWelcomeGreetingStyleId?: string;
     /** Back-compat alias used by some pages/components. */
     enableAttendance: boolean;
     // Guidance
@@ -188,6 +190,7 @@ const defaultSettings: Settings = {
     enableClassSignIn: false,
     enableFaceLogin: false,
     enableStudentWelcome: false,
+    defaultWelcomeGreetingStyleId: '',
     enableAttendance: false,
     enableHelperMode: true,
     showIntroWizard: false,

@@ -16,6 +16,13 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import {
     Settings, Volume2, VolumeX, Monitor, Smartphone, ChevronRight,
     Bell, Shield, Moon, Sun, ArrowLeft, Palette, Zap, Trophy,
     BarChart3, MessageSquare, ShoppingBag, ShieldCheck, Star,
@@ -31,6 +38,7 @@ import { VendingMotorPanel } from '@/components/VendingMotorPanel';
 import { ANIMATED_BACKGROUND_STYLES, type AnimatedBackgroundStyle } from '@/lib/animatedBackdrop';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
 import { cn } from '@/lib/utils';
+import { WELCOME_GREETING_STYLES } from '@/components/WelcomeGreeting';
 
 type SettingsView = 'hub' | 'interface' | 'security' | 'features' | 'library';
 
@@ -767,6 +775,43 @@ export function SettingsModal() {
                                     isAllowed={isFeatureAllowed('enableStudentWelcome')}
                                     planLabel={planLabel}
                                 />
+                                {isAdmin && local.enableStudentWelcome && isFeatureAllowed('enableStudentWelcome') ? (
+                                    <div className="px-3 pb-4 pt-1">
+                                        <Label className="text-xs font-bold text-foreground">
+                                            Default welcome style (school)
+                                        </Label>
+                                        <p className="mt-1 text-xs text-muted-foreground">
+                                            Used when a student has no specific default. Students can still pick their own style on each kiosk.
+                                        </p>
+                                        <div className="mt-3 max-w-sm">
+                                            <Select
+                                                value={local.defaultWelcomeGreetingStyleId || '__none__'}
+                                                onValueChange={(v) =>
+                                                    setDraft((prev) =>
+                                                        prev
+                                                            ? {
+                                                                  ...prev,
+                                                                  defaultWelcomeGreetingStyleId: v === '__none__' ? '' : v,
+                                                              }
+                                                            : prev,
+                                                    )
+                                                }
+                                            >
+                                                <SelectTrigger className="rounded-xl">
+                                                    <SelectValue placeholder="Choose a default" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="__none__">Confetti (built-in default)</SelectItem>
+                                                    {WELCOME_GREETING_STYLES.map((s) => (
+                                                        <SelectItem key={s.id} value={s.id}>
+                                                            {s.emoji} {s.label}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </div>
+                                ) : null}
                                 <FeatureRow
                                     id="enableFaceLogin"
                                     label="Face Login"

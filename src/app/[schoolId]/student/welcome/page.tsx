@@ -156,7 +156,7 @@ export default function StudentWelcomePage() {
       </div>
       <WelcomeGreeting
         name={displayName}
-        initialStyleId={student.welcomeGreetingStyleId}
+        initialStyleId={student.welcomeGreetingStyleId || settings.defaultWelcomeGreetingStyleId || undefined}
         persistStyleStorageKey={persistKey}
       />
     </SchoolGate>
