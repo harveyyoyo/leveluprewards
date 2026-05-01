@@ -97,7 +97,8 @@ export const redeemPrize = async (
   schoolId: string,
   studentId: string,
   prize: Prize,
-  quantity: number
+  quantity: number,
+  pointsOverride?: number
 ): Promise<{ success: boolean; activityId: string; redeemedAt: number; totalCost: number }> => {
   const studentRef = doc(firestore, 'schools', schoolId, 'students', studentId);
   const prizeRef = doc(firestore, 'schools', schoolId, 'prizes', prize.id);
@@ -119,7 +120,7 @@ export const redeemPrize = async (
 
       const studentData = studentDoc.data() as Student;
       const prizeData = prizeDoc.data() as Prize;
-      const totalCost = prizeData.points * quantity;
+      const totalCost = typeof pointsOverride === 'number' ? pointsOverride : prizeData.points * quantity;
 
       if (!prizeData.inStock) {
         throw new Error("This prize is not available.");
@@ -158,7 +159,7 @@ export const redeemPrize = async (
     void import('@/lib/goalsProgress').then((m) =>
       m.syncGoalsForStudent(firestore, schoolId, studentId).catch(() => {}),
     );
-    return { success: true, activityId: activityRef.id, redeemedAt, totalCost: prize.points * quantity };
+    return { success: true, activityId: activityRef.id, redeemedAt, totalCost: typeof pointsOverride === 'number' ? pointsOverride : prize.points * quantity };
   } catch (e) {
     reportFirestorePermissionError(e, { path: studentRef.path, operation: 'update', requestResourceData: { prizeId: prize.id, quantity } });
     throw e;

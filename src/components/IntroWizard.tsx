@@ -64,14 +64,14 @@ const steps = [
     target: '/student',
   },
   {
-    title: 'Step 10: Go to Prize Shop',
-    description: 'The points were added! Let\'s go spend them. Log out of the student kiosk and go to the "Prize Shop" from the main portal. Sign in as the same student.',
+    title: 'Step 10: Go to Prize/Rewards shop',
+    description: 'The points were added! Let\'s go spend them. Log out of the student kiosk and go to the "Prize/Rewards shop" from the main portal. Sign in as the same student.',
     target: '/student',
     hideNext: true,
   },
   {
     title: 'Step 11: Redeem a Prize',
-    description: "You're in the Prize Shop! Select a prize you can afford and click 'Buy'. Once redeemed, you'll see a success message. Then, return to the 'Teacher Portal' (using the home icon then 'Teacher Portal') to finalize the delivery.",
+    description: "You're in the Prize/Rewards shop! Select a prize you can afford and click 'Buy'. Once redeemed, you'll see a success message. Then, return to the 'Teacher Portal' (using the home icon then 'Teacher Portal') to finalize the delivery.",
     target: '/prize',
     hideNext: true,
   },

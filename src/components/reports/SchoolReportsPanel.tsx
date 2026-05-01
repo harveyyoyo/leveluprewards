@@ -136,7 +136,7 @@ function reportTitle(kind: ReportKind): string {
     case 'coupons':
       return 'Coupon inventory';
     case 'prizes':
-      return 'Prize catalog';
+      return 'Prize/Rewards shop';
     case 'classes':
       return 'Classes overview';
     case 'homework':
@@ -888,7 +888,7 @@ export function SchoolReportsPanel({
             )}
             {reportKind === 'prizes' && (
               <section className="space-y-3">
-                <h2 className="text-lg font-bold border-b border-neutral-400 pb-1">Prize catalog</h2>
+                <h2 className="text-lg font-bold border-b border-neutral-400 pb-1">Prize/Rewards shop</h2>
                 <table className="w-full border-collapse border border-black text-[10pt]">
                   <thead>
                     <tr className="bg-neutral-100">
@@ -1028,7 +1028,7 @@ export function SchoolReportsPanel({
                   <SelectItem value="balances">Student balances</SelectItem>
                   <SelectItem value="redemptions">Coupon redemptions</SelectItem>
                   <SelectItem value="coupons">Coupon inventory</SelectItem>
-                  <SelectItem value="prizes">Prize catalog</SelectItem>
+                  <SelectItem value="prizes">Prize/Rewards shop</SelectItem>
                   <SelectItem value="classes">Classes overview</SelectItem>
                   <SelectItem value="homework">Homework rewards</SelectItem>
                 </SelectContent>

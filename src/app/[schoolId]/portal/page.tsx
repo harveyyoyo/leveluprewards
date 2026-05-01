@@ -86,7 +86,7 @@ export default function PortalPage() {
             : []),
         { id: 'redeem', href: `/${schoolId}/student`, title: 'Student Kiosk', description: 'Scan your card to redeem coupon codes and view points.', icon: GraduationCap },
         ...(isStaff && settings.enableStudentPortal ? [{ id: 'student-home', href: `/${schoolId}/student-home`, title: 'Student Home Portal', description: 'Home access is being prepared and is not available yet.', icon: Home, disabled: true, status: 'Coming soon' }] : []),
-        { id: 'prize', href: `/${schoolId}/prize`, title: 'Prize Shop', description: 'Spend your points for awesome prizes.', icon: Gift },
+        { id: 'prize', href: `/${schoolId}/prize`, title: 'Prize/Rewards shop', description: 'Spend your points for awesome prizes.', icon: Gift },
         ...(isStaff || schoolId === 'schoolabc'
             ? [{ id: 'fame', href: `/${schoolId}/halloffame`, title: 'Hall of Fame', description: 'View top student point earners.', icon: Trophy }]
             : []),

@@ -87,13 +87,13 @@ export function AdminPrizesTab({
 
   const wizardTitle = useMemo(() => {
     const titles = [
-      'Prize Wizard',
+      'Item Wizard',
       'Step 1: Basic info',
       'Step 2: Cost & stock',
       'Step 3: Options & access',
       'Step 4: Review & redemption',
     ];
-    return titles[wizardStep] || 'Prize Wizard';
+    return titles[wizardStep] || 'Item Wizard';
   }, [wizardStep]);
 
   const canGoNext = useMemo(() => {
@@ -107,15 +107,15 @@ export function AdminPrizesTab({
       <CardHeader className="flex flex-row justify-between items-center py-6">
         <div>
           <CardTitle className="flex items-center gap-2">
-            <Gift className="text-destructive w-5 h-5" /> Prize Shop
+            <Gift className="text-destructive w-5 h-5" /> Prize/Rewards shop
             <Button
               type="button"
               variant="ghost"
               size="icon"
               className="h-8 w-8 rounded-full text-muted-foreground/60 hover:text-muted-foreground"
               onClick={() => setHelpOpen(true)}
-              aria-label="How prizes work"
-              title="How prizes work"
+              aria-label="How items work"
+              title="How items work"
             >
               <HelpCircle className="h-4 w-4" />
             </Button>
@@ -145,7 +145,7 @@ export function AdminPrizesTab({
             }}
             className="rounded-xl"
           >
-            <Plus className="mr-2 h-4 w-4" /> New Prize
+            <Plus className="mr-2 h-4 w-4" /> New Item
           </Button>
         </div>
       </CardHeader>
@@ -450,7 +450,7 @@ export function AdminPrizesTab({
                       size="icon"
                       className="h-7 w-7 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
                       disabled={!canEditFull}
-                      title="Edit prize"
+                      title="Edit item"
                       onClick={() => onEditPrize(p)}
                     >
                       <Edit3 className="w-3.5 h-3.5" />
@@ -533,7 +533,7 @@ export function AdminPrizesTab({
                       size="icon"
                       className="h-7 w-7 rounded-full text-destructive hover:bg-destructive/10"
                       disabled={mode === 'teacher' && !canDelete}
-                      title={mode === 'teacher' ? 'Delete prize you created' : 'Delete prize'}
+                      title={mode === 'teacher' ? 'Delete item you created' : 'Delete item'}
                       onClick={() => onDeletePrize(p.id)}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -549,11 +549,11 @@ export function AdminPrizesTab({
       <Dialog open={helpOpen} onOpenChange={setHelpOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>How prizes work</DialogTitle>
-            <DialogDescription>Quick overview of prize settings.</DialogDescription>
+            <DialogTitle>How items work</DialogTitle>
+            <DialogDescription>Quick overview of item settings.</DialogDescription>
           </DialogHeader>
           <div className="space-y-3 text-sm">
-            <p><span className="font-bold">Prizes</span> are items students redeem using points in the Prize Shop.</p>
+            <p><span className="font-bold">Items</span> are rewards students redeem using points in the Prize/Rewards shop.</p>
             <ul className="list-disc pl-5 space-y-1">
               <li><span className="font-bold">Points</span>: cost per redemption.</li>
               <li><span className="font-bold">In Stock</span>: whether it appears in the shop.</li>
@@ -562,7 +562,7 @@ export function AdminPrizesTab({
               <li><span className="font-bold">Teachers</span>: pick multiple teachers or school-wide.</li>
               <li><span className="font-bold">Class</span>: optionally restrict by class.</li>
               <li><span className="font-bold">Vending motor</span>: enable the Vending Machine feature in settings, then use the prize motor button to pick axis X/Y/Z/E.</li>
-              <li><span className="font-bold">AI surprise</span>: included on Pro+ plans — enable “AI Prize Surprise” under Settings → Features, then use the sparkle control. After redemption, the Prize Shop can show an AI joke, riddle, or fortune.</li>
+              <li><span className="font-bold">AI surprise</span>: included on Pro+ plans — enable “AI Prize Surprise” under Settings → Features, then use the sparkle control. After redemption, the Prize/Rewards shop can show an AI joke, riddle, or fortune.</li>
             </ul>
           </div>
           <DialogFooter>
@@ -582,7 +582,7 @@ export function AdminPrizesTab({
               <ul className="list-disc pl-5 space-y-1">
                 <li><span className="font-bold">Set</span> name, icon, points, stock.</li>
                 <li><span className="font-bold">Choose</span> printing and who can redeem.</li>
-                <li><span className="font-bold">Then</span> test redemption in the Prize Shop.</li>
+                <li><span className="font-bold">Then</span> test redemption in the Prize/Rewards shop.</li>
               </ul>
             </div>
           )}
@@ -590,7 +590,7 @@ export function AdminPrizesTab({
           {wizardStep === 1 && (
             <div className="grid gap-4">
               <div className="space-y-1">
-                <Label>Prize name</Label>
+                <Label>Item name</Label>
                 <Input value={wName} onChange={(e) => setWName(e.target.value)} placeholder="Homework Pass" />
               </div>
               <div className="space-y-1">
@@ -650,7 +650,7 @@ export function AdminPrizesTab({
                 <div className="space-y-0.5 min-w-0">
                   <Label>AI surprise after redeem</Label>
                   <p className="text-xs text-muted-foreground">
-                    Optional: show a clean AI joke, riddle, or fortune on the Prize Shop after redemption.
+                    Optional: show a clean AI joke, riddle, or fortune on the Prize/Rewards shop after redemption.
                   </p>
                 </div>
                 <Select value={wAiFun} onValueChange={(v) => setWAiFun(v as 'off' | PrizeAiFunReward)}>
@@ -769,7 +769,7 @@ export function AdminPrizesTab({
               </div>
               <div className="flex flex-col sm:flex-row gap-2">
                 <Button asChild variant="outline" className="justify-start">
-                  <Link href={`/${schoolId}/prize`}><ShoppingBag className="mr-2 h-4 w-4" /> Open Prize Shop</Link>
+                  <Link href={`/${schoolId}/prize`}><ShoppingBag className="mr-2 h-4 w-4" /> Open Prize/Rewards shop</Link>
                 </Button>
                 <Button asChild variant="outline" className="justify-start">
                   <Link href={`/${schoolId}/student`}><GraduationCap className="mr-2 h-4 w-4" /> Open Student Page</Link>

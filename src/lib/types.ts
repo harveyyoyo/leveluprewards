@@ -134,6 +134,13 @@ export interface Student {
   earnedBadges?: { badgeId: string; earnedAt: number; periodKey: string }[];
   teacherIds?: string[];
   theme?: StudentTheme;
+  /** ISO date string (YYYY-MM-DD) for student's birthday. */
+  birthday?: string;
+  /** Tracks the last date (YYYY-MM-DD) special day points were awarded to prevent duplicates. */
+  lastSpecialDayAwarded?: {
+    birthday?: string;
+    specialDay?: string;
+  };
 }
 
 /** Who may redeem the coupon at the student kiosk. Omit or `school` = any student. */
@@ -199,7 +206,7 @@ export interface Prize {
   name: string;
   points: number;
   icon: string;
-  /** Optional photo shown in the Prize Shop and admin list (Firebase Storage URL). */
+  /** Optional photo shown in the Prize/Rewards shop and admin list (Firebase Storage URL). */
   imageUrl?: string;
   inStock: boolean;
   /** Optional quantity on hand. Omit for unlimited. When set, listing requires count above zero; redeem decrements until empty. */
@@ -209,7 +216,7 @@ export interface Prize {
   /** Optional physical vending motor trigger run on the kiosk browser after a successful redemption. */
   vendingMotor?: VendingMotorConfig;
   /**
-   * When set, after a successful redemption the Prize Shop shows one AI-generated
+   * When set, after a successful redemption the Prize/Rewards shop shows one AI-generated
    * clean joke, riddle (with answer), or fortune-cookie line. `random` picks one kind per redemption.
    */
   aiFunReward?: PrizeAiFunReward;

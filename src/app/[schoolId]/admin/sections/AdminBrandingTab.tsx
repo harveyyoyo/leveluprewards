@@ -366,7 +366,7 @@ export function AdminBrandingTab({
             </CardTitle>
           </Helper>
           <CardDescription>
-            This theme is used for Kiosk, prize shop, and ID cards when a student has no individual theme.
+            This theme is used for Kiosk, prize/rewards shop, and ID cards when a student has no individual theme.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -470,7 +470,7 @@ export function AdminBrandingTab({
                   <span className="text-sm font-medium text-muted-foreground">seconds</span>
                 </div>
                 <p className="text-[11px] text-muted-foreground">
-                  Inactivity before the student dashboard or prize shop returns to the home screen.
+                  Inactivity before the student dashboard or prize/rewards shop returns to the home screen.
                 </p>
               </div>
             </div>

@@ -365,7 +365,7 @@ export const ensureDefaultAttendanceRules = async (
         createdAt: Date.now(),
       };
 
-      batch.set(ruleRef, rule);
+      batch.set(ruleRef, removeUndefined(rule));
       batchCount++;
       results.created++;
 

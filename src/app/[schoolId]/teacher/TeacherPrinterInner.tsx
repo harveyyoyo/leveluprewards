@@ -78,6 +78,7 @@ function TeacherHomeworkTab({ schoolId, teacherId, students, classes }: { school
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
     const [filterClassId, setFilterClassId] = useState('all');
+    const [searchTerm, setSearchTerm] = useState('');
     const [isAwarding, setIsAwarding] = useState<string | null>(null);
 
     const assignmentsQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'homework') : null, [firestore, schoolId]);
@@ -85,8 +86,18 @@ function TeacherHomeworkTab({ schoolId, teacherId, students, classes }: { school
 
     const myAssignments = useMemo(() => assignments?.filter(a => a.teacherId === teacherId) || [], [assignments, teacherId]);
     const filteredStudents = useMemo(() => {
-        return students.filter((student) => filterClassId === 'all' || student.classId === filterClassId);
-    }, [students, filterClassId]);
+        const normalizedSearch = searchTerm.trim().toLowerCase();
+        return students.filter((student) => {
+            const classMatch = filterClassId === 'all' || student.classId === filterClassId;
+            if (!classMatch) return false;
+            if (!normalizedSearch) return true;
+
+            const fullName = `${getStudentNickname(student)} ${student.lastName}`.toLowerCase();
+            return fullName.includes(normalizedSearch) ||
+                student.id.toLowerCase().includes(normalizedSearch) ||
+                (student.nfcId && student.nfcId.toLowerCase().includes(normalizedSearch));
+        });
+    }, [students, filterClassId, searchTerm]);
 
     const toggleStudent = (studentId: string) => {
         setSelectedStudentIds((prev) => prev.includes(studentId) ? prev.filter((id) => id !== studentId) : [...prev, studentId]);
@@ -171,6 +182,15 @@ function TeacherHomeworkTab({ schoolId, teacherId, students, classes }: { school
                     <p className="text-sm text-muted-foreground font-medium">Give quick points for completed homework without adding anything to the student portal.</p>
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <div className="relative group">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                        <Input
+                            placeholder="Search name or ID..."
+                            value={searchTerm}
+                            onChange={e => setSearchTerm(e.target.value)}
+                            className="h-11 w-full sm:w-64 rounded-xl pl-9 transition-all bg-slate-50"
+                        />
+                    </div>
                     <Select value={filterClassId} onValueChange={setFilterClassId}>
                         <SelectTrigger className="h-11 w-full sm:w-52 rounded-xl font-bold">
                             <SelectValue placeholder="All classes" />
@@ -2114,11 +2134,16 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
     }, [categories, currentTeacher, secretaryMode, isAdmin]);
 
     const filteredStudents = useMemo(() => {
+        const normalizedSearch = studentSearch.trim().toLowerCase();
         return studentsForTeacherActions.filter((s) => {
-            const computedName = `${getStudentNickname(s)} ${s.lastName}`.toLowerCase();
-            const nameMatch = computedName.includes(studentSearch.toLowerCase());
             const classMatch = filterClassId === 'all' || s.classId === filterClassId;
-            return nameMatch && classMatch;
+            if (!classMatch) return false;
+            if (!normalizedSearch) return true;
+
+            const computedName = `${getStudentNickname(s)} ${s.lastName}`.toLowerCase();
+            return computedName.includes(normalizedSearch) ||
+                s.id.toLowerCase().includes(normalizedSearch) ||
+                (s.nfcId && s.nfcId.toLowerCase().includes(normalizedSearch));
         }).sort((a, b) => a.lastName.localeCompare(b.lastName));
     }, [studentsForTeacherActions, studentSearch, filterClassId]);
 
@@ -2636,7 +2661,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                         <div className="relative group">
                                           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                                           <Input
-                                            placeholder="Search name..."
+                                            placeholder="Search name or ID..."
                                             value={studentSearch}
                                             onChange={e => setStudentSearch(e.target.value)}
                                             className={cn("h-11 rounded-xl pl-9 transition-all", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-slate-50')}

@@ -103,7 +103,7 @@ export default function PrizePage() {
             >
                 <StudentScanner
                     onStudentFound={onScannerStudent}
-                    title="Prize Redemption"
+                    title="Prize/Rewards shop"
                     description="Choose how to identify the student below."
                     icon={<Gift className="w-10 h-10" />}
                 />

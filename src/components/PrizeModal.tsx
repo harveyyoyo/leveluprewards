@@ -183,14 +183,14 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses, cre
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent size="sm">
         <DialogHeader>
-          <DialogTitle>{isEditing ? 'Edit Prize' : 'New Prize'}</DialogTitle>
+          <DialogTitle>{isEditing ? 'Edit Prize/Rewards shop item' : 'New Prize/Rewards shop item'}</DialogTitle>
            <DialogDescription>
             Enter the prize details below. For the icon, use any valid name from the Lucide icon library. Optionally add a photo for the shop and admin list.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="space-y-1">
-            <Label htmlFor="prize-name">Prize Name</Label>
+            <Label htmlFor="prize-name">Item Name</Label>
             <Input id="prize-name" value={name} onChange={e => setName(e.target.value)} />
           </div>
            <div className="space-y-1">
@@ -299,7 +299,7 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses, cre
             <div className="space-y-0.5">
               <Label htmlFor="print-ticket">Print redeem voucher</Label>
               <p className="text-xs text-muted-foreground">
-                After a student redeems, offer to print a voucher in the Prize Shop.
+                After a student redeems, offer to print a voucher in the Prize/Rewards shop.
               </p>
             </div>
             <Switch
@@ -313,7 +313,7 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses, cre
             <div className="space-y-0.5">
               <Label htmlFor="ai-fun">AI surprise after redeem</Label>
               <p className="text-xs text-muted-foreground">
-                Optional joke, riddle, or fortune on the Prize Shop kiosk.
+                Optional joke, riddle, or fortune on the Prize/Rewards shop kiosk.
               </p>
             </div>
             <Select value={aiFun} onValueChange={(v) => setAiFun(v as 'off' | PrizeAiFunReward)}>
