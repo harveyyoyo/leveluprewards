@@ -32,7 +32,7 @@ export default function RootPage() {
 
         <div className="w-full space-y-3">
           <Button asChild className="h-12 w-full rounded-xl font-bold">
-            <Link href="/login">🚀 School Login</Link>
+            <Link href="/login">School Login</Link>
           </Button>
           <Button asChild variant="outline" className="h-12 w-full rounded-xl font-bold">
             <Link href="/developer">Developer Tools</Link>
