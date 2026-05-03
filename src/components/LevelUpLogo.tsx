@@ -166,7 +166,7 @@ export function LevelUpLogo({ className }: { className?: string }) {
             fontFamily: "'Inter', system-ui, sans-serif",
           }}
         >
-          Rise Higher
+          School rewards system
         </p>
       </div>
     </div>

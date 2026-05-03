@@ -50,6 +50,13 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ImageCropper } from '@/components/ImageCropper';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import {
+  getHomeLogoMode,
+  setHomeLogoMode,
+  subscribeHomeLogoMode,
+  type HomeLogoMode,
+} from '@/lib/homeLogoMode';
 
 interface SchoolInfo {
   id: string;
@@ -205,6 +212,8 @@ export default function DeveloperPage() {
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
   const [pendingLogoFile, setPendingLogoFile] = useState<File | null>(null);
 
+  const [homeLogoMode, setHomeLogoModeState] = useState<HomeLogoMode>('animated');
+
   const schoolsQuery = useMemoFirebase(() => (loginState === 'developer' && !isUserLoading) ? collection(firestore, 'schools') : null, [loginState, firestore, isUserLoading]);
   const { data: allSchools, isLoading: schoolsLoading, error: schoolsError } = useCollection<SchoolInfo>(schoolsQuery);
 
@@ -212,6 +221,11 @@ export default function DeveloperPage() {
   // We intentionally do not write to roles collections from the client.
 
   // Developer can manually create sample schools if needed using the controls below.
+
+  useEffect(() => {
+    setHomeLogoModeState(getHomeLogoMode());
+    return subscribeHomeLogoMode(() => setHomeLogoModeState(getHomeLogoMode()));
+  }, []);
 
   // Load current app-wide logo and history from global app config
   useEffect(() => {
@@ -785,6 +799,49 @@ export default function DeveloperPage() {
           </section>
 
           <aside className="space-y-6 lg:col-span-5" aria-label="Developer utilities">
+            <Card>
+              <CardHeader className="pb-3">
+                <Helper content="Stored in this browser only (localStorage). Visit the home page / to see the result.">
+                  <CardTitle className="text-base">Home page (/) logo</CardTitle>
+                </Helper>
+                <CardDescription>
+                  Choose animated cinematic SVG or the static PNG logo.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <RadioGroup
+                  value={homeLogoMode}
+                  onValueChange={(v) => {
+                    const m = v as HomeLogoMode;
+                    setHomeLogoMode(m);
+                    setHomeLogoModeState(m);
+                    playSound('click');
+                    toast({
+                      title: 'Home logo preference saved',
+                      description:
+                        m === 'animated'
+                          ? 'The landing page uses the cinematic animation.'
+                          : 'The landing page uses the static /logo.png image.',
+                    });
+                  }}
+                  className="gap-3"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="animated" id="home-logo-animated" />
+                    <Label htmlFor="home-logo-animated" className="cursor-pointer font-normal leading-snug">
+                      Animated (cinematic SVG)
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="static" id="home-logo-static" />
+                    <Label htmlFor="home-logo-static" className="cursor-pointer font-normal leading-snug">
+                      Static image (<code className="rounded bg-muted px-1 py-0.5 text-xs">/logo.png</code>)
+                    </Label>
+                  </div>
+                </RadioGroup>
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-base">Sample Schools</CardTitle>

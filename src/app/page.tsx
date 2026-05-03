@@ -1,22 +1,35 @@
 import Link from 'next/link';
-import { LevelUpLogo } from '@/components/LevelUpLogo';
+import { HomeLandingLogo } from '@/components/HomeLandingLogo';
 import { Button } from '@/components/ui/button';
 
 export default function RootPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background text-foreground p-6">
-      <div className="flex w-full max-w-md flex-col items-center gap-8 text-center">
-        <div className="flex w-full flex-col items-center">
-          <LevelUpLogo />
-        </div>
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-10%,rgba(56,189,248,0.18),transparent)]"
+      />
+      <div className="relative flex min-h-screen items-center justify-center p-6">
+        <div className="flex w-full max-w-md flex-col items-center gap-8 text-center">
+          <div className="flex w-full flex-col items-center">
+            <HomeLandingLogo />
+          </div>
 
-        <div className="w-full space-y-3">
-          <Button asChild className="h-12 w-full rounded-xl font-bold">
-            <Link href="/login">School Login</Link>
-          </Button>
-          <Button asChild variant="outline" className="h-12 w-full rounded-xl font-bold">
-            <Link href="/developer">Developer Tools</Link>
-          </Button>
+          <div className="w-full space-y-3">
+            <Button
+              asChild
+              className="h-12 w-full rounded-xl bg-sky-600 font-bold text-white shadow-lg shadow-sky-950/40 hover:bg-sky-500"
+            >
+              <Link href="/login">School Login</Link>
+            </Button>
+            <Button
+              asChild
+              variant="outline"
+              className="h-12 w-full rounded-xl border-slate-600 bg-slate-950/40 font-bold text-slate-100 hover:bg-slate-800/80 hover:text-white"
+            >
+              <Link href="/developer">Developer Tools</Link>
+            </Button>
+          </div>
         </div>
       </div>
     </div>
