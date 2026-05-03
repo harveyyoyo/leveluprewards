@@ -43,7 +43,8 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
             <ConfirmProvider>
                 {!isLoginPage && <Header />}
                 <main id="screen-view" className={cn(
-                    isLoginPage ? "flex-1" : "flex-1 w-full max-w-7xl mx-auto relative z-10",
+                    /* Login/public landing routes: sit above fixed arcade backdrop host so links stay clickable */
+                    isLoginPage ? "relative z-10 flex-1 min-w-0 w-full" : "flex-1 w-full max-w-7xl mx-auto relative z-10",
                     settings.displayMode === 'app' && 'pb-24'
                 )}>
                     {children}

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { HomeLandingLogo } from '@/components/HomeLandingLogo';
-import { Button } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 export default function RootPage() {
   return (
@@ -9,26 +10,31 @@ export default function RootPage() {
         aria-hidden
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-10%,rgba(56,189,248,0.18),transparent)]"
       />
-      <div className="relative flex min-h-screen items-center justify-center p-6">
+      <div className="relative z-20 flex min-h-screen items-center justify-center p-6">
         <div className="flex w-full max-w-md flex-col items-center gap-8 text-center">
           <div className="flex w-full flex-col items-center">
             <HomeLandingLogo />
           </div>
 
-          <div className="w-full space-y-3">
-            <Button
-              asChild
-              className="h-12 w-full rounded-xl bg-sky-600 font-bold text-white shadow-lg shadow-sky-950/40 hover:bg-sky-500"
+          <div className="relative z-20 w-full space-y-3">
+            <Link
+              href="/login"
+              className={cn(
+                buttonVariants({ variant: 'default', size: 'lg' }),
+                'h-12 min-h-12 w-full rounded-xl border-0 bg-sky-600 font-bold text-white shadow-lg shadow-sky-950/40 hover:bg-sky-500',
+              )}
             >
-              <Link href="/login">School Login</Link>
-            </Button>
-            <Button
-              asChild
-              variant="outline"
-              className="h-12 w-full rounded-xl border-slate-600 bg-slate-950/40 font-bold text-slate-100 hover:bg-slate-800/80 hover:text-white"
+              School Login
+            </Link>
+            <Link
+              href="/developer"
+              className={cn(
+                buttonVariants({ variant: 'outline', size: 'lg' }),
+                'h-12 min-h-12 w-full rounded-xl border-slate-600 bg-slate-950/40 font-bold text-slate-100 hover:bg-slate-800/80 hover:text-white',
+              )}
             >
-              <Link href="/developer">Developer Tools</Link>
-            </Button>
+              Developer Tools
+            </Link>
           </div>
         </div>
       </div>

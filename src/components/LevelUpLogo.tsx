@@ -33,7 +33,7 @@ export function LevelUpLogo({ className }: { className?: string }) {
     >
       <div
         aria-hidden
-        className="absolute -inset-24 rounded-full blur-3xl"
+        className="pointer-events-none absolute -inset-24 rounded-full blur-3xl"
         style={{
           background:
             'radial-gradient(circle, oklch(0.62 0.16 250 / 0.45), transparent 65%)',
@@ -42,7 +42,7 @@ export function LevelUpLogo({ className }: { className?: string }) {
       />
       <div
         aria-hidden
-        className="absolute -inset-16 rounded-full blur-2xl"
+        className="pointer-events-none absolute -inset-16 rounded-full blur-2xl"
         style={{
           background:
             'radial-gradient(circle, oklch(0.75 0.14 90 / 0.18), transparent 70%)',

@@ -42,7 +42,7 @@ export default function RootLayout({
           className="arcade-animated-site-bg no-print pointer-events-none fixed inset-0 min-h-0 w-full overflow-visible"
           aria-hidden
         />
-        <div data-app-view-root className="min-h-screen">
+        <div data-app-view-root className="relative z-10 min-h-screen">
           <ErrorBoundary name="RootFirebaseProvider">
             <FirebaseClientProvider>
               <AppProvider>
