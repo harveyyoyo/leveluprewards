@@ -800,6 +800,18 @@ export function SettingsModal() {
                                     planLabel={planLabel}
                                 />
                                 <FeatureRow
+                                    id="enableNotifications"
+                                    label="Notifications"
+                                    desc="Master switch for the notification system. When off, no alert mail/SMS/WhatsApp documents are created; use Admin → Notifications for per-event channels when this is on."
+                                    icon={<Bell className="w-5 h-5" />}
+                                    settings={local}
+                                    onToggle={handleToggle}
+                                    isImplemented={true}
+                                    isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableNotifications')}
+                                    planLabel={planLabel}
+                                />
+                                <FeatureRow
                                     id="enableTeacherCharts"
                                     label="Teacher Analytics (Soon)"
                                     desc="Let teachers see simple charts for just their own classes and students."
