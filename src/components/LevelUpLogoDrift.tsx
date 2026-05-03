@@ -70,7 +70,7 @@ export function LevelUpLogoDrift({ className }: { className?: string }) {
         </svg>
       </div>
 
-      <div className="flex flex-col items-center gap-3">
+      <div className="flex flex-col items-center">
         <h1
           className="font-extralight leading-none text-[color:var(--brand-cream)]"
           style={{
@@ -84,19 +84,6 @@ export function LevelUpLogoDrift({ className }: { className?: string }) {
         >
           LEVEL UP
         </h1>
-        <p
-          className="uppercase text-[color:var(--brand-cream)]/50"
-          style={{
-            fontSize: 'clamp(0.55rem, 1vw, 0.7rem)',
-            letterSpacing: '0.5em',
-            paddingLeft: '0.5em',
-            opacity: 0,
-            animation: 'lud-fade-in 1.2s ease-out 2.2s forwards',
-            fontFamily: "'Inter', system-ui, sans-serif",
-          }}
-        >
-          Drift
-        </p>
       </div>
     </div>
   );

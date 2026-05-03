@@ -1740,7 +1740,7 @@ export default function StudentLoginPage() {
           <StudentScanner
             onStudentFound={onScannerStudent}
             title="Student Portal"
-            icon={<LevelUpKioskLogo className="" src={appConfig?.appLogoUrl} />}
+            icon={<LevelUpKioskLogo className="" />}
           />
         </div>
       </TooltipProvider>

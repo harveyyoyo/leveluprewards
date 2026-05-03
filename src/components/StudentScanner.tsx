@@ -416,12 +416,8 @@ export function StudentScanner({
                 isGraphic ? 'border-b border-border' : 'bg-muted/30 border-b border-border'
             )}>
                 {/* Kiosk lock removed */}
-                <div className="mx-auto mb-4 flex items-center justify-center transition-all duration-500">
+                <div className="mx-auto mb-2 flex items-center justify-center transition-all duration-500">
                     {icon}
-                </div>
-                <div className="space-y-1 mb-4">
-                    <h2 className={cn("text-4xl font-black tracking-tighter uppercase font-headline", isGraphic ? 'text-foreground graphic-text-glow' : 'text-foreground')}>Ready to Scan</h2>
-                    <p className={cn("text-[10px] font-black uppercase tracking-[0.2em] opacity-40", isGraphic ? 'text-primary' : 'text-muted-foreground')}>Scan your card</p>
                 </div>
             </div>
 
@@ -453,8 +449,8 @@ export function StudentScanner({
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <p className={cn("font-black text-lg", isGraphic ? 'text-foreground' : 'text-foreground')}>System Ready</p>
-                                <p className="text-muted-foreground text-sm font-medium">Please scan your card</p>
+                                <p className={cn("font-black text-2xl sm:text-3xl", isGraphic ? 'text-foreground' : 'text-foreground')}>System Ready</p>
+                                <p className="text-muted-foreground text-base sm:text-lg font-semibold">Please scan your card</p>
                             </div>
                             <Input
                                 ref={nfcInputRef}
