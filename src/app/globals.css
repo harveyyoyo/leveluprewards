@@ -1925,3 +1925,122 @@
     transform: scaleX(1) !important;
   }
 }
+
+/* LevelUpLogo (cinematic SVG) — luc-* keyframes avoid clash with brutalist lu-* */
+.level-up-logo-cinematic {
+  --brand-cream: oklch(0.93 0.04 88);
+}
+
+.level-up-logo-cinematic .font-black {
+  color: var(--brand-cream) !important;
+}
+
+@keyframes luc-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes luc-glow {
+  0%,
+  100% {
+    opacity: 0.65;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+
+@keyframes luc-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes luc-bar-rise {
+  from {
+    transform: scaleY(0);
+    opacity: 0;
+  }
+  to {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+@keyframes luc-bar-pulse {
+  0%,
+  100% {
+    opacity: 0.82;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes luc-arrow-draw {
+  to {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
+
+@keyframes luc-text-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes luc-line-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .level-up-logo-cinematic,
+  .level-up-logo-cinematic * {
+    animation: none !important;
+  }
+
+  .level-up-logo-cinematic svg > path:first-of-type {
+    opacity: 1 !important;
+  }
+
+  .level-up-logo-cinematic svg rect {
+    opacity: 1 !important;
+    transform: scaleY(1) !important;
+  }
+
+  .level-up-logo-cinematic svg > path:last-of-type {
+    stroke-dashoffset: 0 !important;
+    opacity: 1 !important;
+  }
+
+  .level-up-logo-cinematic h1,
+  .level-up-logo-cinematic p {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .level-up-logo-cinematic .h-px {
+    transform: scaleX(1) !important;
+  }
+}

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { LevelUpLogoBrutalist } from '@/components/LevelUpLogoBrutalist';
+import { LevelUpLogo } from '@/components/LevelUpLogo';
 import { Button } from '@/components/ui/button';
 
 export default function RootPage() {
@@ -7,7 +7,7 @@ export default function RootPage() {
     <div className="min-h-screen flex items-center justify-center bg-background text-foreground p-6">
       <div className="flex w-full max-w-md flex-col items-center gap-8 text-center">
         <div className="flex w-full flex-col items-center">
-          <LevelUpLogoBrutalist className="items-center text-center [&_h1]:text-center" />
+          <LevelUpLogo />
         </div>
 
         <div className="w-full space-y-3">
