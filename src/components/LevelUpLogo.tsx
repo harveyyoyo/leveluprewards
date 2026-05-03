@@ -156,7 +156,7 @@ export function LevelUpLogo({ className }: { className?: string }) {
           }}
         />
         <p
-          className="uppercase text-[color:var(--brand-cream)]/60"
+          className="text-[color:var(--brand-cream)]/60"
           style={{
             fontSize: 'clamp(0.55rem, 1vw, 0.7rem)',
             letterSpacing: '0.5em',
