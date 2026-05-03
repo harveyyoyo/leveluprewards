@@ -1,6 +1,5 @@
-
 'use client';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useLayoutEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAppContext } from '@/components/AppProvider';
@@ -57,9 +56,12 @@ export default function HallOfFamePage() {
     const { loginState, isInitialized, schoolId } = useAppContext();
     const firestore = useFirestore();
     const router = useRouter();
-    const { settings, updateSettings } = useSettings();
+    const { settings, isFeatureAllowed } = useSettings();
+    const showClassStandings =
+        settings.enableClassAccumulations && isFeatureAllowed('enableClassAccumulations');
     const [hoveredIndex, setHoveredIndex] = useState<string | null>(null);
 
+    const [rankType, setRankType] = useState<'students' | 'classes'>('students');
     const [sortBy, setSortBy] = useState<string>('lifetimePoints');
     const [scope, setScope] = useState<'all' | string>('all');
     const [isOptionsOpen, setIsOptionsOpen] = useState(false);
@@ -68,12 +70,22 @@ export default function HallOfFamePage() {
     const [autoScroll, setAutoScroll] = useState<boolean>(false);
     const [gridLayout, setGridLayout] = useState<boolean>(true);
 
-    // Load persisted settings
+    // Load persisted settings; optional URL overrides (e.g. ?view=class-standings).
     useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            const view = (params.get('view') || params.get('rank') || '').trim().toLowerCase();
+            if (view === 'class-standings' || view === 'classes' || view === 'class_standings') {
+                setRankType('classes');
+                setSortBy('points');
+                return;
+            }
+        }
         const saved = localStorage.getItem('hall_of_fame_settings');
         if (saved) {
             try {
                 const parsed = JSON.parse(saved);
+                if (parsed.rankType) setRankType(parsed.rankType);
                 if (parsed.sortBy) setSortBy(parsed.sortBy);
                 if (parsed.scope) setScope(parsed.scope);
                 if (parsed.limit) setLimit(parsed.limit);
@@ -86,10 +98,16 @@ export default function HallOfFamePage() {
         }
     }, []);
 
+    useLayoutEffect(() => {
+        if (!showClassStandings && rankType === 'classes') {
+            setRankType('students');
+        }
+    }, [showClassStandings, rankType]);
+
     useEffect(() => {
-        const settingsToSave = { sortBy, scope, limit, podiumSize, autoScroll, gridLayout };
+        const settingsToSave = { rankType, sortBy, scope, limit, podiumSize, autoScroll, gridLayout };
         localStorage.setItem('hall_of_fame_settings', JSON.stringify(settingsToSave));
-    }, [sortBy, scope, limit, podiumSize, autoScroll, gridLayout]);
+    }, [rankType, sortBy, scope, limit, podiumSize, autoScroll, gridLayout]);
 
     useEffect(() => {
         if (isInitialized && !['student', 'teacher', 'admin', 'school', 'developer'].includes(loginState)) {
@@ -121,20 +139,6 @@ export default function HallOfFamePage() {
     const categoriesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'categories') : null, [firestore, schoolId]);
     const { data: categories, isLoading: categoriesLoading } = useCollection<Category>(categoriesQuery);
 
-    const topStudents = useMemo(() => {
-        if (!allTopStudents) return [];
-        let sorted = [...allTopStudents];
-
-        if (sortBy !== 'points' && sortBy !== 'lifetimePoints' && !sortBy.startsWith('period_')) {
-            // It's a category sort
-            const categoryName = sortBy;
-            sorted.sort((a, b) => (b.categoryPoints?.[categoryName] || 0) - (a.categoryPoints?.[categoryName] || 0));
-        }
-
-        if (scope === 'all') return sorted.slice(0, limit);
-        return sorted.filter(s => s.classId === scope).slice(0, limit);
-    }, [allTopStudents, scope, sortBy, limit]);
-
     const classesMap = useMemo(() => {
         if (!classes) return new Map();
         return new Map(classes.map(c => [c.id, c.name]));
@@ -150,6 +154,14 @@ export default function HallOfFamePage() {
     }
 
     const getSortByLabel = () => {
+        if (rankType === 'classes') {
+            if (sortBy === 'points') return 'Class totals (current balances)';
+            if (sortBy === 'lifetimePoints') return 'Class totals (lifetime points)';
+            if (sortBy === 'period_day') return 'Class totals (points today)';
+            if (sortBy === 'period_week') return 'Class totals (points this week)';
+            if (sortBy === 'period_month') return 'Class totals (points this month)';
+            return `Class totals (${sortBy})`;
+        }
         if (sortBy === 'points') return 'Top Current Earners';
         if (sortBy === 'lifetimePoints') return 'Top Lifetime Earners';
         if (sortBy === 'period_day') return 'Top Earners Today';
@@ -170,6 +182,55 @@ export default function HallOfFamePage() {
     const getInitials = (firstName: string, lastName: string) => {
         return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
     }
+
+    const topItems = useMemo(() => {
+        if (rankType === 'students') {
+            if (!allTopStudents) return [];
+            let sorted = [...allTopStudents];
+
+            if (sortBy !== 'points' && sortBy !== 'lifetimePoints' && !sortBy.startsWith('period_')) {
+                // It's a category sort
+                const categoryName = sortBy;
+                sorted.sort((a, b) => (b.categoryPoints?.[categoryName] || 0) - (a.categoryPoints?.[categoryName] || 0));
+            }
+
+            if (scope !== 'all') {
+                sorted = sorted.filter(s => s.classId === scope);
+            }
+            
+            return sorted.slice(0, limit).map(s => ({
+                id: s.id,
+                type: 'student',
+                name: getStudentNickname(s) + (s.lastName ? ` ${s.lastName}` : ''),
+                photoUrl: s.photoUrl,
+                points: getPointsForStudent(s),
+                classId: s.classId,
+                className: getClassName(s.classId),
+                initials: getInitials(s.firstName, s.lastName)
+            }));
+        } else {
+            // Rank classes
+            if (!classes || !allTopStudents) return [];
+            const totals = new Map<string, number>();
+            for (const s of allTopStudents) {
+                const cid = s.classId;
+                if (!cid) continue;
+                totals.set(cid, (totals.get(cid) ?? 0) + getPointsForStudent(s));
+            }
+            const rows = classes.map(c => ({
+                id: c.id,
+                type: 'class',
+                name: c.name || 'Unassigned',
+                photoUrl: null,
+                points: totals.get(c.id) ?? 0,
+                classId: c.id,
+                className: c.name || 'Unassigned',
+                initials: (c.name || 'Unassigned').substring(0, 2).toUpperCase()
+            }));
+            rows.sort((a, b) => b.points - a.points);
+            return rows.slice(0, limit);
+        }
+    }, [rankType, allTopStudents, classes, scope, sortBy, limit, currentPeriodKeys]);
 
     // Auto-scroll logic
     useEffect(() => {
@@ -238,8 +299,8 @@ export default function HallOfFamePage() {
         return <HallOfFameSkeleton animBackdrop={animBackdrop} />;
     }
 
-    const podium = topStudents?.slice(0, podiumSize) || [];
-    const others = topStudents?.slice(podiumSize) || [];
+    const podium = topItems?.slice(0, podiumSize) || [];
+    const others = topItems?.slice(podiumSize) || [];
     const showHallLocalDecor = !animBackdrop;
 
     return (
@@ -309,12 +370,32 @@ export default function HallOfFamePage() {
                                     <p className="text-xs sm:text-sm font-bold text-muted-foreground uppercase tracking-[0.3em]">
                                         {getScopeName()} &bull; {getSortByLabel()}
                                     </p>
+                                    <div className="mt-6 flex justify-center gap-2">
+                                        <Button
+                                            variant={rankType === 'students' ? 'default' : 'outline'}
+                                            size="sm"
+                                            className="rounded-full h-9 px-5 text-xs font-bold uppercase tracking-widest"
+                                            onClick={() => setRankType('students')}
+                                        >
+                                            Students
+                                        </Button>
+                                        {showClassStandings ? (
+                                            <Button
+                                                variant={rankType === 'classes' ? 'default' : 'outline'}
+                                                size="sm"
+                                                className="rounded-full h-9 px-5 text-xs font-bold uppercase tracking-widest"
+                                                onClick={() => setRankType('classes')}
+                                            >
+                                                Class standings
+                                            </Button>
+                                        ) : null}
+                                    </div>
                                 </div>
                                 <Dialog open={isOptionsOpen} onOpenChange={setIsOptionsOpen}>
                                     <DialogTrigger asChild>
                                         <Button variant="outline" size="icon" className="rounded-full flex-shrink-0"><Settings className="w-4 h-4" /></Button>
                                     </DialogTrigger>
-      <DialogContent size="sm" className="border border-border p-0 overflow-hidden">
+                                    <DialogContent size="sm" className="border border-border p-0 overflow-hidden">
                                         <div className="px-6 pt-6 pb-4 border-b border-border/40 bg-card/30 backdrop-blur-md">
                                             <DialogHeader>
                                                 <DialogTitle className="text-xl font-black tracking-tight text-foreground">Display Options</DialogTitle>
@@ -324,6 +405,20 @@ export default function HallOfFamePage() {
                                             </DialogHeader>
                                         </div>
                                         <div className="grid gap-6 p-6">
+                                            <div className="space-y-3">
+                                                <Label htmlFor="rank-type" className="text-[10px] font-semibold text-muted-foreground/80 lowercase tracking-normal">Rank Type</Label>
+                                                <Select value={rankType} onValueChange={(v: any) => setRankType(v)}>
+                                                    <SelectTrigger id="rank-type" className="h-12 rounded-xl bg-muted/30 border-border hover:bg-muted/50 transition-all font-bold">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent className="rounded-xl border-border">
+                                                        <SelectItem value="students" className="rounded-lg font-medium">Students</SelectItem>
+                                                        {showClassStandings ? (
+                                                            <SelectItem value="classes" className="rounded-lg font-medium">Class standings</SelectItem>
+                                                        ) : null}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
                                             <div className="space-y-3">
                                                 <Label htmlFor="sort-by" className="text-[10px] font-semibold text-muted-foreground/80 lowercase tracking-normal">Sort By</Label>
                                                 <Select value={sortBy} onValueChange={(v) => setSortBy(v)}>
@@ -409,10 +504,10 @@ export default function HallOfFamePage() {
                                         </div>
                                         <Avatar className="w-24 h-24 md:w-28 md:h-28 mx-auto mb-4 border-4 border-primary/30 shadow-xl overflow-hidden">
                                             {podium[0].photoUrl && <img src={podium[0].photoUrl} alt="Photo" className={settings.photoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />}
-                                            <AvatarFallback className="bg-primary text-primary-foreground text-3xl font-black">{getInitials(podium[0].firstName, podium[0].lastName)}</AvatarFallback>
+                                            <AvatarFallback className="bg-primary text-primary-foreground text-3xl font-black">{podium[0].initials}</AvatarFallback>
                                         </Avatar>
-                                        <p className="font-black text-foreground text-xl md:text-2xl truncate tracking-tighter">{getStudentNickname(podium[0])}</p>
-                                        <p className="text-primary font-black text-2xl md:text-3xl mt-1 tracking-tighter">{getPointsForStudent(podium[0]).toLocaleString()} pts</p>
+                                        <p className="font-black text-foreground text-xl md:text-2xl truncate tracking-tighter">{podium[0].name}</p>
+                                        <p className="text-primary font-black text-2xl md:text-3xl mt-1 tracking-tighter">{podium[0].points.toLocaleString()} pts</p>
                                     </div>
                                 </motion.div>
 
@@ -430,10 +525,10 @@ export default function HallOfFamePage() {
                                             </div>
                                             <Avatar className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-4 border-4 border-border shadow-md">
                                                 {podium[1].photoUrl && <img src={podium[1].photoUrl} alt="Photo" className={settings.photoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />}
-                                                <AvatarFallback className="bg-muted text-muted-foreground text-2xl font-black">{getInitials(podium[1].firstName, podium[1].lastName)}</AvatarFallback>
+                                                <AvatarFallback className="bg-muted text-muted-foreground text-2xl font-black">{podium[1].initials}</AvatarFallback>
                                             </Avatar>
-                                            <p className="font-black text-foreground text-lg md:text-xl truncate tracking-tight">{getStudentNickname(podium[1])}</p>
-                                            <p className="text-primary font-bold text-lg mt-1 tracking-tight">{getPointsForStudent(podium[1]).toLocaleString()} pts</p>
+                                            <p className="font-black text-foreground text-lg md:text-xl truncate tracking-tight">{podium[1].name}</p>
+                                            <p className="text-primary font-bold text-lg mt-1 tracking-tight">{podium[1].points.toLocaleString()} pts</p>
                                         </div>
                                     </motion.div>
                                 )}
@@ -452,10 +547,10 @@ export default function HallOfFamePage() {
                                             </div>
                                             <Avatar className="w-14 h-14 md:w-16 md:h-16 mx-auto mb-4 border-4 border-border shadow-md">
                                                 {podium[2].photoUrl && <img src={podium[2].photoUrl} alt="Photo" className={settings.photoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />}
-                                                <AvatarFallback className="bg-muted text-muted-foreground text-xl font-black">{getInitials(podium[2].firstName, podium[2].lastName)}</AvatarFallback>
+                                                <AvatarFallback className="bg-muted text-muted-foreground text-xl font-black">{podium[2].initials}</AvatarFallback>
                                             </Avatar>
-                                            <p className="font-black text-foreground text-base md:text-lg truncate tracking-tight">{getStudentNickname(podium[2])}</p>
-                                            <p className="text-primary font-bold text-lg mt-1 tracking-tight">{getPointsForStudent(podium[2]).toLocaleString()} pts</p>
+                                            <p className="font-black text-foreground text-base md:text-lg truncate tracking-tight">{podium[2].name}</p>
+                                            <p className="text-primary font-bold text-lg mt-1 tracking-tight">{podium[2].points.toLocaleString()} pts</p>
                                         </div>
                                     </motion.div>
                                 )}
@@ -472,21 +567,21 @@ export default function HallOfFamePage() {
                             )}>
                                 {!gridLayout && (
                                     <div className="lg:col-span-2 px-6 pb-2 text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 flex justify-between w-full">
-                                        <span>Top Students</span>
+                                        <span>Top Items</span>
                                         <span>Points</span>
                                     </div>
                                 )}
-                                {others.map((student, index) => {
-                                    const prevStudent = index === 0 ? podium[podiumSize - 1] : others[index - 1];
-                                    const pointsToNext = prevStudent ? getPointsForStudent(prevStudent) - getPointsForStudent(student) : 0;
+                                {others.map((item, index) => {
+                                    const prevItem = index === 0 ? podium[podiumSize - 1] : others[index - 1];
+                                    const pointsToNext = prevItem ? prevItem.points - item.points : 0;
                                     
                                     return (
                                         <motion.div
-                                            key={student.id}
+                                            key={item.id}
                                             initial={{ opacity: 0, y: 10 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ delay: 0.8 + index * 0.05 }}
-                                            onMouseEnter={() => setHoveredIndex(student.id)}
+                                            onMouseEnter={() => setHoveredIndex(item.id)}
                                             onMouseLeave={() => setHoveredIndex(null)}
                                             className={cn(
                                                 "group relative flex items-center justify-between backdrop-blur-sm border-2 border-transparent rounded-2xl px-4 py-3 md:px-6 md:py-4 transition-all hover:bg-card hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-0.5",
@@ -498,26 +593,28 @@ export default function HallOfFamePage() {
                                         <div className="flex min-w-0 items-center gap-4">
                                             <span className="w-6 shrink-0 text-sm font-black text-muted-foreground/30">{index + podiumSize + 1}</span>
                                             <Avatar className="w-10 h-10 border-2 border-background overflow-hidden">
-                                                {student.photoUrl && <img src={student.photoUrl} alt="Photo" className={settings.photoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />}
-                                                <AvatarFallback className="bg-secondary text-xs font-bold">{getInitials(student.firstName, student.lastName)}</AvatarFallback>
+                                                {item.photoUrl && <img src={item.photoUrl} alt="Photo" className={settings.photoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />}
+                                                <AvatarFallback className="bg-secondary text-xs font-bold">{item.initials}</AvatarFallback>
                                             </Avatar>
                                             <div className="min-w-0">
                                                 <div className="flex min-w-0 items-center gap-2">
-                                                    <p className="truncate font-black text-foreground tracking-tight">{getStudentNickname(student)} {student.lastName}</p>
+                                                    <p className="truncate font-black text-foreground tracking-tight">{item.name}</p>
                                                 </div>
-                                                <p className="truncate text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{getClassName(student.classId)}</p>
+                                                {item.type === 'student' && (
+                                                    <p className="truncate text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{item.className}</p>
+                                                )}
                                             </div>
                                         </div>
                                         <div className="shrink-0 pl-3 text-lg font-black text-primary tracking-tighter">
-                                            {getPointsForStudent(student).toLocaleString()}
+                                            {item.points.toLocaleString()}
                                         </div>
 
                                         {/* Hover Bar Accent */}
                                         <motion.div
                                             initial={false}
                                             animate={{
-                                                opacity: hoveredIndex === student.id ? 1 : 0,
-                                                scaleY: hoveredIndex === student.id ? 1 : 0.6
+                                                opacity: hoveredIndex === item.id ? 1 : 0,
+                                                scaleY: hoveredIndex === item.id ? 1 : 0.6
                                             }}
                                             className="absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl bg-primary transition-opacity"
                                         />
@@ -527,9 +624,9 @@ export default function HallOfFamePage() {
                             </div>
                         )}
 
-                        {(!topStudents || topStudents.length === 0) && (
+                        {(!topItems || topItems.length === 0) && (
                             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-20 text-muted-foreground font-medium">
-                                No students have earned points yet for this view.
+                                No items have earned points yet for this view.
                             </motion.div>
                         )}
                     </CardContent>

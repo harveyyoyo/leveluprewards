@@ -58,10 +58,8 @@ import {
   FlaskConical,
   Home,
   Wallet,
-  Trophy,
   User,
   ChevronRight,
-  GraduationCap,
   Settings,
   Lock,
   Unlock,
@@ -102,7 +100,6 @@ import { Helper } from '@/components/ui/helper';
 import { Skeleton } from '@/components/ui/skeleton';
 import { BadgeShowcase } from '@/components/BadgeShowcase';
 import { StudentGoalsCard } from '@/components/goals/StudentGoalsCard';
-import { ClassAccumulationsCard } from '@/components/ClassAccumulationsCard';
 import { EarnedBadgesShowcase } from '@/components/EarnedBadgesShowcase';
 import { useStudentKioskSession } from '@/components/providers/StudentKioskSessionProvider';
 import { FaceMismatchBanner } from '@/components/FaceMismatchBanner';
@@ -1264,14 +1261,6 @@ function StudentDashboardInner({
               schoolId={schoolId!}
               student={student}
               enabled={settings.enableGoals && isFeatureAllowed('enableGoals')}
-              themed={!!activeTheme}
-              themeForeground={activeTheme ? 'var(--theme-primary)' : undefined}
-            />
-            <ClassAccumulationsCard
-              schoolId={schoolId!}
-              classes={classes ?? undefined}
-              studentClassId={student.classId}
-              enabled={settings.enableClassAccumulations && isFeatureAllowed('enableClassAccumulations')}
               themed={!!activeTheme}
               themeForeground={activeTheme ? 'var(--theme-primary)' : undefined}
             />

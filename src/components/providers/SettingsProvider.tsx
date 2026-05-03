@@ -52,7 +52,7 @@ interface Settings {
     notificationStaffAlertsEnabled: boolean;
     notificationWhatsAppEnabled: boolean;
     enableClassLeaderboard: boolean;
-    /** Sum student balances by class/group and show friendly competition on the kiosk. */
+    /** Class-vs-class standings (combined balances); surfaced on Hall of Fame, not the student kiosk. */
     enableClassAccumulations: boolean;
     enableShoutouts: boolean;
     // Prize/Rewards shop

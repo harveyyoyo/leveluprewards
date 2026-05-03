@@ -1070,7 +1070,7 @@ export function SettingsModal() {
                                 <FeatureRow
                                     id="enableClassAccumulations"
                                     label="Class Accumulations"
-                                    desc="Let classes or groups compete on the kiosk: standings use the sum of each group&apos;s student point balances."
+                                    desc="When on, Hall of Fame can highlight class-vs-class competition (class standings use each group&apos;s combined student balances for the metric you pick there)."
                                     icon={<UsersRound className="w-5 h-5" />}
                                     settings={local}
                                     onToggle={handleToggle}
