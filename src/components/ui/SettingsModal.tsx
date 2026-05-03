@@ -659,46 +659,62 @@ export function SettingsModal() {
                                 </p>
                                 <p className="text-xs text-muted-foreground leading-normal mb-3">Select which of the 4 core pillars are part of your active paid plan.</p>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    <div className="flex items-center justify-between p-3 bg-background/50 border border-border/40 rounded-xl hover:bg-muted/40 transition-colors">
-                                        <div>
-                                            <h4 className="font-bold text-sm text-foreground uppercase tracking-tight">levelup rewards</h4>
-                                            <p className="text-[10px] text-muted-foreground">Product included in paid subscription</p>
-                                        </div>
-                                        <Switch
-                                            checked={local.payRewards ?? true}
-                                            onCheckedChange={(val) => handleToggle('payRewards', val)}
-                                        />
-                                    </div>
-                                    <div className="flex items-center justify-between p-3 bg-background/50 border border-border/40 rounded-xl hover:bg-muted/40 transition-colors">
-                                        <div>
-                                            <h4 className="font-bold text-sm text-foreground uppercase tracking-tight">levelup attendance</h4>
-                                            <p className="text-[10px] text-muted-foreground">Product included in paid subscription</p>
-                                        </div>
-                                        <Switch
-                                            checked={local.payAttendance ?? true}
-                                            onCheckedChange={(val) => handleToggle('payAttendance', val)}
-                                        />
-                                    </div>
-                                    <div className="flex items-center justify-between p-3 bg-background/50 border border-border/40 rounded-xl hover:bg-muted/40 transition-colors">
-                                        <div>
-                                            <h4 className="font-bold text-sm text-foreground uppercase tracking-tight">levelup home work</h4>
-                                            <p className="text-[10px] text-muted-foreground">Product included in paid subscription</p>
-                                        </div>
-                                        <Switch
-                                            checked={local.payHomework ?? true}
-                                            onCheckedChange={(val) => handleToggle('payHomework', val)}
-                                        />
-                                    </div>
-                                    <div className="flex items-center justify-between p-3 bg-background/50 border border-border/40 rounded-xl hover:bg-muted/40 transition-colors">
-                                        <div>
-                                            <h4 className="font-bold text-sm text-foreground uppercase tracking-tight">levelup library</h4>
-                                            <p className="text-[10px] text-muted-foreground">Product included in paid subscription</p>
-                                        </div>
-                                        <Switch
-                                            checked={local.payLibrary ?? true}
-                                            onCheckedChange={(val) => handleToggle('payLibrary', val)}
-                                        />
-                                    </div>
+                                    {(() => {
+                                        const enabledCount = [
+                                            local.payRewards ?? true,
+                                            local.payAttendance ?? true,
+                                            local.payHomework ?? true,
+                                            local.payLibrary ?? true,
+                                        ].filter(Boolean).length;
+                                        return (
+                                            <>
+                                                <div className="flex items-center justify-between p-3 bg-background/50 border border-border/40 rounded-xl hover:bg-muted/40 transition-colors">
+                                                    <div>
+                                                        <h4 className="font-bold text-sm text-foreground uppercase tracking-tight">levelup rewards</h4>
+                                                        <p className="text-[10px] text-muted-foreground">Product included in paid subscription</p>
+                                                    </div>
+                                                    <Switch
+                                                        checked={local.payRewards ?? true}
+                                                        onCheckedChange={(val) => handleToggle('payRewards', val)}
+                                                        disabled={enabledCount === 1 && (local.payRewards ?? true)}
+                                                    />
+                                                </div>
+                                                <div className="flex items-center justify-between p-3 bg-background/50 border border-border/40 rounded-xl hover:bg-muted/40 transition-colors">
+                                                    <div>
+                                                        <h4 className="font-bold text-sm text-foreground uppercase tracking-tight">levelup attendance</h4>
+                                                        <p className="text-[10px] text-muted-foreground">Product included in paid subscription</p>
+                                                    </div>
+                                                    <Switch
+                                                        checked={local.payAttendance ?? true}
+                                                        onCheckedChange={(val) => handleToggle('payAttendance', val)}
+                                                        disabled={enabledCount === 1 && (local.payAttendance ?? true)}
+                                                    />
+                                                </div>
+                                                <div className="flex items-center justify-between p-3 bg-background/50 border border-border/40 rounded-xl hover:bg-muted/40 transition-colors">
+                                                    <div>
+                                                        <h4 className="font-bold text-sm text-foreground uppercase tracking-tight">levelup home work</h4>
+                                                        <p className="text-[10px] text-muted-foreground">Product included in paid subscription</p>
+                                                    </div>
+                                                    <Switch
+                                                        checked={local.payHomework ?? true}
+                                                        onCheckedChange={(val) => handleToggle('payHomework', val)}
+                                                        disabled={enabledCount === 1 && (local.payHomework ?? true)}
+                                                    />
+                                                </div>
+                                                <div className="flex items-center justify-between p-3 bg-background/50 border border-border/40 rounded-xl hover:bg-muted/40 transition-colors">
+                                                    <div>
+                                                        <h4 className="font-bold text-sm text-foreground uppercase tracking-tight">levelup library</h4>
+                                                        <p className="text-[10px] text-muted-foreground">Product included in paid subscription</p>
+                                                    </div>
+                                                    <Switch
+                                                        checked={local.payLibrary ?? true}
+                                                        onCheckedChange={(val) => handleToggle('payLibrary', val)}
+                                                        disabled={enabledCount === 1 && (local.payLibrary ?? true)}
+                                                    />
+                                                </div>
+                                            </>
+                                        );
+                                    })()}
                                 </div>
                             </div>
                         </div>

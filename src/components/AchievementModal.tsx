@@ -19,6 +19,7 @@ import DynamicIcon from './DynamicIcon';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { Checkbox } from '@/components/ui/checkbox';
+import { BonusSpinWheelModal } from './BonusSpinWheelModal';
 
 interface AchievementModalProps {
     isOpen: boolean;
@@ -40,6 +41,7 @@ export function AchievementModal({ isOpen, setIsOpen, achievement, categories, o
     const [tier, setTier] = useState<Achievement['tier'] | ''>('');
     const [accentColor, setAccentColor] = useState('');
     const [enableWheelSpin, setEnableWheelSpin] = useState(false);
+    const [isTestSpinOpen, setIsTestSpinOpen] = useState(false);
     const { toast } = useToast();
     const playSound = useArcadeSound();
 
@@ -188,11 +190,24 @@ export function AchievementModal({ isOpen, setIsOpen, achievement, categories, o
                         </div>
                     </div>
 
-                    <div className="flex items-center space-x-2 py-1">
-                        <Checkbox id="ach-wheel" checked={enableWheelSpin} onCheckedChange={(checked) => setEnableWheelSpin(checked === true)} />
-                        <Label htmlFor="ach-wheel" className="text-sm font-medium leading-none cursor-pointer">
-                            Enable spin wheel for bonus amount
-                        </Label>
+                    <div className="flex items-center justify-between py-1">
+                        <div className="flex items-center space-x-2">
+                            <Checkbox id="ach-wheel" checked={enableWheelSpin} onCheckedChange={(checked) => setEnableWheelSpin(checked === true)} />
+                            <Label htmlFor="ach-wheel" className="text-sm font-medium leading-none cursor-pointer">
+                                Enable spin wheel for bonus amount
+                            </Label>
+                        </div>
+                        {enableWheelSpin && (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-7 text-xs font-bold gap-1 rounded-xl"
+                                onClick={() => setIsTestSpinOpen(true)}
+                            >
+                                🎡 Preview Spin
+                            </Button>
+                        )}
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -282,6 +297,20 @@ export function AchievementModal({ isOpen, setIsOpen, achievement, categories, o
                     <Button onClick={handleSave}>Save milestone</Button>
                 </DialogFooter>
             </DialogContent>
+            {isTestSpinOpen && (
+                <BonusSpinWheelModal
+                    isOpen={isTestSpinOpen}
+                    achievement={{
+                        name: name || 'Unnamed milestone',
+                        bonusPoints: parseInt(bonusPoints) || 100,
+                    }}
+                    onWon={async (wonAmount) => {
+                        toast({ title: 'Bonus won!', description: `You won +${wonAmount} bonus points from the wheel spin!` });
+                        setIsTestSpinOpen(false);
+                    }}
+                    primaryColor={accentColor}
+                />
+            )}
         </Dialog>
     );
 }

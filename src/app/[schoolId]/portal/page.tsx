@@ -1,10 +1,11 @@
 
 'use client';
-import { useState, useEffect, useMemo, type ComponentType, type CSSProperties } from 'react';
+import { useState, useEffect, type ComponentType, type CSSProperties } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
-import { GraduationCap, Printer, Gift, UserCog, Trophy, ChevronRight, Loader2, Home, Clock, BookOpen, Library } from 'lucide-react';
+import { LevelUpKioskLogo } from '@/components/LevelUpKioskLogo';
+import { GraduationCap, Printer, Gift, UserCog, Trophy, ChevronRight, Loader2, Home } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { cn } from '@/lib/utils';
@@ -12,8 +13,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from '@/components/ui/button';
 import { rainbowByIndex, rainbowForPortalId } from '@/lib/rainbowNav';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
-import { KioskSponsorBanner } from '@/components/KioskSponsorBanner';
-import type { LevelUpPillarId } from '@/lib/levelupNav';
 
 type PortalArea = {
     id: string;
@@ -25,20 +24,12 @@ type PortalArea = {
     status?: string;
 };
 
-type PillarSection = {
-    id: LevelUpPillarId;
-    kicker: string;
-    title: string;
-    blurb: string;
-    cards: PortalArea[];
-};
-
 /** In student (kiosk) login, idle on the hub → default to the badge / redeem flow. */
 const STUDENT_MODE_DEFAULT_TO_KIOSK_SEC = 10;
 
 export default function PortalPage() {
     const { loginState, isInitialized, schoolId, isAdmin } = useAppContext();
-    const { settings, updateSettings, isFeatureAllowed } = useSettings();
+    const { settings, updateSettings } = useSettings();
     const playSound = useArcadeSound();
     const router = useRouter();
     const [hoveredIndex, setHoveredIndex] = useState<string | null>(null);
@@ -76,175 +67,6 @@ export default function PortalPage() {
         !settings.legacyMode;
     const isStaff = loginState === 'teacher' || loginState === 'admin' || loginState === 'developer';
 
-    const pillarSections = useMemo((): PillarSection[] => {
-        if (!schoolId) return [];
-        const sid = schoolId;
-        const isDemoSchool = sid === 'schoolabc';
-
-        const rewardsCards: PortalArea[] = [
-            {
-                id: 'redeem',
-                href: `/${sid}/student`,
-                title: 'Student Kiosk',
-                description: 'Scan your card to redeem coupon codes and view points.',
-                icon: GraduationCap,
-            },
-            {
-                id: 'prize',
-                href: `/${sid}/prize`,
-                title: 'Prize / Rewards shop',
-                description: 'Spend your points for awesome prizes.',
-                icon: Gift,
-            },
-        ];
-        if (isStaff || isDemoSchool) {
-            rewardsCards.push({
-                id: 'fame',
-                href: `/${sid}/halloffame`,
-                title: 'Hall of Fame',
-                description: 'View top student point earners.',
-                icon: Trophy,
-            });
-        }
-
-        const sections: PillarSection[] = [
-            {
-                id: 'rewards',
-                kicker: 'LevelUp',
-                title: 'Rewards',
-                blurb: 'Points, prizes, and recognition.',
-                cards: rewardsCards,
-            },
-        ];
-
-        const attendanceCards: PortalArea[] = [];
-        if (settings.enableAttendance && isFeatureAllowed('enableAttendance')) {
-            if (isStaff || isDemoSchool) {
-                attendanceCards.push({
-                    id: 'attendance-teacher',
-                    href: `/${sid}/teacher?tab=attendance`,
-                    title: 'Attendance · Teacher',
-                    description: 'Period rules, sign-in rewards, and attendance logs.',
-                    icon: Clock,
-                });
-            }
-            if (isAdmin || isDemoSchool) {
-                attendanceCards.push({
-                    id: 'attendance-admin',
-                    href: `/${sid}/admin`,
-                    title: 'Attendance · Admin',
-                    description: 'School-wide class sign-in, periods, and schedules.',
-                    icon: Clock,
-                });
-            }
-        }
-        if (attendanceCards.length > 0) {
-            sections.push({
-                id: 'attendance',
-                kicker: 'LevelUp',
-                title: 'Attendance',
-                blurb: 'Sign-in windows tied to your schedule and rewards.',
-                cards: attendanceCards,
-            });
-        }
-
-        const homeworkCards: PortalArea[] = [];
-        if (settings.enableHomework && isFeatureAllowed('enableHomework') && (isStaff || isDemoSchool)) {
-            homeworkCards.push({
-                id: 'homework-teacher',
-                href: `/${sid}/teacher?tab=homework`,
-                title: 'Homework rewards',
-                description: 'Create homework incentives and award points from the teacher portal.',
-                icon: BookOpen,
-            });
-        }
-        if (homeworkCards.length > 0) {
-            sections.push({
-                id: 'homework',
-                kicker: 'LevelUp',
-                title: 'Homework',
-                blurb: 'Teacher-led homework points that feed the same balance.',
-                cards: homeworkCards,
-            });
-        }
-
-        const libraryCards: PortalArea[] = [];
-        if (settings.enableLibrary && isFeatureAllowed('enableLibrary')) {
-            libraryCards.push({
-                id: 'library-kiosk',
-                href: `/${sid}/student`,
-                title: 'Library checkout · Student',
-                description: 'Scan item barcodes at the kiosk to check out or return.',
-                icon: Library,
-            });
-            if (isAdmin || isDemoSchool) {
-                libraryCards.push({
-                    id: 'library-admin',
-                    href: `/${sid}/admin`,
-                    title: 'Library catalog · Admin',
-                    description: 'Manage titles, UPC codes, and availability (Admin → Library tab).',
-                    icon: Library,
-                });
-            }
-        }
-        if (libraryCards.length > 0) {
-            sections.push({
-                id: 'library',
-                kicker: 'LevelUp',
-                title: 'Library',
-                blurb: 'Checkout and inventory connected to your kiosk.',
-                cards: libraryCards,
-            });
-        }
-
-        return sections;
-    }, [
-        schoolId,
-        isStaff,
-        isAdmin,
-        settings.enableAttendance,
-        settings.enableHomework,
-        settings.enableLibrary,
-        isFeatureAllowed,
-    ]);
-
-    const accessCards: PortalArea[] = useMemo(() => {
-        if (!schoolId) return [];
-        const sid = schoolId;
-        const isDemoSchool = sid === 'schoolabc';
-        const cards: PortalArea[] = [];
-        if (isAdmin || isDemoSchool) {
-            cards.push({
-                id: 'admin',
-                href: `/${sid}/admin`,
-                title: 'Admin Portal',
-                description: 'Manage school data and settings.',
-                icon: UserCog,
-            });
-        }
-        if (isStaff || isDemoSchool) {
-            cards.push({
-                id: 'print',
-                href: `/${sid}/teacher`,
-                title: 'Teacher and Staff Portal',
-                description: 'Sign in for teacher tools, coupon printing, or the prize desk.',
-                icon: Printer,
-            });
-        }
-        if (isStaff && settings.enableStudentPortal) {
-            cards.push({
-                id: 'student-home',
-                href: `/${sid}/student-home`,
-                title: 'Student Home Portal',
-                description: 'Home access is being prepared and is not available yet.',
-                icon: Home,
-                disabled: true,
-                status: 'Coming soon',
-            });
-        }
-        return cards;
-    }, [schoolId, isStaff, isAdmin, settings.enableStudentPortal]);
-
     if (!isInitialized) {
         return (
             <div className="min-h-screen flex items-center justify-center">
@@ -256,8 +78,20 @@ export default function PortalPage() {
         );
     }
 
+    const portals: PortalArea[] = [
+        ...(isAdmin || schoolId === 'schoolabc' ? [{ id: 'admin', href: `/${schoolId}/admin`, title: 'Admin Portal', description: 'Manage school data and settings.', icon: UserCog }] : []),
+        ...(isStaff || schoolId === 'schoolabc'
+            ? [{ id: 'print', href: `/${schoolId}/teacher`, title: 'Teacher and Staff Portal', description: 'Sign in for teacher tools, coupon printing, or the prize desk.', icon: Printer }]
+            : []),
+        { id: 'redeem', href: `/${schoolId}/student`, title: 'Student Kiosk', description: 'Scan your card to redeem coupon codes and view points.', icon: GraduationCap },
+        ...(isStaff && settings.enableStudentPortal ? [{ id: 'student-home', href: `/${schoolId}/student-home`, title: 'Student Home Portal', description: 'Home access is being prepared and is not available yet.', icon: Home, disabled: true, status: 'Coming soon' }] : []),
+        { id: 'prize', href: `/${schoolId}/prize`, title: 'Prize Shop', description: 'Spend your points for awesome prizes.', icon: Gift },
+        ...(isStaff || schoolId === 'schoolabc'
+            ? [{ id: 'fame', href: `/${schoolId}/halloffame`, title: 'Hall of Fame', description: 'View top student point earners.', icon: Trophy }]
+            : []),
+    ];
+
     return (
-        <>
         <div className={cn(
                 "min-h-[calc(100vh-5rem)] text-foreground relative font-sans flex flex-col items-center pt-2 sm:pt-6",
                 animBackdrop ? "bg-transparent" : "bg-background",
@@ -304,11 +138,8 @@ export default function PortalPage() {
                                     : `0 0 14px ${rainbowByIndex(0, settings.colorScheme)}55, 0 0 28px ${rainbowByIndex(0, settings.colorScheme)}33`,
                         }}
                     >
-                        LevelUp
+                        Where to?
                     </h2>
-                    <p className="text-sm text-muted-foreground font-medium mt-1 max-w-md mx-auto">
-                        Choose a destination. Rewards, Attendance, Homework, and Library work together on one student balance.
-                    </p>
                     {schoolId === 'schoolabc' && !settings.showIntroWizard && (
                         <div className="mt-1">
                             <Button variant="link" onClick={() => {
@@ -321,32 +152,30 @@ export default function PortalPage() {
                     )}
                 </motion.div>
 
-                <div className="flex flex-col gap-10">
-                    {(() => {
-                        let cardAnimIndex = 0;
-                        const renderDestination = (area: PortalArea) => {
-                            const index = cardAnimIndex++;
-                            const Icon = area.icon;
-                            const isDisabled = !!area.disabled;
-                            const rainbowColor =
-                                settings.colorScheme === 'default'
-                                    ? 'hsl(var(--primary))'
-                                    : rainbowForPortalId(area.id, settings.colorScheme);
-                            const portalCard = (
+                <div className="flex flex-col gap-4">
+                    {portals.map((area, index) => {
+                        const Icon = area.icon;
+                        const isDisabled = !!area.disabled;
+                        const rainbowColor =
+                            settings.colorScheme === 'default'
+                                ? 'hsl(var(--primary))'
+                                : rainbowForPortalId(area.id, settings.colorScheme);
+                        const portalCard = (
                                 <motion.div
                                     initial={{ opacity: 0, x: -50 }}
                                     animate={{ opacity: 1, x: 0 }}
-                                    transition={{ duration: 0.5, delay: 0.15 + index * 0.08 }}
+                                    transition={{ duration: 0.5, delay: 0.15 + index * 0.1 }}
                                     onMouseEnter={() => !isDisabled && setHoveredIndex(area.id)}
                                     onMouseLeave={() => !isDisabled && setHoveredIndex(null)}
                                     className={cn(
                                         "relative flex w-full items-center justify-between rounded-2xl border-2 px-6 py-4 md:px-8 md:py-5 text-left transition-all duration-300",
-                                        isDisabled ? "cursor-not-allowed opacity-70" : "hover:shadow-2xl hover:shadow-primary/20 hover:-translate-y-1 shadow-md",
+                                        isDisabled ? "cursor-not-allowed opacity-70" : "hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1",
                                         animBackdrop
                                             ? "border-border/50 bg-card/90 backdrop-blur-md shadow-sm hover:bg-card hover:border-border"
-                                            : "border-transparent bg-card/85 backdrop-blur-sm hover:bg-card",
+                                            : "border-transparent bg-card/40 backdrop-blur-sm hover:bg-card",
                                     )}
                                 >
+                                    {/* Fixed Vertical Color Bar - Increased visibility when inactive */}
                                     <div
                                       className={cn(
                                         "absolute left-0 top-0 bottom-0 w-1.5 rounded-l-2xl transition-all duration-500 shadow-sm",
@@ -355,6 +184,7 @@ export default function PortalPage() {
                                       style={{ backgroundColor: rainbowColor }}
                                     />
 
+                                    {/* Left content */}
                                     <div className="flex items-center gap-4">
                                         <div className={cn(
                                             "w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center transition-all duration-300 border-2 border-border/50 shadow-md",
@@ -378,12 +208,14 @@ export default function PortalPage() {
                                         </div>
                                     </div>
 
+                                    {/* Right arrow — always visible, darker on hover (touch-friendly) */}
                                     {!isDisabled && (
                                         <motion.div animate={{ x: hoveredIndex === area.id ? 0 : -4, opacity: hoveredIndex === area.id ? 1 : 0.4 }} transition={{ duration: 0.2 }}>
                                             <ChevronRight className="h-7 w-7 text-muted-foreground" aria-hidden="true" />
                                         </motion.div>
                                     )}
 
+                                    {/* Background Glow - Increased opacity on hover */}
                                     <AnimatePresence>
                                         {hoveredIndex === area.id && !isDisabled && (
                                             <motion.div
@@ -396,65 +228,27 @@ export default function PortalPage() {
                                         )}
                                     </AnimatePresence>
                                 </motion.div>
-                            );
+                        );
 
-                            if (isDisabled) {
-                                return (
-                                    <div key={area.id} className="block rounded-2xl no-underline" aria-disabled="true">
-                                        {portalCard}
-                                    </div>
-                                );
-                            }
-
+                        if (isDisabled) {
                             return (
-                                <Link
-                                    key={area.id}
-                                    href={area.href}
-                                    onClick={() => playSound('click')}
-                                    className="block group no-underline rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                                >
+                                <div key={area.id} className="block rounded-2xl no-underline" aria-disabled="true">
                                     {portalCard}
-                                </Link>
+                                </div>
                             );
-                        };
+                        }
 
                         return (
-                            <>
-                                {pillarSections.map((section) => (
-                                    <section
-                                        key={section.id}
-                                        id={`levelup-${section.id}`}
-                                        className="scroll-mt-24 space-y-3"
-                                        aria-labelledby={`levelup-${section.id}-heading`}
-                                    >
-                                        <div className="px-1 text-left border-l-4 border-primary/40 pl-3 py-0.5 rounded-r-lg bg-muted/20">
-                                            <p id={`levelup-${section.id}-heading`} className="text-[10px] font-black uppercase tracking-[0.28em] text-muted-foreground">
-                                                {section.kicker} · {section.title}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground mt-1">{section.blurb}</p>
-                                        </div>
-                                        <div className="flex flex-col gap-4">
-                                            {section.cards.map((area) => renderDestination(area))}
-                                        </div>
-                                    </section>
-                                ))}
-
-                                {accessCards.length > 0 && (
-                                    <section className="space-y-3" aria-labelledby="levelup-access-heading">
-                                        <div className="px-1 text-left border-l-4 border-chart-2/50 pl-3 py-0.5 rounded-r-lg bg-muted/15">
-                                            <p id="levelup-access-heading" className="text-[10px] font-black uppercase tracking-[0.28em] text-muted-foreground">
-                                                School access
-                                            </p>
-                                            <p className="text-xs text-muted-foreground mt-1">Staff sign-in and administration.</p>
-                                        </div>
-                                        <div className="flex flex-col gap-4">
-                                            {accessCards.map((area) => renderDestination(area))}
-                                        </div>
-                                    </section>
-                                )}
-                            </>
-                        );
-                    })()}
+                            <Link
+                                key={area.id}
+                                href={area.href}
+                                onClick={() => playSound('click')}
+                                className="block group no-underline rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                            >
+                                {portalCard}
+                            </Link>
+                        )
+                    })}
                 </div>
 
                 {loginState === 'student' && schoolId && (
@@ -482,7 +276,5 @@ export default function PortalPage() {
                 </div>
             </div>
         </div>
-        <KioskSponsorBanner />
-        </>
     );
 }
