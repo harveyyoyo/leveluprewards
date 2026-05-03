@@ -6,7 +6,8 @@ import { usePathname } from 'next/navigation';
 import { useAuth, type LoginState } from './AuthProvider';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useDoc, useFirebase, useMemoFirebase } from '@/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, type DocumentData } from 'firebase/firestore';
+import { removeUndefinedDeep } from '@/lib/db/helpers';
 import { schoolPublicDocRef } from '@/lib/schoolPublic';
 import {
     DEFAULT_PLAN,
@@ -417,18 +418,19 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             localStorage.setItem(settingsKey, JSON.stringify(next));
             if (schoolId && firestore && (loginState === 'admin' || loginState === 'developer')) {
                 const sid = schoolId.trim().toLowerCase();
-                void setDoc(
-                    doc(firestore, 'schools', sid),
-                    { appSettings: next, updatedAt: Date.now() },
-                    { merge: true },
-                ).catch((error) => {
+                const schoolWritePayload = removeUndefinedDeep({
+                    appSettings: next,
+                    updatedAt: Date.now(),
+                }) as DocumentData;
+                void setDoc(doc(firestore, 'schools', sid), schoolWritePayload, { merge: true }).catch((error) => {
                     console.error('Failed to save school settings', error);
                 });
-                void setDoc(
-                    schoolPublicDocRef(firestore, sid),
-                    { appSettings: next, active: true, updatedAt: Date.now() },
-                    { merge: true },
-                ).catch((error) => {
+                const publicWritePayload = removeUndefinedDeep({
+                    appSettings: next,
+                    active: true,
+                    updatedAt: Date.now(),
+                }) as DocumentData;
+                void setDoc(schoolPublicDocRef(firestore, sid), publicWritePayload, { merge: true }).catch((error) => {
                     console.error('Failed to save public school settings mirror', error);
                 });
             }

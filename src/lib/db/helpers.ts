@@ -16,6 +16,46 @@ export const removeUndefined = <T extends Record<string, unknown>>(obj: T): Docu
     }
   });
   return newObj;
+};
+
+/**
+ * Recursively strips `undefined` (Firestore rejects undefined at any depth).
+ * Preserves `null`, primitives, `Date`, and non-plain objects (e.g. FieldValue).
+ * Arrays: omits `undefined` entries and cleans nested structures.
+ */
+export function removeUndefinedDeep(value: unknown): unknown {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value === null || typeof value !== 'object') {
+    return value;
+  }
+  if (value instanceof Date) {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    const out: unknown[] = [];
+    for (const item of value) {
+      if (item === undefined) continue;
+      const cleaned = removeUndefinedDeep(item);
+      if (cleaned !== undefined) {
+        out.push(cleaned);
+      }
+    }
+    return out;
+  }
+  const proto = Object.getPrototypeOf(value);
+  if (proto !== null && proto !== Object.prototype) {
+    return value;
+  }
+  const out: DocumentData = {};
+  for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+    const cleaned = removeUndefinedDeep(v);
+    if (cleaned !== undefined) {
+      out[k] = cleaned;
+    }
+  }
+  return out;
 }
 
 // -------------------------------------------------------------------------
@@ -110,8 +150,13 @@ export const evaluateAchievements = (
     } else if (type === 'lifetimePoints') {
       if ((student.lifetimePoints || 0) >= threshold) isEarned = true;
     } else if (type === 'coupons') {
-      // Placeholder for coupons redeemed count if needed. 
-      // Manual/Manual check for now.
+      // Category threshold (historical naming: "coupons" tab). This checks the student's
+      // accumulated points in the selected category, same as category-based points badges.
+      const cat = categories.find(c => c.id === categoryId);
+      const catName = cat ? cat.name : null;
+      if (catName && (student.categoryPoints?.[catName] || 0) >= threshold) {
+        isEarned = true;
+      }
     }
 
     if (isEarned) {
