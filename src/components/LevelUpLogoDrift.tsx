@@ -8,13 +8,13 @@ export function LevelUpLogoDrift({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        'level-up-logo-drift relative flex select-none flex-col items-center justify-center gap-10',
+        'level-up-logo-drift relative flex select-none flex-col items-center justify-center gap-6',
         className,
       )}
     >
       <div
         aria-hidden
-        className="pointer-events-none absolute -inset-20 rounded-full blur-3xl"
+        className="pointer-events-none absolute -inset-16 rounded-full blur-3xl"
         style={{
           background:
             'radial-gradient(circle, oklch(0.62 0.16 250 / 0.25), transparent 70%)',
@@ -22,7 +22,7 @@ export function LevelUpLogoDrift({ className }: { className?: string }) {
         }}
       />
 
-      <div className="relative aspect-[800/720] w-[min(38vw,260px)] max-w-full">
+      <div className="relative aspect-[800/720] w-[min(28vw,200px)] max-w-full">
         <svg
           viewBox="0 0 800 720"
           className="h-full w-full overflow-visible"
@@ -42,7 +42,7 @@ export function LevelUpLogoDrift({ className }: { className?: string }) {
               d={arrowPath}
               fill="none"
               stroke="var(--brand-cream)"
-              strokeWidth={2}
+              strokeWidth={1.5}
               strokeLinejoin="round"
               strokeLinecap="round"
               style={{
@@ -56,7 +56,7 @@ export function LevelUpLogoDrift({ className }: { className?: string }) {
             d={arrowPath}
             fill="url(#lud-drift-fill)"
             stroke="var(--brand-cream)"
-            strokeWidth={3}
+            strokeWidth={2.25}
             strokeLinejoin="round"
             strokeLinecap="round"
             pathLength={1}
@@ -74,9 +74,9 @@ export function LevelUpLogoDrift({ className }: { className?: string }) {
         <h1
           className="font-extralight leading-none text-[color:var(--brand-cream)]"
           style={{
-            fontSize: 'clamp(1.4rem, 3.6vw, 2.25rem)',
-            letterSpacing: '0.45em',
-            paddingLeft: '0.45em',
+            fontSize: 'clamp(0.95rem, 2.4vw, 1.35rem)',
+            letterSpacing: '0.38em',
+            paddingLeft: '0.38em',
             opacity: 0,
             animation: 'lud-fade-in 1.4s ease-out 1.6s forwards',
             fontFamily: "'Inter', system-ui, sans-serif",

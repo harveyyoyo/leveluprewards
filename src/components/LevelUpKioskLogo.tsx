@@ -11,7 +11,7 @@ export function LevelUpKioskLogo({ className }: { className?: string }) {
         className,
       )}
     >
-      <LevelUpLogoDrift className="gap-6 sm:gap-8" />
+      <LevelUpLogoDrift className="gap-4 sm:gap-5" />
     </div>
   );
 }
