@@ -70,7 +70,7 @@ import {
   Ticket,
   CheckCircle2,
   LogOut,
-  Sparkles,
+  Sparkle,
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -1169,7 +1169,7 @@ function StudentDashboardInner({
                     asChild
                   >
                     <Link href={`/${schoolId}/student/welcome`}>
-                      <Sparkles className="h-3.5 w-3.5" aria-hidden />
+                      <Sparkle className="h-3.5 w-3.5" aria-hidden />
                       Welcome styles
                     </Link>
                   </Button>
