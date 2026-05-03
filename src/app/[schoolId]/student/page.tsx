@@ -1053,7 +1053,7 @@ function StudentDashboardInner({
       >
         {activeTheme?.fontFamily && <GoogleFontLoader fontFamily={activeTheme.fontFamily} />}
 
-        {showWelcome && student && (
+        {showWelcome && student && studentSeesWelcomePage(settings, student) && (
           <WelcomeOverlay
             studentName={`${student.firstName} ${student.lastName}`}
             points={student.points || 0}
