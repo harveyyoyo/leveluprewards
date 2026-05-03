@@ -13,5 +13,5 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   // Mock signed-in user — swap with real auth later.
-  return <WelcomeGreeting name="Alex" />;
+  return <WelcomeGreeting name="Champion" />;
 }
