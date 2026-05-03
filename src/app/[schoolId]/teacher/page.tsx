@@ -87,7 +87,12 @@ function TeacherPrinterSkeleton() {
     );
 }
 
-function TeacherPrinter(props: { teacherName: string; teacherId: string; onLogout: () => void }) {
+function TeacherPrinter(props: {
+    teacherName: string;
+    teacherId: string;
+    onLogout: () => void;
+    initialPortalTab?: string | null;
+}) {
     const { isAdmin, isTeacher } = useAppContext();
     if (!isAdmin && !isTeacher) {
         return <TeacherPrinterSkeleton />;
@@ -221,7 +226,14 @@ export default function TeacherPage() {
     if (!directAccountKey && (loginState === 'teacher' || loginState === 'admin' || loginState === 'developer')) {
         const displayName = userName || (loginState === 'admin' || loginState === 'developer' ? 'Admin' : 'Teacher');
         const validTeacherId = teacherDocId || userId || '';
-        return <TeacherPrinter teacherName={displayName} teacherId={validTeacherId} onLogout={handleLogout} />;
+        return (
+            <TeacherPrinter
+                teacherName={displayName}
+                teacherId={validTeacherId}
+                onLogout={handleLogout}
+                initialPortalTab={searchParams.get('tab')}
+            />
+        );
     }
 
     const selectedOption = staffOptions.find((option) => staffLoginKey(option) === selectedLoginKey);

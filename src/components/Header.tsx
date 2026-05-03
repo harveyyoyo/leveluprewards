@@ -82,7 +82,7 @@ export default function Header() {
       ...(isAdmin ? [{ id: 'admin', href: `/${schoolId}/admin`, icon: UserCog, label: 'Admin', color: 'destructive' }] : []),
       ...(isStaff || isDemoSchool ? [{ id: 'print', href: `/${schoolId}/teacher`, icon: Printer, label: 'Teacher', color: 'chart-2' }] : []),
       { id: 'redeem', href: `/${schoolId}/student`, icon: GraduationCap, label: 'Student', color: 'chart-1' },
-      { id: 'prize', href: `/${schoolId}/prize`, icon: Gift, label: 'Shop', color: 'chart-3' },
+      { id: 'prize', href: `/${schoolId}/prize`, icon: Gift, label: 'Rewards', color: 'chart-3' },
       ...(isStaff || isDemoSchool ? [{ id: 'fame', href: `/${schoolId}/halloffame`, icon: Trophy, label: 'Fame', color: 'chart-5' }] : []),
     ].sort((a, b) => {
       const order = ['admin', 'print', 'redeem', 'prize', 'fame'];

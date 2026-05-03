@@ -2050,6 +2050,15 @@
   --brand-cream: oklch(0.93 0.04 88);
 }
 
+/* Kiosk scanner sits on light cards — bump cream + halo presence vs default drift */
+.kiosk-brand-drift .level-up-logo-drift {
+  --brand-cream: oklch(0.35 0.09 252);
+}
+
+.dark .kiosk-brand-drift .level-up-logo-drift {
+  --brand-cream: oklch(0.96 0.06 95);
+}
+
 .level-up-logo-drift .font-extralight {
   color: var(--brand-cream) !important;
 }
