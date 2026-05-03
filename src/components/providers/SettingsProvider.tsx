@@ -52,7 +52,7 @@ interface Settings {
     notificationStaffAlertsEnabled: boolean;
     notificationWhatsAppEnabled: boolean;
     enableClassLeaderboard: boolean;
-    /** Class-vs-class standings (combined balances); surfaced on Hall of Fame, not the student kiosk. */
+    /** Class-vs-class standings (combined balances); primary UI is Hall of Fame. Reserved for future surfaces. */
     enableClassAccumulations: boolean;
     enableShoutouts: boolean;
     // Prize/Rewards shop

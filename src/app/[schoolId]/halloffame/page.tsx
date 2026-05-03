@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useLayoutEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAppContext } from '@/components/AppProvider';
@@ -56,9 +56,7 @@ export default function HallOfFamePage() {
     const { loginState, isInitialized, schoolId } = useAppContext();
     const firestore = useFirestore();
     const router = useRouter();
-    const { settings, isFeatureAllowed } = useSettings();
-    const showClassStandings =
-        settings.enableClassAccumulations && isFeatureAllowed('enableClassAccumulations');
+    const { settings } = useSettings();
     const [hoveredIndex, setHoveredIndex] = useState<string | null>(null);
 
     const [rankType, setRankType] = useState<'students' | 'classes'>('students');
@@ -97,12 +95,6 @@ export default function HallOfFamePage() {
             }
         }
     }, []);
-
-    useLayoutEffect(() => {
-        if (!showClassStandings && rankType === 'classes') {
-            setRankType('students');
-        }
-    }, [showClassStandings, rankType]);
 
     useEffect(() => {
         const settingsToSave = { rankType, sortBy, scope, limit, podiumSize, autoScroll, gridLayout };
@@ -379,16 +371,14 @@ export default function HallOfFamePage() {
                                         >
                                             Students
                                         </Button>
-                                        {showClassStandings ? (
-                                            <Button
-                                                variant={rankType === 'classes' ? 'default' : 'outline'}
-                                                size="sm"
-                                                className="rounded-full h-9 px-5 text-xs font-bold uppercase tracking-widest"
-                                                onClick={() => setRankType('classes')}
-                                            >
-                                                Class standings
-                                            </Button>
-                                        ) : null}
+                                        <Button
+                                            variant={rankType === 'classes' ? 'default' : 'outline'}
+                                            size="sm"
+                                            className="rounded-full h-9 px-5 text-xs font-bold uppercase tracking-widest"
+                                            onClick={() => setRankType('classes')}
+                                        >
+                                            Class standings
+                                        </Button>
                                     </div>
                                 </div>
                                 <Dialog open={isOptionsOpen} onOpenChange={setIsOptionsOpen}>
@@ -413,9 +403,7 @@ export default function HallOfFamePage() {
                                                     </SelectTrigger>
                                                     <SelectContent className="rounded-xl border-border">
                                                         <SelectItem value="students" className="rounded-lg font-medium">Students</SelectItem>
-                                                        {showClassStandings ? (
-                                                            <SelectItem value="classes" className="rounded-lg font-medium">Class standings</SelectItem>
-                                                        ) : null}
+                                                        <SelectItem value="classes" className="rounded-lg font-medium">Class standings</SelectItem>
                                                     </SelectContent>
                                                 </Select>
                                             </div>
