@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import Logo from '@/components/Logo';
+import { LevelUpLogoBrutalist } from '@/components/LevelUpLogoBrutalist';
 import { Button } from '@/components/ui/button';
 import { doc } from 'firebase/firestore';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
@@ -27,7 +27,9 @@ export default function RootPage() {
             className="h-48 w-48 sm:h-64 sm:w-64 object-contain"
           />
         ) : (
-          <Logo className="h-48 w-48 sm:h-64 sm:w-64" />
+          <div className="flex w-full flex-col items-center">
+            <LevelUpLogoBrutalist className="items-center text-center [&_h1]:text-center" />
+          </div>
         )}
 
         <div className="w-full space-y-3">
