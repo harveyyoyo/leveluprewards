@@ -9,6 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { EmptyState } from '@/components/ui/empty-state';
 import { cn } from '@/lib/utils';
 import DynamicIcon from '@/components/DynamicIcon';
+import { AutoCircularToggles } from '@/components/AutoCircularToggles';
 
 export function AdminBadgesTab(props: any) {
   const {
@@ -96,21 +97,20 @@ export function AdminBadgesTab(props: any) {
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-xs text-muted-foreground whitespace-nowrap">Enabled</span>
                       {isToggling ? (
                         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                       ) : (
-                        <Switch
-                          checked={b.enabled !== false}
-                          onCheckedChange={async (checked) => {
+                        <AutoCircularToggles
+                          record={{ ...b, enabled: b.enabled !== false }}
+                          defs={[{ key: 'enabled', label: 'Enabled', shortLabel: 'ACT' }]}
+                          onToggle={async (key, val) => {
                             setBadgeTogglingId(b.id);
                             try {
-                              await onToggleBadge(b, checked);
+                              await onToggleBadge(b, val);
                             } finally {
                               setBadgeTogglingId(null);
                             }
                           }}
-                          className="scale-90"
                         />
                       )}
                     </div>

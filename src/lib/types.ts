@@ -129,7 +129,7 @@ export interface Student {
   pointsByPeriod?: { [periodKey: string]: number };
   /** Category points within time periods (e.g. "2025-03" for month, "2025-H1" for semester). Used for category-based badges. */
   categoryPointsByPeriod?: { [periodKey: string]: { [categoryName: string]: number } };
-  earnedAchievements?: { achievementId: string; earnedAt: number }[];
+  earnedAchievements?: { achievementId: string; earnedAt: number; wheelSpun?: boolean; bonusPointsWon?: number }[];
   /** Badges earned for reaching category point thresholds in a time period. */
   earnedBadges?: { badgeId: string; earnedAt: number; periodKey: string }[];
   teacherIds?: string[];
@@ -253,6 +253,7 @@ export interface Achievement {
   tier?: 'bronze' | 'silver' | 'gold' | 'platinum';
   /** Hex or CSS color for badge card border/glow. */
   accentColor?: string;
+  enableWheelSpin?: boolean;
 }
 
 /** Real badge: earned for reaching a points threshold in a specific category within a time period (e.g. Good Behavior badge = 50 Good Behavior points this month). */

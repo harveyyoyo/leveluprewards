@@ -138,6 +138,11 @@ interface Settings {
     specialDayPointsAmount: number;
     specialDayLabel: string;
     specialDayDate: string;
+    // Product pillars
+    payRewards?: boolean;
+    payAttendance?: boolean;
+    payHomework?: boolean;
+    payLibrary?: boolean;
 }
 
 interface SettingsContextType {
@@ -251,6 +256,10 @@ const defaultSettings: Settings = {
     specialDayPointsAmount: 50,
     specialDayLabel: 'School Spirit Day',
     specialDayDate: '',
+    payRewards: true,
+    payAttendance: true,
+    payHomework: true,
+    payLibrary: true,
 };
 
 const publicLoginSettings: Partial<Settings> = {

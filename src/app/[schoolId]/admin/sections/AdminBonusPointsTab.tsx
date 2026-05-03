@@ -70,6 +70,7 @@ export function AdminBonusPointsTab(props: any) {
                       {ach.criteria.type === 'manual' && 'Manual award only'}
                       {ach.tier && ` · ${ach.tier}`}
                       {(ach.bonusPoints ?? 0) >= 1 && ` · +${ach.bonusPoints} bonus pts`}
+                      {ach.enableWheelSpin && ` · 🎡 Wheel Spin`}
                     </p>
                   </div>
                 </div>

@@ -40,7 +40,7 @@ import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
 import { cn } from '@/lib/utils';
 import { WELCOME_GREETING_STYLES } from '@/components/WelcomeGreeting';
 
-type SettingsView = 'hub' | 'interface' | 'security' | 'features' | 'library';
+type SettingsView = 'hub' | 'interface' | 'security' | 'features' | 'pillars' | 'library';
 
 const FEATURE_SECTION_NAV = [
     { id: 'settings-features-core', label: 'Core' },
@@ -191,6 +191,7 @@ export function SettingsModal() {
         interface: 'Interface & display',
         security: 'Security',
         features: 'Features & add-ons',
+        pillars: 'Product Pillars',
         library: 'Background library',
     };
 
@@ -333,6 +334,27 @@ export function SettingsModal() {
                                 </div>
                                 <span className="font-black text-foreground">Security</span>
                                 <span className="text-xs leading-snug text-muted-foreground">Admin and kiosk session timeouts</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setView('pillars');
+                                    if (local.soundEnabled) playSound('click');
+                                }}
+                                className={cn(
+                                    'flex flex-col items-start gap-2 rounded-2xl border-2 p-4 text-left transition-all',
+                                    'border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/80 dark:bg-emerald-950/20',
+                                    'hover:bg-emerald-100/80 dark:hover:bg-emerald-950/35',
+                                )}
+                            >
+                                <div className="flex w-full items-start justify-between gap-2">
+                                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500 text-white shadow-inner">
+                                        <ShieldCheck className="h-5 w-5" />
+                                    </span>
+                                    <ChevronRight className="h-5 w-5 shrink-0 text-emerald-700/50 dark:text-emerald-400/50" aria-hidden />
+                                </div>
+                                <span className="font-black text-emerald-900 dark:text-emerald-100">Product Pillars</span>
+                                <span className="text-xs leading-snug text-emerald-800/90 dark:text-emerald-200/80">Select active paid plan products</span>
                             </button>
                             <button
                                 type="button"
@@ -622,6 +644,59 @@ export function SettingsModal() {
                                             onChange={(e) => handleToggle('kioskSessionTimeoutSec', Math.max(5, parseInt(e.target.value) || 5))}
                                             min={5}
                                             max={300}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {view === 'pillars' && (
+                        <div className="space-y-6 pb-2 -mx-1 px-1">
+                            <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 border border-slate-100 dark:border-slate-800/50 space-y-4">
+                                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 pb-1 flex items-center gap-2">
+                                    <ShieldCheck className="w-3.5 h-3.5" /> Product Pillars
+                                </p>
+                                <p className="text-xs text-muted-foreground leading-normal mb-3">Select which of the 4 core pillars are part of your active paid plan.</p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div className="flex items-center justify-between p-3 bg-background/50 border border-border/40 rounded-xl hover:bg-muted/40 transition-colors">
+                                        <div>
+                                            <h4 className="font-bold text-sm text-foreground uppercase tracking-tight">levelup rewards</h4>
+                                            <p className="text-[10px] text-muted-foreground">Product included in paid subscription</p>
+                                        </div>
+                                        <Switch
+                                            checked={local.payRewards ?? true}
+                                            onCheckedChange={(val) => handleToggle('payRewards', val)}
+                                        />
+                                    </div>
+                                    <div className="flex items-center justify-between p-3 bg-background/50 border border-border/40 rounded-xl hover:bg-muted/40 transition-colors">
+                                        <div>
+                                            <h4 className="font-bold text-sm text-foreground uppercase tracking-tight">levelup attendance</h4>
+                                            <p className="text-[10px] text-muted-foreground">Product included in paid subscription</p>
+                                        </div>
+                                        <Switch
+                                            checked={local.payAttendance ?? true}
+                                            onCheckedChange={(val) => handleToggle('payAttendance', val)}
+                                        />
+                                    </div>
+                                    <div className="flex items-center justify-between p-3 bg-background/50 border border-border/40 rounded-xl hover:bg-muted/40 transition-colors">
+                                        <div>
+                                            <h4 className="font-bold text-sm text-foreground uppercase tracking-tight">levelup home work</h4>
+                                            <p className="text-[10px] text-muted-foreground">Product included in paid subscription</p>
+                                        </div>
+                                        <Switch
+                                            checked={local.payHomework ?? true}
+                                            onCheckedChange={(val) => handleToggle('payHomework', val)}
+                                        />
+                                    </div>
+                                    <div className="flex items-center justify-between p-3 bg-background/50 border border-border/40 rounded-xl hover:bg-muted/40 transition-colors">
+                                        <div>
+                                            <h4 className="font-bold text-sm text-foreground uppercase tracking-tight">levelup library</h4>
+                                            <p className="text-[10px] text-muted-foreground">Product included in paid subscription</p>
+                                        </div>
+                                        <Switch
+                                            checked={local.payLibrary ?? true}
+                                            onCheckedChange={(val) => handleToggle('payLibrary', val)}
                                         />
                                     </div>
                                 </div>

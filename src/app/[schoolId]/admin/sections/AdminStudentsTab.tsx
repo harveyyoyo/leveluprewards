@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Helper } from '@/components/ui/helper';
 import { cn } from '@/lib/utils';
 import type { Class, Student, Teacher } from '@/lib/types';
+import { AutoCircularToggles } from '@/components/AutoCircularToggles';
 
 function formatAssignedTeachers(student: Student, teachers: Teacher[]): string | null {
   const ids = student.teacherIds;
@@ -51,6 +52,7 @@ export function AdminStudentsTab({
   deleteStudent,
   setStudentToPurge,
   previewIdCardStudent,
+  onUpdateStudent,
 }: {
   settings: { photoDisplayMode?: 'cover' | 'contain'; enableBadges?: boolean; enableFaceLogin?: boolean };
   classes: Class[] | null | undefined;
@@ -82,6 +84,7 @@ export function AdminStudentsTab({
   deleteStudent: (studentId: string) => void;
   setStudentToPurge: (s: Student) => void;
   previewIdCardStudent: (s: Student) => void;
+  onUpdateStudent?: (s: Student) => Promise<void> | void;
 }) {
   return (
     <Card className="border-t-4 border-primary shadow-md overflow-hidden">
@@ -325,6 +328,15 @@ export function AdminStudentsTab({
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-1 justify-end sm:justify-end shrink-0 sm:pl-1" onClick={(e) => e.stopPropagation()}>
+                  <AutoCircularToggles
+                    record={s}
+                    defs={[{ key: 'welcomePageEnabled', label: 'Toggle Welcome Page Allowed', shortLabel: 'WLC' }]}
+                    onToggle={(key, val) => {
+                      if (onUpdateStudent) {
+                        onUpdateStudent({ ...s, [key]: val });
+                      }
+                    }}
+                  />
                   {settings.enableFaceLogin ? (
                     <Button
                       variant="outline"

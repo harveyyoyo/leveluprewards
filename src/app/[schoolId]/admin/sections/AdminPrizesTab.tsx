@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import type { Prize, Teacher, Class, VendingMotorConfig, PrizeAiFunReward } from '@/lib/types';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
+import { AutoCircularToggles } from '@/components/AutoCircularToggles';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -198,23 +199,17 @@ export function AdminPrizesTab({
                   rowDimmed && "opacity-60"
                 )}
               >
-                <div className="flex shrink-0 flex-col items-center w-12">
-                    <Label className="text-[8px] font-bold uppercase tracking-tighter opacity-50 leading-none mb-1">Stock</Label>
-                    <Switch
-                      checked={p.inStock}
-                      disabled={!canEditFull}
-                      onCheckedChange={(checked) => onUpdatePrize({ ...p, inStock: checked })}
-                      className="data-[state=checked]:bg-primary scale-75"
-                    />
-                </div>
-                <div className="flex shrink-0 flex-col items-center w-12">
-                    <Label className="text-[8px] font-bold uppercase tracking-tighter opacity-50 leading-none mb-1">Print</Label>
-                    <Switch
-                      checked={p.offerPrintTicketOnRedeem === true}
-                      disabled={!canEditFull}
-                      onCheckedChange={(checked) => onUpdatePrize({ ...p, offerPrintTicketOnRedeem: checked })}
-                      className="data-[state=checked]:bg-primary scale-75"
-                    />
+                <div className="flex shrink-0 flex-col items-center">
+                  <AutoCircularToggles
+                    record={p}
+                    defs={[
+                      { key: 'inStock', label: 'In Stock', shortLabel: 'STK' },
+                      { key: 'offerPrintTicketOnRedeem', label: 'Offer print voucher', shortLabel: 'PRT' }
+                    ]}
+                    onToggle={(key, val) => {
+                      onUpdatePrize({ ...p, [key]: val });
+                    }}
+                  />
                 </div>
                 <div className="flex shrink-0 flex-col gap-0.5 w-14">
                   <Label className="text-[8px] font-bold uppercase tracking-tighter opacity-50 leading-none">Qty</Label>

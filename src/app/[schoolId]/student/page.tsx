@@ -19,6 +19,7 @@ import { StudentIdCard } from '@/components/StudentIdCard';
 import type { StudentFoundMeta } from '@/components/StudentScanner';
 import { LevelUpKioskLogo } from '@/components/LevelUpKioskLogo';
 import { KioskSponsorBanner } from '@/components/KioskSponsorBanner';
+import { BonusSpinWheelModal } from '@/components/BonusSpinWheelModal';
 
 // ~32 KB (plus @vladmandic/face-api on the face tab). Load only when the
 // kiosk actually needs to scan a student.
@@ -377,6 +378,7 @@ function StudentDashboardInner({
   const [logoutTimer, setLogoutTimer] = useState(settings.kioskSessionTimeoutSec ?? 15);
   const [flyPointsValue, setFlyPointsValue] = useState<number | null>(null);
   const [celebrationMessage, setCelebrationMessage] = useState<string | null>(null);
+  const [unspunAchievement, setUnspunAchievement] = useState<any>(null);
   const celebrationQueueRef = useRef<string[]>([]);
   const celebrationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const animationKey = useRef(0);
@@ -916,6 +918,57 @@ function StudentDashboardInner({
       // ignore storage / JSON errors
     }
   }, [student?.id, schoolId, achievements, toast, playSound]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!student || !schoolId || unspunAchievement) return;
+
+    const unspunAchItem = (student.earnedAchievements || []).find((e) => {
+      const ach = (achievements || []).find((a) => a.id === e.achievementId);
+      return ach?.enableWheelSpin === true && e.wheelSpun === false;
+    });
+
+    if (unspunAchItem) {
+      const achDef = (achievements || []).find((a) => a.id === unspunAchItem.achievementId);
+      if (achDef) {
+        setUnspunAchievement({ ...achDef, earnedAt: unspunAchItem.earnedAt });
+      }
+    }
+  }, [student, schoolId, achievements, unspunAchievement]);
+
+  const handleWheelWon = async (wonAmount: number) => {
+    if (!student || !schoolId || !firestore || !unspunAchievement) return;
+    try {
+      const studentRef = doc(firestore, 'schools', schoolId, 'students', student.id);
+      const updatedEarned = (student.earnedAchievements || []).map(e => {
+        if (e.achievementId === unspunAchievement.id) {
+          return { ...e, wheelSpun: true, bonusPointsWon: wonAmount };
+        }
+        return e;
+      });
+
+      await updateDoc(studentRef, {
+        points: (student.points || 0) + wonAmount,
+        lifetimePoints: (student.lifetimePoints || 0) + wonAmount,
+        earnedAchievements: updatedEarned
+      });
+
+      await addDoc(collection(firestore, 'schools', schoolId, 'students', student.id, 'activities'), {
+        desc: `Wheel spin won: ${unspunAchievement.name} (+${wonAmount} pts)`,
+        amount: wonAmount,
+        date: Date.now()
+      });
+
+      setFlyPointsValue(wonAmount);
+      playSound('success');
+      toast({ title: 'Points Won!', description: `The wheel stopped on +${wonAmount} pts!` });
+
+      setTimeout(() => {
+        setUnspunAchievement(null);
+      }, 1000);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const headerBadges = useMemo(() => {
     if (!student?.earnedBadges?.length || !badges?.length) return [];
@@ -1592,6 +1645,13 @@ function StudentDashboardInner({
                 </Button>
               </DialogContent>
             </Dialog>
+
+            <BonusSpinWheelModal
+              isOpen={!!unspunAchievement}
+              achievement={unspunAchievement}
+              onWon={handleWheelWon}
+              primaryColor={activeTheme?.primary || '#0ea5e9'}
+            />
 
             <BadgeShowcase
               student={student}

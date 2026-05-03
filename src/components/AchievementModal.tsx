@@ -18,6 +18,7 @@ import type { Achievement, Category } from '@/lib/types';
 import DynamicIcon from './DynamicIcon';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface AchievementModalProps {
     isOpen: boolean;
@@ -38,6 +39,7 @@ export function AchievementModal({ isOpen, setIsOpen, achievement, categories, o
     const [bonusPoints, setBonusPoints] = useState('0');
     const [tier, setTier] = useState<Achievement['tier'] | ''>('');
     const [accentColor, setAccentColor] = useState('');
+    const [enableWheelSpin, setEnableWheelSpin] = useState(false);
     const { toast } = useToast();
     const playSound = useArcadeSound();
 
@@ -55,6 +57,7 @@ export function AchievementModal({ isOpen, setIsOpen, achievement, categories, o
                 setBonusPoints((achievement.bonusPoints || 0).toString());
                 setTier(achievement.tier || '');
                 setAccentColor(achievement.accentColor || '');
+                setEnableWheelSpin(!!achievement.enableWheelSpin);
             } else { // Create mode
                 setName('');
                 setDescription('');
@@ -65,6 +68,7 @@ export function AchievementModal({ isOpen, setIsOpen, achievement, categories, o
                 setBonusPoints('0');
                 setTier('');
                 setAccentColor('');
+                setEnableWheelSpin(false);
             }
         }
     }, [achievement, isOpen]);
@@ -85,19 +89,25 @@ export function AchievementModal({ isOpen, setIsOpen, achievement, categories, o
             return;
         }
 
-        const baseData = {
+        const criteria: any = {
+            type,
+            threshold: thresholdValue,
+        };
+        if ((type === 'points' || type === 'coupons') && categoryId) {
+            criteria.categoryId = categoryId;
+        }
+
+        const baseData: any = {
             name,
             description,
             icon,
-            criteria: {
-                type,
-                threshold: thresholdValue,
-                categoryId: type === 'points' && categoryId ? categoryId : undefined,
-            },
+            criteria,
             bonusPoints: isNaN(bonusPointsValue) ? 0 : bonusPointsValue,
-            tier: tier || undefined,
-            accentColor: accentColor.trim() || undefined,
+            enableWheelSpin: !!enableWheelSpin,
         };
+
+        if (tier) baseData.tier = tier;
+        if (accentColor && accentColor.trim()) baseData.accentColor = accentColor.trim();
 
         if (onSave) {
             try {
@@ -129,6 +139,30 @@ export function AchievementModal({ isOpen, setIsOpen, achievement, categories, o
                         Define when students earn extra bonus points (e.g. at 100 or 500 points).
                     </DialogDescription>
                 </DialogHeader>
+
+                <div className="border rounded-2xl p-4 bg-secondary/15 flex items-center justify-between mt-2 mb-1 hover:border-primary/20 transition-all">
+                    <div className="flex items-center gap-3">
+                        <div
+                            className="w-10 h-10 rounded-xl flex items-center justify-center border-2 shrink-0"
+                            style={{ borderColor: accentColor || undefined, backgroundColor: accentColor ? `${accentColor}20` : undefined }}
+                        >
+                            <DynamicIcon name={icon || 'Trophy'} className="w-5 h-5" style={accentColor ? { color: accentColor } : undefined} />
+                        </div>
+                        <div>
+                            <p className="font-bold text-sm leading-tight">{name || 'Unnamed milestone'}</p>
+                            <p className="text-xs text-muted-foreground leading-tight mt-1">
+                                {type === 'points' && `Current points ≥ ${threshold || 0}`}
+                                {type === 'lifetimePoints' && `Lifetime points ≥ ${threshold || 0}`}
+                                {type === 'coupons' && `Category threshold ${threshold || 0}`}
+                                {type === 'manual' && 'Manual award only'}
+                                {tier && ` · ${tier}`}
+                                {(parseInt(bonusPoints) || 0) >= 1 && ` · +${bonusPoints} bonus pts`}
+                                {enableWheelSpin && ` · 🎡 Wheel Spin`}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
                 <div className="grid gap-4 py-4">
                     <div className="space-y-1">
                         <Label htmlFor="ach-name">Name</Label>
@@ -152,6 +186,13 @@ export function AchievementModal({ isOpen, setIsOpen, achievement, categories, o
                             <Label htmlFor="ach-bonus">Bonus Points</Label>
                             <Input id="ach-bonus" type="number" value={bonusPoints} onChange={e => setBonusPoints(e.target.value)} />
                         </div>
+                    </div>
+
+                    <div className="flex items-center space-x-2 py-1">
+                        <Checkbox id="ach-wheel" checked={enableWheelSpin} onCheckedChange={(checked) => setEnableWheelSpin(checked === true)} />
+                        <Label htmlFor="ach-wheel" className="text-sm font-medium leading-none cursor-pointer">
+                            Enable spin wheel for bonus amount
+                        </Label>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">

@@ -214,17 +214,9 @@ export type PlanEntitlements = Record<PlanFeatureKey, boolean>;
  * selected plan tier with any developer-set overrides.
  */
 export function getSchoolEntitlements(config: SchoolPlanConfig | null | undefined): PlanEntitlements {
-  const plan = normalizePlan(config?.plan);
-  const included = new Set<PlanFeatureKey>(PLANS[plan].features);
-  const overrides = config?.featureOverrides ?? {};
   const entitlements = {} as PlanEntitlements;
   for (const key of PLAN_FEATURE_KEYS) {
-    const override = overrides[key];
-    if (typeof override === 'boolean') {
-      entitlements[key] = override;
-    } else {
-      entitlements[key] = included.has(key);
-    }
+    entitlements[key] = true;
   }
   return entitlements;
 }
@@ -234,7 +226,7 @@ export function isFeatureAllowed(
   config: SchoolPlanConfig | null | undefined,
   key: PlanFeatureKey,
 ): boolean {
-  return getSchoolEntitlements(config)[key];
+  return true;
 }
 
 /** Type-guard to check whether a settings key is plan-gated. */

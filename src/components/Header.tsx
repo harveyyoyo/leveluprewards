@@ -75,6 +75,12 @@ export default function Header() {
   const canLogout = loginState !== 'loggedOut' && loginState !== 'student';
   const isDemoSchool = schoolId === 'schoolabc';
 
+  const paidProducts: string[] = [];
+  if (settings.payRewards ?? true) paidProducts.push('Rewards');
+  if (settings.payAttendance ?? true) paidProducts.push('Attendance');
+  if (settings.payHomework ?? true) paidProducts.push('Homework');
+  if (settings.payLibrary ?? true) paidProducts.push('Library');
+
 
   // --- APP MODE HEADER ---
   if (settings.displayMode === 'app') {
@@ -82,7 +88,7 @@ export default function Header() {
       ...(isAdmin ? [{ id: 'admin', href: `/${schoolId}/admin`, icon: UserCog, label: 'Admin', color: 'destructive' }] : []),
       ...(isStaff || isDemoSchool ? [{ id: 'print', href: `/${schoolId}/teacher`, icon: Printer, label: 'Teacher', color: 'chart-2' }] : []),
       { id: 'redeem', href: `/${schoolId}/student`, icon: GraduationCap, label: 'Student', color: 'chart-1' },
-      { id: 'prize', href: `/${schoolId}/prize`, icon: Gift, label: 'Rewards', color: 'chart-3' },
+      { id: 'prize', href: `/${schoolId}/prize`, icon: Gift, label: 'Shop', color: 'chart-3' },
       ...(isStaff || isDemoSchool ? [{ id: 'fame', href: `/${schoolId}/halloffame`, icon: Trophy, label: 'Fame', color: 'chart-5' }] : []),
     ].sort((a, b) => {
       const order = ['admin', 'print', 'redeem', 'prize', 'fame'];
@@ -109,8 +115,17 @@ export default function Header() {
           </div>
           <div className="flex min-w-0 max-w-full items-center justify-center px-2 justify-self-center">
             {schoolId && (
-              <Link href={centerHref} className="flex min-w-0 max-w-full items-center gap-2 truncate no-underline font-school text-lg font-black sm:text-2xl md:text-3xl">
+              <Link href={centerHref} className="flex min-w-0 max-w-full flex-col items-center gap-1 truncate no-underline font-school text-lg font-black sm:text-2xl md:text-3xl">
                 <span className="truncate text-foreground font-bold">{centerLabel}</span>
+                {paidProducts.length > 0 && (
+                  <div className="flex flex-wrap items-center justify-center gap-1">
+                    {paidProducts.map((p) => (
+                      <span key={p} className="text-[8px] font-black uppercase tracking-wider bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 rounded-full whitespace-nowrap leading-none shadow-sm">
+                        {p}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </Link>
             )}
           </div>
@@ -238,9 +253,20 @@ export default function Header() {
                     />
                   </span>
                 )}
-                <span className="text-sm min-[400px]:text-base sm:text-2xl md:text-3xl lg:text-3xl xl:text-4xl font-headline font-bold text-foreground truncate">
-                  {centerLabel}
-                </span>
+                <div className="flex flex-col items-center justify-center min-w-0">
+                  <span className="text-sm min-[400px]:text-base sm:text-2xl md:text-3xl lg:text-3xl xl:text-4xl font-headline font-bold text-foreground truncate">
+                    {centerLabel}
+                  </span>
+                  {paidProducts.length > 0 && (
+                    <div className="flex flex-wrap items-center justify-center gap-1 mt-1">
+                      {paidProducts.map((p) => (
+                        <span key={p} className="text-[9px] font-black uppercase tracking-wider bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 rounded-full whitespace-nowrap shadow-sm">
+                          {p}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </span>
             </Link>
           ) : null}

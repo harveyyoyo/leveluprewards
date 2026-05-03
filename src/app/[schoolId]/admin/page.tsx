@@ -955,6 +955,7 @@ function AdminDashboardInner() {
                 await deleteStudent(id);
               }}
               setStudentToPurge={(s) => setStudentToPurge(s)}
+              onUpdateStudent={(s) => updateStudent(s)}
             />
           </TabsContent>
 

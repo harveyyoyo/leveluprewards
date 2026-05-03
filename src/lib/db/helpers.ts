@@ -233,17 +233,35 @@ export function applyAchievementsAndBadges(
   let bonusTotal = 0;
 
   for (const ach of newAchievements) {
-    earnedAchievements.push({ achievementId: ach.achievementId, earnedAt: ach.earnedAt });
-    bonusTotal += ach.bonusPoints;
     const achInfo = allAchievements.find(a => a.id === ach.achievementId);
-    const achActivityRef = doc(
-      collection(firestore, 'schools', schoolId, 'students', studentId, 'activities')
-    );
-    transaction.set(achActivityRef, {
-      desc: `Achievement Unlocked: ${achInfo?.name || 'Unknown'}`,
-      amount: ach.bonusPoints,
-      date: Date.now(),
+    const hasWheelSpin = achInfo?.enableWheelSpin === true;
+
+    earnedAchievements.push({
+      achievementId: ach.achievementId,
+      earnedAt: ach.earnedAt,
+      wheelSpun: hasWheelSpin ? false : undefined
     });
+
+    if (hasWheelSpin) {
+      const achActivityRef = doc(
+        collection(firestore, 'schools', schoolId, 'students', studentId, 'activities')
+      );
+      transaction.set(achActivityRef, {
+        desc: `Achievement Unlocked: ${achInfo?.name || 'Unknown'} (Wheel Spin ready!)`,
+        amount: 0,
+        date: Date.now(),
+      });
+    } else {
+      bonusTotal += ach.bonusPoints;
+      const achActivityRef = doc(
+        collection(firestore, 'schools', schoolId, 'students', studentId, 'activities')
+      );
+      transaction.set(achActivityRef, {
+        desc: `Achievement Unlocked: ${achInfo?.name || 'Unknown'}`,
+        amount: ach.bonusPoints,
+        date: Date.now(),
+      });
+    }
   }
 
   return { earnedAchievements, earnedBadges, bonusTotal };

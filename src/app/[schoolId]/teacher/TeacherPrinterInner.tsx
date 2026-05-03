@@ -64,7 +64,6 @@ import { SchoolReportsPanel } from '@/components/reports/SchoolReportsPanel';
 import { GoalsManager } from '@/components/goals/GoalsManager';
 import { homeworkRewardCategoryKey } from '@/lib/homeworkRewards';
 import { studentsInTeacherScope } from '@/lib/reportsScope';
-import { sanitizeTeacherPortalTab } from '@/lib/levelupNav';
 
 /** Max sheets per run. Bounded for sensible printer jobs and UI. */
 const MAX_COUPON_PRINT_SHEETS = 100;
@@ -1634,20 +1633,7 @@ function TeacherAttendanceRewardsPanel({
   );
 }
 
-export function TeacherPrinterInner({
-    teacherName,
-    teacherId,
-    onLogout,
-    secretaryMode = false,
-    initialPortalTab,
-}: {
-    teacherName: string;
-    teacherId: string;
-    onLogout: () => void;
-    secretaryMode?: boolean;
-    /** Deep-link from `/teacher?tab=` (e.g. `attendance`, `homework`). */
-    initialPortalTab?: string | null;
-}) {
+export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretaryMode = false }: { teacherName: string, teacherId: string, onLogout: () => void, secretaryMode?: boolean }) {
     const { updateTeacher, addCoupons, setCouponsToPrint, addCategory, schoolId, awardPointsToMultipleStudents, deductPointsFromMultipleStudents, addPrize, updatePrize, deletePrize, getTeacherAttendanceConfig, setTeacherAttendanceConfig, listTeacherAttendanceLog, categories: globalCategories, isAdmin, isTeacher } = useAppContext();
     /** Admin using the teacher portal can act on the whole school (like secretary data scope) while keeping teacher tabs/tools. */
     const schoolWideTeacherScope = secretaryMode || isAdmin;
@@ -2211,32 +2197,6 @@ export function TeacherPrinterInner({
         });
     }, [studentsLoading, schoolId, teacherId, isAdmin, isTeacher, secretaryMode, schoolWideTeacherScope, students, classes, currentTeacher, studentsForTeacherActions, teacherDocId, userId]);
 
-    const teacherTabCtx = useMemo(
-        () => ({
-            enableAttendance: settings.enableAttendance,
-            enableHomework: settings.enableHomework,
-            enableGoals: settings.enableGoals,
-            goalsAllowed: isFeatureAllowed('enableGoals'),
-        }),
-        [
-            settings.enableAttendance,
-            settings.enableHomework,
-            settings.enableGoals,
-            isFeatureAllowed,
-        ],
-    );
-
-    const [portalTab, setPortalTab] = useState<string>('coupons');
-
-    useEffect(() => {
-        setPortalTab((prev) => sanitizeTeacherPortalTab(prev, teacherTabCtx));
-    }, [teacherTabCtx]);
-
-    useEffect(() => {
-        if (!initialPortalTab) return;
-        setPortalTab(sanitizeTeacherPortalTab(initialPortalTab, teacherTabCtx));
-    }, [initialPortalTab, teacherTabCtx]);
-
     if (isTeacher && !isAdmin && !secretaryMode && !currentTeacher && !studentsLoading) {
         return (
             <div className="flex items-center justify-center min-h-[400px] p-6">
@@ -2327,7 +2287,7 @@ export function TeacherPrinterInner({
                         </Button>
                     </div>
 
-                    <Tabs value={portalTab} onValueChange={setPortalTab} className="space-y-6 w-full">
+                    <Tabs defaultValue="coupons" className="space-y-6 w-full">
                         {!secretaryMode && (
                         <div className="flex overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 justify-center">
                             <TabsList
