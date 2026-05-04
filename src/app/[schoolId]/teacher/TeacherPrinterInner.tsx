@@ -591,7 +591,7 @@ function RecentRedemptions({ schoolId, students, classes, teacherId }: { schoolI
                 <div className="space-y-1">
                     <CardTitle className="flex items-center gap-2 text-xl font-black">
                         <Gift className="w-6 h-6 text-chart-3" />
-                        Prize Redemptions
+                      Reward Redemptions
                     </CardTitle>
                     <CardDescription className="font-medium">
                         Student purchases that need to be delivered.
@@ -1642,6 +1642,8 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
     const { updateTeacher, addCoupons, setCouponsToPrint, addCategory, schoolId, awardPointsToMultipleStudents, deductPointsFromMultipleStudents, addPrize, updatePrize, deletePrize, getTeacherAttendanceConfig, setTeacherAttendanceConfig, listTeacherAttendanceLog, categories: globalCategories, isAdmin, isTeacher } = useAppContext();
     /** Admin using the teacher portal can act on the whole school (like secretary data scope) while keeping teacher tabs/tools. */
     const schoolWideTeacherScope = secretaryMode || isAdmin;
+    /** Same redemption options as secretary (schoolwide / classes / teachers) when admin is on the teacher portal. */
+    const staffCouponRedemptionUi = secretaryMode || isAdmin;
     const { toast } = useToast();
     const firestore = useFirestore();
     const { settings, isFeatureAllowed } = useSettings();
@@ -1708,7 +1710,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
     const [printSheetCount, setPrintSheetCount] = useState('1');
     const [printCouponsPerPage, setPrintCouponsPerPage] = useState<CouponPrintPageSize>(COUPONS_PER_PRINT_PAGE);
     const [printRedemptionScope, setPrintRedemptionScope] = useState<CouponRedemptionScope>(() =>
-        secretaryMode ? 'school' : 'creator',
+        secretaryMode || isAdmin ? 'school' : 'creator',
     );
     const [printScopeClassIds, setPrintScopeClassIds] = useState<string[]>([]);
     const [printScopeTeacherIds, setPrintScopeTeacherIds] = useState<string[]>([]);
@@ -1755,11 +1757,11 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
     }, [awardCategoryId, categories]);
 
     useEffect(() => {
-        if (secretaryMode) return;
+        if (secretaryMode || isAdmin) return;
         if (printRedemptionScope === 'school' || printRedemptionScope === 'teachers') {
             setPrintRedemptionScope('creator');
         }
-    }, [secretaryMode, printRedemptionScope]);
+    }, [secretaryMode, isAdmin, printRedemptionScope]);
 
     useEffect(() => {
         if (filterClassId === 'all') return;
@@ -1907,7 +1909,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
             return;
         }
 
-        if (secretaryMode) {
+        if (staffCouponRedemptionUi) {
             if (printRedemptionScope === 'classes' && printScopeClassIds.length === 0) {
                 playSound('error');
                 toast({
@@ -1963,7 +1965,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
 
         const codes = generateUniqueCouponCodes(couponCount);
         const scopeExtra: Partial<Pick<Coupon, 'redemptionScope' | 'allowedClassIds' | 'allowedTeacherIds'>> =
-            secretaryMode
+            staffCouponRedemptionUi
                 ? printRedemptionScope === 'classes'
                     ? { redemptionScope: 'classes', allowedClassIds: [...printScopeClassIds] }
                     : printRedemptionScope === 'teachers'
@@ -1973,7 +1975,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                     ? { redemptionScope: 'classes', allowedClassIds: [...printScopeClassIds] }
                     : { redemptionScope: 'creator' };
 
-        const redemptionScopeForNote: CouponRedemptionScope = secretaryMode
+        const redemptionScopeForNote: CouponRedemptionScope = staffCouponRedemptionUi
             ? printRedemptionScope === 'classes' || printRedemptionScope === 'teachers'
                 ? printRedemptionScope
                 : 'school'
@@ -2003,7 +2005,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
             used: false,
             createdAt: Date.now(),
             color: selectedCategory.color,
-            ...(!secretaryMode && currentTeacher?.id ? { createdByTeacherId: currentTeacher.id } : {}),
+            ...(!staffCouponRedemptionUi && currentTeacher?.id ? { createdByTeacherId: currentTeacher.id } : {}),
             ...scopeExtra,
             ...(redemptionPrintNote ? { redemptionPrintNote } : {}),
             ...(startsAt !== undefined ? { startsAt } : {}),
@@ -2134,7 +2136,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
     };
 
     const selectedCategoryForPreview = categories?.find(c => c.id === printCategoryId);
-    const redemptionPreviewScope: CouponRedemptionScope = secretaryMode
+    const redemptionPreviewScope: CouponRedemptionScope = staffCouponRedemptionUi
         ? printRedemptionScope === 'classes' || printRedemptionScope === 'teachers'
             ? printRedemptionScope
             : 'school'
@@ -2154,7 +2156,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
             .map((t) => t.name),
     });
     const previewScopeFields: Partial<Pick<Coupon, 'redemptionScope' | 'allowedClassIds' | 'allowedTeacherIds'>> =
-        secretaryMode
+        staffCouponRedemptionUi
             ? printRedemptionScope === 'classes'
                 ? { redemptionScope: 'classes' as const, allowedClassIds: [...printScopeClassIds] }
                 : printRedemptionScope === 'teachers'
@@ -2172,7 +2174,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
         used: false,
         createdAt: Date.now(),
         color: selectedCategoryForPreview?.color,
-        ...(currentTeacher?.id && !secretaryMode ? { createdByTeacherId: currentTeacher.id } : {}),
+        ...(currentTeacher?.id && !staffCouponRedemptionUi ? { createdByTeacherId: currentTeacher.id } : {}),
         ...previewScopeFields,
         ...(redemptionPreviewNote ? { redemptionPrintNote: redemptionPreviewNote } : {}),
         ...(computeStartsAt() !== undefined ? { startsAt: computeStartsAt() } : {}),
@@ -2595,7 +2597,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                                 </div>
                                             </div>
 
-                                            {secretaryMode && (
+                                            {staffCouponRedemptionUi && (
                                                 <div className={cn('rounded-2xl border p-4 space-y-4', isGraphic ? 'border-white/10 bg-foreground/5' : 'border-border/60 bg-muted/10')}>
                                                     <Label className={cn('text-xs font-semibold uppercase tracking-wide ml-0.5', isGraphic ? 'text-muted-foreground' : 'text-muted-foreground')}>
                                                         Assign redemption to
@@ -2692,7 +2694,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                                 </div>
                                             )}
 
-                                            {!secretaryMode && (
+                                            {!staffCouponRedemptionUi && (
                                             <div className={cn('rounded-2xl border p-4 space-y-4', isGraphic ? 'border-white/10 bg-foreground/5' : 'border-border/60 bg-muted/10')}>
                                                 <Label className={cn('text-xs font-semibold uppercase tracking-wide ml-0.5', isGraphic ? 'text-muted-foreground' : 'text-muted-foreground')}>
                                                     Who can redeem these codes

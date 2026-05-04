@@ -671,6 +671,12 @@
     height: auto !important;
   }
 
+  html:has(body.coupon-printing),
+  body.coupon-printing {
+    overflow: visible !important;
+    height: auto !important;
+  }
+
   /* Scorched Earth: Hide EVERYTHING on body */
   body.coupon-printing *,
   body.prize-ticket-printing *,
@@ -690,7 +696,8 @@
 
   @page {
     size: auto;
-    margin: 0 !important; /* Zero margin pushes browser to use all physical space */
+    /* Avoid !important here — it prevents named @page rules (e.g. coupons) from applying margins in some engines. */
+    margin: 0;
   }
 
   /* 2. DISABLE FILTERS: Universal reset to kill backdrop-filters and filters */
@@ -744,7 +751,7 @@
     transform-origin: left top !important;
   }
 
-  /* Coupons: do not absolutely fill the sheet — that ignores @page margins and clips on physical printers. */
+  /* Coupons: insets content from the physical non-printable zone (padding is reliable; @page alone often still clips). */
   body.coupon-printing #coupon-print-root {
     display: block !important;
     position: static !important;
@@ -756,7 +763,8 @@
     transform: none !important;
     flex-direction: unset !important;
     margin: 0 !important;
-    padding: 0 !important;
+    padding: 0.5in 0.5in 0.55in !important;
+    box-sizing: border-box !important;
   }
 
   /* Prize tickets should not be stretched to full-page height (creates huge gaps). */
@@ -951,10 +959,10 @@
     margin: 0;
   }
 
-  /* Letter coupon sheets: reserve printable margin so browser/printer chrome does not clip the top row. */
+  /* Letter coupons: page margin + inner padding on #coupon-print-root for double safety on finicky drivers. */
   @page couponletter {
     size: letter portrait;
-    margin: 0.375in;
+    margin: 0.35in;
   }
 
   @page prizeticket {
@@ -972,11 +980,12 @@
   .coupon-print-page {
     page: couponletter;
     display: grid !important;
-    grid-template-columns: repeat(2, 3.875in);
-    grid-template-rows: repeat(5, 2.05in);
+    /* Inner sheet = letter minus @page couponletter margins minus #coupon-print-root padding (approx 7.3in × 9.8in). */
+    grid-template-columns: repeat(2, 3.65in);
+    grid-template-rows: repeat(5, 1.96in);
     gap: 0 !important;
-    width: 7.75in;
-    height: 10.25in;
+    width: 7.3in;
+    height: 9.8in;
     margin: 0 auto;
     padding: 0;
     box-sizing: border-box;
@@ -985,8 +994,8 @@
   }
 
   .coupon-print-page--30 {
-    grid-template-columns: repeat(3, calc(7.75in / 3));
-    grid-template-rows: repeat(10, 1.025in);
+    grid-template-columns: repeat(3, calc(7.3in / 3));
+    grid-template-rows: repeat(10, 0.98in);
   }
 
   .coupon-print-page:last-child {
