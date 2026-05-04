@@ -78,23 +78,23 @@ export default function Header() {
     loginState === 'prizeClerk' ||
     loginState === 'reports';
   const canLogout = loginState !== 'loggedOut' && loginState !== 'student';
-  const isDemoSchool = schoolId === 'schoolabc';
 
   const paidProducts: string[] = [];
   if (settings.payRewards ?? true) paidProducts.push('Rewards');
   if (settings.payAttendance ?? true) paidProducts.push('Attendance');
   if (settings.payHomework ?? true) paidProducts.push('Homework');
   if (settings.payLibrary ?? true) paidProducts.push('Library');
+  const paidProductsLabel = paidProducts.join(' • ');
 
 
   // --- APP MODE HEADER ---
   if (settings.displayMode === 'app') {
     const navItems = [
       ...(isAdmin ? [{ id: 'admin', href: `/${schoolId}/admin`, icon: UserCog, label: 'Admin', color: 'destructive' }] : []),
-      ...(isStaff || isDemoSchool ? [{ id: 'print', href: `/${schoolId}/teacher`, icon: Printer, label: 'Teacher', color: 'chart-2' }] : []),
+      ...(isStaff ? [{ id: 'print', href: `/${schoolId}/teacher`, icon: Printer, label: 'Teacher', color: 'chart-2' }] : []),
       { id: 'redeem', href: `/${schoolId}/student`, icon: GraduationCap, label: 'Student', color: 'chart-1' },
-      ...(isStaff || isDemoSchool ? [{ id: 'fame', href: `/${schoolId}/halloffame`, icon: Trophy, label: 'Fame', color: 'chart-5' }] : []),
-      ...(isStaff || isDemoSchool
+      ...(isStaff ? [{ id: 'fame', href: `/${schoolId}/halloffame`, icon: Trophy, label: 'Fame', color: 'chart-5' }] : []),
+      ...(isStaff
         ? [{ id: 'bulletin', href: `/${schoolId}/bulletin-board`, icon: Megaphone, label: 'Board', color: 'chart-4' }]
         : []),
     ].sort((a, b) => {
@@ -124,15 +124,6 @@ export default function Header() {
             {schoolId && (
               <Link href={centerHref} className="flex min-w-0 max-w-full flex-col items-center gap-1 truncate no-underline font-school text-lg font-black sm:text-2xl md:text-3xl">
                 <span className="truncate text-foreground font-bold">{centerLabel}</span>
-                {paidProducts.length > 0 && (
-                  <div className="flex flex-wrap items-center justify-center gap-1">
-                    {paidProducts.map((p) => (
-                      <span key={p} className="text-[8px] font-black uppercase tracking-wider bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 rounded-full whitespace-nowrap leading-none shadow-sm">
-                        {p}
-                      </span>
-                    ))}
-                  </div>
-                )}
               </Link>
             )}
           </div>
@@ -226,7 +217,9 @@ export default function Header() {
             )}
             <div className="flex-col hidden sm:flex">
               <span className="text-lg font-black tracking-widest uppercase text-primary">levelUp EDU</span>
-              <span className="text-xs font-bold uppercase text-muted-foreground tracking-wider">School Rewards System</span>
+              {paidProductsLabel && (
+                <span className="text-xs font-bold uppercase text-muted-foreground tracking-wider">{paidProductsLabel}</span>
+              )}
             </div>
           </Link>
         </div>
@@ -264,15 +257,6 @@ export default function Header() {
                   <span className="text-sm min-[400px]:text-base sm:text-2xl md:text-3xl lg:text-3xl xl:text-4xl font-headline font-bold text-foreground truncate">
                     {centerLabel}
                   </span>
-                  {paidProducts.length > 0 && (
-                    <div className="flex flex-wrap items-center justify-center gap-1 mt-1">
-                      {paidProducts.map((p) => (
-                        <span key={p} className="text-[9px] font-black uppercase tracking-wider bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 rounded-full whitespace-nowrap shadow-sm">
-                          {p}
-                        </span>
-                      ))}
-                    </div>
-                  )}
                 </div>
               </span>
             </Link>

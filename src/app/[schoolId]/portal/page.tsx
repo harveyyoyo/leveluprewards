@@ -13,7 +13,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from '@/components/ui/button';
 import { rainbowByIndex, rainbowForPortalId } from '@/lib/rainbowNav';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
-import { KioskSponsorBanner } from '@/components/KioskSponsorBanner';
 
 type PortalArea = {
     id: string;
@@ -30,7 +29,7 @@ const STUDENT_MODE_DEFAULT_TO_KIOSK_SEC = 10;
 
 export default function PortalPage() {
     const { loginState, isInitialized, schoolId, isAdmin } = useAppContext();
-    const { settings, updateSettings } = useSettings();
+    const { settings } = useSettings();
     const playSound = useArcadeSound();
     const router = useRouter();
     const [hoveredIndex, setHoveredIndex] = useState<string | null>(null);
@@ -86,16 +85,16 @@ export default function PortalPage() {
     }
 
     const portals: PortalArea[] = [
-        ...(isAdmin || schoolId === 'schoolabc' ? [{ id: 'admin', href: `/${schoolId}/admin`, title: 'Admin Portal', description: 'Manage school data and settings.', icon: UserCog }] : []),
-        ...(isStaff || schoolId === 'schoolabc'
+        ...(isAdmin ? [{ id: 'admin', href: `/${schoolId}/admin`, title: 'Admin Portal', description: 'Manage school data and settings.', icon: UserCog }] : []),
+        ...(isStaff
             ? [{ id: 'print', href: `/${schoolId}/teacher`, title: 'Teacher and Staff Portal', description: 'Sign in for teacher tools, coupon printing, or the prize desk.', icon: Printer }]
             : []),
         { id: 'redeem', href: `/${schoolId}/student`, title: 'Student Kiosk', description: 'Scan your card to redeem coupon codes, view points, and open the prize shop.', icon: GraduationCap },
         ...(isStaff && settings.enableStudentPortal ? [{ id: 'student-home', href: `/${schoolId}/student-home`, title: 'Student Home Portal', description: 'Home access is being prepared and is not available yet.', icon: Home, disabled: true, status: 'Coming soon' }] : []),
-        ...(isStaff || schoolId === 'schoolabc'
+        ...(isStaff
             ? [{ id: 'fame', href: `/${schoolId}/halloffame`, title: 'Hall of Fame', description: 'View top student point earners.', icon: Trophy }]
             : []),
-        ...(isStaff || schoolId === 'schoolabc'
+        ...(isStaff
             ? [
                   {
                       id: 'bulletin',
@@ -157,16 +156,6 @@ export default function PortalPage() {
                     >
                         Where to?
                     </h2>
-                    {schoolId === 'schoolabc' && !settings.showIntroWizard && (
-                        <div className="mt-1">
-                            <Button variant="link" onClick={() => {
-                                playSound('click');
-                                updateSettings({ showIntroWizard: true });
-                            }}>
-                                Click here to start the wizard
-                            </Button>
-                        </div>
-                    )}
                 </motion.div>
 
                 <div className="flex flex-col gap-4">
@@ -292,7 +281,6 @@ export default function PortalPage() {
                     </p>
                 </div>
             </div>
-            <KioskSponsorBanner />
         </div>
     );
 }
