@@ -294,6 +294,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         restore();
     }, [isMounted, isUserLoading, firestore, auth]);
 
+    // Student kiosk: `login()` already calls `enterSchoolKioskSession`, but session restore from localStorage
+    // (refresh, new tab, or fallback from expired staff role) skipped it — then coupon/badge callables fail with
+    // "School entry required." Re-enter whenever we have a signed-in student context.
+    useEffect(() => {
+        if (!isInitialized || loginState !== 'student' || !schoolId || !functions || !auth.currentUser) {
+            return;
+        }
+        const sid = schoolId.trim().toLowerCase();
+        const enter = httpsCallable(functions, 'enterSchoolKioskSession');
+        void enter({ schoolId: sid }).catch((err) => {
+            console.warn('enterSchoolKioskSession (student session):', err);
+        });
+    }, [isInitialized, loginState, schoolId, functions, auth?.currentUser?.uid]);
+
     useEffect(() => {
         // This effect is not necessary anymore as the Cloud Function will handle role provisioning on login.
     }, []);
@@ -384,6 +398,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             } else if (type === 'student' && credentials.schoolId) {
                 // Student/Public access just needs a valid school ID. No real auth.
                 const lowerSchoolId = credentials.schoolId.trim().toLowerCase();
+                if (!auth.currentUser) {
+                    console.error('Student login: no Firebase signed-in user (anonymous auth should run first).');
+                    return false;
+                }
+                try {
+                    const enter = httpsCallable(functions, 'enterSchoolKioskSession');
+                    await enter({ schoolId: lowerSchoolId });
+                } catch (e) {
+                    console.error('Student login: could not create kiosk session', e);
+                    return false;
+                }
                 setSchoolId(lowerSchoolId);
                 setLoginState('student');
                 setIsAdmin(false);
