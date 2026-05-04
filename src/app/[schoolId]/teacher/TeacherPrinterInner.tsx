@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import type { Coupon, Category, Teacher, Student, Class, HistoryItem, Prize, AttendanceSettings, AttendanceLogEntry, AttendanceScheduleSlot, AttendanceRewardRule, CouponRedemptionScope, HomeworkAssignment } from '@/lib/types';
-import { ArrowLeft, Printer, Plus, LogIn, LogOut, UserCheck, Award, User, Search, Users, Minus, Gift, Loader2, Trash2, Edit, Filter, Ticket, Clock, ChevronRight, History, FileText, BookOpen, Target } from 'lucide-react';
+import { ArrowLeft, Printer, Plus, LogIn, LogOut, UserCheck, Award, User, Search, Users, Minus, Gift, Loader2, Trash2, Edit, Filter, Ticket, Clock, ChevronRight, History, FileText, BookOpen, Target, Trophy, Megaphone } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import {
     Dialog,
@@ -1774,10 +1774,14 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
     }, [studentsForTeacherActions]);
 
     useEffect(() => {
-        if (secretaryMode) return;
         const valid = new Set(classesForTeacherUi.map((c) => c.id));
         setPrintScopeClassIds((prev) => prev.filter((id) => valid.has(id)));
-    }, [secretaryMode, classesForTeacherUi]);
+    }, [classesForTeacherUi]);
+
+    useEffect(() => {
+        const valid = new Set((teachers ?? []).map((t) => t.id));
+        setPrintScopeTeacherIds((prev) => prev.filter((id) => valid.has(id)));
+    }, [teachers]);
 
     const handleCreatePrintCategory = async () => {
         if (!newPrintCategoryName || !newPrintCategoryPoints) {
@@ -1903,7 +1907,26 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
             return;
         }
 
-        if (!secretaryMode) {
+        if (secretaryMode) {
+            if (printRedemptionScope === 'classes' && printScopeClassIds.length === 0) {
+                playSound('error');
+                toast({
+                    variant: 'destructive',
+                    title: 'Select classes',
+                    description: 'Choose at least one class, or switch assignment to schoolwide or teachers.',
+                });
+                return;
+            }
+            if (printRedemptionScope === 'teachers' && printScopeTeacherIds.length === 0) {
+                playSound('error');
+                toast({
+                    variant: 'destructive',
+                    title: 'Select teachers',
+                    description: 'Choose at least one teacher, or switch assignment to schoolwide or classes.',
+                });
+                return;
+            }
+        } else {
             if (printRedemptionScope === 'classes' && printScopeClassIds.length === 0) {
                 playSound('error');
                 toast({
@@ -1939,26 +1962,35 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
         const codes = generateUniqueCouponCodes(couponCount);
         const scopeExtra: Partial<Pick<Coupon, 'redemptionScope' | 'allowedClassIds' | 'allowedTeacherIds'>> =
             secretaryMode
-                ? {}
+                ? printRedemptionScope === 'classes'
+                    ? { redemptionScope: 'classes', allowedClassIds: [...printScopeClassIds] }
+                    : printRedemptionScope === 'teachers'
+                        ? { redemptionScope: 'teachers', allowedTeacherIds: [...printScopeTeacherIds] }
+                        : { redemptionScope: 'school' }
                 : printRedemptionScope === 'classes'
                     ? { redemptionScope: 'classes', allowedClassIds: [...printScopeClassIds] }
                     : { redemptionScope: 'creator' };
 
-        const redemptionPrintNote =
-            secretaryMode
-                ? undefined
-                : buildRedemptionPrintNote({
-                    scope: printRedemptionScope,
-                    issuingTeacherDisplayName: teacherName,
-                    classNamesInOrder: (classes || [])
-                        .filter((c) => printScopeClassIds.includes(c.id))
-                        .sort((a, b) => a.name.localeCompare(b.name))
-                        .map((c) => c.name),
-                    teacherNamesInOrder: (teachers || [])
-                        .filter((t) => printScopeTeacherIds.includes(t.id))
-                        .sort((a, b) => a.name.localeCompare(b.name))
-                        .map((t) => t.name),
-                });
+        const redemptionScopeForNote: CouponRedemptionScope = secretaryMode
+            ? printRedemptionScope === 'classes' || printRedemptionScope === 'teachers'
+                ? printRedemptionScope
+                : 'school'
+            : printRedemptionScope === 'classes' || printRedemptionScope === 'creator'
+                ? printRedemptionScope
+                : 'creator';
+
+        const redemptionPrintNote = buildRedemptionPrintNote({
+            scope: redemptionScopeForNote,
+            issuingTeacherDisplayName: teacherName,
+            classNamesInOrder: (classes || [])
+                .filter((c) => printScopeClassIds.includes(c.id))
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map((c) => c.name),
+            teacherNamesInOrder: (teachers || [])
+                .filter((t) => printScopeTeacherIds.includes(t.id))
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map((t) => t.name),
+        });
 
         const couponsToCreate: Coupon[] = codes.map((code) => ({
             id: code,
@@ -2100,21 +2132,35 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
     };
 
     const selectedCategoryForPreview = categories?.find(c => c.id === printCategoryId);
-    const redemptionPreviewNote =
+    const redemptionPreviewScope: CouponRedemptionScope = secretaryMode
+        ? printRedemptionScope === 'classes' || printRedemptionScope === 'teachers'
+            ? printRedemptionScope
+            : 'school'
+        : printRedemptionScope === 'classes' || printRedemptionScope === 'creator'
+            ? printRedemptionScope
+            : 'creator';
+    const redemptionPreviewNote = buildRedemptionPrintNote({
+        scope: redemptionPreviewScope,
+        issuingTeacherDisplayName: teacherName,
+        classNamesInOrder: (classes || [])
+            .filter((c) => printScopeClassIds.includes(c.id))
+            .sort((a, b) => a.name.localeCompare(b.name))
+            .map((c) => c.name),
+        teacherNamesInOrder: (teachers || [])
+            .filter((t) => printScopeTeacherIds.includes(t.id))
+            .sort((a, b) => a.name.localeCompare(b.name))
+            .map((t) => t.name),
+    });
+    const previewScopeFields: Partial<Pick<Coupon, 'redemptionScope' | 'allowedClassIds' | 'allowedTeacherIds'>> =
         secretaryMode
-            ? undefined
-            : buildRedemptionPrintNote({
-                scope: printRedemptionScope,
-                issuingTeacherDisplayName: teacherName,
-                classNamesInOrder: (classes || [])
-                    .filter((c) => printScopeClassIds.includes(c.id))
-                    .sort((a, b) => a.name.localeCompare(b.name))
-                    .map((c) => c.name),
-                teacherNamesInOrder: (teachers || [])
-                    .filter((t) => printScopeTeacherIds.includes(t.id))
-                    .sort((a, b) => a.name.localeCompare(b.name))
-                    .map((t) => t.name),
-            });
+            ? printRedemptionScope === 'classes'
+                ? { redemptionScope: 'classes' as const, allowedClassIds: [...printScopeClassIds] }
+                : printRedemptionScope === 'teachers'
+                    ? { redemptionScope: 'teachers' as const, allowedTeacherIds: [...printScopeTeacherIds] }
+                    : { redemptionScope: 'school' as const }
+            : printRedemptionScope === 'classes'
+                ? { redemptionScope: 'classes' as const, allowedClassIds: [...printScopeClassIds] }
+                : { redemptionScope: 'creator' as const };
     const previewCoupon: Coupon = {
         id: 'PREVIEW',
         code: '123456',
@@ -2125,11 +2171,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
         createdAt: Date.now(),
         color: selectedCategoryForPreview?.color,
         ...(currentTeacher?.id && !secretaryMode ? { createdByTeacherId: currentTeacher.id } : {}),
-        ...(secretaryMode
-            ? {}
-            : printRedemptionScope === 'classes'
-                ? { redemptionScope: 'classes' as const, allowedClassIds: [...printScopeClassIds] }
-                : { redemptionScope: 'creator' as const }),
+        ...previewScopeFields,
         ...(redemptionPreviewNote ? { redemptionPrintNote: redemptionPreviewNote } : {}),
         ...(computeStartsAt() !== undefined ? { startsAt: computeStartsAt() } : {}),
         expiresAt: computeExpiresAt(),
@@ -2304,10 +2346,28 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                 </p>
                             ) : null}
                         </Helper>
-                        <Button variant="outline" onClick={onLogout} className="gap-2 rounded-lg h-10 shrink-0 sm:self-start">
-                            <LogOut className="w-4 h-4" />
-                            <span className="hidden sm:inline">{secretaryMode ? 'Log out' : 'Switch Teacher'}</span>
-                        </Button>
+                        <div className="flex flex-wrap gap-2 shrink-0 sm:self-start justify-end">
+                            {secretaryMode && schoolId ? (
+                                <>
+                                    <Button variant="secondary" asChild className="gap-2 rounded-lg h-10">
+                                        <Link href={`/${schoolId}/halloffame`} aria-label="Hall of Fame">
+                                            <Trophy className="w-4 h-4 shrink-0" aria-hidden />
+                                            <span className="hidden sm:inline">Hall of Fame</span>
+                                        </Link>
+                                    </Button>
+                                    <Button variant="secondary" asChild className="gap-2 rounded-lg h-10">
+                                        <Link href={`/${schoolId}/bulletin-board`} aria-label="Bulletin board">
+                                            <Megaphone className="w-4 h-4 shrink-0" aria-hidden />
+                                            <span className="hidden sm:inline">Bulletin</span>
+                                        </Link>
+                                    </Button>
+                                </>
+                            ) : null}
+                            <Button variant="outline" onClick={onLogout} className="gap-2 rounded-lg h-10">
+                                <LogOut className="w-4 h-4" />
+                                <span className="hidden sm:inline">{secretaryMode ? 'Log out' : 'Switch Teacher'}</span>
+                            </Button>
+                        </div>
                     </div>
 
                     <Tabs defaultValue="coupons" className="space-y-6 w-full">
@@ -2532,6 +2592,103 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                                     />
                                                 </div>
                                             </div>
+
+                                            {secretaryMode && (
+                                                <div className={cn('rounded-2xl border p-4 space-y-4', isGraphic ? 'border-white/10 bg-foreground/5' : 'border-border/60 bg-muted/10')}>
+                                                    <Label className={cn('text-xs font-semibold uppercase tracking-wide ml-0.5', isGraphic ? 'text-muted-foreground' : 'text-muted-foreground')}>
+                                                        Assign redemption to
+                                                    </Label>
+                                                    <p className={cn('text-xs -mt-1', isGraphic ? 'text-muted-foreground' : 'text-muted-foreground')}>
+                                                        Restrict who can redeem at the student kiosk, or leave schoolwide.
+                                                    </p>
+                                                    <RadioGroup
+                                                        value={printRedemptionScope}
+                                                        onValueChange={(v) => setPrintRedemptionScope(v as CouponRedemptionScope)}
+                                                        className="grid gap-3 sm:grid-cols-3"
+                                                    >
+                                                        <div className={cn('flex items-start gap-2 rounded-xl border p-3', isGraphic ? 'border-white/10 bg-card/40' : 'bg-background/80')}>
+                                                            <RadioGroupItem value="school" id="sec-crs-school" className="mt-1" />
+                                                            <label htmlFor="sec-crs-school" className="text-sm leading-snug cursor-pointer">
+                                                                <span className="font-bold">Schoolwide</span>
+                                                                <span className={cn('block text-xs mt-0.5', isGraphic ? 'text-muted-foreground' : 'text-muted-foreground')}>
+                                                                    Any enrolled student may redeem.
+                                                                </span>
+                                                            </label>
+                                                        </div>
+                                                        <div className={cn('flex items-start gap-2 rounded-xl border p-3', isGraphic ? 'border-white/10 bg-card/40' : 'bg-background/80')}>
+                                                            <RadioGroupItem value="classes" id="sec-crs-classes" className="mt-1" />
+                                                            <label htmlFor="sec-crs-classes" className="text-sm leading-snug cursor-pointer">
+                                                                <span className="font-bold">Class(es)</span>
+                                                                <span className={cn('block text-xs mt-0.5', isGraphic ? 'text-muted-foreground' : 'text-muted-foreground')}>
+                                                                    Only students in the classes you select.
+                                                                </span>
+                                                            </label>
+                                                        </div>
+                                                        <div className={cn('flex items-start gap-2 rounded-xl border p-3', isGraphic ? 'border-white/10 bg-card/40' : 'bg-background/80')}>
+                                                            <RadioGroupItem value="teachers" id="sec-crs-teachers" className="mt-1" />
+                                                            <label htmlFor="sec-crs-teachers" className="text-sm leading-snug cursor-pointer">
+                                                                <span className="font-bold">Teacher(s)</span>
+                                                                <span className={cn('block text-xs mt-0.5', isGraphic ? 'text-muted-foreground' : 'text-muted-foreground')}>
+                                                                    Students linked to selected teachers (roster or primary class).
+                                                                </span>
+                                                            </label>
+                                                        </div>
+                                                    </RadioGroup>
+                                                    {printRedemptionScope === 'classes' && (
+                                                        <div className="space-y-2">
+                                                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Classes</p>
+                                                            <ScrollArea className={cn('h-40 rounded-xl border p-2', isGraphic ? 'border-white/10 bg-card/30' : 'bg-background')}>
+                                                                <div className="space-y-2 pr-3">
+                                                                    {classesForTeacherUi.map((cl) => (
+                                                                        <label key={cl.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                                                                            <Checkbox
+                                                                                checked={printScopeClassIds.includes(cl.id)}
+                                                                                onCheckedChange={(ch: boolean | 'indeterminate') =>
+                                                                                    setPrintScopeClassIds((prev) =>
+                                                                                        ch === true ? [...prev, cl.id] : prev.filter((id) => id !== cl.id)
+                                                                                    )
+                                                                                }
+                                                                            />
+                                                                            <span>{cl.name}</span>
+                                                                        </label>
+                                                                    ))}
+                                                                    {classesForTeacherUi.length === 0 && (
+                                                                        <p className="text-xs text-muted-foreground px-1 py-2">No classes in this school yet.</p>
+                                                                    )}
+                                                                </div>
+                                                            </ScrollArea>
+                                                        </div>
+                                                    )}
+                                                    {printRedemptionScope === 'teachers' && (
+                                                        <div className="space-y-2">
+                                                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Teachers</p>
+                                                            <ScrollArea className={cn('h-40 rounded-xl border p-2', isGraphic ? 'border-white/10 bg-card/30' : 'bg-background')}>
+                                                                <div className="space-y-2 pr-3">
+                                                                    {(teachers ?? [])
+                                                                        .slice()
+                                                                        .sort((a, b) => a.name.localeCompare(b.name))
+                                                                        .map((t) => (
+                                                                            <label key={t.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                                                                                <Checkbox
+                                                                                    checked={printScopeTeacherIds.includes(t.id)}
+                                                                                    onCheckedChange={(ch: boolean | 'indeterminate') =>
+                                                                                        setPrintScopeTeacherIds((prev) =>
+                                                                                            ch === true ? [...prev, t.id] : prev.filter((id) => id !== t.id)
+                                                                                        )
+                                                                                    }
+                                                                                />
+                                                                                <span>{t.name}</span>
+                                                                            </label>
+                                                                        ))}
+                                                                    {(teachers ?? []).length === 0 && (
+                                                                        <p className="text-xs text-muted-foreground px-1 py-2">No teachers in this school yet.</p>
+                                                                    )}
+                                                                </div>
+                                                            </ScrollArea>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
 
                                             {!secretaryMode && (
                                             <div className={cn('rounded-2xl border p-4 space-y-4', isGraphic ? 'border-white/10 bg-foreground/5' : 'border-border/60 bg-muted/10')}>
