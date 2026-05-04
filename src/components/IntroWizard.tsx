@@ -65,7 +65,7 @@ const steps = [
   },
   {
     title: 'Step 10: Go to Prize/Rewards shop',
-    description: 'The points were added! Let\'s go spend them. Log out of the student kiosk and go to the "Prize/Rewards shop" from the main portal. Sign in as the same student.',
+    description: 'The points were added! Let\'s go spend them. On the student kiosk, scroll to Eligible Rewards and tap "See all prizes" to open the prize/rewards shop (stay signed in as the same student).',
     target: '/student',
     hideNext: true,
   },

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
 import { LevelUpKioskLogo } from '@/components/LevelUpKioskLogo';
-import { GraduationCap, Printer, Gift, UserCog, Trophy, ChevronRight, Loader2, Home } from 'lucide-react';
+import { GraduationCap, Printer, UserCog, Trophy, ChevronRight, Loader2, Home, Megaphone } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { cn } from '@/lib/utils';
@@ -65,7 +65,13 @@ export default function PortalPage() {
         !!settings.enableAnimatedBackground &&
         !settings.calmMode &&
         !settings.legacyMode;
-    const isStaff = loginState === 'teacher' || loginState === 'admin' || loginState === 'developer';
+    const isStaff =
+        loginState === 'teacher' ||
+        loginState === 'admin' ||
+        loginState === 'developer' ||
+        loginState === 'secretary' ||
+        loginState === 'prizeClerk' ||
+        loginState === 'reports';
 
     if (!isInitialized) {
         return (
@@ -83,11 +89,21 @@ export default function PortalPage() {
         ...(isStaff || schoolId === 'schoolabc'
             ? [{ id: 'print', href: `/${schoolId}/teacher`, title: 'Teacher and Staff Portal', description: 'Sign in for teacher tools, coupon printing, or the prize desk.', icon: Printer }]
             : []),
-        { id: 'redeem', href: `/${schoolId}/student`, title: 'Student Kiosk', description: 'Scan your card to redeem coupon codes and view points.', icon: GraduationCap },
+        { id: 'redeem', href: `/${schoolId}/student`, title: 'Student Kiosk', description: 'Scan your card to redeem coupon codes, view points, and open the prize shop.', icon: GraduationCap },
         ...(isStaff && settings.enableStudentPortal ? [{ id: 'student-home', href: `/${schoolId}/student-home`, title: 'Student Home Portal', description: 'Home access is being prepared and is not available yet.', icon: Home, disabled: true, status: 'Coming soon' }] : []),
-        { id: 'prize', href: `/${schoolId}/prize`, title: 'Prize Shop', description: 'Spend your points for awesome prizes.', icon: Gift },
         ...(isStaff || schoolId === 'schoolabc'
             ? [{ id: 'fame', href: `/${schoolId}/halloffame`, title: 'Hall of Fame', description: 'View top student point earners.', icon: Trophy }]
+            : []),
+        ...(isStaff || schoolId === 'schoolabc'
+            ? [
+                  {
+                      id: 'bulletin',
+                      href: `/${schoolId}/bulletin-board`,
+                      title: 'Bulletin Board',
+                      description: 'Read posted incentives the same way families see them on the kiosk.',
+                      icon: Megaphone,
+                  },
+              ]
             : []),
     ];
 

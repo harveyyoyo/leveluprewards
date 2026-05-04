@@ -12,7 +12,6 @@ import {
   Printer,
   ShoppingBag,
   UserCog,
-  Gift,
   ArrowRightLeft,
 } from 'lucide-react';
 import { Button } from './ui/button';
@@ -71,7 +70,12 @@ export default function Header() {
   const logoLink = schoolId ? `/${schoolId}/portal` : '/';
   const centerLabel = schoolName;
   const centerHref = schoolId ? `/${schoolId}/portal` : '/portal';
-  const isStaff = loginState === 'teacher' || loginState === 'admin' || loginState === 'secretary';
+  const isStaff =
+    loginState === 'teacher' ||
+    loginState === 'admin' ||
+    loginState === 'secretary' ||
+    loginState === 'prizeClerk' ||
+    loginState === 'reports';
   const canLogout = loginState !== 'loggedOut' && loginState !== 'student';
   const isDemoSchool = schoolId === 'schoolabc';
 
@@ -86,12 +90,11 @@ export default function Header() {
   if (settings.displayMode === 'app') {
     const navItems = [
       ...(isAdmin ? [{ id: 'admin', href: `/${schoolId}/admin`, icon: UserCog, label: 'Admin', color: 'destructive' }] : []),
-      ...(isStaff || isDemoSchool ? [{ id: 'print', href: loginState === 'secretary' ? `/${schoolId}/secretary` : `/${schoolId}/teacher`, icon: Printer, label: loginState === 'secretary' ? 'Secretary' : 'Teacher', color: 'chart-2' }] : []),
+      ...(isStaff || isDemoSchool ? [{ id: 'print', href: `/${schoolId}/teacher`, icon: Printer, label: 'Teacher', color: 'chart-2' }] : []),
       { id: 'redeem', href: `/${schoolId}/student`, icon: GraduationCap, label: 'Student', color: 'chart-1' },
-      { id: 'prize', href: `/${schoolId}/prize`, icon: Gift, label: 'Shop', color: 'chart-3' },
       ...(isStaff || isDemoSchool ? [{ id: 'fame', href: `/${schoolId}/halloffame`, icon: Trophy, label: 'Fame', color: 'chart-5' }] : []),
     ].sort((a, b) => {
-      const order = ['admin', 'print', 'redeem', 'prize', 'fame'];
+      const order = ['admin', 'print', 'redeem', 'fame'];
       return order.indexOf(a.id) - order.indexOf(b.id);
     });
 
