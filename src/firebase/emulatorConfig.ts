@@ -25,6 +25,7 @@ export function functionsEmulatorEnabledByEnv(): boolean {
  */
 export function shouldConnectFirebaseEmulators(): boolean {
   if (typeof window === 'undefined') return false;
+  if (process.env.NODE_ENV !== 'development') return false;
   if (!firebaseEmulatorsEnabledByEnv()) return false;
 
   const localHost =
@@ -32,12 +33,12 @@ export function shouldConnectFirebaseEmulators(): boolean {
     window.location.hostname === '127.0.0.1' ||
     window.location.hostname === '[::1]';
 
-  if (process.env.NODE_ENV === 'development') return true;
   return localHost;
 }
 
 export function shouldConnectFunctionsEmulator(): boolean {
   if (typeof window === 'undefined') return false;
+  if (process.env.NODE_ENV !== 'development') return false;
   if (!functionsEmulatorEnabledByEnv()) return false;
 
   const localHost =
@@ -45,7 +46,6 @@ export function shouldConnectFunctionsEmulator(): boolean {
     window.location.hostname === '127.0.0.1' ||
     window.location.hostname === '[::1]';
 
-  if (process.env.NODE_ENV === 'development') return true;
   return localHost;
 }
 

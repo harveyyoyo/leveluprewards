@@ -23,3 +23,9 @@ npm run dev
 5. Monitor the terminal for any build or lint errors. If errors occur, resolve them immediately using your code editing tools.
 
 6. Once verified, notify the user or move to the next task milestone.
+
+> [!IMPORTANT]
+> **Troubleshooting Note:** If the dev server crashes or the UI shows unexpected behavior, do not just keep writing code. Stop, run `npm run build` to identify the root syntax or type error, fix it, and only restart `npm run dev` once the build passes.
+
+> [!IMPORTANT]
+> **Firestore Rules:** If you ever modify `firestore.rules`, you MUST immediately deploy them to the cloud using `npx firebase deploy --only firestore:rules` for the changes to take effect at runtime.

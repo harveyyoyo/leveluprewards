@@ -239,295 +239,299 @@ export function BulkRosterSetupDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) resetAi(); onOpenChange(o); }}>
-      <DialogContent className="sm:max-w-2xl rounded-2xl max-h-[92vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-2xl rounded-2xl flex flex-col p-0 overflow-hidden max-h-[var(--dialog-max-h,min(90vh,calc(100dvh-2rem)))]">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b">
           <DialogTitle className="text-xl">Bulk roster setup</DialogTitle>
           <DialogDescription>
-            CSV templates for precise columns, or paste/upload anything and let AI detect classes, people, periods, categories, prizes, and desk staff.
+                  CSV templates for precise columns, or paste/upload anything and let AI detect classes, people, periods, categories, reward items, and desk staff.
           </DialogDescription>
         </DialogHeader>
 
-        <Alert className="rounded-xl border-primary/30 bg-primary/5">
-          <AlertTitle className="text-sm font-semibold">Tip</AlertTitle>
-          <AlertDescription className="text-xs leading-relaxed pt-1">
-            Paste exports and notes together, or attach a PDF/DOCX. You do not need to say what kind of data it is—the model sorts it into the right lists.
-          </AlertDescription>
-        </Alert>
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          <div className="space-y-4">
+            <Alert className="rounded-xl border-primary/30 bg-primary/5">
+              <AlertTitle className="text-sm font-semibold">Tip</AlertTitle>
+              <AlertDescription className="text-xs leading-relaxed pt-1">
+                Paste exports and notes together, or attach a PDF/DOCX. You do not need to say what kind of data it is—the model sorts it into the right lists.
+              </AlertDescription>
+            </Alert>
 
-        <Tabs defaultValue="csv" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 rounded-xl">
-            <TabsTrigger value="csv" className="rounded-lg gap-2">
-              <FileSpreadsheet className="w-4 h-4" />
-              CSV files
-            </TabsTrigger>
-            <TabsTrigger value="ai" className="rounded-lg gap-2">
-              <Wand2 className="w-4 h-4" />
-              AI import
-            </TabsTrigger>
-          </TabsList>
+            <Tabs defaultValue="csv" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 rounded-xl">
+                <TabsTrigger value="csv" className="rounded-lg gap-2">
+                  <FileSpreadsheet className="w-4 h-4" />
+                  CSV files
+                </TabsTrigger>
+                <TabsTrigger value="ai" className="rounded-lg gap-2">
+                  <Wand2 className="w-4 h-4" />
+                  AI import
+                </TabsTrigger>
+              </TabsList>
 
-          <TabsContent value="csv" className="space-y-5 pt-4 outline-none">
-            <div className="space-y-5 pt-1">
-              <section className="rounded-xl border bg-card p-4 space-y-3">
-                <div className="flex items-start gap-3">
-                  <BookOpen className="w-5 h-5 text-primary shrink-0 mt-0.5" aria-hidden />
-                  <div className="space-y-1 min-w-0 flex-1">
-                    <h3 className="font-bold text-sm">Classes</h3>
-                    <p className="text-xs text-muted-foreground">
-                      One class name per row (or a single &quot;Class Name&quot; column). Duplicate names are skipped.
-                    </p>
-                    <div className="flex flex-wrap gap-2 pt-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="rounded-lg"
-                        onClick={() => downloadUtf8Csv('classes-template.csv', ROSTER_CLASSES_TEMPLATE)}
-                      >
-                        <Download className="w-4 h-4 mr-1.5" />
-                        Template
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        className="rounded-lg"
-                        disabled={busy !== null}
-                        onClick={() => classesRef.current?.click()}
-                      >
-                        {busy === 'classes' ? (
-                          <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
-                        ) : (
-                          <UploadCloud className="w-4 h-4 mr-1.5" />
-                        )}
-                        Import CSV
-                      </Button>
+              <TabsContent value="csv" className="space-y-5 pt-4 outline-none">
+                <div className="space-y-5 pt-1">
+                  <section className="rounded-xl border bg-card p-4 space-y-3">
+                    <div className="flex items-start gap-3">
+                      <BookOpen className="w-5 h-5 text-primary shrink-0 mt-0.5" aria-hidden />
+                      <div className="space-y-1 min-w-0 flex-1">
+                        <h3 className="font-bold text-sm">Classes</h3>
+                        <p className="text-xs text-muted-foreground">
+                          One class name per row (or a single &quot;Class Name&quot; column). Duplicate names are skipped.
+                        </p>
+                        <div className="flex flex-wrap gap-2 pt-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="rounded-lg"
+                            onClick={() => downloadUtf8Csv('classes-template.csv', ROSTER_CLASSES_TEMPLATE)}
+                          >
+                            <Download className="w-4 h-4 mr-1.5" />
+                            Template
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            className="rounded-lg"
+                            disabled={busy !== null}
+                            onClick={() => classesRef.current?.click()}
+                          >
+                            {busy === 'classes' ? (
+                              <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                            ) : (
+                              <UploadCloud className="w-4 h-4 mr-1.5" />
+                            )}
+                            Import CSV
+                          </Button>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-                <input
-                  ref={classesRef}
-                  type="file"
-                  accept=".csv,text/csv"
-                  className="hidden"
-                  onChange={wrap('classes', onClassesCsv)}
-                />
-              </section>
+                    <input
+                      ref={classesRef}
+                      type="file"
+                      accept=".csv,text/csv"
+                      className="hidden"
+                      onChange={wrap('classes', onClassesCsv)}
+                    />
+                  </section>
 
-              <section className="rounded-xl border bg-card p-4 space-y-3">
-                <div className="flex items-start gap-3">
-                  <User className="w-5 h-5 text-primary shrink-0 mt-0.5" aria-hidden />
-                  <div className="space-y-1 min-w-0 flex-1">
-                    <h3 className="font-bold text-sm">Teachers</h3>
-                    <p className="text-xs text-muted-foreground">
-                      Columns: Full Name, Username, Passcode. Username and passcode can be left blank; unique logins are generated when omitted.
-                    </p>
-                    <div className="flex flex-wrap gap-2 pt-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="rounded-lg"
-                        onClick={() => downloadUtf8Csv('teachers-template.csv', ROSTER_TEACHERS_TEMPLATE)}
-                      >
-                        <Download className="w-4 h-4 mr-1.5" />
-                        Template
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        className="rounded-lg"
-                        disabled={busy !== null}
-                        onClick={() => teachersRef.current?.click()}
-                      >
-                        {busy === 'teachers' ? (
-                          <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
-                        ) : (
-                          <UploadCloud className="w-4 h-4 mr-1.5" />
-                        )}
-                        Import CSV
-                      </Button>
+                  <section className="rounded-xl border bg-card p-4 space-y-3">
+                    <div className="flex items-start gap-3">
+                      <User className="w-5 h-5 text-primary shrink-0 mt-0.5" aria-hidden />
+                      <div className="space-y-1 min-w-0 flex-1">
+                        <h3 className="font-bold text-sm">Teachers</h3>
+                        <p className="text-xs text-muted-foreground">
+                          Columns: Full Name, Username, Passcode. Username and passcode can be left blank; unique logins are generated when omitted.
+                        </p>
+                        <div className="flex flex-wrap gap-2 pt-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="rounded-lg"
+                            onClick={() => downloadUtf8Csv('teachers-template.csv', ROSTER_TEACHERS_TEMPLATE)}
+                          >
+                            <Download className="w-4 h-4 mr-1.5" />
+                            Template
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            className="rounded-lg"
+                            disabled={busy !== null}
+                            onClick={() => teachersRef.current?.click()}
+                          >
+                            {busy === 'teachers' ? (
+                              <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                            ) : (
+                              <UploadCloud className="w-4 h-4 mr-1.5" />
+                            )}
+                            Import CSV
+                          </Button>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-                <input
-                  ref={teachersRef}
-                  type="file"
-                  accept=".csv,text/csv"
-                  className="hidden"
-                  onChange={wrap('teachers', onTeachersCsv)}
-                />
-              </section>
+                    <input
+                      ref={teachersRef}
+                      type="file"
+                      accept=".csv,text/csv"
+                      className="hidden"
+                      onChange={wrap('teachers', onTeachersCsv)}
+                    />
+                  </section>
 
-              <section className="rounded-xl border bg-card p-4 space-y-3">
-                <div className="flex items-start gap-3">
-                  <Users className="w-5 h-5 text-primary shrink-0 mt-0.5" aria-hidden />
-                  <div className="space-y-1 min-w-0 flex-1">
-                    <h3 className="font-bold text-sm">Students</h3>
-                    <p className="text-xs text-muted-foreground">
-                      Columns: First Name, Last Name, Class Name (optional). Class Name must match an existing class.
-                    </p>
-                    <div className="flex flex-wrap gap-2 pt-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="rounded-lg"
-                        onClick={() => downloadUtf8Csv('students-template.csv', ROSTER_STUDENTS_TEMPLATE)}
-                      >
-                        <Download className="w-4 h-4 mr-1.5" />
-                        Template
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        className="rounded-lg"
-                        disabled={busy !== null}
-                        onClick={() => studentsRef.current?.click()}
-                      >
-                        {busy === 'students' ? (
-                          <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
-                        ) : (
-                          <UploadCloud className="w-4 h-4 mr-1.5" />
-                        )}
-                        Import CSV
-                      </Button>
+                  <section className="rounded-xl border bg-card p-4 space-y-3">
+                    <div className="flex items-start gap-3">
+                      <Users className="w-5 h-5 text-primary shrink-0 mt-0.5" aria-hidden />
+                      <div className="space-y-1 min-w-0 flex-1">
+                        <h3 className="font-bold text-sm">Students</h3>
+                        <p className="text-xs text-muted-foreground">
+                          Columns: First Name, Last Name, Class Name (optional). Class Name must match an existing class.
+                        </p>
+                        <div className="flex flex-wrap gap-2 pt-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="rounded-lg"
+                            onClick={() => downloadUtf8Csv('students-template.csv', ROSTER_STUDENTS_TEMPLATE)}
+                          >
+                            <Download className="w-4 h-4 mr-1.5" />
+                            Template
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            className="rounded-lg"
+                            disabled={busy !== null}
+                            onClick={() => studentsRef.current?.click()}
+                          >
+                            {busy === 'students' ? (
+                              <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                            ) : (
+                              <UploadCloud className="w-4 h-4 mr-1.5" />
+                            )}
+                            Import CSV
+                          </Button>
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                    <input
+                      ref={studentsRef}
+                      type="file"
+                      accept=".csv,text/csv"
+                      className="hidden"
+                      onChange={wrap('students', onStudentsCsv)}
+                    />
+                  </section>
                 </div>
-                <input
-                  ref={studentsRef}
-                  type="file"
-                  accept=".csv,text/csv"
-                  className="hidden"
-                  onChange={wrap('students', onStudentsCsv)}
-                />
-              </section>
-            </div>
-          </TabsContent>
+              </TabsContent>
 
-          <TabsContent value="ai" className="space-y-4 pt-4 outline-none">
-            <div className="space-y-2">
-              <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Attach document (optional)
-              </Label>
-              <div className="flex flex-wrap gap-2 items-center">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="rounded-xl gap-2"
-                  disabled={extractingDoc || !schoolId}
-                  onClick={() => docInputRef.current?.click()}
-                >
-                  {extractingDoc ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
-                  PDF, DOCX, TXT, CSV
-                </Button>
-                {extractedDocName ? (
-                  <span className="text-xs text-muted-foreground truncate max-w-[200px]" title={extractedDocName}>
-                    {extractedDocName}
-                  </span>
-                ) : null}
-                {extractedDocText ? (
-                  <Button type="button" variant="ghost" size="sm" className="text-xs h-8" onClick={() => { setExtractedDocText(''); setExtractedDocName(''); }}>
-                    Remove file
+              <TabsContent value="ai" className="space-y-4 pt-4 outline-none">
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Attach document (optional)
+                  </Label>
+                  <div className="flex flex-wrap gap-2 items-center">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="rounded-xl gap-2"
+                      disabled={extractingDoc || !schoolId}
+                      onClick={() => docInputRef.current?.click()}
+                    >
+                      {extractingDoc ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
+                      PDF, DOCX, TXT, CSV
+                    </Button>
+                    {extractedDocName ? (
+                      <span className="text-xs text-muted-foreground truncate max-w-[200px]" title={extractedDocName}>
+                        {extractedDocName}
+                      </span>
+                    ) : null}
+                    {extractedDocText ? (
+                      <Button type="button" variant="ghost" size="sm" className="text-xs h-8" onClick={() => { setExtractedDocText(''); setExtractedDocName(''); }}>
+                        Remove file
+                      </Button>
+                    ) : null}
+                  </div>
+                  <input
+                    ref={docInputRef}
+                    type="file"
+                    accept=".pdf,.docx,.txt,.csv,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/csv"
+                    className="hidden"
+                    onChange={(e) => void handleDocFile(e)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Paste anything (optional)
+                  </Label>
+                  <Textarea
+                    value={aiPaste}
+                    onChange={(e) => setAiPaste(e.target.value)}
+                    placeholder="Spreadsheets, schedules, mixed lists, emails… Everything above is sent together to the model."
+                    className="min-h-[120px] rounded-xl text-sm font-mono"
+                  />
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    className="rounded-xl gap-2"
+                    disabled={aiParsing || (!buildCombinedPrompt().trim()) || !schoolId}
+                    onClick={() => void handleAiParse()}
+                  >
+                    {aiParsing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+                    Understand with AI
                   </Button>
-                ) : null}
-              </div>
-              <input
-                ref={docInputRef}
-                type="file"
-                accept=".pdf,.docx,.txt,.csv,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/csv"
-                className="hidden"
-                onChange={(e) => void handleDocFile(e)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Paste anything (optional)
-              </Label>
-              <Textarea
-                value={aiPaste}
-                onChange={(e) => setAiPaste(e.target.value)}
-                placeholder="Spreadsheets, schedules, mixed lists, emails… Everything above is sent together to the model."
-                className="min-h-[120px] rounded-xl text-sm font-mono"
-              />
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                className="rounded-xl gap-2"
-                disabled={aiParsing || (!buildCombinedPrompt().trim()) || !schoolId}
-                onClick={() => void handleAiParse()}
-              >
-                {aiParsing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
-                Understand with AI
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                className="rounded-xl"
-                disabled={aiImporting || previewTotal === 0}
-                onClick={() => void handleAiImport()}
-              >
-                {aiImporting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                Import all ({previewTotal})
-              </Button>
-            </div>
-
-            {previewTotal > 0 && aiSnapshot && (
-              <div className="rounded-xl border bg-muted/30 p-3 space-y-3">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Preview</p>
-                <div className="flex flex-wrap gap-2 text-xs">
-                  {counts.classes ? (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-background px-2 py-0.5 border">
-                      <BookOpen className="w-3 h-3" /> {counts.classes} classes
-                    </span>
-                  ) : null}
-                  {counts.teachers ? (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-background px-2 py-0.5 border">
-                      <User className="w-3 h-3" /> {counts.teachers} teachers
-                    </span>
-                  ) : null}
-                  {counts.students ? (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-background px-2 py-0.5 border">
-                      <Users className="w-3 h-3" /> {counts.students} students
-                    </span>
-                  ) : null}
-                  {counts.periods ? (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-background px-2 py-0.5 border">
-                      <Clock className="w-3 h-3" /> {counts.periods} periods
-                    </span>
-                  ) : null}
-                  {counts.categories ? (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-background px-2 py-0.5 border">
-                      <Tags className="w-3 h-3" /> {counts.categories} categories
-                    </span>
-                  ) : null}
-                  {counts.prizes ? (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-background px-2 py-0.5 border">
-                      <Gift className="w-3 h-3" /> {counts.prizes} prizes
-                    </span>
-                  ) : null}
-                  {counts.staffAccounts ? (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-background px-2 py-0.5 border">
-                      <Headset className="w-3 h-3" /> {counts.staffAccounts} desk staff
-                    </span>
-                  ) : null}
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="rounded-xl"
+                    disabled={aiImporting || previewTotal === 0}
+                    onClick={() => void handleAiImport()}
+                  >
+                    {aiImporting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                    Import all ({previewTotal})
+                  </Button>
                 </div>
-                <ScrollArea className="h-[min(220px,38vh)] pr-3">
-                  <pre className="text-[11px] font-mono whitespace-pre-wrap break-words text-muted-foreground">
-                    {JSON.stringify(aiSnapshot, null, 2)}
-                  </pre>
-                </ScrollArea>
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
+
+                {previewTotal > 0 && aiSnapshot && (
+                  <div className="rounded-xl border bg-muted/30 p-3 space-y-3">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Preview</p>
+                    <div className="flex flex-wrap gap-2 text-xs">
+                      {counts.classes ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-background px-2 py-0.5 border">
+                          <BookOpen className="w-3 h-3" /> {counts.classes} classes
+                        </span>
+                      ) : null}
+                      {counts.teachers ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-background px-2 py-0.5 border">
+                          <User className="w-3 h-3" /> {counts.teachers} teachers
+                        </span>
+                      ) : null}
+                      {counts.students ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-background px-2 py-0.5 border">
+                          <Users className="w-3 h-3" /> {counts.students} students
+                        </span>
+                      ) : null}
+                      {counts.periods ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-background px-2 py-0.5 border">
+                          <Clock className="w-3 h-3" /> {counts.periods} periods
+                        </span>
+                      ) : null}
+                      {counts.categories ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-background px-2 py-0.5 border">
+                          <Tags className="w-3 h-3" /> {counts.categories} categories
+                        </span>
+                      ) : null}
+                      {counts.prizes ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-background px-2 py-0.5 border">
+                          <Gift className="w-3 h-3" /> {counts.prizes} reward items
+                        </span>
+                      ) : null}
+                      {counts.staffAccounts ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-background px-2 py-0.5 border">
+                          <Headset className="w-3 h-3" /> {counts.staffAccounts} desk staff
+                        </span>
+                      ) : null}
+                    </div>
+                    <ScrollArea className="h-[min(220px,38vh)] pr-3">
+                      <pre className="text-[11px] font-mono whitespace-pre-wrap break-words text-muted-foreground">
+                        {JSON.stringify(aiSnapshot, null, 2)}
+                      </pre>
+                    </ScrollArea>
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

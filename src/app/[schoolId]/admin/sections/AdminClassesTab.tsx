@@ -39,7 +39,7 @@ export function AdminClassesTab({
         </Button>
       </CardHeader>
       <CardContent>
-        <ul className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+        <ul className="space-y-2 h-[calc(100vh-22rem)] max-h-[420px] min-h-[250px] overflow-y-auto pr-1">
           {classes?.map((c) => (
             <li
               key={c.id}

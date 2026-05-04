@@ -3,7 +3,7 @@ import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, getDocs } from 'firebase/firestore';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyA8UDVcA5e8HU0rQZkyOEWhQ4wDjWNTSU4",
+  apiKey: process.env.FIREBASE_API_KEY || "",
   authDomain: "levelup-edu.firebaseapp.com",
   projectId: "levelup-edu",
   storageBucket: "levelup-edu.appspot.com",

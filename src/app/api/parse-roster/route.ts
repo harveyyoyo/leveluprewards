@@ -76,7 +76,7 @@ Entity types (all optional arrays):
 
 5) "categories" — behavior/academic point categories teachers award (NOT classes). [{ "name": "string", "points"?: number }] Default points to 5 if unsure.
 
-6) "prizes" — prize shop items with point costs. [{ "name": "string", "points"?: number }]
+  6) "prizes" — rewards shop items with point costs. [{ "name": "string", "points"?: number }]
 
 7) "staffAccounts" — front office / prize desk logins (NOT teachers). [{ "displayName": "string", "username": "string", "passcode": "string", "role"?: "secretary" | "prizeClerk" }]
 

@@ -33,11 +33,11 @@ export async function assertPrizeAiSurpriseAllowedForSchool(schoolId: string): P
       featureOverrides: d.featureOverrides as SchoolPlanConfig['featureOverrides'],
     };
     if (!isFeatureAllowed(config, 'enablePrizeAiSurprise')) {
-      return NextResponse.json({ error: 'Prize AI surprise is not included in this school plan.' }, { status: 403 });
+    return NextResponse.json({ error: 'AI rewards shop surprise is not included in this school plan.' }, { status: 403 });
     }
     const appSettings = d.appSettings as Record<string, unknown> | undefined;
     if (appSettings?.enablePrizeAiSurprise !== true) {
-      return NextResponse.json({ error: 'Prize AI surprise is turned off in school settings.' }, { status: 403 });
+    return NextResponse.json({ error: 'AI rewards shop surprise is turned off in school settings.' }, { status: 403 });
     }
     return null;
   } catch (e) {

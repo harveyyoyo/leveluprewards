@@ -28,6 +28,9 @@ export function BonusSpinWheelModal({
     const spinTo = useRef(0);
 
     const segments = useMemo(() => {
+        if (achievement?.wheelSegments && Array.isArray(achievement.wheelSegments) && achievement.wheelSegments.length === 6) {
+            return achievement.wheelSegments;
+        }
         const base = achievement?.bonusPoints || 10;
         return [
             Math.floor(base * 0.5),
@@ -57,6 +60,7 @@ export function BonusSpinWheelModal({
                 handleSpin();
             }, 1000);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isOpen, hasSpun, achievement]);
 
     const handleSpin = async () => {

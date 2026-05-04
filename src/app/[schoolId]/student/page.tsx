@@ -1773,7 +1773,7 @@ export default function StudentLoginPage() {
       <TooltipProvider>
         <div
           className={cn(
-            "flex flex-col items-center justify-center min-h-[80vh] py-8 px-4 font-sans",
+            "flex flex-col items-center justify-center py-4 px-4 font-sans",
             isGraphic ? 'animate-in fade-in zoom-in-95 duration-500' : '',
             settings.displayMode === 'app' && 'pb-24'
           )}

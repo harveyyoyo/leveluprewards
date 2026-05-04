@@ -58,3 +58,14 @@ test_output.html
 errors.txt
 fetch_error.js
 prize_error*.png
+
+# local scripts/scratch (may contain secrets)
+/scratch/
+
+# local agent / codex run logs (not source)
+codex-*.log
+codex-*.out.log
+codex-*.err.log
+
+# assistant handoff scratch (local only)
+HANDOFF.md

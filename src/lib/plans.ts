@@ -46,8 +46,7 @@ export type PlanFeatureKey =
   | 'enableClassAccumulations'
   | 'enableShoutouts'
   | 'enableHomework'
-  | 'enableSeasonalPrizes'
-  | 'enableLibrary';
+  | 'enableSeasonalPrizes';
 
 /** Ordered list of all gated features (used for UI iteration). */
 export const PLAN_FEATURE_KEYS: PlanFeatureKey[] = [
@@ -81,7 +80,6 @@ export const PLAN_FEATURE_KEYS: PlanFeatureKey[] = [
   'enableShoutouts',
   'enableHomework',
   'enableSeasonalPrizes',
-  'enableLibrary',
 ];
 
 export interface PlanInfo {
@@ -101,7 +99,7 @@ export const PLANS: Record<PlanTier, PlanInfo> = {
     id: 'free',
     label: 'Free',
     description:
-      'Core classroom essentials: students, classes, teachers, categories, prize/rewards shop and coupons.',
+      'Core classroom essentials: students, classes, teachers, categories, the rewards shop, and coupons.',
     features: [],
   },
   basic: {
@@ -141,7 +139,6 @@ export const PLANS: Record<PlanTier, PlanInfo> = {
       'enableClassLeaderboard',
       'enableClassAccumulations',
       'enableHomework',
-      'enableLibrary',
     ],
   },
   enterprise: {
@@ -166,8 +163,8 @@ export const PLAN_FEATURE_LABELS: Record<PlanFeatureKey, string> = {
   enableStudentPortal: 'Student Home Portal',
   enableFaceLogin: 'Face Login',
   enableQrLogin: 'QR Code Login',
-  enablePrizeImages: 'Prize/Rewards shop Photos',
-  enablePrizeAiSurprise: 'AI Prize/Rewards shop Surprise',
+  enablePrizeImages: 'Reward Item Photos',
+  enablePrizeAiSurprise: 'AI Rewards Shop Surprise',
   enableVendingMachine: 'Vending Machine',
   enableWishlist: 'Student Wishlists',
   enableAchievements: 'Bonus Points',
@@ -188,8 +185,7 @@ export const PLAN_FEATURE_LABELS: Record<PlanFeatureKey, string> = {
   enableClassAccumulations: 'Class Accumulations',
   enableShoutouts: 'Shoutouts',
   enableHomework: 'Homework Rewards',
-  enableSeasonalPrizes: 'Seasonal Prize/Rewards shop Items',
-  enableLibrary: 'Library Checkout',
+  enableSeasonalPrizes: 'Seasonal Reward Items',
 };
 
 export interface SchoolPlanConfig {

@@ -32,6 +32,30 @@ function toFiniteNumber(value: unknown, fallback: number): number {
   return Number.isFinite(n) ? n : fallback;
 }
 
+async function isDeveloper(uid: string): Promise<boolean> {
+  const snap = await admin.firestore().collection("appConfig").doc("global").get();
+  const list = snap.exists ? (snap.data()?.developerUids as string[] | undefined) : undefined;
+  return Array.isArray(list) && list.includes(uid);
+}
+
+async function hasKioskMembershipOrStaff(schoolId: string, uid: string): Promise<boolean> {
+  const db = admin.firestore();
+  const schoolRef = db.collection("schools").doc(schoolId);
+  const memberSnap = await schoolRef.collection("kioskMembers").doc(uid).get();
+  if (memberSnap.exists) return true;
+
+  const roleChecks = [
+    schoolRef.collection("roles_admin").doc(uid).get(),
+    schoolRef.collection("roles_teacher").doc(uid).get(),
+    schoolRef.collection("roles_secretary").doc(uid).get(),
+    schoolRef.collection("roles_prizeClerk").doc(uid).get(),
+  ];
+  const roles = ["admin", "teacher", "secretary", "prizeClerk"];
+  const snaps = await Promise.all(roleChecks);
+  if (snaps.some((snap, index) => snap.exists && snap.data()?.role === roles[index])) return true;
+  return isDeveloper(uid);
+}
+
 function parseTimeToMinutes(hhmm: string): number {
   const [h, m] = hhmm.split(":").map(Number);
   return (h ?? 0) * 60 + (m ?? 0);
@@ -197,6 +221,9 @@ export const signInAttendance = functions.https.onCall(
 
     const db = admin.firestore();
     const now = Date.now();
+    if (!(await hasKioskMembershipOrStaff(schoolId, context.auth!.uid))) {
+      throw new functions.https.HttpsError("permission-denied", "School entry required.");
+    }
 
     try {
       const studentSnap = await db.collection("schools").doc(schoolId).collection("students").doc(studentId).get();

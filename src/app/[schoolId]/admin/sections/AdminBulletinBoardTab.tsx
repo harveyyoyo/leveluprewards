@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import Link from 'next/link';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, doc, addDoc, updateDoc, deleteDoc, query } from 'firebase/firestore';
 import {
   Megaphone,
+  ArrowUpRight,
   Plus,
   Edit,
   Trash2,
@@ -187,6 +189,35 @@ export function AdminBulletinBoardTab({
     <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
       {/* Left Pane: Config & List */}
       <div className="xl:col-span-2 space-y-6">
+        <Card className="border-t-4 border-indigo-500 shadow-md">
+          <CardHeader className="py-6 flex flex-row items-start justify-between gap-4">
+            <div className="min-w-0">
+              <CardTitle className="flex items-center gap-2">
+                <Megaphone className="w-5 h-5 text-indigo-500" /> Board Preview
+              </CardTitle>
+              <CardDescription>
+                Preview and open the full Bulletin Board page (no header). This is the staff-facing board; it is not shown on the student kiosk.
+              </CardDescription>
+            </div>
+            <Button asChild variant="outline" className="rounded-xl gap-2 shrink-0">
+              <Link href={`/${schoolId}/bulletin-board`}>
+                View full page <ArrowUpRight className="w-4 h-4" aria-hidden />
+              </Link>
+            </Button>
+          </CardHeader>
+          <CardContent className="text-sm text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-semibold text-foreground/80">Active incentives:</span>
+              <span className="rounded-full border border-border/60 bg-muted/30 px-2.5 py-1 text-xs font-black">
+                {(sortedIncentives || []).filter((i) => i.active !== false).length}
+              </span>
+              <span className="text-xs">
+                Total incentives: {(sortedIncentives || []).length}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+
         <Card className="border-t-4 border-primary shadow-lg backdrop-blur-md">
           <CardHeader>
             <Helper content="Manage options and incentives on the Bulletin Board. Enable the feature, change visual settings, and create custom incentives to earn points.">
@@ -336,7 +367,7 @@ export function AdminBulletinBoardTab({
               <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Quick Add Incentives
               </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[520px] overflow-y-auto pr-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 h-[calc(100vh-22rem)] max-h-[350px] min-h-[180px] overflow-y-auto pr-1">
                 {PRESET_BULLETIN_INCENTIVES.map((p, idx) => (
                   <Button
                     key={idx}
@@ -368,7 +399,7 @@ export function AdminBulletinBoardTab({
               <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-1.5">
                 <Tag className="w-3.5 h-3.5 text-indigo-500" /> Posted Incentives
               </h3>
-              <ScrollArea className="h-[400px] border rounded-2xl bg-slate-50/40 dark:bg-slate-900/40">
+              <ScrollArea className="h-[calc(100vh-24rem)] max-h-[350px] min-h-[220px] border rounded-2xl bg-slate-50/40 dark:bg-slate-900/40">
                 {isLoading ? (
                   <p className="text-center text-sm text-muted-foreground p-8 animate-pulse">
                     Loading posted incentives...

@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAppContext } from '@/components/AppProvider';
@@ -64,6 +64,7 @@ export default function HallOfFamePage() {
     const [sortBy, setSortBy] = useState<string>('lifetimePoints');
     const [scope, setScope] = useState<'all' | string>('all');
     const [isOptionsOpen, setIsOptionsOpen] = useState(false);
+    const [showHeader, setShowHeader] = useState(false);
     const [limit, setLimit] = useState<number>(50);
     const [podiumSize, setPodiumSize] = useState<number>(3);
     const [autoScroll, setAutoScroll] = useState<boolean>(false);
@@ -74,6 +75,7 @@ export default function HallOfFamePage() {
     useEffect(() => {
         if (typeof window !== 'undefined') {
             const params = new URLSearchParams(window.location.search);
+            setShowHeader(params.get('header') === '1');
             const view = (params.get('view') || params.get('rank') || '').trim().toLowerCase();
             if (view === 'class-standings' || view === 'classes' || view === 'class_standings') {
                 setRankType('classes');
@@ -184,9 +186,9 @@ export default function HallOfFamePage() {
         return new Map(classes.map(c => [c.id, c.name]));
     }, [classes]);
 
-    const getClassName = (classId?: string) => {
+    const getClassName = useCallback((classId?: string) => {
         return classId ? classesMap.get(classId) || 'Unassigned' : 'Unassigned';
-    };
+    }, [classesMap]);
 
     const getScopeName = () => {
         if (scope === 'all') return 'Entire School';
@@ -211,14 +213,14 @@ export default function HallOfFamePage() {
         return `Top Earners in ${sortBy}`;
     }
 
-    const getPointsForStudent = (student: Student) => {
+    const getPointsForStudent = useCallback((student: Student) => {
         if (sortBy === 'points') return student.points || 0;
         if (sortBy === 'lifetimePoints') return student.lifetimePoints || 0;
         if (sortBy === 'period_day') return student.pointsByPeriod?.[currentPeriodKeys.day] || 0;
         if (sortBy === 'period_week') return student.pointsByPeriod?.[currentPeriodKeys.week] || 0;
         if (sortBy === 'period_month') return student.pointsByPeriod?.[currentPeriodKeys.month] || 0;
         return student.categoryPoints?.[sortBy] || 0;
-    }
+    }, [sortBy, currentPeriodKeys]);
 
     const getInitials = (firstName: string, lastName: string) => {
         return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
@@ -293,7 +295,7 @@ export default function HallOfFamePage() {
                 bonusReward: g.bonusPointsReward
             }));
         }
-    }, [rankType, allTopStudents, classes, allGoals, goalsProgressMap, scope, sortBy, limit, currentPeriodKeys]);
+    }, [rankType, allTopStudents, classes, allGoals, goalsProgressMap, scope, sortBy, limit, getClassName, getPointsForStudent]);
 
     // Auto-scroll logic
     useEffect(() => {
@@ -426,143 +428,245 @@ export default function HallOfFamePage() {
                     animBackdrop ? "bg-card/92 border-border/40" : "bg-card/80",
                 )}>
                     <CardContent className="p-4 sm:p-6 md:p-8">
-                        {/* Header */}
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.6 }}
-                            className="mb-12 md:mb-16"
-                        >
-                            <div className="flex justify-between items-start">
-                                <div className='text-center flex-grow'>
-                                    <h2 className="text-4xl sm:text-5xl font-black tracking-tighter text-primary font-headline drop-shadow-sm mb-4 flex items-center justify-center gap-4">
-                                        <Trophy className="w-10 h-10 sm:w-12 sm:h-12 text-chart-5" /> Hall of Fame
-                                    </h2>
-                                    <p className="text-xs sm:text-sm font-bold text-muted-foreground uppercase tracking-[0.3em]">
-                                        {getScopeName()} &bull; {getSortByLabel()}
-                                    </p>
-                                    <div className="mt-6 flex justify-center gap-2">
-                                        <Button
-                                            variant={rankType === 'students' ? 'default' : 'outline'}
-                                            size="sm"
-                                            className="rounded-full h-9 px-5 text-xs font-bold uppercase tracking-widest"
-                                            onClick={() => setRankType('students')}
-                                        >
-                                            Students
-                                        </Button>
-                                        <Button
-                                            variant={rankType === 'classes' ? 'default' : 'outline'}
-                                            size="sm"
-                                            className="rounded-full h-9 px-5 text-xs font-bold uppercase tracking-widest"
-                                            onClick={() => setRankType('classes')}
-                                        >
-                                            Class standings
-                                        </Button>
-                                        <Button
-                                            variant={rankType === 'goals' ? 'default' : 'outline'}
-                                            size="sm"
-                                            className="rounded-full h-9 px-5 text-xs font-bold uppercase tracking-widest"
-                                            onClick={() => setRankType('goals')}
-                                        >
-                                            School goals
-                                        </Button>
-                                    </div>
-                                </div>
-                                <Dialog open={isOptionsOpen} onOpenChange={setIsOptionsOpen}>
-                                    <DialogTrigger asChild>
-                                        <Button variant="outline" size="icon" className="rounded-full flex-shrink-0"><Settings className="w-4 h-4" /></Button>
-                                    </DialogTrigger>
-                                    <DialogContent size="sm" className="border border-border p-0 overflow-hidden">
-                                        <div className="px-6 pt-6 pb-4 border-b border-border/40 bg-card/30 backdrop-blur-md">
-                                            <DialogHeader>
-                                                <DialogTitle className="text-xl font-black tracking-tight text-foreground">Display Options</DialogTitle>
-                                                <DialogDescription className="text-xs font-medium text-muted-foreground uppercase tracking-widest mt-1">
-                                                    Customize the leaderboard view
-                                                </DialogDescription>
-                                            </DialogHeader>
-                                        </div>
-                                        <div className="grid gap-6 p-6">
-                                            <div className="space-y-3">
-                                                <Label htmlFor="rank-type" className="text-[10px] font-semibold text-muted-foreground/80 lowercase tracking-normal">Rank Type</Label>
-                                                <Select value={rankType} onValueChange={(v: any) => setRankType(v)}>
-                                                    <SelectTrigger id="rank-type" className="h-12 rounded-xl bg-muted/30 border-border hover:bg-muted/50 transition-all font-bold">
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent className="rounded-xl border-border">
-                                                        <SelectItem value="students" className="rounded-lg font-medium">Students</SelectItem>
-                                                        <SelectItem value="classes" className="rounded-lg font-medium">Class standings</SelectItem>
-                                                        <SelectItem value="goals" className="rounded-lg font-medium">School goals</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                            <div className="space-y-3">
-                                                <Label htmlFor="sort-by" className="text-[10px] font-semibold text-muted-foreground/80 lowercase tracking-normal">Sort By</Label>
-                                                <Select value={sortBy} onValueChange={(v) => setSortBy(v)}>
-                                                    <SelectTrigger id="sort-by" className="h-12 rounded-xl bg-muted/30 border-border hover:bg-muted/50 transition-all font-bold">
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent className="rounded-xl border-border">
-                                                        <SelectItem value="lifetimePoints" className="rounded-lg font-medium">Lifetime Points</SelectItem>
-                                                        <SelectItem value="points" className="rounded-lg font-medium">Current Points</SelectItem>
-                                                        <SelectItem value="period_day" className="rounded-lg font-medium">Points Today</SelectItem>
-                                                        <SelectItem value="period_week" className="rounded-lg font-medium">Points This Week</SelectItem>
-                                                        <SelectItem value="period_month" className="rounded-lg font-medium">Points This Month</SelectItem>
-                                                        {categories?.map(c => <SelectItem key={c.id} value={c.name} className="rounded-lg font-medium">{c.name} Points</SelectItem>)}
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                            <div className="grid grid-cols-3 gap-3">
-                                                <div className="space-y-3">
-                                                    <Label htmlFor="scope" className="text-[10px] font-semibold text-muted-foreground/80 lowercase tracking-normal">Show</Label>
-                                                    <Select value={scope} onValueChange={setScope}>
-                                                        <SelectTrigger id="scope" className="h-12 rounded-xl bg-muted/30 border-border hover:bg-muted/50 transition-all font-bold">
-                                                            <SelectValue />
-                                                        </SelectTrigger>
-                                                        <SelectContent className="rounded-xl border-border">
-                                                            <SelectItem value="all" className="rounded-lg font-medium">Entire School</SelectItem>
-                                                            {classes?.map(c => <SelectItem key={c.id} value={c.id} className="rounded-lg font-medium">{c.name}</SelectItem>)}
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-                                                <div className="space-y-3">
-                                                    <Label htmlFor="limit" className="text-[10px] font-semibold text-muted-foreground/80 lowercase tracking-normal">Show Top</Label>
-                                                    <Input
-                                                        id="limit"
-                                                        type="number"
-                                                        className="h-12 rounded-xl bg-muted/30 border-border font-bold px-4 focus:bg-background transition-all"
-                                                        value={limit}
-                                                        onChange={(e) => setLimit(Math.max(1, parseInt(e.target.value) || 1))}
-                                                    />
-                                                </div>
-                                                <div className="space-y-3">
-                                                    <Label htmlFor="podium-size" className="text-[10px] font-semibold text-muted-foreground/80 lowercase tracking-normal">Highlight Top</Label>
-                                                    <Input
-                                                        id="podium-size"
-                                                        type="number"
-                                                        className="h-12 rounded-xl bg-muted/30 border-border font-bold px-4 focus:bg-background transition-all"
-                                                        value={podiumSize}
-                                                        onChange={(e) => setPodiumSize(Math.max(0, Math.min(3, parseInt(e.target.value) || 0)))}
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <div className="flex items-center justify-between py-1 px-1">
-                                                    <Label htmlFor="auto-scroll" className="cursor-pointer font-bold text-sm">Auto-Scroll</Label>
-                                                    <Switch id="auto-scroll" checked={autoScroll} onCheckedChange={setAutoScroll} />
-                                                </div>
-                                                <div className="flex items-center justify-between py-1 px-1">
-                                                    <Label htmlFor="grid-layout" className="cursor-pointer font-bold text-sm">Grid / Multi-column</Label>
-                                                    <Switch id="grid-layout" checked={gridLayout} onCheckedChange={setGridLayout} />
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <DialogFooter className="p-4 bg-muted/20 border-t border-border/40">
-                                            <Button onClick={() => setIsOptionsOpen(false)} className="w-full h-11 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg active:scale-95 transition-all">Done</Button>
-                                        </DialogFooter>
-                                    </DialogContent>
-                                </Dialog>
+                        {showHeader ? (
+                          <motion.div
+                              initial={{ opacity: 0, y: 20 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ duration: 0.6 }}
+                              className="mb-12 md:mb-16"
+                          >
+                              <div className="flex justify-between items-start">
+                                  <div className='text-center flex-grow'>
+                                      <h2 className="text-4xl sm:text-5xl font-black tracking-tighter text-primary font-headline drop-shadow-sm mb-4 flex items-center justify-center gap-4">
+                                          <Trophy className="w-10 h-10 sm:w-12 sm:h-12 text-chart-5" /> Hall of Fame
+                                      </h2>
+                                      <p className="text-xs sm:text-sm font-bold text-muted-foreground uppercase tracking-[0.3em]">
+                                          {getScopeName()} &bull; {getSortByLabel()}
+                                      </p>
+                                      <div className="mt-6 flex justify-center gap-2">
+                                          <Button
+                                              variant={rankType === 'students' ? 'default' : 'outline'}
+                                              size="sm"
+                                              className="rounded-full h-9 px-5 text-xs font-bold uppercase tracking-widest"
+                                              onClick={() => setRankType('students')}
+                                          >
+                                              Students
+                                          </Button>
+                                          <Button
+                                              variant={rankType === 'classes' ? 'default' : 'outline'}
+                                              size="sm"
+                                              className="rounded-full h-9 px-5 text-xs font-bold uppercase tracking-widest"
+                                              onClick={() => setRankType('classes')}
+                                          >
+                                              Class standings
+                                          </Button>
+                                          <Button
+                                              variant={rankType === 'goals' ? 'default' : 'outline'}
+                                              size="sm"
+                                              className="rounded-full h-9 px-5 text-xs font-bold uppercase tracking-widest"
+                                              onClick={() => setRankType('goals')}
+                                          >
+                                              School goals
+                                          </Button>
+                                      </div>
+                                  </div>
+                                  <Dialog open={isOptionsOpen} onOpenChange={setIsOptionsOpen}>
+                                      <DialogTrigger asChild>
+                                          <Button variant="outline" size="icon" className="rounded-full flex-shrink-0"><Settings className="w-4 h-4" /></Button>
+                                      </DialogTrigger>
+                                      <DialogContent size="sm" className="border border-border p-0 overflow-hidden">
+                                          <div className="px-6 pt-6 pb-4 border-b border-border/40 bg-card/30 backdrop-blur-md">
+                                              <DialogHeader>
+                                                  <DialogTitle className="text-xl font-black tracking-tight text-foreground">Display Options</DialogTitle>
+                                                  <DialogDescription className="text-xs font-medium text-muted-foreground uppercase tracking-widest mt-1">
+                                                      Customize the leaderboard view
+                                                  </DialogDescription>
+                                              </DialogHeader>
+                                          </div>
+                                          <div className="grid gap-6 p-6">
+                                              <div className="space-y-3">
+                                                  <Label htmlFor="rank-type" className="text-[10px] font-semibold text-muted-foreground/80 lowercase tracking-normal">Rank Type</Label>
+                                                  <Select value={rankType} onValueChange={(v: any) => setRankType(v)}>
+                                                      <SelectTrigger id="rank-type" className="h-12 rounded-xl bg-muted/30 border-border hover:bg-muted/50 transition-all font-bold">
+                                                          <SelectValue />
+                                                      </SelectTrigger>
+                                                      <SelectContent className="rounded-xl border-border">
+                                                          <SelectItem value="students" className="rounded-lg font-medium">Students</SelectItem>
+                                                          <SelectItem value="classes" className="rounded-lg font-medium">Class standings</SelectItem>
+                                                          <SelectItem value="goals" className="rounded-lg font-medium">School goals</SelectItem>
+                                                      </SelectContent>
+                                                  </Select>
+                                              </div>
+                                              <div className="space-y-3">
+                                                  <Label htmlFor="sort-by" className="text-[10px] font-semibold text-muted-foreground/80 lowercase tracking-normal">Sort By</Label>
+                                                  <Select value={sortBy} onValueChange={(v) => setSortBy(v)}>
+                                                      <SelectTrigger id="sort-by" className="h-12 rounded-xl bg-muted/30 border-border hover:bg-muted/50 transition-all font-bold">
+                                                          <SelectValue />
+                                                      </SelectTrigger>
+                                                      <SelectContent className="rounded-xl border-border">
+                                                          <SelectItem value="lifetimePoints" className="rounded-lg font-medium">Lifetime Points</SelectItem>
+                                                          <SelectItem value="points" className="rounded-lg font-medium">Current Points</SelectItem>
+                                                          <SelectItem value="period_day" className="rounded-lg font-medium">Points Today</SelectItem>
+                                                          <SelectItem value="period_week" className="rounded-lg font-medium">Points This Week</SelectItem>
+                                                          <SelectItem value="period_month" className="rounded-lg font-medium">Points This Month</SelectItem>
+                                                          {categories?.map(c => <SelectItem key={c.id} value={c.name} className="rounded-lg font-medium">{c.name} Points</SelectItem>)}
+                                                      </SelectContent>
+                                                  </Select>
+                                              </div>
+                                              <div className="grid grid-cols-3 gap-3">
+                                                  <div className="space-y-3">
+                                                      <Label htmlFor="scope" className="text-[10px] font-semibold text-muted-foreground/80 lowercase tracking-normal">Show</Label>
+                                                      <Select value={scope} onValueChange={setScope}>
+                                                          <SelectTrigger id="scope" className="h-12 rounded-xl bg-muted/30 border-border hover:bg-muted/50 transition-all font-bold">
+                                                              <SelectValue />
+                                                          </SelectTrigger>
+                                                          <SelectContent className="rounded-xl border-border">
+                                                              <SelectItem value="all" className="rounded-lg font-medium">Entire School</SelectItem>
+                                                              {classes?.map(c => <SelectItem key={c.id} value={c.id} className="rounded-lg font-medium">{c.name}</SelectItem>)}
+                                                          </SelectContent>
+                                                      </Select>
+                                                  </div>
+                                                  <div className="space-y-3">
+                                                      <Label htmlFor="limit" className="text-[10px] font-semibold text-muted-foreground/80 lowercase tracking-normal">Show Top</Label>
+                                                      <Input
+                                                          id="limit"
+                                                          type="number"
+                                                          className="h-12 rounded-xl bg-muted/30 border-border font-bold px-4 focus:bg-background transition-all"
+                                                          value={limit}
+                                                          onChange={(e) => setLimit(Math.max(1, parseInt(e.target.value) || 1))}
+                                                      />
+                                                  </div>
+                                                  <div className="space-y-3">
+                                                      <Label htmlFor="podium-size" className="text-[10px] font-semibold text-muted-foreground/80 lowercase tracking-normal">Highlight Top</Label>
+                                                      <Input
+                                                          id="podium-size"
+                                                          type="number"
+                                                          className="h-12 rounded-xl bg-muted/30 border-border font-bold px-4 focus:bg-background transition-all"
+                                                          value={podiumSize}
+                                                          onChange={(e) => setPodiumSize(Math.max(0, Math.min(3, parseInt(e.target.value) || 0)))}
+                                                      />
+                                                  </div>
+                                              </div>
+                                              <div className="space-y-1">
+                                                  <div className="flex items-center justify-between py-1 px-1">
+                                                      <Label htmlFor="auto-scroll" className="cursor-pointer font-bold text-sm">Auto-Scroll</Label>
+                                                      <Switch id="auto-scroll" checked={autoScroll} onCheckedChange={setAutoScroll} />
+                                                  </div>
+                                                  <div className="flex items-center justify-between py-1 px-1">
+                                                      <Label htmlFor="grid-layout" className="cursor-pointer font-bold text-sm">Grid / Multi-column</Label>
+                                                      <Switch id="grid-layout" checked={gridLayout} onCheckedChange={setGridLayout} />
+                                                  </div>
+                                              </div>
+                                          </div>
+                                          <DialogFooter className="p-4 bg-muted/20 border-t border-border/40">
+                                              <Button onClick={() => setIsOptionsOpen(false)} className="w-full h-11 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg active:scale-95 transition-all">Done</Button>
+                                          </DialogFooter>
+                                      </DialogContent>
+                                  </Dialog>
+                              </div>
+                          </motion.div>
+                        ) : (
+                          <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+                            <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground">
+                              {getScopeName()} &bull; {getSortByLabel()}
                             </div>
-                        </motion.div>
+                            <Dialog open={isOptionsOpen} onOpenChange={setIsOptionsOpen}>
+                              <DialogTrigger asChild>
+                                <Button variant="outline" size="sm" className="rounded-xl gap-2">
+                                  <Settings className="w-4 h-4" /> Options
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent size="sm" className="border border-border p-0 overflow-hidden">
+                                <div className="px-6 pt-6 pb-4 border-b border-border/40 bg-card/30 backdrop-blur-md">
+                                  <DialogHeader>
+                                    <DialogTitle className="text-xl font-black tracking-tight text-foreground">Display Options</DialogTitle>
+                                    <DialogDescription className="text-xs font-medium text-muted-foreground uppercase tracking-widest mt-1">
+                                      Customize the leaderboard view
+                                    </DialogDescription>
+                                  </DialogHeader>
+                                </div>
+                                <div className="grid gap-6 p-6">
+                                  <div className="space-y-3">
+                                    <Label htmlFor="rank-type-mini" className="text-[10px] font-semibold text-muted-foreground/80 lowercase tracking-normal">Rank Type</Label>
+                                    <Select value={rankType} onValueChange={(v: any) => setRankType(v)}>
+                                      <SelectTrigger id="rank-type-mini" className="h-12 rounded-xl bg-muted/30 border-border hover:bg-muted/50 transition-all font-bold">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent className="rounded-xl border-border">
+                                        <SelectItem value="students" className="rounded-lg font-medium">Students</SelectItem>
+                                        <SelectItem value="classes" className="rounded-lg font-medium">Class standings</SelectItem>
+                                        <SelectItem value="goals" className="rounded-lg font-medium">School goals</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  <div className="space-y-3">
+                                    <Label htmlFor="sort-by-mini" className="text-[10px] font-semibold text-muted-foreground/80 lowercase tracking-normal">Sort By</Label>
+                                    <Select value={sortBy} onValueChange={(v) => setSortBy(v)}>
+                                      <SelectTrigger id="sort-by-mini" className="h-12 rounded-xl bg-muted/30 border-border hover:bg-muted/50 transition-all font-bold">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent className="rounded-xl border-border">
+                                        <SelectItem value="lifetimePoints" className="rounded-lg font-medium">Lifetime Points</SelectItem>
+                                        <SelectItem value="points" className="rounded-lg font-medium">Current Points</SelectItem>
+                                        <SelectItem value="period_day" className="rounded-lg font-medium">Points Today</SelectItem>
+                                        <SelectItem value="period_week" className="rounded-lg font-medium">Points This Week</SelectItem>
+                                        <SelectItem value="period_month" className="rounded-lg font-medium">Points This Month</SelectItem>
+                                        {categories?.map(c => <SelectItem key={c.id} value={c.name} className="rounded-lg font-medium">{c.name} Points</SelectItem>)}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  <div className="grid grid-cols-3 gap-3">
+                                    <div className="space-y-3">
+                                      <Label htmlFor="scope-mini" className="text-[10px] font-semibold text-muted-foreground/80 lowercase tracking-normal">Show</Label>
+                                      <Select value={scope} onValueChange={setScope}>
+                                        <SelectTrigger id="scope-mini" className="h-12 rounded-xl bg-muted/30 border-border hover:bg-muted/50 transition-all font-bold">
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent className="rounded-xl border-border">
+                                          <SelectItem value="all" className="rounded-lg font-medium">Entire School</SelectItem>
+                                          {classes?.map(c => <SelectItem key={c.id} value={c.id} className="rounded-lg font-medium">{c.name}</SelectItem>)}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                    <div className="space-y-3">
+                                      <Label htmlFor="limit-mini" className="text-[10px] font-semibold text-muted-foreground/80 lowercase tracking-normal">Show Top</Label>
+                                      <Input
+                                        id="limit-mini"
+                                        type="number"
+                                        className="h-12 rounded-xl bg-muted/30 border-border font-bold px-4 focus:bg-background transition-all"
+                                        value={limit}
+                                        onChange={(e) => setLimit(Math.max(1, parseInt(e.target.value) || 1))}
+                                      />
+                                    </div>
+                                    <div className="space-y-3">
+                                      <Label htmlFor="podium-size-mini" className="text-[10px] font-semibold text-muted-foreground/80 lowercase tracking-normal">Highlight Top</Label>
+                                      <Input
+                                        id="podium-size-mini"
+                                        type="number"
+                                        className="h-12 rounded-xl bg-muted/30 border-border font-bold px-4 focus:bg-background transition-all"
+                                        value={podiumSize}
+                                        onChange={(e) => setPodiumSize(Math.max(0, Math.min(3, parseInt(e.target.value) || 0)))}
+                                      />
+                                    </div>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <div className="flex items-center justify-between py-1 px-1">
+                                      <Label htmlFor="auto-scroll-mini" className="cursor-pointer font-bold text-sm">Auto-Scroll</Label>
+                                      <Switch id="auto-scroll-mini" checked={autoScroll} onCheckedChange={setAutoScroll} />
+                                    </div>
+                                    <div className="flex items-center justify-between py-1 px-1">
+                                      <Label htmlFor="grid-layout-mini" className="cursor-pointer font-bold text-sm">Grid / Multi-column</Label>
+                                      <Switch id="grid-layout-mini" checked={gridLayout} onCheckedChange={setGridLayout} />
+                                    </div>
+                                  </div>
+                                </div>
+                                <DialogFooter className="p-4 bg-muted/20 border-t border-border/40">
+                                  <Button onClick={() => setIsOptionsOpen(false)} className="w-full h-11 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg active:scale-95 transition-all">Done</Button>
+                                </DialogFooter>
+                              </DialogContent>
+                            </Dialog>
+                          </div>
+                        )}
 
                         {/* Podium */}
                         {rankType !== 'goals' && podium.length > 0 && (

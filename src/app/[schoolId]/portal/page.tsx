@@ -87,24 +87,10 @@ export default function PortalPage() {
     const portals: PortalArea[] = [
         ...(isAdmin ? [{ id: 'admin', href: `/${schoolId}/admin`, title: 'Admin Portal', description: 'Manage school data and settings.', icon: UserCog }] : []),
         ...(isStaff
-            ? [{ id: 'print', href: `/${schoolId}/teacher`, title: 'Teacher and Staff Portal', description: 'Sign in for teacher tools, coupon printing, or the prize desk.', icon: Printer }]
+            ? [{ id: 'print', href: `/${schoolId}/teacher`, title: 'Teacher & Faculty Portal', description: 'Sign in for teacher tools, coupon printing, or the prize desk.', icon: Printer }]
             : []),
         { id: 'redeem', href: `/${schoolId}/student`, title: 'Student Kiosk', description: 'Scan your card to redeem coupon codes, view points, and open the prize shop.', icon: GraduationCap },
         ...(isStaff && settings.enableStudentPortal ? [{ id: 'student-home', href: `/${schoolId}/student-home`, title: 'Student Home Portal', description: 'Home access is being prepared and is not available yet.', icon: Home, disabled: true, status: 'Coming soon' }] : []),
-        ...(isStaff
-            ? [{ id: 'fame', href: `/${schoolId}/halloffame`, title: 'Hall of Fame', description: 'View top student point earners.', icon: Trophy }]
-            : []),
-        ...(isStaff
-            ? [
-                  {
-                      id: 'bulletin',
-                      href: `/${schoolId}/bulletin-board`,
-                      title: 'Bulletin Board',
-                      description: 'School-wide point incentives (staff view; not on the student kiosk).',
-                      icon: Megaphone,
-                  },
-              ]
-            : []),
     ];
 
     return (
@@ -259,16 +245,16 @@ export default function PortalPage() {
 
                 {loginState === 'student' && schoolId && (
                     <div className="mt-10 text-center rounded-2xl border border-border/60 bg-muted/30 px-4 py-5">
-                        <p className="text-sm text-muted-foreground mb-3">Need staff or admin access?</p>
+                        <p className="text-sm text-muted-foreground mb-3">Need faculty access?</p>
                         <div className="flex flex-wrap justify-center gap-2">
                             <Button variant="outline" size="sm" asChild className="font-bold">
                                 <Link href={`/${schoolId}/teacher`} onClick={() => playSound('click')}>
-                                    Teacher and Staff Portal
+                                    Teacher & Faculty Portal
                                 </Link>
                             </Button>
                             <Button variant="ghost" size="sm" asChild className="font-bold">
-                                <Link href={`/login?school=${encodeURIComponent(schoolId)}`} onClick={() => playSound('click')}>
-                                    Admin login
+                                <Link href={`/${schoolId}/sign-in`} onClick={() => playSound('click')}>
+                                    Switch sign-in
                                 </Link>
                             </Button>
                         </div>

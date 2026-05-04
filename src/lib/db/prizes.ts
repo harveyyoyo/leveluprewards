@@ -115,7 +115,7 @@ export const redeemPrize = async (
         throw new Error("Student not found.");
       }
       if (!prizeDoc.exists()) {
-        throw new Error("Prize not found.");
+      throw new Error("Reward item not found.");
       }
 
       const studentData = studentDoc.data() as Student;
@@ -123,7 +123,7 @@ export const redeemPrize = async (
       const totalCost = typeof pointsOverride === 'number' ? pointsOverride : prizeData.points * quantity;
 
       if (!prizeData.inStock) {
-        throw new Error("This prize is not available.");
+      throw new Error("This reward item is not available.");
       }
       if (typeof prizeData.stockCount === 'number') {
         if (prizeData.stockCount < quantity) {

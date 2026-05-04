@@ -29,7 +29,7 @@ export function AdminCouponsTab({
       <CardContent className="grid md:grid-cols-2 gap-6">
         <div>
           <h3 className="text-lg font-semibold mb-4">Available Coupons ({availableCoupons.length})</h3>
-          <ScrollArea className="h-[500px] border rounded-lg bg-background/50">
+          <ScrollArea className="h-[calc(100vh-22rem)] max-h-[420px] min-h-[250px] border rounded-lg bg-background/50">
             {availableCoupons.length >= 1 ? (
               <ul className="p-3 space-y-2">
                 {availableCoupons.map((coupon) => {
@@ -69,7 +69,7 @@ export function AdminCouponsTab({
 
         <div>
           <h3 className="text-lg font-semibold mb-4">Redeemed Coupons ({redeemedCoupons.length})</h3>
-          <ScrollArea className="h-[500px] border rounded-lg bg-background/50">
+          <ScrollArea className="h-[calc(100vh-22rem)] max-h-[420px] min-h-[250px] border rounded-lg bg-background/50">
             {redeemedCoupons.length >= 1 ? (
               <ul className="p-3 space-y-2">
                 {redeemedCoupons.map((coupon) => (

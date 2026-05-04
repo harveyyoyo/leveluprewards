@@ -14,9 +14,9 @@ function getFirebaseCallableConnectivityHint(): string {
   let dev = '';
   if (typeof window !== 'undefined') {
     const host = window.location.hostname;
-    if (host === 'localhost' || host === '127.0.0.1') {
+    if (host === 'localhost' || host === '127.0.0.1' || host === '[::1]') {
       dev =
-        ' On localhost: deploy Cloud Functions to this Firebase project (including face-auth callables), or connect the Firebase CLI Functions emulator.';
+        ' On localhost: either deploy functions (firebase deploy --only functions) or use the emulator (NEXT_PUBLIC_FIREBASE_FUNCTIONS_EMULATOR=true in .env.local, firebase emulators:start, then restart next dev).';
     }
   }
   return `Could not reach or run Firebase Cloud Functions. Check VPN/firewall/proxy (allow *.cloudfunctions.net and *.googleapis.com), then try again.${dev}`;

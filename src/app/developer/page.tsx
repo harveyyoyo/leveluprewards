@@ -7,7 +7,7 @@ import { useFirestore, useFirebase, useCollection, useMemoFirebase, useFunctions
 import { collection, doc, getDoc, setDoc, query, getDocs, orderBy, limit } from 'firebase/firestore';
 import { schoolPublicDocRef, mainSchoolDocToPublicPayload } from '@/lib/schoolPublic';
 import {
-  Plus, Trash2, Server, Pencil, Database, Download, Upload, ShieldCheck, LifeBuoy, RefreshCw, Link2, Check, Loader2, Image as ImageIcon, LogOut,
+  Plus, Trash2, Server, Pencil, Database, Download, Upload, ShieldCheck, LifeBuoy, RefreshCw, Link2, Check, Loader2, Image as ImageIcon, LogOut, Headset,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -156,7 +156,7 @@ function SchoolStatsModal({ school, isOpen, onOpenChange }: { school: SchoolInfo
             </div>
             <div className="bg-secondary p-4 rounded-lg">
               <p className="text-2xl font-bold">{stats.prizes}</p>
-              <p className="text-sm text-muted-foreground">Prize Types</p>
+                    <p className="text-sm text-muted-foreground">Reward items</p>
             </div>
             <div className="bg-secondary p-4 rounded-lg">
               <p className="text-2xl font-bold">{(stats.totalPointsAwarded || 0).toLocaleString()}</p>
@@ -177,6 +177,7 @@ export default function DeveloperPage() {
     loginState, isInitialized, isUserLoading, logout, createSchool, deleteSchool, updateSchool,
     devCreateBackup, devRestoreFromBackup, devDownloadBackup, devBackupAllSchools,
     devVerifyBackup, devMigrateSchoolData, devResetSampleSchool, devSyncSchoolPublicIndex,
+    startDeveloperSupportSession,
   } = useAppContext();
   const firestore = useFirestore();
   const functions = useFunctions();
@@ -188,13 +189,15 @@ export default function DeveloperPage() {
   const [isCreateSchoolDialogOpen, setIsCreateSchoolDialogOpen] = useState(false);
   const [newSchoolId, setNewSchoolId] = useState('');
   const [newSchoolName, setNewSchoolName] = useState('');
-  const [newSchoolPasscode, setNewSchoolPasscode] = useState('');
+  const [newSchoolAccessPasscode, setNewSchoolAccessPasscode] = useState('1234');
+  const [newAdminPasscode, setNewAdminPasscode] = useState('1234');
 
-  const [createdSchoolInfo, setCreatedSchoolInfo] = useState<{ id: string; passcode: string } | null>(null);
+  const [createdSchoolInfo, setCreatedSchoolInfo] = useState<{ id: string; schoolAccessPasscode: string; adminPasscode: string } | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [editingSchool, setEditingSchool] = useState<SchoolInfo | null>(null);
   const [editingSchoolName, setEditingSchoolName] = useState('');
-  const [editingPasscode, setEditingPasscode] = useState('');
+  const [editingSchoolAccessPasscode, setEditingSchoolAccessPasscode] = useState('');
+  const [editingAdminPasscode, setEditingAdminPasscode] = useState('');
   const [planSchool, setPlanSchool] = useState<SchoolInfo | null>(null);
   const [editingPlan, setEditingPlan] = useState<PlanTier>(DEFAULT_PLAN);
   const [editingFeatureOverrides, setEditingFeatureOverrides] = useState<Partial<Record<PlanFeatureKey, boolean>>>({});
@@ -202,6 +205,7 @@ export default function DeveloperPage() {
   const [backupSchool, setBackupSchool] = useState<SchoolInfo | null>(null);
   const [schoolBackups, setSchoolBackups] = useState<BackupInfo[]>([]);
   const [statsSchool, setStatsSchool] = useState<SchoolInfo | null>(null);
+  const [supportStartingSchool, setSupportStartingSchool] = useState<string | null>(null);
 
   const [orphanSchoolId, setOrphanSchoolId] = useState('');
   const [latestBackup, setLatestBackup] = useState<{ id: string } | null>(null);
@@ -432,37 +436,51 @@ export default function DeveloperPage() {
       toast({ variant: 'destructive', title: "School ID cannot be empty." });
       return;
     }
-    const result = await createSchool(newSchoolId, newSchoolName, newSchoolPasscode);
+    const result = await createSchool(newSchoolId, newSchoolName, {
+      schoolAccessPasscode: newSchoolAccessPasscode,
+      adminPasscode: newAdminPasscode,
+    });
     if (result) {
-      setCreatedSchoolInfo({ id: result.cleanId, passcode: result.passcode });
+      setCreatedSchoolInfo({
+        id: result.cleanId,
+        schoolAccessPasscode: result.schoolAccessPasscode,
+        adminPasscode: result.adminPasscode,
+      });
     }
     setIsCreateSchoolDialogOpen(false);
     setNewSchoolId('');
     setNewSchoolName('');
-    setNewSchoolPasscode('');
+    setNewSchoolAccessPasscode('1234');
+    setNewAdminPasscode('1234');
   };
 
   const handleOpenEditModal = (school: SchoolInfo) => {
     setEditingSchool(school);
     setEditingSchoolName(school.name);
-    setEditingPasscode(''); // Clear passcode for security
+    setEditingSchoolAccessPasscode('');
+    setEditingAdminPasscode('');
   }
 
   const handleCloseEditModal = () => {
     setEditingSchool(null);
     setEditingSchoolName('');
-    setEditingPasscode('');
+    setEditingSchoolAccessPasscode('');
+    setEditingAdminPasscode('');
   }
 
   const handleUpdateSchool = async () => {
     if (!editingSchool) return;
 
-    const updates: { name?: string; passcode?: string } = {};
+    const updates: { name?: string; passcode?: string; schoolAccessPasscode?: string; adminPasscode?: string } = {};
     if (editingSchoolName && editingSchoolName !== editingSchool.name) {
       updates.name = editingSchoolName;
     }
-    if (editingPasscode) {
-      updates.passcode = editingPasscode;
+    if (editingSchoolAccessPasscode) {
+      updates.passcode = editingSchoolAccessPasscode;
+      updates.schoolAccessPasscode = editingSchoolAccessPasscode;
+    }
+    if (editingAdminPasscode) {
+      updates.adminPasscode = editingAdminPasscode;
     }
 
     if (Object.keys(updates).length > 0) {
@@ -612,6 +630,28 @@ export default function DeveloperPage() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const handleStartSupportSession = async (school: SchoolInfo) => {
+    setSupportStartingSchool(school.id);
+    playSound('click');
+    const ok = await startDeveloperSupportSession(school.id);
+    setSupportStartingSchool(null);
+    if (!ok) {
+      playSound('error');
+      toast({
+        variant: 'destructive',
+        title: 'Could not start support session',
+        description: 'Confirm your developer access and try again.',
+      });
+      return;
+    }
+    playSound('login');
+    toast({
+      title: `Support session started for ${school.id}`,
+      description: 'Opening the school admin dashboard.',
+    });
+    window.location.assign(`/${school.id}/admin`);
+  };
+
   if (!isInitialized || isUserLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -717,6 +757,25 @@ export default function DeveloperPage() {
                       </button>
                     </div>
                     <div className="flex items-center gap-0.5">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleStartSupportSession(school)}
+                            disabled={supportStartingSchool === school.id}
+                          >
+                            {supportStartingSchool === school.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                            ) : (
+                              <Headset className="w-4 h-4 text-primary" />
+                            )}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Start audited support session.</p>
+                        </TooltipContent>
+                      </Tooltip>
                       <AlertDialog>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -1124,7 +1183,7 @@ export default function DeveloperPage() {
                 <div className="flex flex-col justify-between rounded-lg border bg-secondary p-4">
                   <div>
                     <h3 className="flex items-center gap-2 font-bold"><ShieldCheck className="h-4 w-4 shrink-0" aria-hidden />Scheduled Daily Backups</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">Full-depth backups of all schools run automatically every 24 hours via Cloud Scheduler. Includes all students, classes, teachers, prizes, coupons, categories, and activity history. Old backups are automatically pruned after 30 days.</p>
+                        <p className="mt-1 text-sm text-muted-foreground">Full-depth backups of all schools run automatically every 24 hours via Cloud Scheduler. Includes all students, classes, teachers, reward items, coupons, categories, and activity history. Old backups are automatically pruned after 30 days.</p>
                   </div>
                   <div className="mt-4 flex items-center gap-2 rounded bg-background p-2 text-xs text-muted-foreground">
                     <ShieldCheck className="h-3.5 w-3.5 shrink-0" aria-hidden />
@@ -1164,12 +1223,21 @@ export default function DeveloperPage() {
                 />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="new-school-passcode">Passcode</Label>
+                <Label htmlFor="new-school-access-passcode">School Login Passcode</Label>
                 <Input
-                  id="new-school-passcode"
-                  placeholder="(Leave blank to auto-generate)"
-                  value={newSchoolPasscode}
-                  onChange={(e) => setNewSchoolPasscode(e.target.value)}
+                  id="new-school-access-passcode"
+                  placeholder="1234"
+                  value={newSchoolAccessPasscode}
+                  onChange={(e) => setNewSchoolAccessPasscode(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="new-admin-passcode">Admin Login Passcode</Label>
+                <Input
+                  id="new-admin-passcode"
+                  placeholder="1234"
+                  value={newAdminPasscode}
+                  onChange={(e) => setNewAdminPasscode(e.target.value)}
                 />
               </div>
             </div>
@@ -1191,7 +1259,7 @@ export default function DeveloperPage() {
             <AlertDialogHeader>
               <AlertDialogTitle>School Created Successfully!</AlertDialogTitle>
               <AlertDialogDescription>
-                Send the school their unique link and passcode below.
+                Send the school their unique link and passcodes below.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <div className="bg-slate-100 dark:bg-slate-800 rounded-lg p-4 text-center my-4 space-y-4">
@@ -1204,9 +1272,15 @@ export default function DeveloperPage() {
                   </Button>
                 </div>
               </div>
-              <div className="border-t pt-4">
-                <p className="text-sm text-muted-foreground">Passcode</p>
-                <p className="font-code font-bold text-3xl tracking-widest text-primary">{createdSchoolInfo?.passcode}</p>
+              <div className="grid gap-4 border-t pt-4 sm:grid-cols-2">
+                <div>
+                  <p className="text-sm text-muted-foreground">School Login</p>
+                  <p className="font-code font-bold text-3xl tracking-widest text-primary">{createdSchoolInfo?.schoolAccessPasscode}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Admin Login</p>
+                  <p className="font-code font-bold text-3xl tracking-widest text-primary">{createdSchoolInfo?.adminPasscode}</p>
+                </div>
               </div>
             </div>
             <AlertDialogFooter>
@@ -1220,7 +1294,7 @@ export default function DeveloperPage() {
             <DialogHeader>
               <DialogTitle>Edit School: <span className="font-code">{editingSchool?.id}</span></DialogTitle>
               <DialogDescription>
-                Update the school's name or set a new passcode. Leaving the passcode field blank will not change it.
+                Update the school's name or set new login passcodes. Blank passcode fields are left unchanged.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
@@ -1234,12 +1308,22 @@ export default function DeveloperPage() {
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="new-passcode" className="text-right">New Passcode</Label>
+                <Label htmlFor="new-school-access-passcode-edit" className="text-right">School Login</Label>
                 <Input
-                  id="new-passcode"
-                  value={editingPasscode}
+                  id="new-school-access-passcode-edit"
+                  value={editingSchoolAccessPasscode}
                   placeholder="(Leave blank to keep unchanged)"
-                  onChange={(e) => setEditingPasscode(e.target.value)}
+                  onChange={(e) => setEditingSchoolAccessPasscode(e.target.value)}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="new-admin-passcode-edit" className="text-right">Admin Login</Label>
+                <Input
+                  id="new-admin-passcode-edit"
+                  value={editingAdminPasscode}
+                  placeholder="(Leave blank to keep unchanged)"
+                  onChange={(e) => setEditingAdminPasscode(e.target.value)}
                   className="col-span-3"
                 />
               </div>
@@ -1335,7 +1419,7 @@ export default function DeveloperPage() {
             <DialogHeader>
               <DialogTitle>Manage Backups for <span className="font-code">{backupSchool?.id}</span></DialogTitle>
               <DialogDescription>
-                Full-depth backups include all students, classes, teachers, prizes, coupons, categories, and activity history. Scheduled backups run daily via Cloud Scheduler.
+                      Full-depth backups include all students, classes, teachers, reward items, coupons, categories, and activity history. Scheduled backups run daily via Cloud Scheduler.
               </DialogDescription>
             </DialogHeader>
             <div className="py-4">
@@ -1391,7 +1475,7 @@ export default function DeveloperPage() {
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>Restore from this backup?</AlertDialogTitle>
                                   <AlertDialogDescription>
-                                    This will fully restore {backupSchool?.id} from the backup taken on {backup.createdAt ? new Date(backup.createdAt).toLocaleString() : 'unknown date'}. All current data (students, classes, teachers, prizes, coupons, categories, and activities) will be replaced. A safety backup will be created first.
+                    This will fully restore {backupSchool?.id} from the backup taken on {backup.createdAt ? new Date(backup.createdAt).toLocaleString() : 'unknown date'}. All current data (students, classes, teachers, reward items, coupons, categories, and activities) will be replaced. A safety backup will be created first.
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>

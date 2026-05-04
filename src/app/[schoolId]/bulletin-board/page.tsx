@@ -1,16 +1,14 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Megaphone, ArrowLeft, Sparkles, Loader2 } from 'lucide-react';
+import { Megaphone, Sparkles, Loader2 } from 'lucide-react';
 import { useAppContext } from '@/components/AppProvider';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query } from 'firebase/firestore';
 import { useSchoolMetadataDocRef } from '@/hooks/useSchoolMetadataDocRef';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
 import { DEFAULT_BULLETIN_SUBTITLE, bulletinLogoBoxClass, getBulletinBoardCardClassName } from '@/lib/bulletinBoard';
@@ -70,9 +68,6 @@ export default function BulletinBoardViewPage() {
   const schoolLogoUrl = schoolMeta?.logoUrl;
   const logoSize = settings.bulletinLogoSize || 'md';
 
-  const backHref =
-    loginState === 'secretary' ? `/${schoolId}/secretary` : schoolId ? `/${schoolId}/portal` : '/login';
-
   if (!isInitialized || !VIEWER_LOGIN_STATES.has(loginState)) {
     return (
       <div
@@ -94,15 +89,6 @@ export default function BulletinBoardViewPage() {
         animBackdrop ? 'bg-transparent' : 'bg-background',
       )}
     >
-      <div className="flex flex-wrap items-center gap-3 mb-6">
-        <Button variant="outline" size="sm" className="gap-2 rounded-xl" asChild>
-          <Link href={backHref}>
-            <ArrowLeft className="h-4 w-4" aria-hidden />
-            Back
-          </Link>
-        </Button>
-      </div>
-
       {!bulletinEnabled ? (
         <Card className="border-dashed">
           <CardHeader>

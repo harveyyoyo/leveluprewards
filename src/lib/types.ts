@@ -268,8 +268,8 @@ export interface Achievement {
   /** Hex or CSS color for badge card border/glow. */
   accentColor?: string;
   enableWheelSpin?: boolean;
-  /** Which spin type to use (optional; falls back to legacy computed segments). */
-  wheelSpinTypeId?: string;
+  /** Exact point values for the 6 wheel segments. If omitted, falls back to computed segments based on bonusPoints. */
+  wheelSegments?: number[];
 }
 
 /** Real badge: earned for reaching a points threshold in a specific category within a time period (e.g. Good Behavior badge = 50 Good Behavior points this month). */
@@ -389,6 +389,7 @@ export interface BackupInfo {
 export interface Database {
   name: string;
   passcode: string;
+  schoolAccessPasscode?: string;
   adminPasscode?: string;
   // All array fields are now subcollections
   students?: Student[];

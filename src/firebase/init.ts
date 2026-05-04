@@ -104,6 +104,19 @@ export function getSdks(firebaseApp: FirebaseApp) {
       console.info(
         `[Firebase] Callable functions → HTTPS (${FIREBASE_CLOUD_FUNCTIONS_REGION}, production project endpoints)`,
       );
+      const h = window.location.hostname;
+      if (h === 'localhost' || h === '127.0.0.1' || h === '[::1]') {
+        const emu =
+          process.env.NEXT_PUBLIC_FIREBASE_EMULATORS === '1' ||
+          process.env.NEXT_PUBLIC_FIREBASE_EMULATORS === 'true' ||
+          process.env.NEXT_PUBLIC_FIREBASE_FUNCTIONS_EMULATOR === '1' ||
+          process.env.NEXT_PUBLIC_FIREBASE_FUNCTIONS_EMULATOR === 'true';
+        if (!emu) {
+          console.info(
+            '[Firebase] If callables fail on localhost: deploy functions to this project, or set NEXT_PUBLIC_FIREBASE_FUNCTIONS_EMULATOR=true (or NEXT_PUBLIC_FIREBASE_EMULATORS=true), run firebase emulators:start, restart next dev.',
+          );
+        }
+      }
     }
   }
 

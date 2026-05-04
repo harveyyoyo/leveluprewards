@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useRef, useCallback, RefObject, useMemo } from 'react';
@@ -10,13 +9,12 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
 import { useAppContext } from '@/components/AppProvider';
-import { useFirestore } from '@/firebase';
 import { useSettings } from '@/components/providers/SettingsProvider';
-import { lookupStudentId } from '@/lib/db';
 import { useToast } from '@/hooks/use-toast';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { cn } from '@/lib/utils';
 import { useFunctions, useUser } from '@/firebase';
+import { useAuth } from '@/components/providers/AuthProvider';
 import { useFaceDescriptor } from '@/hooks/useFaceDescriptor';
 import { getReadableErrorMessage } from '@/lib/errorMessage';
 
@@ -80,9 +78,9 @@ export function StudentScanner({
     isActive = true,
 }: StudentScannerProps) {
     const { schoolId } = useAppContext();
-    const firestore = useFirestore();
     const functions = useFunctions();
     const { user, isUserLoading } = useUser();
+    const { loginState, studentKioskSessionEstablished, studentKioskSessionError } = useAuth();
     const { toast } = useToast();
     const playSound = useArcadeSound();
     const { settings } = useSettings();
@@ -327,10 +325,39 @@ export function StudentScanner({
     ]);
 
     const handleLookup = useCallback(async (rawId: string) => {
-        if (!rawId?.trim() || !schoolId) return;
+        if (!rawId?.trim() || !schoolId || !functions) return;
 
-        try {
-            const finalStudentId = await lookupStudentId(firestore, schoolId, rawId.trim());
+        if (loginState === 'student') {
+            if (studentKioskSessionError) {
+                playSound('error');
+                toast({
+                    variant: 'destructive',
+                    title: 'Kiosk Not Ready',
+                    description: studentKioskSessionError,
+                });
+                setNfcId('');
+                return;
+            }
+            if (!studentKioskSessionEstablished) {
+                playSound('error');
+                toast({
+                    variant: 'destructive',
+                    title: 'Still Connecting',
+                    description: 'Wait a moment for this kiosk to finish connecting, then scan or enter the student ID again.',
+                });
+                setNfcId('');
+                return;
+            }
+        }
+
+        const badgeId = rawId.trim();
+        const runLookup = () => {
+            const lookup = httpsCallable(functions, 'lookupStudentByBadge');
+            return lookup({ schoolId, badgeId });
+        };
+
+        const onSuccess = (data: { studentId?: unknown }) => {
+            const finalStudentId = typeof data.studentId === 'string' ? data.studentId : null;
             if (finalStudentId) {
                 playSound('login');
                 onStudentFound(finalStudentId);
@@ -339,20 +366,56 @@ export function StudentScanner({
                 toast({
                     variant: 'destructive',
                     title: 'Student Not Found',
-                    description: 'The provided ID does not match any student.'
+                    description: 'The provided ID does not match any student.',
                 });
             }
+        };
+
+        try {
+            const res = await runLookup();
+            onSuccess(res.data as { studentId?: unknown });
         } catch (error) {
             const failure = getStudentLookupFailure(error, user, isUserLoading);
-            playSound('error');
-            toast({
-                variant: 'destructive',
-                title: failure.title,
-                description: failure.description,
-            });
+            // Any signed-in role can hit this if `kioskMembers` was never written (e.g. admin testing `/student`
+            // without a prior student session). `enterSchoolKioskSession` registers the current UID for lookups.
+            const isSchoolEntry = failure.title === 'School Entry Required' && !!user && !isUserLoading;
+            if (isSchoolEntry) {
+                try {
+                    const enter = httpsCallable(functions, 'enterSchoolKioskSession');
+                    await enter({ schoolId: schoolId.trim().toLowerCase() });
+                    const res2 = await runLookup();
+                    onSuccess(res2.data as { studentId?: unknown });
+                } catch (error2) {
+                    const failure2 = getStudentLookupFailure(error2, user, isUserLoading);
+                    playSound('error');
+                    toast({
+                        variant: 'destructive',
+                        title: failure2.title,
+                        description: failure2.description,
+                    });
+                }
+            } else {
+                playSound('error');
+                toast({
+                    variant: 'destructive',
+                    title: failure.title,
+                    description: failure.description,
+                });
+            }
         }
         setNfcId('');
-    }, [firestore, schoolId, user, isUserLoading, playSound, onStudentFound, toast]);
+    }, [
+        functions,
+        schoolId,
+        user,
+        isUserLoading,
+        playSound,
+        onStudentFound,
+        toast,
+        loginState,
+        studentKioskSessionEstablished,
+        studentKioskSessionError,
+    ]);
 
     const { videoRef, hasCameraPermission: hookHasPermission } = useBarcodeScanner(
         isActive && loginTab === 'camera',
@@ -403,7 +466,7 @@ export function StudentScanner({
 
     return (
         <div className={cn(
-            "w-full max-w-md rounded-[2.5rem] p-6 transition-all duration-700 relative z-10",
+            "w-full max-w-md rounded-[2.5rem] p-4 transition-all duration-700 relative z-10",
             isGraphic ? 'bg-card/90 backdrop-blur-2xl border border-border shadow-xl shadow-primary/10' : 'bg-card shadow-lg border border-border'
         )}>
             {/* Mascot Decoration for Graphic Mode */}
@@ -412,18 +475,18 @@ export function StudentScanner({
             )}
 
             <div className={cn(
-                "p-4 text-center relative z-10",
+                "p-2 text-center relative z-10",
                 isGraphic ? 'border-b border-border' : 'bg-muted/30 border-b border-border'
             )}>
                 {/* Kiosk lock removed */}
-                <div className="mx-auto mb-2 flex items-center justify-center transition-all duration-500">
+                <div className="mx-auto mb-1 flex items-center justify-center transition-all duration-500">
                     {icon}
                 </div>
             </div>
 
-            <div className="p-5">
+            <div className="p-3">
                 <Tabs defaultValue="nfc" className="w-full" value={loginTab} onValueChange={setLoginTab}>
-                    <TabsList className={cn("grid w-full p-1 rounded-xl mb-6", tabsColsClass, isGraphic ? 'bg-muted/50' : 'bg-muted/50')}>
+                    <TabsList className={cn("grid w-full p-1 rounded-xl mb-4", tabsColsClass, isGraphic ? 'bg-muted/50' : 'bg-muted/50')}>
                         <TabsTrigger value="nfc" onClick={() => nfcInputRef.current?.focus()} className="flex-1 sm:flex-initial rounded-xl font-black text-[9px] sm:text-[10px] px-1 sm:px-3 py-1.5 uppercase tracking-wider sm:tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-md transition-all">
                             <Nfc className="mr-1 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" /> Card
                         </TabsTrigger>
@@ -441,16 +504,28 @@ export function StudentScanner({
                     </TabsList>
 
                     <TabsContent value="nfc" className="text-center">
-                        <div className="py-12 space-y-8">
-                            <div className="relative w-32 h-32 mx-auto flex items-center justify-center">
+                        <div className="py-6 space-y-4">
+                            <div className="relative w-24 h-24 mx-auto flex items-center justify-center">
                                 <div className={cn("absolute inset-0 rounded-full animate-ping opacity-25", isGraphic ? 'bg-primary' : 'bg-muted-foreground')}></div>
-                                <div className={cn("w-24 h-24 rounded-full flex items-center justify-center border-4 relative z-10 shadow-xl transition-all", isGraphic ? 'bg-background border-primary text-primary' : 'bg-card border-slate-800 dark:border-slate-200 text-slate-800 dark:text-slate-200')}>
-                                    <Nfc className="w-12 h-12" />
+                                <div className={cn("w-20 h-20 rounded-full flex items-center justify-center border-4 relative z-10 shadow-xl transition-all", isGraphic ? 'bg-background border-primary text-primary' : 'bg-card border-slate-800 dark:border-slate-200 text-slate-800 dark:text-slate-200')}>
+                                    <Nfc className="w-10 h-10" />
                                 </div>
                             </div>
-                            <div className="space-y-2">
-                                <p className={cn("font-black text-2xl sm:text-3xl", isGraphic ? 'text-foreground' : 'text-foreground')}>System Ready</p>
-                                <p className="text-muted-foreground text-base sm:text-lg font-semibold">Please scan your card</p>
+                            <div className="space-y-1">
+                                <p className={cn("font-black text-xl sm:text-2xl", isGraphic ? 'text-foreground' : 'text-foreground')}>
+                                    {loginState === 'student' && studentKioskSessionError
+                                        ? 'Check-in Unavailable'
+                                        : loginState === 'student' && !studentKioskSessionEstablished
+                                          ? 'Connecting…'
+                                          : 'System Ready'}
+                                </p>
+                                <p className="text-muted-foreground text-sm sm:text-base font-semibold">
+                                    {loginState === 'student' && studentKioskSessionError
+                                        ? studentKioskSessionError
+                                        : loginState === 'student' && !studentKioskSessionEstablished
+                                          ? 'This device is registering with the school. Please wait.'
+                                          : 'Please scan your card'}
+                                </p>
                             </div>
                             <Input
                                 ref={nfcInputRef}
@@ -465,27 +540,27 @@ export function StudentScanner({
                     </TabsContent>
 
                     <TabsContent value="manual">
-                        <div className="space-y-4 py-2">
-                            <div className={cn("flex items-center gap-4 p-4 rounded-2xl border border-dashed transition-all hover:border-primary/50", isGraphic ? 'bg-background/50' : 'bg-secondary/50')}>
-                                <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0", isGraphic ? 'bg-primary text-primary-foreground' : 'bg-primary/10 text-primary')}>
-                                    <User className="w-5 h-5" />
+                        <div className="space-y-3 py-1">
+                            <div className={cn("flex items-center gap-4 p-3 rounded-2xl border border-dashed transition-all hover:border-primary/50", isGraphic ? 'bg-background/50' : 'bg-secondary/50')}>
+                                <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center shrink-0", isGraphic ? 'bg-primary text-primary-foreground' : 'bg-primary/10 text-primary')}>
+                                    <User className="w-4 h-4" />
                                 </div>
                                 <div className="flex-grow text-left">
                                     <Label className={cn("text-[10px] font-bold uppercase tracking-widest opacity-60", isGraphic ? 'text-foreground' : 'text-foreground')}>Manual Entry</Label>
                                     <p className={cn("text-xs font-medium", isGraphic ? 'text-muted-foreground' : 'text-muted-foreground')}>Enter your Student ID</p>
                                 </div>
                             </div>
-                            <div className="py-8">
+                            <div className="py-4">
                                 <Input
                                     value={nfcId}
                                     onChange={e => setNfcId(e.target.value)}
-                                    className={cn("h-20 text-4xl font-black text-center tracking-[0.5em] rounded-2xl transition-all", isGraphic ? 'bg-background/50 border-border text-foreground' : 'border-border bg-muted/30 text-foreground')}
+                                    className={cn("h-16 text-3xl font-black text-center tracking-[0.5em] rounded-2xl transition-all", isGraphic ? 'bg-background/50 border-border text-foreground' : 'border-border bg-muted/30 text-foreground')}
                                     placeholder="----"
                                     autoFocus
                                 />
                             </div>
                             <p className="text-xs text-muted-foreground">Use the ID on your student card or ask a teacher.</p>
-                            <Button onClick={() => handleLookup(nfcId)} className={cn("w-full h-14 rounded-xl font-black text-base uppercase tracking-widest shadow-lg transition-all active:scale-95 text-primary-foreground", isGraphic ? 'bg-primary hover:bg-primary/90' : 'bg-primary hover:bg-primary/90')}>
+                            <Button onClick={() => handleLookup(nfcId)} className={cn("w-full h-12 rounded-xl font-black text-base uppercase tracking-widest shadow-lg transition-all active:scale-95 text-primary-foreground", isGraphic ? 'bg-primary hover:bg-primary/90' : 'bg-primary hover:bg-primary/90')}>
                                 Identify Student
                             </Button>
                         </div>
@@ -494,7 +569,7 @@ export function StudentScanner({
                     <TabsContent value="camera">
                         <div className="py-2 space-y-4">
                             <div className="relative border-2 border-border rounded-xl overflow-hidden shadow-xl bg-black">
-                                <video ref={videoRef as RefObject<HTMLVideoElement>} className="w-full aspect-square object-cover" playsInline muted />
+                                <video ref={videoRef as RefObject<HTMLVideoElement>} className="w-full aspect-video max-h-[220px] object-cover" playsInline muted />
                                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                     <div className="w-3/4 h-3/4 border-2 border-white/30 rounded-[1.5rem] border-dashed animate-pulse" />
                                 </div>
@@ -514,7 +589,7 @@ export function StudentScanner({
                         <TabsContent value="face">
                             <div className="py-2 space-y-4">
                                 <div className="relative border-2 border-border rounded-xl overflow-hidden shadow-xl bg-black">
-                                    <video ref={faceVideoRef} className="w-full aspect-square object-cover" playsInline muted />
+                                    <video ref={faceVideoRef} className="w-full aspect-video max-h-[220px] object-cover" playsInline muted />
                                 </div>
 
                                 {faceStatus && (

@@ -378,7 +378,7 @@ export function AdminBrandingTab({
             </CardTitle>
           </Helper>
           <CardDescription>
-            This theme is used for Kiosk, prize/rewards shop, and ID cards when a student has no individual theme.
+                    This theme is used for the kiosk, rewards shop, and ID cards when a student has no individual theme.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -482,7 +482,7 @@ export function AdminBrandingTab({
                   <span className="text-sm font-medium text-muted-foreground">seconds</span>
                 </div>
                 <p className="text-[11px] text-muted-foreground">
-                  Inactivity before the student dashboard or prize/rewards shop returns to the home screen.
+                    Inactivity before the student dashboard or rewards shop returns to the home screen.
                 </p>
               </div>
             </div>
@@ -498,7 +498,7 @@ export function AdminBrandingTab({
             </CardTitle>
           </Helper>
           <CardDescription>
-            Show a scrolling message at the bottom or top of the student kiosk and portal hub. Draft the text below, then turn on the banner so students see it.
+            Show a sponsor or announcement banner at the top or bottom of student kiosk screens. Draft the content below, then turn on the banner so students see it.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -506,13 +506,15 @@ export function AdminBrandingTab({
           <div className="mb-6 border-b border-border/40 pb-6">
              <Label className="text-xs font-bold text-muted-foreground uppercase tracking-widest block mb-3">Live Preview</Label>
              <div className="rounded-xl overflow-hidden shadow-sm border border-border/50 bg-slate-100 dark:bg-slate-900 min-h-[5rem] flex items-center justify-center p-2 relative">
-                {(!settings.kioskSponsorMessage?.trim() && !settings.kioskSponsorEnabled) ? (
-                    <p className="text-sm text-muted-foreground">Sponsor banner is currently disabled or empty.</p>
+                {(!settings.kioskSponsorEnabled && !settings.kioskSponsorSchedules?.length) ? (
+                    <p className="text-sm text-muted-foreground">Sponsor banner is currently disabled.</p>
+                ) : (!settings.kioskSponsorMessage?.trim() && !settings.kioskSponsorLogoUrl?.trim() && !settings.kioskSponsorLink?.trim()) ? (
+                    <p className="text-sm text-muted-foreground">Add a message, logo, or link before students will see the banner.</p>
                 ) : (
                     <div className="w-full relative overflow-hidden rounded-lg">
                         <KioskSponsorBanner 
                             previewOverride={{
-                                message: settings.kioskSponsorMessage || 'Sample sponsor message',
+                                message: settings.kioskSponsorMessage || 'Thanks to our sponsor',
                                 link: settings.kioskSponsorLink,
                                 logoUrl: settings.kioskSponsorLogoUrl,
                                 speed: settings.kioskSponsorSpeed,
@@ -530,10 +532,10 @@ export function AdminBrandingTab({
             <div className="flex items-start gap-4 mr-6">
               <div className="flex flex-col">
                 <Label className="font-bold text-base block text-foreground mb-1" htmlFor="kioskSponsorEnabledBranding">
-                  Enable Default Sponsor Message
+                  Enable Default Sponsor Banner
                 </Label>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Display this scrolling sponsor or announcement banner on all student kiosk screens by default.
+                  Display this sponsor or announcement banner on student kiosk screens by default.
                 </p>
               </div>
             </div>
@@ -565,7 +567,7 @@ export function AdminBrandingTab({
 
             <div className="space-y-3">
               <Label htmlFor="kioskSponsorLinkBranding" className="text-xs font-bold text-muted-foreground uppercase tracking-widest block">
-                Sponsor Website / Call to Action
+                Sponsor Website or Call to Action
               </Label>
               <Input
                 id="kioskSponsorLinkBranding"
@@ -668,8 +670,8 @@ export function AdminBrandingTab({
           {/* Sponsor Schedules Sub-Section - Always visible regardless of default settings */}
           <div className="col-span-2 pt-6 border-t border-border/40 space-y-6">
             <div>
-              <h4 className="text-sm font-bold text-foreground">Future & Date-Specific Sponsors</h4>
-                  <p className="text-xs text-muted-foreground">Schedule upcoming sponsors or special announcement messages for specific days.</p>
+              <h4 className="text-sm font-bold text-foreground">Scheduled Sponsor Banners</h4>
+                  <p className="text-xs text-muted-foreground">Schedule sponsor banners or special announcements for specific days.</p>
                 </div>
 
                 {/* Form to add a new schedule */}
@@ -753,11 +755,23 @@ export function AdminBrandingTab({
                         </SelectContent>
                       </Select>
                     </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-bold text-muted-foreground uppercase">Banner position</Label>
+                      <Select value={newSponsorPosition} onValueChange={(val: any) => setNewSponsorPosition(val)}>
+                        <SelectTrigger className="rounded-xl">
+                          <SelectValue placeholder="Position" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="bottom">Bottom of screen</SelectItem>
+                          <SelectItem value="top">Top of screen</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                   <Button
                     onClick={() => {
                       if (!newSponsorDate || !newSponsorMessage) {
-                        toast({ variant: 'destructive', title: 'Missing fields', description: 'Date and message are required.' });
+                        toast({ variant: 'destructive', title: 'Missing fields', description: 'Date and scheduled message are required.' });
                         return;
                       }
                       const newItem = {
@@ -779,11 +793,11 @@ export function AdminBrandingTab({
                       setNewSponsorLink('');
                       setNewSponsorLogo('');
                       setNewSponsorIcon('🎉');
-                      toast({ title: 'Schedule Added', description: `Sponsor message scheduled for ${newSponsorDate}` });
+                      toast({ title: 'Schedule added', description: `Sponsor banner scheduled for ${newSponsorDate}` });
                     }}
                     className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold py-2.5 transition-all shadow-md flex items-center justify-center gap-2"
                   >
-                    <span>+ Add This Sponsor Schedule</span>
+                    <span>+ Add Scheduled Banner</span>
                   </Button>
                 </div>
 
@@ -822,7 +836,7 @@ export function AdminBrandingTab({
                               updateSettings({
                                 kioskSponsorSchedules: (settings.kioskSponsorSchedules || []).filter(item => item.id !== s.id),
                               });
-                              toast({ title: 'Schedule Removed', description: 'The sponsor schedule has been removed.' });
+                              toast({ title: 'Schedule removed', description: 'The scheduled sponsor banner has been removed.' });
                             }}
                           >
                             <Trash2 className="w-4 h-4" />

@@ -19,6 +19,30 @@ function toFiniteNumber(value, fallback) {
     const n = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
     return Number.isFinite(n) ? n : fallback;
 }
+async function isDeveloper(uid) {
+    var _a;
+    const snap = await admin.firestore().collection("appConfig").doc("global").get();
+    const list = snap.exists ? (_a = snap.data()) === null || _a === void 0 ? void 0 : _a.developerUids : undefined;
+    return Array.isArray(list) && list.includes(uid);
+}
+async function hasKioskMembershipOrStaff(schoolId, uid) {
+    const db = admin.firestore();
+    const schoolRef = db.collection("schools").doc(schoolId);
+    const memberSnap = await schoolRef.collection("kioskMembers").doc(uid).get();
+    if (memberSnap.exists)
+        return true;
+    const roleChecks = [
+        schoolRef.collection("roles_admin").doc(uid).get(),
+        schoolRef.collection("roles_teacher").doc(uid).get(),
+        schoolRef.collection("roles_secretary").doc(uid).get(),
+        schoolRef.collection("roles_prizeClerk").doc(uid).get(),
+    ];
+    const roles = ["admin", "teacher", "secretary", "prizeClerk"];
+    const snaps = await Promise.all(roleChecks);
+    if (snaps.some((snap, index) => { var _a; return snap.exists && ((_a = snap.data()) === null || _a === void 0 ? void 0 : _a.role) === roles[index]; }))
+        return true;
+    return isDeveloper(uid);
+}
 function parseTimeToMinutes(hhmm) {
     const [h, m] = hhmm.split(":").map(Number);
     return (h !== null && h !== void 0 ? h : 0) * 60 + (m !== null && m !== void 0 ? m : 0);
@@ -147,6 +171,9 @@ exports.signInAttendance = functions.https.onCall(async (data, context) => {
     const studentId = String(payload.studentId).trim();
     const db = admin.firestore();
     const now = Date.now();
+    if (!(await hasKioskMembershipOrStaff(schoolId, context.auth.uid))) {
+        throw new functions.https.HttpsError("permission-denied", "School entry required.");
+    }
     try {
         const studentSnap = await db.collection("schools").doc(schoolId).collection("students").doc(studentId).get();
         if (!studentSnap.exists) {

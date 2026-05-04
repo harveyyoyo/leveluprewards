@@ -154,7 +154,7 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses, cre
         };
         await updatePrize(updatedPrize);
         playSound('success');
-        toast({ title: 'Prize updated!' });
+        toast({ title: 'Reward item updated!' });
       } else {
         const newId = await addPrize({
           ...coreFields,
@@ -167,12 +167,12 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses, cre
           await updateDoc(doc(firestore, 'schools', schoolId, 'prizes', newId), { imageUrl });
         }
         playSound('success');
-        toast({ title: 'Prize added!' });
+        toast({ title: 'Reward item added!' });
       }
       setIsOpen(false);
     } catch (e) {
       playSound('error');
-      const msg = e instanceof Error ? e.message : 'Could not save prize.';
+      const msg = e instanceof Error ? e.message : 'Could not save reward item.';
       toast({ variant: 'destructive', title: msg });
     } finally {
       setUploading(false);
@@ -181,157 +181,159 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses, cre
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent size="sm">
-        <DialogHeader>
-          <DialogTitle>{isEditing ? 'Edit Prize/Rewards shop item' : 'New Prize/Rewards shop item'}</DialogTitle>
-           <DialogDescription>
-            Enter the prize details below. For the icon, use any valid name from the Lucide icon library. Optionally add a photo for the shop and admin list.
+      <DialogContent size="sm" className="flex flex-col p-0 overflow-hidden max-h-[var(--dialog-max-h,min(90vh,calc(100dvh-2rem)))]">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b">
+          <DialogTitle>{isEditing ? 'Edit reward item' : 'New reward item'}</DialogTitle>
+          <DialogDescription>
+            Enter the reward item details below. For the icon, use any valid name from the Lucide icon library. Optionally add a photo for the shop and admin list.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="space-y-1">
-            <Label htmlFor="prize-name">Item Name</Label>
-            <Input id="prize-name" value={name} onChange={e => setName(e.target.value)} />
-          </div>
-           <div className="space-y-1">
-            <Label htmlFor="prize-points">Point Cost</Label>
-            <Input id="prize-points" type="number" value={points} onChange={e => setPoints(e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label>Prize picture (optional)</Label>
-            <div className="flex flex-wrap items-start gap-3">
-              <div
-                className={cn(
-                  'relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border bg-muted flex items-center justify-center',
-                  displayImageSrc ? '' : 'border-dashed',
-                )}
-              >
-                {displayImageSrc ? (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img src={displayImageSrc} alt="" className="h-full w-full object-cover" />
-                ) : (
-                  <ImagePlus className="h-8 w-8 text-muted-foreground/50" aria-hidden />
-                )}
-              </div>
-              <div className="flex min-w-0 flex-1 flex-col gap-2">
-                <Input
-                  type="file"
-                  accept="image/jpeg,image/png,image/gif,image/webp"
-                  className="cursor-pointer text-sm file:mr-2"
-                  disabled={uploading}
-                  onChange={(e) => {
-                    handlePickFile(e.target.files?.[0]);
-                    e.target.value = '';
-                  }}
-                />
-                <p className="text-xs text-muted-foreground">JPEG, PNG, GIF, or WebP up to 2 MB.</p>
-                {displayImageSrc && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 self-start px-2 text-destructive hover:text-destructive"
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          <div className="grid gap-4">
+            <div className="space-y-1">
+              <Label htmlFor="prize-name">Item name</Label>
+              <Input id="prize-name" value={name} onChange={e => setName(e.target.value)} />
+            </div>
+             <div className="space-y-1">
+              <Label htmlFor="prize-points">Point cost</Label>
+              <Input id="prize-points" type="number" value={points} onChange={e => setPoints(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Reward picture (optional)</Label>
+              <div className="flex flex-wrap items-start gap-3">
+                <div
+                  className={cn(
+                    'relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border bg-muted flex items-center justify-center',
+                    displayImageSrc ? '' : 'border-dashed',
+                  )}
+                >
+                  {displayImageSrc ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={displayImageSrc} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <ImagePlus className="h-8 w-8 text-muted-foreground/50" aria-hidden />
+                  )}
+                </div>
+                <div className="flex min-w-0 flex-1 flex-col gap-2">
+                  <Input
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp"
+                    className="cursor-pointer text-sm file:mr-2"
                     disabled={uploading}
-                    onClick={() => {
-                      setPendingFile(null);
-                      setStripImage(true);
+                    onChange={(e) => {
+                      handlePickFile(e.target.files?.[0]);
+                      e.target.value = '';
                     }}
-                  >
-                    Remove picture
-                  </Button>
-                )}
+                  />
+                  <p className="text-xs text-muted-foreground">JPEG, PNG, GIF, or WebP up to 2 MB.</p>
+                  {displayImageSrc && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 self-start px-2 text-destructive hover:text-destructive"
+                      disabled={uploading}
+                      onClick={() => {
+                        setPendingFile(null);
+                        setStripImage(true);
+                      }}
+                    >
+                      Remove picture
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="prize-icon">Icon Name</Label>
-            <div className="flex items-center gap-2">
-              <Input id="prize-icon" value={icon} onChange={e => setIcon(e.target.value)} placeholder="e.g., 'Gift', 'Star', 'Trophy'" />
-              <div className="p-2 border rounded-md bg-secondary">
-                <DynamicIcon name={icon} className="w-6 h-6 text-primary" />
-              </div>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <Label htmlFor="prize-teacher">Teacher Restriction</Label>
-              <Select value={teacherId || 'all'} onValueChange={(v) => setTeacherId(v === 'all' ? '' : v)}>
-                <SelectTrigger id="prize-teacher">
-                  <SelectValue placeholder="School-wide" />
+              <Label htmlFor="prize-icon">Icon name</Label>
+              <div className="flex items-center gap-2">
+                <Input id="prize-icon" value={icon} onChange={e => setIcon(e.target.value)} placeholder="e.g., 'Gift', 'Star', 'Trophy'" />
+                <div className="p-2 border rounded-md bg-secondary">
+                  <DynamicIcon name={icon} className="w-6 h-6 text-primary" />
+                </div>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <Label htmlFor="prize-teacher">Teacher restriction</Label>
+                <Select value={teacherId || 'all'} onValueChange={(v) => setTeacherId(v === 'all' ? '' : v)}>
+                  <SelectTrigger id="prize-teacher">
+                    <SelectValue placeholder="School-wide" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">School-wide</SelectItem>
+                    {teachers.map(t => (
+                      <SelectItem key={t.id} value={t.id}>{t.name}'s rewards</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="prize-class">Class restriction</Label>
+                <Select value={classId || 'all'} onValueChange={(v) => setClassId(v === 'all' ? '' : v)}>
+                  <SelectTrigger id="prize-class">
+                    <SelectValue placeholder="School-wide" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">School-wide</SelectItem>
+                    {allClasses.map(c => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
+              <div className="space-y-0.5">
+                <Label htmlFor="in-stock">In stock</Label>
+                <p className="text-xs text-muted-foreground">
+                  Is this reward item currently available for redemption?
+                </p>
+              </div>
+              <Switch
+                id="in-stock"
+                checked={inStock}
+                onCheckedChange={setInStock}
+              />
+            </div>
+            <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
+              <div className="space-y-0.5">
+                <Label htmlFor="print-ticket">Print redeem voucher</Label>
+                <p className="text-xs text-muted-foreground">
+                  After a student redeems, offer to print a voucher in the rewards shop.
+                </p>
+              </div>
+              <Switch
+                id="print-ticket"
+                checked={offerPrintTicketOnRedeem}
+                onCheckedChange={setOfferPrintTicketOnRedeem}
+              />
+            </div>
+            {prizeAiOn ? (
+            <div className="flex flex-col gap-2 rounded-lg border p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="ai-fun">AI surprise after redeem</Label>
+                <p className="text-xs text-muted-foreground">
+                  Optional joke, riddle, or fortune on the rewards shop kiosk.
+                </p>
+              </div>
+              <Select value={aiFun} onValueChange={(v) => setAiFun(v as 'off' | PrizeAiFunReward)}>
+                <SelectTrigger id="ai-fun" className="w-full sm:w-[160px]">
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">School-wide</SelectItem>
-                  {teachers.map(t => (
-                    <SelectItem key={t.id} value={t.id}>{t.name}'s Prizes</SelectItem>
-                  ))}
+                  <SelectItem value="off">Off</SelectItem>
+                  <SelectItem value="random">Random</SelectItem>
+                  <SelectItem value="joke">Joke</SelectItem>
+                  <SelectItem value="riddle">Riddle</SelectItem>
+                  <SelectItem value="fortune">Fortune cookie</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="prize-class">Class Restriction</Label>
-              <Select value={classId || 'all'} onValueChange={(v) => setClassId(v === 'all' ? '' : v)}>
-                <SelectTrigger id="prize-class">
-                  <SelectValue placeholder="School-wide" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">School-wide</SelectItem>
-                  {allClasses.map(c => (
-                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            ) : null}
           </div>
-          <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
-            <div className="space-y-0.5">
-              <Label htmlFor="in-stock">In Stock</Label>
-              <p className="text-xs text-muted-foreground">
-                Is this prize currently available for redemption?
-              </p>
-            </div>
-            <Switch
-              id="in-stock"
-              checked={inStock}
-              onCheckedChange={setInStock}
-            />
-          </div>
-          <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
-            <div className="space-y-0.5">
-              <Label htmlFor="print-ticket">Print redeem voucher</Label>
-              <p className="text-xs text-muted-foreground">
-                After a student redeems, offer to print a voucher in the Prize/Rewards shop.
-              </p>
-            </div>
-            <Switch
-              id="print-ticket"
-              checked={offerPrintTicketOnRedeem}
-              onCheckedChange={setOfferPrintTicketOnRedeem}
-            />
-          </div>
-          {prizeAiOn ? (
-          <div className="flex flex-col gap-2 rounded-lg border p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-0.5">
-              <Label htmlFor="ai-fun">AI surprise after redeem</Label>
-              <p className="text-xs text-muted-foreground">
-                Optional joke, riddle, or fortune on the Prize/Rewards shop kiosk.
-              </p>
-            </div>
-            <Select value={aiFun} onValueChange={(v) => setAiFun(v as 'off' | PrizeAiFunReward)}>
-              <SelectTrigger id="ai-fun" className="w-full sm:w-[160px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="off">Off</SelectItem>
-                <SelectItem value="random">Random</SelectItem>
-                <SelectItem value="joke">Joke</SelectItem>
-                <SelectItem value="riddle">Riddle</SelectItem>
-                <SelectItem value="fortune">Fortune cookie</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          ) : null}
         </div>
-        <DialogFooter>
+        <DialogFooter className="px-6 py-4 border-t bg-muted/30">
           <Button type="button" variant="secondary" disabled={uploading} onClick={() => setIsOpen(false)}>Cancel</Button>
           <Button type="submit" disabled={uploading} onClick={handleSave} className="gap-2">
             {uploading ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden /> : null}

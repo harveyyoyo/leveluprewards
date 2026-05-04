@@ -50,6 +50,147 @@ function requireString(value, name) {
         throw new functions.https.HttpsError("invalid-argument", `A valid ${name} is required.`);
     }
 }
+function trimmedString(value) {
+    return typeof value === "string" ? value.trim() : "";
+}
+function schoolAccessPasscodeFrom(data) {
+    return trimmedString(data.schoolAccessPasscode) || trimmedString(data.passcode) || "1234";
+}
+function adminPasscodeFrom(data) {
+    return trimmedString(data.adminPasscode) || trimmedString(data.passcode) || "1234";
+}
+async function hasSchoolRole(schoolId, uid, roles) {
+    const db = admin.firestore();
+    const roleCollections = {
+        admin: "roles_admin",
+        teacher: "roles_teacher",
+        secretary: "roles_secretary",
+        prizeClerk: "roles_prizeClerk",
+        reports: "roles_reports",
+    };
+    const snaps = await Promise.all(roles.map((role) => db.collection("schools").doc(schoolId).collection(roleCollections[role]).doc(uid).get()));
+    return snaps.some((snap, index) => { var _a; return snap.exists && ((_a = snap.data()) === null || _a === void 0 ? void 0 : _a.role) === roles[index]; });
+}
+async function hasKioskMembershipOrStaff(schoolId, context, roles = ["admin", "teacher", "secretary", "prizeClerk"]) {
+    requireAuth(context);
+    const uid = context.auth.uid;
+    const db = admin.firestore();
+    const memberSnap = await db.collection("schools").doc(schoolId).collection("kioskMembers").doc(uid).get();
+    if (memberSnap.exists)
+        return true;
+    if (await hasSchoolRole(schoolId, uid, roles))
+        return true;
+    return isDeveloper(context);
+}
+async function schoolEntryCodeIsRequired(db, schoolId) {
+    var _a, _b;
+    const secretSnap = await db.collection("schools").doc(schoolId).collection("secrets").doc("entry").get();
+    const code = secretSnap.exists ? String((_b = (_a = secretSnap.data()) === null || _a === void 0 ? void 0 : _a.code) !== null && _b !== void 0 ? _b : "").trim() : "";
+    return code.length > 0;
+}
+function requireDescriptor(value, name) {
+    if (!Array.isArray(value) ||
+        value.length < 32 ||
+        value.length > 2048 ||
+        !value.every((n) => typeof n === "number" && Number.isFinite(n))) {
+        throw new functions.https.HttpsError("invalid-argument", `A valid ${name} descriptor is required.`);
+    }
+}
+function getRewardPeriodKeys(now) {
+    const d = new Date(now);
+    const y = d.getFullYear();
+    const m = d.getMonth() + 1;
+    return {
+        month: `${y}-${String(m).padStart(2, "0")}`,
+        semester: m <= 6 ? `${y}-H1` : `${y}-H2`,
+        year: String(y),
+        all_time: "all",
+    };
+}
+function applyCategoryPointsByPeriodData(current, categoryName, points, now) {
+    const next = current && typeof current === "object" && !Array.isArray(current)
+        ? JSON.parse(JSON.stringify(current))
+        : {};
+    const keys = getRewardPeriodKeys(now);
+    for (const key of [keys.month, keys.semester, keys.year, keys.all_time]) {
+        if (!next[key] || typeof next[key] !== "object")
+            next[key] = {};
+        next[key][categoryName] = Number(next[key][categoryName] || 0) + points;
+    }
+    return next;
+}
+function evaluateBadgeAwardsData(params) {
+    var _a;
+    const earned = Array.isArray(params.student.earnedBadges) ? params.student.earnedBadges : [];
+    const earnedSet = new Set(earned.map((e) => `${e === null || e === void 0 ? void 0 : e.badgeId}:${e === null || e === void 0 ? void 0 : e.periodKey}`));
+    const keys = getRewardPeriodKeys(params.now);
+    const out = [];
+    for (const badge of params.badges) {
+        if (!badge || badge.enabled === false || typeof badge.id !== "string")
+            continue;
+        const cat = params.categories.find((c) => (c === null || c === void 0 ? void 0 : c.id) === badge.categoryId);
+        const categoryName = typeof (cat === null || cat === void 0 ? void 0 : cat.name) === "string" ? cat.name : "";
+        if (!categoryName)
+            continue;
+        const periodKey = badge.period === "month"
+            ? keys.month
+            : badge.period === "semester"
+                ? keys.semester
+                : badge.period === "year"
+                    ? keys.year
+                    : "all";
+        const periodPoints = Number(((_a = params.categoryPointsByPeriod[periodKey]) === null || _a === void 0 ? void 0 : _a[categoryName]) || 0);
+        const required = Number(badge.pointsRequired || 0);
+        if (periodPoints < required || earnedSet.has(`${badge.id}:${periodKey}`))
+            continue;
+        earnedSet.add(`${badge.id}:${periodKey}`);
+        out.push({ badgeId: badge.id, periodKey, earnedAt: params.now, name: String(badge.name || "Unknown") });
+    }
+    return out;
+}
+function evaluateAchievementAwardsData(params) {
+    const earned = Array.isArray(params.student.earnedAchievements) ? params.student.earnedAchievements : [];
+    const earnedSet = new Set(earned.map((e) => e === null || e === void 0 ? void 0 : e.achievementId));
+    const out = [];
+    for (const ach of params.achievements) {
+        if (!ach || typeof ach.id !== "string" || earnedSet.has(ach.id))
+            continue;
+        const criteria = ach.criteria || {};
+        if (criteria.type === "manual")
+            continue;
+        const threshold = Number(criteria.threshold || 0);
+        let earnedNow = false;
+        if (criteria.type === "points") {
+            if (typeof criteria.categoryId === "string" && criteria.categoryId) {
+                const cat = params.categories.find((c) => (c === null || c === void 0 ? void 0 : c.id) === criteria.categoryId);
+                const categoryName = typeof (cat === null || cat === void 0 ? void 0 : cat.name) === "string" ? cat.name : "";
+                earnedNow = !!categoryName && Number(params.categoryPoints[categoryName] || 0) >= threshold;
+            }
+            else {
+                earnedNow = params.points >= threshold;
+            }
+        }
+        else if (criteria.type === "lifetimePoints") {
+            earnedNow = params.lifetimePoints >= threshold;
+        }
+        else if (criteria.type === "coupons") {
+            const cat = params.categories.find((c) => (c === null || c === void 0 ? void 0 : c.id) === criteria.categoryId);
+            const categoryName = typeof (cat === null || cat === void 0 ? void 0 : cat.name) === "string" ? cat.name : "";
+            earnedNow = !!categoryName && Number(params.categoryPoints[categoryName] || 0) >= threshold;
+        }
+        if (!earnedNow)
+            continue;
+        earnedSet.add(ach.id);
+        out.push({
+            achievementId: ach.id,
+            earnedAt: params.now,
+            bonusPoints: Number(ach.bonusPoints || 0),
+            name: String(ach.name || "Unknown"),
+            wheelSpin: ach.enableWheelSpin === true,
+        });
+    }
+    return out;
+}
 // ========================================================================
 // Core backup engine
 // ========================================================================
@@ -62,6 +203,8 @@ async function collectFullSchoolData(schoolId) {
     }
     const schoolData = JSON.parse(JSON.stringify(schoolSnap.data()));
     delete schoolData.passcode;
+    delete schoolData.schoolAccessPasscode;
+    delete schoolData.adminPasscode;
     const counts = {};
     let totalDocs = 1;
     for (const sub of SUBCOLLECTIONS) {
@@ -140,7 +283,10 @@ async function restoreSchoolFromData(schoolId, backupData) {
     const schoolRef = db.collection("schools").doc(schoolId);
     const BATCH_LIMIT = 499;
     const currentSnap = await schoolRef.get();
-    const currentPasscode = currentSnap.exists ? (_a = currentSnap.data()) === null || _a === void 0 ? void 0 : _a.passcode : null;
+    const currentSchoolData = currentSnap.exists ? (_a = currentSnap.data()) !== null && _a !== void 0 ? _a : {} : {};
+    const currentPasscode = trimmedString(currentSchoolData.passcode) || null;
+    const currentSchoolAccessPasscode = trimmedString(currentSchoolData.schoolAccessPasscode) || null;
+    const currentAdminPasscode = trimmedString(currentSchoolData.adminPasscode) || null;
     for (const sub of SUBCOLLECTIONS) {
         const snap = await schoolRef.collection(sub).get();
         if (sub === "students") {
@@ -167,6 +313,12 @@ async function restoreSchoolFromData(schoolId, backupData) {
     }
     if (currentPasscode) {
         schoolDocData.passcode = currentPasscode;
+    }
+    if (currentSchoolAccessPasscode) {
+        schoolDocData.schoolAccessPasscode = currentSchoolAccessPasscode;
+    }
+    if (currentAdminPasscode) {
+        schoolDocData.adminPasscode = currentAdminPasscode;
     }
     await schoolRef.set(schoolDocData);
     for (const sub of SUBCOLLECTIONS) {
@@ -383,12 +535,35 @@ exports.verifySchoolPasscode = functions.https.onCall(async (data, context) => {
         throw new functions.https.HttpsError("not-found", "School not found.");
     }
     const schoolData = schoolDoc.data();
-    if (schoolData.passcode !== data.passcode) {
+    if (adminPasscodeFrom(schoolData) !== String(data.passcode).trim()) {
         throw new functions.https.HttpsError("permission-denied", "Invalid passcode.");
     }
     // Provision admin role using the Admin SDK (path must match client: schools/{schoolId}/roles_admin/{uid})
     const adminRoleRef = db.collection("schools").doc(schoolId).collection("roles_admin").doc(context.auth.uid);
     await adminRoleRef.set({ role: 'admin' });
+    return { success: true };
+});
+// ========================================================================
+// Callable: Verify school access passcode (NO role provisioning)
+// Used for "school sign-in" gate before choosing student/faculty/admin.
+// ========================================================================
+exports.verifySchoolAccessPasscode = functions.https.onCall(async (data, context) => {
+    requireAuth(context);
+    requireString(data.schoolId, "schoolId");
+    if (typeof data.passcode !== "string" || data.passcode.length === 0) {
+        throw new functions.https.HttpsError("invalid-argument", "A valid passcode is required.");
+    }
+    const schoolId = String(data.schoolId).trim().toLowerCase();
+    const passcode = String(data.passcode).trim();
+    const db = admin.firestore();
+    const schoolDoc = await db.collection("schools").doc(schoolId).get();
+    if (!schoolDoc.exists) {
+        throw new functions.https.HttpsError("not-found", "School not found.");
+    }
+    const schoolData = schoolDoc.data();
+    if (schoolAccessPasscodeFrom(schoolData) !== passcode) {
+        throw new functions.https.HttpsError("permission-denied", "Invalid passcode.");
+    }
     return { success: true };
 });
 // ========================================================================
@@ -426,6 +601,28 @@ exports.addDeveloperMe = functions.https.onCall(async (data, context) => {
     await globalRef.set({ developerUids: firestore_1.FieldValue.arrayUnion(context.auth.uid) }, { merge: true });
     return { success: true };
 });
+/** Callable: record a developer support session before opening a school's admin tools. */
+exports.startDeveloperSupportSession = functions.https.onCall(async (data, context) => {
+    await requireDeveloper(context);
+    requireString(data.schoolId, "schoolId");
+    const schoolId = String(data.schoolId).trim().toLowerCase();
+    const db = admin.firestore();
+    const schoolRef = db.collection("schools").doc(schoolId);
+    const schoolSnap = await schoolRef.get();
+    if (!schoolSnap.exists) {
+        throw new functions.https.HttpsError("not-found", `School "${schoolId}" was not found.`);
+    }
+    const now = Date.now();
+    const sessionRef = schoolRef.collection("supportSessions").doc(`${now}_${context.auth.uid}`);
+    await sessionRef.set({
+        developerUid: context.auth.uid,
+        startedAt: now,
+        schoolId,
+        userAgent: context.rawRequest.get("user-agent") || "",
+        status: "started",
+    });
+    return { success: true, sessionId: sessionRef.id };
+});
 /** Callable: create or repair a school shell using the Admin SDK. */
 exports.createSchoolByDeveloper = functions.https.onCall(async (data, context) => {
     var _a;
@@ -437,12 +634,16 @@ exports.createSchoolByDeveloper = functions.https.onCall(async (data, context) =
     }
     const now = Date.now();
     const providedName = typeof data.name === "string" ? data.name.trim() : "";
-    const providedPasscode = typeof data.passcode === "string" ? data.passcode.trim() : "";
-    const defaultPasscode = Math.floor(1000 + Math.random() * 9000).toString();
+    const providedLegacyPasscode = trimmedString(data.passcode);
+    const providedSchoolAccessPasscode = trimmedString(data.schoolAccessPasscode) || providedLegacyPasscode;
+    const providedAdminPasscode = trimmedString(data.adminPasscode) || providedLegacyPasscode;
+    const defaultPasscode = "1234";
     const schoolDocData = {
         name: providedName || cleanId,
         updatedAt: now,
-        passcode: providedPasscode || defaultPasscode,
+        passcode: providedSchoolAccessPasscode || defaultPasscode,
+        schoolAccessPasscode: providedSchoolAccessPasscode || defaultPasscode,
+        adminPasscode: providedAdminPasscode || defaultPasscode,
         plan: "free",
         featureOverrides: {},
         hasMigratedStudents: true,
@@ -515,7 +716,11 @@ exports.createSchoolByDeveloper = functions.https.onCall(async (data, context) =
         throw new functions.https.HttpsError("already-exists", `School ID "${cleanId}" already exists.`);
     }
     const existing = schoolSnap.exists ? (_a = schoolSnap.data()) !== null && _a !== void 0 ? _a : {} : {};
-    const finalSchoolDocData = Object.assign(Object.assign(Object.assign({}, schoolDocData), existing), { name: providedName || existing.name || schoolDocData.name, passcode: providedPasscode || existing.passcode || schoolDocData.passcode, updatedAt: now, plan: existing.plan || schoolDocData.plan, featureOverrides: existing.featureOverrides || schoolDocData.featureOverrides, hasMigratedStudents: true, hasMigratedClasses: true, hasMigratedTeachers: true, hasMigratedPrizes: true, hasMigratedCoupons: true, hasMigratedCategories: true });
+    const finalSchoolDocData = Object.assign(Object.assign(Object.assign({}, schoolDocData), existing), { name: providedName || existing.name || schoolDocData.name, passcode: providedSchoolAccessPasscode || existing.passcode || schoolDocData.passcode, schoolAccessPasscode: providedSchoolAccessPasscode ||
+            schoolAccessPasscodeFrom(existing) ||
+            schoolDocData.schoolAccessPasscode, adminPasscode: providedAdminPasscode ||
+            adminPasscodeFrom(existing) ||
+            schoolDocData.adminPasscode, updatedAt: now, plan: existing.plan || schoolDocData.plan, featureOverrides: existing.featureOverrides || schoolDocData.featureOverrides, hasMigratedStudents: true, hasMigratedClasses: true, hasMigratedTeachers: true, hasMigratedPrizes: true, hasMigratedCoupons: true, hasMigratedCategories: true });
     const batch = db.batch();
     batch.set(schoolRef, finalSchoolDocData, { merge: true });
     if (studentsSnap.empty) {
@@ -567,7 +772,9 @@ exports.createSchoolByDeveloper = functions.https.onCall(async (data, context) =
     return {
         success: true,
         cleanId,
-        passcode: finalSchoolDocData.passcode,
+        passcode: finalSchoolDocData.schoolAccessPasscode,
+        schoolAccessPasscode: finalSchoolDocData.schoolAccessPasscode,
+        adminPasscode: finalSchoolDocData.adminPasscode,
         repaired: schoolSnap.exists,
     };
 });
@@ -649,28 +856,6 @@ exports.setAttendanceConfig = functions.https.onCall(async (data, context) => {
 // ========================================================================
 // Kiosk / school-entry helpers (private school URLs)
 // ========================================================================
-/**
- * When Admin has not set `schools/{id}/secrets/entry` (or code is empty), the kiosk entry gate is off:
- * coupon/badge callables work without `kioskMembers`. If a non-empty code is configured, callers must
- * verify via `verifySchoolEntryCode` first (client should collect that code once per device/session).
- */
-async function schoolKioskEntryGateIsActive(db, schoolId) {
-    var _a, _b;
-    const secretSnap = await db.collection("schools").doc(schoolId).collection("secrets").doc("entry").get();
-    if (!secretSnap.exists)
-        return false;
-    const code = String((_b = (_a = secretSnap.data()) === null || _a === void 0 ? void 0 : _a.code) !== null && _b !== void 0 ? _b : "").trim();
-    return code.length > 0;
-}
-async function assertKioskMemberIfEntryGateActive(db, schoolId, uid) {
-    if (!(await schoolKioskEntryGateIsActive(db, schoolId)))
-        return;
-    const memberRef = db.collection("schools").doc(schoolId).collection("kioskMembers").doc(uid);
-    const memberSnap = await memberRef.get();
-    if (!memberSnap.exists) {
-        throw new functions.https.HttpsError("permission-denied", "School entry required.");
-    }
-}
 /** Callable: verify school entry code and grant kiosk membership. */
 exports.verifySchoolEntryCode = functions.https.onCall(async (data, context) => {
     var _a, _b;
@@ -694,6 +879,31 @@ exports.verifySchoolEntryCode = functions.https.onCall(async (data, context) => 
     await memberRef.set({ createdAt: Date.now() }, { merge: true });
     return { success: true };
 });
+/** Callable: grant a browser a kiosk session for public student-mode school links. */
+exports.enterSchoolKioskSession = functions.https.onCall(async (data, context) => {
+    var _a;
+    requireAuth(context);
+    requireString(data.schoolId, "schoolId");
+    const schoolId = String(data.schoolId).trim().toLowerCase();
+    const db = admin.firestore();
+    const publicSnap = await db.collection("schoolPublic").doc(schoolId).get();
+    if (!publicSnap.exists) {
+        throw new functions.https.HttpsError("permission-denied", "Public student access is not enabled for this school.");
+    }
+    if (((_a = publicSnap.data()) === null || _a === void 0 ? void 0 : _a.active) === false) {
+        throw new functions.https.HttpsError("permission-denied", "School is not active.");
+    }
+    if (await schoolEntryCodeIsRequired(db, schoolId)) {
+        throw new functions.https.HttpsError("permission-denied", "School entry required.");
+    }
+    await db
+        .collection("schools")
+        .doc(schoolId)
+        .collection("kioskMembers")
+        .doc(context.auth.uid)
+        .set({ createdAt: Date.now(), source: "student-login" }, { merge: true });
+    return { success: true };
+});
 /** Callable: kiosk-safe student lookup by badge/card id. */
 exports.lookupStudentByBadge = functions.https.onCall(async (data, context) => {
     requireAuth(context);
@@ -701,8 +911,10 @@ exports.lookupStudentByBadge = functions.https.onCall(async (data, context) => {
     requireString(data.badgeId, "badgeId");
     const schoolId = String(data.schoolId).trim().toLowerCase();
     const badgeId = String(data.badgeId).trim();
+    if (!(await hasKioskMembershipOrStaff(schoolId, context))) {
+        throw new functions.https.HttpsError("permission-denied", "School entry required.");
+    }
     const db = admin.firestore();
-    await assertKioskMemberIfEntryGateActive(db, schoolId, context.auth.uid);
     const studentsRef = db.collection("schools").doc(schoolId).collection("students");
     const byDoc = await studentsRef.doc(badgeId).get();
     if (byDoc.exists)
@@ -720,21 +932,27 @@ exports.lookupStudentByBadge = functions.https.onCall(async (data, context) => {
     }
     return { studentId: null };
 });
-/** Callable: redeem coupon (server-authoritative; kiosk-safe). */
-exports.redeemCouponServer = functions.https.onCall(async (data, context) => {
-    requireAuth(context);
-    requireString(data.schoolId, "schoolId");
-    requireString(data.studentId, "studentId");
-    requireString(data.couponCode, "couponCode");
-    const schoolId = String(data.schoolId).trim().toLowerCase();
-    const studentId = String(data.studentId).trim();
-    const couponCode = String(data.couponCode).trim().toUpperCase();
-    const db = admin.firestore();
-    await assertKioskMemberIfEntryGateActive(db, schoolId, context.auth.uid);
-    const couponRef = db.collection("schools").doc(schoolId).collection("coupons").doc(couponCode);
-    const studentRef = db.collection("schools").doc(schoolId).collection("students").doc(studentId);
+async function redeemCouponForStudent(db, schoolId, studentId, couponCode) {
+    var _a;
+    const schoolRef = db.collection("schools").doc(schoolId);
+    const couponRef = schoolRef.collection("coupons").doc(couponCode);
+    const studentRef = schoolRef.collection("students").doc(studentId);
+    const [schoolSnap, categoriesSnap, achievementsSnap, badgesSnap] = await Promise.all([
+        schoolRef.get(),
+        schoolRef.collection("categories").get(),
+        schoolRef.collection("achievements").get(),
+        schoolRef.collection("badges").get(),
+    ]);
+    const appSettings = schoolSnap.exists ? (((_a = schoolSnap.data()) === null || _a === void 0 ? void 0 : _a.appSettings) || {}) : {};
+    const achievements = appSettings.enableAchievements === true
+        ? achievementsSnap.docs.map((d) => (Object.assign({ id: d.id }, d.data())))
+        : [];
+    const badges = appSettings.enableBadges === true
+        ? badgesSnap.docs.map((d) => (Object.assign({ id: d.id }, d.data())))
+        : [];
+    const categories = categoriesSnap.docs.map((d) => (Object.assign({ id: d.id }, d.data())));
     const now = Date.now();
-    const result = await db.runTransaction(async (tx) => {
+    return db.runTransaction(async (tx) => {
         const couponSnap = await tx.get(couponRef);
         if (!couponSnap.exists)
             throw new functions.https.HttpsError("not-found", "Coupon code not found.");
@@ -755,8 +973,7 @@ exports.redeemCouponServer = functions.https.onCall(async (data, context) => {
         const classId = typeof s.classId === "string" ? s.classId : "";
         let classPrimaryTeacherId = null;
         if (classId) {
-            const classRef = db.collection("schools").doc(schoolId).collection("classes").doc(classId);
-            const classSnap = await tx.get(classRef);
+            const classSnap = await tx.get(schoolRef.collection("classes").doc(classId));
             if (classSnap.exists) {
                 const cd = classSnap.data();
                 if (typeof cd.primaryTeacherId === "string")
@@ -768,18 +985,91 @@ exports.redeemCouponServer = functions.https.onCall(async (data, context) => {
             throw new functions.https.HttpsError("failed-precondition", gate.message || "Not eligible to redeem this coupon.");
         }
         const value = typeof coupon.value === "number" ? coupon.value : Number(coupon.value || 0);
+        const categoryName = String(coupon.category || "Coupon");
+        const newPoints = Number(s.points || 0) + value;
+        const newLifetimePoints = Number(s.lifetimePoints || 0) + value;
+        const categoryPoints = s.categoryPoints && typeof s.categoryPoints === "object" && !Array.isArray(s.categoryPoints)
+            ? Object.assign({}, s.categoryPoints) : {};
+        categoryPoints[categoryName] = Number(categoryPoints[categoryName] || 0) + value;
+        const categoryPointsByPeriod = applyCategoryPointsByPeriodData(s.categoryPointsByPeriod, categoryName, value, now);
+        const earnedBadges = [...(Array.isArray(s.earnedBadges) ? s.earnedBadges : [])];
+        for (const b of evaluateBadgeAwardsData({ student: s, badges, categories, categoryPointsByPeriod, now })) {
+            earnedBadges.push({ badgeId: b.badgeId, periodKey: b.periodKey, earnedAt: b.earnedAt });
+            tx.set(studentRef.collection("activities").doc(), {
+                desc: `Badge earned: ${b.name}`,
+                amount: 0,
+                date: b.earnedAt,
+            });
+        }
+        const earnedAchievements = [...(Array.isArray(s.earnedAchievements) ? s.earnedAchievements : [])];
+        let bonusTotal = 0;
+        for (const ach of evaluateAchievementAwardsData({
+            student: s,
+            achievements,
+            categories,
+            points: newPoints,
+            lifetimePoints: newLifetimePoints,
+            categoryPoints,
+            now,
+        })) {
+            const earnedAchievement = {
+                achievementId: ach.achievementId,
+                earnedAt: ach.earnedAt,
+            };
+            if (ach.wheelSpin)
+                earnedAchievement.wheelSpun = false;
+            earnedAchievements.push(earnedAchievement);
+            if (ach.wheelSpin) {
+                tx.set(studentRef.collection("activities").doc(), {
+                    desc: `Achievement Unlocked: ${ach.name} (Wheel Spin ready!)`,
+                    amount: 0,
+                    date: now,
+                });
+            }
+            else {
+                bonusTotal += ach.bonusPoints;
+                tx.set(studentRef.collection("activities").doc(), {
+                    desc: `Achievement Unlocked: ${ach.name}`,
+                    amount: ach.bonusPoints,
+                    date: now,
+                });
+            }
+        }
         tx.update(studentRef, {
-            points: Number(s.points || 0) + value,
-            lifetimePoints: Number(s.lifetimePoints || 0) + value,
+            points: newPoints + bonusTotal,
+            lifetimePoints: newLifetimePoints + bonusTotal,
+            categoryPoints,
+            categoryPointsByPeriod,
+            earnedAchievements,
+            earnedBadges,
         });
-        const activityRef = studentRef.collection("activities").doc();
         const cat = String(coupon.category || "Coupon");
         const code = String(coupon.code || couponCode);
-        tx.set(activityRef, { desc: `Redeemed coupon: ${code} (${cat})`, amount: value, date: now });
+        tx.set(studentRef.collection("activities").doc(), { desc: `Redeemed coupon: ${code} (${cat})`, amount: value, date: now });
         tx.update(couponRef, { used: true, usedAt: now, usedBy: studentId });
-        return { value };
+        return { value, bonusTotal };
     });
-    return { success: true, message: "Redeemed successfully", value: result.value };
+}
+/** Callable: redeem coupon (server-authoritative; kiosk-safe). */
+exports.redeemCouponServer = functions.https.onCall(async (data, context) => {
+    requireAuth(context);
+    requireString(data.schoolId, "schoolId");
+    requireString(data.studentId, "studentId");
+    requireString(data.couponCode, "couponCode");
+    const schoolId = String(data.schoolId).trim().toLowerCase();
+    const studentId = String(data.studentId).trim();
+    const couponCode = String(data.couponCode).trim().toUpperCase();
+    if (!(await hasKioskMembershipOrStaff(schoolId, context))) {
+        throw new functions.https.HttpsError("permission-denied", "School entry required.");
+    }
+    const db = admin.firestore();
+    const result = await redeemCouponForStudent(db, schoolId, studentId, couponCode);
+    return {
+        success: true,
+        message: "Redeemed successfully",
+        value: result.value,
+        bonusTotal: result.bonusTotal,
+    };
 });
 /** Callable: kiosk-safe prize redemption with trusted balance + stock updates. */
 exports.redeemPrizeServer = functions.https.onCall(async (data, context) => {
@@ -797,6 +1087,9 @@ exports.redeemPrizeServer = functions.https.onCall(async (data, context) => {
         throw new functions.https.HttpsError("invalid-argument", "Quantity must be between 1 and 99.");
     }
     const db = admin.firestore();
+    if (!(await hasKioskMembershipOrStaff(schoolId, context, ["admin", "teacher", "prizeClerk"]))) {
+        throw new functions.https.HttpsError("permission-denied", "School entry required.");
+    }
     const studentRef = db.collection("schools").doc(schoolId).collection("students").doc(studentId);
     const prizeRef = db.collection("schools").doc(schoolId).collection("prizes").doc(prizeId);
     const redeemedAt = Date.now();
@@ -887,8 +1180,10 @@ exports.syncPendingRedemptions = functions.https.onCall(async (data, context) =>
         throw new functions.https.HttpsError("invalid-argument", "items must be an array");
     }
     const schoolId = String(data.schoolId).trim().toLowerCase();
+    if (!(await hasKioskMembershipOrStaff(schoolId, context))) {
+        throw new functions.https.HttpsError("permission-denied", "School entry required.");
+    }
     const db = admin.firestore();
-    await assertKioskMemberIfEntryGateActive(db, schoolId, context.auth.uid);
     const out = [];
     for (const it of data.items) {
         const id = String((it === null || it === void 0 ? void 0 : it.id) || "");
@@ -897,49 +1192,7 @@ exports.syncPendingRedemptions = functions.https.onCall(async (data, context) =>
         if (!id || !studentId || !couponCode)
             continue;
         try {
-            const couponRef = db.collection("schools").doc(schoolId).collection("coupons").doc(couponCode);
-            const studentRef = db.collection("schools").doc(schoolId).collection("students").doc(studentId);
-            const now = Date.now();
-            await db.runTransaction(async (tx) => {
-                const couponSnap = await tx.get(couponRef);
-                if (!couponSnap.exists)
-                    throw new functions.https.HttpsError("not-found", "Coupon code not found.");
-                const coupon = couponSnap.data();
-                if (coupon.startsAt && typeof coupon.startsAt === "number" && now < coupon.startsAt) {
-                    throw new functions.https.HttpsError("failed-precondition", "This coupon is not valid yet.");
-                }
-                if (coupon.expiresAt && typeof coupon.expiresAt === "number" && now > coupon.expiresAt) {
-                    throw new functions.https.HttpsError("failed-precondition", "This coupon has expired.");
-                }
-                if (coupon.used === true)
-                    throw new functions.https.HttpsError("failed-precondition", "This coupon has already been used.");
-                const studentSnap = await tx.get(studentRef);
-                if (!studentSnap.exists)
-                    throw new functions.https.HttpsError("not-found", "Student not found.");
-                const s = studentSnap.data();
-                const classId = typeof s.classId === "string" ? s.classId : "";
-                let classPrimaryTeacherId = null;
-                if (classId) {
-                    const classRef = db.collection("schools").doc(schoolId).collection("classes").doc(classId);
-                    const classSnap = await tx.get(classRef);
-                    if (classSnap.exists) {
-                        const cd = classSnap.data();
-                        if (typeof cd.primaryTeacherId === "string")
-                            classPrimaryTeacherId = cd.primaryTeacherId;
-                    }
-                }
-                const gate = (0, couponRedemption_1.studentMayRedeemCouponData)(coupon, s, classPrimaryTeacherId);
-                if (!gate.ok) {
-                    throw new functions.https.HttpsError("failed-precondition", gate.message || "Not eligible to redeem this coupon.");
-                }
-                const value = typeof coupon.value === "number" ? coupon.value : Number(coupon.value || 0);
-                tx.update(studentRef, { points: Number(s.points || 0) + value, lifetimePoints: Number(s.lifetimePoints || 0) + value });
-                const activityRef = studentRef.collection("activities").doc();
-                const cat = String(coupon.category || "Coupon");
-                const code = String(coupon.code || couponCode);
-                tx.set(activityRef, { desc: `Redeemed coupon: ${code} (${cat})`, amount: value, date: now });
-                tx.update(couponRef, { used: true, usedAt: now, usedBy: studentId });
-            });
+            await redeemCouponForStudent(db, schoolId, studentId, couponCode);
             out.push({ id, status: "confirmed" });
         }
         catch (e) {
@@ -955,8 +1208,10 @@ exports.getCouponSnapshot = functions.https.onCall(async (data, context) => {
     requireAuth(context);
     requireString(data.schoolId, "schoolId");
     const schoolId = String(data.schoolId).trim().toLowerCase();
+    if (!(await hasKioskMembershipOrStaff(schoolId, context))) {
+        throw new functions.https.HttpsError("permission-denied", "School entry required.");
+    }
     const db = admin.firestore();
-    await assertKioskMemberIfEntryGateActive(db, schoolId, context.auth.uid);
     const snap = await db.collection("schools").doc(schoolId).collection("coupons").get();
     const now = Date.now();
     const coupons = [];
@@ -979,6 +1234,103 @@ exports.getCouponSnapshot = functions.https.onCall(async (data, context) => {
         });
     }
     return { updatedAt: now, coupons };
+});
+function formatLocalDateParts(now, timeZone) {
+    var _a, _b, _c;
+    const d = new Date(now);
+    let year = String(d.getFullYear());
+    let month = String(d.getMonth() + 1).padStart(2, "0");
+    let day = String(d.getDate()).padStart(2, "0");
+    if (timeZone) {
+        try {
+            const parts = new Intl.DateTimeFormat("en-US", {
+                timeZone,
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+            }).formatToParts(d);
+            year = ((_a = parts.find((p) => p.type === "year")) === null || _a === void 0 ? void 0 : _a.value) || year;
+            month = ((_b = parts.find((p) => p.type === "month")) === null || _b === void 0 ? void 0 : _b.value) || month;
+            day = ((_c = parts.find((p) => p.type === "day")) === null || _c === void 0 ? void 0 : _c.value) || day;
+        }
+        catch (_d) {
+            // Fall back to the runtime local date if the stored time zone is invalid.
+        }
+    }
+    return { full: `${year}-${month}-${day}`, monthDay: `${month}-${day}` };
+}
+/** Callable: award birthday/special-day points without client Firestore writes. */
+exports.awardSpecialDayPoints = functions.https.onCall(async (data, context) => {
+    requireAuth(context);
+    requireString(data.schoolId, "schoolId");
+    requireString(data.studentId, "studentId");
+    const schoolId = String(data.schoolId).trim().toLowerCase();
+    const studentId = String(data.studentId).trim();
+    if (!(await hasKioskMembershipOrStaff(schoolId, context))) {
+        throw new functions.https.HttpsError("permission-denied", "School entry required.");
+    }
+    const db = admin.firestore();
+    const schoolRef = db.collection("schools").doc(schoolId);
+    const studentRef = schoolRef.collection("students").doc(studentId);
+    const attendanceRef = schoolRef.collection("attendance").doc("config");
+    const now = Date.now();
+    const result = await db.runTransaction(async (tx) => {
+        var _a;
+        const [schoolSnap, studentSnap, attendanceSnap] = await Promise.all([
+            tx.get(schoolRef),
+            tx.get(studentRef),
+            tx.get(attendanceRef),
+        ]);
+        if (!schoolSnap.exists)
+            throw new functions.https.HttpsError("not-found", "School not found.");
+        if (!studentSnap.exists)
+            throw new functions.https.HttpsError("not-found", "Student not found.");
+        const settings = (((_a = schoolSnap.data()) === null || _a === void 0 ? void 0 : _a.appSettings) || {});
+        const attendanceConfig = attendanceSnap.exists ? (attendanceSnap.data() || {}) : {};
+        const timeZone = typeof attendanceConfig.attendanceTimeZone === "string"
+            ? attendanceConfig.attendanceTimeZone.trim()
+            : undefined;
+        const today = formatLocalDateParts(now, timeZone);
+        const student = studentSnap.data();
+        const lastAwarded = student.lastSpecialDayAwarded && typeof student.lastSpecialDayAwarded === "object"
+            ? Object.assign({}, student.lastSpecialDayAwarded) : {};
+        const awards = [];
+        if (settings.enableBirthdayPoints === true && typeof student.birthday === "string") {
+            const birthMD = student.birthday.length >= 10 ? student.birthday.substring(5, 10) : "";
+            const amount = Number(settings.birthdayPointsAmount || 0);
+            if (birthMD === today.monthDay && lastAwarded.birthday !== today.full && amount > 0) {
+                awards.push({ desc: `Happy Birthday! (+${amount} pts)`, amount });
+                lastAwarded.birthday = today.full;
+            }
+        }
+        if (settings.enableSpecialDayPoints === true && settings.specialDayDate === today.monthDay) {
+            const amount = Number(settings.specialDayPointsAmount || 0);
+            if (lastAwarded.specialDay !== today.full && amount > 0) {
+                const label = typeof settings.specialDayLabel === "string" && settings.specialDayLabel.trim()
+                    ? settings.specialDayLabel.trim()
+                    : "Special Day";
+                awards.push({ desc: `${label}! (+${amount} pts)`, amount });
+                lastAwarded.specialDay = today.full;
+            }
+        }
+        const totalAward = awards.reduce((sum, award) => sum + award.amount, 0);
+        if (totalAward <= 0)
+            return { totalAward: 0, awards: [] };
+        tx.update(studentRef, {
+            points: Number(student.points || 0) + totalAward,
+            lifetimePoints: Number(student.lifetimePoints || 0) + totalAward,
+            lastSpecialDayAwarded: lastAwarded,
+        });
+        for (const award of awards) {
+            tx.set(studentRef.collection("activities").doc(), {
+                desc: award.desc,
+                amount: award.amount,
+                date: now,
+            });
+        }
+        return { totalAward, awards };
+    });
+    return Object.assign({ success: true }, result);
 });
 // ========================================================================
 // Callable: Upload school logo (server-side to avoid client Storage hangs)
@@ -1473,16 +1825,6 @@ for (const [fnName, { collection: col, flag }] of Object.entries(MIGRATION_MAP))
         return migrateCollectionToSubcollection(data.schoolId, col, flag, context);
     });
 }
-function requireDescriptor(value, name) {
-    if (!Array.isArray(value) || value.length !== 128) {
-        throw new functions.https.HttpsError("invalid-argument", `${name} must be a 128-length number array.`);
-    }
-    for (const n of value) {
-        if (typeof n !== "number" || !Number.isFinite(n)) {
-            throw new functions.https.HttpsError("invalid-argument", `${name} must contain only finite numbers.`);
-        }
-    }
-}
 function cosineSimilarity(a, b) {
     let dot = 0;
     let na = 0;
@@ -1526,6 +1868,11 @@ exports.enrollStudentFace = functions.https.onCall(async (data, context) => {
     const studentId = String(data.studentId).trim();
     const descriptor = data.descriptor;
     const db = admin.firestore();
+    if (!(await hasSchoolRole(schoolId, context.auth.uid, ["admin"]))) {
+        if (!(await isDeveloper(context))) {
+            throw new functions.https.HttpsError("permission-denied", "Admin privileges required for this school.");
+        }
+    }
     const ref = db.collection("schools").doc(schoolId).collection("faceAuth").doc(studentId);
     const snap = await ref.get();
     const prev = snap.exists ? snap.data() : null;
@@ -1545,6 +1892,11 @@ exports.deleteStudentFace = functions.https.onCall(async (data, context) => {
     const schoolId = String(data.schoolId).trim().toLowerCase();
     const studentId = String(data.studentId).trim();
     const db = admin.firestore();
+    const uid = context.auth.uid;
+    const mayManageFace = (await hasSchoolRole(schoolId, uid, ["admin", "teacher"])) || (await isDeveloper(context));
+    if (!mayManageFace) {
+        throw new functions.https.HttpsError("permission-denied", "School entry required.");
+    }
     const ref = db.collection("schools").doc(schoolId).collection("faceAuth").doc(studentId);
     await ref.set({ enabled: false, descriptors: [], updatedAt: Date.now() }, { merge: true });
     return { success: true };
@@ -1558,6 +1910,9 @@ exports.matchStudentFace = functions
     const schoolId = String(data.schoolId).trim().toLowerCase();
     const descriptor = data.descriptor;
     const db = admin.firestore();
+    if (!(await hasKioskMembershipOrStaff(schoolId, context))) {
+        throw new functions.https.HttpsError("permission-denied", "School entry required.");
+    }
     const snap = await db
         .collection("schools")
         .doc(schoolId)

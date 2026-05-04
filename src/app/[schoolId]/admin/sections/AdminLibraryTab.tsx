@@ -41,7 +41,7 @@ export function AdminLibraryTab({
         </div>
       </CardHeader>
       <CardContent>
-        <ScrollArea className="h-[500px] border rounded-lg bg-background/50 p-3">
+        <ScrollArea className="h-[calc(100vh-22rem)] max-h-[420px] min-h-[250px] border rounded-lg bg-background/50 p-3">
           {(!libraryItems || libraryItems.length === 0) ? (
             <EmptyState
               icon={Book}

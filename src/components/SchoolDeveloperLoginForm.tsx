@@ -72,39 +72,47 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
     if (!allowDeveloperLogin && isDeveloper) setIsDeveloper(false);
   }, [allowDeveloperLogin, isDeveloper, isDeveloperOnly]);
 
-  const handleSchoolLogin = async () => {
-    if (!schoolId || !schoolPasscode) {
+  const handleSchoolEntry = async () => {
+    const sid = schoolId.trim().toLowerCase();
+    if (!sid || !schoolPasscode.trim()) {
       playSound('error');
       triggerShake();
       toast({
         variant: 'destructive',
-        title: 'Login Failed',
+        title: 'Login failed',
         description: 'Please enter a School ID and passcode.',
       });
       return;
     }
 
     playSound('click');
-    const result = await login('school', {
-      schoolId: schoolId.trim(),
-      passcode: schoolPasscode,
-    });
-    if (result) {
-      playSound('login');
-      router.push(`/${schoolId.trim()}/portal`);
-    } else {
+    const result = await login('school', { schoolId: sid, passcode: schoolPasscode.trim() });
+    if (!result) {
       playSound('error');
       triggerShake();
       toast({
         variant: 'destructive',
-        title: 'Login Failed',
+        title: 'Login failed',
         description: 'Invalid School ID or passcode.',
       });
-      setSchoolPasscode('');
+      return;
     }
+
+    playSound('login');
+    router.push(`/${sid}/sign-in`);
   };
 
   const handleDeveloperLogin = async () => {
+    if (!schoolPasscode) {
+      playSound('error');
+      triggerShake();
+      toast({
+        variant: 'destructive',
+        title: 'Developer login failed',
+        description: 'Please enter the developer passcode.',
+      });
+      return;
+    }
     const result = await login('developer', { passcode: schoolPasscode });
     if (result) {
       playSound('login');
@@ -126,13 +134,10 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
 
   const handleSampleLogin = async (id: string) => {
     playSound('click');
-    const result = await login('school', {
-      schoolId: id,
-      passcode: '1234',
-    });
+    const result = await login('school', { schoolId: id, passcode: '1234' });
     if (result) {
       playSound('login');
-      router.push(`/${id}/portal`);
+      router.push(`/${id}/sign-in`);
     } else {
       playSound('error');
       toast({
@@ -198,7 +203,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
                   .
                 </>
               ) : (
-                <>Sign in with your school&apos;s ID and passcode to manage students, award points, and redeem prizes.</>
+              <>Enter your school&apos;s ID to open sign-in options for students and staff.</>
               )}
             </p>
           </div>
@@ -208,7 +213,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
             onSubmit={(e) => {
               e.preventDefault();
               if (isDeveloperOnly || isDeveloper) void handleDeveloperLogin();
-              else void handleSchoolLogin();
+              else void handleSchoolEntry();
             }}
           >
             {!isDeveloperOnly && !isDeveloper && (
@@ -226,19 +231,36 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
                 />
               </div>
             )}
-            <div className="space-y-2">
-              <Label htmlFor="passcode" className="text-xs font-semibold text-muted-foreground">
-                {isDeveloperOnly || isDeveloper ? 'Developer Passcode' : 'Access Passcode'}
-              </Label>
-              <input
-                id="passcode"
-                type="password"
-                className="w-full h-12 rounded-xl px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-all font-mono tracking-[0.35em] text-center bg-background border border-border text-foreground"
-                value={schoolPasscode}
-                onChange={(e) => setSchoolPasscode(e.target.value)}
-                autoComplete="current-password"
-              />
-            </div>
+            {(!isDeveloperOnly && !isDeveloper) && (
+              <div className="space-y-2">
+                <Label htmlFor="passcode" className="text-xs font-semibold text-muted-foreground">
+                  Access Passcode
+                </Label>
+                <input
+                  id="passcode"
+                  type="password"
+                  className="w-full h-12 rounded-xl px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-all font-mono tracking-[0.35em] text-center bg-background border border-border text-foreground"
+                  value={schoolPasscode}
+                  onChange={(e) => setSchoolPasscode(e.target.value)}
+                  autoComplete="current-password"
+                />
+              </div>
+            )}
+            {(isDeveloperOnly || isDeveloper) && (
+              <div className="space-y-2">
+                <Label htmlFor="passcode" className="text-xs font-semibold text-muted-foreground">
+                  Developer Passcode
+                </Label>
+                <input
+                  id="passcode"
+                  type="password"
+                  className="w-full h-12 rounded-xl px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-all font-mono tracking-[0.35em] text-center bg-background border border-border text-foreground"
+                  value={schoolPasscode}
+                  onChange={(e) => setSchoolPasscode(e.target.value)}
+                  autoComplete="current-password"
+                />
+              </div>
+            )}
 
             <div className="pt-4 flex flex-col gap-3">
               <button
@@ -246,7 +268,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
                 aria-label={isDeveloperOnly || isDeveloper ? 'Sign in as developer' : 'Sign in to school'}
                 className="w-full h-12 font-bold rounded-xl transition-all active:scale-[0.99] bg-primary hover:bg-primary/90 text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
-                {isDeveloperOnly || isDeveloper ? 'Dev Login' : 'School Login'}
+                {isDeveloperOnly || isDeveloper ? 'Dev Login' : 'Continue'}
               </button>
               <div className="flex items-center justify-between text-xs">
                 {!isDeveloperOnly && !isDeveloper ? (
@@ -255,7 +277,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
                     onClick={() => setShowForgot(true)}
                     className="font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:underline"
                   >
-                    Forgot passcode?
+                    Faculty sign-in?
                   </button>
                 ) : (
                   <span />
@@ -279,11 +301,10 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
                 aria-labelledby="forgot-title"
               >
                 <p id="forgot-title" className="font-semibold">
-                  Forgot your school passcode?
+                  Looking for faculty tools?
                 </p>
                 <p>
-                  Contact your school&apos;s developer or system administrator to reset it — for security reasons we
-                  can&apos;t reset it from this screen.
+                  Continue with the School ID first, then choose Admin or Faculty on the next screen.
                 </p>
                 <button
                   type="button"

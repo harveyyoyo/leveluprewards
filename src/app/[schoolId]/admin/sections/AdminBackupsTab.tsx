@@ -35,7 +35,7 @@ export function AdminBackupsTab({
         </Button>
       </CardHeader>
       <CardContent className="p-6">
-        <ScrollArea className="h-[400px]">
+        <ScrollArea className="h-[calc(100vh-22rem)] max-h-[400px] min-h-[250px]">
           <ul className="space-y-2.5 pr-4">
             {(backups || [])
               .slice()

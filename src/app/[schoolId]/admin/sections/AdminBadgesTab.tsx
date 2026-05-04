@@ -57,7 +57,7 @@ export function AdminBadgesTab(props: any) {
       </CardHeader>
       <CardContent>
         {badgesLoading ? (
-          <ul className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+          <ul className="space-y-2 h-[calc(100vh-22rem)] max-h-[420px] min-h-[250px] overflow-y-auto pr-1">
             {[1, 2, 3].map((i: number) => (
               <li key={i} className="flex justify-between items-center bg-secondary/20 p-4 rounded-2xl border">
                 <Skeleton className="h-10 w-48" />
@@ -66,7 +66,7 @@ export function AdminBadgesTab(props: any) {
             ))}
           </ul>
         ) : (
-          <ul className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+          <ul className="space-y-2 h-[calc(100vh-22rem)] max-h-[420px] min-h-[250px] overflow-y-auto pr-1">
             {(badges || []).map((b: any) => {
               const cat = categories?.find((c: any) => c.id === b.categoryId);
               const periodLabel = b.period === 'month' ? 'This month' : b.period === 'semester' ? 'This semester' : b.period === 'year' ? 'This year' : 'All time';

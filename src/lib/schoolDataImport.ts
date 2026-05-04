@@ -139,7 +139,7 @@ export async function importParsedSchoolSnapshot(
       const p = snapshot.prizes[i];
       const name = (p.name || '').trim();
       if (!name) {
-        errors.push(`Prize ${i + 1}: missing name.`);
+        errors.push(`Reward item ${i + 1}: missing name.`);
         continue;
       }
       if (namesLower.has(name.toLowerCase())) continue;

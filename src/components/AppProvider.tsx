@@ -67,6 +67,7 @@ interface AppContextType {
   schoolId: string | null;
   syncStatus: 'synced' | 'syncing' | 'offline' | 'error';
   login: (type: 'school' | 'developer' | 'student' | 'teacher' | 'admin' | 'secretary' | 'prizeClerk' | 'reports', credentials: { schoolId?: string; passcode?: string; username?: string; teacherName?: string; teacherDocId?: string; staffRole?: 'secretary' | 'prizeClerk' | 'reports'; }) => Promise<boolean>;
+  startDeveloperSupportSession: (schoolId: string) => Promise<boolean>;
   logout: (options?: LogoutOptions) => void;
   setUserName: (name: string | null) => void;
   isKioskLocked: boolean;
@@ -109,9 +110,13 @@ interface AppContextType {
   badges: Badge[];
   badgesLoading: boolean;
   // Backup/School management
-  createSchool: (schoolId: string, name?: string, passcode?: string) => Promise<{ passcode: string; cleanId: string } | null>;
+  createSchool: (
+    schoolId: string,
+    name?: string,
+    passcodes?: { passcode?: string; schoolAccessPasscode?: string; adminPasscode?: string },
+  ) => Promise<{ passcode: string; schoolAccessPasscode: string; adminPasscode: string; cleanId: string } | null>;
   deleteSchool: (schoolId: string) => Promise<void>;
-  updateSchool: (schoolId: string, updates: { name?: string; passcode?: string }) => Promise<void>;
+  updateSchool: (schoolId: string, updates: { name?: string; passcode?: string; schoolAccessPasscode?: string; adminPasscode?: string }) => Promise<void>;
   devCreateBackup: (schoolId: string) => Promise<void>;
   devRestoreFromBackup: (schoolId: string, backupId: string) => Promise<void>;
   devDownloadBackup: (schoolId: string, backupId: string) => Promise<void>;
@@ -445,7 +450,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     } catch (e: any) {
       return {
         success: false,
-        message: e?.message || 'Could not redeem this prize.',
+      message: e?.message || 'Could not redeem this reward.',
       };
     }
   }, [functions, schoolId]);

@@ -31,7 +31,7 @@ export default function StudentHomePage() {
                 <CardContent className="space-y-5 text-center">
                     <div className="rounded-2xl border bg-muted/40 p-4 text-sm text-muted-foreground">
                         <Clock className="mx-auto mb-2 h-5 w-5 text-primary" aria-hidden="true" />
-                        Students can still use the in-school kiosk and prize/rewards shop while the home portal is being prepared.
+            Students can still use the in-school kiosk and rewards shop while the home portal is being prepared.
                     </div>
                     <Button asChild className="w-full h-12 rounded-xl font-bold">
                         <Link href={portalHref}>

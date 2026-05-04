@@ -202,7 +202,7 @@ export function GoalsManager(props: {
             Add goal
           </CardTitle>
           <CardDescription>
-            Personal targets, savings toward shop prizes, or class-wide milestones. Enable under Settings → Features → Goals.
+            Personal targets, savings toward shop rewards, or class-wide milestones. Enable under Settings &gt; Features &gt; Goals.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -214,7 +214,7 @@ export function GoalsManager(props: {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="personal">Personal (one student)</SelectItem>
-                <SelectItem value="prize_savings">Savings (balance toward a prize)</SelectItem>
+                <SelectItem value="prize_savings">Savings (balance toward a reward)</SelectItem>
                 <SelectItem value="class">Class (whole group)</SelectItem>
               </SelectContent>
             </Select>
@@ -303,7 +303,7 @@ export function GoalsManager(props: {
 
           {goalType === 'prize_savings' && (
             <div className="space-y-2">
-              <Label>Related prize (optional)</Label>
+              <Label>Related reward (optional)</Label>
               <Select value={prizeId} onValueChange={setPrizeId}>
                 <SelectTrigger className="rounded-xl">
                   <SelectValue placeholder="None" />

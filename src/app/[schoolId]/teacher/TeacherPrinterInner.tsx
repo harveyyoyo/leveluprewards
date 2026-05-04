@@ -437,7 +437,7 @@ function TeacherRosterTab({
                     <div className="grid gap-6 lg:grid-cols-2">
                         <div className="space-y-2">
                             <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">On my roster ({roster.length})</Label>
-                            <ScrollArea className={cn("h-[420px] rounded-2xl border p-3", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-muted/20')}>
+                            <ScrollArea className={cn("h-[calc(100vh-24rem)] max-h-[420px] min-h-[300px] rounded-2xl border p-3", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-muted/20')}>
                                 <div className="space-y-2 pr-3">
                                     {roster.map((student) => {
                                         const directlyLinked = (student.teacherIds || []).includes(teacherId);
@@ -473,7 +473,7 @@ function TeacherRosterTab({
 
                         <div className="space-y-2">
                             <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Add students ({addable.length})</Label>
-                            <ScrollArea className={cn("h-[420px] rounded-2xl border p-3", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-muted/20')}>
+                            <ScrollArea className={cn("h-[calc(100vh-24rem)] max-h-[420px] min-h-[300px] rounded-2xl border p-3", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-muted/20')}>
                                 <div className="space-y-2 pr-3">
                                     {addable.map((student) => (
                                         <div key={student.id} className="flex items-center justify-between gap-3 rounded-xl border bg-background/70 p-3">
@@ -2353,18 +2353,6 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                         <div className="flex flex-wrap gap-2 shrink-0 sm:self-start justify-end">
                             {secretaryMode && schoolId ? (
                                 <>
-                                    <Button variant="secondary" asChild className="gap-2 rounded-lg h-10">
-                                        <Link href={`/${schoolId}/halloffame`} aria-label="Hall of Fame">
-                                            <Trophy className="w-4 h-4 shrink-0" aria-hidden />
-                                            <span className="hidden sm:inline">Hall of Fame</span>
-                                        </Link>
-                                    </Button>
-                                    <Button variant="secondary" asChild className="gap-2 rounded-lg h-10">
-                                        <Link href={`/${schoolId}/bulletin-board`} aria-label="Bulletin board">
-                                            <Megaphone className="w-4 h-4 shrink-0" aria-hidden />
-                                            <span className="hidden sm:inline">Bulletin</span>
-                                        </Link>
-                                    </Button>
                                 </>
                             ) : null}
                             <Button variant="outline" onClick={onLogout} className="gap-2 rounded-lg h-10">
@@ -2961,7 +2949,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                       </Button>
 
                                       <div className="rounded-2xl border bg-muted/20">
-                                        <ScrollArea className="h-[360px] w-full">
+                                        <ScrollArea className="h-[calc(100vh-26rem)] max-h-[380px] min-h-[250px] w-full">
                                           <ul className="p-3 space-y-2">
                                             {filteredStudents.map((s) => {
                                               const checked = selectedStudentIds.includes(s.id);

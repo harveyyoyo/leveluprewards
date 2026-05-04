@@ -213,120 +213,61 @@ export const awardPointsToMultipleStudents = async (
   }
 
   try {
-    const studentRefs = studentIds.map(id => doc(firestore, 'schools', schoolId, 'students', id));
-    const studentDocs = await Promise.all(studentRefs.map(ref => getDoc(ref)));
-
-    // Collect all write operations so we can chunk them.
-    type WriteOp = {
-      ref: DocumentReference;
-      type: 'update' | 'set';
-      data: DocumentData;
-    };
-    const allOps: WriteOp[] = [];
     let processedCount = 0;
+    // Process in chunks of 50 to safely stay under the 500 writes-per-transaction limit
+    // (each student = 1 update + 1 main activity + N badge/achievement activities)
+    const chunkSize = 50;
+    const uniqueIds = [...new Set(studentIds)];
+    
+    for (let i = 0; i < uniqueIds.length; i += chunkSize) {
+      const chunkIds = uniqueIds.slice(i, i + chunkSize);
+      
+      await runTransaction(firestore, async (transaction) => {
+        const studentRefs = chunkIds.map(id => doc(firestore, 'schools', schoolId, 'students', id));
+        const studentDocs = await Promise.all(studentRefs.map(ref => transaction.get(ref)));
+        
+        for (const studentDoc of studentDocs) {
+          if (!studentDoc.exists()) continue;
 
-    for (const studentDoc of studentDocs) {
-      if (!studentDoc.exists()) continue;
+          const studentData = studentDoc.data() as Student;
+          const newPoints = studentData.points + points;
+          const newLifetimePoints = (studentData.lifetimePoints || 0) + points;
+          const categoryPointsUpdate = { ...studentData.categoryPoints };
+          categoryPointsUpdate[description] = (categoryPointsUpdate[description] || 0) + points;
 
-      const studentData = studentDoc.data() as Student;
+          const now = Date.now();
+          const pointsByPeriodUpdate = applyPointsByPeriod(studentData.pointsByPeriod, points, now);
+          const categoryPointsByPeriodUpdate = applyCategoryPointsByPeriod(studentData.categoryPointsByPeriod, description, points, now);
+          
+          const result = applyAchievementsAndBadges(
+            transaction, studentDoc.ref, studentData,
+            newPoints, newLifetimePoints,
+            categoryPointsUpdate, categoryPointsByPeriodUpdate,
+            allAchievements, allCategories, allBadges,
+            schoolId, studentDoc.id, firestore,
+          );
 
-      const newPoints = studentData.points + points;
-      const newLifetimePoints = (studentData.lifetimePoints || 0) + points;
+          transaction.update(studentDoc.ref, {
+            points: newPoints + result.bonusTotal,
+            lifetimePoints: newLifetimePoints + result.bonusTotal,
+            categoryPoints: categoryPointsUpdate,
+            pointsByPeriod: pointsByPeriodUpdate,
+            categoryPointsByPeriod: categoryPointsByPeriodUpdate,
+            earnedAchievements: result.earnedAchievements,
+            earnedBadges: result.earnedBadges,
+          });
 
-      const categoryPointsUpdate = { ...studentData.categoryPoints };
-      categoryPointsUpdate[description] = (categoryPointsUpdate[description] || 0) + points;
-
-      const now = Date.now();
-      const pointsByPeriodUpdate = applyPointsByPeriod(
-        studentData.pointsByPeriod,
-        points,
-        now
-      );
-      const categoryPointsByPeriodUpdate = applyCategoryPointsByPeriod(
-        studentData.categoryPointsByPeriod,
-        description,
-        points,
-        now
-      );
-      const updatedStudentForBadges: Student = {
-        ...studentData,
-        categoryPoints: categoryPointsUpdate,
-        categoryPointsByPeriod: categoryPointsByPeriodUpdate,
-      };
-      const newBadges = evaluateBadges(updatedStudentForBadges, allBadges, allCategories);
-      const earnedBadges = [...(studentData.earnedBadges || [])];
-      for (const b of newBadges) {
-        earnedBadges.push({ badgeId: b.badgeId, periodKey: b.periodKey, earnedAt: b.earnedAt });
-        const badgeInfo = allBadges.find(x => x.id === b.badgeId);
-        const badgeActivityRef = doc(collection(studentDoc.ref, 'activities'));
-        allOps.push({
-          ref: badgeActivityRef, type: 'set', data: {
-            desc: `Badge earned: ${badgeInfo?.name || 'Unknown'}`,
-            amount: 0, date: b.earnedAt,
-          },
-        });
-      }
-
-      // Evaluate achievements
-      const updatedStudentForEval: Student = {
-        ...studentData,
-        points: newPoints,
-        lifetimePoints: newLifetimePoints,
-        categoryPoints: categoryPointsUpdate
-      };
-
-      const newAchievements = evaluateAchievements(updatedStudentForEval, allAchievements, allCategories);
-      const earnedAchievements = [...(studentData.earnedAchievements || [])];
-      let bonusTotal = 0;
-
-      for (const ach of newAchievements) {
-        earnedAchievements.push({ achievementId: ach.achievementId, earnedAt: ach.earnedAt });
-        bonusTotal += ach.bonusPoints;
-
-        const achInfo = allAchievements.find(a => a.id === ach.achievementId);
-        const achievementActivityRef = doc(collection(studentDoc.ref, 'activities'));
-        allOps.push({
-          ref: achievementActivityRef, type: 'set', data: {
-            desc: `Achievement Unlocked: ${achInfo?.name || 'Unknown'}`,
-            amount: ach.bonusPoints, date: Date.now(),
-          },
-        });
-      }
-
-      allOps.push({
-        ref: studentDoc.ref, type: 'update', data: {
-          points: newPoints + bonusTotal,
-          lifetimePoints: newLifetimePoints + bonusTotal,
-          categoryPoints: categoryPointsUpdate,
-          pointsByPeriod: pointsByPeriodUpdate,
-          categoryPointsByPeriod: categoryPointsByPeriodUpdate,
-          earnedAchievements,
-          earnedBadges
-        },
+          const mainActivityRef = doc(collection(studentDoc.ref, 'activities'));
+          transaction.set(mainActivityRef, { desc: description, amount: points, date: now });
+          
+          processedCount++;
+        }
       });
-
-      const mainActivityRef = doc(collection(studentDoc.ref, 'activities'));
-      allOps.push({ ref: mainActivityRef, type: 'set', data: { desc: description, amount: points, date: Date.now() } });
-
-      processedCount++;
-    }
-
-    // Chunk writes to respect the 500-operation Firestore batch limit.
-    const BATCH_LIMIT = 450;
-    for (let i = 0; i < allOps.length; i += BATCH_LIMIT) {
-      const batch = writeBatch(firestore);
-      const chunk = allOps.slice(i, i + BATCH_LIMIT);
-      for (const op of chunk) {
-        if (op.type === 'update') batch.update(op.ref, op.data);
-        else batch.set(op.ref, op.data);
-      }
-      await batch.commit();
     }
 
     if (!options?.skipGoalSync && processedCount > 0) {
-      const unique = [...new Set(studentIds)];
       void import('@/lib/goalsProgress').then((m) =>
-        Promise.all(unique.map((id) => m.syncGoalsForStudent(firestore, schoolId, id))).catch(() => {}),
+        Promise.all(uniqueIds.map((id) => m.syncGoalsForStudent(firestore, schoolId, id))).catch(() => {}),
       );
     }
 
@@ -352,48 +293,36 @@ export const deductPointsFromMultipleStudents = async (firestore: Firestore, sch
   }
 
   try {
-    const studentRefs = studentIds.map(id => doc(firestore, 'schools', schoolId, 'students', id));
-    const studentDocs = await Promise.all(studentRefs.map(ref => getDoc(ref)));
-
-    // Chunk writes to respect the 500-operation Firestore batch limit.
-    type WriteOp = {
-      ref: DocumentReference;
-      type: 'update' | 'set';
-      data: DocumentData;
-    };
-    const allOps: WriteOp[] = [];
     let processedCount = 0;
+    const chunkSize = 200; // Deductions are simpler: 1 update + 1 activity per student. (200 * 2 = 400 < 500)
+    const uniqueIds = [...new Set(studentIds)];
 
-    for (const studentDoc of studentDocs) {
-      if (!studentDoc.exists()) continue;
+    for (let i = 0; i < uniqueIds.length; i += chunkSize) {
+      const chunkIds = uniqueIds.slice(i, i + chunkSize);
+      
+      await runTransaction(firestore, async (transaction) => {
+        const studentRefs = chunkIds.map(id => doc(firestore, 'schools', schoolId, 'students', id));
+        const studentDocs = await Promise.all(studentRefs.map(ref => transaction.get(ref)));
+        
+        for (const studentDoc of studentDocs) {
+          if (!studentDoc.exists()) continue;
 
-      const studentData = studentDoc.data() as Student;
+          const studentData = studentDoc.data() as Student;
+          const newPoints = Math.max(0, studentData.points - points);
 
-      const newPoints = Math.max(0, studentData.points - points);
+          transaction.update(studentDoc.ref, { points: newPoints });
 
-      allOps.push({ ref: studentDoc.ref, type: 'update', data: { points: newPoints } });
+          const activityRef = doc(collection(studentDoc.ref, 'activities'));
+          transaction.set(activityRef, { desc: reason, amount: -points, date: Date.now() });
 
-      const activityRef = doc(collection(studentDoc.ref, 'activities'));
-      allOps.push({ ref: activityRef, type: 'set', data: { desc: reason, amount: -points, date: Date.now() } });
-
-      processedCount++;
-    }
-
-    const BATCH_LIMIT = 450;
-    for (let i = 0; i < allOps.length; i += BATCH_LIMIT) {
-      const batch = writeBatch(firestore);
-      const chunk = allOps.slice(i, i + BATCH_LIMIT);
-      for (const op of chunk) {
-        if (op.type === 'update') batch.update(op.ref, op.data);
-        else batch.set(op.ref, op.data);
-      }
-      await batch.commit();
+          processedCount++;
+        }
+      });
     }
 
     if (processedCount > 0) {
-      const unique = [...new Set(studentIds)];
       void import('@/lib/goalsProgress').then((m) =>
-        Promise.all(unique.map((id) => m.syncGoalsForStudent(firestore, schoolId, id))).catch(() => {}),
+        Promise.all(uniqueIds.map((id) => m.syncGoalsForStudent(firestore, schoolId, id))).catch(() => {}),
       );
     }
 

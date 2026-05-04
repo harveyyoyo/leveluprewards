@@ -319,7 +319,7 @@ export function AdminTeachersTab({
               each teacher&apos;s scope (class primary teacher or explicit assignment on the student).
             </p>
           </div>
-          <ul className="space-y-2 max-h-[min(520px,70vh)] overflow-y-auto pr-1">
+          <ul className="space-y-2 h-[calc(100vh-22rem)] max-h-[420px] min-h-[280px] overflow-y-auto pr-1">
           {teachers?.map((t) => {
             const rows = scopedStudentsByTeacher.get(t.id) ?? [];
             return (
@@ -513,7 +513,7 @@ export function AdminTeachersTab({
             <h3 className="font-bold">Desk staff</h3>
             <p className="text-sm text-muted-foreground">Limited accounts for coupon sheets, prize redemption, or reports.</p>
           </div>
-          <ul className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
+          <ul className="space-y-2 h-[calc(100vh-24rem)] max-h-[360px] min-h-[200px] overflow-y-auto pr-1">
             {staffAccounts?.map((account) => (
               <li
                 key={account.id}

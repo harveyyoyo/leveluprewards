@@ -57,7 +57,7 @@ export default function Header() {
   const appLogoUrl = appConfig?.appLogoUrl;
 
   const isLoginPage = pathname === '/' || pathname.startsWith('/s/');
-  const isDeveloperMode = loginState === 'developer';
+  const isDeveloperMode = loginState === 'developer' && !schoolId;
 
   const handleLogout = () => {
     playSound('swoosh');
@@ -70,7 +70,7 @@ export default function Header() {
 
   const logoLink = schoolId ? `/${schoolId}/portal` : '/';
   const centerLabel = schoolName;
-  const centerHref = schoolId ? `/${schoolId}/portal` : '/portal';
+  const centerHref = schoolId ? `/${schoolId}/sign-in` : '/portal';
   const isStaff =
     loginState === 'teacher' ||
     loginState === 'admin' ||
@@ -93,12 +93,8 @@ export default function Header() {
       ...(isAdmin ? [{ id: 'admin', href: `/${schoolId}/admin`, icon: UserCog, label: 'Admin', color: 'destructive' }] : []),
       ...(isStaff ? [{ id: 'print', href: `/${schoolId}/teacher`, icon: Printer, label: 'Teacher', color: 'chart-2' }] : []),
       { id: 'redeem', href: `/${schoolId}/student`, icon: GraduationCap, label: 'Student', color: 'chart-1' },
-      ...(isStaff ? [{ id: 'fame', href: `/${schoolId}/halloffame`, icon: Trophy, label: 'Fame', color: 'chart-5' }] : []),
-      ...(isStaff
-        ? [{ id: 'bulletin', href: `/${schoolId}/bulletin-board`, icon: Megaphone, label: 'Board', color: 'chart-4' }]
-        : []),
     ].sort((a, b) => {
-      const order = ['admin', 'print', 'redeem', 'fame', 'bulletin'];
+      const order = ['admin', 'print', 'redeem'];
       return order.indexOf(a.id) - order.indexOf(b.id);
     });
 

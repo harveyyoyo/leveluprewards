@@ -108,7 +108,7 @@ export function AdminPrizesTab({
       <CardHeader className="flex flex-row justify-between items-center py-6">
         <div>
           <CardTitle className="flex items-center gap-2">
-            <Gift className="text-destructive w-5 h-5" /> Prize/Rewards shop
+                <Gift className="text-destructive w-5 h-5" /> Rewards Shop
             <Button
               type="button"
               variant="ghost"
@@ -151,7 +151,7 @@ export function AdminPrizesTab({
         </div>
       </CardHeader>
       <CardContent className="min-w-0">
-        <ul className="grid grid-cols-1 gap-4 max-h-[500px] min-w-0 overflow-y-auto overflow-x-hidden pr-2">
+        <ul className="grid grid-cols-1 gap-4 h-[calc(100vh-22rem)] max-h-[420px] min-h-[250px] min-w-0 overflow-y-auto overflow-x-hidden pr-2">
           {prizes
             ?.sort((a, b) => a.points - b.points)
             .map((p) => (
@@ -548,7 +548,7 @@ export function AdminPrizesTab({
             <DialogDescription>Quick overview of item settings.</DialogDescription>
           </DialogHeader>
           <div className="space-y-3 text-sm">
-            <p><span className="font-bold">Items</span> are rewards students redeem using points in the Prize/Rewards shop.</p>
+                            <p><span className="font-bold">Items</span> are rewards students redeem using points in the rewards shop.</p>
             <ul className="list-disc pl-5 space-y-1">
               <li><span className="font-bold">Points</span>: cost per redemption.</li>
               <li><span className="font-bold">In Stock</span>: whether it appears in the shop.</li>
@@ -557,7 +557,7 @@ export function AdminPrizesTab({
               <li><span className="font-bold">Teachers</span>: pick multiple teachers or school-wide.</li>
               <li><span className="font-bold">Class</span>: optionally restrict by class.</li>
               <li><span className="font-bold">Vending motor</span>: enable the Vending Machine feature in settings, then use the prize motor button to pick axis X/Y/Z/E.</li>
-              <li><span className="font-bold">AI surprise</span>: included on Pro+ plans — enable “AI Prize Surprise” under Settings → Features, then use the sparkle control. After redemption, the Prize/Rewards shop can show an AI joke, riddle, or fortune.</li>
+                                <li><span className="font-bold">AI surprise</span>: included on Pro+ plans — enable “AI Reward Surprise” under Settings → Features, then use the sparkle control. After redemption, the rewards shop can show an AI joke, riddle, or fortune.</li>
             </ul>
           </div>
           <DialogFooter>
@@ -577,7 +577,7 @@ export function AdminPrizesTab({
               <ul className="list-disc pl-5 space-y-1">
                 <li><span className="font-bold">Set</span> name, icon, points, stock.</li>
                 <li><span className="font-bold">Choose</span> printing and who can redeem.</li>
-                <li><span className="font-bold">Then</span> test redemption in the Prize/Rewards shop.</li>
+                                <li><span className="font-bold">Then</span> test redemption in the rewards shop.</li>
               </ul>
             </div>
           )}
@@ -645,7 +645,7 @@ export function AdminPrizesTab({
                 <div className="space-y-0.5 min-w-0">
                   <Label>AI surprise after redeem</Label>
                   <p className="text-xs text-muted-foreground">
-                    Optional: show a clean AI joke, riddle, or fortune on the Prize/Rewards shop after redemption.
+                                              Optional: show a clean AI joke, riddle, or fortune in the rewards shop after redemption.
                   </p>
                 </div>
                 <Select value={wAiFun} onValueChange={(v) => setWAiFun(v as 'off' | PrizeAiFunReward)}>
@@ -764,7 +764,7 @@ export function AdminPrizesTab({
               </div>
               <div className="flex flex-col sm:flex-row gap-2">
                 <Button asChild variant="outline" className="justify-start">
-                  <Link href={`/${schoolId}/prize`}><ShoppingBag className="mr-2 h-4 w-4" /> Open Prize/Rewards shop</Link>
+                <Link href={`/${schoolId}/prize`}><ShoppingBag className="mr-2 h-4 w-4" /> Open Rewards Shop</Link>
                 </Button>
                 <Button asChild variant="outline" className="justify-start">
                   <Link href={`/${schoolId}/student`}><GraduationCap className="mr-2 h-4 w-4" /> Open Student Page</Link>

@@ -31,9 +31,9 @@ import { SCHOOL_DATA } from '@/lib/school-data';
 import { DEFAULT_PLAN } from '@/lib/plans';
 
 interface BackupContextType {
-    createSchool: (schoolId: string, name?: string, passcode?: string) => Promise<{ passcode: string; cleanId: string } | null>;
+    createSchool: (schoolId: string, name?: string, passcodes?: SchoolPasscodeUpdates) => Promise<CreateSchoolResult | null>;
     deleteSchool: (schoolId: string) => Promise<void>;
-    updateSchool: (schoolId: string, updates: { name?: string; passcode?: string }) => Promise<void>;
+    updateSchool: (schoolId: string, updates: SchoolPasscodeUpdates & { name?: string }) => Promise<void>;
     devCreateBackup: (schoolId: string) => Promise<void>;
     devRestoreFromBackup: (schoolId: string, backupId: string) => Promise<void>;
     devDownloadBackup: (schoolId: string, backupId: string) => Promise<void>;
@@ -46,12 +46,25 @@ interface BackupContextType {
 
 const BackupContext = createContext<BackupContextType | null>(null);
 
+type SchoolPasscodeUpdates = {
+    passcode?: string;
+    schoolAccessPasscode?: string;
+    adminPasscode?: string;
+};
+
+type CreateSchoolResult = {
+    passcode: string;
+    schoolAccessPasscode: string;
+    adminPasscode: string;
+    cleanId: string;
+};
+
 export function BackupProvider({ children }: { children: React.ReactNode }) {
     const { toast } = useToast();
     const { auth, firestore, functions } = useFirebase();
     const playSound = useArcadeSound();
 
-    const createSchool = useCallback(async (schoolId: string, name?: string, passcode?: string): Promise<{ passcode: string; cleanId: string } | null> => {
+    const createSchool = useCallback(async (schoolId: string, name?: string, passcodes: SchoolPasscodeUpdates = {}): Promise<CreateSchoolResult | null> => {
         if (!functions || !auth.currentUser) return null;
         const cleanId = schoolId.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
         if (!cleanId) {
@@ -62,14 +75,19 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
 
         try {
             const createSchoolFn = httpsCallable(functions, 'createSchoolByDeveloper');
-            const result = await createSchoolFn({ schoolId: cleanId, name, passcode });
-            const response = result.data as { cleanId: string; passcode: string; repaired?: boolean };
+            const result = await createSchoolFn({ schoolId: cleanId, name, ...passcodes });
+            const response = result.data as { cleanId: string; passcode: string; schoolAccessPasscode?: string; adminPasscode?: string; repaired?: boolean };
             playSound('success');
             toast({
                 title: response.repaired ? `School "${response.cleanId}" repaired!` : `School "${response.cleanId}" created!`,
                 description: response.repaired ? 'Missing starter data was restored after a partial create.' : undefined,
             });
-            return { passcode: response.passcode, cleanId: response.cleanId };
+            return {
+                passcode: response.schoolAccessPasscode || response.passcode,
+                schoolAccessPasscode: response.schoolAccessPasscode || response.passcode,
+                adminPasscode: response.adminPasscode || response.passcode,
+                cleanId: response.cleanId,
+            };
         } catch (e) {
             playSound('error');
             const code = (e as any)?.code;
@@ -225,6 +243,8 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
         const finalSchoolDocData = {
             ...schoolDocData,
             passcode: newPasscode,
+            schoolAccessPasscode: newPasscode,
+            adminPasscode: newPasscode,
             name: schoolData.name,
             plan: schoolDocData.plan ?? DEFAULT_PLAN,
             featureOverrides: schoolDocData.featureOverrides ?? {},
@@ -307,7 +327,7 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
         }
     }, [firestore, auth, toast, playSound, functions]);
 
-    const updateSchool = useCallback(async (schoolId: string, updates: { name?: string; passcode?: string }) => {
+    const updateSchool = useCallback(async (schoolId: string, updates: SchoolPasscodeUpdates & { name?: string }) => {
         if (!firestore) return;
         try {
             await updateDoc(doc(firestore, 'schools', schoolId), updates);

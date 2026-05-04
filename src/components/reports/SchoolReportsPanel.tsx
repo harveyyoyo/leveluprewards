@@ -136,7 +136,7 @@ function reportTitle(kind: ReportKind): string {
     case 'coupons':
       return 'Coupon inventory';
     case 'prizes':
-      return 'Prize/Rewards shop';
+      return 'Rewards Shop';
     case 'classes':
       return 'Classes overview';
     case 'homework':
@@ -504,7 +504,7 @@ export function SchoolReportsPanel({
         ['Coupons redeemed', usedCouponsCount],
         ['Coupon point value redeemed', totalCouponValueRedeemed],
         ['Incentive categories', categoriesInScope.length],
-        ['Prizes listed', prizesInScope.length],
+        ['Reward items listed', prizesInScope.length],
       ]);
       return;
     }
@@ -720,7 +720,7 @@ export function SchoolReportsPanel({
             <td className="border border-black p-2 text-right">{categoriesInScope.length}</td>
           </tr>
           <tr>
-            <td className="border border-black p-2 font-semibold">Prizes listed</td>
+            <td className="border border-black p-2 font-semibold">Reward items listed</td>
             <td className="border border-black p-2 text-right">{prizesInScope.length}</td>
           </tr>
         </tbody>
@@ -888,7 +888,7 @@ export function SchoolReportsPanel({
             )}
             {reportKind === 'prizes' && (
               <section className="space-y-3">
-                <h2 className="text-lg font-bold border-b border-neutral-400 pb-1">Prize/Rewards shop</h2>
+                <h2 className="text-lg font-bold border-b border-neutral-400 pb-1">Rewards Shop</h2>
                 <table className="w-full border-collapse border border-black text-[10pt]">
                   <thead>
                     <tr className="bg-neutral-100">
@@ -909,7 +909,7 @@ export function SchoolReportsPanel({
                     ))}
                   </tbody>
                 </table>
-                {prizes.length === 0 ? <p className="text-sm italic">No prizes match this report.</p> : null}
+                {prizes.length === 0 ? <p className="text-sm italic">No reward items match this report.</p> : null}
               </section>
             )}
             {reportKind === 'classes' && (
@@ -1028,7 +1028,7 @@ export function SchoolReportsPanel({
                   <SelectItem value="balances">Student balances</SelectItem>
                   <SelectItem value="redemptions">Coupon redemptions</SelectItem>
                   <SelectItem value="coupons">Coupon inventory</SelectItem>
-                  <SelectItem value="prizes">Prize/Rewards shop</SelectItem>
+                  <SelectItem value="prizes">Rewards Shop</SelectItem>
                   <SelectItem value="classes">Classes overview</SelectItem>
                   <SelectItem value="homework">Homework rewards</SelectItem>
                 </SelectContent>
@@ -1119,7 +1119,7 @@ export function SchoolReportsPanel({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All prizes</SelectItem>
+                    <SelectItem value="all">All reward items</SelectItem>
                     <SelectItem value="in-stock">In stock</SelectItem>
                     <SelectItem value="out-of-stock">Out of stock</SelectItem>
                     <SelectItem value="limited">Limited quantity</SelectItem>
@@ -1224,7 +1224,7 @@ export function SchoolReportsPanel({
               )}
               {reportKind === 'prizes' && (
                 <p className="text-sm text-muted-foreground">
-                  {prizes.length} prize{prizes.length === 1 ? '' : 's'} match the current stock filter.
+                  {prizes.length} reward item{prizes.length === 1 ? '' : 's'} match the current stock filter.
                 </p>
               )}
               {reportKind === 'classes' && (

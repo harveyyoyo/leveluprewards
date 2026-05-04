@@ -113,14 +113,14 @@ export function AdminStudentsTab({
   handleDtcPrintClick: () => void;
   getClassName: (id: string) => string;
   teachers: Teacher[];
-  handleOpenStudentModal: (s: Student | null) => void;
-  onOpenFaceTraining: (s: Student) => void;
-  handleOpenActivityModal: (s: Student) => void;
-  setThemeStudent: (s: Student) => void;
-  setBadgesStudent: (s: Student) => void;
-  deleteStudent: (studentId: string) => void;
-  setStudentToPurge: (s: Student) => void;
-  previewIdCardStudent: (s: Student) => void;
+  handleOpenStudentModal?: (s: Student | null) => void;
+  onOpenFaceTraining?: (s: Student) => void;
+  handleOpenActivityModal?: (s: Student) => void;
+  setThemeStudent?: (s: Student) => void;
+  setBadgesStudent?: (s: Student) => void;
+  deleteStudent?: (studentId: string) => void;
+  setStudentToPurge?: (s: Student) => void;
+  previewIdCardStudent?: (s: Student) => void;
   onUpdateStudent?: (s: Student) => Promise<void> | void;
 }) {
   const [selectedTeacherIdForBulk, setSelectedTeacherIdForBulk] = useState('');
@@ -176,7 +176,7 @@ export function AdminStudentsTab({
             <Printer className="mr-2 h-4 w-4" />
             {selectionMode && selectedStudentIds.size === 1 ? 'Print Selected (DTC)' : 'DTC Card Print'}
           </Button>
-          <Button onClick={() => handleOpenStudentModal(null)} className="rounded-xl">
+          <Button onClick={() => handleOpenStudentModal?.(null)} className="rounded-xl">
             <Plus className="mr-2 h-4 w-4" /> Add Student
           </Button>
           <input type="file" ref={studentCsvInputRef} onChange={onStudentCsvFileChange} className="hidden" accept=".csv" />
@@ -423,7 +423,7 @@ export function AdminStudentsTab({
                       variant="outline"
                       size="icon"
                       className="h-8 w-8 sm:h-9 sm:w-9 rounded-full"
-                      onClick={() => onOpenFaceTraining(s)}
+                      onClick={() => onOpenFaceTraining?.(s)}
                       title="Face login training"
                     >
                       <ScanFace className="w-4 h-4 text-sky-600 dark:text-sky-400" />
@@ -433,7 +433,7 @@ export function AdminStudentsTab({
                     variant="outline"
                     size="icon"
                     className="h-8 w-8 sm:h-9 sm:w-9 rounded-full"
-                    onClick={() => setThemeStudent(s)}
+                    onClick={() => setThemeStudent?.(s)}
                     title="Generate AI Theme"
                   >
                     <Wand2 className="w-4 h-4 text-purple-500" />
@@ -442,7 +442,7 @@ export function AdminStudentsTab({
                     variant="outline"
                     size="icon"
                     className="h-8 w-8 sm:h-9 sm:w-9 rounded-full"
-                    onClick={() => previewIdCardStudent(s)}
+                    onClick={() => previewIdCardStudent?.(s)}
                     title="Preview ID Card"
                   >
                     <IdCard className="w-4 h-4 text-primary" />
@@ -451,7 +451,7 @@ export function AdminStudentsTab({
                     variant="outline"
                     size="icon"
                     className="h-8 w-8 sm:h-9 sm:w-9 rounded-full"
-                    onClick={() => handleOpenActivityModal(s)}
+                    onClick={() => handleOpenActivityModal?.(s)}
                     title="Activity history"
                   >
                     <History className="w-4 h-4" />
@@ -465,7 +465,7 @@ export function AdminStudentsTab({
                         (!s.earnedBadges || s.earnedBadges.length === 0) && 'opacity-40'
                       )}
                       disabled={!s.earnedBadges || s.earnedBadges.length === 0}
-                      onClick={() => setBadgesStudent(s)}
+                      onClick={() => setBadgesStudent?.(s)}
                       title="View badges for this student"
                     >
                       <Award
@@ -480,7 +480,7 @@ export function AdminStudentsTab({
                     variant="outline"
                     size="icon"
                     className="h-8 w-8 sm:h-9 sm:w-9 rounded-full"
-                    onClick={() => handleOpenStudentModal(s)}
+                    onClick={() => handleOpenStudentModal?.(s)}
                     title="Edit student"
                   >
                     <Edit className="w-4 h-4 text-primary" />
@@ -490,7 +490,7 @@ export function AdminStudentsTab({
                     size="icon"
                     className="h-8 w-8 sm:h-9 sm:w-9 rounded-full text-primary hover:bg-primary/10"
                     title="Purge points & badges"
-                    onClick={() => setStudentToPurge(s)}
+                    onClick={() => setStudentToPurge?.(s)}
                   >
                     <Zap className="w-4 h-4" />
                   </Button>
@@ -498,7 +498,7 @@ export function AdminStudentsTab({
                     variant="outline"
                     size="icon"
                     className="h-8 w-8 sm:h-9 sm:w-9 rounded-full text-destructive hover:bg-destructive/10"
-                    onClick={() => deleteStudent(s.id)}
+                    onClick={() => deleteStudent?.(s.id)}
                     title="Delete student"
                   >
                     <Trash2 className="w-4 h-4" />

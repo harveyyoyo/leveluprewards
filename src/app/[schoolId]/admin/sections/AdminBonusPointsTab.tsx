@@ -42,7 +42,7 @@ export function AdminBonusPointsTab(props: any) {
       </CardHeader>
       <CardContent>
         {achievementsLoading ? (
-          <ul className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+          <ul className="space-y-2 h-[calc(100vh-22rem)] max-h-[420px] min-h-[250px] overflow-y-auto pr-1">
             {[1, 2, 3].map((i: number) => (
               <li key={i} className="flex justify-between items-center bg-secondary/20 p-4 rounded-2xl border">
                 <Skeleton className="h-10 w-48" />
@@ -51,7 +51,7 @@ export function AdminBonusPointsTab(props: any) {
             ))}
           </ul>
         ) : (
-          <ul className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+          <ul className="space-y-2 h-[calc(100vh-22rem)] max-h-[420px] min-h-[250px] overflow-y-auto pr-1">
             {(achievements || []).map((ach: any) => (
               <li key={ach.id} className="flex justify-between items-center bg-secondary/20 p-4 rounded-2xl border hover:border-primary/20 transition-colors">
                 <div className="flex items-center gap-3">

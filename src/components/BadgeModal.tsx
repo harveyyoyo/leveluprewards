@@ -119,96 +119,98 @@ export function BadgeModal({ isOpen, setIsOpen, badge, categories, onSave }: Bad
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogContent size="sm">
-        <DialogHeader>
+      <DialogContent size="sm" className="flex flex-col p-0 overflow-hidden max-h-[var(--dialog-max-h,min(90vh,calc(100dvh-2rem)))]">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b">
           <DialogTitle>{isEditing ? 'Edit badge' : 'New badge'}</DialogTitle>
           <DialogDescription>
             Award this badge when a student reaches the required points in the chosen category within the time period.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="badge-name">Name</Label>
-            <Input id="badge-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Good Behavior Badge" />
-          </div>
-          <div className="flex items-center justify-between rounded-lg border p-4">
-            <div>
-              <Label htmlFor="badge-enabled">Enabled</Label>
-              <p className="text-xs text-muted-foreground">When off, this badge is not awarded (existing earners stay).</p>
-            </div>
-            <Switch id="badge-enabled" checked={enabled} onCheckedChange={setEnabled} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="badge-desc">Description</Label>
-            <Input id="badge-desc" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g. Earn 50 Good Behavior points this month" />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          <div className="grid gap-4">
             <div className="space-y-2">
-              <Label>Category</Label>
-              <Select value={categoryId} onValueChange={setCategoryId}>
-                <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+              <Label htmlFor="badge-name">Name</Label>
+              <Input id="badge-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Good Behavior Badge" />
+            </div>
+            <div className="flex items-center justify-between rounded-lg border p-4">
+              <div>
+                <Label htmlFor="badge-enabled">Enabled</Label>
+                <p className="text-xs text-muted-foreground">When off, this badge is not awarded (existing earners stay).</p>
+              </div>
+              <Switch id="badge-enabled" checked={enabled} onCheckedChange={setEnabled} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="badge-desc">Description</Label>
+              <Input id="badge-desc" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g. Earn 50 Good Behavior points this month" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Category</Label>
+                <Select value={categoryId} onValueChange={setCategoryId}>
+                  <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                  <SelectContent>
+                    {categories.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="badge-points">Points required</Label>
+                <Input id="badge-points" type="number" min={1} value={pointsRequired} onChange={(e) => setPointsRequired(e.target.value)} />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Time period</Label>
+              <Select value={period} onValueChange={(v: Badge['period']) => setPeriod(v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {categories.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  {(Object.keys(PERIOD_LABELS) as Badge['period'][]).map((p) => (
+                    <SelectItem key={p} value={p}>{PERIOD_LABELS[p]}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="badge-points">Points required</Label>
-              <Input id="badge-points" type="number" min={1} value={pointsRequired} onChange={(e) => setPointsRequired(e.target.value)} />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label>Time period</Label>
-            <Select value={period} onValueChange={(v: Badge['period']) => setPeriod(v)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {(Object.keys(PERIOD_LABELS) as Badge['period'][]).map((p) => (
-                  <SelectItem key={p} value={p}>{PERIOD_LABELS[p]}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Icon</Label>
-              <div className="flex gap-2 items-center">
-                <Input value={icon} onChange={(e) => setIcon(e.target.value)} />
-                <div className="w-10 h-10 rounded-lg border bg-muted flex items-center justify-center shrink-0">
-                  <DynamicIcon name={icon} className="w-5 h-5" />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Icon</Label>
+                <div className="flex gap-2 items-center">
+                  <Input value={icon} onChange={(e) => setIcon(e.target.value)} />
+                  <div className="w-10 h-10 rounded-lg border bg-muted flex items-center justify-center shrink-0">
+                    <DynamicIcon name={icon} className="w-5 h-5" />
+                  </div>
                 </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Tier</Label>
+                <Select value={tier || 'none'} onValueChange={(v) => setTier(v === 'none' ? '' : (v as Badge['tier']))}>
+                  <SelectTrigger><SelectValue placeholder="Optional" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="bronze">Bronze</SelectItem>
+                    <SelectItem value="silver">Silver</SelectItem>
+                    <SelectItem value="gold">Gold</SelectItem>
+                    <SelectItem value="platinum">Platinum</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Tier</Label>
-              <Select value={tier || 'none'} onValueChange={(v) => setTier(v === 'none' ? '' : (v as Badge['tier']))}>
-                <SelectTrigger><SelectValue placeholder="Optional" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
-                  <SelectItem value="bronze">Bronze</SelectItem>
-                  <SelectItem value="silver">Silver</SelectItem>
-                  <SelectItem value="gold">Gold</SelectItem>
-                  <SelectItem value="platinum">Platinum</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="badge-accent">Accent color (optional)</Label>
-            <div className="flex gap-2 items-center">
-              <input
-                id="badge-accent"
-                type="color"
-                value={accentColor && /^#[0-9A-Fa-f]{6}$/.test(accentColor) ? accentColor : '#0ea5e9'}
-                onChange={(e) => setAccentColor(e.target.value)}
-                className="w-10 h-10 rounded border cursor-pointer"
-              />
-              <Input value={accentColor} onChange={(e) => setAccentColor(e.target.value)} placeholder="#0ea5e9" className="font-mono text-sm" />
+              <Label htmlFor="badge-accent">Accent color (optional)</Label>
+              <div className="flex gap-2 items-center">
+                <input
+                  id="badge-accent"
+                  type="color"
+                  value={accentColor && /^#[0-9A-Fa-f]{6}$/.test(accentColor) ? accentColor : '#0ea5e9'}
+                  onChange={(e) => setAccentColor(e.target.value)}
+                  className="w-10 h-10 rounded border cursor-pointer"
+                />
+                <Input value={accentColor} onChange={(e) => setAccentColor(e.target.value)} placeholder="#0ea5e9" className="font-mono text-sm" />
+              </div>
             </div>
           </div>
         </div>
-        <DialogFooter>
+        <DialogFooter className="px-6 py-4 border-t bg-muted/30">
           <Button variant="secondary" onClick={() => setIsOpen(false)}>Cancel</Button>
           <Button onClick={handleSave}>Save badge</Button>
         </DialogFooter>
