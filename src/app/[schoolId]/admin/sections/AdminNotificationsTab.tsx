@@ -8,7 +8,7 @@ import {
   Check,
   CheckCircle2,
   ClipboardList,
-  Image,
+  Image as ImageIcon,
   ListTree,
   Mail,
   MessageSquare,
@@ -156,20 +156,6 @@ export function AdminNotificationsTab() {
 
   return (
     <div className="space-y-6">
-      {!notificationsPlanOk && (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" aria-hidden="true" />
-          <AlertTitle>Alerts are not active on your plan</AlertTitle>
-          <AlertDescription>
-            Parent and staff messages are handled by Cloud Functions only when the school&apos;s{' '}
-            <strong>Notifications</strong> feature is enabled (included on Enterprise, or granted via a developer
-            override on your school). Turning on &quot;Reward Redemptions&quot; below does not send email until that
-            requirement is met. You must also install the Firebase <strong>Trigger Email</strong> extension (or
-            equivalent) so documents in the <code className="text-xs">mail</code> collection are delivered.
-          </AlertDescription>
-        </Alert>
-      )}
-
       <Card className="border-t-4 border-blue-500 shadow-md">
         <CardHeader className="py-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -422,7 +408,7 @@ export function AdminNotificationsTab() {
             <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
               <div className="space-y-0.5">
                 <Label className="text-sm font-bold flex items-center gap-2">
-                  Celebration Artwork <Image className="w-3.5 h-3.5 text-sky-500" />
+                  Celebration Artwork <ImageIcon className="w-3.5 h-3.5 text-sky-500" />
                 </Label>
                 <p className="text-[11px] text-muted-foreground">Include badge-style artwork in milestone and badge emails.</p>
               </div>
