@@ -195,28 +195,12 @@ const PRESET_CLASS_BY_ID = Object.fromEntries(PRESET_BULLETIN_THEMES.map((t) => 
   string
 >;
 
-/**
- * Outer card classes for the bulletin board shell (student kiosk, portal page, admin preview).
- */
-export function getBulletinBoardCardClassName(
-  themeId: string | undefined,
-  options: { variant: 'standalone' | 'student'; studentHasCustomTheme: boolean },
-): string {
+/** Outer card classes for the bulletin board shell (Board page and admin preview). */
+export function getBulletinBoardCardClassName(themeId: string | undefined): string {
   const id = themeId || 'default';
   const preset = PRESET_CLASS_BY_ID[id];
   if (preset && id !== 'default') {
     return cn('overflow-hidden border shadow-xl relative transition-all duration-300', preset);
-  }
-  if (id === 'default') {
-    if (options.variant === 'student' && options.studentHasCustomTheme) {
-      return cn('overflow-hidden border shadow-xl relative transition-all duration-300');
-    }
-    if (options.variant === 'student') {
-      return cn(
-        'overflow-hidden border shadow-xl relative transition-all duration-300 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800',
-      );
-    }
-    return cn('overflow-hidden border shadow-xl relative transition-all duration-300 bg-card border-border');
   }
   return cn('overflow-hidden border shadow-xl relative transition-all duration-300 bg-card border-border');
 }

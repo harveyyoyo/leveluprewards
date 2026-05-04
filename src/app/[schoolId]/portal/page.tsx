@@ -100,7 +100,7 @@ export default function PortalPage() {
                       id: 'bulletin',
                       href: `/${schoolId}/bulletin-board`,
                       title: 'Bulletin Board',
-                      description: 'Read posted incentives the same way families see them on the kiosk.',
+                      description: 'School-wide point incentives (staff view; not on the student kiosk).',
                       icon: Megaphone,
                   },
               ]

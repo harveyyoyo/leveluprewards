@@ -24,8 +24,8 @@ type BulletinIncentive = {
   active?: boolean;
 };
 
+/** Staff and school accounts only - not the signed-in student kiosk. */
 const VIEWER_LOGIN_STATES = new Set([
-  'student',
   'teacher',
   'admin',
   'school',
@@ -116,10 +116,7 @@ export default function BulletinBoardViewPage() {
       ) : (
         <Card
           className={cn(
-            getBulletinBoardCardClassName(settings.bulletinTheme, {
-              variant: 'standalone',
-              studentHasCustomTheme: false,
-            }),
+            getBulletinBoardCardClassName(settings.bulletinTheme),
           )}
         >
           <CardHeader className="pb-3 border-b flex flex-col md:flex-row justify-between md:items-center gap-3">

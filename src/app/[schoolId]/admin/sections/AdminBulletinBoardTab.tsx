@@ -250,7 +250,7 @@ export function AdminBulletinBoardTab({
                 className="rounded-xl resize-y min-h-[72px] text-sm"
               />
               <p className="text-[10px] text-muted-foreground">
-                Shown on the student kiosk, Board page, and preview. Leave blank to use the default sentence.
+                Shown on the Board page and this preview. Leave blank to use the default sentence.
               </p>
             </div>
 
@@ -299,9 +299,9 @@ export function AdminBulletinBoardTab({
 
             <div className="flex items-center justify-between rounded-2xl border p-3 bg-muted/30">
               <div>
-                <p className="text-sm font-bold">“Wowed Design” flair on kiosk</p>
+                <p className="text-sm font-bold">“Wowed Design” flair in preview</p>
                 <p className="text-[10px] text-muted-foreground leading-snug">
-                  Small decorative pill on the student home bulletin card. Does not affect the standalone Board page.
+                  Decorative footer in this admin preview only (not on the live Board page).
                 </p>
               </div>
               <Switch
@@ -456,17 +456,14 @@ export function AdminBulletinBoardTab({
               <Eye className="w-4 h-4 text-emerald-500" /> Interactive Live Preview
             </CardTitle>
             <CardDescription>
-              This is how students will view the bulletin board on their portal/kiosk.
+              This matches the staff Board page (`/bulletin-board`); it is not shown on the student kiosk.
             </CardDescription>
           </CardHeader>
           <CardContent>
             {bulletinEnabled ? (
               <div
                 className={cn(
-                  getBulletinBoardCardClassName(bulletinTheme, {
-                    variant: 'standalone',
-                    studentHasCustomTheme: false,
-                  }),
+                  getBulletinBoardCardClassName(bulletinTheme),
                   'rounded-3xl border-2 p-5 min-h-[450px] flex flex-col justify-between transition-all duration-500 select-none',
                 )}
               >
@@ -552,7 +549,7 @@ export function AdminBulletinBoardTab({
                   </div>
                 ) : (
                   <div className="pt-4 border-t border-black/5 dark:border-white/5 text-[10px] opacity-50 font-semibold">
-                    Flair hidden on kiosk (toggle above to show).
+                    Flair hidden in preview (toggle above to show).
                   </div>
                 )}
               </div>
