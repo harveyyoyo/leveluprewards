@@ -13,6 +13,7 @@ import {
   ShoppingBag,
   UserCog,
   ArrowRightLeft,
+  Megaphone,
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { useAppContext } from './AppProvider';
@@ -93,8 +94,11 @@ export default function Header() {
       ...(isStaff || isDemoSchool ? [{ id: 'print', href: `/${schoolId}/teacher`, icon: Printer, label: 'Teacher', color: 'chart-2' }] : []),
       { id: 'redeem', href: `/${schoolId}/student`, icon: GraduationCap, label: 'Student', color: 'chart-1' },
       ...(isStaff || isDemoSchool ? [{ id: 'fame', href: `/${schoolId}/halloffame`, icon: Trophy, label: 'Fame', color: 'chart-5' }] : []),
+      ...(isStaff || isDemoSchool
+        ? [{ id: 'bulletin', href: `/${schoolId}/bulletin-board`, icon: Megaphone, label: 'Board', color: 'chart-4' }]
+        : []),
     ].sort((a, b) => {
-      const order = ['admin', 'print', 'redeem', 'fame'];
+      const order = ['admin', 'print', 'redeem', 'fame', 'bulletin'];
       return order.indexOf(a.id) - order.indexOf(b.id);
     });
 

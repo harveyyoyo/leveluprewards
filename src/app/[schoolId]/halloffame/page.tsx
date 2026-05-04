@@ -109,7 +109,12 @@ export default function HallOfFamePage() {
     }, [rankType, sortBy, scope, limit, podiumSize, autoScroll, gridLayout]);
 
     useEffect(() => {
-        if (isInitialized && !['student', 'teacher', 'admin', 'school', 'developer'].includes(loginState)) {
+        if (
+            isInitialized &&
+            !['student', 'teacher', 'admin', 'school', 'developer', 'secretary', 'prizeClerk', 'reports'].includes(
+                loginState,
+            )
+        ) {
             router.replace('/login');
         }
     }, [isInitialized, loginState, router]);
@@ -353,7 +358,15 @@ export default function HallOfFamePage() {
 
     const animBackdrop = globalAnimatedBackdropActive(settings);
 
-    if (!isInitialized || !['student', 'teacher', 'admin', 'school', 'developer'].includes(loginState) || studentsLoading || classesLoading || categoriesLoading) {
+    if (
+        !isInitialized ||
+        !['student', 'teacher', 'admin', 'school', 'developer', 'secretary', 'prizeClerk', 'reports'].includes(
+            loginState,
+        ) ||
+        studentsLoading ||
+        classesLoading ||
+        categoriesLoading
+    ) {
         return <HallOfFameSkeleton animBackdrop={animBackdrop} />;
     }
 
