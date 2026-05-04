@@ -15,7 +15,7 @@ import { httpsCallable } from 'firebase/functions';
 import {
   addCategory as dbAddCategory, deleteCategory as dbDeleteCategory, updateCategory as dbUpdateCategory,
   addCoupons as dbAddCoupons, deleteCoupon as dbDeleteCoupon,
-  redeemPrize as dbRedeemPrize, addPrize as dbAddPrize,
+  addPrize as dbAddPrize,
   updatePrize as dbUpdatePrize, deletePrize as dbDeletePrize,
   addStudent as dbAddStudent, updateStudent as dbUpdateStudent,
   deleteStudent as dbDeleteStudent, addClass as dbAddClass, updateClass as dbUpdateClass,
@@ -170,6 +170,30 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
 
   const { settings } = useSettings();
   const { loginState, logout } = authCtx;
+
+  // Kiosk entry: optional `?kioskEntry=` or `?entry=` on the student URL verifies with Cloud Functions
+  // and grants `kioskMembers` when the school has configured `secrets/entry` (see verifySchoolEntryCode).
+  React.useEffect(() => {
+    if (loginState !== 'student' || !schoolId || !functions || !auth?.currentUser) return;
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const code = (params.get('kioskEntry') || params.get('entry') || '').trim();
+    if (!code) return;
+    const doneKey = `kioskEntryVerified:${schoolId}`;
+    if (sessionStorage.getItem(doneKey) === code) return;
+
+    const verify = httpsCallable(functions, 'verifySchoolEntryCode');
+    void verify({ schoolId, code })
+      .then(() => {
+        sessionStorage.setItem(doneKey, code);
+        params.delete('kioskEntry');
+        params.delete('entry');
+        const q = params.toString();
+        const next = `${window.location.pathname}${q ? `?${q}` : ''}${window.location.hash}`;
+        window.history.replaceState(null, '', next);
+      })
+      .catch(() => {});
+  }, [loginState, schoolId, functions, auth?.currentUser]);
 
   // Privileged sessions (admin, teacher): auto-logout after idle period.
   // Consumes configurable timeout from settings (default: 5 min).
@@ -401,9 +425,30 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
   }, [firestore, schoolId]);
 
   const redeemPrize_ = useCallback(async (studentId: string, prize: Prize, quantity: number, pointsOverride?: number) => {
-    if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
-    return dbRedeemPrize(firestore, schoolId, studentId, prize, quantity, pointsOverride);
-  }, [firestore, schoolId]);
+    if (!schoolId) return Promise.reject("Not logged into a school.");
+    try {
+      const fn = httpsCallable(functions, 'redeemPrizeServer');
+      const res = await fn({
+        schoolId,
+        studentId,
+        prizeId: prize.id,
+        quantity,
+      });
+      const data = res.data as any;
+      return {
+        success: !!data?.success,
+        activityId: typeof data?.activityId === 'string' ? data.activityId : undefined,
+        redeemedAt: typeof data?.redeemedAt === 'number' ? data.redeemedAt : undefined,
+        totalCost: typeof data?.totalCost === 'number' ? data.totalCost : undefined,
+        message: typeof data?.message === 'string' ? data.message : undefined,
+      };
+    } catch (e: any) {
+      return {
+        success: false,
+        message: e?.message || 'Could not redeem this prize.',
+      };
+    }
+  }, [functions, schoolId]);
 
   const addPrize_ = useCallback((p: Omit<Prize, 'id'>) => {
     if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
