@@ -66,6 +66,18 @@ export interface Category {
   teacherId?: string;
 }
 
+export interface BonusSpinType {
+  id: string;
+  /** Display name shown in Admin UI (e.g. "Behavior Spin", "Homework Spin"). */
+  name: string;
+  /** Optional category this spin is intended for. When set, Admin UI will suggest it for that category. */
+  categoryId?: string;
+  /** Exactly what the wheel can land on. */
+  segments: number[];
+  /** Optional UI accent for the wheel glow / border. */
+  accentColor?: string;
+}
+
 export interface AttendanceRewardRule {
   id: string;
   teacherId: string;
@@ -254,6 +266,8 @@ export interface Achievement {
   /** Hex or CSS color for badge card border/glow. */
   accentColor?: string;
   enableWheelSpin?: boolean;
+  /** Which spin type to use (optional; falls back to legacy computed segments). */
+  wheelSpinTypeId?: string;
 }
 
 /** Real badge: earned for reaching a points threshold in a specific category within a time period (e.g. Good Behavior badge = 50 Good Behavior points this month). */

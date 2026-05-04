@@ -95,6 +95,8 @@ export function AdminTeachersTab({
   const [rosterBusyKey, setRosterBusyKey] = useState('');
   const [copiedKey, setCopiedKey] = useState('');
   const [origin, setOrigin] = useState('');
+  const [studentSearchTerms, setStudentSearchTerms] = useState<Record<string, string>>({});
+
 
   useEffect(() => {
     setOrigin(window.location.origin);
@@ -405,10 +407,64 @@ export function AdminTeachersTab({
                       </ul>
                     )}
                     <div className="mt-3 space-y-2">
-                      <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Add students directly</p>
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Add students directly</p>
+                        <div className="flex gap-2">
+                          <Input
+                            placeholder="Search..."
+                            className="h-7 w-32 text-xs px-2 rounded-lg"
+                            value={studentSearchTerms[t.id] || ''}
+                            onChange={(e) =>
+                              setStudentSearchTerms((prev) => ({ ...prev, [t.id]: e.target.value }))
+                            }
+                          />
+                          {(studentSearchTerms[t.id] || '').trim() && (
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              className="h-7 text-xs px-2 rounded-lg shrink-0"
+                              onClick={async () => {
+                                const q = (studentSearchTerms[t.id] || '').toLowerCase().trim();
+                                const unassigned = (students || [])
+                                  .filter((s) => !(s.teacherIds || []).includes(t.id))
+                                  .filter((s) => {
+                                    if (!q) return true;
+                                    return (
+                                      s.firstName.toLowerCase().includes(q) ||
+                                      s.lastName.toLowerCase().includes(q) ||
+                                      (s.nickname && s.nickname.toLowerCase().includes(q))
+                                    );
+                                  });
+                                const busyKey = `bulk:${t.id}`;
+                                setRosterBusyKey(busyKey);
+                                try {
+                                  for (const s of unassigned) {
+                                    await assignStudentToTeacher(s, t.id);
+                                  }
+                                } finally {
+                                  setRosterBusyKey('');
+                                }
+                              }}
+                              disabled={rosterBusyKey.startsWith('bulk:')}
+                            >
+                              Add all filtered
+                            </Button>
+                          )}
+                        </div>
+                      </div>
                       <ul className="max-h-36 overflow-y-auto space-y-1 rounded-xl border border-border/50 bg-background/80 p-2 text-sm">
                         {(students || [])
                           .filter((s) => !(s.teacherIds || []).includes(t.id))
+                          .filter((s) => {
+                            const query = (studentSearchTerms[t.id] || '').toLowerCase().trim();
+                            if (!query) return true;
+                            return (
+                              s.firstName.toLowerCase().includes(query) ||
+                              s.lastName.toLowerCase().includes(query) ||
+                              (s.nickname && s.nickname.toLowerCase().includes(query))
+                            );
+                          })
                           .slice()
                           .sort(studentSortKey)
                           .map((s) => {

@@ -39,11 +39,12 @@ type DialogContentProps = React.ComponentPropsWithoutRef<typeof DialogPrimitive.
 };
 
 const dialogSizeClasses: Record<NonNullable<DialogContentProps["size"]>, string> = {
-  sm: "max-w-[var(--dialog-max-w,28rem)]",
-  md: "max-w-[var(--dialog-max-w,32rem)]",
-  lg: "max-w-[var(--dialog-max-w,42rem)]",
-  xl: "max-w-[var(--dialog-max-w,52rem)]",
+  sm: "max-w-[var(--dialog-max-w,38rem)]",
+  md: "max-w-[var(--dialog-max-w,48rem)]",
+  lg: "max-w-[var(--dialog-max-w,56rem)]",
+  xl: "max-w-[var(--dialog-max-w,68rem)]",
 };
+
 
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,

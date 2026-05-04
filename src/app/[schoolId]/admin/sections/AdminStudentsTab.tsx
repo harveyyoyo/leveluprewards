@@ -1,4 +1,6 @@
 'use client';
+import { useState } from 'react';
+
 
 import { Award, Edit, History, IdCard, LayoutDashboard, Mail, Phone, Plus, Printer, ScanFace, Trash2, UploadCloud, Users, Wand2, X, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -86,6 +88,7 @@ export function AdminStudentsTab({
   previewIdCardStudent: (s: Student) => void;
   onUpdateStudent?: (s: Student) => Promise<void> | void;
 }) {
+  const [selectedTeacherIdForBulk, setSelectedTeacherIdForBulk] = useState('');
   return (
     <Card className="border-t-4 border-primary shadow-md overflow-hidden">
       <CardHeader className="bg-primary/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 py-8">
@@ -155,6 +158,45 @@ export function AdminStudentsTab({
             <LayoutDashboard className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground" />
           </div>
           <div className="flex gap-2 items-center flex-wrap">
+            {selectedStudentIds.size > 0 && teachers && teachers.length > 0 && (
+              <div className="flex gap-1 items-center bg-primary/5 p-1 rounded-xl border border-primary/20 shrink-0">
+                <Select
+                  value={selectedTeacherIdForBulk}
+                  onValueChange={setSelectedTeacherIdForBulk}
+                >
+                  <SelectTrigger className="w-[160px] rounded-lg h-9 bg-background border-muted">
+                    <SelectValue placeholder="Add to teacher..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {teachers.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  variant="default"
+                  className="h-9 rounded-lg px-3 font-semibold shrink-0 bg-primary hover:bg-primary/90 text-primary-foreground"
+                  disabled={!selectedTeacherIdForBulk}
+                  onClick={async () => {
+                    if (!selectedTeacherIdForBulk || !onUpdateStudent) return;
+                    const selectedStudents = students?.filter((s) => selectedStudentIds.has(s.id)) || [];
+                    for (const s of selectedStudents) {
+                      const current = s.teacherIds || [];
+                      if (!current.includes(selectedTeacherIdForBulk)) {
+                        await onUpdateStudent({ ...s, teacherIds: [...current, selectedTeacherIdForBulk] });
+                      }
+                    }
+                    setSelectedTeacherIdForBulk('');
+                    setSelectedStudentIds(new Set());
+                  }}
+                >
+                  Add Selected
+                </Button>
+              </div>
+            )}
             <Button
               type="button"
               variant="outline"

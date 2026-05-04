@@ -77,7 +77,12 @@ function TeacherHomeworkTab({ schoolId, teacherId, students, classes }: { school
     const [newReward, setNewReward] = useState({ title: '', description: '', points: 10, classId: 'all' });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
-    const [filterClassId, setFilterClassId] = useState('all');
+    const [filterClassId, setFilterClassId] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem('defaultClassId') || 'all';
+        }
+        return 'all';
+    });
     const [searchTerm, setSearchTerm] = useState('');
     const [isAwarding, setIsAwarding] = useState<string | null>(null);
 
@@ -191,7 +196,7 @@ function TeacherHomeworkTab({ schoolId, teacherId, students, classes }: { school
                             className="h-11 w-full sm:w-64 rounded-xl pl-9 transition-all bg-slate-50"
                         />
                     </div>
-                    <Select value={filterClassId} onValueChange={setFilterClassId}>
+                    <Select value={filterClassId} onValueChange={(val) => { setFilterClassId(val); localStorage.setItem('defaultClassId', val); }}>
                         <SelectTrigger className="h-11 w-full sm:w-52 rounded-xl font-bold">
                             <SelectValue placeholder="All classes" />
                         </SelectTrigger>
@@ -1714,11 +1719,19 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
     // State for direct/bulk awarding
     const [awardMode, setAwardMode] = useState<'award' | 'deduct'>('award');
     const [studentSearch, setStudentSearch] = useState('');
-    const [filterClassId, setFilterClassId] = useState('all');
+    const [filterClassId, setFilterClassId] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem('defaultClassId') || 'all';
+        }
+        return 'all';
+    });
     const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
     const [awardCategoryId, setAwardCategoryId] = useState('');
     const [awardValue, setAwardValue] = useState('10');
     const [awardReason, setAwardReason] = useState('');
+    const [minPoints, setMinPoints] = useState('');
+    const [maxPoints, setMaxPoints] = useState('');
+    const [badgeFilter, setBadgeFilter] = useState<'all' | 'has_nfc' | 'no_nfc'>('all');
 
     useEffect(() => {
         if (categories && categories.length > 0) {
@@ -2135,9 +2148,19 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
 
     const filteredStudents = useMemo(() => {
         const normalizedSearch = studentSearch.trim().toLowerCase();
+        const minVal = minPoints.trim() === '' ? -Infinity : Number(minPoints);
+        const maxVal = maxPoints.trim() === '' ? Infinity : Number(maxPoints);
+
         return studentsForTeacherActions.filter((s) => {
             const classMatch = filterClassId === 'all' || s.classId === filterClassId;
             if (!classMatch) return false;
+
+            const currentPts = s.points || 0;
+            if (currentPts < minVal || currentPts > maxVal) return false;
+
+            if (badgeFilter === 'has_nfc' && !s.nfcId) return false;
+            if (badgeFilter === 'no_nfc' && s.nfcId) return false;
+
             if (!normalizedSearch) return true;
 
             const computedName = `${getStudentNickname(s)} ${s.lastName}`.toLowerCase();
@@ -2145,7 +2168,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                 s.id.toLowerCase().includes(normalizedSearch) ||
                 (s.nfcId && s.nfcId.toLowerCase().includes(normalizedSearch));
         }).sort((a, b) => a.lastName.localeCompare(b.lastName));
-    }, [studentsForTeacherActions, studentSearch, filterClassId]);
+    }, [studentsForTeacherActions, studentSearch, filterClassId, minPoints, maxPoints, badgeFilter]);
 
     useEffect(() => {
         if (filteredStudents.length === 1) {
@@ -2657,17 +2680,18 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                         </Button>
                                       </div>
 
-                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                        <div className="relative group">
+                                      {/* Enhanced Filtering Row */}
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-muted/10 p-3 rounded-2xl border border-dashed">
+                                        <div className="relative group col-span-1 sm:col-span-2">
                                           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                                           <Input
-                                            placeholder="Search name or ID..."
+                                            placeholder="Search name, ID, or NFC..."
                                             value={studentSearch}
                                             onChange={e => setStudentSearch(e.target.value)}
-                                            className={cn("h-11 rounded-xl pl-9 transition-all", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-slate-50')}
+                                            className={cn("h-11 rounded-xl pl-9 transition-all bg-background/50 backdrop-blur-sm focus-visible:ring-primary/20", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-slate-50')}
                                           />
                                         </div>
-                                        <Select value={filterClassId} onValueChange={setFilterClassId}>
+                                        <Select value={filterClassId} onValueChange={(val) => { setFilterClassId(val); localStorage.setItem('defaultClassId', val); }}>
                                           <SelectTrigger className={cn("h-11 rounded-xl transition-all", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-slate-50')}>
                                             <SelectValue placeholder="All Classes" />
                                           </SelectTrigger>
@@ -2680,9 +2704,47 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                             ))}
                                           </SelectContent>
                                         </Select>
+                                        <Select value={badgeFilter} onValueChange={(v: any) => setBadgeFilter(v)}>
+                                          <SelectTrigger className={cn("h-11 rounded-xl transition-all", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-slate-50')}>
+                                            <SelectValue placeholder="Badge filter" />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="all">All NFC Statuses</SelectItem>
+                                            <SelectItem value="has_nfc">Has NFC tag</SelectItem>
+                                            <SelectItem value="no_nfc">No NFC tag</SelectItem>
+                                          </SelectContent>
+                                        </Select>
                                       </div>
 
-                                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                        <Input
+                                          type="number"
+                                          placeholder="Min Points"
+                                          value={minPoints}
+                                          onChange={e => setMinPoints(e.target.value)}
+                                          className={cn("h-11 rounded-xl font-medium", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-slate-50')}
+                                        />
+                                        <Input
+                                          type="number"
+                                          placeholder="Max Points"
+                                          value={maxPoints}
+                                          onChange={e => setMaxPoints(e.target.value)}
+                                          className={cn("h-11 rounded-xl font-medium", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-slate-50')}
+                                        />
+                                        <div className="col-span-2 flex items-center gap-2">
+                                          <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => { setMinPoints(''); setMaxPoints(''); setBadgeFilter('all'); }}
+                                            className="h-11 px-3 rounded-xl text-xs font-bold w-full"
+                                          >
+                                            Clear Filters
+                                          </Button>
+                                        </div>
+                                      </div>
+
+                                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-3 border-t">
                                         <Select value={awardCategoryId} onValueChange={setAwardCategoryId}>
                                           <SelectTrigger className={cn("h-11 rounded-xl", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-slate-50')}>
                                             <SelectValue placeholder="Category" />
@@ -2693,13 +2755,30 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                             ))}
                                           </SelectContent>
                                         </Select>
-                                        <Input
-                                          type="number"
-                                          value={awardValue}
-                                          onChange={(e) => setAwardValue(e.target.value)}
-                                          className={cn("h-11 rounded-xl font-black", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-slate-50')}
-                                          placeholder="Points"
-                                        />
+                                        <div className="space-y-1">
+                                          <Input
+                                            type="number"
+                                            value={awardValue}
+                                            onChange={(e) => setAwardValue(e.target.value)}
+                                            className={cn("h-11 rounded-xl font-black", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-slate-50')}
+                                            placeholder="Points"
+                                          />
+                                          {/* Presets */}
+                                          <div className="flex flex-wrap gap-1 mt-1">
+                                            {[5, 10, 20, 50, 100].map(v => (
+                                              <Button
+                                                key={v}
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => setAwardValue(v.toString())}
+                                                className="h-6 px-1.5 text-[10px] rounded-md font-bold"
+                                              >
+                                                +{v}
+                                              </Button>
+                                            ))}
+                                          </div>
+                                        </div>
                                         {awardMode === 'deduct' ? (
                                           <Input
                                             value={awardReason}

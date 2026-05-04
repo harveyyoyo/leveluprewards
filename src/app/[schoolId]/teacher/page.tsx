@@ -3,14 +3,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { doc } from 'firebase/firestore';
+import { doc, collection } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAppContext } from '@/components/AppProvider';
-import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { useDoc, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { LogIn, LogOut, UserCheck, Loader2 } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
@@ -111,7 +111,14 @@ export default function TeacherPage() {
 
     const [selectedLoginKey, setSelectedLoginKey] = useState('');
     const [passcode, setPasscode] = useState('');
+    const [selectedClassId, setSelectedClassId] = useState('all');
     const directAccountKey = searchParams.get('account') || '';
+
+    const classesQuery = useMemoFirebase(
+        () => (schoolId ? collection(firestore, 'schools', schoolId, 'classes') : null),
+        [firestore, schoolId],
+    );
+    const { data: classesData, isLoading: classesLoading } = useCollection<{ id: string; name: string }>(classesQuery);
 
     const schoolPublicRef = useMemoFirebase(
         () => (schoolId ? doc(firestore, 'schoolPublic', schoolId) : null),
@@ -192,6 +199,11 @@ export default function TeacherPage() {
         });
 
         if (result) {
+            if (selectedClassId && selectedClassId !== 'all') {
+                localStorage.setItem('defaultClassId', selectedClassId);
+            } else {
+                localStorage.removeItem('defaultClassId');
+            }
             playSound('login');
             toast({ title: 'Logged in successfully.' });
             router.replace(staffLandingPath(schoolId, selected.type));
@@ -284,6 +296,33 @@ export default function TeacherPage() {
                                             </SelectContent>
                                         </Select>
                                     )}
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="default-class" className={`text-xs font-semibold uppercase tracking-wide ${isGraphic ? 'text-muted-foreground' : 'text-slate-500'}`}>Default Class (Optional)</Label>
+                                    <Select value={selectedClassId} onValueChange={setSelectedClassId} disabled={classesLoading}>
+                                        <SelectTrigger
+                                            id="default-class"
+                                            className={`h-14 rounded-xl text-lg font-bold ${isGraphic ? 'bg-foreground/5 border-border' : 'bg-slate-50'}`}
+                                        >
+                                            <SelectValue
+                                                placeholder={
+                                                    classesLoading
+                                                        ? 'Loading classes...'
+                                                        : classesData?.length === 0
+                                                            ? 'No classes found'
+                                                            : 'Select default class...'
+                                                }
+                                            />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">All Classes</SelectItem>
+                                            {(classesData || []).slice().sort((a, b) => a.name.localeCompare(b.name)).map((c) => (
+                                                <SelectItem key={c.id} value={c.id}>
+                                                    {c.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="teacher-passcode" className={`text-xs font-semibold uppercase tracking-wide ${isGraphic ? 'text-muted-foreground' : 'text-slate-500'}`}>Passcode</Label>

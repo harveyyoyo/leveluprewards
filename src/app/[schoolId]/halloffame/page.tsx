@@ -5,12 +5,13 @@ import Link from 'next/link';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, limit as firestoreLimit } from 'firebase/firestore';
-import { ArrowLeft, Trophy, Crown, Medal, ChevronRight, Settings, Cpu } from 'lucide-react';
+import { ArrowLeft, Trophy, Crown, Medal, ChevronRight, Settings, Cpu, Target } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import type { Student, Class, Category } from '@/lib/types';
+import type { Student, Class, Category, Goal } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { cn, getStudentNickname } from '@/lib/utils';
+import { computeGoalProgress } from '@/lib/goalsProgress';
 import { getPeriodKeys } from '@/lib/db/helpers';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
 import { rainbowTripletForNavId, complementTripletForNavId } from '@/lib/rainbowNav';
@@ -59,7 +60,7 @@ export default function HallOfFamePage() {
     const { settings } = useSettings();
     const [hoveredIndex, setHoveredIndex] = useState<string | null>(null);
 
-    const [rankType, setRankType] = useState<'students' | 'classes'>('students');
+    const [rankType, setRankType] = useState<'students' | 'classes' | 'goals'>('students');
     const [sortBy, setSortBy] = useState<string>('lifetimePoints');
     const [scope, setScope] = useState<'all' | string>('all');
     const [isOptionsOpen, setIsOptionsOpen] = useState(false);
@@ -67,6 +68,7 @@ export default function HallOfFamePage() {
     const [podiumSize, setPodiumSize] = useState<number>(3);
     const [autoScroll, setAutoScroll] = useState<boolean>(false);
     const [gridLayout, setGridLayout] = useState<boolean>(true);
+    const [goalsProgressMap, setGoalsProgressMap] = useState<Record<string, number>>({});
 
     // Load persisted settings; optional URL overrides (e.g. ?view=class-standings).
     useEffect(() => {
@@ -76,6 +78,11 @@ export default function HallOfFamePage() {
             if (view === 'class-standings' || view === 'classes' || view === 'class_standings') {
                 setRankType('classes');
                 setSortBy('points');
+                return;
+            }
+            if (view === 'goals' || view === 'school-goals' || view === 'school_goals') {
+                setRankType('goals');
+                setSortBy('lifetimePoints');
                 return;
             }
         }
@@ -131,6 +138,42 @@ export default function HallOfFamePage() {
     const categoriesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'categories') : null, [firestore, schoolId]);
     const { data: categories, isLoading: categoriesLoading } = useCollection<Category>(categoriesQuery);
 
+    const goalsQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'goals') : null, [firestore, schoolId]);
+    const { data: allGoals, isLoading: goalsLoading } = useCollection<Goal>(goalsQuery);
+
+    useEffect(() => {
+        if (!firestore || !schoolId || !allGoals || allGoals.length === 0 || !categories?.length) {
+            setGoalsProgressMap({});
+            return;
+        }
+        let cancelled = false;
+        (async () => {
+            const out: Record<string, number> = {};
+            for (const g of allGoals) {
+                let viewer = allTopStudents?.find(s => s.id === g.studentId);
+                if (!viewer) {
+                    viewer = allTopStudents?.[0];
+                }
+                if (!viewer) continue;
+                
+                let roster = [viewer];
+                if (g.type === 'class' && g.classId) {
+                    roster = allTopStudents?.filter(s => s.classId === g.classId) || [];
+                }
+
+                const p = await computeGoalProgress(firestore, schoolId, g, viewer, roster, categories);
+                out[g.id] = p;
+            }
+            if (!cancelled) {
+                setGoalsProgressMap(out);
+            }
+        })().catch(() => {});
+
+        return () => {
+            cancelled = true;
+        };
+    }, [firestore, schoolId, allGoals, allTopStudents, categories]);
+
     const classesMap = useMemo(() => {
         if (!classes) return new Map();
         return new Map(classes.map(c => [c.id, c.name]));
@@ -146,6 +189,7 @@ export default function HallOfFamePage() {
     }
 
     const getSortByLabel = () => {
+        if (rankType === 'goals') return 'All Active & Completed Goals';
         if (rankType === 'classes') {
             if (sortBy === 'points') return 'Class totals (current balances)';
             if (sortBy === 'lifetimePoints') return 'Class totals (lifetime points)';
@@ -200,7 +244,7 @@ export default function HallOfFamePage() {
                 className: getClassName(s.classId),
                 initials: getInitials(s.firstName, s.lastName)
             }));
-        } else {
+        } else if (rankType === 'classes') {
             // Rank classes
             if (!classes || !allTopStudents) return [];
             const totals = new Map<string, number>();
@@ -221,8 +265,30 @@ export default function HallOfFamePage() {
             }));
             rows.sort((a, b) => b.points - a.points);
             return rows.slice(0, limit);
+        } else {
+            // rankType === 'goals'
+            if (!allGoals) return [];
+            let sorted = [...allGoals];
+            if (scope !== 'all') {
+                sorted = sorted.filter(g => g.classId === scope);
+            }
+            return sorted.slice(0, limit).map(g => ({
+                id: g.id,
+                type: 'goal',
+                name: g.title,
+                photoUrl: null,
+                points: goalsProgressMap[g.id] || 0,
+                targetPoints: g.targetPoints,
+                classId: g.classId,
+                className: g.classId ? getClassName(g.classId) : 'School-wide',
+                initials: g.type === 'class' ? 'C' : 'P',
+                description: g.description || '',
+                status: g.status,
+                goalType: g.type,
+                bonusReward: g.bonusPointsReward
+            }));
         }
-    }, [rankType, allTopStudents, classes, scope, sortBy, limit, currentPeriodKeys]);
+    }, [rankType, allTopStudents, classes, allGoals, goalsProgressMap, scope, sortBy, limit, currentPeriodKeys]);
 
     // Auto-scroll logic
     useEffect(() => {
@@ -379,6 +445,14 @@ export default function HallOfFamePage() {
                                         >
                                             Class standings
                                         </Button>
+                                        <Button
+                                            variant={rankType === 'goals' ? 'default' : 'outline'}
+                                            size="sm"
+                                            className="rounded-full h-9 px-5 text-xs font-bold uppercase tracking-widest"
+                                            onClick={() => setRankType('goals')}
+                                        >
+                                            School goals
+                                        </Button>
                                     </div>
                                 </div>
                                 <Dialog open={isOptionsOpen} onOpenChange={setIsOptionsOpen}>
@@ -404,6 +478,7 @@ export default function HallOfFamePage() {
                                                     <SelectContent className="rounded-xl border-border">
                                                         <SelectItem value="students" className="rounded-lg font-medium">Students</SelectItem>
                                                         <SelectItem value="classes" className="rounded-lg font-medium">Class standings</SelectItem>
+                                                        <SelectItem value="goals" className="rounded-lg font-medium">School goals</SelectItem>
                                                     </SelectContent>
                                                 </Select>
                                             </div>
@@ -477,7 +552,7 @@ export default function HallOfFamePage() {
                         </motion.div>
 
                         {/* Podium */}
-                        {podium.length > 0 && (
+                        {rankType !== 'goals' && podium.length > 0 && (
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end mb-12 md:mb-20">
                                 {/* 1st Place */}
                                 <motion.div
@@ -544,9 +619,80 @@ export default function HallOfFamePage() {
                                 )}
                             </div>
                         )}
+                        {/* Goals List Grid */}
+                        {rankType === 'goals' && topItems && topItems.length > 0 && (
+                            <div className="mx-auto w-full grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-12">
+                                {topItems.map((item: any, index: number) => {
+                                    const pct = item.targetPoints > 0 ? Math.min(100, Math.round((item.points / item.targetPoints) * 100)) : 0;
+                                    return (
+                                        <motion.div
+                                            key={item.id}
+                                            initial={{ opacity: 0, y: 15 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: 0.1 + index * 0.05 }}
+                                            className="group relative flex flex-col justify-between backdrop-blur-sm border-2 border-border/40 rounded-3xl p-5 md:p-6 transition-all hover:bg-card hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1 bg-card/40 min-h-[160px]"
+                                        >
+                                            <div>
+                                                <div className="flex justify-between items-start gap-4 mb-2">
+                                                    <div>
+                                                        <span className="text-[10px] bg-primary/10 text-primary px-2.5 py-1 rounded-full font-black uppercase tracking-wider">
+                                                            {item.goalType} Goal
+                                                        </span>
+                                                        <span className={cn(
+                                                            "text-[10px] ml-2 px-2.5 py-1 rounded-full font-black uppercase tracking-wider",
+                                                            item.status === 'completed' ? "bg-green-500/10 text-green-500" : "bg-muted text-muted-foreground"
+                                                        )}>
+                                                            {item.status}
+                                                        </span>
+                                                    </div>
+                                                    {item.bonusReward ? (
+                                                        <span className="text-xs font-bold text-chart-5 bg-chart-5/10 px-2.5 py-1 rounded-full whitespace-nowrap">
+                                                            +{item.bonusReward} bonus
+                                                        </span>
+                                                    ) : null}
+                                                </div>
+                                                <h4 className="font-black text-foreground text-lg md:text-xl tracking-tight mb-1">
+                                                    {item.name}
+                                                </h4>
+                                                {item.description && (
+                                                    <p className="text-xs font-medium text-muted-foreground mb-3 line-clamp-2">
+                                                        {item.description}
+                                                    </p>
+                                                )}
+                                                <div className="flex items-center gap-2 mb-4">
+                                                    <Target className="w-3.5 h-3.5 text-muted-foreground/60" />
+                                                    <p className="text-xs font-bold text-muted-foreground/80">
+                                                        {item.className}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="mt-auto space-y-2">
+                                                <div className="flex justify-between text-xs font-black text-muted-foreground">
+                                                    <span>
+                                                        {item.points.toLocaleString()} / {item.targetPoints.toLocaleString()} pts
+                                                    </span>
+                                                    <span className="text-primary font-bold">
+                                                        {pct}%
+                                                    </span>
+                                                </div>
+                                                <div className="w-full bg-muted/40 rounded-full h-2.5 overflow-hidden border border-border/30">
+                                                    <motion.div
+                                                        initial={{ width: 0 }}
+                                                        animate={{ width: `${pct}%` }}
+                                                        transition={{ duration: 1, ease: "easeOut" }}
+                                                        className="h-full bg-primary"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </motion.div>
+                                    );
+                                })}
+                            </div>
+                        )}
 
                         {/* Leaderboard List */}
-                        {others.length > 0 && (
+                        {rankType !== 'goals' && others.length > 0 && (
                             <div className={cn(
                                 "mx-auto w-full",
                                 gridLayout 

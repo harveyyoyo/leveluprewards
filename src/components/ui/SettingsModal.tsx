@@ -258,9 +258,6 @@ export function SettingsModal() {
             }}
         >
             <Settings className="w-5 h-5 text-muted-foreground group-hover:rotate-45 transition-transform duration-300" />
-            {!isAdmin && (
-                <div className="absolute -top-1 -right-1 bg-primary w-2 h-2 rounded-full border border-background" title="Admin required" />
-            )}
         </Button>
     );
 

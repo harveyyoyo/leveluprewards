@@ -46,6 +46,9 @@ export { addCoupons, deleteCoupon, redeemCoupon } from './coupons';
 // Achievements
 export { addAchievement, updateAchievement, deleteAchievement } from './achievements';
 
+// Bonus Spin Types
+export { addBonusSpinType, updateBonusSpinType, deleteBonusSpinType } from './bonusSpinTypes';
+
 // Badges
 export { addBadge, updateBadge, deleteBadge } from './badges';
 
