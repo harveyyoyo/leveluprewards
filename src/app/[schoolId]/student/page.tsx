@@ -12,8 +12,8 @@ import { useAppContext } from '@/components/AppProvider';
 import { useFirestore, useFirebase, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { useSchoolMetadataDocRef } from '@/hooks/useSchoolMetadataDocRef';
 import { collection, query, orderBy, limit, doc, where, getDocs, updateDoc, addDoc } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
 import { SchoolGate } from '@/components/SchoolGate';
-import { lookupStudentId } from '@/lib/db';
 import dynamic from 'next/dynamic';
 import { StudentIdCard } from '@/components/StudentIdCard';
 import type { StudentFoundMeta } from '@/components/StudentScanner';
@@ -197,7 +197,7 @@ function StudentActivityList({ schoolId, studentId, themed = false, onReprintTic
 
 
   return (
-    <ScrollArea className="w-full min-h-[50dvh] h-[min(85dvh,calc(100dvh-9rem))] lg:min-h-[calc(100dvh-12rem)] lg:max-h-[calc(100dvh-8rem)] pr-4">
+    <ScrollArea className="w-full min-h-[36dvh] h-[min(65dvh,calc(100dvh-11rem))] lg:min-h-[calc(100dvh-20rem)] lg:max-h-[calc(100dvh-12rem)] pr-4">
       <ul className="space-y-3">
         {history && history.length > 0 ? (
           history.map((item, index) => {
@@ -208,7 +208,7 @@ function StudentActivityList({ schoolId, studentId, themed = false, onReprintTic
                             <li
                                 key={index}
                                 className={cn(
-                                  "group p-4 rounded-2xl transition-all duration-300",
+                                  "group p-3 rounded-2xl transition-all duration-300",
                                   !themed && "border border-slate-50 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 hover:bg-slate-50 dark:hover:bg-slate-800/80",
                                 )}
                                 style={themed ? { backgroundColor: 'rgba(255,255,255,0.08)', borderColor: 'rgba(127,127,127,0.25)', borderWidth: 1, borderStyle: 'solid' } : undefined}
@@ -570,7 +570,7 @@ function StudentDashboardInner({
  
   // --- Special Occasions (Birthday & School Special Day) ---
   useEffect(() => {
-    if (!student || !schoolId || !firestore) return;
+    if (!student || !schoolId || !functions) return;
     
     const todayFull = format(new Date(), 'yyyy-MM-dd');
     const todayMD = format(new Date(), 'MM-dd');
@@ -604,25 +604,20 @@ function StudentDashboardInner({
     if (totalAward > 0) {
         void (async () => {
             try {
-                const studentRef = doc(firestore, 'schools', schoolId, 'students', student.id);
-                await updateDoc(studentRef, {
-                    points: (student.points || 0) + totalAward,
-                    lastSpecialDayAwarded: newLastAwarded
-                });
-                
-                // Add activity logs
-                for (const desc of descriptions) {
-                    await addDoc(collection(firestore, 'schools', schoolId, 'students', student.id, 'activities'), {
-                        desc,
-                        amount: totalAward / descriptions.length, // Split amount if multiple events (rare)
-                        date: Date.now()
-                    });
-                    queueCelebration(desc);
+                const awardSpecialDayPoints = httpsCallable(functions, 'awardSpecialDayPoints');
+                const res = await awardSpecialDayPoints({ schoolId, studentId: student.id });
+                const data = (res.data || {}) as {
+                  totalAward?: number;
+                  awards?: Array<{ desc?: string; amount?: number }>;
+                };
+                const awarded = Number(data.totalAward || 0);
+                if (awarded <= 0) return;
+                for (const award of data.awards || []) {
+                    if (award.desc) queueCelebration(award.desc);
                 }
-                
                 playSound('success');
                 animationKey.current += 1;
-                setFlyPointsValue(totalAward);
+                setFlyPointsValue(awarded);
                 setTimeout(() => { setFlyPointsValue(null); }, 2000);
             } catch (err) {
                 console.error('Failed to award special day points', err);
@@ -630,7 +625,7 @@ function StudentDashboardInner({
         })();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [student?.id, settings.enableBirthdayPoints, settings.enableSpecialDayPoints, schoolId, firestore, playSound, queueCelebration]);
+  }, [student?.id, settings.enableBirthdayPoints, settings.enableSpecialDayPoints, schoolId, functions, playSound, queueCelebration]);
 
   const resetTimer = useCallback(() => {
     if (!isKioskLocked) {
@@ -1118,7 +1113,7 @@ function StudentDashboardInner({
                 </div>
                 <div className="flex flex-col items-start gap-1">
                   <div className="flex items-center gap-2">
-                    <h2 className="text-xl md:text-2xl font-black leading-tight">
+                    <h2 className="text-2xl md:text-4xl font-black leading-tight">
                       {student.firstName} {student.lastName}
                     </h2>
                     {(student.customEmojiUrl || activeTheme?.emoji) && (
@@ -1265,7 +1260,7 @@ function StudentDashboardInner({
               style={activeTheme ? { backgroundColor: 'var(--theme-card)', color: 'var(--theme-text)' } : undefined}
             >
               <CardHeader className="pb-3 border-b" style={activeTheme ? { borderColor: 'var(--theme-bg)' } : undefined}>
-                <Helper content="Enter a coupon code to add points to your account. You can type it in manually or use the camera to scan a QR code. Use the Logout button on this card to exit.">
+                <Helper content="Scan or type a coupon code to add points. Use the camera tab to scan a QR code. Use the Logout button on this card to exit.">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <CardTitle className="text-sm font-black flex items-center gap-2">
                       <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", !activeTheme && "bg-slate-100 dark:bg-slate-800")} style={activeTheme ? { backgroundColor: 'var(--theme-bg)' } : undefined}>
@@ -1368,7 +1363,7 @@ function StudentDashboardInner({
                         }}
                       >
                         <Input
-                          placeholder="Enter coupon code..."
+                          placeholder="Scan coupon..."
                           value={couponCode}
                           onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
                           className="font-mono text-left tracking-widest h-12 border-2 rounded-xl text-sm"
@@ -1413,7 +1408,7 @@ function StudentDashboardInner({
               style={activeTheme ? { backgroundColor: 'var(--theme-card)', color: 'var(--theme-text)' } : undefined}
             >
               <CardHeader className="pb-2 pt-4">
-                <Helper content="Prizes you can afford right now. Tap one to redeem it here, or use See all prizes to browse the full prize/rewards shop.">
+                          <Helper content="Rewards you can afford right now. Tap one to redeem it here, or use See all rewards to browse the full rewards shop.">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={activeTheme ? { backgroundColor: 'var(--theme-bg)' } : undefined}>
                       <Award className="w-4 h-4" style={activeTheme ? { color: 'var(--theme-primary)' } : undefined} />
@@ -1471,7 +1466,7 @@ function StudentDashboardInner({
                           />
                         </div>
                         <p
-                          className={cn("text-[10px] font-black leading-tight line-clamp-2", !activeTheme && "text-slate-800 dark:text-white")}
+                          className={cn("text-xs sm:text-sm font-black leading-tight line-clamp-2", !activeTheme && "text-slate-800 dark:text-white")}
                           style={activeTheme ? { color: 'var(--theme-text)' } : undefined}
                         >
                           {reward.name}
@@ -1530,7 +1525,7 @@ function StudentDashboardInner({
                     className="flex items-center justify-center gap-2"
                   >
                     <Gift className="h-5 w-5 md:h-6 md:w-6 shrink-0" aria-hidden />
-                    See all prizes
+                              See all rewards
                     <ChevronRight className="h-4 w-4 md:h-5 md:w-5 shrink-0 opacity-90" aria-hidden />
                   </Link>
                 </Button>
@@ -1641,7 +1636,7 @@ function StudentDashboardInner({
 
           {/* Right Section: Activity */}
           <Card
-            className={cn("lg:col-span-1 border-none shadow-lg flex flex-col min-h-0 lg:min-h-[calc(100dvh-11rem)]", !activeTheme ? "bg-white dark:bg-slate-900" : "")}
+            className={cn("lg:col-span-1 border-none shadow-lg flex flex-col min-h-0 lg:min-h-[calc(100dvh-16rem)]", !activeTheme ? "bg-white dark:bg-slate-900" : "")}
             style={activeTheme ? { backgroundColor: 'var(--theme-card)', color: 'var(--theme-text)' } : undefined}
           >
             <CardHeader className="pb-2 border-b shrink-0" style={activeTheme ? { borderColor: 'var(--theme-bg)' } : undefined}>
@@ -1745,7 +1740,6 @@ export default function StudentLoginPage() {
             />
           </SchoolGate>
         </ErrorBoundary>
-        <KioskSponsorBanner />
       </>
     );
   }
