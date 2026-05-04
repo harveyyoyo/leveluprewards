@@ -7,40 +7,48 @@ export interface ToggleDef {
   key: string;
   label: string;
   shortLabel: string;
+  /** When true, missing/undefined on the record counts as enabled (matches `field !== false` defaults). */
+  missingMeansOn?: boolean;
 }
 
 export function AutoCircularToggles<T extends Record<string, any>>({
   record,
   defs = [],
-  onToggle
+  onToggle,
+  /** When true, only `defs` are shown (no auto-discovery of other boolean fields on `record`). */
+  restrictToDefs = false,
 }: {
   record: T;
   defs?: ToggleDef[];
   onToggle: (key: string, newValue: boolean) => void;
+  restrictToDefs?: boolean;
 }) {
   // Combine explicitly given defs with any found boolean fields in the record instance
   const allDefs = [...defs];
-  Object.keys(record).forEach((k) => {
-    // Avoid built-in or private fields that shouldn't be toggled
-    if (
-      typeof record[k] === 'boolean' &&
-      !defs.some((d) => d.key === k) &&
-      !['used', 'active'].includes(k)
-    ) {
-      allDefs.push({
-        key: k,
-        label: `Toggle ${k}`,
-        shortLabel: k.substring(0, 3).toUpperCase(),
-      });
-    }
-  });
+  if (!restrictToDefs) {
+    Object.keys(record).forEach((k) => {
+      // Avoid built-in or private fields that shouldn't be toggled
+      if (
+        typeof record[k] === 'boolean' &&
+        !defs.some((d) => d.key === k) &&
+        !['used', 'active'].includes(k)
+      ) {
+        allDefs.push({
+          key: k,
+          label: `Toggle ${k}`,
+          shortLabel: k.substring(0, 3).toUpperCase(),
+        });
+      }
+    });
+  }
 
   if (allDefs.length === 0) return null;
 
   return (
     <div className="flex flex-wrap gap-1 items-center shrink-0">
-      {allDefs.map(({ key, label, shortLabel }) => {
-        const val = !!record[key];
+      {allDefs.map(({ key, label, shortLabel, missingMeansOn }) => {
+        const raw = record[key];
+        const val = missingMeansOn ? raw !== false : !!raw;
         return (
           <Button
             key={key}

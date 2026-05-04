@@ -11,7 +11,33 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Helper } from '@/components/ui/helper';
 import { cn } from '@/lib/utils';
 import type { Class, Student, Teacher } from '@/lib/types';
-import { AutoCircularToggles } from '@/components/AutoCircularToggles';
+import { AutoCircularToggles, type ToggleDef } from '@/components/AutoCircularToggles';
+
+function buildStudentKioskWelcomeToggleDefs(settings: {
+  enableStudentWelcome?: boolean;
+  enableStudentWelcomeBackScreen?: boolean;
+}): ToggleDef[] {
+  const out: ToggleDef[] = [];
+  if (settings.enableStudentWelcomeBackScreen) {
+    out.push({
+      key: 'welcomeBackScreenEnabled',
+      label:
+        'Welcome back splash — short full-screen greeting when this student opens the kiosk (duration is in school Settings).',
+      shortLabel: 'SPL',
+      missingMeansOn: true,
+    });
+  }
+  if (settings.enableStudentWelcome) {
+    out.push({
+      key: 'welcomePageEnabled',
+      label:
+        'Style welcome page — when off, this student will not see the Welcome styles picker on the kiosk (school setting must stay on).',
+      shortLabel: 'STY',
+      missingMeansOn: true,
+    });
+  }
+  return out;
+}
 
 function formatAssignedTeachers(student: Student, teachers: Teacher[]): string | null {
   const ids = student.teacherIds;
@@ -56,7 +82,13 @@ export function AdminStudentsTab({
   previewIdCardStudent,
   onUpdateStudent,
 }: {
-  settings: { photoDisplayMode?: 'cover' | 'contain'; enableBadges?: boolean; enableFaceLogin?: boolean };
+  settings: {
+    photoDisplayMode?: 'cover' | 'contain';
+    enableBadges?: boolean;
+    enableFaceLogin?: boolean;
+    enableStudentWelcome?: boolean;
+    enableStudentWelcomeBackScreen?: boolean;
+  };
   classes: Class[] | null | undefined;
   students: Student[] | null | undefined;
   filteredStudents: Student[];
@@ -89,6 +121,7 @@ export function AdminStudentsTab({
   onUpdateStudent?: (s: Student) => Promise<void> | void;
 }) {
   const [selectedTeacherIdForBulk, setSelectedTeacherIdForBulk] = useState('');
+  const studentKioskWelcomeToggleDefs = buildStudentKioskWelcomeToggleDefs(settings);
   return (
     <Card className="border-t-4 border-primary shadow-md overflow-hidden">
       <CardHeader className="bg-primary/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 py-8">
@@ -370,15 +403,18 @@ export function AdminStudentsTab({
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-1 justify-end sm:justify-end shrink-0 sm:pl-1" onClick={(e) => e.stopPropagation()}>
-                  <AutoCircularToggles
-                    record={s}
-                    defs={[{ key: 'welcomePageEnabled', label: 'Toggle Welcome Page Allowed', shortLabel: 'WLC' }]}
-                    onToggle={(key, val) => {
-                      if (onUpdateStudent) {
-                        onUpdateStudent({ ...s, [key]: val });
-                      }
-                    }}
-                  />
+                  {studentKioskWelcomeToggleDefs.length > 0 ? (
+                    <AutoCircularToggles
+                      record={s}
+                      defs={studentKioskWelcomeToggleDefs}
+                      restrictToDefs
+                      onToggle={(key, val) => {
+                        if (onUpdateStudent) {
+                          onUpdateStudent({ ...s, [key]: val });
+                        }
+                      }}
+                    />
+                  ) : null}
                   {settings.enableFaceLogin ? (
                     <Button
                       variant="outline"
