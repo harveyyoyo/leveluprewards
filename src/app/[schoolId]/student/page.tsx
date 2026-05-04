@@ -19,7 +19,6 @@ import { StudentIdCard } from '@/components/StudentIdCard';
 import type { StudentFoundMeta } from '@/components/StudentScanner';
 import { LevelUpKioskLogo } from '@/components/LevelUpKioskLogo';
 import { KioskSponsorBanner } from '@/components/KioskSponsorBanner';
-import { BonusSpinWheelModal } from '@/components/BonusSpinWheelModal';
 
 // ~32 KB (plus @vladmandic/face-api on the face tab). Load only when the
 // kiosk actually needs to scan a student.
@@ -99,7 +98,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Helper } from '@/components/ui/helper';
 import { Skeleton } from '@/components/ui/skeleton';
-import { BadgeShowcase } from '@/components/BadgeShowcase';
 import { StudentGoalsCard } from '@/components/goals/StudentGoalsCard';
 import { EarnedBadgesShowcase } from '@/components/EarnedBadgesShowcase';
 import { useStudentKioskSession } from '@/components/providers/StudentKioskSessionProvider';
@@ -338,7 +336,7 @@ function StudentDashboardInner({
   onRequestExit: () => void;
 }) {
   const router = useRouter();
-  const { redeemCoupon, redeemPrize, printPrizeTickets, schoolId, isKioskLocked, achievements, badges } = useAppContext();
+  const { redeemCoupon, redeemPrize, printPrizeTickets, schoolId, isKioskLocked, badges } = useAppContext();
   const firestore = useFirestore();
   const { functions } = useFirebase();
   const { toast } = useToast();
@@ -399,7 +397,6 @@ function StudentDashboardInner({
   const [logoutTimer, setLogoutTimer] = useState(settings.kioskSessionTimeoutSec ?? 15);
   const [flyPointsValue, setFlyPointsValue] = useState<number | null>(null);
   const [celebrationMessage, setCelebrationMessage] = useState<string | null>(null);
-  const [unspunAchievement, setUnspunAchievement] = useState<any>(null);
   const celebrationQueueRef = useRef<string[]>([]);
   const celebrationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const animationKey = useRef(0);
@@ -941,91 +938,26 @@ function StudentDashboardInner({
   }, [student, prizes, settings]);
 
 
-  // Celebrate on login if new badges / bonus milestones were earned since last time this student opened the portal.
+  // Celebrate on login if new badges were earned since last time this student opened the kiosk.
   useEffect(() => {
     if (!student || !schoolId) return;
     try {
       const key = `arcade:lastSeenCelebrations:${schoolId}:${student.id}`;
-      const prev = JSON.parse(localStorage.getItem(key) || '{}') as { badgeAt?: number; bonusAt?: number };
+      const prev = JSON.parse(localStorage.getItem(key) || '{}') as { badgeAt?: number };
 
       const latestBadgeAt = Math.max(0, ...(student.earnedBadges || []).map((e) => e.earnedAt || 0));
-      const latestBonusAt = Math.max(
-        0,
-        ...(student.earnedAchievements || [])
-          .map((e) => {
-            const ach = (achievements || []).find((a) => a.id === e.achievementId);
-            const isBonus = (ach?.bonusPoints ?? 0) > 0;
-            return isBonus ? (e.earnedAt || 0) : 0;
-          })
-      );
-
       const newBadge = latestBadgeAt > (prev.badgeAt || 0);
-      const newBonus = latestBonusAt > (prev.bonusAt || 0);
 
-      if (newBadge || newBonus) {
+      if (newBadge) {
         playSound('success');
-        const parts: string[] = [];
-        if (newBadge) parts.push('a new badge');
-        if (newBonus) parts.push('a new achievement');
-        queueCelebration(`You earned ${parts.join(' and ')}!`);
+        queueCelebration('You earned a new badge!');
       }
 
-      localStorage.setItem(key, JSON.stringify({ badgeAt: latestBadgeAt, bonusAt: latestBonusAt }));
+      localStorage.setItem(key, JSON.stringify({ badgeAt: latestBadgeAt }));
     } catch {
       // ignore storage / JSON errors
     }
-  }, [student?.id, schoolId, achievements, toast, playSound]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    if (!student || !schoolId || unspunAchievement) return;
-
-    const unspunAchItem = (student.earnedAchievements || []).find((e) => {
-      const ach = (achievements || []).find((a) => a.id === e.achievementId);
-      return ach?.enableWheelSpin === true && e.wheelSpun === false;
-    });
-
-    if (unspunAchItem) {
-      const achDef = (achievements || []).find((a) => a.id === unspunAchItem.achievementId);
-      if (achDef) {
-        setUnspunAchievement({ ...achDef, earnedAt: unspunAchItem.earnedAt });
-      }
-    }
-  }, [student, schoolId, achievements, unspunAchievement]);
-
-  const handleWheelWon = async (wonAmount: number) => {
-    if (!student || !schoolId || !firestore || !unspunAchievement) return;
-    try {
-      const studentRef = doc(firestore, 'schools', schoolId, 'students', student.id);
-      const updatedEarned = (student.earnedAchievements || []).map(e => {
-        if (e.achievementId === unspunAchievement.id) {
-          return { ...e, wheelSpun: true, bonusPointsWon: wonAmount };
-        }
-        return e;
-      });
-
-      await updateDoc(studentRef, {
-        points: (student.points || 0) + wonAmount,
-        lifetimePoints: (student.lifetimePoints || 0) + wonAmount,
-        earnedAchievements: updatedEarned
-      });
-
-      await addDoc(collection(firestore, 'schools', schoolId, 'students', student.id, 'activities'), {
-        desc: `Wheel spin won: ${unspunAchievement.name} (+${wonAmount} pts)`,
-        amount: wonAmount,
-        date: Date.now()
-      });
-
-      setFlyPointsValue(wonAmount);
-      playSound('success');
-      toast({ title: 'Points Won!', description: `The wheel stopped on +${wonAmount} pts!` });
-
-      setTimeout(() => {
-        setUnspunAchievement(null);
-      }, 1000);
-    } catch (err) {
-      console.error(err);
-    }
-  };
+  }, [student?.id, schoolId, student?.earnedBadges, playSound, queueCelebration]);
 
   const headerBadges = useMemo(() => {
     if (!student?.earnedBadges?.length || !badges?.length) return [];
@@ -1697,19 +1629,6 @@ function StudentDashboardInner({
               </DialogContent>
             </Dialog>
 
-            <BonusSpinWheelModal
-              isOpen={!!unspunAchievement}
-              achievement={unspunAchievement}
-              onWon={handleWheelWon}
-              primaryColor={activeTheme?.primary || '#0ea5e9'}
-            />
-
-            <BadgeShowcase
-              student={student}
-              achievements={achievements || []}
-              enableAchievements={settings.enableAchievements}
-              theme={activeTheme}
-            />
             <EarnedBadgesShowcase
               student={student}
               badges={badges || []}
