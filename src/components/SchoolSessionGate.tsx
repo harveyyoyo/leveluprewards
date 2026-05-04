@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
+import { canAccessHallOfFameRoute } from '@/lib/hallOfFameAccess';
 
 const ALLOWED = new Set(['school', 'student', 'teacher', 'admin', 'developer', 'secretary', 'prizeClerk', 'reports']);
 
@@ -22,6 +23,8 @@ function canUseRoute(pathname: string, routeSchoolId: string, loginState: string
   if (section === 'secretary') return loginState === 'secretary' || loginState === 'admin';
   if (section === 'prize-clerk') return loginState === 'prizeClerk' || loginState === 'admin';
   if (section === 'reports') return loginState === 'reports' || loginState === 'admin';
+
+  if (section === 'halloffame') return canAccessHallOfFameRoute(loginState);
 
   return true;
 }

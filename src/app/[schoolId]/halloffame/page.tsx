@@ -11,6 +11,7 @@ import type { Student, Class, Category, Goal } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { cn, getStudentNickname } from '@/lib/utils';
+import { canAccessHallOfFameRoute } from '@/lib/hallOfFameAccess';
 import { computeGoalProgress } from '@/lib/goalsProgress';
 import { getPeriodKeys } from '@/lib/db/helpers';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
@@ -111,15 +112,11 @@ export default function HallOfFamePage() {
     }, [rankType, sortBy, scope, limit, podiumSize, autoScroll, gridLayout]);
 
     useEffect(() => {
-        if (
-            isInitialized &&
-            !['student', 'teacher', 'admin', 'school', 'developer', 'secretary', 'prizeClerk', 'reports'].includes(
-                loginState,
-            )
-        ) {
-            router.replace('/login');
+        if (isInitialized && !canAccessHallOfFameRoute(loginState)) {
+            const q = schoolId ? `?school=${encodeURIComponent(schoolId)}` : '';
+            router.replace(`/login${q}`);
         }
-    }, [isInitialized, loginState, router]);
+    }, [isInitialized, loginState, router, schoolId]);
 
     const currentPeriodKeys = useMemo(() => getPeriodKeys(Date.now()), []);
 
@@ -362,9 +359,7 @@ export default function HallOfFamePage() {
 
     if (
         !isInitialized ||
-        !['student', 'teacher', 'admin', 'school', 'developer', 'secretary', 'prizeClerk', 'reports'].includes(
-            loginState,
-        ) ||
+        !canAccessHallOfFameRoute(loginState) ||
         studentsLoading ||
         classesLoading ||
         categoriesLoading
