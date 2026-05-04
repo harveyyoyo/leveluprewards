@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, doc, addDoc, updateDoc, deleteDoc, query, orderBy } from 'firebase/firestore';
+import { collection, doc, addDoc, updateDoc, deleteDoc, query } from 'firebase/firestore';
 import {
   Megaphone,
   Plus,
@@ -32,90 +32,18 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Helper } from '@/components/ui/helper';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-
-export interface BulletinBoardIncentive {
-  id: string;
-  title: string;
-  description: string;
-  points: number;
-  icon: string;
-  category: string;
-  active: boolean;
-}
-
-const PRESET_INCENTIVES = [
-  {
-    title: 'Perfect Attendance',
-    description: 'No absences or tardies this month.',
-    points: 100,
-    icon: '📅',
-    category: 'Attendance',
-  },
-  {
-    title: 'Homework Hero',
-    description: 'Submit all homework assignments fully complete.',
-    points: 50,
-    icon: '📚',
-    category: 'Homework',
-  },
-  {
-    title: 'Good Citizen',
-    description: 'Help a peer in need or show outstanding kindness.',
-    points: 120,
-    icon: '🤝',
-    category: 'Classroom',
-  },
-  {
-    title: 'Participation Star',
-    description: 'Actively participate and ask questions in class.',
-    points: 40,
-    icon: '🙋',
-    category: 'Engagement',
-  },
-  {
-    title: 'Hallway Helper',
-    description: 'Help clean up the hallway or maintain the school grounds.',
-    points: 80,
-    icon: '🧹',
-    category: 'Service',
-  },
-  {
-    title: 'Math Whiz',
-    description: 'Complete extra credit problems or show growth in math.',
-    points: 75,
-    icon: '🔢',
-    category: 'Academics',
-  },
-];
-
-const PRESET_THEMES = [
-  {
-    id: 'default',
-    name: 'Classic Neutral',
-    className: 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100',
-  },
-  {
-    id: 'neon_gold',
-    name: 'Neon Gold',
-    className: 'bg-gradient-to-br from-amber-500/10 via-amber-600/10 to-transparent border-amber-500/40 text-amber-900 dark:text-amber-100',
-  },
-  {
-    id: 'hyper_gradient',
-    name: 'Hyper Gradient',
-    className: 'bg-gradient-to-tr from-indigo-500/15 via-purple-500/15 to-pink-500/15 border-purple-500/40 text-indigo-900 dark:text-indigo-100',
-  },
-  {
-    id: 'electric',
-    name: 'Electric Azure',
-    className: 'bg-gradient-to-br from-cyan-500/10 via-blue-500/10 to-transparent border-cyan-400/40 text-cyan-900 dark:text-cyan-100',
-  },
-  {
-    id: 'glassmorphic',
-    name: 'Glassmorphic Ultra',
-    className: 'bg-white/40 dark:bg-slate-950/40 backdrop-blur-md border-white/20 dark:border-white/10 text-slate-800 dark:text-slate-200',
-  },
-];
+import {
+  BULLETIN_EMOJI_SUGGESTIONS,
+  DEFAULT_BULLETIN_SUBTITLE,
+  PRESET_BULLETIN_INCENTIVES,
+  PRESET_BULLETIN_THEMES,
+  type BulletinBoardIncentiveRecord,
+  bulletinLogoBoxClass,
+  getBulletinBoardCardClassName,
+} from '@/lib/bulletinBoard';
+import { cn } from '@/lib/utils';
 
 export function AdminBulletinBoardTab({
   schoolId,
@@ -136,11 +64,16 @@ export function AdminBulletinBoardTab({
     () => (schoolId ? query(collection(firestore, 'schools', schoolId, 'bulletinBoardIncentives')) : null),
     [firestore, schoolId]
   );
-  const { data: incentives, isLoading } = useCollection<BulletinBoardIncentive>(incentivesQuery);
+  const { data: incentives, isLoading } = useCollection<BulletinBoardIncentiveRecord>(incentivesQuery);
+
+  const sortedIncentives = useMemo(() => {
+    if (!incentives?.length) return [];
+    return [...incentives].sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
+  }, [incentives]);
 
   // States for Modals and creation/editing
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingIncentive, setEditingIncentive] = useState<BulletinBoardIncentive | null>(null);
+  const [editingIncentive, setEditingIncentive] = useState<BulletinBoardIncentiveRecord | null>(null);
 
   // New/Editing incentive fields
   const [title, setTitle] = useState('');
@@ -154,9 +87,14 @@ export function AdminBulletinBoardTab({
   const bulletinEnabled = settings.bulletinEnabled ?? true;
   const bulletinTitle = settings.bulletinTitle || 'School Bulletin Board';
   const bulletinTheme = settings.bulletinTheme || 'default';
+  const bulletinSubtitle = (settings.bulletinSubtitle ?? '').trim();
+  const displaySubtitle = bulletinSubtitle || DEFAULT_BULLETIN_SUBTITLE;
+  const bulletinLogoSize = settings.bulletinLogoSize || 'md';
+  const bulletinShowWowBadge = settings.bulletinShowWowBadge !== false;
+  const bulletinColumns = settings.bulletinColumns || '2';
 
   // Toggle create/edit modal
-  const openModal = (incentive?: BulletinBoardIncentive) => {
+  const openModal = (incentive?: BulletinBoardIncentiveRecord) => {
     if (incentive) {
       setEditingIncentive(incentive);
       setTitle(incentive.title);
@@ -178,7 +116,7 @@ export function AdminBulletinBoardTab({
   };
 
   // Quick Add Preset Incentive
-  const handleQuickAdd = async (preset: typeof PRESET_INCENTIVES[0]) => {
+  const handleQuickAdd = async (preset: (typeof PRESET_BULLETIN_INCENTIVES)[number]) => {
     if (!schoolId || !firestore) return;
     try {
       await addDoc(collection(firestore, 'schools', schoolId, 'bulletinBoardIncentives'), {
@@ -242,7 +180,8 @@ export function AdminBulletinBoardTab({
     }
   };
 
-  const currentTheme = PRESET_THEMES.find((t) => t.id === bulletinTheme) || PRESET_THEMES[0];
+  const incentiveGridClass =
+    bulletinColumns === '1' ? 'grid grid-cols-1 gap-3' : 'grid grid-cols-1 sm:grid-cols-2 gap-3';
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -283,8 +222,8 @@ export function AdminBulletinBoardTab({
 
               <div className="space-y-2">
                 <Label htmlFor="bulletinTheme">Board Theme / Visual Styling</Label>
-                <div className="flex flex-wrap gap-2 pt-1">
-                  {PRESET_THEMES.map((theme) => (
+                <div className="flex flex-wrap gap-2 pt-1 max-h-[140px] overflow-y-auto pr-1">
+                  {PRESET_BULLETIN_THEMES.map((theme) => (
                     <Button
                       key={theme.id}
                       type="button"
@@ -298,6 +237,77 @@ export function AdminBulletinBoardTab({
                   ))}
                 </div>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="bulletinSubtitle">Tagline (under the title)</Label>
+              <Textarea
+                id="bulletinSubtitle"
+                value={settings.bulletinSubtitle ?? ''}
+                onChange={(e) => updateSettings({ bulletinSubtitle: e.target.value })}
+                placeholder={DEFAULT_BULLETIN_SUBTITLE}
+                rows={2}
+                className="rounded-xl resize-y min-h-[72px] text-sm"
+              />
+              <p className="text-[10px] text-muted-foreground">
+                Shown on the student kiosk, Board page, and preview. Leave blank to use the default sentence.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>School logo size in header</Label>
+                <div className="flex flex-wrap gap-2">
+                  {(['sm', 'md', 'lg'] as const).map((sz) => (
+                    <Button
+                      key={sz}
+                      type="button"
+                      size="sm"
+                      variant={bulletinLogoSize === sz ? 'default' : 'outline'}
+                      className="rounded-xl capitalize font-bold text-xs"
+                      onClick={() => updateSettings({ bulletinLogoSize: sz })}
+                    >
+                      {sz === 'sm' ? 'Small' : sz === 'md' ? 'Medium' : 'Large'}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Incentive grid</Label>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={bulletinColumns === '2' ? 'default' : 'outline'}
+                    className="rounded-xl font-bold text-xs"
+                    onClick={() => updateSettings({ bulletinColumns: '2' })}
+                  >
+                    Two columns (wide screens)
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={bulletinColumns === '1' ? 'default' : 'outline'}
+                    className="rounded-xl font-bold text-xs"
+                    onClick={() => updateSettings({ bulletinColumns: '1' })}
+                  >
+                    Single column
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between rounded-2xl border p-3 bg-muted/30">
+              <div>
+                <p className="text-sm font-bold">“Wowed Design” flair on kiosk</p>
+                <p className="text-[10px] text-muted-foreground leading-snug">
+                  Small decorative pill on the student home bulletin card. Does not affect the standalone Board page.
+                </p>
+              </div>
+              <Switch
+                checked={bulletinShowWowBadge}
+                onCheckedChange={(checked) => updateSettings({ bulletinShowWowBadge: checked })}
+              />
             </div>
           </CardContent>
         </Card>
@@ -326,8 +336,8 @@ export function AdminBulletinBoardTab({
               <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Quick Add Incentives
               </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                {PRESET_INCENTIVES.map((p, idx) => (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[520px] overflow-y-auto pr-1">
+                {PRESET_BULLETIN_INCENTIVES.map((p, idx) => (
                   <Button
                     key={idx}
                     variant="outline"
@@ -363,9 +373,9 @@ export function AdminBulletinBoardTab({
                   <p className="text-center text-sm text-muted-foreground p-8 animate-pulse">
                     Loading posted incentives...
                   </p>
-                ) : incentives && incentives.length > 0 ? (
-                  <ul className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {incentives.map((inc) => (
+                ) : sortedIncentives.length > 0 ? (
+                  <ul className={cn('p-3', incentiveGridClass)}>
+                    {sortedIncentives.map((inc) => (
                       <li
                         key={inc.id}
                         className="p-4 bg-white dark:bg-slate-950 rounded-2xl border flex flex-col justify-between hover:shadow-md hover:border-primary/40 transition-all duration-300"
@@ -452,38 +462,52 @@ export function AdminBulletinBoardTab({
           <CardContent>
             {bulletinEnabled ? (
               <div
-                className={`p-5 rounded-3xl border-2 shadow-xl relative min-h-[450px] flex flex-col justify-between transition-all duration-500 select-none ${currentTheme.className}`}
+                className={cn(
+                  getBulletinBoardCardClassName(bulletinTheme, {
+                    variant: 'standalone',
+                    studentHasCustomTheme: false,
+                  }),
+                  'rounded-3xl border-2 p-5 min-h-[450px] flex flex-col justify-between transition-all duration-500 select-none',
+                )}
               >
                 <div>
                   <div className="flex items-center justify-between gap-3 border-b border-black/10 dark:border-white/10 pb-4 mb-4">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
                       {schoolLogoUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={schoolLogoUrl}
                           alt="School Logo"
-                          className="w-10 h-10 object-contain rounded-xl bg-white/30 backdrop-blur-md p-1 shadow-md shrink-0"
+                          className={cn(
+                            bulletinLogoBoxClass(bulletinLogoSize),
+                            'object-contain bg-white/30 backdrop-blur-md p-1 shadow-md shrink-0',
+                          )}
                         />
                       ) : (
-                        <div className="w-10 h-10 rounded-xl bg-indigo-500/20 backdrop-blur-md border border-white/20 flex items-center justify-center font-black text-indigo-700 dark:text-indigo-300 shadow-md shrink-0">
+                        <div
+                          className={cn(
+                            bulletinLogoBoxClass(bulletinLogoSize),
+                            'bg-indigo-500/20 backdrop-blur-md border border-white/20 flex items-center justify-center font-black text-indigo-700 dark:text-indigo-300 shadow-md shrink-0',
+                          )}
+                        >
                           🏫
                         </div>
                       )}
-                      <div>
+                      <div className="min-w-0">
                         <h4 className="font-black text-base md:text-lg tracking-wide leading-tight">
                           {bulletinTitle}
                         </h4>
-                        <p className="text-[10px] font-bold uppercase tracking-wider opacity-70">
-                          Complete items to claim points!
+                        <p className="text-[10px] font-semibold opacity-80 leading-snug line-clamp-2">
+                          {displaySubtitle}
                         </p>
                       </div>
                     </div>
                   </div>
 
                   <div className="space-y-3">
-                    {incentives && incentives.filter((i) => i.active).length > 0 ? (
-                      incentives
-                        .filter((i) => i.active)
+                    {sortedIncentives.filter((i) => i.active !== false).length > 0 ? (
+                      sortedIncentives
+                        .filter((i) => i.active !== false)
                         .slice(0, 3)
                         .map((inc) => (
                           <div
@@ -510,21 +534,27 @@ export function AdminBulletinBoardTab({
                         <span className="text-xs font-bold">No active incentives to preview</span>
                       </div>
                     )}
-                    {incentives && incentives.filter((i) => i.active).length > 3 && (
+                    {sortedIncentives.filter((i) => i.active !== false).length > 3 && (
                       <p className="text-[10px] text-center font-bold opacity-60 uppercase tracking-widest pt-2">
-                        + {incentives.filter((i) => i.active).length - 3} more items
+                        + {sortedIncentives.filter((i) => i.active !== false).length - 3} more items
                       </p>
                     )}
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-black/5 dark:border-white/5 flex items-center justify-between text-[10px] opacity-70">
-                  <span className="font-black tracking-widest uppercase">Premium Display</span>
-                  <span className="flex items-center gap-1">
-                    <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
-                    Wowed Design
-                  </span>
-                </div>
+                {bulletinShowWowBadge ? (
+                  <div className="pt-4 border-t border-black/5 dark:border-white/5 flex items-center justify-between text-[10px] opacity-70">
+                    <span className="font-black tracking-widest uppercase">Premium Display</span>
+                    <span className="flex items-center gap-1">
+                      <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
+                      Wowed Design
+                    </span>
+                  </div>
+                ) : (
+                  <div className="pt-4 border-t border-black/5 dark:border-white/5 text-[10px] opacity-50 font-semibold">
+                    Flair hidden on kiosk (toggle above to show).
+                  </div>
+                )}
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-16 text-center space-y-3 opacity-60 border-2 border-dashed rounded-3xl p-6">
@@ -625,6 +655,26 @@ export function AdminBulletinBoardTab({
                   className="rounded-xl h-10"
                   required
                 />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold">Quick icon picks</Label>
+              <div className="flex flex-wrap gap-1 max-h-[88px] overflow-y-auto rounded-xl border bg-muted/20 p-2">
+                {BULLETIN_EMOJI_SUGGESTIONS.map((em) => (
+                  <button
+                    key={em}
+                    type="button"
+                    className={cn(
+                      'text-lg leading-none size-9 rounded-lg border bg-background/80 hover:bg-primary/10 hover:border-primary/30 transition-colors',
+                      icon === em && 'ring-2 ring-primary border-primary',
+                    )}
+                    onClick={() => setIcon(em)}
+                    aria-label={`Use ${em} as icon`}
+                  >
+                    {em}
+                  </button>
+                ))}
               </div>
             </div>
 
