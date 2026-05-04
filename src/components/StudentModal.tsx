@@ -34,6 +34,7 @@ import { ImageCropper } from './ImageCropper';
 import { cn, getStudentNickname } from '@/lib/utils';
 import { encryptField, decryptField } from '@/lib/crypto';
 import { WELCOME_GREETING_STYLES } from '@/components/WelcomeGreeting';
+import { STUDENT_WELCOME_STYLES_LIVE } from '@/lib/studentWelcome';
 
 interface StudentModalProps {
   isOpen: boolean;
@@ -543,7 +544,7 @@ export function StudentModal({
               />
             </div>
           )}
-          {settings.enableStudentWelcome && (
+          {STUDENT_WELCOME_STYLES_LIVE && settings.enableStudentWelcome && (
             <div className="space-y-3 rounded-xl border border-border/60 bg-muted/20 p-4">
               <div className="flex items-center justify-between gap-3">
                 <div className="space-y-0.5">

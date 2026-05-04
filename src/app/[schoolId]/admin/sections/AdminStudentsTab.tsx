@@ -12,6 +12,7 @@ import { Helper } from '@/components/ui/helper';
 import { cn } from '@/lib/utils';
 import type { Class, Student, Teacher } from '@/lib/types';
 import { AutoCircularToggles, type ToggleDef } from '@/components/AutoCircularToggles';
+import { STUDENT_WELCOME_STYLES_LIVE } from '@/lib/studentWelcome';
 
 function buildStudentKioskWelcomeToggleDefs(settings: {
   enableStudentWelcome?: boolean;
@@ -27,7 +28,7 @@ function buildStudentKioskWelcomeToggleDefs(settings: {
       missingMeansOn: true,
     });
   }
-  if (settings.enableStudentWelcome) {
+  if (STUDENT_WELCOME_STYLES_LIVE && settings.enableStudentWelcome) {
     out.push({
       key: 'welcomePageEnabled',
       label:

@@ -15,6 +15,7 @@ import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import type { Student } from '@/lib/types';
 import {
+  STUDENT_WELCOME_STYLES_LIVE,
   schoolAllowsStudentWelcome,
   studentAllowsWelcomePage,
   welcomeGreetingStyleStorageKey,
@@ -51,6 +52,32 @@ export default function StudentWelcomePage() {
 
   if (!schoolId) {
     return null;
+  }
+
+  if (!STUDENT_WELCOME_STYLES_LIVE) {
+    return (
+      <SchoolGate>
+        <div className="mx-auto max-w-lg px-4 py-12">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5" aria-hidden />
+                Welcome styles
+              </CardTitle>
+              <CardDescription>Coming soon. Check back later for animated welcome themes on the kiosk.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button asChild variant="outline" className="rounded-xl">
+                <Link href={kioskHref}>
+                  <ArrowLeft className="mr-2 h-4 w-4" aria-hidden />
+                  Back to kiosk
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </SchoolGate>
+    );
   }
 
   if (!schoolAllowsStudentWelcome(settings)) {

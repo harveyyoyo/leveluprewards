@@ -21,6 +21,7 @@ import {
     type SchoolPlanConfig,
 } from '@/lib/plans';
 import type { StudentTheme } from '@/lib/types';
+import { STUDENT_WELCOME_STYLES_LIVE } from '@/lib/studentWelcome';
 
 type ColorScheme = 'default' | 'sky' | 'rose' | 'mint' | 'lavender' | 'peach';
 
@@ -79,7 +80,7 @@ interface Settings {
     enableStudentPortal: boolean;
     enableClassSignIn: boolean;
     enableFaceLogin: boolean;
-    /** Playful full-screen welcome styles on the student kiosk (`/student/welcome`). */
+    /** Welcome styles picker on the kiosk (`/student/welcome`). Gated by `STUDENT_WELCOME_STYLES_LIVE` until shipped. */
     enableStudentWelcome: boolean;
     /** Short “welcome back” splash when a student lands on the kiosk dashboard. Can be turned off per student. */
     enableStudentWelcomeBackScreen: boolean;
@@ -434,6 +435,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                 }
                 if (typeof parsed.enableStudentWelcomeBackScreen !== 'boolean') {
                     parsed.enableStudentWelcomeBackScreen = !!parsed.enableStudentWelcome;
+                }
+                if (!STUDENT_WELCOME_STYLES_LIVE) {
+                    parsed.enableStudentWelcome = false;
                 }
                 if (typeof parsed.studentWelcomeBackDurationSec !== 'number' || !Number.isFinite(parsed.studentWelcomeBackDurationSec)) {
                     parsed.studentWelcomeBackDurationSec = defaultSettings.studentWelcomeBackDurationSec;

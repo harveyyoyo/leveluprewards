@@ -3,8 +3,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Star, Sparkles, Trophy, Ticket } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Trophy, Ticket } from 'lucide-react';
 import type { SoundEffect } from '@/hooks/useArcadeSound';
 
 interface WelcomeOverlayProps {
@@ -24,6 +23,7 @@ interface WelcomeOverlayProps {
 }
 
 const DEFAULT_VISIBLE_MS = 3000;
+const POINT_COUNT_MS = 1000;
 
 export const WelcomeOverlay: React.FC<WelcomeOverlayProps> = ({
   studentName,
@@ -35,6 +35,9 @@ export const WelcomeOverlay: React.FC<WelcomeOverlayProps> = ({
   playSound,
 }) => {
   const [isVisible, setIsVisible] = useState(true);
+  const [displayedPoints, setDisplayedPoints] = useState(0);
+
+  const targetPoints = Number.isFinite(points) ? Math.max(0, Math.round(points)) : 0;
 
   useEffect(() => {
     if (playSound) playSound('redeem');
@@ -47,8 +50,22 @@ export const WelcomeOverlay: React.FC<WelcomeOverlayProps> = ({
     return () => clearTimeout(timer);
   }, [onClose, playSound, visibleDurationMs]);
 
+  useEffect(() => {
+    setDisplayedPoints(0);
+    if (targetPoints === 0) return;
+    let raf = 0;
+    const start = performance.now();
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / POINT_COUNT_MS);
+      const eased = 1 - (1 - t) ** 3;
+      setDisplayedPoints(Math.round(eased * targetPoints));
+      if (t < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [targetPoints]);
+
   const primaryColor = theme?.primary || 'hsl(var(--primary))';
-  const textColor = theme?.text || 'white';
 
   return (
     <AnimatePresence>
@@ -158,8 +175,8 @@ export const WelcomeOverlay: React.FC<WelcomeOverlayProps> = ({
               <p className="text-white/70 text-sm font-bold uppercase tracking-widest mb-1">Your Balance</p>
               <div className="flex items-center justify-center gap-2">
                 <Ticket className="text-amber-400 w-8 h-8 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]" />
-                <span className="text-5xl font-black text-white drop-shadow-md">
-                  {points.toLocaleString()}
+                <span className="text-5xl font-black text-white drop-shadow-md tabular-nums">
+                  {displayedPoints.toLocaleString()}
                 </span>
                 <span className="text-white/60 font-bold text-xl">PTS</span>
               </div>

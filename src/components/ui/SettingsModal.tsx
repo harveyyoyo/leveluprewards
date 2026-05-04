@@ -40,16 +40,16 @@ import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
 import { cn } from '@/lib/utils';
 import { WELCOME_GREETING_STYLES } from '@/components/WelcomeGreeting';
 
-type SettingsView = 'hub' | 'interface' | 'security' | 'features' | 'pillars' | 'library';
+type SettingsView = 'hub' | 'interface' | 'security' | 'features' | 'pillars';
 
 const FEATURE_SECTION_NAV = [
     { id: 'settings-features-core', label: 'Core' },
     { id: 'settings-features-attendance', label: 'Attendance' },
-    { id: 'settings-features-students', label: 'Students' },
-    { id: 'settings-features-sponsor', label: 'Sponsor' },
     { id: 'settings-features-recognition', label: 'Recognition' },
-    { id: 'settings-features-occasions', label: 'Occasions' },
     { id: 'settings-features-shop', label: 'Shop' },
+    { id: 'settings-features-students', label: 'Students' },
+    { id: 'settings-features-occasions', label: 'Occasions' },
+    { id: 'settings-features-sponsor', label: 'Sponsor' },
     { id: 'settings-features-printing', label: 'Printing' },
 ] as const;
 
@@ -192,7 +192,6 @@ export function SettingsModal() {
         security: 'Security',
         features: 'Features & add-ons',
         pillars: 'Product Pillars',
-        library: 'Background library',
     };
 
     const visibleStyles = ANIMATED_BACKGROUND_STYLES.filter(s => !(local.hiddenAnimatedBackgroundIds || []).includes(s.id));
@@ -374,29 +373,6 @@ export function SettingsModal() {
                                 <span className="font-black text-amber-900 dark:text-amber-100">Features &amp; add-ons</span>
                                 <span className="text-xs leading-snug text-amber-800/90 dark:text-amber-200/80">Attendance, shop, recognition, library checkout, and more</span>
                             </button>
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setView('library');
-                                    if (local.soundEnabled) playSound('click');
-                                }}
-                                className={cn(
-                                    'flex flex-col items-start gap-2 rounded-2xl border p-4 text-left transition-all',
-                                    'border-slate-100 dark:border-slate-800/50 bg-slate-50 dark:bg-slate-800/30',
-                                    'hover:border-emerald-500/30 hover:bg-emerald-500/5',
-                                )}
-                            >
-                                <div className="flex w-full items-start justify-between gap-2">
-                                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                                        <LayoutDashboard className="h-5 w-5" />
-                                    </span>
-                                    <div className="text-[10px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2 py-1 rounded">
-                                        {visibleStyles.length}/{ANIMATED_BACKGROUND_STYLES.length}
-                                    </div>
-                                </div>
-                                <span className="font-black text-foreground">Background library</span>
-                                <span className="text-xs leading-snug text-muted-foreground">Show or hide animated backdrop styles in the picker</span>
-                            </button>
                         </div>
                     )}
 
@@ -531,11 +507,6 @@ export function SettingsModal() {
                                     />
                                 </div>
 
-                                {/* Background Library Button */}
-                                <Button variant="outline" className="w-full justify-between h-11 px-4 rounded-xl border-border/50 text-xs font-bold text-muted-foreground hover:text-foreground" onClick={() => setView('library')}>
-                                    <span className="flex items-center gap-2"><LayoutDashboard className="w-4 h-4" /> Background library</span>
-                                    <div className="text-[10px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-600 px-2 py-1 rounded">{visibleStyles.length} of {ANIMATED_BACKGROUND_STYLES.length}</div>
-                                </Button>
                             </div>
 
                             {/* THEME & LAYOUT */}
@@ -737,8 +708,64 @@ export function SettingsModal() {
                                 </div>
                             )}
 
+                            <div className="flex items-center justify-between mb-3 border-b border-border/40 pb-3 mt-1">
+                                <h3 className="text-sm font-bold text-muted-foreground">Manage Features</h3>
+                                <div className="flex items-center gap-2 shrink-0">
+                                    <Button variant="outline" size="sm" className="h-8 rounded-xl text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-700 dark:hover:text-emerald-300" onClick={() => {
+                                        if (local.soundEnabled) playSound('click');
+                                        setDraft(prev => {
+                                            if (!prev) return prev;
+                                            const next = { ...prev };
+                                            const keys = [
+                                                'enableTeacherBudgets', 'enableHomework', 'enableBulkPoints', 'enableAdminAnalytics',
+                                                'enableNotifications', 'enableTeacherCharts', 'enableClassSignIn', 'enableStudentPortal',
+                                                'enableStudentWelcomeBackScreen', 'enableStudentWelcome', 'enableFaceLogin', 'enableQrLogin',
+                                                'enablePrizeImages', 'enableWishlist', 'kioskSponsorEnabled',
+                                                'enableAchievements', 'enableBadges', 'enableLevels', 'enableStreaks', 'enableGoals',
+                                                'enableClassAccumulations', 'enableBirthdayPoints', 'enableSpecialDayPoints',
+                                                'enablePrizeAiSurprise', 'enableVendingMachine', 'enableStudentEmojiOnPrizeTickets',
+                                                'enableColorPrinting', 'enableHelperMode', 'showIntroWizard'
+                                            ];
+                                            keys.forEach(k => {
+                                                if (isFeatureAllowed(k)) {
+                                                    (next as any)[k] = true;
+                                                }
+                                            });
+                                            next.enableAttendance = !!next.enableClassSignIn;
+                                            return next;
+                                        });
+                                    }}>
+                                        Select All
+                                    </Button>
+                                    <Button variant="outline" size="sm" className="h-8 rounded-xl text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:bg-destructive/10 hover:text-destructive" onClick={() => {
+                                        if (local.soundEnabled) playSound('click');
+                                        setDraft(prev => {
+                                            if (!prev) return prev;
+                                            const next = { ...prev };
+                                            const keys = [
+                                                'enableTeacherBudgets', 'enableHomework', 'enableBulkPoints', 'enableAdminAnalytics',
+                                                'enableNotifications', 'enableTeacherCharts', 'enableClassSignIn', 'enableStudentPortal',
+                                                'enableStudentWelcomeBackScreen', 'enableStudentWelcome', 'enableFaceLogin', 'enableQrLogin',
+                                                'enablePrizeImages', 'enableWishlist', 'kioskSponsorEnabled',
+                                                'enableAchievements', 'enableBadges', 'enableLevels', 'enableStreaks', 'enableGoals',
+                                                'enableClassAccumulations', 'enableBirthdayPoints', 'enableSpecialDayPoints',
+                                                'enablePrizeAiSurprise', 'enableVendingMachine', 'enableStudentEmojiOnPrizeTickets',
+                                                'enableColorPrinting', 'enableHelperMode', 'showIntroWizard'
+                                            ];
+                                            keys.forEach(k => {
+                                                (next as any)[k] = false;
+                                            });
+                                            next.enableAttendance = false;
+                                            return next;
+                                        });
+                                    }}>
+                                        Deselect All
+                                    </Button>
+                                </div>
+                            </div>
+
                             <SettingsSectionJumpNav
-                                sections={FEATURE_SECTION_NAV}
+                                sections={FEATURE_SECTION_NAV.filter(s => s.id !== 'settings-features-attendance' || (local.payAttendance ?? true))}
                                 ariaLabel="Feature categories"
                                 onJump={jumpToSettingsSection}
                             />
@@ -822,231 +849,34 @@ export function SettingsModal() {
                                 />
                             </div>
 
-                            <div id="settings-features-attendance" className="scroll-mt-[5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
-                                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><Clock className="w-3.5 h-3.5" /> Attendance</p>
-                                <FeatureRow
-                                    id="enableClassSignIn"
-                                    label="Attendance"
-                                    desc="Use student kiosk login as class attendance. Optional punctuality points and schedules can be configured in Admin → Attendance."
-                                    icon={<Clock className="w-5 h-5" />}
-                                    settings={local}
-                                    onToggle={handleToggle}
-                                    isImplemented={true}
-                                    isAdmin={isAdmin}
-                                    isAllowed={isFeatureAllowed('enableClassSignIn')}
-                                    planLabel={planLabel}
-                                />
-                                {isFeatureAllowed('enableClassSignIn') && isAdmin ? (
-                                    <div className="px-3 pb-4 pt-0">
-                                        <AttendanceTimeZoneField
-                                            schoolId={appSchoolId}
-                                            getAttendanceConfig={getAttendanceConfig}
-                                            setAttendanceConfig={setAttendanceConfig}
-                                            enabled
-                                            compact
-                                        />
-                                    </div>
-                                ) : null}
-                            </div>
-
-                            <div id="settings-features-students" className="scroll-mt-[5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
-                                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><Smartphone className="w-3.5 h-3.5" /> Student Experience</p>
-                                <FeatureRow
-                                    id="enableStudentPortal"
-                                    label="Student Home Portal (Soon)"
-                                    desc="Placeholder for future home access. Students should use the in-school kiosk and prize/rewards shop for now."
-                                    icon={<Smartphone className="w-5 h-5" />}
-                                    settings={local}
-                                    onToggle={handleToggle}
-                                    isImplemented={false}
-                                    isAdmin={isAdmin}
-                                    isAllowed={isFeatureAllowed('enableStudentPortal')}
-                                    planLabel={planLabel}
-                                />
-                                <FeatureRow
-                                    id="enableStudentWelcomeBackScreen"
-                                    label="Welcome back splash"
-                                    desc="Shows a short full-screen greeting when a student opens the kiosk. Default 3 seconds; duration is adjustable below. Can be turned off per student in Admin → Students."
-                                    icon={<Tv className="w-5 h-5" />}
-                                    settings={local}
-                                    onToggle={handleToggle}
-                                    isImplemented={true}
-                                    isAdmin={isAdmin}
-                                    isAllowed={isFeatureAllowed('enableStudentWelcomeBackScreen')}
-                                    planLabel={planLabel}
-                                />
-                                {isAdmin && local.enableStudentWelcomeBackScreen && isFeatureAllowed('enableStudentWelcomeBackScreen') ? (
-                                    <div className="px-3 pb-4 pt-0">
-                                        <Label htmlFor="studentWelcomeBackDurationSec" className="text-xs font-bold text-foreground">
-                                            Splash duration (seconds)
-                                        </Label>
-                                        <p className="mt-1 text-xs text-muted-foreground">
-                                            How long the welcome back screen stays up before it dismisses itself (1–60). Students can still tap the skip button to leave sooner.
-                                        </p>
-                                        <Input
-                                            id="studentWelcomeBackDurationSec"
-                                            type="number"
-                                            min={1}
-                                            max={60}
-                                            className="mt-3 max-w-[8rem] rounded-xl"
-                                            value={local.studentWelcomeBackDurationSec ?? 3}
-                                            onChange={(e) => {
-                                                const n = parseInt(e.target.value, 10);
-                                                handleToggle('studentWelcomeBackDurationSec', Number.isFinite(n) ? Math.min(60, Math.max(1, n)) : 3);
-                                            }}
-                                        />
-                                    </div>
-                                ) : null}
-                                <FeatureRow
-                                    id="enableStudentWelcome"
-                                    label="Student welcome styles"
-                                    desc="Let students open a full-screen welcome experience on the kiosk to pick animated greeting styles. Can be turned off per student in Admin → Students."
-                                    icon={<Sparkles className="w-5 h-5" />}
-                                    settings={local}
-                                    onToggle={handleToggle}
-                                    isImplemented={true}
-                                    isAdmin={isAdmin}
-                                    isAllowed={isFeatureAllowed('enableStudentWelcome')}
-                                    planLabel={planLabel}
-                                />
-                                {isAdmin && local.enableStudentWelcome && isFeatureAllowed('enableStudentWelcome') ? (
-                                    <div className="px-3 pb-4 pt-1">
-                                        <Label className="text-xs font-bold text-foreground">
-                                            Default welcome style (school)
-                                        </Label>
-                                        <p className="mt-1 text-xs text-muted-foreground">
-                                            Used when a student has no specific default. Students can still pick their own style on each kiosk.
-                                        </p>
-                                        <div className="mt-3 max-w-sm">
-                                            <Select
-                                                value={local.defaultWelcomeGreetingStyleId || '__none__'}
-                                                onValueChange={(v) =>
-                                                    setDraft((prev) =>
-                                                        prev
-                                                            ? {
-                                                                  ...prev,
-                                                                  defaultWelcomeGreetingStyleId: v === '__none__' ? '' : v,
-                                                              }
-                                                            : prev,
-                                                    )
-                                                }
-                                            >
-                                                <SelectTrigger className="rounded-xl">
-                                                    <SelectValue placeholder="Choose a default" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="__none__">Confetti (built-in default)</SelectItem>
-                                                    {WELCOME_GREETING_STYLES.map((s) => (
-                                                        <SelectItem key={s.id} value={s.id}>
-                                                            {s.emoji} {s.label}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                    </div>
-                                ) : null}
-                                <FeatureRow
-                                    id="enableFaceLogin"
-                                    label="Face Login"
-                                    desc="Allow students to sign in using the kiosk webcam. Requires camera permission and deployed Cloud Functions."
-                                    icon={<Shield className="w-5 h-5" />}
-                                    settings={local}
-                                    onToggle={handleToggle}
-                                    isImplemented={true}
-                                    isAdmin={isAdmin}
-                                    isAllowed={isFeatureAllowed('enableFaceLogin')}
-                                    planLabel={planLabel}
-                                />
-                                <FeatureRow
-                                    id="enableQrLogin"
-                                    label="QR Code Login"
-                                    desc="Students scan a QR code instead of typing their ID to log into kiosks."
-                                    icon={<LayoutDashboard className="w-5 h-5" />}
-                                    settings={local}
-                                    onToggle={handleToggle}
-                                    isImplemented={false}
-                                    isAdmin={isAdmin}
-                                    isAllowed={isFeatureAllowed('enableQrLogin')}
-                                    planLabel={planLabel}
-                                />
-                                                                <FeatureRow
-                                    id="enableLibrary"
-                                    label="Library Checkout"
-                                    desc="Allow students to scan items (via UPC) and check them out/return them from the kiosk."
-                                    icon={<ShoppingBag className="w-5 h-5" />}
-                                    settings={local}
-                                    onToggle={handleToggle}
-                                    isAdmin={isAdmin}
-                                    isAllowed={isFeatureAllowed('enableLibrary')}
-                                    planLabel={planLabel}
-                                />
-                                  <FeatureRow
-                                    id="enablePrizeImages"
-                                    label="Prize Photos"
-                                    desc="Show real photos of prizes in the shop, not only icons."
-                                    icon={<ShoppingBag className="w-5 h-5" />}
-                                    settings={local}
-                                    onToggle={handleToggle}
-                                    isImplemented={false}
-                                    isAdmin={isAdmin}
-                                    isAllowed={isFeatureAllowed('enablePrizeImages')}
-                                    planLabel={planLabel}
-                                />
-                                <FeatureRow
-                                    id="enableWishlist"
-                                    label="Student Wishlists"
-                                    desc="Let students star favorite prizes and track progress toward them."
-                                    icon={<Star className="w-5 h-5" />}
-                                    settings={local}
-                                    onToggle={handleToggle}
-                                    isImplemented={false}
-                                    isAdmin={isAdmin}
-                                    isAllowed={isFeatureAllowed('enableWishlist')}
-                                    planLabel={planLabel}
-                                />
-                            </div>
-
-                            {/* Sponsor Banner */}
-                            <div id="settings-features-sponsor" className="scroll-mt-[5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
-                                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><Megaphone className="w-3.5 h-3.5" /> Sponsor Banner</p>
-
-                                {/* Enable toggle */}
-                                <div className="flex items-start justify-between py-4 px-3 border-b border-border/40 hover:bg-muted/30 rounded-xl transition-colors">
-                                    <div className="flex items-start gap-4 mr-6">
-                                        <div className={`p-2.5 rounded-xl transition-colors shrink-0 mt-0.5 ${local.kioskSponsorEnabled ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
-                                            <Megaphone className="w-5 h-5" />
-                                        </div>
-                                        <div className="flex flex-col">
-                                            <Label className="font-bold text-sm block text-foreground mb-1" htmlFor="kioskSponsorEnabled">Show Sponsor Message</Label>
-                                            <p className="text-xs text-muted-foreground leading-relaxed w-full pr-4">Display a scrolling sponsor or announcement banner along the bottom of all student kiosk screens.</p>
-                                        </div>
-                                    </div>
-                                    <Switch
-                                        id="kioskSponsorEnabled"
-                                        checked={!!local.kioskSponsorEnabled}
-                                        onCheckedChange={(checked) => handleToggle('kioskSponsorEnabled', checked)}
-                                        disabled={!isAdmin}
+                            {(local.payAttendance ?? true) && (
+                                <div id="settings-features-attendance" className="scroll-mt-[5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
+                                    <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><Clock className="w-3.5 h-3.5" /> Attendance</p>
+                                    <FeatureRow
+                                        id="enableClassSignIn"
+                                        label="Attendance"
+                                        desc="Use student kiosk login as class attendance. Optional punctuality points and schedules can be configured in Admin → Attendance."
+                                        icon={<Clock className="w-5 h-5" />}
+                                        settings={local}
+                                        onToggle={handleToggle}
+                                        isImplemented={true}
+                                        isAdmin={isAdmin}
+                                        isAllowed={isFeatureAllowed('enableClassSignIn')}
+                                        planLabel={planLabel}
                                     />
+                                    {isFeatureAllowed('enableClassSignIn') && isAdmin ? (
+                                        <div className="px-3 pb-4 pt-0">
+                                            <AttendanceTimeZoneField
+                                                schoolId={appSchoolId}
+                                                getAttendanceConfig={getAttendanceConfig}
+                                                setAttendanceConfig={setAttendanceConfig}
+                                                enabled
+                                                compact
+                                            />
+                                        </div>
+                                    ) : null}
                                 </div>
-
-                                {/* Message input — only shown when enabled */}
-                                {local.kioskSponsorEnabled && (
-                                    <div className="px-3 py-4">
-                                        <Label htmlFor="kioskSponsorMessage" className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2 block">Banner Message</Label>
-                                        <Input
-                                            id="kioskSponsorMessage"
-                                            placeholder="e.g. Proudly sponsored by Acme Corp · Visit us at acme.com"
-                                            value={local.kioskSponsorMessage || ''}
-                                            onChange={(e) => handleToggle('kioskSponsorMessage', e.target.value)}
-                                            disabled={!isAdmin}
-                                            className="rounded-xl text-sm bg-background/50 border-border/50"
-                                            maxLength={300}
-                                        />
-                                        <p className="text-[10px] text-muted-foreground mt-1.5">{(local.kioskSponsorMessage || '').length}/300 characters · Message scrolls continuously across the screen.</p>
-                                    </div>
-                                )}
-                            </div>
+                            )}
 
                             <div id="settings-features-recognition" className="scroll-mt-[5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
                                 <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><Trophy className="w-3.5 h-3.5" /> Recognition</p>
@@ -1120,6 +950,196 @@ export function SettingsModal() {
                                     isImplemented={true}
                                     isAdmin={isAdmin}
                                     isAllowed={isFeatureAllowed('enableClassAccumulations')}
+                                    planLabel={planLabel}
+                                />
+                            </div>
+
+                            <div id="settings-features-shop" className="scroll-mt-[5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
+                                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><ShoppingBag className="w-3.5 h-3.5" /> Prize/Rewards shop</p>
+                                <FeatureRow
+                                    id="enablePrizeAiSurprise"
+                                    label="AI Prize Surprise"
+                                    desc="After redemption, show a school-safe AI joke, riddle, or fortune for prizes that have it configured. Uses server API keys."
+                                    icon={<Sparkles className="w-5 h-5" />}
+                                    settings={local}
+                                    onToggle={handleToggle}
+                                    isImplemented={true}
+                                    isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enablePrizeAiSurprise')}
+                                    planLabel={planLabel}
+                                />
+                                <FeatureRow
+                                    id="enableVendingMachine"
+                                    label="Vending Machine"
+                                    desc="Connect a USB serial vending rig and let configured prizes trigger a motor after redemption."
+                                    icon={<Cog className="w-5 h-5" />}
+                                    settings={local}
+                                    onToggle={handleToggle}
+                                    onConfigure={() => setVendingSettingsOpen(true)}
+                                    isImplemented={true}
+                                    isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableVendingMachine')}
+                                    planLabel={planLabel}
+                                />
+                                <FeatureRow
+                                    id="enableStudentEmojiOnPrizeTickets"
+                                    label="Student emoji on prize vouchers"
+                                    desc="When printing a redeem voucher, show the student theme emoji (or school default theme emoji) next to their name."
+                                    icon={<Smile className="w-5 h-5" />}
+                                    settings={local}
+                                    onToggle={handleToggle}
+                                    isImplemented={true}
+                                    isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableStudentEmojiOnPrizeTickets')}
+                                    planLabel={planLabel}
+                                />
+
+                            </div>
+
+                            <div id="settings-features-students" className="scroll-mt-[5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
+                                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><Smartphone className="w-3.5 h-3.5" /> Student Experience</p>
+                                <FeatureRow
+                                    id="enableStudentPortal"
+                                    label="Student Home Portal (Soon)"
+                                    desc="Placeholder for future home access. Students should use the in-school kiosk and prize/rewards shop for now."
+                                    icon={<Smartphone className="w-5 h-5" />}
+                                    settings={local}
+                                    onToggle={handleToggle}
+                                    isImplemented={false}
+                                    isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableStudentPortal')}
+                                    planLabel={planLabel}
+                                />
+                                <FeatureRow
+                                    id="enableStudentWelcomeBackScreen"
+                                    label="Welcome back splash"
+                                    desc="Shows a short full-screen greeting when a student opens the kiosk. Default 3 seconds; duration is adjustable below. Can be turned off per student in Admin → Students."
+                                    icon={<Tv className="w-5 h-5" />}
+                                    settings={local}
+                                    onToggle={handleToggle}
+                                    isImplemented={true}
+                                    isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableStudentWelcomeBackScreen')}
+                                    planLabel={planLabel}
+                                />
+                                {isAdmin && local.enableStudentWelcomeBackScreen && isFeatureAllowed('enableStudentWelcomeBackScreen') ? (
+                                    <div className="px-3 pb-4 pt-0">
+                                        <Label htmlFor="studentWelcomeBackDurationSec" className="text-xs font-bold text-foreground">
+                                            Splash duration (seconds)
+                                        </Label>
+                                        <p className="mt-1 text-xs text-muted-foreground">
+                                            How long the welcome back screen stays up before it dismisses itself (1–60). Students can still tap the skip button to leave sooner.
+                                        </p>
+                                        <Input
+                                            id="studentWelcomeBackDurationSec"
+                                            type="number"
+                                            min={1}
+                                            max={60}
+                                            className="mt-3 max-w-[8rem] rounded-xl"
+                                            value={local.studentWelcomeBackDurationSec ?? 3}
+                                            onChange={(e) => {
+                                                const n = parseInt(e.target.value, 10);
+                                                handleToggle('studentWelcomeBackDurationSec', Number.isFinite(n) ? Math.min(60, Math.max(1, n)) : 3);
+                                            }}
+                                        />
+                                    </div>
+                                ) : null}
+                                <FeatureRow
+                                    id="enableStudentWelcome"
+                                    label="Student welcome styles"
+                                    desc="Full-screen animated welcome styles on the kiosk. Coming soon — per-student controls will return when this ships."
+                                    icon={<Sparkles className="w-5 h-5" />}
+                                    settings={local}
+                                    onToggle={handleToggle}
+                                    isImplemented={false}
+                                    isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableStudentWelcome')}
+                                    planLabel={planLabel}
+                                />
+                                {isAdmin && local.enableStudentWelcome && isFeatureAllowed('enableStudentWelcome') ? (
+                                    <div className="px-3 pb-4 pt-1">
+                                        <Label className="text-xs font-bold text-foreground">
+                                            Default welcome style (school)
+                                        </Label>
+                                        <p className="mt-1 text-xs text-muted-foreground">
+                                            Used when a student has no specific default. Students can still pick their own style on each kiosk.
+                                        </p>
+                                        <div className="mt-3 max-w-sm">
+                                            <Select
+                                                value={local.defaultWelcomeGreetingStyleId || '__none__'}
+                                                onValueChange={(v) =>
+                                                    setDraft((prev) =>
+                                                        prev
+                                                            ? {
+                                                                  ...prev,
+                                                                  defaultWelcomeGreetingStyleId: v === '__none__' ? '' : v,
+                                                              }
+                                                            : prev,
+                                                    )
+                                                }
+                                            >
+                                                <SelectTrigger className="rounded-xl">
+                                                    <SelectValue placeholder="Choose a default" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="__none__">Confetti (built-in default)</SelectItem>
+                                                    {WELCOME_GREETING_STYLES.map((s) => (
+                                                        <SelectItem key={s.id} value={s.id}>
+                                                            {s.emoji} {s.label}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </div>
+                                ) : null}
+                                <FeatureRow
+                                    id="enableFaceLogin"
+                                    label="Face Login"
+                                    desc="Allow students to sign in using the kiosk webcam. Requires camera permission and deployed Cloud Functions."
+                                    icon={<Shield className="w-5 h-5" />}
+                                    settings={local}
+                                    onToggle={handleToggle}
+                                    isImplemented={true}
+                                    isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableFaceLogin')}
+                                    planLabel={planLabel}
+                                />
+                                <FeatureRow
+                                    id="enableQrLogin"
+                                    label="QR Code Login"
+                                    desc="Students scan a QR code instead of typing their ID to log into kiosks."
+                                    icon={<LayoutDashboard className="w-5 h-5" />}
+                                    settings={local}
+                                    onToggle={handleToggle}
+                                    isImplemented={false}
+                                    isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableQrLogin')}
+                                    planLabel={planLabel}
+                                />
+
+                                  <FeatureRow
+                                    id="enablePrizeImages"
+                                    label="Prize Photos"
+                                    desc="Show real photos of prizes in the shop, not only icons."
+                                    icon={<ShoppingBag className="w-5 h-5" />}
+                                    settings={local}
+                                    onToggle={handleToggle}
+                                    isImplemented={false}
+                                    isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enablePrizeImages')}
+                                    planLabel={planLabel}
+                                />
+                                <FeatureRow
+                                    id="enableWishlist"
+                                    label="Student Wishlists"
+                                    desc="Let students star favorite prizes and track progress toward them."
+                                    icon={<Star className="w-5 h-5" />}
+                                    settings={local}
+                                    onToggle={handleToggle}
+                                    isImplemented={false}
+                                    isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableWishlist')}
                                     planLabel={planLabel}
                                 />
                             </div>
@@ -1200,58 +1220,6 @@ export function SettingsModal() {
                                 )}
                             </div>
 
-                            <div id="settings-features-shop" className="scroll-mt-[5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
-                                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><ShoppingBag className="w-3.5 h-3.5" /> Prize/Rewards shop</p>
-                                <FeatureRow
-                                    id="enablePrizeAiSurprise"
-                                    label="AI Prize Surprise"
-                                    desc="After redemption, show a school-safe AI joke, riddle, or fortune for prizes that have it configured. Uses server API keys."
-                                    icon={<Sparkles className="w-5 h-5" />}
-                                    settings={local}
-                                    onToggle={handleToggle}
-                                    isImplemented={true}
-                                    isAdmin={isAdmin}
-                                    isAllowed={isFeatureAllowed('enablePrizeAiSurprise')}
-                                    planLabel={planLabel}
-                                />
-                                <FeatureRow
-                                    id="enableVendingMachine"
-                                    label="Vending Machine"
-                                    desc="Connect a USB serial vending rig and let configured prizes trigger a motor after redemption."
-                                    icon={<Cog className="w-5 h-5" />}
-                                    settings={local}
-                                    onToggle={handleToggle}
-                                    onConfigure={() => setVendingSettingsOpen(true)}
-                                    isImplemented={true}
-                                    isAdmin={isAdmin}
-                                    isAllowed={isFeatureAllowed('enableVendingMachine')}
-                                    planLabel={planLabel}
-                                />
-                                <FeatureRow
-                                    id="enableStudentEmojiOnPrizeTickets"
-                                    label="Student emoji on prize vouchers"
-                                    desc="When printing a redeem voucher, show the student theme emoji (or school default theme emoji) next to their name."
-                                    icon={<Smile className="w-5 h-5" />}
-                                    settings={local}
-                                    onToggle={handleToggle}
-                                    isImplemented={true}
-                                    isAdmin={isAdmin}
-                                    isAllowed={isFeatureAllowed('enableStudentEmojiOnPrizeTickets')}
-                                    planLabel={planLabel}
-                                />
-                                <FeatureRow
-                                    id="enableDoubleOrNothing"
-                                    label="Double or Nothing"
-                                    desc="Allow students to gamble their redeemed prize for a chance to win double or lose it all via a spinning wheel."
-                                    icon={<RotateCcw className="w-5 h-5" />}
-                                    settings={local}
-                                    onToggle={handleToggle}
-                                    isImplemented={true}
-                                    isAdmin={isAdmin}
-                                    isAllowed={isFeatureAllowed('enableDoubleOrNothing')}
-                                    planLabel={planLabel}
-                                />
-                            </div>
 
                             <div id="settings-features-printing" className="scroll-mt-[5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
                                 <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><Monitor className="w-3.5 h-3.5" /> Printing & Guidance</p>
@@ -1290,55 +1258,6 @@ export function SettingsModal() {
                         </div>
                 )}
 
-                {view === 'library' && (
-                    <div className="flex-1 overflow-y-auto space-y-4 pb-2 -mx-1 px-1">
-                        <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 mb-2 border border-slate-100 dark:border-slate-800/50">
-                            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 pb-3 flex items-center gap-2">
-                                <LayoutDashboard className="w-3.5 h-3.5" /> Background Library
-                            </p>
-                            <p className="text-xs text-muted-foreground leading-relaxed">
-                                Remove styles you don't want in the picker. Restore anytime. At least one style stays available.
-                            </p>
-                        </div>
-
-                        <div className="space-y-1">
-                            {ANIMATED_BACKGROUND_STYLES.map((style) => {
-                                const isHidden = (local.hiddenAnimatedBackgroundIds || []).includes(style.id);
-                                return (
-                                    <div key={style.id} className="flex items-center justify-between py-2.5 px-3 rounded-xl border-b border-border/40 last:border-0 hover:bg-muted/30 transition-colors group">
-                                        <div className="flex flex-col">
-                                            <span className="font-bold text-sm text-foreground">{style.label}</span>
-                                            <span className="text-[10px] text-muted-foreground leading-tight">{style.description}</span>
-                                        </div>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8 rounded-lg shrink-0"
-                                            onClick={() => {
-                                                setDraft((d) => {
-                                                    if (!d) return d;
-                                                    const current = d.hiddenAnimatedBackgroundIds || [];
-                                                    if (isHidden) {
-                                                        const next = current.filter((id) => id !== style.id);
-                                                        return { ...d, hiddenAnimatedBackgroundIds: next };
-                                                    }
-                                                    if (visibleStyles.length > 1) {
-                                                        const next = [...current, style.id];
-                                                        return { ...d, hiddenAnimatedBackgroundIds: next };
-                                                    }
-                                                    return d;
-                                                });
-                                                if (local.soundEnabled) playSound('click');
-                                            }}
-                                        >
-                                            {isHidden ? <RotateCcw className="w-4 h-4 text-primary" /> : <Trash2 className="w-4 h-4 text-muted-foreground group-hover:text-destructive transition-colors" />}
-                                        </Button>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-                )}
                 </div>
 
                 <DialogFooter className="border-t border-border/40 bg-card/30 px-6 py-4 shrink-0 sm:justify-end gap-2">
