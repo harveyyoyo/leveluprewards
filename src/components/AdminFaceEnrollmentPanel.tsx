@@ -18,6 +18,7 @@ import { useAppContext } from '@/components/AppProvider';
 import { useFirebase } from '@/firebase';
 import { useConfirm } from '@/components/providers/ConfirmProvider';
 import { useToast } from '@/hooks/use-toast';
+import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { getReadableErrorMessage } from '@/lib/errorMessage';
 import { callableToastDescription } from '@/firebase/emulatorHints';
 import { useFaceDescriptor } from '@/hooks/useFaceDescriptor';
@@ -50,6 +51,7 @@ export function AdminFaceEnrollmentPanel({ studentId, studentLabel, autoOpenTrai
   const { functions, user, isUserLoading, userError } = useFirebase();
   const confirm = useConfirm();
   const { toast } = useToast();
+  const playSound = useArcadeSound();
   const { captureFaceDescriptor, averageDescriptor, ensureFaceApiReady } = useFaceDescriptor();
 
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -59,6 +61,8 @@ export function AdminFaceEnrollmentPanel({ studentId, studentLabel, autoOpenTrai
   const [cameraOn, setCameraOn] = useState(false);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
+  /** Shown after a successful Train so the dialog does not go blank while still open. */
+  const [trainSuccessMessage, setTrainSuccessMessage] = useState<string | null>(null);
 
   const [faceStatus, setFaceStatus] = useState<FaceAuthStatus>({
     enrolled: false,
@@ -135,7 +139,10 @@ export function AdminFaceEnrollmentPanel({ studentId, studentLabel, autoOpenTrai
   const handleTrainingDialogOpenChange = useCallback(
     (open: boolean) => {
       setTrainingDialogOpen(open);
-      if (!open) stopCamera();
+      if (!open) {
+        stopCamera();
+        setTrainSuccessMessage(null);
+      }
     },
     [stopCamera],
   );
@@ -242,6 +249,7 @@ export function AdminFaceEnrollmentPanel({ studentId, studentLabel, autoOpenTrai
     }
 
     setBusy(true);
+    setTrainSuccessMessage(null);
     setStatus('Starting camera…');
     try {
       await user.getIdToken(true);
@@ -283,11 +291,16 @@ export function AdminFaceEnrollmentPanel({ studentId, studentLabel, autoOpenTrai
         studentId,
         descriptor: descriptor.map((n: number) => Number(n)),
       });
+      playSound('success');
+      const desc = studentLabel
+        ? `${studentLabel} can now sign in by face.`
+        : 'Student can now sign in by face.';
       toast({
-        title: enrolled ? 'Face retrained' : 'Face trained',
-        description: studentLabel ? `${studentLabel} can now sign in by face.` : 'Student can now sign in by face.',
+        title: 'Success',
+        description: enrolled ? `Face retrained. ${desc}` : `Face trained. ${desc}`,
       });
       setStatus(null);
+      setTrainSuccessMessage(enrolled ? 'Success — face login retrained and saved.' : 'Success — face login trained and saved.');
       await refreshStatus();
     } catch (e: any) {
       console.warn('[enrollStudentFace]', e?.code, e?.message, e);
@@ -317,6 +330,7 @@ export function AdminFaceEnrollmentPanel({ studentId, studentLabel, autoOpenTrai
     toast,
     stopCamera,
     refreshStatus,
+    playSound,
   ]);
 
   const handleRemove = useCallback(async () => {
@@ -501,11 +515,15 @@ export function AdminFaceEnrollmentPanel({ studentId, studentLabel, autoOpenTrai
               )}
             </div>
 
-            {status && (
+            {trainSuccessMessage ? (
+              <p className="text-center text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                {trainSuccessMessage}
+              </p>
+            ) : status ? (
               <p className="text-center text-xs font-bold text-muted-foreground uppercase tracking-wider">
                 {status}
               </p>
-            )}
+            ) : null}
 
             <div className="flex items-center gap-2">
               <Button
