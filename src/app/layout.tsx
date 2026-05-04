@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 
 import { AppProvider } from "@/components/AppProvider";
 import { FirebaseClientProvider } from '@/firebase';
@@ -8,9 +9,48 @@ import "./globals.css";
 // Client-only Firebase apps should not be statically pre-rendered in Next.js.
 export const dynamic = 'force-dynamic';
 
-export const metadata = {
+/** Base URL for resolving relative OG / Twitter image paths (set NEXT_PUBLIC_SITE_URL in prod). */
+function appMetadataBase(): URL {
+  const site = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (site) {
+    try {
+      return new URL(/^https?:\/\//i.test(site) ? site : `https://${site}`);
+    } catch {
+      /* fall through */
+    }
+  }
+  const vercel = process.env.VERCEL_URL?.trim();
+  if (vercel) {
+    try {
+      return new URL(`https://${vercel.replace(/^https?:\/\//, '')}`);
+    } catch {
+      /* fall through */
+    }
+  }
+  return new URL('http://localhost:3000');
+}
+
+export const metadata: Metadata = {
+  metadataBase: appMetadataBase(),
   title: 'levelUp EDU',
   description: 'LevelUp rewards hub',
+  icons: {
+    icon: [{ url: '/logo.png', type: 'image/png' }],
+    apple: [{ url: '/logo.png', type: 'image/png' }],
+  },
+  openGraph: {
+    title: 'levelUp EDU',
+    description: 'LevelUp rewards hub',
+    siteName: 'levelUp EDU',
+    images: [{ url: '/logo.png', alt: 'levelUp EDU' }],
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'levelUp EDU',
+    description: 'LevelUp rewards hub',
+    images: ['/logo.png'],
+  },
 };
 
 export default function RootLayout({
