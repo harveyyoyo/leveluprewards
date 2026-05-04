@@ -2,9 +2,9 @@
 
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { doc } from 'firebase/firestore';
-import { Building2, GraduationCap, ShieldCheck, Users, ChevronRight, Loader2 } from 'lucide-react';
+import { GraduationCap, ShieldCheck, Users, ChevronRight, Loader2 } from 'lucide-react';
 
 import { useAppContext } from '@/components/AppProvider';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,15 +28,6 @@ type SchoolPublicStaffDirectory = {
   staffDirectory?: StaffPortalLoginOption[];
 };
 
-type EntryCard = {
-  id: 'student' | 'admin';
-  title: string;
-  description: string;
-  href?: string;
-  icon: React.ComponentType<{ className?: string }>;
-  onClick?: () => void;
-};
-
 function staffLoginKey(option: StaffPortalLoginOption) {
   return option.id;
 }
@@ -54,9 +45,9 @@ export default function SchoolSignInChooserPage() {
   const { toast } = useToast();
   const { login, isInitialized, schoolId: activeSchoolId } = useAppContext();
   const firestore = useFirestore();
-  const [loadingId, setLoadingId] = useState<EntryCard['id'] | null>(null);
-  const [facultyAccount, setFacultyAccount] = useState('');
-  const [officeAccount, setOfficeAccount] = useState('');
+  const [loadingId, setLoadingId] = useState<'student' | null>(null);
+  const [facultyStepActive, setFacultyStepActive] = useState(false);
+  const [staffAccount, setStaffAccount] = useState('');
 
   const schoolId = useMemo(() => (params.schoolId || activeSchoolId || '').trim().toLowerCase(), [activeSchoolId, params.schoolId]);
   const schoolPublicRef = useMemoFirebase(
@@ -75,8 +66,11 @@ export default function SchoolSignInChooserPage() {
       ),
     [schoolPublic],
   );
-  const facultyOptions = useMemo(() => staffOptions.filter((option) => option.type === 'teacher'), [staffOptions]);
-  const officeOptions = useMemo(() => staffOptions.filter((option) => option.type !== 'teacher'), [staffOptions]);
+  const allStaffForDropdown = useMemo(() => {
+    const list = [...staffOptions];
+    list.sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }));
+    return list;
+  }, [staffOptions]);
 
   const goToStaffLogin = useCallback(
     (accountKey: string) => {
@@ -87,15 +81,14 @@ export default function SchoolSignInChooserPage() {
     [playSound, router, schoolId],
   );
 
-  useEffect(() => {
-    if (!facultyAccount) return;
-    goToStaffLogin(facultyAccount);
-  }, [facultyAccount, goToStaffLogin]);
-
-  useEffect(() => {
-    if (!officeAccount) return;
-    goToStaffLogin(officeAccount);
-  }, [officeAccount, goToStaffLogin]);
+  const handleStaffPick = useCallback(
+    (accountKey: string) => {
+      if (!accountKey) return;
+      setStaffAccount(accountKey);
+      goToStaffLogin(accountKey);
+    },
+    [goToStaffLogin],
+  );
 
   const enterStudentKiosk = useCallback(async () => {
     if (!schoolId) return;
@@ -117,26 +110,6 @@ export default function SchoolSignInChooserPage() {
     }
   }, [login, playSound, router, schoolId, toast]);
 
-  const cards: EntryCard[] = useMemo(
-    () => [
-      {
-        id: 'admin',
-        title: 'Admin',
-        description: 'Admin passcode sign-in.',
-        icon: ShieldCheck,
-        href: `/${schoolId}/admin-signin`,
-      },
-      {
-        id: 'student',
-        title: 'Student kiosk',
-        description: 'No passcode needed. Scan a badge to open the student dashboard.',
-        icon: GraduationCap,
-        onClick: enterStudentKiosk,
-      },
-    ],
-    [enterStudentKiosk, schoolId],
-  );
-
   if (!isInitialized) {
     return (
       <div className="min-h-[calc(100vh-5rem)] flex items-center justify-center p-8">
@@ -150,130 +123,137 @@ export default function SchoolSignInChooserPage() {
 
   return (
     <div className="min-h-[calc(100vh-5rem)] flex items-center justify-center px-4 py-10">
-      <Card className="w-full max-w-xl border-t-8 border-primary shadow-lg">
+      <Card className="w-full max-w-4xl border-t-8 border-primary shadow-lg">
         <CardHeader className="text-center space-y-2">
           <CardTitle className="text-3xl font-black tracking-tight">Sign in</CardTitle>
           <CardDescription>Choose how you want to sign in for this school.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl border bg-card px-5 py-4">
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center border border-border/60">
-                  <Users className="h-6 w-6" aria-hidden />
-                </div>
-                <div className="min-w-0">
-                  <p className="font-black text-lg leading-tight truncate">Faculty</p>
-                  <p className="text-sm text-muted-foreground leading-snug">Select your name.</p>
-                </div>
-              </div>
-              <div className="mt-4 space-y-2">
-                <Label htmlFor="faculty-account" className="sr-only">Faculty member</Label>
-                <Select
-                  value={facultyAccount}
-                  onValueChange={setFacultyAccount}
-                  disabled={staffLoading || facultyOptions.length === 0}
-                >
-                  <SelectTrigger id="faculty-account" className="h-12 rounded-xl font-bold">
-                    <SelectValue placeholder={staffLoading ? 'Loading...' : facultyOptions.length ? 'Choose faculty' : 'No faculty listed'} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {facultyOptions.map((option) => (
-                      <SelectItem key={staffLoginKey(option)} value={staffLoginKey(option)}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="rounded-2xl border bg-card px-5 py-4">
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center border border-border/60">
-                  <Building2 className="h-6 w-6" aria-hidden />
-                </div>
-                <div className="min-w-0">
-                  <p className="font-black text-lg leading-tight truncate">Office staff</p>
-                  <p className="text-sm text-muted-foreground leading-snug">Select your desk login.</p>
-                </div>
-              </div>
-              <div className="mt-4 space-y-2">
-                <Label htmlFor="office-account" className="sr-only">Office staff member</Label>
-                <Select
-                  value={officeAccount}
-                  onValueChange={setOfficeAccount}
-                  disabled={staffLoading || officeOptions.length === 0}
-                >
-                  <SelectTrigger id="office-account" className="h-12 rounded-xl font-bold">
-                    <SelectValue placeholder={staffLoading ? 'Loading...' : officeOptions.length ? 'Choose office staff' : 'No office staff listed'} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {officeOptions.map((option) => (
-                      <SelectItem key={staffLoginKey(option)} value={staffLoginKey(option)}>
-                        {option.label} - {officeRoleLabel(option.type)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-
-          {cards.map((c) => {
-            const Icon = c.icon;
-            const isBusy = loadingId === c.id;
-            const cardInner = (
-              <div
-                className={cn(
-                  'group relative flex items-center justify-between rounded-2xl border bg-card px-5 py-4 transition-all',
-                  isBusy ? 'opacity-80' : 'hover:shadow-md hover:-translate-y-0.5',
-                )}
-              >
-                <div className="flex items-center gap-4 min-w-0">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <Link
+              href={`/${schoolId}/admin-signin`}
+              onClick={() => {
+                playSound('click');
+                setFacultyStepActive(false);
+                setStaffAccount('');
+              }}
+              className="block rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            >
+              <div className="group relative flex h-full min-h-[8.5rem] flex-col justify-between rounded-2xl border bg-card px-4 py-4 transition-all hover:shadow-md hover:-translate-y-0.5 sm:px-5">
+                <div className="flex flex-col gap-3">
                   <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center border border-border/60">
-                    <Icon className="h-6 w-6" aria-hidden />
+                    <ShieldCheck className="h-6 w-6" aria-hidden />
+                  </div>
+                  <div className="min-w-0 text-left">
+                    <p className="font-black text-lg leading-tight truncate">Admin</p>
+                    <p className="text-sm text-muted-foreground leading-snug">Passcode sign-in for school setup.</p>
+                  </div>
+                </div>
+                <ChevronRight className="h-5 w-5 self-end text-muted-foreground/60 group-hover:text-muted-foreground transition-colors" aria-hidden />
+              </div>
+            </Link>
+
+            <button
+              type="button"
+              onClick={() => {
+                playSound('click');
+                setFacultyStepActive(true);
+                setStaffAccount('');
+              }}
+              aria-expanded={facultyStepActive}
+              aria-controls="faculty-staff-select-panel"
+              className={cn(
+                'text-left rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+                facultyStepActive && 'ring-2 ring-primary ring-offset-2 ring-offset-background',
+              )}
+            >
+              <div className="group relative flex h-full min-h-[8.5rem] flex-col justify-between rounded-2xl border bg-card px-4 py-4 transition-all hover:shadow-md hover:-translate-y-0.5 sm:px-5">
+                <div className="flex flex-col gap-3">
+                  <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center border border-border/60">
+                    <Users className="h-6 w-6" aria-hidden />
                   </div>
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="font-black text-lg leading-tight truncate">{c.title}</p>
-                      {isBusy && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" aria-hidden />}
-                    </div>
-                    <p className="text-sm text-muted-foreground leading-snug">{c.description}</p>
+                    <p className="font-black text-lg leading-tight truncate">Faculty</p>
+                    <p className="text-sm text-muted-foreground leading-snug">
+                      Teachers and office staff — tap here, then pick your name below.
+                    </p>
                   </div>
                 </div>
-                <ChevronRight className="h-6 w-6 text-muted-foreground/60 group-hover:text-muted-foreground transition-colors" aria-hidden />
+                <ChevronRight className="h-5 w-5 self-end text-muted-foreground/60 group-hover:text-muted-foreground transition-colors" aria-hidden />
               </div>
-            );
+            </button>
 
-            if (c.href) {
-              return (
-                <Link
-                  key={c.id}
-                  href={c.href}
-                  onClick={() => playSound('click')}
-                  className="block rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                >
-                  {cardInner}
-                </Link>
-              );
-            }
-
-            return (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => {
-                  playSound('click');
-                  c.onClick?.();
-                }}
-                disabled={!!loadingId}
-                className="w-full text-left rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed"
+            <button
+              type="button"
+              onClick={() => {
+                playSound('click');
+                setFacultyStepActive(false);
+                setStaffAccount('');
+                void enterStudentKiosk();
+              }}
+              disabled={!!loadingId}
+              className="text-left rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-80"
+            >
+              <div
+                className={cn(
+                  'group relative flex h-full min-h-[8.5rem] flex-col justify-between rounded-2xl border bg-card px-4 py-4 transition-all',
+                  loadingId === 'student' ? 'opacity-80' : 'hover:shadow-md hover:-translate-y-0.5',
+                )}
               >
-                {cardInner}
-              </button>
-            );
-          })}
+                <div className="flex flex-col gap-3">
+                  <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center border border-border/60">
+                    {loadingId === 'student' ? (
+                      <Loader2 className="h-6 w-6 animate-spin" aria-hidden />
+                    ) : (
+                      <GraduationCap className="h-6 w-6" aria-hidden />
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-black text-lg leading-tight truncate">Students</p>
+                    <p className="text-sm text-muted-foreground leading-snug">Kiosk: scan a badge to open the student dashboard.</p>
+                  </div>
+                </div>
+                <ChevronRight className="h-5 w-5 self-end text-muted-foreground/60 group-hover:text-muted-foreground transition-colors" aria-hidden />
+              </div>
+            </button>
+          </div>
+
+          {facultyStepActive && (
+            <div
+              id="faculty-staff-select-panel"
+              className="rounded-2xl border bg-muted/30 px-4 py-4 sm:px-5"
+            >
+              <Label htmlFor="staff-account" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                Staff account
+              </Label>
+              <Select
+                value={staffAccount || undefined}
+                onValueChange={handleStaffPick}
+                disabled={staffLoading || allStaffForDropdown.length === 0}
+              >
+                <SelectTrigger id="staff-account" className="mt-2 h-12 rounded-xl font-bold bg-card">
+                  <SelectValue
+                    placeholder={
+                      staffLoading
+                        ? 'Loading staff…'
+                        : allStaffForDropdown.length
+                          ? 'Choose your name'
+                          : 'No staff accounts listed yet'
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {allStaffForDropdown.map((option) => (
+                    <SelectItem key={staffLoginKey(option)} value={staffLoginKey(option)}>
+                      {option.type === 'teacher'
+                        ? option.label
+                        : `${option.label} — ${officeRoleLabel(option.type)}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="pt-3">
             <Button
