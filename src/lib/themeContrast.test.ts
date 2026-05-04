@@ -144,6 +144,11 @@ describe('resolveStudentThemeWithSchoolDefault', () => {
   it('returns undefined when neither is set', () => {
     expect(resolveStudentThemeWithSchoolDefault(undefined, undefined)).toBeUndefined();
   });
+
+  it('returns undefined when student themes are disabled (data ignored, not erased)', () => {
+    expect(resolveStudentThemeWithSchoolDefault(undefined, school, false)).toBeUndefined();
+    expect(resolveStudentThemeWithSchoolDefault(school, undefined, false)).toBeUndefined();
+  });
 });
 
 describe('primaryForegroundFor', () => {

@@ -296,19 +296,19 @@ export function SettingsModal() {
                                     if (local.soundEnabled) playSound('click');
                                 }}
                                 className={cn(
-                                    'flex flex-col items-start gap-2 rounded-2xl border p-4 text-left transition-all',
-                                    'border-slate-100 dark:border-slate-800/50 bg-slate-50 dark:bg-slate-800/30',
-                                    'hover:border-primary/40 hover:bg-primary/5',
+                                    'flex flex-col items-start gap-2 rounded-2xl border-2 p-4 text-left transition-all',
+                                    'border-sky-200 dark:border-sky-900/50 bg-sky-50/80 dark:bg-sky-950/20',
+                                    'hover:bg-sky-100/80 dark:hover:bg-sky-950/35',
                                 )}
                             >
                                 <div className="flex w-full items-start justify-between gap-2">
-                                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sky-500 text-white shadow-inner">
                                         <Palette className="h-5 w-5" />
                                     </span>
-                                    <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground opacity-50" aria-hidden />
+                                    <ChevronRight className="h-5 w-5 shrink-0 text-sky-700/50 dark:text-sky-400/50" aria-hidden />
                                 </div>
-                                <span className="font-black text-foreground">Interface &amp; display</span>
-                                <span className="text-xs leading-snug text-muted-foreground">Accent colors, dark mode, motion, sound, and Web vs App layout</span>
+                                <span className="font-black text-sky-900 dark:text-sky-100">Interface &amp; display</span>
+                                <span className="text-xs leading-snug text-sky-800/90 dark:text-sky-200/80">Accent colors, dark mode, motion, sound, and Web vs App layout</span>
                             </button>
                             <button
                                 type="button"
@@ -317,19 +317,19 @@ export function SettingsModal() {
                                     if (local.soundEnabled) playSound('click');
                                 }}
                                 className={cn(
-                                    'flex flex-col items-start gap-2 rounded-2xl border p-4 text-left transition-all',
-                                    'border-slate-100 dark:border-slate-800/50 bg-slate-50 dark:bg-slate-800/30',
-                                    'hover:border-primary/40 hover:bg-primary/5',
+                                    'flex flex-col items-start gap-2 rounded-2xl border-2 p-4 text-left transition-all',
+                                    'border-indigo-200 dark:border-indigo-900/50 bg-indigo-50/80 dark:bg-indigo-950/20',
+                                    'hover:bg-indigo-100/80 dark:hover:bg-indigo-950/35',
                                 )}
                             >
                                 <div className="flex w-full items-start justify-between gap-2">
-                                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-500 text-white shadow-inner">
                                         <Shield className="h-5 w-5" />
                                     </span>
-                                    <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground opacity-50" aria-hidden />
+                                    <ChevronRight className="h-5 w-5 shrink-0 text-indigo-700/50 dark:text-indigo-400/50" aria-hidden />
                                 </div>
-                                <span className="font-black text-foreground">Security</span>
-                                <span className="text-xs leading-snug text-muted-foreground">Admin and kiosk session timeouts</span>
+                                <span className="font-black text-indigo-900 dark:text-indigo-100">Security</span>
+                                <span className="text-xs leading-snug text-indigo-800/90 dark:text-indigo-200/80">Admin and kiosk session timeouts</span>
                             </button>
                             <button
                                 type="button"
@@ -540,6 +540,22 @@ export function SettingsModal() {
                                             checked={local.legacyMode}
                                             onCheckedChange={(checked) => handleToggle('legacyMode', checked)}
                                             className="data-[state=checked]:bg-orange-600"
+                                        />
+                                    </div>
+                                    {/* Student themes (display only; does not delete saved themes) */}
+                                    <div className="flex items-center justify-between col-span-2">
+                                        <div className="flex items-center gap-2 min-w-0 pr-2">
+                                            <Palette className="w-4 h-4 text-muted-foreground shrink-0" />
+                                            <div className="min-w-0">
+                                                <span className="text-sm font-bold">Student themes</span>
+                                                <p className="text-[10px] text-muted-foreground font-medium leading-snug mt-0.5">
+                                                    Off: kiosk, shop, and ID cards use standard styling. Saved themes stay on file.
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <Switch
+                                            checked={local.enableStudentThemes !== false}
+                                            onCheckedChange={(checked) => handleToggle('enableStudentThemes', checked)}
                                         />
                                     </div>
                                     {/* Sound Effects */}
@@ -955,11 +971,11 @@ export function SettingsModal() {
                             </div>
 
                             <div id="settings-features-shop" className="scroll-mt-[5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
-                                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><ShoppingBag className="w-3.5 h-3.5" /> Prize/Rewards shop</p>
+                                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><ShoppingBag className="w-3.5 h-3.5" /> Rewards Shop</p>
                                 <FeatureRow
                                     id="enablePrizeAiSurprise"
-                                    label="AI Prize Surprise"
-                                    desc="After redemption, show a school-safe AI joke, riddle, or fortune for prizes that have it configured. Uses server API keys."
+                                    label="AI Reward Surprise"
+                                    desc="After redemption, show a school-safe AI joke, riddle, or fortune for configured reward items. Uses server API keys."
                                     icon={<Sparkles className="w-5 h-5" />}
                                     settings={local}
                                     onToggle={handleToggle}
@@ -971,7 +987,7 @@ export function SettingsModal() {
                                 <FeatureRow
                                     id="enableVendingMachine"
                                     label="Vending Machine"
-                                    desc="Connect a USB serial vending rig and let configured prizes trigger a motor after redemption."
+                                    desc="Connect a USB serial vending rig and let configured reward items trigger a motor after redemption."
                                     icon={<Cog className="w-5 h-5" />}
                                     settings={local}
                                     onToggle={handleToggle}
@@ -983,7 +999,7 @@ export function SettingsModal() {
                                 />
                                 <FeatureRow
                                     id="enableStudentEmojiOnPrizeTickets"
-                                    label="Student emoji on prize vouchers"
+                                    label="Student emoji on reward vouchers"
                                     desc="When printing a redeem voucher, show the student theme emoji (or school default theme emoji) next to their name."
                                     icon={<Smile className="w-5 h-5" />}
                                     settings={local}
@@ -1001,7 +1017,7 @@ export function SettingsModal() {
                                 <FeatureRow
                                     id="enableStudentPortal"
                                     label="Student Home Portal (Soon)"
-                                    desc="Placeholder for future home access. Students should use the in-school kiosk and prize/rewards shop for now."
+                                    desc="At-home access is planned. For now, students should use the in-school kiosk and rewards shop."
                                     icon={<Smartphone className="w-5 h-5" />}
                                     settings={local}
                                     onToggle={handleToggle}
@@ -1120,8 +1136,8 @@ export function SettingsModal() {
 
                                   <FeatureRow
                                     id="enablePrizeImages"
-                                    label="Prize Photos"
-                                    desc="Show real photos of prizes in the shop, not only icons."
+                                    label="Reward Photos"
+                                    desc="Show real photos of reward items in the shop, not only icons."
                                     icon={<ShoppingBag className="w-5 h-5" />}
                                     settings={local}
                                     onToggle={handleToggle}
@@ -1133,7 +1149,7 @@ export function SettingsModal() {
                                 <FeatureRow
                                     id="enableWishlist"
                                     label="Student Wishlists"
-                                    desc="Let students star favorite prizes and track progress toward them."
+                                    desc="Let students star favorite reward items and track progress toward them."
                                     icon={<Star className="w-5 h-5" />}
                                     settings={local}
                                     onToggle={handleToggle}

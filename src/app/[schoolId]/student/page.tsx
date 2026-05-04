@@ -788,7 +788,11 @@ function StudentDashboardInner({
         const displayFirst = getStudentNickname(student);
         const legalFirst = (student.firstName || '').trim();
         const nick = student.nickname?.trim();
-        const themeForTicket = resolveStudentThemeWithSchoolDefault(student.theme, settings.defaultStudentTheme);
+        const themeForTicket = resolveStudentThemeWithSchoolDefault(
+          student.theme,
+          settings.defaultStudentTheme,
+          settings.enableStudentThemes,
+        );
         const emojiRaw = settings.enableStudentEmojiOnPrizeTickets === true ? themeForTicket?.emoji : undefined;
         const studentEmoji = typeof emojiRaw === 'string' && emojiRaw.trim() ? emojiRaw.trim() : undefined;
         ticketPayload = {
@@ -866,7 +870,7 @@ function StudentDashboardInner({
     } finally {
       setIsRedeemingPrize(false);
     }
-  }, [authFetch, confirmingPrize, playSound, redeemPrize, resetTimer, schoolId, settings.defaultStudentTheme, settings.enablePrizeAiSurprise, settings.enableStudentEmojiOnPrizeTickets, settings.enableGoals, student, toast, firestore, isFeatureAllowed]);
+  }, [authFetch, confirmingPrize, playSound, redeemPrize, resetTimer, schoolId, settings.defaultStudentTheme, settings.enableStudentThemes, settings.enablePrizeAiSurprise, settings.enableStudentEmojiOnPrizeTickets, settings.enableGoals, student, toast, firestore, isFeatureAllowed]);
 
   const handlePrintPrizeTicket = useCallback(() => {
     if (!prizeTicketData) return;
@@ -914,7 +918,11 @@ function StudentDashboardInner({
     const displayFirst = getStudentNickname(student);
     const legalFirst = (student.firstName || '').trim();
     const nick = student.nickname?.trim();
-    const themeForTicket = resolveStudentThemeWithSchoolDefault(student.theme, settings.defaultStudentTheme);
+    const themeForTicket = resolveStudentThemeWithSchoolDefault(
+      student.theme,
+      settings.defaultStudentTheme,
+      settings.enableStudentThemes,
+    );
     const emojiRaw = settings.enableStudentEmojiOnPrizeTickets === true ? themeForTicket?.emoji : undefined;
     const studentEmoji = typeof emojiRaw === 'string' && emojiRaw.trim() ? emojiRaw.trim() : undefined;
 
@@ -1001,7 +1009,11 @@ function StudentDashboardInner({
   }
 
   // Normalize: per-student theme, else school default from admin settings.
-  const activeTheme = resolveStudentThemeWithSchoolDefault(student.theme, settings.defaultStudentTheme);
+  const activeTheme = resolveStudentThemeWithSchoolDefault(
+    student.theme,
+    settings.defaultStudentTheme,
+    settings.enableStudentThemes,
+  );
   const fontScale = activeTheme?.fontScale ?? 1.15;
   const themeBg = activeTheme?.background || '#020617';
   const computedThemeText = activeTheme?.text || (getContrastColor(themeBg) === 'black' ? '#020617' : '#ffffff');
@@ -1256,7 +1268,10 @@ function StudentDashboardInner({
             />
 
             <Card
-              className={cn("border-none shadow-lg overflow-hidden", !activeTheme ? "bg-white dark:bg-slate-900" : "")}
+              className={cn(
+                "border-none shadow-lg overflow-hidden rounded-3xl",
+                !activeTheme ? "bg-white dark:bg-slate-900" : "",
+              )}
               style={activeTheme ? { backgroundColor: 'var(--theme-card)', color: 'var(--theme-text)' } : undefined}
             >
               <CardHeader className="pb-3 border-b" style={activeTheme ? { borderColor: 'var(--theme-bg)' } : undefined}>
@@ -1334,19 +1349,28 @@ function StudentDashboardInner({
               <CardContent className="pt-4">
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                   <TabsList 
-                    className={cn("grid w-full grid-cols-2 mb-4 p-1 rounded-xl h-12", !activeTheme && "bg-slate-100 dark:bg-slate-800")}
+                    className={cn(
+                      "grid w-full grid-cols-2 mb-4 p-1 rounded-xl h-12 overflow-hidden min-w-0",
+                      !activeTheme && "bg-slate-100 dark:bg-slate-800",
+                    )}
                     style={activeTheme ? { backgroundColor: 'var(--theme-bg)' } : undefined}
                   >
                     <TabsTrigger 
                       value="manual" 
-                      className={cn("text-[12px] font-bold rounded-lg data-[state=active]:shadow-sm flex items-center gap-1.5 py-1", !activeTheme && "data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700")}
+                      className={cn(
+                        "text-[12px] font-bold rounded-lg data-[state=active]:shadow-sm flex items-center gap-1.5 py-1 min-w-0",
+                        !activeTheme && "data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700",
+                      )}
                       style={activeTheme && activeTab === 'manual' ? { backgroundColor: 'var(--theme-card)', color: 'var(--theme-text)' } : undefined}
                     >
                       <Type className="w-3.5 h-3.5" /> Manual / USB
                     </TabsTrigger>
                     <TabsTrigger 
                       value="camera" 
-                      className={cn("text-[12px] font-bold rounded-lg data-[state=active]:shadow-sm flex items-center gap-1.5 py-1", !activeTheme && "data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700")}
+                      className={cn(
+                        "text-[12px] font-bold rounded-lg data-[state=active]:shadow-sm flex items-center gap-1.5 py-1 min-w-0",
+                        !activeTheme && "data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700",
+                      )}
                       style={activeTheme && activeTab === 'camera' ? { backgroundColor: 'var(--theme-card)', color: 'var(--theme-text)' } : undefined}
                     >
                       <Camera className="w-3.5 h-3.5" /> Webcam Scan
@@ -1356,7 +1380,7 @@ function StudentDashboardInner({
                   {activeTab === 'manual' ? (
                     <div className="space-y-3">
                       <form
-                        className="flex gap-2"
+                        className="flex gap-2 min-w-0"
                         onSubmit={(e) => {
                           e.preventDefault();
                           void handleRedeemCoupon();
@@ -1366,7 +1390,7 @@ function StudentDashboardInner({
                           placeholder="Scan coupon..."
                           value={couponCode}
                           onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                          className="font-mono text-left tracking-widest h-12 border-2 rounded-xl text-sm"
+                          className="flex-1 min-w-0 font-mono text-left tracking-widest h-12 border-2 rounded-xl text-sm"
                           style={activeTheme ? { backgroundColor: 'var(--theme-bg)', borderColor: 'var(--theme-primary)', color: 'var(--theme-text)' } : undefined}
                           autoFocus
                           autoComplete="one-time-code"

@@ -67,7 +67,7 @@ import { useActiveStudentSession } from '@/hooks/useActiveStudentSession';
 import type { StudentFoundMeta } from '@/components/StudentScanner';
 import { rainbowTripletForNavId, complementTripletForNavId } from '@/lib/rainbowNav';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
-import { DoubleOrNothingWheel } from '@/components/DoubleOrNothingWheel';
+
 import { prizeIsListed, stripLeadingEmojiFromPrizeName, studentSeesPrizeByTeachers } from '@/lib/prize-utils';
 import { runMotor as runVendingMotor, isConnected as motorIsConnected } from '@/lib/vendingMotor';
 import { useAuthFetch } from '@/lib/authFetch';
@@ -88,13 +88,15 @@ function ConfirmRedemptionDialog({
     prize,
     isOpen,
     onOpenChange,
-    onConfirm
+    onConfirm,
+    isRedeeming = false,
 }: {
     student: Student | null,
     prize: Prize | null,
     isOpen: boolean,
     onOpenChange: (open: boolean) => void,
-    onConfirm: (quantity: number) => void
+    onConfirm: (quantity: number) => void,
+    isRedeeming?: boolean,
 }) {
     const [quantity, setQuantity] = useState(1);
     const playSound = useArcadeSound();
@@ -207,9 +209,9 @@ function ConfirmRedemptionDialog({
                     {!canAfford && <p className="text-sm text-destructive font-bold text-center" role="alert">You don&apos;t have enough points for this quantity.</p>}
                 </div>
                 <AlertDialogFooter>
-                    <AlertDialogCancel onClick={() => onOpenChange(false)}>Cancel</AlertDialogCancel>
-                    <Button type="button" disabled={!canAfford} onClick={() => onConfirm(quantity)}>
-                        Confirm
+                    <AlertDialogCancel onClick={() => onOpenChange(false)} disabled={isRedeeming}>Cancel</AlertDialogCancel>
+                    <Button type="button" disabled={!canAfford || isRedeeming} onClick={() => onConfirm(quantity)}>
+                        {isRedeeming ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />Processing…</> : 'Confirm'}
                     </Button>
                 </AlertDialogFooter>
             </AlertDialogContent>
@@ -387,10 +389,11 @@ export function PrizeDashboard({
     } | null>(null);
 
     const [aiSurpriseOpen, setAiSurpriseOpen] = useState(false);
-    const [doubleOrNothingOpen, setDoubleOrNothingOpen] = useState(false);
-    const [doubleOrNothingPrize, setDoubleOrNothingPrize] = useState<Prize | null>(null);
-    const [doubleOrNothingQuantity, setDoubleOrNothingQuantity] = useState(1);
-    const [doubleOrNothingOriginalActivityId, setDoubleOrNothingOriginalActivityId] = useState<string | null>(null);
+    /** Guards against double-click: disables confirm button while a redemption Cloud Function call is in flight. */
+    const [isRedeeming, setIsRedeeming] = useState(false);
+    /** Client-side cooldown for AI surprise calls to prevent rapid-fire abuse. */
+    const lastAiSurpriseCallRef = useRef(0);
+
     const pendingTicketRef = useRef<any>(null);
     const [aiSurpriseLoading, setAiSurpriseLoading] = useState(false);
     const [aiSurpriseErr, setAiSurpriseErr] = useState<string | null>(null);
@@ -499,7 +502,8 @@ export function PrizeDashboard({
     }, [resetTimer, isKioskLocked]);
 
     const handleRedeemReward = async (prize: Prize, quantity: number) => {
-        if (!student) return;
+        if (!student || isRedeeming) return;
+        setIsRedeeming(true);
         resetTimer();
         setConfirmingPrize(null);
         if (typeof navigator !== 'undefined' && navigator.onLine === false) {
@@ -563,7 +567,11 @@ export function PrizeDashboard({
                 const displayFirst = getStudentNickname(student);
                 const legalFirst = (student.firstName || '').trim();
                 const nick = student.nickname?.trim();
-                const themeForTicket = resolveStudentThemeWithSchoolDefault(student.theme, settings.defaultStudentTheme);
+                const themeForTicket = resolveStudentThemeWithSchoolDefault(
+                    student.theme,
+                    settings.defaultStudentTheme,
+                    settings.enableStudentThemes,
+                );
                 const emojiRaw =
                     settings.enableStudentEmojiOnPrizeTickets === true ? themeForTicket?.emoji : undefined;
                 const studentEmoji =
@@ -585,16 +593,10 @@ export function PrizeDashboard({
                 };
             }
 
-            if (settings.enableDoubleOrNothing && prize.points > 0) {
-                setDoubleOrNothingPrize(prize);
-                setDoubleOrNothingQuantity(quantity);
-                setDoubleOrNothingOriginalActivityId(activityId || null);
-                pendingTicketRef.current = ticketPayload;
-                setDoubleOrNothingOpen(true);
-                return;
-            }
 
-            if (prize.aiFunReward && schoolId && settings.enablePrizeAiSurprise === true) {
+            const aiCooldownOk = Date.now() - lastAiSurpriseCallRef.current > 10_000;
+            if (prize.aiFunReward && schoolId && settings.enablePrizeAiSurprise === true && aiCooldownOk) {
+                lastAiSurpriseCallRef.current = Date.now();
                 pendingTicketAfterAiRef.current = ticketPayload;
                 setAiSurpriseErr(null);
                 setAiSurpriseBody(null);
@@ -633,54 +635,11 @@ export function PrizeDashboard({
                 description: getReadableErrorMessage(error, 'An error occurred during redemption.'),
                 duration: 8000,
             });
+        } finally {
+            setIsRedeeming(false);
         }
     };
 
-    const handleDoubleOrNothingResult = async (res: 'double' | 'nothing' | 'cancel') => {
-        if (!student || !doubleOrNothingPrize || !schoolId || !student.id) {
-            setDoubleOrNothingOpen(false);
-            return;
-        }
-
-        if (res === 'double') {
-            // Award a second prize for free
-            try {
-                const { activityId, redeemedAt } = await redeemPrize(student.id, doubleOrNothingPrize, doubleOrNothingQuantity, 0);
-                
-                // Show doubled ticket
-                if (pendingTicketRef.current) {
-                    const doubledTicket = {
-                        ...pendingTicketRef.current,
-                        quantity: doubleOrNothingQuantity * 2,
-                        totalCost: pendingTicketRef.current.totalCost, // cost stays the same
-                    };
-                    setTicketData(doubledTicket);
-                }
-            } catch (err) {
-                console.error("Failed to award double prize:", err);
-                // Still show the original ticket at least?
-                if (pendingTicketRef.current) setTicketData(pendingTicketRef.current);
-            }
-        } else if (res === 'nothing') {
-            // They lost it all. 
-            // We don't refund points, we just don't give the prize.
-            // In a real system we might want to mark the activity as "LOST".
-            toast({
-                title: "Bad Luck!",
-                description: `You lost your ${doubleOrNothingPrize.name}. Better luck next time!`,
-                duration: 5000,
-            });
-        } else if (res === 'cancel') {
-            // They decided not to play. Show the original ticket.
-            if (pendingTicketRef.current) {
-                setTicketData(pendingTicketRef.current);
-            }
-        }
-
-        setDoubleOrNothingOpen(false);
-        setDoubleOrNothingPrize(null);
-        pendingTicketRef.current = null;
-    };
 
     const handlePrintTicket = useCallback(() => {
         if (!ticketData || !schoolId) return;
@@ -735,7 +694,11 @@ export function PrizeDashboard({
         const displayFirst = getStudentNickname(student);
         const legalFirst = (student.firstName || '').trim();
         const nick = student.nickname?.trim();
-        const themeForTicket = resolveStudentThemeWithSchoolDefault(student.theme, settings.defaultStudentTheme);
+        const themeForTicket = resolveStudentThemeWithSchoolDefault(
+            student.theme,
+            settings.defaultStudentTheme,
+            settings.enableStudentThemes,
+        );
         const emojiRaw = settings.enableStudentEmojiOnPrizeTickets === true ? themeForTicket?.emoji : undefined;
         const studentEmoji = typeof emojiRaw === 'string' && emojiRaw.trim() ? emojiRaw.trim() : undefined;
 
@@ -761,7 +724,7 @@ export function PrizeDashboard({
                 className="space-y-6 p-8"
                 role="status"
                 aria-live="polite"
-                aria-label="Loading prize/rewards shop"
+          aria-label="Loading rewards shop"
             >
                 <Skeleton className="h-32 w-full rounded-3xl" />
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -774,7 +737,7 @@ export function PrizeDashboard({
                         </div>
                     ))}
                 </div>
-                <span className="sr-only">Loading prize/rewards shop...</span>
+          <span className="sr-only">Loading rewards shop...</span>
             </div>
         );
     }
@@ -785,7 +748,7 @@ export function PrizeDashboard({
             <div className="min-h-[50vh] flex items-center justify-center p-6">
                 <Card className="max-w-md w-full border-destructive/30 shadow-lg">
                     <CardHeader className="text-center space-y-2">
-                        <CardTitle className="text-xl">Can&apos;t load the prize/rewards shop</CardTitle>
+            <CardTitle className="text-xl">Can&apos;t load the rewards shop</CardTitle>
                         <CardDescription className="text-base leading-relaxed">
                             {getReadableErrorMessage(loadErr, 'Something went wrong while loading. Please try again.')}
                         </CardDescription>
@@ -859,7 +822,11 @@ export function PrizeDashboard({
     // at least WCAG AA contrast, regardless of what the AI or a teacher
     // hand-picked. Uses per-student theme, else admin default from school
     // settings. Downstream reads `activeTheme` instead of `student.theme`.
-    const activeTheme = resolveStudentThemeWithSchoolDefault(student.theme, settings.defaultStudentTheme);
+    const activeTheme = resolveStudentThemeWithSchoolDefault(
+        student.theme,
+        settings.defaultStudentTheme,
+        settings.enableStudentThemes,
+    );
     const fontScale = activeTheme?.fontScale ?? 1.15;
     const themeBg = activeTheme?.background || 'transparent';
     const computedThemeText = activeTheme?.text || (getContrastColor(activeTheme?.background || activeTheme?.cardBackground || activeTheme?.primary || '#0ea5e9') === 'black' ? '#020617' : '#ffffff');
@@ -885,6 +852,7 @@ export function PrizeDashboard({
     const themeStyle: CSSProperties = (student && activeTheme) ? ({
         '--theme-bg': themeBg,
         '--theme-text': computedThemeText,
+        '--theme-text-muted': `${computedThemeText}b3`, // 70% opacity
         '--theme-primary': activeTheme.primary || 'hsl(var(--primary))',
         '--theme-primary-foreground': primaryForeground,
         '--theme-card': activeTheme.cardBackground || 'hsl(var(--card))',
@@ -954,11 +922,11 @@ export function PrizeDashboard({
                                                 </span>
                                             )
                                         ) : (
-                                            <ShoppingBag className="w-12 h-12 text-primary" />
+                                            <ShoppingBag className="w-12 h-12 text-primary" style={activeTheme ? { color: 'var(--theme-primary)' } : undefined} />
                                         )}
-                                        <span style={{ color: activeTheme ? 'var(--theme-primary)' : 'hsl(var(--primary))' }}>Prize/Rewards shop</span>
+                        <span style={activeTheme ? { color: 'var(--theme-primary)' } : { color: 'hsl(var(--primary))' }}>Rewards Shop</span>
                                     </h2>
-                                    <p className="text-sm font-bold uppercase tracking-[0.3em]" style={{ color: activeTheme ? 'var(--theme-text)' : undefined, opacity: 0.7 }}>
+                                    <p className="text-sm font-bold uppercase tracking-[0.3em]" style={activeTheme ? { color: 'var(--theme-text-muted)' } : { opacity: 0.7 }}>
                                         Redeem your points for rewards
                                     </p>
                                 </div>
@@ -1038,15 +1006,15 @@ export function PrizeDashboard({
                                         borderColor: 'hsl(var(--primary) / 0.2)'
                                     }}
                                 >
-                                    <p className="text-xs font-black uppercase tracking-[0.2em] mb-1" style={{ color: activeTheme ? 'var(--theme-text)' : undefined, opacity: 0.7 }}>
+                                    <p className="text-xs font-black uppercase tracking-[0.2em] mb-1" style={activeTheme ? { color: 'var(--theme-text-muted)' } : { opacity: 0.7 }}>
                                         {student.firstName} {student.lastName}
                                     </p>
                                     {student.nickname?.trim() ? (
-                                        <p className="text-[10px] font-black uppercase tracking-[0.25em] -mt-1 mb-2" style={{ color: activeTheme ? 'var(--theme-text)' : undefined, opacity: 0.65 }}>
+                                        <p className="text-[10px] font-black uppercase tracking-[0.25em] -mt-1 mb-2" style={activeTheme ? { color: 'var(--theme-text-muted)' } : { opacity: 0.65 }}>
                                             {student.nickname.trim()}
                                         </p>
                                     ) : null}
-                                    <p className="text-4xl font-black tracking-tighter" style={{ color: activeTheme ? 'var(--theme-primary)' : 'hsl(var(--primary))' }}>{(student.points || 0).toLocaleString()} <span className="text-sm font-bold uppercase tracking-widest ml-1" style={{ color: activeTheme ? 'var(--theme-primary)' : 'hsl(var(--primary) / 0.6)', opacity: 0.6 }}>pts</span></p>
+                                    <p className="text-4xl font-black tracking-tighter" style={activeTheme ? { color: 'var(--theme-primary)' } : { color: 'hsl(var(--primary))' }}>{(student.points || 0).toLocaleString()} <span className="text-sm font-bold uppercase tracking-widest ml-1" style={activeTheme ? { color: 'var(--theme-primary)', opacity: 0.6 } : { color: 'hsl(var(--primary) / 0.6)' }}>pts</span></p>
                                 </div>
                                 </div>
                             </div>
@@ -1241,7 +1209,7 @@ export function PrizeDashboard({
                                                                 <Badge
                                                                     variant="outline"
                                                                     className="font-black text-xs px-2 py-1 rounded-xl border-dashed"
-                                                                    style={activeTheme ? { borderColor: 'var(--theme-text)', color: 'var(--theme-text)', opacity: 0.6 } : { borderColor: 'hsl(var(--muted-foreground))', color: 'hsl(var(--muted-foreground))' }}
+                                                                    style={activeTheme ? { borderColor: 'var(--theme-text-muted)', color: 'var(--theme-text-muted)' } : { borderColor: 'hsl(var(--muted-foreground))', color: 'hsl(var(--muted-foreground))' }}
                                                                     title={`You have ${pctTowardCost}% of the points this prize costs (need ${(prize.points || 0).toLocaleString()} pts).`}
                                                                 >
                                                                     {pctTowardCost}%
@@ -1322,24 +1290,16 @@ export function PrizeDashboard({
                     </Card>
                 </div>
 
-                <Dialog open={doubleOrNothingOpen} onOpenChange={(open) => { if (!open) handleDoubleOrNothingResult('cancel'); }}>
-                    <DialogContent className="sm:max-w-md p-0 overflow-hidden border-none bg-transparent shadow-none">
-                        <DoubleOrNothingWheel
-                            prizeName={doubleOrNothingPrize?.name || ''}
-                            onResult={(res) => handleDoubleOrNothingResult(res)}
-                            onCancel={() => handleDoubleOrNothingResult('cancel')}
-                            primaryColor={activeTheme ? 'var(--theme-primary)' : undefined}
-                        />
-                    </DialogContent>
-                </Dialog>
+
 
                 <ConfirmRedemptionDialog
                     isOpen={!!confirmingPrize}
                     onOpenChange={(open: boolean) => {
-                        if (!open) setConfirmingPrize(null);
+                        if (!open && !isRedeeming) setConfirmingPrize(null);
                     }}
                     student={student}
                     prize={confirmingPrize}
+                    isRedeeming={isRedeeming}
                     onConfirm={(quantity: number) => {
                         const p = confirmingPrize;
                         if (p) void handleRedeemReward(p, quantity);

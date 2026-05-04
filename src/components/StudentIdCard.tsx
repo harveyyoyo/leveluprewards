@@ -86,6 +86,8 @@ export function StudentIdCard({
   appLogoUrl,
   appName,
   appTagline,
+  /** When true, always apply stored themes (e.g. theme editor preview) even if the school has student themes turned off. */
+  forceStudentThemePreview = false,
 }: {
   student: Student;
   schoolName: string;
@@ -95,9 +97,15 @@ export function StudentIdCard({
   appLogoUrl?: string | null;
   appName?: string;
   appTagline?: string;
+  forceStudentThemePreview?: boolean;
 }) {
   const { settings } = useSettings();
-  const theme = resolveStudentThemeWithSchoolDefault(student.theme, settings.defaultStudentTheme);
+  const studentThemesOn = forceStudentThemePreview || settings.enableStudentThemes;
+  const theme = resolveStudentThemeWithSchoolDefault(
+    student.theme,
+    settings.defaultStudentTheme,
+    studentThemesOn,
+  );
   const themeEmoji = theme?.emoji;
   const customEmojiUrl = student.customEmojiUrl;
   const themeFontFamily = theme?.fontFamily;

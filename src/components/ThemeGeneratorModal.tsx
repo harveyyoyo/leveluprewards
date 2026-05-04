@@ -876,6 +876,7 @@ export function ThemeGeneratorModal({
                                                         appLogoUrl={previewAppLogoUrl}
                                                         appName={previewAppName}
                                                         appTagline={previewAppTagline}
+                                                        forceStudentThemePreview
                                                     />
                                                 </div>
                                             </div>

@@ -242,11 +242,15 @@ export function normalizeStudentTheme(
 /**
  * Per-student theme wins; otherwise the school default from admin settings.
  * Result is always contrast-normalized for rendering.
+ *
+ * @param studentThemesEnabled When `false`, returns `undefined` so UI uses standard styling; stored themes are unchanged.
  */
 export function resolveStudentThemeWithSchoolDefault(
   studentTheme: StudentTheme | null | undefined,
   schoolDefault: StudentTheme | null | undefined,
+  studentThemesEnabled: boolean = true,
 ): StudentTheme | undefined {
+  if (!studentThemesEnabled) return undefined;
   return normalizeStudentTheme(studentTheme ?? schoolDefault ?? undefined);
 }
 

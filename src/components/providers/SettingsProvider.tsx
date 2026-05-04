@@ -34,6 +34,8 @@ interface Settings {
     darkMode: boolean;
     // Theme visuals
     enableThemeAnimations: boolean;
+    /** When false, kiosk, rewards shop, and ID cards ignore per-student and school default themes (data is kept). */
+    enableStudentThemes: boolean;
     // Engagement
     enableAchievements: boolean;
     enableBadges: boolean;
@@ -190,6 +192,7 @@ const defaultSettings: Settings = {
     language: 'English',
     darkMode: false,
     enableThemeAnimations: false,
+    enableStudentThemes: true,
     enableAchievements: false,
     enableBadges: false,
     enableLevels: false,
