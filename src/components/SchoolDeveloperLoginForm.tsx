@@ -26,7 +26,6 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
   const [schoolPasscode, setSchoolPasscode] = useState('');
   const [isDeveloper, setIsDeveloper] = useState(false);
   const [isShaking, setIsShaking] = useState(false);
-  const [showForgot, setShowForgot] = useState(false);
   const { login, isInitialized, isUserLoading } = useAppContext();
   const { toast } = useToast();
   const router = useRouter();
@@ -270,19 +269,8 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
               >
                 {isDeveloperOnly || isDeveloper ? 'Dev Login' : 'Continue'}
               </button>
-              <div className="flex items-center justify-between text-xs">
-                {!isDeveloperOnly && !isDeveloper ? (
-                  <button
-                    type="button"
-                    onClick={() => setShowForgot(true)}
-                    className="font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:underline"
-                  >
-                    Faculty sign-in?
-                  </button>
-                ) : (
-                  <span />
-                )}
-                {!isDeveloperOnly && allowDeveloperLogin && (
+              {!isDeveloperOnly && allowDeveloperLogin && (
+                <div className="flex justify-end text-xs">
                   <button
                     type="button"
                     onClick={() => setIsDeveloper(!isDeveloper)}
@@ -290,31 +278,9 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
                   >
                     {isDeveloper ? '← Return to School Login' : 'Developer? Click here'}
                   </button>
-                )}
-              </div>
+                </div>
+              )}
             </div>
-
-            {showForgot && !isDeveloperOnly && !isDeveloper && (
-              <div
-                className="mt-2 rounded-xl border border-amber-300/60 bg-amber-50/70 dark:bg-amber-900/20 dark:border-amber-800/50 p-4 text-xs text-amber-900 dark:text-amber-200 leading-relaxed space-y-2"
-                role="dialog"
-                aria-labelledby="forgot-title"
-              >
-                <p id="forgot-title" className="font-semibold">
-                  Looking for faculty tools?
-                </p>
-                <p>
-                  Continue with the School ID first, then choose Admin or Faculty on the next screen.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setShowForgot(false)}
-                  className="font-semibold underline underline-offset-2 hover:no-underline"
-                >
-                  Got it
-                </button>
-              </div>
-            )}
 
             {!isDeveloperOnly && !isDeveloper && (
               <details className="mt-2 rounded-xl border border-border/70 bg-background/60 group">
