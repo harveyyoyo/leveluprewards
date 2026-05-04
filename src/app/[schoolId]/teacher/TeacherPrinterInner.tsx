@@ -1936,7 +1936,9 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                 });
                 return;
             }
-            if (printRedemptionScope === 'creator' && !currentTeacher?.id) {
+            // Admins use `userId` as fallback `teacherId` when `teacherDocId` is unset; that UID does not
+            // match Firestore `teachers` doc ids, so `currentTeacher` can be missing even though the UI is ready.
+            if (printRedemptionScope === 'creator' && !currentTeacher?.id && !schoolWideTeacherScope) {
                 playSound('error');
                 toast({
                     variant: 'destructive',
