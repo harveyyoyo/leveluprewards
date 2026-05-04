@@ -751,7 +751,7 @@
     transform-origin: left top !important;
   }
 
-  /* Coupons: insets content from the physical non-printable zone (padding is reliable; @page alone often still clips). */
+  /* Coupons: keep root flush; tiny safe area comes only from @page couponletter (avoid stacking padding + @page). */
   body.coupon-printing #coupon-print-root {
     display: block !important;
     position: static !important;
@@ -763,7 +763,7 @@
     transform: none !important;
     flex-direction: unset !important;
     margin: 0 !important;
-    padding: 0.5in 0.5in 0.55in !important;
+    padding: 0 !important;
     box-sizing: border-box !important;
   }
 
@@ -959,10 +959,10 @@
     margin: 0;
   }
 
-  /* Letter coupons: page margin + inner padding on #coupon-print-root for double safety on finicky drivers. */
+  /* Letter coupons: minimal non-printable inset (~4mm) so edges are not clipped on most printers. */
   @page couponletter {
     size: letter portrait;
-    margin: 0.35in;
+    margin: 4mm;
   }
 
   @page prizeticket {
@@ -980,12 +980,11 @@
   .coupon-print-page {
     page: couponletter;
     display: grid !important;
-    /* Inner sheet = letter minus @page couponletter margins minus #coupon-print-root padding (approx 7.3in × 9.8in). */
-    grid-template-columns: repeat(2, 3.65in);
-    grid-template-rows: repeat(5, 1.96in);
+    grid-template-columns: repeat(2, calc((8.5in - 8mm) / 2));
+    grid-template-rows: repeat(5, calc((11in - 8mm) / 5));
     gap: 0 !important;
-    width: 7.3in;
-    height: 9.8in;
+    width: calc(8.5in - 8mm);
+    height: calc(11in - 8mm);
     margin: 0 auto;
     padding: 0;
     box-sizing: border-box;
@@ -994,8 +993,8 @@
   }
 
   .coupon-print-page--30 {
-    grid-template-columns: repeat(3, calc(7.3in / 3));
-    grid-template-rows: repeat(10, 0.98in);
+    grid-template-columns: repeat(3, calc((8.5in - 8mm) / 3));
+    grid-template-rows: repeat(10, calc((11in - 8mm) / 10));
   }
 
   .coupon-print-page:last-child {
