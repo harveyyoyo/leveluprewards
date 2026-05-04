@@ -713,6 +713,11 @@
   body.id-card-printing > *:not([data-app-view-root]) {
     display: none !important;
   }
+
+  /* Coupons: print root is portaled to body (see PrintSheet). Drop phantom blank pages from the tall in-app layout. */
+  body.coupon-printing > *:not(#coupon-print-root) {
+    display: none !important;
+  }
   
   /* Prize tickets: keep only the wrapper to avoid layout gaps. */
   body.prize-ticket-printing [data-app-view-root] > *:not(#prize-ticket-print-wrapper) {

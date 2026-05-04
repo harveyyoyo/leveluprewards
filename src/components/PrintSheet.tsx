@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import type { Coupon } from '@/lib/types';
 import { Coupon as CouponComponent } from '@/components/Coupon';
 import { chunkCouponsForPrint, normalizeCouponPrintPageSize, type CouponPrintPageSize } from '@/lib/coupon-print';
@@ -29,7 +30,7 @@ export function PrintSheet({ coupons, schoolId, couponsPerPage = 10 }: PrintShee
   const pageSize = normalizeCouponPrintPageSize(couponsPerPage);
   const pages = chunkCouponsForPrint(coupons, pageSize);
 
-  return (
+  const sheet = (
     <div id="coupon-print-root">
       {pages.map((pageCoupons, pageIndex) => (
         <div key={pageIndex} className={cn('coupon-print-page', `coupon-print-page--${pageSize}`)}>
@@ -42,4 +43,10 @@ export function PrintSheet({ coupons, schoolId, couponsPerPage = 10 }: PrintShee
       ))}
     </div>
   );
+
+  if (typeof document === 'undefined') {
+    return null;
+  }
+
+  return createPortal(sheet, document.body);
 }
