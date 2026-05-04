@@ -264,6 +264,7 @@ export function StudentScanner({
                         const data = res.data as any;
                         const studentId = typeof data?.studentId === 'string' ? data.studentId : '';
                         const confidence = typeof data?.confidence === 'number' ? data.confidence : null;
+                        const ambiguous = data?.ambiguous === true;
 
                         if (studentId && typeof confidence === 'number' && confidence >= FACE_MATCH_MIN_CONFIDENCE) {
                             playSound('login');
@@ -274,9 +275,11 @@ export function StudentScanner({
                         }
 
                         setFaceStatus(
-                            typeof confidence === 'number'
-                                ? `Not recognized (${Math.round(confidence * 100)}%) — keep trying`
-                                : 'Not recognized — keep trying',
+                            ambiguous
+                                ? 'Unclear match — use card or QR, or try again'
+                                : typeof confidence === 'number'
+                                  ? `Not recognized (${Math.round(confidence * 100)}%) — keep trying`
+                                  : 'Not recognized — keep trying',
                         );
                         await sleep(1600);
                         if (!faceLoopCancelRef.current) setFaceStatus('Look at the camera');

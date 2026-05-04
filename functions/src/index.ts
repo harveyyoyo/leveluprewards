@@ -2371,28 +2371,39 @@ exports.matchStudentFace = functions
       .limit(500)
       .get();
 
-    let bestStudentId = "";
-    let bestScore = -1;
-
+    /** Best cosine match per student (max over their stored descriptor scans). */
+    const perStudent: { studentId: string; score: number }[] = [];
     for (const doc of snap.docs) {
       const d = doc.data();
       const list = descriptorRecordsFrom(d.descriptors);
+      if (list.length === 0) continue;
+      let bestForStudent = -1;
       for (const cand of list) {
         const score = cosineSimilarity(descriptor, cand.values);
-        if (score > bestScore) {
-          bestScore = score;
-          bestStudentId = doc.id;
-        }
+        if (score > bestForStudent) bestForStudent = score;
       }
+      perStudent.push({ studentId: doc.id, score: bestForStudent });
     }
+    perStudent.sort((a, b) => b.score - a.score);
+
+    const top = perStudent[0];
+    const second = perStudent[1];
 
     // Conservative threshold for "convenience-grade" matching.
     // Higher = fewer false positives, more fallbacks.
     const threshold = 0.9;
-    if (!bestStudentId || bestScore < threshold) {
-      return { studentId: null, confidence: bestScore };
+    // If two enrolled students score nearly the same, do not pick a winner — reduces
+    // "closest student wins" mistakes (open-set: a stranger can still match one spike
+    // above threshold; raising threshold or adding NFC/PIN is the remaining lever).
+    const minMarginSecondStudent = 0.04;
+
+    if (!top || top.score < threshold) {
+      return { studentId: null, confidence: top?.score ?? -1 };
     }
-    return { studentId: bestStudentId, confidence: bestScore };
+    if (second && top.score - second.score < minMarginSecondStudent) {
+      return { studentId: null, confidence: top.score, ambiguous: true };
+    }
+    return { studentId: top.studentId, confidence: top.score };
   });
 
 exports.getStudentFaceAuthStatus = functions.https.onCall(
