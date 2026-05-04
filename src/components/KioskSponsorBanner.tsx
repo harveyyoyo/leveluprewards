@@ -55,14 +55,22 @@ export function KioskSponsorBanner({ className, previewOverride }: { className?:
 
     if (!msg) return null;
 
-    // Visual Style Presets with extremely strong readability and premium aesthetic
+    // Visual Style Presets with extremely strong readability and premium aesthetic.
+    // globals.css forces .font-extrabold / .font-black to hsl(--primary); on bg-primary that
+    // washes out text. Each preset re-asserts the intended text color on those utilities.
     const styleMap: Record<string, string> = {
-        subtle: 'bg-slate-100 border-slate-300 text-slate-800 dark:bg-slate-900/90 dark:text-slate-100 dark:border-slate-800',
-        neon_gold: 'bg-black border-amber-400 text-amber-300 shadow-[0_0_25px_rgba(245,158,11,0.35)]',
-        electric: 'bg-blue-950 border-blue-400 text-blue-50 shadow-[0_0_25px_rgba(59,130,246,0.35)]',
-        gradient: 'bg-gradient-to-r from-pink-500 via-purple-600 to-indigo-700 text-white border-pink-400',
-        glass: 'bg-white/50 dark:bg-black/40 backdrop-blur-2xl border-white/30 text-foreground shadow-xl',
-        primary: 'bg-primary border-primary-foreground/30 text-primary-foreground shadow-2xl backdrop-blur-xl',
+        subtle:
+            'bg-slate-100 border-slate-300 text-slate-800 dark:bg-slate-900/90 dark:text-slate-100 dark:border-slate-800 [&_.font-extrabold]:text-slate-800 [&_.font-black]:text-slate-800 dark:[&_.font-extrabold]:text-slate-100 dark:[&_.font-black]:text-slate-100',
+        neon_gold:
+            'bg-black border-amber-400 text-amber-300 shadow-[0_0_25px_rgba(245,158,11,0.35)] [&_.font-extrabold]:text-amber-300 [&_.font-black]:text-amber-300',
+        electric:
+            'bg-blue-950 border-blue-400 text-blue-50 shadow-[0_0_25px_rgba(59,130,246,0.35)] [&_.font-extrabold]:text-blue-50 [&_.font-black]:text-blue-50',
+        gradient:
+            'bg-gradient-to-r from-pink-500 via-purple-600 to-indigo-700 text-white border-pink-400 [&_.font-extrabold]:text-white [&_.font-black]:text-white',
+        glass:
+            'bg-white/50 dark:bg-black/40 backdrop-blur-2xl border-white/30 text-foreground shadow-xl [&_.font-extrabold]:text-foreground [&_.font-black]:text-foreground',
+        primary:
+            'bg-primary border-primary-foreground/30 text-primary-foreground shadow-2xl [&_.font-extrabold]:text-primary-foreground [&_.font-black]:text-primary-foreground',
     };
 
     // Speed durations
