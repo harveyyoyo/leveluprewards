@@ -147,6 +147,8 @@ export interface Student {
   teacherIds?: string[];
   /** When false, this student cannot open the style welcome page (school must also enable it). */
   welcomePageEnabled?: boolean;
+  /** When false, the kiosk “welcome back” splash does not run (school must also enable it). */
+  welcomeBackScreenEnabled?: boolean;
   /** Default or admin-set welcome animation style id (`WelcomeGreeting`). */
   welcomeGreetingStyleId?: string;
   theme?: StudentTheme;

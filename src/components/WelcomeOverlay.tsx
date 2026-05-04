@@ -11,6 +11,8 @@ interface WelcomeOverlayProps {
   studentName: string;
   points: number;
   photoUrl?: string;
+  /** How long the overlay stays visible before auto-closing (default 3s, plus exit animation). */
+  visibleDurationMs?: number;
   theme?: {
     primary?: string;
     text?: string;
@@ -21,10 +23,13 @@ interface WelcomeOverlayProps {
   playSound?: (name: SoundEffect) => void;
 }
 
+const DEFAULT_VISIBLE_MS = 3000;
+
 export const WelcomeOverlay: React.FC<WelcomeOverlayProps> = ({
   studentName,
   points,
   photoUrl,
+  visibleDurationMs = DEFAULT_VISIBLE_MS,
   theme,
   onClose,
   playSound,
@@ -33,13 +38,14 @@ export const WelcomeOverlay: React.FC<WelcomeOverlayProps> = ({
 
   useEffect(() => {
     if (playSound) playSound('redeem');
-    
+
+    const ms = Number.isFinite(visibleDurationMs) && visibleDurationMs > 0 ? visibleDurationMs : DEFAULT_VISIBLE_MS;
     const timer = setTimeout(() => {
       setIsVisible(false);
       setTimeout(onClose, 500); // Wait for exit animation
-    }, 4000);
+    }, ms);
     return () => clearTimeout(timer);
-  }, [onClose, playSound]);
+  }, [onClose, playSound, visibleDurationMs]);
 
   const primaryColor = theme?.primary || 'hsl(var(--primary))';
   const textColor = theme?.text || 'white';

@@ -78,6 +78,7 @@ export function StudentModal({
   const [theme, setTheme] = useState<StudentTheme | undefined>(undefined);
   const [birthday, setBirthday] = useState('');
   const [studentWelcomeAllowed, setStudentWelcomeAllowed] = useState(true);
+  const [welcomeBackAllowed, setWelcomeBackAllowed] = useState(true);
   const [welcomeGreetingStyleId, setWelcomeGreetingStyleId] = useState('');
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
@@ -105,6 +106,7 @@ export function StudentModal({
         setTheme(student.theme);
         setBirthday(student.birthday || '');
         setStudentWelcomeAllowed(student.welcomePageEnabled !== false);
+        setWelcomeBackAllowed(student.welcomeBackScreenEnabled !== false);
         setWelcomeGreetingStyleId(student.welcomeGreetingStyleId || '');
       } else { // Create mode
         setFirstName('');
@@ -122,6 +124,7 @@ export function StudentModal({
         setTheme(undefined);
         setBirthday('');
         setStudentWelcomeAllowed(true);
+        setWelcomeBackAllowed(true);
         setWelcomeGreetingStyleId('');
       }
     }
@@ -380,6 +383,7 @@ export function StudentModal({
         studentPhone: encryptField(studentPhone.trim()) || undefined,
         birthday: birthday || undefined,
         welcomePageEnabled: studentWelcomeAllowed ? true : false,
+        welcomeBackScreenEnabled: welcomeBackAllowed ? true : false,
         welcomeGreetingStyleId: welcomeGreetingStyleId.trim() || undefined,
       };
       await updateStudent(updatedStudent);
@@ -402,6 +406,7 @@ export function StudentModal({
         studentPhone: encryptField(studentPhone.trim()) || undefined,
         birthday: birthday || undefined,
         welcomePageEnabled: studentWelcomeAllowed ? true : false,
+        welcomeBackScreenEnabled: welcomeBackAllowed ? true : false,
         welcomeGreetingStyleId: welcomeGreetingStyleId.trim() || undefined,
       };
       await addStudent(newStudent);
@@ -523,6 +528,21 @@ export function StudentModal({
             <Label htmlFor="birthday">Birthday (Optional)</Label>
             <Input id="birthday" type="date" value={birthday} onChange={e => setBirthday(e.target.value)} />
           </div>
+          {settings.enableStudentWelcomeBackScreen && (
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-muted/20 p-4">
+              <div className="space-y-0.5">
+                <Label htmlFor="student-welcome-back-allowed">Welcome back splash</Label>
+                <p className="text-xs text-muted-foreground">
+                  Short full-screen greeting when this student opens the kiosk. The school can set how long it stays on screen in Settings.
+                </p>
+              </div>
+              <Checkbox
+                id="student-welcome-back-allowed"
+                checked={welcomeBackAllowed}
+                onCheckedChange={(v) => setWelcomeBackAllowed(v === true)}
+              />
+            </div>
+          )}
           {settings.enableStudentWelcome && (
             <div className="space-y-3 rounded-xl border border-border/60 bg-muted/20 p-4">
               <div className="flex items-center justify-between gap-3">

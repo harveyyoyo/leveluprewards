@@ -47,6 +47,7 @@ import { Progress } from '@/components/ui/progress';
 import { cn, getStudentNickname, getContrastColor } from '@/lib/utils';
 import { resolveStudentThemeWithSchoolDefault, primaryForegroundFor } from '@/lib/themeContrast';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
+import { DEFAULT_BULLETIN_SUBTITLE, bulletinLogoBoxClass, getBulletinBoardCardClassName } from '@/lib/bulletinBoard';
 import { getReadableErrorMessage } from '@/lib/errorMessage';
 import {
   ArrowLeft,
@@ -107,7 +108,7 @@ import { useStudentKioskSession } from '@/components/providers/StudentKioskSessi
 import { FaceMismatchBanner } from '@/components/FaceMismatchBanner';
 import { rainbowTripletForNavId, complementTripletForNavId } from '@/lib/rainbowNav';
 import { STUDENT_KIOSK_REQUEST_EXIT_EVENT } from '@/lib/student-kiosk';
-import { studentSeesWelcomePage } from '@/lib/studentWelcome';
+import { studentSeesWelcomeBackOverlay, studentSeesWelcomePage } from '@/lib/studentWelcome';
 import { prizeIsListed, studentSeesPrizeByTeachers } from '@/lib/prize-utils';
 import { useAuthFetch } from '@/lib/authFetch';
 import { WelcomeOverlay } from '@/components/WelcomeOverlay';
@@ -1117,11 +1118,12 @@ function StudentDashboardInner({
       >
         {activeTheme?.fontFamily && <GoogleFontLoader fontFamily={activeTheme.fontFamily} />}
 
-        {showWelcome && student && studentSeesWelcomePage(settings, student) && (
+        {showWelcome && student && studentSeesWelcomeBackOverlay(settings, student) && (
           <WelcomeOverlay
             studentName={`${student.firstName} ${student.lastName}`}
             points={student.points || 0}
             photoUrl={student.photoUrl}
+            visibleDurationMs={Math.min(60, Math.max(1, settings.studentWelcomeBackDurationSec ?? 3)) * 1000}
             theme={activeTheme ? {
               primary: activeTheme.primary,
               text: computedThemeText,
@@ -1332,50 +1334,61 @@ function StudentDashboardInner({
             {settings.bulletinEnabled !== false && (
               <Card
                 className={cn(
-                  "overflow-hidden border shadow-xl relative transition-all duration-300",
-                  settings.bulletinTheme === 'neon_gold'
-                    ? "bg-gradient-to-br from-amber-500/10 via-amber-600/10 to-transparent border-amber-500/40"
-                    : settings.bulletinTheme === 'hyper_gradient'
-                    ? "bg-gradient-to-tr from-indigo-500/15 via-purple-500/15 to-pink-500/15 border-purple-500/40"
-                    : settings.bulletinTheme === 'electric'
-                    ? "bg-gradient-to-br from-cyan-500/10 via-blue-500/10 to-transparent border-cyan-400/40"
-                    : settings.bulletinTheme === 'glassmorphic'
-                    ? "bg-white/40 dark:bg-slate-950/40 backdrop-blur-md border-white/20 dark:border-white/10"
-                    : !activeTheme
-                    ? "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
-                    : ""
+                  getBulletinBoardCardClassName(settings.bulletinTheme, {
+                    variant: 'student',
+                    studentHasCustomTheme: !!activeTheme,
+                  }),
                 )}
                 style={activeTheme && !settings.bulletinTheme ? { backgroundColor: 'var(--theme-card)', color: 'var(--theme-text)' } : undefined}
               >
                 <CardHeader className="pb-3 border-b flex flex-col md:flex-row justify-between md:items-center gap-3" style={activeTheme ? { borderColor: 'var(--theme-bg)' } : undefined}>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
                     {previewSchoolLogoUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={previewSchoolLogoUrl} alt="School Logo" className="w-10 h-10 object-contain rounded-xl bg-white/30 backdrop-blur-md p-1 shrink-0" />
+                      <img
+                        src={previewSchoolLogoUrl}
+                        alt="School Logo"
+                        className={cn(
+                          bulletinLogoBoxClass(settings.bulletinLogoSize || 'md'),
+                          'object-contain rounded-xl bg-white/30 backdrop-blur-md p-1 shrink-0',
+                        )}
+                      />
                     ) : (
-                      <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center font-black text-primary flex-shrink-0 text-xl shadow-md">
+                      <div
+                        className={cn(
+                          bulletinLogoBoxClass(settings.bulletinLogoSize || 'md'),
+                          'rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center font-black text-primary flex-shrink-0 shadow-md',
+                        )}
+                      >
                         🏫
                       </div>
                     )}
-                    <div>
+                    <div className="min-w-0">
                       <CardTitle className="text-sm font-black flex items-center gap-2">
-                        <Megaphone className="w-4 h-4 text-indigo-500" />
+                        <Megaphone className="w-4 h-4 text-indigo-500 shrink-0" />
                         {settings.bulletinTitle || 'School Bulletin Board'}
                       </CardTitle>
-                      <CardDescription className="text-[10px] font-medium opacity-70">
-                        Visual reminders and incentives for earning points!
+                      <CardDescription className="text-[10px] font-medium opacity-70 line-clamp-2">
+                        {(settings.bulletinSubtitle ?? '').trim() || DEFAULT_BULLETIN_SUBTITLE}
                       </CardDescription>
                     </div>
                   </div>
-                  <div className="text-[10px] uppercase font-bold tracking-widest bg-emerald-500/15 text-emerald-800 dark:text-emerald-200 border border-emerald-500/25 px-2.5 py-1 rounded-full self-start md:self-auto flex items-center gap-1">
-                    <Sparkles className="w-3 h-3 text-amber-500" /> Wowed Design
-                  </div>
+                  {settings.bulletinShowWowBadge !== false ? (
+                    <div className="text-[10px] uppercase font-bold tracking-widest bg-emerald-500/15 text-emerald-800 dark:text-emerald-200 border border-emerald-500/25 px-2.5 py-1 rounded-full self-start md:self-auto flex items-center gap-1 shrink-0">
+                      <Sparkles className="w-3 h-3 text-amber-500" /> Wowed Design
+                    </div>
+                  ) : null}
                 </CardHeader>
                 <CardContent className="pt-3 pb-4">
-                  {bulletinIncentives && bulletinIncentives.filter((i: any) => i.active).length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {bulletinIncentives && bulletinIncentives.filter((i: any) => i.active !== false).length > 0 ? (
+                    <div
+                      className={cn(
+                        'grid gap-3',
+                        settings.bulletinColumns === '1' ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2',
+                      )}
+                    >
                       {bulletinIncentives
-                        .filter((i: any) => i.active)
+                        .filter((i: any) => i.active !== false)
                         .map((inc: any) => (
                           <div
                             key={inc.id}

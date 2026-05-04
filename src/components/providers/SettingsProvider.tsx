@@ -81,6 +81,10 @@ interface Settings {
     enableFaceLogin: boolean;
     /** Playful full-screen welcome styles on the student kiosk (`/student/welcome`). */
     enableStudentWelcome: boolean;
+    /** Short “welcome back” splash when a student lands on the kiosk dashboard. Can be turned off per student. */
+    enableStudentWelcomeBackScreen: boolean;
+    /** Auto-dismiss duration for the welcome back splash (seconds). */
+    studentWelcomeBackDurationSec: number;
     /** School-wide default welcome style (used when student has no override). Empty = confetti. */
     defaultWelcomeGreetingStyleId?: string;
     /** Back-compat alias used by some pages/components. */
@@ -136,6 +140,14 @@ interface Settings {
     bulletinEnabled?: boolean;
     bulletinTitle?: string;
     bulletinTheme?: string;
+    /** Shown under the title on kiosk, portal board, and admin preview. */
+    bulletinSubtitle?: string;
+    /** Logo size in the bulletin header. */
+    bulletinLogoSize?: 'sm' | 'md' | 'lg';
+    /** When false, hides the small “Wowed Design” pill on the student kiosk card. */
+    bulletinShowWowBadge?: boolean;
+    /** '1' = single column; '2' = responsive two-column grid on wide screens. */
+    bulletinColumns?: '1' | '2';
     // Special Occasions
     enableBirthdayPoints: boolean;
     birthdayPointsAmount: number;
@@ -217,6 +229,8 @@ const defaultSettings: Settings = {
     enableClassSignIn: false,
     enableFaceLogin: false,
     enableStudentWelcome: false,
+    enableStudentWelcomeBackScreen: false,
+    studentWelcomeBackDurationSec: 3,
     defaultWelcomeGreetingStyleId: '',
     enableAttendance: false,
     enableHelperMode: true,
@@ -258,6 +272,10 @@ const defaultSettings: Settings = {
     bulletinEnabled: true,
     bulletinTitle: 'School Bulletin Board',
     bulletinTheme: 'default',
+    bulletinSubtitle: '',
+    bulletinLogoSize: 'md',
+    bulletinShowWowBadge: true,
+    bulletinColumns: '2',
     enableBirthdayPoints: false,
     birthdayPointsAmount: 100,
     enableSpecialDayPoints: false,
@@ -376,6 +394,14 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                 }
                 if (typeof parsed.enableClassSignIn !== 'boolean' && typeof parsed.enableAttendance === 'boolean') {
                     parsed.enableClassSignIn = parsed.enableAttendance;
+                }
+                if (typeof parsed.enableStudentWelcomeBackScreen !== 'boolean') {
+                    parsed.enableStudentWelcomeBackScreen = !!parsed.enableStudentWelcome;
+                }
+                if (typeof parsed.studentWelcomeBackDurationSec !== 'number' || !Number.isFinite(parsed.studentWelcomeBackDurationSec)) {
+                    parsed.studentWelcomeBackDurationSec = defaultSettings.studentWelcomeBackDurationSec;
+                } else {
+                    parsed.studentWelcomeBackDurationSec = Math.min(60, Math.max(1, Math.round(parsed.studentWelcomeBackDurationSec)));
                 }
                 // Demo school: production defaults are applied only on first-run (see no-saved-settings branch below).
                 const nextSettings = applyEntitlements({ 

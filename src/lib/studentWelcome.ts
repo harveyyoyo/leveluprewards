@@ -21,3 +21,22 @@ export function studentSeesWelcomePage(
 ): boolean {
   return schoolAllowsStudentWelcome(settings) && studentAllowsWelcomePage(student ?? null);
 }
+
+/** Kiosk full-screen “welcome back” overlay (not the `/student/welcome` style picker). */
+export function schoolAllowsStudentWelcomeBackScreen(settings: { enableStudentWelcomeBackScreen?: boolean }): boolean {
+  return !!settings.enableStudentWelcomeBackScreen;
+}
+
+export function studentAllowsWelcomeBackScreen(
+  student: Pick<Student, 'welcomeBackScreenEnabled'> | null | undefined,
+): boolean {
+  if (!student) return false;
+  return student.welcomeBackScreenEnabled !== false;
+}
+
+export function studentSeesWelcomeBackOverlay(
+  settings: { enableStudentWelcomeBackScreen?: boolean },
+  student: Student | null | undefined,
+): boolean {
+  return schoolAllowsStudentWelcomeBackScreen(settings) && studentAllowsWelcomeBackScreen(student ?? null);
+}

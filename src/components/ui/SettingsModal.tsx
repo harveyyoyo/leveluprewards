@@ -27,7 +27,7 @@ import {
     Bell, Shield, Moon, Sun, ArrowLeft, Palette, Zap, Trophy,
     BarChart3, MessageSquare, ShoppingBag, ShieldCheck, Star,
     Users, Database, Printer, LayoutDashboard, History, HelpCircle,
-    Cpu, Award, Clock, Cog, Lock, Sparkles, ArrowRightLeft, Trash2, RotateCcw, Smile, BookOpen, Target, Megaphone,
+    Cpu, Award, Clock, Cog, Lock, Sparkles, ArrowRightLeft, Trash2, RotateCcw, Smile, BookOpen, Target, Megaphone, Tv,
     Layers, UsersRound
 } from 'lucide-react';
 import { useSettings, colorSchemes, type ColorScheme, type Settings as AppSettings } from '../providers/SettingsProvider';
@@ -863,6 +863,40 @@ export function SettingsModal() {
                                     isAllowed={isFeatureAllowed('enableStudentPortal')}
                                     planLabel={planLabel}
                                 />
+                                <FeatureRow
+                                    id="enableStudentWelcomeBackScreen"
+                                    label="Welcome back splash"
+                                    desc="Shows a short full-screen greeting when a student opens the kiosk. Default 3 seconds; duration is adjustable below. Can be turned off per student in Admin → Students."
+                                    icon={<Tv className="w-5 h-5" />}
+                                    settings={local}
+                                    onToggle={handleToggle}
+                                    isImplemented={true}
+                                    isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableStudentWelcomeBackScreen')}
+                                    planLabel={planLabel}
+                                />
+                                {isAdmin && local.enableStudentWelcomeBackScreen && isFeatureAllowed('enableStudentWelcomeBackScreen') ? (
+                                    <div className="px-3 pb-4 pt-0">
+                                        <Label htmlFor="studentWelcomeBackDurationSec" className="text-xs font-bold text-foreground">
+                                            Splash duration (seconds)
+                                        </Label>
+                                        <p className="mt-1 text-xs text-muted-foreground">
+                                            How long the welcome back screen stays up before it dismisses itself (1–60). Students can still tap the skip button to leave sooner.
+                                        </p>
+                                        <Input
+                                            id="studentWelcomeBackDurationSec"
+                                            type="number"
+                                            min={1}
+                                            max={60}
+                                            className="mt-3 max-w-[8rem] rounded-xl"
+                                            value={local.studentWelcomeBackDurationSec ?? 3}
+                                            onChange={(e) => {
+                                                const n = parseInt(e.target.value, 10);
+                                                handleToggle('studentWelcomeBackDurationSec', Number.isFinite(n) ? Math.min(60, Math.max(1, n)) : 3);
+                                            }}
+                                        />
+                                    </div>
+                                ) : null}
                                 <FeatureRow
                                     id="enableStudentWelcome"
                                     label="Student welcome styles"
