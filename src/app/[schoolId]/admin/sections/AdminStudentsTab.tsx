@@ -75,6 +75,7 @@ export function AdminStudentsTab({
   getClassName,
   teachers,
   handleOpenStudentModal,
+  onOpenFaceTraining,
   handleOpenActivityModal,
   setThemeStudent,
   setBadgesStudent,
@@ -112,7 +113,8 @@ export function AdminStudentsTab({
   handleDtcPrintClick: () => void;
   getClassName: (id: string) => string;
   teachers: Teacher[];
-  handleOpenStudentModal: (s: Student | null, opts?: { faceTraining?: boolean }) => void;
+  handleOpenStudentModal: (s: Student | null) => void;
+  onOpenFaceTraining: (s: Student) => void;
   handleOpenActivityModal: (s: Student) => void;
   setThemeStudent: (s: Student) => void;
   setBadgesStudent: (s: Student) => void;
@@ -280,7 +282,7 @@ export function AdminStudentsTab({
           </div>
         </div>
 
-        <ScrollArea className="h-[min(520px,70vh)]">
+        <ScrollArea className="h-[calc(100vh-22rem)] max-h-[420px] min-h-[280px]">
           <ul className="flex flex-col gap-1.5 pr-4">
             {filteredStudents.map((s) => {
               const teacherLine = formatAssignedTeachers(s, teachers);
@@ -421,7 +423,7 @@ export function AdminStudentsTab({
                       variant="outline"
                       size="icon"
                       className="h-8 w-8 sm:h-9 sm:w-9 rounded-full"
-                      onClick={() => handleOpenStudentModal(s, { faceTraining: true })}
+                      onClick={() => onOpenFaceTraining(s)}
                       title="Face login training"
                     >
                       <ScanFace className="w-4 h-4 text-sky-600 dark:text-sky-400" />

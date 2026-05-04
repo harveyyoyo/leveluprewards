@@ -27,6 +27,7 @@ import type { Student, Prize, Coupon, Category, Class, Teacher, BackupInfo, Achi
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StudentModal } from '@/components/StudentModal';
+import { AdminFaceEnrollmentPanel } from '@/components/AdminFaceEnrollmentPanel';
 import { AttendanceTimeZoneField } from '@/components/attendance/AttendanceTimeZoneField';
 import { PrizeModal } from '@/components/PrizeModal';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -157,6 +158,10 @@ const AdminBadgesTab = dynamic(
 );
 const AdminBulletinBoardTab = dynamic(
   () => import('./sections/AdminBulletinBoardTab').then((m) => m.AdminBulletinBoardTab),
+  { loading: tabLoader, ssr: false },
+);
+const AdminHallOfFameTab = dynamic(
+  () => import('./sections/AdminHallOfFameTab').then((m) => m.AdminHallOfFameTab),
   { loading: tabLoader, ssr: false },
 );
 import { getReadableErrorMessage } from '@/lib/errorMessage';
@@ -328,7 +333,7 @@ function AdminDashboardInner() {
   const [isTeacherModalOpen, setIsTeacherModalOpen] = useState(false);
 
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
-  const [studentModalFaceTraining, setStudentModalFaceTraining] = useState(false);
+  const [faceTrainingOnlyStudent, setFaceTrainingOnlyStudent] = useState<Student | null>(null);
   const [isPrizeModalOpen, setIsPrizeModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
@@ -554,10 +559,13 @@ function AdminDashboardInner() {
     setIsCategoryModalOpen(true);
   };
 
-  const handleOpenStudentModal = (student: Student | null, opts?: { faceTraining?: boolean }) => {
+  const handleOpenStudentModal = (student: Student | null) => {
     setEditingStudent(student);
-    setStudentModalFaceTraining(!!opts?.faceTraining && !!student);
     setIsStudentModalOpen(true);
+  };
+
+  const handleOpenFaceTrainingStudent = (student: Student) => {
+    setFaceTrainingOnlyStudent(student);
   };
 
   const handleOpenPrizeModal = (prize: Prize | null) => {
@@ -844,13 +852,16 @@ function AdminDashboardInner() {
               <span aria-hidden="true" className="self-stretch w-px bg-border/60 mx-1" />
 
               <TabsTrigger value="prizes" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
-                <Gift className="w-4 h-4" aria-hidden="true" /> Prize/Rewards shop
+                        <Gift className="w-4 h-4" aria-hidden="true" /> Rewards Shop
               </TabsTrigger>
                             <TabsTrigger value="coupons" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
                 <Ticket className="w-4 h-4" aria-hidden="true" /> Coupons
               </TabsTrigger>
               <TabsTrigger value="library" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
                 <BookOpen className="w-4 h-4" aria-hidden="true" /> Library
+              </TabsTrigger>
+              <TabsTrigger value="halloffame" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
+                <Trophy className="w-4 h-4" aria-hidden="true" /> Hall of Fame
               </TabsTrigger>
               <TabsTrigger value="bulletinboard" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
                 <Megaphone className="w-4 h-4" aria-hidden="true" /> Bulletin Board
@@ -945,6 +956,7 @@ function AdminDashboardInner() {
               getClassName={getClassName}
               teachers={teachers || []}
               handleOpenStudentModal={handleOpenStudentModal}
+              onOpenFaceTraining={handleOpenFaceTrainingStudent}
               handleOpenActivityModal={handleOpenActivityModal}
               setThemeStudent={(s) => setThemeStudent(s)}
               setBadgesStudent={(s) => setBadgesStudent(s)}
@@ -1130,6 +1142,10 @@ function AdminDashboardInner() {
                 onDeleteLibraryItem={handleDeleteLibraryItem}
                 onReturnLibraryItem={handleReturnLibraryItem}
               />
+            </TabsContent>
+
+            <TabsContent value="halloffame" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <AdminHallOfFameTab schoolId={schoolId!} />
             </TabsContent>
 
             <TabsContent value="bulletinboard" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -1399,9 +1415,39 @@ function AdminDashboardInner() {
           allStudents={students || []}
           allClasses={classes || []}
           allTeachers={teachers || []}
-          requestFaceTrainingOnOpen={studentModalFaceTraining}
-          onFaceTrainingRequestConsumed={() => setStudentModalFaceTraining(false)}
         />
+        {settings.enableFaceLogin && (
+          <Dialog
+            open={!!faceTrainingOnlyStudent}
+            onOpenChange={(open) => {
+              if (!open) setFaceTrainingOnlyStudent(null);
+            }}
+          >
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Face login</DialogTitle>
+                <DialogDescription>
+                  {faceTrainingOnlyStudent
+                    ? `${getStudentNickname(faceTrainingOnlyStudent)} ${faceTrainingOnlyStudent.lastName}`.trim()
+                    : ''}
+                </DialogDescription>
+              </DialogHeader>
+              {faceTrainingOnlyStudent ? (
+                <AdminFaceEnrollmentPanel
+                  key={faceTrainingOnlyStudent.id}
+                  studentId={faceTrainingOnlyStudent.id}
+                  studentLabel={
+                    [getStudentNickname(faceTrainingOnlyStudent), faceTrainingOnlyStudent.lastName]
+                      .filter(Boolean)
+                      .join(' ')
+                      .trim() || undefined
+                  }
+                  autoOpenTrainingDialog
+                />
+              ) : null}
+            </DialogContent>
+          </Dialog>
+        )}
         <PrizeModal
           isOpen={isPrizeModalOpen}
           setIsOpen={setIsPrizeModalOpen}

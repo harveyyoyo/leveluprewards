@@ -43,9 +43,6 @@ interface StudentModalProps {
   allStudents: Student[];
   allClasses: Class[];
   allTeachers: Teacher[];
-  /** When the modal opens, jump straight into the face-login training dialog (edit mode + face login enabled only). */
-  requestFaceTrainingOnOpen?: boolean;
-  onFaceTrainingRequestConsumed?: () => void;
 }
 
 export function StudentModal({
@@ -55,8 +52,6 @@ export function StudentModal({
   allStudents,
   allClasses,
   allTeachers,
-  requestFaceTrainingOnOpen,
-  onFaceTrainingRequestConsumed,
 }: StudentModalProps) {
   const { addStudent, updateStudent, schoolId } = useAppContext();
   const { settings } = useSettings();
@@ -83,7 +78,6 @@ export function StudentModal({
   const [welcomeGreetingStyleId, setWelcomeGreetingStyleId] = useState('');
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
-  const [faceTrainingDialogRequested, setFaceTrainingDialogRequested] = useState(false);
   const { toast } = useToast();
   const playSound = useArcadeSound();
 
@@ -130,17 +124,6 @@ export function StudentModal({
       }
     }
   }, [student, isOpen]);
-
-  useEffect(() => {
-    if (!isOpen) {
-      setFaceTrainingDialogRequested(false);
-      return;
-    }
-    if (requestFaceTrainingOnOpen && student?.id && settings.enableFaceLogin) {
-      setFaceTrainingDialogRequested(true);
-      onFaceTrainingRequestConsumed?.();
-    }
-  }, [isOpen, requestFaceTrainingOnOpen, student?.id, settings.enableFaceLogin, onFaceTrainingRequestConsumed]);
 
   const handlePhotoUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -420,11 +403,12 @@ export function StudentModal({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent size="lg">
-        <DialogHeader>
+      <DialogContent size="lg" className="flex flex-col p-0 overflow-hidden max-h-[var(--dialog-max-h,min(90vh,calc(100dvh-2rem)))]">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b">
           <DialogTitle>{isEditing ? `Edit ${getStudentNickname(student!)} ${student!.lastName}` : 'New Student'}</DialogTitle>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          <div className="grid gap-4">
           {isEditing && (
             <div className="space-y-2">
               <Label>Profile Photo</Label>
@@ -494,7 +478,7 @@ export function StudentModal({
                     onChange={(e) => void handleCustomEmojiUpload(e)}
                     disabled={isCustomEmojiUploading}
                   />
-                  <p className="text-[11px] text-muted-foreground mt-1">PNG/JPG/WebP/GIF under 2MB. Shown next to their name on the student portal, prize/rewards shop, and ID card.</p>
+                    <p className="text-[11px] text-muted-foreground mt-1">PNG/JPG/WebP/GIF under 2MB. Shown next to their name on the student portal, rewards shop, and ID card.</p>
                 </div>
               </div>
               {isCustomEmojiUploading ? (
@@ -711,11 +695,11 @@ export function StudentModal({
               key={student.id}
               studentId={student.id}
               studentLabel={[firstName, lastName].filter(Boolean).join(' ').trim() || undefined}
-              autoOpenTrainingDialog={faceTrainingDialogRequested}
             />
           ) : null}
+          </div>
         </div>
-        <DialogFooter>
+        <DialogFooter className="px-6 py-4 border-t bg-muted/30">
           <Button type="button" variant="secondary" onClick={() => setIsOpen(false)}>Cancel</Button>
           <Button type="submit" onClick={handleSave}>Save</Button>
         </DialogFooter>
