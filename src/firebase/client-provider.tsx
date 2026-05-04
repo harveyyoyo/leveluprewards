@@ -14,19 +14,20 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
   // that can cause hydration errors.
   const firebaseServices = useMemo(() => {
     try {
-      console.log("FirebaseClientProvider: Initializing Firebase...");
+      console.log('FirebaseClientProvider: Initializing Firebase...');
       const sdks = initializeFirebase();
       if (!sdks) {
-        console.error("FirebaseClientProvider: initializeFirebase returned null");
+        console.error('FirebaseClientProvider: initializeFirebase returned null');
       }
-      return sdks;
+      return { ok: sdks, error: null as string | null };
     } catch (e) {
-      console.error("FirebaseClientProvider: initializeFirebase threw an error", e);
-      return null;
+      const message = e instanceof Error ? e.message : String(e);
+      console.error('FirebaseClientProvider: initializeFirebase threw an error', e);
+      return { ok: null, error: message };
     }
   }, []);
 
-  if (!firebaseServices || !firebaseServices.firebaseApp) {
+  if (!firebaseServices.ok?.firebaseApp) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground p-6 text-center">
         <div className="animate-pulse mb-4 text-primary font-bold">Initializing Firebase Services...</div>
@@ -34,17 +35,22 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
           If this screen persists, there might be a configuration or connectivity issue.
           Check your environment variables and internet connection.
         </p>
+        {firebaseServices.error ? (
+          <p className="mt-4 text-xs text-destructive max-w-md break-words font-mono">{firebaseServices.error}</p>
+        ) : null}
       </div>
     );
   }
 
+  const sdk = firebaseServices.ok;
+
   return (
     <FirebaseProvider
-      firebaseApp={firebaseServices.firebaseApp}
-      auth={firebaseServices.auth}
-      firestore={firebaseServices.firestore}
-      functions={firebaseServices.functions}
-      storage={firebaseServices.storage}
+      firebaseApp={sdk.firebaseApp}
+      auth={sdk.auth}
+      firestore={sdk.firestore}
+      functions={sdk.functions}
+      storage={sdk.storage}
     >
       {children}
     </FirebaseProvider>
