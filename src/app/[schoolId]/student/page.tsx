@@ -347,6 +347,7 @@ function StudentDashboardInner({
   const signInRecordedRef = useRef(false);
   const [showWelcome, setShowWelcome] = useState(true);
   const hasShownWelcomeRef = useRef<string | null>(null);
+  const dismissWelcome = useCallback(() => setShowWelcome(false), []);
 
   useEffect(() => {
     // Only show welcome if it's a new student ID session
@@ -670,7 +671,7 @@ function StudentDashboardInner({
     resetTimer();
 
     // 1. Check Library Item first (if enabled)
-    if (settings.enableLibrary && firestore && schoolId) {
+    if (settings.payLibrary !== false && firestore && schoolId) {
       try {
         const libraryQuery = query(collection(firestore, 'schools', schoolId, 'library'), where('upc', '==', code), limit(1));
         const librarySnap = await getDocs(libraryQuery);
@@ -748,7 +749,7 @@ function StudentDashboardInner({
     } finally {
       if (activeTab === 'manual') setCouponCode('');
     }
-  }, [couponCode, resetTimer, redeemCoupon, student, toast, playSound, activeTab, settings.enableLibrary, settings.enableGoals, firestore, schoolId, isFeatureAllowed]);
+  }, [couponCode, resetTimer, redeemCoupon, student, toast, playSound, activeTab, settings.payLibrary, settings.enableGoals, firestore, schoolId, isFeatureAllowed]);
 
   const handleRedeemPrize = useCallback(async () => {
     if (!student || !confirmingPrize) return;
@@ -957,7 +958,7 @@ function StudentDashboardInner({
     } catch {
       // ignore storage / JSON errors
     }
-  }, [student?.id, schoolId, student?.earnedBadges, playSound, queueCelebration]);
+  }, [student, student?.id, schoolId, student?.earnedBadges, playSound, queueCelebration]);
 
   const headerBadges = useMemo(() => {
     if (!student?.earnedBadges?.length || !badges?.length) return [];
@@ -1047,6 +1048,7 @@ function StudentDashboardInner({
 
         {showWelcome && student && studentSeesWelcomeBackOverlay(settings, student) && (
           <WelcomeOverlay
+            key={student.id}
             studentName={`${student.firstName} ${student.lastName}`}
             points={student.points || 0}
             photoUrl={student.photoUrl}
@@ -1057,7 +1059,7 @@ function StudentDashboardInner({
               background: activeTheme.background,
               emoji: student.customEmojiUrl || activeTheme.emoji,
             } : undefined}
-            onClose={() => setShowWelcome(false)}
+            onClose={dismissWelcome}
             playSound={playSound}
           />
         )}

@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, Ticket } from 'lucide-react';
 import type { SoundEffect } from '@/hooks/useArcadeSound';
@@ -39,16 +39,23 @@ export const WelcomeOverlay: React.FC<WelcomeOverlayProps> = ({
 
   const targetPoints = Number.isFinite(points) ? Math.max(0, Math.round(points)) : 0;
 
+  // Parent often passes an inline `onClose`; including it in deps re-runs this effect
+  // on every parent render and spams the redeem chime while Firestore/state updates stream in.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  const playSoundRef = useRef(playSound);
+  playSoundRef.current = playSound;
+
   useEffect(() => {
-    if (playSound) playSound('redeem');
+    if (playSoundRef.current) playSoundRef.current('redeem');
 
     const ms = Number.isFinite(visibleDurationMs) && visibleDurationMs > 0 ? visibleDurationMs : DEFAULT_VISIBLE_MS;
     const timer = setTimeout(() => {
       setIsVisible(false);
-      setTimeout(onClose, 500); // Wait for exit animation
+      setTimeout(() => onCloseRef.current(), 500); // Wait for exit animation
     }, ms);
     return () => clearTimeout(timer);
-  }, [onClose, playSound, visibleDurationMs]);
+  }, [visibleDurationMs]);
 
   useEffect(() => {
     setDisplayedPoints(0);
@@ -186,7 +193,10 @@ export const WelcomeOverlay: React.FC<WelcomeOverlayProps> = ({
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.8 }}
-              onClick={() => setIsVisible(false)}
+              onClick={() => {
+                setIsVisible(false);
+                setTimeout(() => onCloseRef.current(), 500);
+              }}
               className="mt-8 px-8 py-3 rounded-full bg-white text-black font-black uppercase tracking-widest hover:bg-amber-400 transition-colors shadow-xl"
             >
               Let's Go!
