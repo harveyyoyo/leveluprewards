@@ -16,7 +16,7 @@ import {
    Users, Gift, BookOpen, Trash2, Edit, Plus, UploadCloud, Printer, LayoutDashboard, Database,
    Settings, History, Award, CheckCircle, Tag, Trophy, ArrowRight, Loader2, Play, ShieldCheck,
    User, Ticket, Upload, Download, Activity, Zap, Clock, Palette, Wand2, TableProperties,
-   FileText, Bell, Target,
+   FileText, Bell, Target, Megaphone,
  } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -153,6 +153,10 @@ const AdminGoalsTab = dynamic(
 );
 const AdminBadgesTab = dynamic(
   () => import('./sections/AdminBadgesTab').then((m) => m.AdminBadgesTab),
+  { loading: tabLoader, ssr: false },
+);
+const AdminBulletinBoardTab = dynamic(
+  () => import('./sections/AdminBulletinBoardTab').then((m) => m.AdminBulletinBoardTab),
   { loading: tabLoader, ssr: false },
 );
 import { getReadableErrorMessage } from '@/lib/errorMessage';
@@ -848,6 +852,9 @@ function AdminDashboardInner() {
               <TabsTrigger value="library" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
                 <BookOpen className="w-4 h-4" aria-hidden="true" /> Library
               </TabsTrigger>
+              <TabsTrigger value="bulletinboard" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
+                <Megaphone className="w-4 h-4" aria-hidden="true" /> Bulletin Board
+              </TabsTrigger>
               {settings.enableAchievements && (
                 <TabsTrigger value="bonuspoints" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
                   <Trophy className="w-4 h-4" aria-hidden="true" /> Bonus Points
@@ -1122,6 +1129,15 @@ function AdminDashboardInner() {
                 onEditLibraryItem={handleEditLibraryItem}
                 onDeleteLibraryItem={handleDeleteLibraryItem}
                 onReturnLibraryItem={handleReturnLibraryItem}
+              />
+            </TabsContent>
+
+            <TabsContent value="bulletinboard" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <AdminBulletinBoardTab
+                schoolId={schoolId!}
+                schoolLogoUrl={schoolData?.logoUrl ?? null}
+                settings={settings}
+                updateSettings={updateSettings}
               />
             </TabsContent>
 

@@ -45,6 +45,7 @@ import {
     Minus,
     Loader2,
     Sparkles,
+    Printer,
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
@@ -216,7 +217,7 @@ function ConfirmRedemptionDialog({
     );
 }
 
-function PrizeActivityList({ schoolId, studentId, themed = false }: { schoolId: string; studentId: string; themed?: boolean }) {
+function PrizeActivityList({ schoolId, studentId, themed = false, onReprintTicket }: { schoolId: string; studentId: string; themed?: boolean; onReprintTicket?: (item: HistoryItem) => void }) {
     const firestore = useFirestore();
     const activitiesQuery = useMemoFirebase(() => {
         if (!schoolId || !studentId) return null;
@@ -288,27 +289,50 @@ function PrizeActivityList({ schoolId, studentId, themed = false }: { schoolId: 
                                     {item.amount > 0 ? `+${item.amount}` : item.amount} pts
                                 </Badge>
                             </div>
-                            {item.date ? (
-                                <p
-                                    className={cn("text-[10px] font-bold uppercase tracking-widest", !themed && "text-muted-foreground")}
-                                    style={mutedStyle}
-                                >
-                                    {(() => {
-                                        try {
-                                            return format(new Date(item.date), 'MMM d, h:mm a');
-                                        } catch {
-                                            return 'Date unknown';
-                                        }
-                                    })()}
-                                </p>
-                            ) : (
-                                <p
-                                    className={cn("text-[10px] font-bold uppercase tracking-widest opacity-30", !themed && "text-muted-foreground")}
-                                    style={mutedStyle}
-                                >
-                                    Date unknown
-                                </p>
-                            )}
+                            <div className="flex justify-between items-center mt-2">
+                                {item.date ? (
+                                    <p
+                                        className={cn("text-[10px] font-bold uppercase tracking-widest", !themed && "text-muted-foreground")}
+                                        style={mutedStyle}
+                                    >
+                                        {(() => {
+                                            try {
+                                                return format(new Date(item.date), 'MMM d, h:mm a');
+                                            } catch {
+                                                return 'Date unknown';
+                                            }
+                                        })()}
+                                    </p>
+                                ) : (
+                                    <p
+                                        className={cn("text-[10px] font-bold uppercase tracking-widest opacity-30", !themed && "text-muted-foreground")}
+                                        style={mutedStyle}
+                                    >
+                                        Date unknown
+                                    </p>
+                                )}
+                                {item.desc.startsWith('Redeemed:') && onReprintTicket && (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onReprintTicket(item);
+                                        }}
+                                        className={cn(
+                                            "h-6 px-2 text-[10px] rounded-full border flex items-center gap-1 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700",
+                                            !themed && "border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300",
+                                        )}
+                                        style={themed ? {
+                                            backgroundColor: 'rgba(255,255,255,0.1)',
+                                            borderColor: 'rgba(127,127,127,0.3)',
+                                            color: 'var(--theme-text)',
+                                        } : undefined}
+                                    >
+                                        <Printer className="w-3 h-3" aria-hidden="true" /> Reprint
+                                    </Button>
+                                )}
+                            </div>
                         </li>
                     ))
                 ) : (
@@ -694,6 +718,42 @@ export function PrizeDashboard({
         }));
         printPrizeTickets(sheets);
     }, [ticketData, schoolId, printPrizeTickets]);
+
+    const handleReprint = useCallback((item: HistoryItem) => {
+        if (!student) return;
+        let prizeName = item.desc.replace(/^Redeemed:\s*/, '');
+        let quantity = 1;
+        const match = prizeName.match(/\s*\(x(\d+)\)$/);
+        if (match) {
+            quantity = parseInt(match[1], 10);
+            prizeName = prizeName.replace(/\s*\(x(\d+)\)$/, '');
+        }
+        const foundPrize = prizes?.find(p => p.name === prizeName);
+        const prizeIcon = foundPrize?.icon || 'Gift';
+
+        const ticketNo = String(item.date).slice(-6);
+        const displayFirst = getStudentNickname(student);
+        const legalFirst = (student.firstName || '').trim();
+        const nick = student.nickname?.trim();
+        const themeForTicket = resolveStudentThemeWithSchoolDefault(student.theme, settings.defaultStudentTheme);
+        const emojiRaw = settings.enableStudentEmojiOnPrizeTickets === true ? themeForTicket?.emoji : undefined;
+        const studentEmoji = typeof emojiRaw === 'string' && emojiRaw.trim() ? emojiRaw.trim() : undefined;
+
+        setTicketData({
+            activityId: item.id || String(item.date),
+            ticketNo,
+            redeemedAt: item.date,
+            studentId: student.id,
+            studentName: `${displayFirst} ${student.lastName}`.trim(),
+            studentNickname: nick && legalFirst && displayFirst.trim() !== legalFirst ? legalFirst : undefined,
+            studentEmoji,
+            prizeName,
+            prizeIcon,
+            quantity,
+            totalCost: -item.amount,
+        });
+    }, [student, prizes, settings]);
+
 
     if (studentLoading || prizesLoading) {
         return (
@@ -1237,7 +1297,7 @@ export function PrizeDashboard({
                                             </CardTitle>
                                         </CardHeader>
                                         <CardContent className="p-6 flex-1 min-h-0 overflow-hidden flex flex-col">
-                                            <PrizeActivityList schoolId={schoolId!} studentId={student.id} themed={!!activeTheme} />
+                                            <PrizeActivityList schoolId={schoolId!} studentId={student.id} themed={!!activeTheme} onReprintTicket={handleReprint} />
                                         </CardContent>
                                     </Card>
 

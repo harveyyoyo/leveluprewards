@@ -70,6 +70,8 @@ import {
   CheckCircle2,
   LogOut,
   Sparkles,
+  Megaphone,
+  Printer,
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -163,7 +165,7 @@ function fallbackPrizeSurprise(
   return selected;
 }
 
-function StudentActivityList({ schoolId, studentId, themed = false }: { schoolId: string; studentId: string; themed?: boolean }) {
+function StudentActivityList({ schoolId, studentId, themed = false, onReprintTicket }: { schoolId: string; studentId: string; themed?: boolean; onReprintTicket?: (item: HistoryItem) => void }) {
   const firestore = useFirestore();
   const activitiesQuery = useMemoFirebase(() => (
     query(
@@ -262,27 +264,50 @@ function StudentActivityList({ schoolId, studentId, themed = false }: { schoolId
                                 <div className="flex justify-between items-center mt-1">
                                     <div />
                                     {isRedemption && (
-                                        <div
-                                            className={cn(
-                                                "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide",
-                                                !themed && (item.fulfilled
-                                                    ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30"
-                                                    : "bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30"),
-                                            )}
-                                            style={themed ? {
-                                                backgroundColor: item.fulfilled ? 'rgba(16,185,129,0.18)' : 'rgba(245,158,11,0.18)',
-                                                color: 'var(--theme-text)',
-                                                borderColor: 'transparent',
-                                            } : undefined}
-                                        >
-                                            {item.fulfilled ? (
-                                                <>
-                                                    <CheckCircle2 className="w-3 h-3" aria-hidden="true" /> Delivered
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Clock className="w-3 h-3" aria-hidden="true" /> Pending
-                                                </>
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            <div
+                                                className={cn(
+                                                    "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide",
+                                                    !themed && (item.fulfilled
+                                                        ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30"
+                                                        : "bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30"),
+                                                )}
+                                                style={themed ? {
+                                                    backgroundColor: item.fulfilled ? 'rgba(16,185,129,0.18)' : 'rgba(245,158,11,0.18)',
+                                                    color: 'var(--theme-text)',
+                                                    borderColor: 'transparent',
+                                                } : undefined}
+                                            >
+                                                {item.fulfilled ? (
+                                                    <>
+                                                        <CheckCircle2 className="w-3 h-3" aria-hidden="true" /> Delivered
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Clock className="w-3 h-3" aria-hidden="true" /> Pending
+                                                    </>
+                                                )}
+                                            </div>
+                                            {onReprintTicket && (
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        onReprintTicket(item);
+                                                    }}
+                                                    className={cn(
+                                                        "h-6 px-2 text-[10px] rounded-full border flex items-center gap-1 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 shrink-0",
+                                                        !themed && "border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300",
+                                                    )}
+                                                    style={themed ? {
+                                                        backgroundColor: 'rgba(255,255,255,0.1)',
+                                                        borderColor: 'rgba(127,127,127,0.3)',
+                                                        color: 'var(--theme-text)',
+                                                    } : undefined}
+                                                >
+                                                    <Printer className="w-3 h-3" aria-hidden="true" /> Reprint
+                                                </Button>
                                             )}
                                         </div>
                                     )}
@@ -370,6 +395,9 @@ function StudentDashboardInner({
     return collection(firestore, 'schools', schoolId, 'teachers', teacherId, 'attendanceRewards');
   }, [firestore, schoolId, student?.classId, classes]);
   const { data: teacherRewards } = useCollection<AttendanceRewardRule>(teacherRewardsQuery);
+
+  const bulletinQuery = useMemoFirebase(() => schoolId ? query(collection(firestore, 'schools', schoolId, 'bulletinBoardIncentives')) : null, [firestore, schoolId]);
+  const { data: bulletinIncentives } = useCollection<any>(bulletinQuery);
 
   const [couponCode, setCouponCode] = useState('');
   const [logoutTimer, setLogoutTimer] = useState(settings.kioskSessionTimeoutSec ?? 15);
@@ -881,6 +909,42 @@ function StudentDashboardInner({
     }]);
   }, [printPrizeTickets, prizeTicketData]);
 
+  const handleReprint = useCallback((item: HistoryItem) => {
+    if (!student) return;
+    let prizeName = item.desc.replace(/^Redeemed:\s*/, '');
+    let quantity = 1;
+    const match = prizeName.match(/\s*\(x(\d+)\)$/);
+    if (match) {
+      quantity = parseInt(match[1], 10);
+      prizeName = prizeName.replace(/\s*\(x(\d+)\)$/, '');
+    }
+    const foundPrize = prizes?.find(p => p.name === prizeName);
+    const prizeIcon = foundPrize?.icon || 'Gift';
+
+    const ticketNo = String(item.date).replace(/\D/g, '').slice(-6) || String(item.date).slice(-6);
+    const displayFirst = getStudentNickname(student);
+    const legalFirst = (student.firstName || '').trim();
+    const nick = student.nickname?.trim();
+    const themeForTicket = resolveStudentThemeWithSchoolDefault(student.theme, settings.defaultStudentTheme);
+    const emojiRaw = settings.enableStudentEmojiOnPrizeTickets === true ? themeForTicket?.emoji : undefined;
+    const studentEmoji = typeof emojiRaw === 'string' && emojiRaw.trim() ? emojiRaw.trim() : undefined;
+
+    setPrizeTicketData({
+      activityId: item.id || String(item.date),
+      ticketNo,
+      redeemedAt: item.date,
+      studentId: student.id,
+      studentName: `${displayFirst} ${student.lastName}`.trim(),
+      studentNickname: nick && legalFirst && displayFirst.trim() !== legalFirst ? legalFirst : undefined,
+      studentEmoji,
+      prizeName,
+      prizeIcon,
+      quantity,
+      totalCost: -item.amount,
+    });
+  }, [student, prizes, settings]);
+
+
   // Celebrate on login if new badges / bonus milestones were earned since last time this student opened the portal.
   useEffect(() => {
     if (!student || !schoolId) return;
@@ -1264,6 +1328,83 @@ function StudentDashboardInner({
               themed={!!activeTheme}
               themeForeground={activeTheme ? 'var(--theme-primary)' : undefined}
             />
+
+            {settings.bulletinEnabled !== false && (
+              <Card
+                className={cn(
+                  "overflow-hidden border shadow-xl relative transition-all duration-300",
+                  settings.bulletinTheme === 'neon_gold'
+                    ? "bg-gradient-to-br from-amber-500/10 via-amber-600/10 to-transparent border-amber-500/40"
+                    : settings.bulletinTheme === 'hyper_gradient'
+                    ? "bg-gradient-to-tr from-indigo-500/15 via-purple-500/15 to-pink-500/15 border-purple-500/40"
+                    : settings.bulletinTheme === 'electric'
+                    ? "bg-gradient-to-br from-cyan-500/10 via-blue-500/10 to-transparent border-cyan-400/40"
+                    : settings.bulletinTheme === 'glassmorphic'
+                    ? "bg-white/40 dark:bg-slate-950/40 backdrop-blur-md border-white/20 dark:border-white/10"
+                    : !activeTheme
+                    ? "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+                    : ""
+                )}
+                style={activeTheme && !settings.bulletinTheme ? { backgroundColor: 'var(--theme-card)', color: 'var(--theme-text)' } : undefined}
+              >
+                <CardHeader className="pb-3 border-b flex flex-col md:flex-row justify-between md:items-center gap-3" style={activeTheme ? { borderColor: 'var(--theme-bg)' } : undefined}>
+                  <div className="flex items-center gap-3">
+                    {previewSchoolLogoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={previewSchoolLogoUrl} alt="School Logo" className="w-10 h-10 object-contain rounded-xl bg-white/30 backdrop-blur-md p-1 shrink-0" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center font-black text-primary flex-shrink-0 text-xl shadow-md">
+                        🏫
+                      </div>
+                    )}
+                    <div>
+                      <CardTitle className="text-sm font-black flex items-center gap-2">
+                        <Megaphone className="w-4 h-4 text-indigo-500" />
+                        {settings.bulletinTitle || 'School Bulletin Board'}
+                      </CardTitle>
+                      <CardDescription className="text-[10px] font-medium opacity-70">
+                        Visual reminders and incentives for earning points!
+                      </CardDescription>
+                    </div>
+                  </div>
+                  <div className="text-[10px] uppercase font-bold tracking-widest bg-emerald-500/15 text-emerald-800 dark:text-emerald-200 border border-emerald-500/25 px-2.5 py-1 rounded-full self-start md:self-auto flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 text-amber-500" /> Wowed Design
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-3 pb-4">
+                  {bulletinIncentives && bulletinIncentives.filter((i: any) => i.active).length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {bulletinIncentives
+                        .filter((i: any) => i.active)
+                        .map((inc: any) => (
+                          <div
+                            key={inc.id}
+                            className="p-3 bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-2xl border border-white/20 dark:border-white/10 flex items-center justify-between gap-3 shadow-sm transition-all duration-300 hover:scale-[1.02]"
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <span className="text-2xl select-none" role="img" aria-label="incentive">
+                                {inc.icon || '🎯'}
+                              </span>
+                              <div className="min-w-0">
+                                <h5 className="font-bold text-xs md:text-sm leading-tight truncate">{inc.title}</h5>
+                                <p className="text-[10px] opacity-70 leading-relaxed mt-0.5 break-words line-clamp-2">{inc.description}</p>
+                              </div>
+                            </div>
+                            <span className="text-xs font-black bg-emerald-500/20 text-emerald-800 dark:text-emerald-200 px-2.5 py-1 rounded-full shrink-0 border border-emerald-500/30">
+                              +{inc.points} PTS
+                            </span>
+                          </div>
+                        ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 opacity-70 flex flex-col items-center justify-center gap-2">
+                      <Sparkles className="w-6 h-6 text-indigo-400 animate-pulse" />
+                      <span className="text-xs font-bold">No active incentives on the board yet</span>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
             <Card
               className={cn("border-none shadow-lg overflow-hidden", !activeTheme ? "bg-white dark:bg-slate-900" : "")}
               style={activeTheme ? { backgroundColor: 'var(--theme-card)', color: 'var(--theme-text)' } : undefined}
@@ -1675,7 +1816,7 @@ function StudentDashboardInner({
               </Helper>
             </CardHeader>
             <CardContent className="flex-1 min-h-0 flex flex-col pt-3 pb-4">
-              <StudentActivityList schoolId={schoolId} studentId={student.id} themed={!!activeTheme} />
+              <StudentActivityList schoolId={schoolId} studentId={student.id} themed={!!activeTheme} onReprintTicket={handleReprint} />
             </CardContent>
           </Card>
         </div>

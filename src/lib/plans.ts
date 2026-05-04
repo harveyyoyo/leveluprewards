@@ -196,6 +196,8 @@ export interface SchoolPlanConfig {
   plan?: PlanTier;
   /** Per-feature overrides that win over the plan defaults. */
   featureOverrides?: Partial<Record<PlanFeatureKey, boolean>>;
+  /** Default on/off state for school settings when feature is granted. */
+  featureSettingsDefaults?: Partial<Record<PlanFeatureKey, boolean>>;
 }
 
 /** Resolves a plan value to a known tier, falling back to DEFAULT_PLAN. */
@@ -214,9 +216,17 @@ export type PlanEntitlements = Record<PlanFeatureKey, boolean>;
  * selected plan tier with any developer-set overrides.
  */
 export function getSchoolEntitlements(config: SchoolPlanConfig | null | undefined): PlanEntitlements {
+  const plan = normalizePlan(config?.plan);
+  const includedFeatures = PLANS[plan]?.features ?? [];
+  const overrides = config?.featureOverrides ?? {};
+
   const entitlements = {} as PlanEntitlements;
   for (const key of PLAN_FEATURE_KEYS) {
-    entitlements[key] = true;
+    if (typeof overrides[key] === 'boolean') {
+      entitlements[key] = overrides[key]!;
+    } else {
+      entitlements[key] = includedFeatures.includes(key);
+    }
   }
   return entitlements;
 }
@@ -226,7 +236,7 @@ export function isFeatureAllowed(
   config: SchoolPlanConfig | null | undefined,
   key: PlanFeatureKey,
 ): boolean {
-  return true;
+  return getSchoolEntitlements(config)[key];
 }
 
 /** Type-guard to check whether a settings key is plan-gated. */

@@ -132,6 +132,10 @@ interface Settings {
         icon?: string;
     }[];
     enableDoubleOrNothing: boolean;
+    // Bulletin Board
+    bulletinEnabled?: boolean;
+    bulletinTitle?: string;
+    bulletinTheme?: string;
     // Special Occasions
     enableBirthdayPoints: boolean;
     birthdayPointsAmount: number;
@@ -251,6 +255,9 @@ const defaultSettings: Settings = {
     kioskSponsorIcon: '🎉',
     kioskSponsorSchedules: [],
     enableDoubleOrNothing: false,
+    bulletinEnabled: true,
+    bulletinTitle: 'School Bulletin Board',
+    bulletinTheme: 'default',
     enableBirthdayPoints: false,
     birthdayPointsAmount: 100,
     enableSpecialDayPoints: false,
@@ -371,16 +378,21 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                     parsed.enableClassSignIn = parsed.enableAttendance;
                 }
                 // Demo school: production defaults are applied only on first-run (see no-saved-settings branch below).
-                const nextSettings = applyEntitlements({ ...defaultSettings, ...parsed });
+                const nextSettings = applyEntitlements({ 
+                    ...defaultSettings, 
+                    ...(schoolData?.featureSettingsDefaults ?? {}),
+                    ...parsed 
+                });
                 setSettings(nextSettings);
                 localStorage.setItem(settingsKey, JSON.stringify(nextSettings));
             } catch (e) {
-                setSettings(applyEntitlements(defaultSettings));
+                setSettings(applyEntitlements({ ...defaultSettings, ...(schoolData?.featureSettingsDefaults ?? {}) }));
             }
         } else {
             // No settings for this school, use defaults and show the intro wizard once.
             const initialSettings: Settings = {
                 ...defaultSettings,
+                ...(schoolData?.featureSettingsDefaults ?? {}),
                 showIntroWizard: !!schoolId,
                 // Demo school: apply sky theme and sound to match production
                 ...(schoolId === 'schoolabc' ? { 
@@ -396,7 +408,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             setSettings(applyEntitlements(initialSettings));
         }
         setIsLoaded(true);
-    }, [schoolId, isInitialized, isMobile, applyEntitlements, schoolData?.appSettings, loginState]);
+    }, [schoolId, isInitialized, isMobile, applyEntitlements, schoolData?.appSettings, schoolData?.featureSettingsDefaults, loginState]);
 
     const updateSettings = (updates: Partial<Settings>) => {
         const settingsKey = getLocalArcadeSettingsKey(schoolId, loginState);

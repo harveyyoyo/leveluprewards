@@ -63,6 +63,7 @@ interface SchoolInfo {
   name: string;
   plan?: PlanTier;
   featureOverrides?: Partial<Record<PlanFeatureKey, boolean>>;
+  featureSettingsDefaults?: Partial<Record<PlanFeatureKey, boolean>>;
 }
 
 interface SchoolStats {
@@ -197,6 +198,7 @@ export default function DeveloperPage() {
   const [planSchool, setPlanSchool] = useState<SchoolInfo | null>(null);
   const [editingPlan, setEditingPlan] = useState<PlanTier>(DEFAULT_PLAN);
   const [editingFeatureOverrides, setEditingFeatureOverrides] = useState<Partial<Record<PlanFeatureKey, boolean>>>({});
+  const [editingFeatureSettingsDefaults, setEditingFeatureSettingsDefaults] = useState<Partial<Record<PlanFeatureKey, boolean>>>({});
   const [backupSchool, setBackupSchool] = useState<SchoolInfo | null>(null);
   const [schoolBackups, setSchoolBackups] = useState<BackupInfo[]>([]);
   const [statsSchool, setStatsSchool] = useState<SchoolInfo | null>(null);
@@ -477,16 +479,22 @@ export default function DeveloperPage() {
     setPlanSchool(school);
     setEditingPlan(school.plan ?? DEFAULT_PLAN);
     setEditingFeatureOverrides(school.featureOverrides ?? {});
+    setEditingFeatureSettingsDefaults(school.featureSettingsDefaults ?? {});
   };
 
   const handleClosePlanModal = () => {
     setPlanSchool(null);
     setEditingPlan(DEFAULT_PLAN);
     setEditingFeatureOverrides({});
+    setEditingFeatureSettingsDefaults({});
   };
 
   const handleToggleFeatureOverride = (key: PlanFeatureKey, checked: boolean) => {
     setEditingFeatureOverrides((prev) => ({ ...prev, [key]: checked }));
+  };
+
+  const handleToggleFeatureDefault = (key: PlanFeatureKey, checked: boolean) => {
+    setEditingFeatureSettingsDefaults((prev) => ({ ...prev, [key]: checked }));
   };
 
   const handleClearFeatureOverride = (key: PlanFeatureKey) => {
@@ -503,10 +511,15 @@ export default function DeveloperPage() {
       Object.entries(editingFeatureOverrides).filter(([, value]) => typeof value === 'boolean'),
     ) as Partial<Record<PlanFeatureKey, boolean>>;
 
+    const cleanDefaults = Object.fromEntries(
+      Object.entries(editingFeatureSettingsDefaults).filter(([, value]) => typeof value === 'boolean'),
+    ) as Partial<Record<PlanFeatureKey, boolean>>;
+
     try {
       const planPayload = {
         plan: editingPlan,
         featureOverrides: cleanOverrides,
+        featureSettingsDefaults: cleanDefaults,
         updatedAt: Date.now(),
       };
       await setDoc(doc(firestore, 'schools', planSchool.id), planPayload, { merge: true });
@@ -1286,13 +1299,22 @@ export default function DeveloperPage() {
                                 Use tier
                               </Button>
                             )}
-                            <Label className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                              <Checkbox
-                                checked={effective}
-                                onCheckedChange={(checked) => handleToggleFeatureOverride(key, checked === true)}
-                              />
-                              Allowed
-                            </Label>
+                            <div className="flex flex-col gap-2 min-w-[140px]">
+                              <Label className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground self-end">
+                                <Checkbox
+                                  checked={effective}
+                                  onCheckedChange={(checked) => handleToggleFeatureOverride(key, checked === true)}
+                                />
+                                Allowed
+                              </Label>
+                              <Label className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground self-end">
+                                <Checkbox
+                                  checked={editingFeatureSettingsDefaults[key] ?? false}
+                                  onCheckedChange={(checked) => handleToggleFeatureDefault(key, checked === true)}
+                                />
+                                On by default
+                              </Label>
+                            </div>
                           </div>
                         </div>
                       );
