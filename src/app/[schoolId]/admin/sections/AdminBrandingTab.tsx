@@ -18,6 +18,7 @@ import { ThemeGeneratorModal } from '@/components/ThemeGeneratorModal';
 import { normalizeStudentTheme } from '@/lib/themeContrast';
 import type { StudentTheme } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { KioskSponsorBanner } from '@/components/KioskSponsorBanner';
 
 
 export function AdminBrandingTab({
@@ -497,18 +498,42 @@ export function AdminBrandingTab({
             </CardTitle>
           </Helper>
           <CardDescription>
-            Show a scrolling message at the bottom or top of the student kiosk and portal screens.
+            Show a scrolling message at the bottom or top of the student kiosk and portal hub. Draft the text below, then turn on the banner so students see it.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Live Preview */}
+          <div className="mb-6 border-b border-border/40 pb-6">
+             <Label className="text-xs font-bold text-muted-foreground uppercase tracking-widest block mb-3">Live Preview</Label>
+             <div className="rounded-xl overflow-hidden shadow-sm border border-border/50 bg-slate-100 dark:bg-slate-900 min-h-[5rem] flex items-center justify-center p-2 relative">
+                {(!settings.kioskSponsorMessage?.trim() && !settings.kioskSponsorEnabled) ? (
+                    <p className="text-sm text-muted-foreground">Sponsor banner is currently disabled or empty.</p>
+                ) : (
+                    <div className="w-full relative overflow-hidden rounded-lg">
+                        <KioskSponsorBanner 
+                            previewOverride={{
+                                message: settings.kioskSponsorMessage || 'Sample sponsor message',
+                                link: settings.kioskSponsorLink,
+                                logoUrl: settings.kioskSponsorLogoUrl,
+                                speed: settings.kioskSponsorSpeed,
+                                position: settings.kioskSponsorPosition,
+                                bannerStyle: settings.kioskSponsorBannerStyle,
+                                icon: settings.kioskSponsorIcon
+                            }}
+                        />
+                    </div>
+                )}
+             </div>
+          </div>
+
           <div className="flex items-start justify-between py-4 border-b border-border/40 transition-colors">
             <div className="flex items-start gap-4 mr-6">
               <div className="flex flex-col">
                 <Label className="font-bold text-base block text-foreground mb-1" htmlFor="kioskSponsorEnabledBranding">
-                  Enable Sponsor Message
+                  Enable Default Sponsor Message
                 </Label>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Display a scrolling sponsor or announcement banner on all student kiosk screens.
+                  Display this scrolling sponsor or announcement banner on all student kiosk screens by default.
                 </p>
               </div>
             </div>
@@ -519,130 +544,131 @@ export function AdminBrandingTab({
             />
           </div>
 
-          {settings.kioskSponsorEnabled && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-              <div className="space-y-3 col-span-2">
-                <Label htmlFor="kioskSponsorMessageBranding" className="text-xs font-bold text-muted-foreground uppercase tracking-widest block">
-                  Sponsor Message
-                </Label>
-                <Input
-                  id="kioskSponsorMessageBranding"
-                  placeholder="e.g. Proudly sponsored by Acme Corp · Visit us at acme.com"
-                  value={settings.kioskSponsorMessage || ''}
-                  onChange={(e) => updateSettings({ kioskSponsorMessage: e.target.value })}
-                  className="text-sm rounded-xl"
-                  maxLength={300}
-                />
-                <p className="text-[10px] text-muted-foreground">
-                  {(settings.kioskSponsorMessage || '').length}/300 characters
-                </p>
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 pb-6">
+            <div className="space-y-3 col-span-2">
+              <Label htmlFor="kioskSponsorMessageBranding" className="text-xs font-bold text-muted-foreground uppercase tracking-widest block">
+                Sponsor Message
+              </Label>
+              <Input
+                id="kioskSponsorMessageBranding"
+                placeholder="e.g. Proudly sponsored by Acme Corp · Visit us at acme.com"
+                value={settings.kioskSponsorMessage || ''}
+                onChange={(e) => updateSettings({ kioskSponsorMessage: e.target.value })}
+                className="text-sm rounded-xl"
+                maxLength={300}
+              />
+              <p className="text-[10px] text-muted-foreground">
+                {(settings.kioskSponsorMessage || '').length}/300 characters
+                {!settings.kioskSponsorEnabled ? ' · Banner stays hidden for students until you enable it above.' : null}
+              </p>
+            </div>
 
-              <div className="space-y-3">
-                <Label htmlFor="kioskSponsorLinkBranding" className="text-xs font-bold text-muted-foreground uppercase tracking-widest block">
-                  Sponsor Website / Call to Action
-                </Label>
-                <Input
-                  id="kioskSponsorLinkBranding"
-                  placeholder="e.g. https://acme.com or @AcmeCorp"
-                  value={settings.kioskSponsorLink || ''}
-                  onChange={(e) => updateSettings({ kioskSponsorLink: e.target.value })}
-                  className="text-sm rounded-xl"
-                />
-              </div>
+            <div className="space-y-3">
+              <Label htmlFor="kioskSponsorLinkBranding" className="text-xs font-bold text-muted-foreground uppercase tracking-widest block">
+                Sponsor Website / Call to Action
+              </Label>
+              <Input
+                id="kioskSponsorLinkBranding"
+                placeholder="e.g. https://acme.com or @AcmeCorp"
+                value={settings.kioskSponsorLink || ''}
+                onChange={(e) => updateSettings({ kioskSponsorLink: e.target.value })}
+                className="text-sm rounded-xl"
+              />
+            </div>
 
-              <div className="space-y-3">
-                <Label htmlFor="kioskSponsorLogoUrlBranding" className="text-xs font-bold text-muted-foreground uppercase tracking-widest block">
-                  Sponsor Logo URL
-                </Label>
-                <Input
-                  id="kioskSponsorLogoUrlBranding"
-                  placeholder="e.g. https://example.com/logo.png"
-                  value={settings.kioskSponsorLogoUrl || ''}
-                  onChange={(e) => updateSettings({ kioskSponsorLogoUrl: e.target.value })}
-                  className="text-sm rounded-xl"
-                />
-              </div>
+            <div className="space-y-3">
+              <Label htmlFor="kioskSponsorLogoUrlBranding" className="text-xs font-bold text-muted-foreground uppercase tracking-widest block">
+                Sponsor Logo URL
+              </Label>
+              <Input
+                id="kioskSponsorLogoUrlBranding"
+                placeholder="e.g. https://example.com/logo.png"
+                value={settings.kioskSponsorLogoUrl || ''}
+                onChange={(e) => updateSettings({ kioskSponsorLogoUrl: e.target.value })}
+                className="text-sm rounded-xl"
+              />
+            </div>
 
-              <div className="space-y-3">
-                <Label htmlFor="kioskSponsorBannerStyleBranding" className="text-xs font-bold text-muted-foreground uppercase tracking-widest block">
-                  Visual Theme / Banner Style
-                </Label>
-                <Select
-                  value={settings.kioskSponsorBannerStyle || 'primary'}
-                  onValueChange={(val: any) => updateSettings({ kioskSponsorBannerStyle: val })}
-                >
-                  <SelectTrigger className="rounded-xl">
-                    <SelectValue placeholder="Style" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="primary">Primary Brand Color</SelectItem>
-                    <SelectItem value="subtle">Subtle Slate</SelectItem>
-                    <SelectItem value="neon_gold">Neon Gold</SelectItem>
-                    <SelectItem value="electric">Electric Blue</SelectItem>
-                    <SelectItem value="gradient">Hyper Gradient</SelectItem>
-                    <SelectItem value="glass">Glassmorphic Blur</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-3">
+              <Label htmlFor="kioskSponsorBannerStyleBranding" className="text-xs font-bold text-muted-foreground uppercase tracking-widest block">
+                Visual Theme / Banner Style
+              </Label>
+              <Select
+                value={settings.kioskSponsorBannerStyle || 'primary'}
+                onValueChange={(val: any) => updateSettings({ kioskSponsorBannerStyle: val })}
+              >
+                <SelectTrigger className="rounded-xl">
+                  <SelectValue placeholder="Style" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="primary">Primary Brand Color</SelectItem>
+                  <SelectItem value="subtle">Subtle Slate</SelectItem>
+                  <SelectItem value="neon_gold">Neon Gold</SelectItem>
+                  <SelectItem value="electric">Electric Blue</SelectItem>
+                  <SelectItem value="gradient">Hyper Gradient</SelectItem>
+                  <SelectItem value="glass">Glassmorphic Blur</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-              <div className="space-y-3">
-                <Label htmlFor="kioskSponsorSpeedBranding" className="text-xs font-bold text-muted-foreground uppercase tracking-widest block">
-                  Scroll Speed
-                </Label>
-                <Select
-                  value={settings.kioskSponsorSpeed || 'normal'}
-                  onValueChange={(val: any) => updateSettings({ kioskSponsorSpeed: val })}
-                >
-                  <SelectTrigger className="rounded-xl">
-                    <SelectValue placeholder="Speed" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="slow">Slow</SelectItem>
-                    <SelectItem value="normal">Normal</SelectItem>
-                    <SelectItem value="fast">Fast</SelectItem>
-                    <SelectItem value="very_fast">Very Fast</SelectItem>
-                    <SelectItem value="static">Static (Fixed Banner)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-3">
+              <Label htmlFor="kioskSponsorSpeedBranding" className="text-xs font-bold text-muted-foreground uppercase tracking-widest block">
+                Scroll Speed
+              </Label>
+              <Select
+                value={settings.kioskSponsorSpeed || 'normal'}
+                onValueChange={(val: any) => updateSettings({ kioskSponsorSpeed: val })}
+              >
+                <SelectTrigger className="rounded-xl">
+                  <SelectValue placeholder="Speed" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="slow">Slow</SelectItem>
+                  <SelectItem value="normal">Normal</SelectItem>
+                  <SelectItem value="fast">Fast</SelectItem>
+                  <SelectItem value="very_fast">Very Fast</SelectItem>
+                  <SelectItem value="static">Static (Fixed Banner)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-              <div className="space-y-3">
-                <Label htmlFor="kioskSponsorPositionBranding" className="text-xs font-bold text-muted-foreground uppercase tracking-widest block">
-                  Banner Position
-                </Label>
-                <Select
-                  value={settings.kioskSponsorPosition || 'bottom'}
-                  onValueChange={(val: any) => updateSettings({ kioskSponsorPosition: val })}
-                >
-                  <SelectTrigger className="rounded-xl">
-                    <SelectValue placeholder="Position" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="bottom">Bottom of screen</SelectItem>
-                    <SelectItem value="top">Top of screen</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-3">
+              <Label htmlFor="kioskSponsorPositionBranding" className="text-xs font-bold text-muted-foreground uppercase tracking-widest block">
+                Banner Position
+              </Label>
+              <Select
+                value={settings.kioskSponsorPosition || 'bottom'}
+                onValueChange={(val: any) => updateSettings({ kioskSponsorPosition: val })}
+              >
+                <SelectTrigger className="rounded-xl">
+                  <SelectValue placeholder="Position" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="bottom">Bottom of screen</SelectItem>
+                  <SelectItem value="top">Top of screen</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-              <div className="space-y-3">
-                <Label htmlFor="kioskSponsorIconBranding" className="text-xs font-bold text-muted-foreground uppercase tracking-widest block">
-                  Emoji / Icon Prefix
-                </Label>
-                <Input
-                  id="kioskSponsorIconBranding"
-                  placeholder="e.g. 🎉, 🌟, 💡, 🏫, 🍎, etc."
-                  value={settings.kioskSponsorIcon || ''}
-                  onChange={(e) => updateSettings({ kioskSponsorIcon: e.target.value })}
-                  className="text-sm rounded-xl"
-                  maxLength={10}
-                />
-              </div>
+            <div className="space-y-3">
+              <Label htmlFor="kioskSponsorIconBranding" className="text-xs font-bold text-muted-foreground uppercase tracking-widest block">
+                Emoji / Icon Prefix
+              </Label>
+              <Input
+                id="kioskSponsorIconBranding"
+                placeholder="e.g. 🎉, 🌟, 💡, 🏫, 🍎, etc."
+                value={settings.kioskSponsorIcon || ''}
+                onChange={(e) => updateSettings({ kioskSponsorIcon: e.target.value })}
+                className="text-sm rounded-xl"
+                maxLength={10}
+              />
+            </div>
+          </div>
 
-              {/* Sponsor Schedules Sub-Section */}
-              <div className="col-span-2 pt-6 border-t border-border/40 space-y-6">
-                <div>
-                  <h4 className="text-sm font-bold text-foreground">Future & Date-Specific Sponsors</h4>
+          {/* Sponsor Schedules Sub-Section - Always visible regardless of default settings */}
+          <div className="col-span-2 pt-6 border-t border-border/40 space-y-6">
+            <div>
+              <h4 className="text-sm font-bold text-foreground">Future & Date-Specific Sponsors</h4>
                   <p className="text-xs text-muted-foreground">Schedule upcoming sponsors or special announcement messages for specific days.</p>
                 </div>
 
@@ -807,8 +833,6 @@ export function AdminBrandingTab({
                   )}
                 </div>
               </div>
-            </div>
-          )}
         </CardContent>
       </Card>
     </div>

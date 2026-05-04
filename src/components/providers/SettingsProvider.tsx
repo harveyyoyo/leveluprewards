@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useAuth, type LoginState } from './AuthProvider';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -95,7 +95,6 @@ interface Settings {
     // Workflow
     enableTeacherBudgets: boolean;
     enableHomework: boolean;
-    enableLibrary: boolean;
     legacyMode: boolean;
     enableAnimatedBackground: boolean;
     calmMode?: boolean;
@@ -135,7 +134,7 @@ interface Settings {
         position?: 'top' | 'bottom';
         icon?: string;
     }[];
-    enableDoubleOrNothing: boolean;
+
     // Bulletin Board
     bulletinEnabled?: boolean;
     bulletinTitle?: string;
@@ -237,7 +236,6 @@ const defaultSettings: Settings = {
     showIntroWizard: false,
     enableTeacherBudgets: false,
     enableHomework: false,
-    enableLibrary: false,
     legacyMode: false,
     enableAnimatedBackground: true,
     calmMode: false,
@@ -268,7 +266,7 @@ const defaultSettings: Settings = {
     kioskSponsorBannerStyle: 'primary',
     kioskSponsorIcon: '🎉',
     kioskSponsorSchedules: [],
-    enableDoubleOrNothing: false,
+
     bulletinEnabled: true,
     bulletinTitle: 'School Bulletin Board',
     bulletinTheme: 'default',
@@ -325,6 +323,28 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         return schoolPublicDocRef(firestore, sid);
     }, [firestore, schoolId, isStaff]);
     const { data: schoolData } = useDoc<SchoolPlanConfig & { appSettings?: Partial<Settings> }>(schoolDocRef);
+
+    /** Stable deps so unrelated school doc fields do not re-run the hydration merge every snapshot. */
+    const stableRemoteAppSettingsJson = useMemo(() => {
+        const rs = schoolData?.appSettings;
+        if (!rs || typeof rs !== 'object') return null;
+        try {
+            return JSON.stringify(rs);
+        } catch {
+            return null;
+        }
+    }, [schoolData?.appSettings]);
+
+    const stableFeatureDefaultsJson = useMemo(() => {
+        const fd = schoolData?.featureSettingsDefaults;
+        if (!fd || typeof fd !== 'object') return null;
+        try {
+            return JSON.stringify(fd);
+        } catch {
+            return null;
+        }
+    }, [schoolData?.featureSettingsDefaults]);
+
     const planTier = useMemo(
         () => (schoolId ? normalizePlan(schoolData?.plan) : 'enterprise'),
         [schoolId, schoolData],
@@ -362,6 +382,14 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         return next;
     }, [isAllowed]);
 
+    const latestForFirestoreRef = useRef<Settings | null>(null);
+    const lastScheduledFlushSchoolIdRef = useRef<string | null>(null);
+    const firestoreFlushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const firestoreRef = useRef(firestore);
+    firestoreRef.current = firestore;
+    const loginStateRef = useRef(loginState);
+    loginStateRef.current = loginState;
+
     useEffect(() => {
         if (!isInitialized) {
             return; // Wait for auth provider to be ready
@@ -378,9 +406,18 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                 localStorage.removeItem(legacySchoolKey);
             }
         }
-        const remoteSettings = schoolId && schoolData?.appSettings && typeof schoolData.appSettings === 'object'
-            ? schoolData.appSettings
-            : null;
+        const remoteSettings =
+            schoolId && stableRemoteAppSettingsJson
+                ? (JSON.parse(stableRemoteAppSettingsJson) as Partial<Settings>)
+                : null;
+        let featureDefaultsFromRemote: Partial<Settings> = {};
+        if (stableFeatureDefaultsJson) {
+            try {
+                featureDefaultsFromRemote = JSON.parse(stableFeatureDefaultsJson) as Partial<Settings>;
+            } catch {
+                featureDefaultsFromRemote = {};
+            }
+        }
 
         if (remoteSettings || saved) {
             try {
@@ -406,19 +443,22 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                 // Demo school: production defaults are applied only on first-run (see no-saved-settings branch below).
                 const nextSettings = applyEntitlements({ 
                     ...defaultSettings, 
-                    ...(schoolData?.featureSettingsDefaults ?? {}),
+                    ...featureDefaultsFromRemote,
                     ...parsed 
                 });
                 setSettings(nextSettings);
                 localStorage.setItem(settingsKey, JSON.stringify(nextSettings));
             } catch (e) {
-                setSettings(applyEntitlements({ ...defaultSettings, ...(schoolData?.featureSettingsDefaults ?? {}) }));
+                setSettings(applyEntitlements({ 
+                    ...defaultSettings, 
+                    ...featureDefaultsFromRemote,
+                }));
             }
         } else {
             // No settings for this school, use defaults and show the intro wizard once.
             const initialSettings: Settings = {
                 ...defaultSettings,
-                ...(schoolData?.featureSettingsDefaults ?? {}),
+                ...featureDefaultsFromRemote,
                 showIntroWizard: !!schoolId,
                 // Demo school: apply sky theme and sound to match production
                 ...(schoolId === 'schoolabc' ? { 
@@ -434,7 +474,49 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             setSettings(applyEntitlements(initialSettings));
         }
         setIsLoaded(true);
-    }, [schoolId, isInitialized, isMobile, applyEntitlements, schoolData?.appSettings, schoolData?.featureSettingsDefaults, loginState]);
+    }, [schoolId, isInitialized, isMobile, applyEntitlements, stableRemoteAppSettingsJson, stableFeatureDefaultsJson, loginState]);
+
+    const flushAppSettingsToFirestore = useCallback((next: Settings, sid: string) => {
+        const fs = firestoreRef.current;
+        const ls = loginStateRef.current;
+        if (!sid || !fs || (ls !== 'admin' && ls !== 'developer')) return;
+        const schoolWritePayload = removeUndefinedDeep({
+            appSettings: next,
+            updatedAt: Date.now(),
+        }) as DocumentData;
+        void setDoc(doc(fs, 'schools', sid), schoolWritePayload, { merge: true }).catch((error) => {
+            console.error('Failed to save school settings', error);
+        });
+        const publicWritePayload = removeUndefinedDeep({
+            appSettings: next,
+            active: true,
+            updatedAt: Date.now(),
+        }) as DocumentData;
+        void setDoc(schoolPublicDocRef(fs, sid), publicWritePayload, { merge: true }).catch((error) => {
+            console.error('Failed to save public school settings mirror', error);
+        });
+    }, []);
+
+    useEffect(() => {
+        const capturedSid = schoolId?.trim().toLowerCase() ?? '';
+        return () => {
+            if (firestoreFlushTimerRef.current) {
+                clearTimeout(firestoreFlushTimerRef.current);
+                firestoreFlushTimerRef.current = null;
+            }
+            const pending = latestForFirestoreRef.current;
+            const flushSid = lastScheduledFlushSchoolIdRef.current;
+            const ls = loginStateRef.current;
+            if (
+                pending &&
+                flushSid &&
+                flushSid === capturedSid &&
+                (ls === 'admin' || ls === 'developer')
+            ) {
+                flushAppSettingsToFirestore(pending, flushSid);
+            }
+        };
+    }, [schoolId, loginState, flushAppSettingsToFirestore]);
 
     const updateSettings = (updates: Partial<Settings>) => {
         const settingsKey = getLocalArcadeSettingsKey(schoolId, loginState);
@@ -454,23 +536,22 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             const next = applyEntitlements({ ...prev, ...allowedUpdates });
 
             localStorage.setItem(settingsKey, JSON.stringify(next));
+            latestForFirestoreRef.current = next;
+
             if (schoolId && firestore && (loginState === 'admin' || loginState === 'developer')) {
-                const sid = schoolId.trim().toLowerCase();
-                const schoolWritePayload = removeUndefinedDeep({
-                    appSettings: next,
-                    updatedAt: Date.now(),
-                }) as DocumentData;
-                void setDoc(doc(firestore, 'schools', sid), schoolWritePayload, { merge: true }).catch((error) => {
-                    console.error('Failed to save school settings', error);
-                });
-                const publicWritePayload = removeUndefinedDeep({
-                    appSettings: next,
-                    active: true,
-                    updatedAt: Date.now(),
-                }) as DocumentData;
-                void setDoc(schoolPublicDocRef(firestore, sid), publicWritePayload, { merge: true }).catch((error) => {
-                    console.error('Failed to save public school settings mirror', error);
-                });
+                const flushSid = schoolId.trim().toLowerCase();
+                lastScheduledFlushSchoolIdRef.current = flushSid;
+                if (firestoreFlushTimerRef.current) {
+                    clearTimeout(firestoreFlushTimerRef.current);
+                }
+                firestoreFlushTimerRef.current = setTimeout(() => {
+                    firestoreFlushTimerRef.current = null;
+                    const payload = latestForFirestoreRef.current;
+                    const scheduledSid = lastScheduledFlushSchoolIdRef.current;
+                    if (payload && scheduledSid) {
+                        flushAppSettingsToFirestore(payload, scheduledSid);
+                    }
+                }, 450);
             }
 
             // Dispatch a custom event so non-react code or other tabs can listen if needed
