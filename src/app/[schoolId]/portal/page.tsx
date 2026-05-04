@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
 import { LevelUpKioskLogo } from '@/components/LevelUpKioskLogo';
-import { GraduationCap, Printer, UserCog, Trophy, ChevronRight, Loader2, Home, Megaphone } from 'lucide-react';
+import { GraduationCap, Printer, UserCog, Trophy, ChevronRight, Loader2, Megaphone } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { cn } from '@/lib/utils';
@@ -20,8 +20,6 @@ type PortalArea = {
     title: string;
     description: string;
     icon: ComponentType<{ className?: string; style?: CSSProperties }>;
-    disabled?: boolean;
-    status?: string;
 };
 
 /** In student (kiosk) login, idle on the hub → default to the badge / redeem flow. */
@@ -90,7 +88,6 @@ export default function PortalPage() {
             ? [{ id: 'print', href: `/${schoolId}/teacher`, title: 'Teacher & Faculty Portal', description: 'Sign in for teacher tools, coupon printing, or the prize desk.', icon: Printer }]
             : []),
         { id: 'redeem', href: `/${schoolId}/student`, title: 'Student Kiosk', description: 'Scan your card to redeem coupon codes, view points, and open the prize shop.', icon: GraduationCap },
-        ...(isStaff && settings.enableStudentPortal ? [{ id: 'student-home', href: `/${schoolId}/student-home`, title: 'Student Home Portal', description: 'Home access is being prepared and is not available yet.', icon: Home, disabled: true, status: 'Coming soon' }] : []),
     ];
 
     return (
@@ -147,7 +144,6 @@ export default function PortalPage() {
                 <div className="flex flex-col gap-4">
                     {portals.map((area, index) => {
                         const Icon = area.icon;
-                        const isDisabled = !!area.disabled;
                         const rainbowColor =
                             settings.colorScheme === 'default'
                                 ? 'hsl(var(--primary))'
@@ -157,11 +153,11 @@ export default function PortalPage() {
                                     initial={{ opacity: 0, x: -50 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ duration: 0.5, delay: 0.15 + index * 0.1 }}
-                                    onMouseEnter={() => !isDisabled && setHoveredIndex(area.id)}
-                                    onMouseLeave={() => !isDisabled && setHoveredIndex(null)}
+                                    onMouseEnter={() => setHoveredIndex(area.id)}
+                                    onMouseLeave={() => setHoveredIndex(null)}
                                     className={cn(
                                         "relative flex w-full items-center justify-between rounded-2xl border-2 px-6 py-4 md:px-8 md:py-5 text-left transition-all duration-300",
-                                        isDisabled ? "cursor-not-allowed opacity-70" : "hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1",
+                                        "hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1",
                                         animBackdrop
                                             ? "border-border/50 bg-card/90 backdrop-blur-md shadow-sm hover:bg-card hover:border-border"
                                             : "border-transparent bg-card/40 backdrop-blur-sm hover:bg-card",
@@ -181,35 +177,26 @@ export default function PortalPage() {
                                         <div className={cn(
                                             "w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center transition-all duration-300 border-2 border-border/50 shadow-md",
                                             animBackdrop ? "bg-card/90" : "bg-card/70",
-                                            !isDisabled && "group-hover:scale-105 group-hover:border-primary/20 group-hover:shadow-lg"
+                                            "group-hover:scale-105 group-hover:border-primary/20 group-hover:shadow-lg"
                                         )}>
                                             <Icon className="w-6 h-6 md:w-7 md:h-7" style={{ color: rainbowColor }} />
                                         </div>
                                         <div className="min-w-0">
-                                            <div className="flex flex-wrap items-center gap-2">
-                                                <h3 className="text-lg md:text-xl font-black tracking-tight leading-tight" style={{ color: rainbowColor }}>
-                                                  {area.title}
-                                                </h3>
-                                                {area.status && (
-                                                    <span className="rounded-full border border-border/70 bg-muted/60 px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                                                        {area.status}
-                                                    </span>
-                                                )}
-                                            </div>
+                                            <h3 className="text-lg md:text-xl font-black tracking-tight leading-tight" style={{ color: rainbowColor }}>
+                                                {area.title}
+                                            </h3>
                                             <p className="text-sm text-muted-foreground mt-1 font-medium leading-normal">{area.description}</p>
                                         </div>
                                     </div>
 
                                     {/* Right arrow — always visible, darker on hover (touch-friendly) */}
-                                    {!isDisabled && (
-                                        <motion.div animate={{ x: hoveredIndex === area.id ? 0 : -4, opacity: hoveredIndex === area.id ? 1 : 0.4 }} transition={{ duration: 0.2 }}>
-                                            <ChevronRight className="h-7 w-7 text-muted-foreground" aria-hidden="true" />
-                                        </motion.div>
-                                    )}
+                                    <motion.div animate={{ x: hoveredIndex === area.id ? 0 : -4, opacity: hoveredIndex === area.id ? 1 : 0.4 }} transition={{ duration: 0.2 }}>
+                                        <ChevronRight className="h-7 w-7 text-muted-foreground" aria-hidden="true" />
+                                    </motion.div>
 
                                     {/* Background Glow - Increased opacity on hover */}
                                     <AnimatePresence>
-                                        {hoveredIndex === area.id && !isDisabled && (
+                                        {hoveredIndex === area.id && (
                                             <motion.div
                                               initial={{ opacity: 0 }}
                                               animate={{ opacity: 0.08 }}
@@ -222,14 +209,6 @@ export default function PortalPage() {
                                 </motion.div>
                         );
 
-                        if (isDisabled) {
-                            return (
-                                <div key={area.id} className="block rounded-2xl no-underline" aria-disabled="true">
-                                    {portalCard}
-                                </div>
-                            );
-                        }
-
                         return (
                             <Link
                                 key={area.id}
@@ -239,7 +218,7 @@ export default function PortalPage() {
                             >
                                 {portalCard}
                             </Link>
-                        )
+                        );
                     })}
                 </div>
 
