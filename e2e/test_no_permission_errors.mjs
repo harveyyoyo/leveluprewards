@@ -1,6 +1,8 @@
 import { chromium } from '@playwright/test';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
+const DEMO_SCHOOL_ID = (process.env.DEMO_SCHOOL_ID || 'schoolabc').trim().toLowerCase();
+const DEMO_SCHOOL_PASSCODE = (process.env.DEMO_SCHOOL_PASSCODE || '1234').trim();
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
@@ -55,16 +57,13 @@ function isPermissionDeniedMessage(text) {
     console.log('Logging into demo School ABC...');
     await page.goto(`${BASE_URL}/login`, { waitUntil: 'domcontentloaded' });
 
-    const demoToggle = page.locator('summary').filter({ hasText: /Try a demo school/i });
-    await demoToggle.waitFor({ timeout: 20000 });
-    await demoToggle.click();
+    await page.locator('#schoolId').waitFor({ timeout: 20000 });
+    await page.locator('#schoolId').fill(DEMO_SCHOOL_ID);
+    await page.locator('#passcode').fill(DEMO_SCHOOL_PASSCODE);
+    await page.getByRole('button', { name: /Continue/i }).click({ timeout: 20000 });
 
-    const schoolAbcButton = page.getByRole('button', { name: /Sign in to demo school: School ABC/i });
-    await schoolAbcButton.waitFor({ timeout: 20000 });
-    await schoolAbcButton.click({ timeout: 20000 });
-
-    await page.waitForFunction(() => window.location.pathname.endsWith('/sign-in'), { timeout: 20000 });
-    const schoolId = 'schoolabc';
+    await page.waitForFunction(() => window.location.pathname.endsWith('/sign-in'), { timeout: 30000 });
+    const schoolId = DEMO_SCHOOL_ID;
 
     const authenticatedPaths = [
       `/${schoolId}/portal`,
