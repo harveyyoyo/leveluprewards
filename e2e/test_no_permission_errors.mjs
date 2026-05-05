@@ -55,7 +55,7 @@ function isPermissionDeniedMessage(text) {
     console.log('Logging into demo School ABC...');
     await page.goto(`${BASE_URL}/login`, { waitUntil: 'domcontentloaded' });
 
-    const demoToggle = page.getByRole('button', { name: /Try a demo school/i });
+    const demoToggle = page.locator('summary').filter({ hasText: /Try a demo school/i });
     await demoToggle.waitFor({ timeout: 20000 });
     await demoToggle.click();
 
