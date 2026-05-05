@@ -11,7 +11,7 @@ var __rest = (this && this.__rest) || function (s, e) {
     return t;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onAttendanceLogCreated = exports.onStudentActivityCreated = void 0;
+exports.onAttendanceLogCreated = exports.onPrizeUpdated = exports.onStudentActivityCreated = void 0;
 const functions = require("firebase-functions/v1");
 const admin = require("firebase-admin");
 const crypto = require("crypto");
@@ -2046,6 +2046,54 @@ function queueContactAlerts(args) {
         }
     }
 }
+function numericOrNull(v) {
+    if (typeof v !== "number" || !Number.isFinite(v))
+        return null;
+    return v;
+}
+async function queueStaffInventoryAlerts(args) {
+    const { db, schoolId, subject, message, html, fromEmail, whatsappEnabled } = args;
+    const alerts = [];
+    const [teachersSnap, staffSnap] = await Promise.all([
+        db.collection("schools").doc(schoolId).collection("teachers").get(),
+        db.collection("schools").doc(schoolId).collection("staffAccounts").get(),
+    ]);
+    for (const d of teachersSnap.docs) {
+        const data = d.data();
+        const email = (0, crypto_1.decryptField)(data === null || data === void 0 ? void 0 : data.email);
+        const phone = (0, crypto_1.decryptField)(data === null || data === void 0 ? void 0 : data.phone);
+        queueContactAlerts({
+            alerts,
+            db,
+            email,
+            phone: whatsappEnabled ? phone : undefined,
+            subject,
+            message,
+            html,
+            fromEmail,
+            schoolId,
+            whatsappEnabled,
+        });
+    }
+    for (const d of staffSnap.docs) {
+        const data = d.data();
+        const email = (0, crypto_1.decryptField)(data === null || data === void 0 ? void 0 : data.email);
+        const phone = (0, crypto_1.decryptField)(data === null || data === void 0 ? void 0 : data.phone);
+        queueContactAlerts({
+            alerts,
+            db,
+            email,
+            phone: whatsappEnabled ? phone : undefined,
+            subject,
+            message,
+            html,
+            fromEmail,
+            schoolId,
+            whatsappEnabled,
+        });
+    }
+    await Promise.all(alerts);
+}
 /** Triggered when a student earns points or redeems a prize. */
 exports.onStudentActivityCreated = functions.firestore
     .document("schools/{schoolId}/students/{studentId}/activities/{activityId}")
@@ -2136,6 +2184,111 @@ exports.onStudentActivityCreated = functions.firestore
         }
     }
     await Promise.all(alerts);
+});
+/**
+ * Triggered when a prize is edited or redeemed (stockCount changes).
+ * Sends staff alerts when stock is low or the shop becomes empty.
+ */
+exports.onPrizeUpdated = functions.firestore
+    .document("schools/{schoolId}/prizes/{prizeId}")
+    .onUpdate(async (change, context) => {
+    var _a, _b;
+    const { schoolId } = context.params;
+    const before = change.before.data();
+    const after = change.after.data();
+    if (!after)
+        return;
+    const db = admin.firestore();
+    const schoolSnap = await db.collection("schools").doc(schoolId).get();
+    const settings = (_a = schoolSnap.data()) === null || _a === void 0 ? void 0 : _a.appSettings;
+    if (!(settings === null || settings === void 0 ? void 0 : settings.enableNotifications))
+        return;
+    if (!(settings === null || settings === void 0 ? void 0 : settings.notificationStaffAlertsEnabled))
+        return;
+    if (!(settings === null || settings === void 0 ? void 0 : settings.notificationPrizeInventoryEnabled))
+        return;
+    const schoolName = ((_b = schoolSnap.data()) === null || _b === void 0 ? void 0 : _b.name) || "School";
+    const fromEmail = `"${schoolName} Alerts" <alerts@levelup-edu.com>`;
+    const whatsappEnabled = !!settings.notificationWhatsAppEnabled;
+    const afterCount = numericOrNull(after.stockCount);
+    const beforeCount = numericOrNull(before === null || before === void 0 ? void 0 : before.stockCount);
+    const thresholdRaw = numericOrNull(settings.notificationPrizeLowStockThreshold);
+    const threshold = thresholdRaw === null ? 5 : Math.max(0, Math.floor(thresholdRaw));
+    const name = String(after.name || "Prize").trim() || "Prize";
+    const inStock = after.inStock !== false;
+    const alertsToSend = [];
+    // Low stock / out of stock: only when a finite count exists and crosses into threshold.
+    if (afterCount !== null && inStock) {
+        const crossedIntoLow = afterCount <= threshold &&
+            (beforeCount === null || beforeCount > threshold) &&
+            (beforeCount === null || beforeCount !== afterCount);
+        const crossedIntoZero = afterCount === 0 && (beforeCount === null || beforeCount > 0) && (beforeCount === null || beforeCount !== afterCount);
+        if (crossedIntoLow || crossedIntoZero) {
+            const subject = crossedIntoZero ? `Inventory alert: Out of stock (${name})` : `Inventory alert: Low stock (${name})`;
+            const message = crossedIntoZero
+                ? `Rewards shop inventory alert: "${name}" is out of stock (0 left).`
+                : `Rewards shop inventory alert: "${name}" is low (only ${afterCount} left).`;
+            const html = buildCelebrationEmailHtml({
+                title: crossedIntoZero ? "Out of stock" : "Low stock",
+                subtitle: "Rewards shop inventory",
+                message,
+                studentName: schoolName,
+                accent: crossedIntoZero ? "#ef4444" : "#f59e0b",
+                icon: crossedIntoZero ? "!" : "i",
+                showArtwork: false,
+            });
+            alertsToSend.push(queueStaffInventoryAlerts({
+                db,
+                schoolId,
+                subject,
+                message,
+                html,
+                fromEmail,
+                whatsappEnabled,
+            }));
+        }
+    }
+    // Shop empty: only when enabled, and rate-limited.
+    if (settings.notificationPrizeEmptyShopEnabled) {
+        const lastEmptyAt = numericOrNull(settings.inventoryLastEmptyShopAlertAt);
+        const now = Date.now();
+        const cooldownMs = 6 * 60 * 60 * 1000; // 6 hours
+        const cooldownOk = lastEmptyAt === null ? true : now - lastEmptyAt > cooldownMs;
+        if (cooldownOk) {
+            const snap = await db.collection("schools").doc(schoolId).collection("prizes").get();
+            const prizes = snap.docs.map((d) => d.data());
+            const available = prizes.some((p) => {
+                const listed = (p === null || p === void 0 ? void 0 : p.inStock) !== false;
+                const c = numericOrNull(p === null || p === void 0 ? void 0 : p.stockCount);
+                const countOk = c === null ? true : c > 0;
+                return listed && countOk;
+            });
+            if (!available) {
+                const subject = "Inventory alert: Rewards shop is empty";
+                const message = `Rewards shop inventory alert: there are currently no prizes available to redeem (all are out of stock or not listed).`;
+                const html = buildCelebrationEmailHtml({
+                    title: "Rewards shop empty",
+                    subtitle: "Rewards shop inventory",
+                    message,
+                    studentName: schoolName,
+                    accent: "#f97316",
+                    icon: "!",
+                    showArtwork: false,
+                });
+                alertsToSend.push(queueStaffInventoryAlerts({
+                    db,
+                    schoolId,
+                    subject,
+                    message,
+                    html,
+                    fromEmail,
+                    whatsappEnabled,
+                }));
+                await db.collection("schools").doc(schoolId).set({ appSettings: { inventoryLastEmptyShopAlertAt: now } }, { merge: true });
+            }
+        }
+    }
+    await Promise.all(alertsToSend);
 });
 /** Triggered when a student signs in via the attendance kiosk. */
 exports.onAttendanceLogCreated = functions.firestore
