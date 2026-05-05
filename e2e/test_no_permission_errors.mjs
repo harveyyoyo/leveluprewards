@@ -55,19 +55,16 @@ function isPermissionDeniedMessage(text) {
     console.log('Logging into demo School ABC...');
     await page.goto(`${BASE_URL}/login`, { waitUntil: 'domcontentloaded' });
 
-    let schoolAbcButton = page.getByRole('button', { name: /School ABC/i });
-    if (!(await schoolAbcButton.isVisible({ timeout: 5000 }).catch(() => false))) {
-      const demoDetails = page.locator('summary').filter({ hasText: /Try a demo school/i });
-      if (await demoDetails.isVisible({ timeout: 5000 }).catch(() => false)) {
-        await demoDetails.click();
-      }
-      schoolAbcButton = page.getByRole('button', { name: /School ABC/i });
-    }
+    const demoToggle = page.getByRole('button', { name: /Try a demo school/i });
+    await demoToggle.waitFor({ timeout: 20000 });
+    await demoToggle.click();
 
-    await schoolAbcButton.click({ timeout: 10000 });
-    await page.waitForFunction(() => window.location.pathname.endsWith('/portal'), { timeout: 15000 });
-    const schoolMatch = new URL(page.url()).pathname.match(/^\/([^/]+)\/portal$/);
-    const schoolId = schoolMatch?.[1] || 'schoolabc';
+    const schoolAbcButton = page.getByRole('button', { name: /Sign in to demo school: School ABC/i });
+    await schoolAbcButton.waitFor({ timeout: 20000 });
+    await schoolAbcButton.click({ timeout: 20000 });
+
+    await page.waitForFunction(() => window.location.pathname.endsWith('/sign-in'), { timeout: 20000 });
+    const schoolId = 'schoolabc';
 
     const authenticatedPaths = [
       `/${schoolId}/portal`,
