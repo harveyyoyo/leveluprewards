@@ -10,6 +10,11 @@
 - Cloud Data Sync: Automatically synchronize school data with Firebase Firestore to ensure data consistency across devices.
 - Data Import/Export: Allow admin users to import/export CSV and JSON data. Teachers, categories, students data will be imported by uploading the corresponding files.
 
+## Operational Notes:
+
+- Firestore permission guardrails are documented in [firestore-permission-guardrails.md](./firestore-permission-guardrails.md). Any new frontend Firestore collection path needs matching `firestore.rules` coverage and should pass `npm run check:firestore-rules`.
+- Agent scratch and handoff notes should stay UTF-8; see [agent-file-format-notes.md](./agent-file-format-notes.md).
+
 ## Style Guidelines:
 
 - Primary color: Light indigo (#7986CB) for a scholastic feel.

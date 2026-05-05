@@ -41,7 +41,7 @@ export function AdminLibraryTab({
         </div>
       </CardHeader>
       <CardContent>
-        <ScrollArea className="h-[calc(100vh-22rem)] max-h-[420px] min-h-[250px] border rounded-lg bg-background/50 p-3">
+        <ScrollArea className="h-[calc(100vh-22rem)] min-h-[250px] border rounded-lg bg-background/50 p-3">
           {(!libraryItems || libraryItems.length === 0) ? (
             <EmptyState
               icon={Book}
@@ -56,7 +56,18 @@ export function AdminLibraryTab({
                   key={item.id}
                   className="flex justify-between items-center bg-card p-4 rounded-xl border transition-colors"
                 >
-                  <div className="flex items-center gap-4">
+                  <div className="flex shrink-0 items-center">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+                      onClick={() => onEditLibraryItem(item)}
+                      title="Edit item"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="flex items-center gap-4 flex-1">
                     <div className="flex flex-col">
                       <p className="font-bold text-base">{item.name}</p>
                       <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground font-medium">
@@ -85,9 +96,7 @@ export function AdminLibraryTab({
                         Return
                       </Button>
                     )}
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEditLibraryItem(item)}>
-                      <Edit className="w-4 h-4" />
-                    </Button>
+
                     <Button
                       variant="ghost"
                       size="icon"

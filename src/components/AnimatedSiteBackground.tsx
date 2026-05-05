@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useLayoutEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Award,
@@ -936,9 +936,34 @@ export function AnimatedSiteBackground() {
     sanitizeHiddenAnimatedBackgroundIds(settings.hiddenAnimatedBackgroundIds),
   );
   const [host, setHost] = useState<HTMLElement | null>(null);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const shouldRender = active && !prefersReducedMotion;
+
+  const shouldPauseAnimations = useMemo(() => {
+    // Pause when:
+    // - tab hidden (handled by visibility effect below)
+    // - reduced motion requested
+    // - backdrop is toggled off (belt-and-suspenders, still pauses any lingering CSS)
+    return prefersReducedMotion || !active;
+  }, [prefersReducedMotion, active]);
 
   useLayoutEffect(() => {
     setHost(document.getElementById('arcade-backdrop-host'));
+  }, []);
+
+  // Respect OS-level reduced-motion preference.
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const onChange = () => setPrefersReducedMotion(!!mq.matches);
+    onChange();
+    if (mq.addEventListener) {
+      mq.addEventListener('change', onChange);
+      return () => mq.removeEventListener('change', onChange);
+    }
+    // Safari < 14
+    mq.addListener(onChange);
+    return () => mq.removeListener(onChange);
   }, []);
 
   // Pause the heavy decorative animations while the tab is hidden. CSS
@@ -962,7 +987,18 @@ export function AnimatedSiteBackground() {
     };
   }, [host]);
 
-  if (!active || !host) return null;
+  // Hard-stop animation ticking when backdrop is off / reduced-motion.
+  useEffect(() => {
+    if (!host) return;
+    host.classList.toggle('arcade-backdrop-off', !active || prefersReducedMotion);
+    host.classList.toggle('arcade-backdrop-paused', shouldPauseAnimations);
+    return () => {
+      host.classList.remove('arcade-backdrop-off');
+      if (!document.hidden) host.classList.remove('arcade-backdrop-paused');
+    };
+  }, [host, active, prefersReducedMotion, shouldPauseAnimations]);
+
+  if (!shouldRender || !host) return null;
 
   return createPortal(
     <div

@@ -99,13 +99,24 @@ export function AdminStaffAccountsTab({
         </Button>
       </CardHeader>
       <CardContent>
-        <ul className="space-y-2 h-[calc(100vh-22rem)] max-h-[420px] min-h-[250px] overflow-y-auto pr-1">
+        <ul className="space-y-2 h-[calc(100vh-22rem)] min-h-[250px] overflow-y-auto pr-1">
           {staffAccounts?.map((a) => (
             <li
               key={a.id}
               className="flex justify-between items-center bg-secondary/20 p-4 rounded-2xl border hover:border-primary/30 transition-colors"
             >
-              <div className="flex items-center gap-3">
+              <div className="flex shrink-0 items-center">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+                  onClick={() => openEdit(a)}
+                  title="Edit staff account"
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="flex items-center gap-3 flex-1">
                 <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center text-primary">
                   {a.role === 'secretary' ? <Printer className="w-5 h-5" /> : <Gift className="w-5 h-5" />}
                 </div>
@@ -118,9 +129,7 @@ export function AdminStaffAccountsTab({
                 </div>
               </div>
               <div className="flex gap-1">
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(a)}>
-                  <Edit className="h-4 w-4" />
-                </Button>
+
                 <Button
                   variant="ghost"
                   size="icon"

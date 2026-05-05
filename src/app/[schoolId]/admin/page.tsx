@@ -18,6 +18,7 @@ import {
    User, Ticket, Upload, Download, Activity, Zap, Clock, Palette, Wand2, TableProperties,
    FileText, Bell, Target, Megaphone,
  } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -130,10 +131,6 @@ const AdminCouponsTab = dynamic(
 );
 const AdminLibraryTab = dynamic(
   () => import('./sections/AdminLibraryTab').then((m) => m.AdminLibraryTab),
-  { loading: tabLoader, ssr: false },
-);
-const AdminBackupsTab = dynamic(
-  () => import('./sections/AdminBackupsTab').then((m) => m.AdminBackupsTab),
   { loading: tabLoader, ssr: false },
 );
 const AdminAttendanceTab = dynamic(
@@ -262,7 +259,7 @@ function AdminDashboardInner() {
   const {
     schoolId, setCouponsToPrint, deleteStudent,
     addClass, updateClass, deleteClass, deleteCategory, addCategory, updateCategory,
-    devCreateBackup, devRestoreFromBackup, devDownloadBackup, addTeacher, updateTeacher, deleteTeacher,
+    addTeacher, updateTeacher, deleteTeacher,
     addPrize, updatePrize, deletePrize, uploadStudents, uploadClassesFromCsv, uploadTeachersFromCsv, setStudentsToPrint,
     updateStudent,
     achievements, achievementsLoading,
@@ -273,7 +270,9 @@ function AdminDashboardInner() {
     listAttendanceLog,
     getTeacherAttendanceConfig,
     setTeacherAttendanceConfig,
-    listTeacherAttendanceLog
+    listTeacherAttendanceLog,
+    deleteCoupon,
+    deleteCoupons,
   } = useAppContext();
   const functions = useFunctions();
   const { toast } = useToast();
@@ -295,10 +294,9 @@ function AdminDashboardInner() {
     prizes, prizesLoading, prizesError,
     coupons, couponsLoading, couponsError,
     attendancePeriods, attendancePeriodsLoading,
-    backups, backupsLoading, backupsError,
     schoolData, schoolDocRef,
     appConfigGlobal,
-  } = useAdminDashboardData(schoolId);
+  } = useAdminDashboardData(schoolId, settings.payLibrary);
 
   // School logo state + upload/crop/remove pipeline (see hook for details).
   const {
@@ -370,6 +368,19 @@ function AdminDashboardInner() {
   const [isPurgingStudent, setIsPurgingStudent] = useState(false);
   const [showPurgeFlash, setShowPurgeFlash] = useState(false);
 
+  const [activeMainTab, setActiveMainTab] = useState('students');
+
+  useEffect(() => {
+    const basicTabs = ['students', 'classes', 'teachers', 'prizes', 'categories'];
+    if (!settings.expertMode && !basicTabs.includes(activeMainTab)) {
+      // Delay the switch slightly so the animation has time to start/progress
+      const timer = setTimeout(() => {
+        setActiveMainTab('students');
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [settings.expertMode, activeMainTab]);
+
   const [bulkRosterOpen, setBulkRosterOpen] = useState(false);
   const [isPreviousLogosOpen, setIsPreviousLogosOpen] = useState(false);
   const [isDtcAlertOpen, setIsDtcAlertOpen] = useState(false);
@@ -410,7 +421,7 @@ function AdminDashboardInner() {
     listTeacherAttendanceLog,
   });
 
-  const isDbLoading = studentsLoading || classesLoading || teachersLoading || staffAccountsLoading || categoriesLoading || prizesLoading || couponsLoading || backupsLoading;
+  const isDbLoading = studentsLoading || classesLoading || teachersLoading || staffAccountsLoading || categoriesLoading || prizesLoading || couponsLoading;
 
   const collectionErrors = [
     { name: 'Students', error: studentsError },
@@ -421,7 +432,6 @@ function AdminDashboardInner() {
     { name: 'Prizes', error: prizesError },
     { name: 'Coupons', error: couponsError },
     { name: 'Library', error: libraryError },
-    { name: 'Backups', error: backupsError },
   ].filter(c => c.error);
 
   const getClassName = (classId: string) => {
@@ -575,25 +585,6 @@ function AdminDashboardInner() {
 
   const handleOpenActivityModal = (student: Student) => {
     setActivityStudent(student);
-  };
-
-  const handleCreateBackup = async () => {
-    if (!schoolId) return;
-    await devCreateBackup(schoolId);
-    playSound('success');
-    toast({ title: "Backup Created", description: "A new backup has been saved." });
-  };
-
-  const handleRestoreFromBackup = async (backupId: string) => {
-    if (!schoolId) return;
-    await devRestoreFromBackup(schoolId, backupId);
-    playSound('success');
-    toast({ title: "Restore Complete", description: "Data has been restored from the backup." });
-  };
-
-  const handleDownloadBackup = async (backupId: string) => {
-    if (!schoolId) return;
-    await devDownloadBackup(schoolId, backupId);
   };
 
   const onStudentCsvFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -793,15 +784,21 @@ function AdminDashboardInner() {
               Manage students, classes, prizes, and system settings.
             </p>
           </Helper>
-          <Button
-            type="button"
-            variant="outline"
-            className="rounded-xl shrink-0 font-semibold gap-2"
-            onClick={() => setBulkRosterOpen(true)}
-          >
-            <TableProperties className="w-4 h-4" aria-hidden />
-            Bulk roster setup
-          </Button>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/40 rounded-xl border">
+              <span className="text-[10px] font-black uppercase text-muted-foreground tracking-wider">Expert Mode</span>
+              <Switch checked={settings.expertMode} onCheckedChange={(val) => updateSettings({ expertMode: val })} />
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-xl shrink-0 font-semibold gap-2"
+              onClick={() => setBulkRosterOpen(true)}
+            >
+              <TableProperties className="w-4 h-4" aria-hidden />
+              Bulk roster setup
+            </Button>
+          </div>
         </div>
 
         <BulkRosterSetupDialog
@@ -814,121 +811,104 @@ function AdminDashboardInner() {
           onAiCommitSnapshot={handleAiCommitSnapshot}
         />
 
-        <Tabs key={`${String(settings.enableAchievements)}:${String(settings.enableBadges)}`} defaultValue="students" className="space-y-6">
-          {/*
-            Tabs wrap onto multiple rows when they don't fit on a single line,
-            so every section is always visible without horizontal scrolling.
-          */}
-          <div className="w-full">
-            <TabsList className="bg-muted/50 p-1.5 rounded-2xl flex flex-wrap justify-center border shadow-sm gap-x-0.5 gap-y-1 h-auto w-full"
+        <motion.div layout className="w-full">
+          <Tabs key={`${String(settings.enableAchievements)}:${String(settings.enableBadges)}:${String(settings.enableAdminAnalytics)}:${String(settings.enableClassSignIn)}`} value={activeMainTab} onValueChange={setActiveMainTab} className="space-y-8">
+          <div className="w-full flex flex-col gap-4">
+            <TabsList 
+              className="bg-muted/50 p-1.5 rounded-2xl flex flex-wrap justify-center border shadow-sm gap-x-1 gap-y-1 h-auto w-full max-w-6xl mx-auto"
               style={{ ['--admin-accent' as any]: rainbowForNavId('admin', settings.colorScheme) }}
-              aria-label="Admin sections"
+              aria-label="Admin categories"
             >
-              {settings.enableAdminAnalytics && (
-                <>
-                  <TabsTrigger value="stats" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
-                    <LayoutDashboard className="w-4 h-4" aria-hidden="true" /> Stats
-                  </TabsTrigger>
-                  <span aria-hidden="true" className="self-stretch w-px bg-border/60 mx-1" />
-                </>
-              )}
-              <TabsTrigger value="reports" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
-                <FileText className="w-4 h-4" aria-hidden="true" /> Reports
+              <TabsTrigger value="students" className="rounded-xl px-4 py-2 font-bold flex items-center gap-2 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)] transition-all">
+                <Users className="w-4 h-4" /> Students
               </TabsTrigger>
-              <span aria-hidden="true" className="self-stretch w-px bg-border/60 mx-1" />
-              <TabsTrigger value="students" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
-                <Users className="w-4 h-4" aria-hidden="true" /> Students
+              <TabsTrigger value="classes" className="rounded-xl px-4 py-2 font-bold flex items-center gap-2 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)] transition-all">
+                <BookOpen className="w-4 h-4" /> Classes
               </TabsTrigger>
-              <TabsTrigger value="classes" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
-                <BookOpen className="w-4 h-4" aria-hidden="true" /> Classes
+              <TabsTrigger value="teachers" className="rounded-xl px-4 py-2 font-bold flex items-center gap-2 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)] transition-all">
+                <User className="w-4 h-4" /> Faculty
               </TabsTrigger>
-              <TabsTrigger value="teachers" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
-                <User className="w-4 h-4" aria-hidden="true" /> Staff
+              <TabsTrigger value="prizes" className="rounded-xl px-4 py-2 font-bold flex items-center gap-2 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)] transition-all">
+                <Gift className="w-4 h-4" /> Prizes
               </TabsTrigger>
-              <TabsTrigger value="categories" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
-                <Tag className="w-4 h-4" aria-hidden="true" /> Categories
-              </TabsTrigger>
-
-              <span aria-hidden="true" className="self-stretch w-px bg-border/60 mx-1" />
-
-              <TabsTrigger value="prizes" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
-                        <Gift className="w-4 h-4" aria-hidden="true" /> Rewards Shop
-              </TabsTrigger>
-                            <TabsTrigger value="coupons" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
-                <Ticket className="w-4 h-4" aria-hidden="true" /> Coupons
-              </TabsTrigger>
-              <TabsTrigger value="library" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
-                <BookOpen className="w-4 h-4" aria-hidden="true" /> Library
-              </TabsTrigger>
-              <TabsTrigger value="halloffame" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
-                <Trophy className="w-4 h-4" aria-hidden="true" /> Hall of Fame
-              </TabsTrigger>
-              <TabsTrigger value="bulletinboard" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
-                <Megaphone className="w-4 h-4" aria-hidden="true" /> Bulletin Board
-              </TabsTrigger>
-              {settings.enableAchievements && (
-                <TabsTrigger value="bonuspoints" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
-                  <Trophy className="w-4 h-4" aria-hidden="true" /> Bonus Points
-                </TabsTrigger>
-              )}
-              {settings.enableBadges && (
-                <TabsTrigger value="category-badges" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
-                  <Award className="w-4 h-4" aria-hidden="true" /> Badges
-                </TabsTrigger>
-              )}
-              {settings.enableGoals && isFeatureAllowed('enableGoals') && (
-                <TabsTrigger value="goals" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
-                  <Target className="w-4 h-4" aria-hidden="true" /> Goals
-                </TabsTrigger>
-              )}
-
-              {settings.enableClassSignIn && (
-                <>
-                  <span aria-hidden="true" className="self-stretch w-px bg-border/60 mx-1" />
-                  <TabsTrigger value="attendance" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
-                    <Clock className="w-4 h-4" aria-hidden="true" /> Attendance
-                  </TabsTrigger>
-                </>
-              )}
-
-              <span aria-hidden="true" className="self-stretch w-px bg-border/60 mx-1" />
-
-              <TabsTrigger value="branding" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
-                <UploadCloud className="w-4 h-4" aria-hidden="true" /> Branding
-              </TabsTrigger>
-              <TabsTrigger value="notifications" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
-                <Bell className="w-4 h-4" aria-hidden="true" /> Notifications
-              </TabsTrigger>
-              <TabsTrigger value="backups" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)]">
-                <Database className="w-4 h-4" aria-hidden="true" /> Backups
+              <TabsTrigger value="categories" className="rounded-xl px-4 py-2 font-bold flex items-center gap-2 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)] transition-all">
+                <Tag className="w-4 h-4" /> Rewards
               </TabsTrigger>
             </TabsList>
+
+            <AnimatePresence initial={false}>
+              {settings.expertMode && (
+                <motion.div 
+                  key="expert-tools-row"
+                  layout="position"
+                  initial={{ opacity: 0, height: 0, y: -20 }}
+                  animate={{ 
+                    opacity: 1, 
+                    height: 'auto',
+                    y: 0,
+                    transition: {
+                      height: { type: 'spring', duration: 0.6, bounce: 0 },
+                      opacity: { duration: 0.3, delay: 0.1 },
+                      y: { type: 'spring', duration: 0.6, bounce: 0 },
+                      staggerChildren: 0.03,
+                    }
+                  }}
+                  exit={{ 
+                    opacity: 0, 
+                    height: 0,
+                    y: -20,
+                    transition: {
+                      height: { type: 'spring', duration: 0.5, bounce: 0 },
+                      opacity: { duration: 0.2 },
+                      y: { type: 'spring', duration: 0.5, bounce: 0 },
+                    }
+                  }}
+                  className="flex flex-col gap-3 overflow-hidden mt-1"
+                >
+                  <div className="flex items-center gap-4 px-4 max-w-6xl mx-auto w-full pt-2 opacity-40">
+                    <div className="h-px bg-border flex-1" />
+                    <span className="text-[10px] font-black uppercase tracking-[0.3em] whitespace-nowrap">Expert Tools</span>
+                    <div className="h-px bg-border flex-1" />
+                  </div>
+                  <TabsList 
+                    className="bg-muted/15 p-1.5 rounded-2xl flex flex-wrap justify-center border border-dashed border-border/60 shadow-sm gap-x-1 gap-y-1 h-auto w-full max-w-6xl mx-auto"
+                    style={{ ['--admin-accent' as any]: rainbowForNavId('admin', settings.colorScheme) }}
+                  >
+                    {[
+                      { value: 'coupons', label: 'Coupons', icon: Ticket },
+                      { value: 'insights', label: 'Insights', icon: Activity },
+                      { value: 'attendance', label: 'Attendance', icon: Clock },
+                      { value: 'halloffame', label: 'Hall of Fame', icon: Trophy },
+                      { value: 'bulletinboard', label: 'Bulletin', icon: Megaphone },
+                      { value: 'library', label: 'Library', icon: BookOpen },
+                      { value: 'bonuspoints', label: 'Bonus Points', icon: Trophy },
+                      { value: 'category-badges', label: 'Badges', icon: Award },
+                      { value: 'goals', label: 'Goals', icon: Target },
+                      { value: 'notifications', label: 'Notifications', icon: Bell },
+                      { value: 'backups', label: 'Backups', icon: Database },
+                      { value: 'branding', label: 'Branding', icon: Palette },
+                    ].map((tab) => (
+                      <motion.div
+                        key={tab.value}
+                        variants={{
+                          hidden: { opacity: 0, scale: 0.95 },
+                          visible: { opacity: 1, scale: 1 },
+                          exit: { opacity: 0, scale: 0.95 }
+                        }}
+                      >
+                        <TabsTrigger 
+                          value={tab.value} 
+                          className="rounded-xl px-4 py-2 font-bold flex items-center gap-2 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)] transition-all"
+                        >
+                          <tab.icon className="w-4 h-4" /> {tab.label}
+                        </TabsTrigger>
+                      </motion.div>
+                    ))}
+                  </TabsList>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
-
-          {settings.enableAdminAnalytics && (
-            <TabsContent value="stats" className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6">
-              <AdminStatsTab
-                students={students}
-                classes={classes}
-                teachers={teachers}
-                coupons={coupons}
-                usedCouponsCount={usedCouponsCount}
-                totalPointsAwarded={totalPointsAwarded}
-              />
-            </TabsContent>
-          )}
-
-          <TabsContent value="reports" className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6">
-            <AdminReportsTab
-              schoolName={schoolData?.name?.trim() || 'School'}
-              students={students}
-              classes={classes}
-              teachers={teachers}
-              coupons={coupons}
-              prizes={prizes}
-              categories={categories}
-            />
-          </TabsContent>
 
           <TabsContent value="students" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <AdminStudentsTab
@@ -1022,6 +1002,7 @@ function AdminDashboardInner() {
                 setIsTeacherModalOpen(true);
               }}
               onUpdateStudent={updateStudent}
+              onUpdateClass={updateClass}
               onDeleteTeacher={async (id) => {
                 const teacher = (teachers || []).find((t) => t.id === id);
                 const ok = await confirm({
@@ -1066,6 +1047,88 @@ function AdminDashboardInner() {
             />
           </TabsContent>
 
+          <TabsContent value="prizes" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <AdminPrizesTab
+              prizes={prizes}
+              teachers={teachers}
+              classes={classes}
+              schoolId={schoolId!}
+              onCreatePrize={(p) => addPrize(p)}
+              onEditPrize={(p) => handleOpenPrizeModal(p)}
+              onDeletePrize={async (id) => {
+                const prize = (prizes || []).find((p) => p.id === id);
+                const ok = await confirm({
+                  title: prize ? `Delete prize "${prize.name}"?` : 'Delete this prize?',
+                  description: 'Students who already redeemed this prize keep their redemption. It will disappear from the shop immediately.',
+                  confirmLabel: 'Delete prize',
+                  destructive: true,
+                });
+                if (!ok) return;
+                await deletePrize(id);
+              }}
+              onUpdatePrize={(p) => updatePrize(p)}
+              onOpenSimpleNewPrize={() => handleOpenPrizeModal(null)}
+            />
+          </TabsContent>
+
+          <TabsContent value="coupons" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <AdminCouponsTab
+              availableCoupons={availableCoupons}
+              redeemedCoupons={redeemedCoupons}
+              getStudentName={getStudentName}
+              schoolId={schoolId!}
+              onDeleteCoupon={deleteCoupon}
+              onPurgeRedeemed={async () => {
+                const ids = redeemedCoupons.map((c) => c.id);
+                if (ids.length > 0) {
+                  await deleteCoupons(ids);
+                  toast({ title: 'Redeemed coupons purged', description: `Successfully deleted ${ids.length} coupons.` });
+                }
+              }}
+            />
+          </TabsContent>
+
+          <TabsContent value="insights" className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <Tabs defaultValue="stats" className="space-y-6">
+              <div className="flex justify-center">
+                <TabsList className="bg-muted/30 p-1 rounded-xl border shadow-sm">
+                  {settings.enableAdminAnalytics && (
+                    <TabsTrigger value="stats" className="rounded-lg px-4 py-1.5 font-bold flex items-center gap-2 text-xs">
+                      <LayoutDashboard className="w-3.5 h-3.5" /> Stats
+                    </TabsTrigger>
+                  )}
+                  <TabsTrigger value="reports" className="rounded-lg px-4 py-1.5 font-bold flex items-center gap-2 text-xs">
+                    <FileText className="w-3.5 h-3.5" /> Reports
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+
+              {settings.enableAdminAnalytics && (
+                <TabsContent value="stats">
+                  <AdminStatsTab
+                    students={students}
+                    classes={classes}
+                    teachers={teachers}
+                    coupons={coupons}
+                    usedCouponsCount={usedCouponsCount}
+                    totalPointsAwarded={totalPointsAwarded}
+                  />
+                </TabsContent>
+              )}
+              <TabsContent value="reports">
+                <AdminReportsTab
+                  schoolName={schoolData?.name?.trim() || 'School'}
+                  students={students}
+                  classes={classes}
+                  teachers={teachers}
+                  coupons={coupons}
+                  prizes={prizes}
+                  categories={categories}
+                />
+              </TabsContent>
+            </Tabs>
+          </TabsContent>
+
           <TabsContent value="categories" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <AdminCategoriesTab
               categories={categories}
@@ -1104,60 +1167,67 @@ function AdminDashboardInner() {
             />
           </TabsContent>
 
-          <TabsContent value="prizes" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <AdminPrizesTab
-              prizes={prizes}
+          <TabsContent value="attendance" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <AdminAttendanceTab
+              schoolId={schoolId}
               teachers={teachers}
+              selectedAttendanceTeacherId={selectedAttendanceTeacherId}
+              setSelectedAttendanceTeacherId={setSelectedAttendanceTeacherId}
+              loadTeacherAttendanceLog={loadTeacherAttendanceLog}
+              teacherAttendanceLogLoading={teacherAttendanceLogLoading}
+              teacherAttendanceConfig={teacherAttendanceConfig}
+              teacherAttendanceRewardsLoading={teacherAttendanceRewardsLoading}
+              teacherAttendanceRewards={teacherAttendanceRewards}
+              ruleDrafts={ruleDrafts}
+              setRuleDrafts={setRuleDrafts}
+              savingRuleId={savingRuleId}
+              saveTeacherRewardRule={saveTeacherRewardRule}
+              deleteTeacherRewardRule={deleteTeacherRewardRule}
               classes={classes}
-              schoolId={schoolId!}
-              onCreatePrize={(p) => addPrize(p)}
-              onEditPrize={(p) => handleOpenPrizeModal(p)}
-              onDeletePrize={async (id) => {
-                const prize = (prizes || []).find((p) => p.id === id);
-                const ok = await confirm({
-                  title: prize ? `Delete prize "${prize.name}"?` : 'Delete this prize?',
-                  description: 'Students who already redeemed this prize keep their redemption. It will disappear from the shop immediately.',
-                  confirmLabel: 'Delete prize',
-                  destructive: true,
-                });
-                if (!ok) return;
-                await deletePrize(id);
-              }}
-              onUpdatePrize={(p) => updatePrize(p)}
-              onOpenSimpleNewPrize={() => handleOpenPrizeModal(null)}
+              attendancePeriodsLoading={attendancePeriodsLoading}
+              attendancePeriods={attendancePeriods}
+              categories={categories}
+              handleSaveTeacherAttendanceConfig={handleSaveTeacherAttendanceConfig}
+              teacherAttendanceSaving={teacherAttendanceSaving}
+              teacherAttendanceLog={teacherAttendanceLog}
+              studentActivityLog={studentActivityLog}
+              studentActivityLogLoading={studentActivityLogLoading}
+              loadStudentActivityLog={loadStudentActivityLog}
+              setTeacherAttendanceConfigState={setTeacherAttendanceConfigState}
+              attendanceConfig={attendanceConfig}
+              setAttendanceConfigState={setAttendanceConfigState}
+              attendanceConfigSaving={attendanceConfigSaving}
+              handleSaveAttendanceConfig={handleSaveAttendanceConfig}
+              getAttendanceConfig={getAttendanceConfig}
+              setAttendanceConfig={setAttendanceConfig}
+              UniversalPeriodsAdmin={UniversalPeriodsAdmin}
             />
           </TabsContent>
 
+          <TabsContent value="halloffame" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <AdminHallOfFameTab schoolId={schoolId!} />
+          </TabsContent>
 
-                      <TabsContent value="coupons" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <AdminCouponsTab availableCoupons={availableCoupons} redeemedCoupons={redeemedCoupons} getStudentName={getStudentName} />
-            </TabsContent>
+          <TabsContent value="bulletinboard" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <AdminBulletinBoardTab
+              schoolId={schoolId!}
+              schoolLogoUrl={schoolData?.logoUrl ?? null}
+              settings={settings}
+              updateSettings={updateSettings}
+            />
+          </TabsContent>
 
-            <TabsContent value="library" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <AdminLibraryTab
-                libraryItems={library}
-                getStudentName={getStudentName}
-                onAddLibraryItem={handleAddLibraryItem}
-                onEditLibraryItem={handleEditLibraryItem}
-                onDeleteLibraryItem={handleDeleteLibraryItem}
-                onReturnLibraryItem={handleReturnLibraryItem}
-              />
-            </TabsContent>
+          <TabsContent value="library" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <AdminLibraryTab
+              libraryItems={library}
+              getStudentName={getStudentName}
+              onAddLibraryItem={handleAddLibraryItem}
+              onEditLibraryItem={handleEditLibraryItem}
+              onDeleteLibraryItem={handleDeleteLibraryItem}
+              onReturnLibraryItem={handleReturnLibraryItem}
+            />
+          </TabsContent>
 
-            <TabsContent value="halloffame" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <AdminHallOfFameTab schoolId={schoolId!} />
-            </TabsContent>
-
-            <TabsContent value="bulletinboard" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <AdminBulletinBoardTab
-                schoolId={schoolId!}
-                schoolLogoUrl={schoolData?.logoUrl ?? null}
-                settings={settings}
-                updateSettings={updateSettings}
-              />
-            </TabsContent>
-
-          {settings.enableAchievements && (
           <TabsContent value="bonuspoints" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <AdminBonusPointsTab
               achievementsLoading={achievementsLoading}
@@ -1169,7 +1239,7 @@ function AdminDashboardInner() {
               setAchievementToDelete={setAchievementToDelete}
             />
           </TabsContent>
-          )}          {settings.enableBadges && (
+
           <TabsContent value="category-badges" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <AdminBadgesTab
               categories={categories}
@@ -1192,59 +1262,22 @@ function AdminDashboardInner() {
               isAddingSampleCategoryBadges={isAddingSampleCategoryBadges}
             />
           </TabsContent>
-          )}
-          {settings.enableGoals && isFeatureAllowed('enableGoals') && (
-            <TabsContent value="goals" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <AdminGoalsTab
-                schoolId={schoolId!}
-                students={students || []}
-                classes={classes || []}
-                categories={categories || []}
-                prizes={prizes || []}
-              />
-            </TabsContent>
-          )}
- 
-          {settings.enableClassSignIn && (
-            <TabsContent value="attendance" className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6">
-              <AdminAttendanceTab
-                schoolId={schoolId}
-                teachers={teachers}
-                selectedAttendanceTeacherId={selectedAttendanceTeacherId}
-                setSelectedAttendanceTeacherId={setSelectedAttendanceTeacherId}
-                loadTeacherAttendanceLog={loadTeacherAttendanceLog}
-                teacherAttendanceLogLoading={teacherAttendanceLogLoading}
-                teacherAttendanceConfig={teacherAttendanceConfig}
-                teacherAttendanceRewardsLoading={teacherAttendanceRewardsLoading}
-                teacherAttendanceRewards={teacherAttendanceRewards}
-                ruleDrafts={ruleDrafts}
-                setRuleDrafts={setRuleDrafts}
-                savingRuleId={savingRuleId}
-                saveTeacherRewardRule={saveTeacherRewardRule}
-                deleteTeacherRewardRule={deleteTeacherRewardRule}
-                classes={classes}
-                attendancePeriodsLoading={attendancePeriodsLoading}
-                attendancePeriods={attendancePeriods}
-                categories={categories}
-                handleSaveTeacherAttendanceConfig={handleSaveTeacherAttendanceConfig}
-                teacherAttendanceSaving={teacherAttendanceSaving}
-                teacherAttendanceLog={teacherAttendanceLog}
-                studentActivityLog={studentActivityLog}
-                studentActivityLogLoading={studentActivityLogLoading}
-                loadStudentActivityLog={loadStudentActivityLog}
-                setTeacherAttendanceConfigState={setTeacherAttendanceConfigState}
-                attendanceConfig={attendanceConfig}
-                setAttendanceConfigState={setAttendanceConfigState}
-                attendanceConfigSaving={attendanceConfigSaving}
-                handleSaveAttendanceConfig={handleSaveAttendanceConfig}
-                getAttendanceConfig={getAttendanceConfig}
-                setAttendanceConfig={setAttendanceConfig}
-                UniversalPeriodsAdmin={UniversalPeriodsAdmin}
-              />
-            </TabsContent>
-          )}
 
-          <TabsContent value="branding" className="mt-6">
+          <TabsContent value="goals" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <AdminGoalsTab
+              schoolId={schoolId!}
+              students={students || []}
+              classes={classes || []}
+              categories={categories || []}
+              prizes={prizes || []}
+            />
+          </TabsContent>
+
+          <TabsContent value="notifications" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <AdminNotificationsTab />
+          </TabsContent>
+
+          <TabsContent value="branding" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <AdminBrandingTab
               schoolId={schoolId}
               firestore={firestore}
@@ -1264,20 +1297,6 @@ function AdminDashboardInner() {
               playSound={(s: any) => playSound(s)}
             />
           </TabsContent>
-
-            <TabsContent value="notifications" className="mt-6">
-              <AdminNotificationsTab />
-            </TabsContent>
-
-          <TabsContent value="backups" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <AdminBackupsTab
-              backups={backups}
-              onCreateBackup={handleCreateBackup}
-              onDownloadBackup={handleDownloadBackup}
-              onRestoreFromBackup={handleRestoreFromBackup}
-            />
-          </TabsContent>
-
         </Tabs>
 
         {/* Modals outside Tabs */}
@@ -1845,6 +1864,7 @@ function AdminDashboardInner() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        </motion.div>
         {showPurgeFlash && (
           <div className="fixed inset-0 z-50 pointer-events-none flex items-center justify-center">
             <div className="absolute inset-0 bg-white/90 animate-pulse" />

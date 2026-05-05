@@ -1,4 +1,4 @@
-import puppeteer from 'puppeteer';
+import { chromium } from '@playwright/test';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 
@@ -17,9 +17,9 @@ function isPermissionDeniedMessage(text) {
 
 (async () => {
   const hits = [];
-  console.log('Starting puppeteer...');
+  console.log('Starting Playwright...');
 
-  const browser = await puppeteer.launch({ headless: 'new' });
+  const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage();
 
   page.on('console', (msg) => {
@@ -44,12 +44,41 @@ function isPermissionDeniedMessage(text) {
   });
 
   try {
-    const paths = ['/', '/admin', '/student'];
+    const publicPaths = ['/', '/login'];
 
-    for (const path of paths) {
+    for (const path of publicPaths) {
       console.log(`Navigating to ${path}...`);
-      await page.goto(`${BASE_URL}${path}`, { waitUntil: 'networkidle2' });
+      await page.goto(`${BASE_URL}${path}`, { waitUntil: 'domcontentloaded' });
       await sleep(2500);
+    }
+
+    console.log('Logging into demo School ABC...');
+    await page.goto(`${BASE_URL}/login`, { waitUntil: 'domcontentloaded' });
+
+    let schoolAbcButton = page.getByRole('button', { name: /School ABC/i });
+    if (!(await schoolAbcButton.isVisible({ timeout: 5000 }).catch(() => false))) {
+      const demoDetails = page.locator('summary').filter({ hasText: /Try a demo school/i });
+      if (await demoDetails.isVisible({ timeout: 5000 }).catch(() => false)) {
+        await demoDetails.click();
+      }
+      schoolAbcButton = page.getByRole('button', { name: /School ABC/i });
+    }
+
+    await schoolAbcButton.click({ timeout: 10000 });
+    await page.waitForFunction(() => window.location.pathname.endsWith('/portal'), { timeout: 15000 });
+    const schoolMatch = new URL(page.url()).pathname.match(/^\/([^/]+)\/portal$/);
+    const schoolId = schoolMatch?.[1] || 'schoolabc';
+
+    const authenticatedPaths = [
+      `/${schoolId}/portal`,
+      `/${schoolId}/admin`,
+      `/${schoolId}/bulletin-board`,
+    ];
+
+    for (const path of authenticatedPaths) {
+      console.log(`Navigating to ${path}...`);
+      await page.goto(`${BASE_URL}${path}`, { waitUntil: 'domcontentloaded' });
+      await sleep(3000);
     }
 
     if (hits.length > 0) {

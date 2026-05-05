@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { doc } from 'firebase/firestore';
@@ -112,6 +112,7 @@ export default function TeacherPage() {
 
     const [selectedLoginKey, setSelectedLoginKey] = useState('');
     const [passcode, setPasscode] = useState('');
+    const passcodeRef = useRef<HTMLInputElement | null>(null);
     const directAccountKey = searchParams.get('account') || '';
     const schoolId = useMemo(
         () => (params.schoolId || activeSchoolId || '').trim().toLowerCase(),
@@ -173,6 +174,15 @@ export default function TeacherPage() {
             setSelectedLoginKey(staffLoginKey(match));
         }
     }, [directAccountKey, staffOptions]);
+
+    useEffect(() => {
+        // If a staff account was preselected (e.g. from sign-in chooser link),
+        // focus the passcode so user can type immediately and hit Enter.
+        if (!isInitialized) return;
+        if (!selectedLoginKey) return;
+        passcodeRef.current?.focus();
+        passcodeRef.current?.select?.();
+    }, [isInitialized, selectedLoginKey]);
 
     const handleLogin = async () => {
         if (!schoolId || !selectedLoginKey || !passcode) {
@@ -297,8 +307,10 @@ export default function TeacherPage() {
                                         type="password"
                                         value={passcode}
                                         onChange={(e) => setPasscode(e.target.value)}
+                                        ref={passcodeRef}
                                         className={`h-14 rounded-xl text-lg font-mono tracking-widest text-center ${isGraphic ? 'bg-foreground/5 border-border' : 'bg-slate-50'}`}
                                         autoComplete="current-password"
+                                        autoFocus={!!directAccountKey}
                                     />
                                 </div>
                             </div>

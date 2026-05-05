@@ -13,6 +13,7 @@ import {
   Mail,
   MessageSquare,
   RefreshCw,
+  ShoppingBag,
   Shield,
   Sparkles,
   User,
@@ -233,7 +234,7 @@ export function AdminNotificationsTab() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="h-[min(420px,55vh)] pr-3">
+            <ScrollArea className="h-[calc(100vh-28rem)] pr-3">
               <ul className="space-y-3 text-sm">
                 {diagnosticLines.map((line, i) => (
                   <li key={i} className="flex gap-2 items-start">
@@ -290,7 +291,7 @@ export function AdminNotificationsTab() {
                 if still empty, check Functions deployment and logs for <code className="text-xs">onStudentActivityCreated</code>.
               </p>
             ) : (
-              <ScrollArea className="h-[min(420px,55vh)] border rounded-md">
+              <ScrollArea className="h-[calc(100vh-28rem)] border rounded-md">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -475,6 +476,76 @@ export function AdminNotificationsTab() {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="shadow-md">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <ShoppingBag className="w-4 h-4 text-primary" /> Inventory Alerts
+          </CardTitle>
+          <CardDescription>
+            Notify staff when prizes are running low or when the rewards shop is empty (requires Staff Alerts + Notifications enabled).
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="rounded-xl border bg-muted/30 overflow-hidden">
+            <div className="flex items-center justify-between p-4">
+              <div className="space-y-0.5">
+                <Label className="text-sm font-bold">Inventory alerts</Label>
+                <p className="text-[11px] text-muted-foreground">
+                  Sends a staff alert when a prize hits low stock, and optionally when the shop is empty.
+                </p>
+              </div>
+              <Switch
+                checked={settings.notificationPrizeInventoryEnabled}
+                onCheckedChange={(checked) => updateSettings({ notificationPrizeInventoryEnabled: checked })}
+              />
+            </div>
+            <div className="border-t bg-background/40 px-4 py-2">
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                Tip: Low-stock alerts only apply to prizes with a Qty set. Unlimited Qty prizes won&apos;t trigger inventory alerts.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-4 rounded-xl border bg-muted/30">
+              <Label className="text-sm font-bold">Low stock threshold</Label>
+              <p className="text-[11px] text-muted-foreground mb-2">
+                Alert when remaining quantity is ≤ this number.
+              </p>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={0}
+                  className="h-9 w-24 rounded-md border bg-background px-2 text-sm font-semibold"
+                  value={String(settings.notificationPrizeLowStockThreshold ?? 5)}
+                  disabled={!settings.notificationPrizeInventoryEnabled}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    const n = Math.max(0, Math.round(Number(raw) || 0));
+                    updateSettings({ notificationPrizeLowStockThreshold: n });
+                  }}
+                />
+                <span className="text-xs text-muted-foreground">items</span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between p-4 rounded-xl border bg-muted/30">
+              <div className="space-y-0.5">
+                <Label className="text-sm font-bold">Shop empty alert</Label>
+                <p className="text-[11px] text-muted-foreground">
+                  Notify staff when no prizes are available to redeem.
+                </p>
+              </div>
+              <Switch
+                checked={settings.notificationPrizeEmptyShopEnabled}
+                disabled={!settings.notificationPrizeInventoryEnabled}
+                onCheckedChange={(checked) => updateSettings({ notificationPrizeEmptyShopEnabled: checked })}
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card className="shadow-md overflow-hidden">
         <CardContent className="p-0">

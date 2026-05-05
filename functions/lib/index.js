@@ -499,7 +499,7 @@ exports.verifyBackupIntegrity = functions.https.onCall(async (data, context) => 
 // ========================================================================
 exports.scheduledFullBackup = functions
     .runWith({ timeoutSeconds: 540, memory: "512MB" })
-    .pubsub.schedule("every 24 hours")
+    .pubsub.schedule("every 6 hours")
     .timeZone("UTC")
     .onRun(async () => {
     const schoolsSnap = await admin.firestore().collection("schools").get();

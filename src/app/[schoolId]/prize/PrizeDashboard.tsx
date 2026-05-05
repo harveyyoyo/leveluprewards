@@ -72,6 +72,7 @@ import { prizeIsListed, stripLeadingEmojiFromPrizeName, studentSeesPrizeByTeache
 import { runMotor as runVendingMotor, isConnected as motorIsConnected } from '@/lib/vendingMotor';
 import { useAuthFetch } from '@/lib/authFetch';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { createAiJokePrize, isAiJokePrize } from '@/lib/aiJokePrize';
 
 /** Max units per redemption for 0-point prizes when stock is unlimited (balance does not limit). */
 const FREE_PRIZE_MAX_QTY = 99;
@@ -103,6 +104,7 @@ function ConfirmRedemptionDialog({
 
     const studentPoints = student && typeof student.points === 'number' ? student.points : 0;
     const prizePoints = prize && typeof prize.points === 'number' ? prize.points : 0;
+    const aiPrize = isAiJokePrize(prize);
     /** Free (0 pt) prizes are not limited by balance — cap + optional stock count. */
     const maxByPoints =
         !prize ? 1 :
@@ -123,7 +125,8 @@ function ConfirmRedemptionDialog({
 
     if (!prize || !student) return null;
 
-    const totalCost = prizePoints * quantity;
+    const effectiveQty = aiPrize ? 1 : quantity;
+    const totalCost = prizePoints * effectiveQty;
     const canAfford = studentPoints >= totalCost;
     const remainingPoints = studentPoints - totalCost;
 
@@ -149,51 +152,59 @@ function ConfirmRedemptionDialog({
                             <img src={prize.imageUrl} alt="" className="size-full object-cover" />
                         </div>
                     ) : null}
-                    <div className="flex items-center justify-center gap-3">
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-12 w-12 rounded-full"
-                            onClick={() => handleQuantityChange(-1)}
-                            disabled={quantity <= 1}
-                            aria-label="Decrease quantity"
-                        >
-                            <Minus className="w-5 h-5" aria-hidden="true" />
-                        </Button>
-                        <Input
-                            type="number"
-                            min={1}
-                            max={maxQuantity}
-                            value={quantity}
-                            onChange={(e) => {
-                                const v = Math.max(1, Math.min(maxQuantity, Math.floor(Number(e.target.value) || 1)));
-                                setQuantity(v);
-                            }}
-                            onKeyDown={(e) => {
-                                if (e.key === 'ArrowUp') { e.preventDefault(); handleQuantityChange(1); }
-                                else if (e.key === 'ArrowDown') { e.preventDefault(); handleQuantityChange(-1); }
-                            }}
-                            aria-label="Quantity"
-                            className="text-4xl font-bold w-24 text-center h-16 px-0"
-                        />
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-12 w-12 rounded-full"
-                            onClick={() => handleQuantityChange(1)}
-                            disabled={quantity >= maxQuantity}
-                            aria-label="Increase quantity"
-                        >
-                            <Plus className="w-5 h-5" aria-hidden="true" />
-                        </Button>
-                    </div>
-                    {quantity >= maxQuantity && (
-                        <p className="text-xs text-center text-muted-foreground">
-                            {maxByStock !== Number.POSITIVE_INFINITY && quantity >= maxByStock
-                                ? `Only ${maxByStock} in stock.`
-                                : prizePoints > 0
-                                    ? `Max you can afford: ${maxByPoints}.`
-                                    : `Limit: ${FREE_PRIZE_MAX_QTY} per redemption.`}
+                    {!aiPrize ? (
+                        <>
+                            <div className="flex items-center justify-center gap-3">
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-12 w-12 rounded-full"
+                                    onClick={() => handleQuantityChange(-1)}
+                                    disabled={quantity <= 1}
+                                    aria-label="Decrease quantity"
+                                >
+                                    <Minus className="w-5 h-5" aria-hidden="true" />
+                                </Button>
+                                <Input
+                                    type="number"
+                                    min={1}
+                                    max={maxQuantity}
+                                    value={quantity}
+                                    onChange={(e) => {
+                                        const v = Math.max(1, Math.min(maxQuantity, Math.floor(Number(e.target.value) || 1)));
+                                        setQuantity(v);
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'ArrowUp') { e.preventDefault(); handleQuantityChange(1); }
+                                        else if (e.key === 'ArrowDown') { e.preventDefault(); handleQuantityChange(-1); }
+                                    }}
+                                    aria-label="Quantity"
+                                    className="text-4xl font-bold w-24 text-center h-16 px-0"
+                                />
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-12 w-12 rounded-full"
+                                    onClick={() => handleQuantityChange(1)}
+                                    disabled={quantity >= maxQuantity}
+                                    aria-label="Increase quantity"
+                                >
+                                    <Plus className="w-5 h-5" aria-hidden="true" />
+                                </Button>
+                            </div>
+                            {quantity >= maxQuantity && (
+                                <p className="text-xs text-center text-muted-foreground">
+                                    {maxByStock !== Number.POSITIVE_INFINITY && quantity >= maxByStock
+                                        ? `Only ${maxByStock} in stock.`
+                                        : prizePoints > 0
+                                            ? `Max you can afford: ${maxByPoints}.`
+                                            : `Limit: ${FREE_PRIZE_MAX_QTY} per redemption.`}
+                                </p>
+                            )}
+                        </>
+                    ) : (
+                        <p className="text-xs text-center text-muted-foreground font-semibold">
+                            One per redeem.
                         </p>
                     )}
                     <div className="text-sm space-y-1 bg-secondary p-3 rounded-lg">
@@ -210,7 +221,7 @@ function ConfirmRedemptionDialog({
                 </div>
                 <AlertDialogFooter>
                     <AlertDialogCancel onClick={() => onOpenChange(false)} disabled={isRedeeming}>Cancel</AlertDialogCancel>
-                    <Button type="button" disabled={!canAfford || isRedeeming} onClick={() => onConfirm(quantity)}>
+                    <Button type="button" disabled={!canAfford || isRedeeming} onClick={() => onConfirm(effectiveQty)}>
                         {isRedeeming ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />Processing…</> : 'Confirm'}
                     </Button>
                 </AlertDialogFooter>
@@ -517,6 +528,39 @@ export function PrizeDashboard({
             return;
         }
         try {
+            if (isAiJokePrize(prize)) {
+                const aiCooldownOk = Date.now() - lastAiSurpriseCallRef.current > 10_000;
+                if (!schoolId || settings.enablePrizeAiSurprise !== true || !aiCooldownOk) {
+                    return;
+                }
+                lastAiSurpriseCallRef.current = Date.now();
+                setAiSurpriseErr(null);
+                setAiSurpriseBody(null);
+                setAiSurpriseLoading(true);
+                try {
+                    const res = await authFetch('/api/prize-ai-fun', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            schoolId,
+                            mode: 'joke',
+                        }),
+                    });
+                    const j = (await res.json()) as { error?: string; kind?: string; text?: string; answer?: string };
+                    if (!res.ok) throw new Error(j.error || 'Could not load surprise.');
+                    setAiSurpriseBody({
+                        kind: typeof j.kind === 'string' ? j.kind : 'joke',
+                        text: typeof j.text === 'string' ? j.text : '',
+                        answer: typeof j.answer === 'string' ? j.answer : undefined,
+                    });
+                    setAiSurpriseOpen(true);
+                } catch (e: unknown) {
+                    console.warn('Prize AI surprise unavailable:', e);
+                } finally {
+                    setAiSurpriseLoading(false);
+                }
+                return;
+            }
+
             const result = await redeemPrize(student.id, prize, quantity);
             if (!result.success) {
                 throw new Error(result.message || 'An error occurred during redemption.');
@@ -782,11 +826,16 @@ export function PrizeDashboard({
             return teacherMatch && classMatch;
         });
 
+    const effectiveVisiblePrizes =
+        settings.enablePrizeAiSurprise === true
+            ? [...baseVisiblePrizes, createAiJokePrize()]
+            : baseVisiblePrizes;
+
     const filteredPrizes = searchTerm.trim()
-        ? baseVisiblePrizes.filter(p =>
+        ? effectiveVisiblePrizes.filter(p =>
             (p.name || '').toLowerCase().includes(searchTerm.trim().toLowerCase())
         )
-        : baseVisiblePrizes;
+        : effectiveVisiblePrizes;
 
     const visiblePrizes = [...filteredPrizes].sort((a, b) => {
         const ap = a.points || 0;

@@ -628,7 +628,7 @@ exports.verifyBackupIntegrity = functions.https.onCall(
 
 exports.scheduledFullBackup = functions
   .runWith({ timeoutSeconds: 540, memory: "512MB" })
-  .pubsub.schedule("every 24 hours")
+  .pubsub.schedule("every 6 hours")
   .timeZone("UTC")
   .onRun(async () => {
     const schoolsSnap = await admin.firestore().collection("schools").get();
@@ -2557,6 +2557,67 @@ function queueContactAlerts(args: {
   }
 }
 
+function numericOrNull(v: unknown): number | null {
+  if (typeof v !== "number" || !Number.isFinite(v)) return null;
+  return v;
+}
+
+async function queueStaffInventoryAlerts(args: {
+  db: admin.firestore.Firestore;
+  schoolId: string;
+  subject: string;
+  message: string;
+  html?: string;
+  fromEmail: string;
+  whatsappEnabled?: boolean;
+}): Promise<void> {
+  const { db, schoolId, subject, message, html, fromEmail, whatsappEnabled } = args;
+  const alerts: Promise<any>[] = [];
+
+  const [teachersSnap, staffSnap] = await Promise.all([
+    db.collection("schools").doc(schoolId).collection("teachers").get(),
+    db.collection("schools").doc(schoolId).collection("staffAccounts").get(),
+  ]);
+
+  for (const d of teachersSnap.docs) {
+    const data = d.data();
+    const email = decryptField(data?.email);
+    const phone = decryptField(data?.phone);
+    queueContactAlerts({
+      alerts,
+      db,
+      email,
+      phone: whatsappEnabled ? phone : undefined,
+      subject,
+      message,
+      html,
+      fromEmail,
+      schoolId,
+      whatsappEnabled,
+    });
+  }
+
+  for (const d of staffSnap.docs) {
+    const data = d.data();
+    const email = decryptField(data?.email);
+    const phone = decryptField(data?.phone);
+    queueContactAlerts({
+      alerts,
+      db,
+      email,
+      phone: whatsappEnabled ? phone : undefined,
+      subject,
+      message,
+      html,
+      fromEmail,
+      schoolId,
+      whatsappEnabled,
+    });
+  }
+
+  await Promise.all(alerts);
+}
+
 /** Triggered when a student earns points or redeems a prize. */
 export const onStudentActivityCreated = functions.firestore
   .document("schools/{schoolId}/students/{studentId}/activities/{activityId}")
@@ -2656,6 +2717,127 @@ export const onStudentActivityCreated = functions.firestore
     }
 
     await Promise.all(alerts);
+  });
+
+/**
+ * Triggered when a prize is edited or redeemed (stockCount changes).
+ * Sends staff alerts when stock is low or the shop becomes empty.
+ */
+export const onPrizeUpdated = functions.firestore
+  .document("schools/{schoolId}/prizes/{prizeId}")
+  .onUpdate(async (change, context) => {
+    const { schoolId, prizeId } = context.params;
+    const before = change.before.data() as Record<string, any> | undefined;
+    const after = change.after.data() as Record<string, any> | undefined;
+    if (!after) return;
+
+    const db = admin.firestore();
+    const schoolSnap = await db.collection("schools").doc(schoolId).get();
+    const settings = schoolSnap.data()?.appSettings as Record<string, any> | undefined;
+    if (!settings?.enableNotifications) return;
+    if (!settings?.notificationStaffAlertsEnabled) return;
+    if (!settings?.notificationPrizeInventoryEnabled) return;
+
+    const schoolName = schoolSnap.data()?.name || "School";
+    const fromEmail = `"${schoolName} Alerts" <alerts@levelup-edu.com>`;
+    const whatsappEnabled = !!settings.notificationWhatsAppEnabled;
+
+    const afterCount = numericOrNull(after.stockCount);
+    const beforeCount = numericOrNull(before?.stockCount);
+    const thresholdRaw = numericOrNull(settings.notificationPrizeLowStockThreshold);
+    const threshold = thresholdRaw === null ? 5 : Math.max(0, Math.floor(thresholdRaw));
+    const name = String(after.name || "Prize").trim() || "Prize";
+    const inStock = after.inStock !== false;
+
+    const alertsToSend: Array<Promise<void>> = [];
+
+    // Low stock / out of stock: only when a finite count exists and crosses into threshold.
+    if (afterCount !== null && inStock) {
+      const crossedIntoLow =
+        afterCount <= threshold &&
+        (beforeCount === null || beforeCount > threshold) &&
+        (beforeCount === null || beforeCount !== afterCount);
+      const crossedIntoZero =
+        afterCount === 0 && (beforeCount === null || beforeCount > 0) && (beforeCount === null || beforeCount !== afterCount);
+
+      if (crossedIntoLow || crossedIntoZero) {
+        const subject = crossedIntoZero ? `Inventory alert: Out of stock (${name})` : `Inventory alert: Low stock (${name})`;
+        const message =
+          crossedIntoZero
+            ? `Rewards shop inventory alert: "${name}" is out of stock (0 left).`
+            : `Rewards shop inventory alert: "${name}" is low (only ${afterCount} left).`;
+        const html = buildCelebrationEmailHtml({
+          title: crossedIntoZero ? "Out of stock" : "Low stock",
+          subtitle: "Rewards shop inventory",
+          message,
+          studentName: schoolName,
+          accent: crossedIntoZero ? "#ef4444" : "#f59e0b",
+          icon: crossedIntoZero ? "!" : "i",
+          showArtwork: false,
+        });
+        alertsToSend.push(
+          queueStaffInventoryAlerts({
+            db,
+            schoolId,
+            subject,
+            message,
+            html,
+            fromEmail,
+            whatsappEnabled,
+          })
+        );
+      }
+    }
+
+    // Shop empty: only when enabled, and rate-limited.
+    if (settings.notificationPrizeEmptyShopEnabled) {
+      const lastEmptyAt = numericOrNull(settings.inventoryLastEmptyShopAlertAt);
+      const now = Date.now();
+      const cooldownMs = 6 * 60 * 60 * 1000; // 6 hours
+      const cooldownOk = lastEmptyAt === null ? true : now - lastEmptyAt > cooldownMs;
+
+      if (cooldownOk) {
+        const snap = await db.collection("schools").doc(schoolId).collection("prizes").get();
+        const prizes = snap.docs.map((d) => d.data() as Record<string, any>);
+        const available = prizes.some((p) => {
+          const listed = p?.inStock !== false;
+          const c = numericOrNull(p?.stockCount);
+          const countOk = c === null ? true : c > 0;
+          return listed && countOk;
+        });
+
+        if (!available) {
+          const subject = "Inventory alert: Rewards shop is empty";
+          const message = `Rewards shop inventory alert: there are currently no prizes available to redeem (all are out of stock or not listed).`;
+          const html = buildCelebrationEmailHtml({
+            title: "Rewards shop empty",
+            subtitle: "Rewards shop inventory",
+            message,
+            studentName: schoolName,
+            accent: "#f97316",
+            icon: "!",
+            showArtwork: false,
+          });
+          alertsToSend.push(
+            queueStaffInventoryAlerts({
+              db,
+              schoolId,
+              subject,
+              message,
+              html,
+              fromEmail,
+              whatsappEnabled,
+            })
+          );
+          await db.collection("schools").doc(schoolId).set(
+            { appSettings: { inventoryLastEmptyShopAlertAt: now } },
+            { merge: true }
+          );
+        }
+      }
+    }
+
+    await Promise.all(alertsToSend);
   });
 
 /** Triggered when a student signs in via the attendance kiosk. */

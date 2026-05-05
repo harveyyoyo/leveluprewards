@@ -55,6 +55,17 @@ interface Settings {
     notificationArtworkEnabled: boolean;
     notificationStaffAlertsEnabled: boolean;
     notificationWhatsAppEnabled: boolean;
+    /** When on, staff can receive prize inventory alerts (low stock / empty shop). */
+    notificationPrizeInventoryEnabled: boolean;
+    /** Low-stock threshold (inclusive) when inventory alerts are on. */
+    notificationPrizeLowStockThreshold: number;
+    /** When on, staff can receive a "shop empty" alert when no prizes are available. */
+    notificationPrizeEmptyShopEnabled: boolean;
+    /**
+     * Internal: last time we sent an "empty shop" alert (ms since epoch).
+     * Used by Cloud Functions to rate-limit notifications.
+     */
+    inventoryLastEmptyShopAlertAt?: number;
     enableClassLeaderboard: boolean;
     /** Class-vs-class standings (combined balances); primary UI is Hall of Fame. Reserved for future surfaces. */
     enableClassAccumulations: boolean;
@@ -162,6 +173,24 @@ interface Settings {
     payAttendance?: boolean;
     payHomework?: boolean;
     payLibrary?: boolean;
+
+    // Student Portal Interface overrides (set by admin)
+    studentDisplayMode?: 'web' | 'app';
+    studentColorScheme?: ColorScheme;
+    studentDarkMode?: boolean;
+    studentEnableAnimatedBackground?: boolean;
+    studentAnimatedBackgroundStyle?: string;
+
+    // Teacher Portal Interface overrides (set by admin)
+    teacherDisplayMode?: 'web' | 'app';
+    teacherColorScheme?: ColorScheme;
+    teacherDarkMode?: boolean;
+    teacherEnableAnimatedBackground?: boolean;
+    teacherAnimatedBackgroundStyle?: string;
+
+    // Teacher Feature Toggles (controlled by admin)
+    teacherFeatures?: Record<string, boolean>;
+    expertMode: boolean;
 }
 
 interface SettingsContextType {
@@ -209,6 +238,9 @@ const defaultSettings: Settings = {
     notificationArtworkEnabled: true,
     notificationStaffAlertsEnabled: true,
     notificationWhatsAppEnabled: false,
+    notificationPrizeInventoryEnabled: false,
+    notificationPrizeLowStockThreshold: 5,
+    notificationPrizeEmptyShopEnabled: false,
     enableClassLeaderboard: false,
     enableClassAccumulations: false,
     enableShoutouts: false,
@@ -288,6 +320,23 @@ const defaultSettings: Settings = {
     payAttendance: true,
     payHomework: true,
     payLibrary: true,
+
+    // Role-based defaults
+    teacherFeatures: {
+        enableTeacherBudgets: true,
+        enableTeacherCharts: true,
+        enableHomework: true,
+        enableBulkPoints: true,
+        enableNotifications: true,
+        enableClassSignIn: true,
+        enableAttendance: true,
+        enableStudentProfiles: true,
+        enableAchievements: true,
+        enableBadges: true,
+        enableLevels: true,
+        enableStreaks: true,
+    },
+    expertMode: false,
 };
 
 const publicLoginSettings: Partial<Settings> = {
@@ -309,6 +358,7 @@ const SettingsContext = createContext<SettingsContextType | null>(null);
 function getLocalArcadeSettingsKey(schoolId: string | null, loginState: LoginState): string {
     if (!schoolId) return 'arcade_settings_global';
     if (loginState === 'student') return `arcade_settings_${schoolId}_student`;
+    if (loginState === 'teacher') return `arcade_settings_${schoolId}_teacher`;
     return `arcade_settings_${schoolId}_staff`;
 }
 
@@ -365,12 +415,13 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         (typeof pathname === 'string' && pathname.startsWith('/s/'));
 
     const isAllowed = useCallback((key: string) => {
+        if (settings.expertMode) return true;
         if (key === 'enableClassSignIn') {
             return featureEntitlements.enableClassSignIn || featureEntitlements.enableAttendance;
         }
         if (!isPlanFeatureKey(key)) return true;
         return featureEntitlements[key];
-    }, [featureEntitlements]);
+    }, [featureEntitlements, settings.expertMode]);
 
     const applyEntitlements = useCallback((input: Settings): Settings => {
         const next = { ...input };
@@ -611,8 +662,60 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         root.setAttribute('data-color-scheme', next.colorScheme ?? 'default');
     }, [isLoaded, isPublicLoginRoute, settings]);
 
+    const effectiveSettings = useMemo(() => {
+        const s = { ...settings };
+        
+        if (s.expertMode) {
+            // Expert Mode forces all functional feature toggles to true
+            Object.keys(s).forEach(key => {
+                if (key.startsWith('enable') && typeof (s as any)[key] === 'boolean') {
+                    // Skip purely visual toggles that might be disruptive
+                    if (key !== 'enableAnimatedBackground' && key !== 'enableThemeAnimations') {
+                        (s as any)[key] = true;
+                    }
+                }
+            });
+            // Also enable pillars
+            s.payRewards = true;
+            s.payAttendance = true;
+            s.payHomework = true;
+            s.payLibrary = true;
+            s.bulletinEnabled = true;
+        }
+
+        if (loginState === 'student') {
+            if (s.studentDisplayMode) s.displayMode = s.studentDisplayMode;
+            if (s.studentColorScheme) s.colorScheme = s.studentColorScheme;
+            if (typeof s.studentDarkMode === 'boolean') s.darkMode = s.studentDarkMode;
+            if (typeof s.studentEnableAnimatedBackground === 'boolean') s.enableAnimatedBackground = s.studentEnableAnimatedBackground;
+            if (s.studentAnimatedBackgroundStyle) s.animatedBackgroundStyle = s.studentAnimatedBackgroundStyle;
+        } else if (loginState === 'teacher') {
+            if (s.teacherDisplayMode) s.displayMode = s.teacherDisplayMode;
+            if (s.teacherColorScheme) s.colorScheme = s.teacherColorScheme;
+            if (typeof s.teacherDarkMode === 'boolean') s.darkMode = s.teacherDarkMode;
+            if (typeof s.teacherEnableAnimatedBackground === 'boolean') s.enableAnimatedBackground = s.teacherEnableAnimatedBackground;
+            if (s.teacherAnimatedBackgroundStyle) s.animatedBackgroundStyle = s.teacherAnimatedBackgroundStyle;
+        }
+        return s;
+    }, [settings, loginState]);
+
+    const isTeacherAllowed = useCallback((key: string) => {
+        if (!isAllowed(key)) return false;
+        if (loginState !== 'teacher') return true;
+        // Teachers only see features enabled for them by the admin
+        return settings.teacherFeatures?.[key] ?? false;
+    }, [isAllowed, loginState, settings.teacherFeatures]);
+
     return (
-        <SettingsContext.Provider value={{ settings, updateSettings, planTier, planLabel, featureEntitlements, isFeatureAllowed: isAllowed, isLoaded }}>
+        <SettingsContext.Provider value={{ 
+            settings: effectiveSettings, 
+            updateSettings, 
+            planTier, 
+            planLabel, 
+            featureEntitlements, 
+            isFeatureAllowed: loginState === 'teacher' ? isTeacherAllowed : isAllowed, 
+            isLoaded 
+        }}>
             {children}
         </SettingsContext.Provider>
     );

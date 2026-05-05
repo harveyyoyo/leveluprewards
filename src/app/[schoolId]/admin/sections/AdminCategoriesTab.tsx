@@ -43,13 +43,24 @@ export function AdminCategoriesTab({
         </div>
       </CardHeader>
       <CardContent>
-        <ul className="space-y-2 h-[calc(100vh-22rem)] max-h-[420px] min-h-[250px] overflow-y-auto pr-1">
+        <ul className="space-y-2 h-[calc(100vh-22rem)] min-h-[250px] overflow-y-auto pr-1">
           {categories?.map((c) => (
             <li
               key={c.id}
               className="flex justify-between items-center bg-secondary/20 p-4 rounded-2xl border hover:border-primary/20 transition-colors"
             >
-              <div className="flex items-center gap-3">
+              <div className="flex shrink-0 items-center">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+                  onClick={() => onEditCategory(c)}
+                  title="Edit category"
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="flex items-center gap-3 flex-1">
                 <div className="w-4 h-4 rounded-full border" style={{ backgroundColor: c.color || '#cccccc' }} />
                 <div>
                   <p className="font-bold">{c.name}</p>
@@ -62,9 +73,7 @@ export function AdminCategoriesTab({
                 </div>
               </div>
               <div className="flex gap-1">
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEditCategory(c)}>
-                  <Edit className="w-4 h-4" />
-                </Button>
+
                 <Button
                   variant="ghost"
                   size="icon"

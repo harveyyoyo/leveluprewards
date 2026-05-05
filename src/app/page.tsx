@@ -26,15 +26,6 @@ export default function RootPage() {
             >
               School Login
             </Link>
-            <Link
-              href="/developer"
-              className={cn(
-                buttonVariants({ variant: 'outline', size: 'lg' }),
-                'h-12 min-h-12 w-full rounded-xl border-slate-600 bg-slate-950/40 font-bold text-slate-100 hover:bg-slate-800/80 hover:text-white',
-              )}
-            >
-              Developer Tools
-            </Link>
           </div>
         </div>
       </div>

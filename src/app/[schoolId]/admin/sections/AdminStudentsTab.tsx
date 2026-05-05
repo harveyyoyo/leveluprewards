@@ -282,7 +282,7 @@ export function AdminStudentsTab({
           </div>
         </div>
 
-        <ScrollArea className="h-[calc(100vh-22rem)] max-h-[420px] min-h-[280px]">
+        <ScrollArea className="h-[calc(100vh-22rem)] min-h-[280px]">
           <ul className="flex flex-col gap-1.5 pr-4">
             {filteredStudents.map((s) => {
               const teacherLine = formatAssignedTeachers(s, teachers);
@@ -323,6 +323,17 @@ export function AdminStudentsTab({
                   }
                 }}
               >
+                <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8 sm:h-9 sm:w-9 rounded-full"
+                    onClick={() => handleOpenStudentModal?.(s)}
+                    title="Edit student"
+                  >
+                    <Edit className="w-4 h-4 text-primary" />
+                  </Button>
+                </div>
                 <div className="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0">
                   <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden bg-primary/10 border border-border/40 flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">
                     {s.photoUrl ? (
@@ -479,15 +490,6 @@ export function AdminStudentsTab({
                   <Button
                     variant="outline"
                     size="icon"
-                    className="h-8 w-8 sm:h-9 sm:w-9 rounded-full"
-                    onClick={() => handleOpenStudentModal?.(s)}
-                    title="Edit student"
-                  >
-                    <Edit className="w-4 h-4 text-primary" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
                     className="h-8 w-8 sm:h-9 sm:w-9 rounded-full text-primary hover:bg-primary/10"
                     title="Purge points & badges"
                     onClick={() => setStudentToPurge?.(s)}
@@ -513,4 +515,3 @@ export function AdminStudentsTab({
     </Card>
   );
 }
-

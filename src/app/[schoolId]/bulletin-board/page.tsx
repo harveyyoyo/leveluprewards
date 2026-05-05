@@ -13,6 +13,9 @@ import { cn } from '@/lib/utils';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
 import { DEFAULT_BULLETIN_SUBTITLE, bulletinLogoBoxClass, getBulletinBoardCardClassName } from '@/lib/bulletinBoard';
 
+import { motion } from 'framer-motion';
+import { rainbowTripletForNavId, complementTripletForNavId } from '@/lib/rainbowNav';
+
 type BulletinIncentive = {
   id: string;
   title: string;
@@ -85,12 +88,36 @@ export default function BulletinBoardViewPage() {
   return (
     <div
       className={cn(
-        'min-h-screen text-foreground font-sans p-4 md:p-8 max-w-3xl mx-auto',
+        'min-h-screen text-foreground font-sans p-4 md:p-8 max-w-4xl mx-auto flex flex-col items-center',
         animBackdrop ? 'bg-transparent' : 'bg-background',
       )}
+      style={{
+        ['--primary' as any]: rainbowTripletForNavId('admin', settings.colorScheme),
+        ['--chart-1' as any]: rainbowTripletForNavId('admin', settings.colorScheme),
+        ['--chart-2' as any]: complementTripletForNavId('admin', settings.colorScheme),
+        ['--chart-3' as any]: rainbowTripletForNavId('admin', settings.colorScheme),
+        ['--chart-4' as any]: complementTripletForNavId('admin', settings.colorScheme),
+        ['--chart-5' as any]: rainbowTripletForNavId('admin', settings.colorScheme),
+        ['--ring' as any]: complementTripletForNavId('admin', settings.colorScheme),
+      } as any}
     >
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        className="w-full text-center mb-12"
+      >
+        <h1 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tighter text-primary drop-shadow-sm mb-4 flex items-center justify-center gap-4">
+          <Megaphone className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 text-indigo-500" />
+          {bulletinTitle}
+        </h1>
+        <p className="text-xs sm:text-sm font-bold text-muted-foreground uppercase tracking-[0.3em] max-w-2xl mx-auto">
+          {bulletinSubtitle}
+        </p>
+      </motion.div>
+
       {!bulletinEnabled ? (
-        <Card className="border-dashed">
+        <Card className="border-dashed w-full max-w-2xl">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <Megaphone className="h-5 w-5 text-muted-foreground" />
@@ -102,41 +129,30 @@ export default function BulletinBoardViewPage() {
       ) : (
         <Card
           className={cn(
+            'w-full shadow-2xl border-t-8 border-indigo-500 backdrop-blur-md',
             getBulletinBoardCardClassName(settings.bulletinTheme),
+            animBackdrop ? 'bg-card/92' : 'bg-card/80',
           )}
         >
-          <CardHeader className="pb-3 border-b flex flex-col md:flex-row justify-between md:items-center gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              {schoolLogoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={schoolLogoUrl}
-                  alt="School logo"
-                  className={cn(
-                    bulletinLogoBoxClass(logoSize),
-                    'object-contain rounded-xl bg-white/30 backdrop-blur-md p-1 shrink-0',
-                  )}
-                />
-              ) : (
-                <div
-                  className={cn(
-                    bulletinLogoBoxClass(logoSize),
-                    'rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center font-black text-primary flex-shrink-0 shadow-md',
-                  )}
-                >
-                  🏫
-                </div>
-              )}
-              <div className="min-w-0">
-                <CardTitle className="text-sm font-black flex items-center gap-2">
-                  <Megaphone className="w-4 h-4 text-indigo-500 shrink-0" />
-                  {bulletinTitle}
-                </CardTitle>
-                <CardDescription className="text-[10px] font-medium opacity-70 line-clamp-2">
-                  {bulletinSubtitle}
-                </CardDescription>
-              </div>
+          {schoolLogoUrl && (
+            <div className="flex justify-center pt-8">
+              <img
+                src={schoolLogoUrl}
+                alt="School logo"
+                className={cn(
+                  bulletinLogoBoxClass(logoSize),
+                  'object-contain rounded-2xl bg-white/30 backdrop-blur-md p-2 shadow-xl shrink-0',
+                )}
+              />
             </div>
+          )}
+          <CardHeader className="pb-3 text-center">
+            <CardTitle className="text-xl font-black flex items-center justify-center gap-2">
+              Current Opportunities
+            </CardTitle>
+            <CardDescription className="text-xs font-bold uppercase tracking-widest opacity-70">
+              Complete these tasks to earn points
+            </CardDescription>
           </CardHeader>
           <CardContent className="pt-3 pb-6">
             {isLoading ? (

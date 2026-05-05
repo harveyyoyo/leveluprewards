@@ -42,7 +42,7 @@ export function AdminBonusPointsTab(props: any) {
       </CardHeader>
       <CardContent>
         {achievementsLoading ? (
-          <ul className="space-y-2 h-[calc(100vh-22rem)] max-h-[420px] min-h-[250px] overflow-y-auto pr-1">
+          <ul className="space-y-2 h-[calc(100vh-22rem)] min-h-[250px] overflow-y-auto pr-1">
             {[1, 2, 3].map((i: number) => (
               <li key={i} className="flex justify-between items-center bg-secondary/20 p-4 rounded-2xl border">
                 <Skeleton className="h-10 w-48" />
@@ -51,10 +51,21 @@ export function AdminBonusPointsTab(props: any) {
             ))}
           </ul>
         ) : (
-          <ul className="space-y-2 h-[calc(100vh-22rem)] max-h-[420px] min-h-[250px] overflow-y-auto pr-1">
+          <ul className="space-y-2 h-[calc(100vh-22rem)] min-h-[250px] overflow-y-auto pr-1">
             {(achievements || []).map((ach: any) => (
               <li key={ach.id} className="flex justify-between items-center bg-secondary/20 p-4 rounded-2xl border hover:border-primary/20 transition-colors">
-                <div className="flex items-center gap-3">
+                <div className="flex shrink-0 items-center">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+                    onClick={() => { setEditingAchievement(ach); setIsBadgeModalOpen(true); }}
+                    title="Edit milestone"
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="flex items-center gap-3 flex-1">
                   <div
                     className="w-10 h-10 rounded-xl flex items-center justify-center border-2 shrink-0"
                     style={{ borderColor: ach.accentColor || undefined, backgroundColor: ach.accentColor ? `${ach.accentColor}20` : undefined }}
@@ -75,9 +86,7 @@ export function AdminBonusPointsTab(props: any) {
                   </div>
                 </div>
                 <div className="flex gap-1">
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingAchievement(ach); setIsBadgeModalOpen(true); }}>
-                    <Edit className="h-4 w-4" />
-                  </Button>
+
                   <Button
                     variant="ghost"
                     size="icon"

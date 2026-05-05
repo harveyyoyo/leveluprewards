@@ -325,7 +325,7 @@ export function AdminAttendanceTab(props: any) {
                         {inClass.length === 0 ? (
                           <p className="text-sm text-muted-foreground">No sign-ins recorded yet for this period.</p>
                         ) : (
-                          <ScrollArea className="h-[220px] w-full pr-3">
+                          <ScrollArea className="h-[calc(100vh-28rem)] w-full pr-3">
                             <ul className="space-y-2">
                               {inClass.map((e: any) => (
                                 <li
@@ -703,7 +703,7 @@ export function AdminAttendanceTab(props: any) {
               {teacherAttendanceLog.length > 0 && (
                 <div className="space-y-2">
                   <Label>Recent sign-ins (teacher)</Label>
-                  <ScrollArea className="h-[240px] w-full pr-4">
+                  <ScrollArea className="h-[calc(100vh-28rem)] w-full pr-4">
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b text-left">
@@ -749,7 +749,7 @@ export function AdminAttendanceTab(props: any) {
               Refresh activity log
             </Button>
           </div>
-          <ScrollArea className="h-[320px] w-full pr-4">
+          <ScrollArea className="h-[calc(100vh-28rem)] w-full pr-4">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-left">

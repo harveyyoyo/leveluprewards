@@ -5,6 +5,7 @@ import React, {
   useContext,
   useCallback,
   useMemo,
+  useEffect,
 } from 'react';
 import type { Student, Class, Coupon, Teacher, Prize, Category, HistoryItem, Achievement, Badge, AttendanceSettings, AttendanceLogEntry, RecordClassSignInResult, HomeworkAssignment, HomeworkSubmission } from '@/lib/types';
 import type { CouponPrintPageSize } from '@/lib/coupon-print';
@@ -14,7 +15,7 @@ import { collection } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import {
   addCategory as dbAddCategory, deleteCategory as dbDeleteCategory, updateCategory as dbUpdateCategory,
-  addCoupons as dbAddCoupons, deleteCoupon as dbDeleteCoupon,
+  addCoupons as dbAddCoupons, deleteCoupon as dbDeleteCoupon, deleteCoupons as dbDeleteCoupons,
   addPrize as dbAddPrize,
   updatePrize as dbUpdatePrize, deletePrize as dbDeletePrize,
   addStudent as dbAddStudent, updateStudent as dbUpdateStudent,
@@ -92,6 +93,7 @@ interface AppContextType {
   addCoupons: (coupons: Coupon[]) => Promise<void>;
   redeemCoupon: (studentId: string, couponCode: string) => Promise<{ success: boolean; message: string; value?: number; bonusTotal?: number }>;
   deleteCoupon: (couponId: string) => Promise<void>;
+  deleteCoupons: (couponIds: string[]) => Promise<void>;
   awardPoints: (studentId: string, points: number, description: string) => Promise<{ success: boolean; message: string; bonusTotal?: number }>;
   awardPointsToMultipleStudents: (studentIds: string[], points: number, description: string) => Promise<{ success: boolean; message: string; count: number }>;
   deductPointsFromMultipleStudents: (studentIds: string[], points: number, reason: string) => Promise<{ success: boolean; message: string; count: number; }>;
@@ -154,6 +156,14 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
   const { firestore, functions, auth } = useFirebase();
   const schoolId = authCtx.schoolId;
   const canReadRewardMetadata = authCtx.isAdmin || authCtx.isTeacher;
+
+  // Some third-party bundles may (incorrectly) reference a global `react` identifier.
+  // Defining it defensively prevents hard crashes like "react is not defined".
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    (window as any).React = React;
+    (window as any).react = React;
+  }, []);
 
   const categoriesQuery = useMemoFirebase(
     () => (schoolId && canReadRewardMetadata ? collection(firestore, 'schools', schoolId, 'categories') : null),
@@ -410,6 +420,11 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     return dbDeleteCoupon(firestore, schoolId, couponId);
   }, [firestore, schoolId]);
 
+  const deleteCoupons_ = useCallback((couponIds: string[]) => {
+    if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
+    return dbDeleteCoupons(firestore, schoolId, couponIds);
+  }, [firestore, schoolId]);
+
   const awardPoints_ = useCallback(async (studentId: string, points: number, description: string) => {
     if (!firestore || !schoolId) return { success: false, message: 'Not logged in.' };
     const allAchievements = settings.enableAchievements ? (achievements || []) : [];
@@ -583,7 +598,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     addClass: addClass_, updateClass: updateClass_, deleteClass: deleteClass_,
     addTeacher: addTeacher_, updateTeacher: updateTeacher_, deleteTeacher: deleteTeacher_,
     addCategory: addCategory_, updateCategory: updateCategory_, deleteCategory: deleteCategory_,
-    addCoupons: addCoupons_, redeemCoupon: redeemCoupon_, deleteCoupon: deleteCoupon_, awardPoints: awardPoints_,
+    addCoupons: addCoupons_, redeemCoupon: redeemCoupon_, deleteCoupon: deleteCoupon_, deleteCoupons: deleteCoupons_, awardPoints: awardPoints_,
     awardPointsToMultipleStudents: awardPointsToMultipleStudents_,
     deductPointsFromMultipleStudents: deductPointsFromMultipleStudents_,
     redeemPrize: redeemPrize_,
@@ -618,7 +633,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     addStudent_, updateStudent_, deleteStudent_,
     addClass_, updateClass_, deleteClass_, addTeacher_, updateTeacher_, deleteTeacher_,
     addCategory_, updateCategory_, deleteCategory_, addCoupons_,
-    redeemCoupon_, deleteCoupon_, awardPoints_, awardPointsToMultipleStudents_, deductPointsFromMultipleStudents_,
+    redeemCoupon_, deleteCoupon_, deleteCoupons_, awardPoints_, awardPointsToMultipleStudents_, deductPointsFromMultipleStudents_,
     redeemPrize_, addPrize_, updatePrize_, deletePrize_,
     uploadStudents_,
     uploadClassesFromCsv_,

@@ -1,7 +1,9 @@
 
-import { useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useAppContext } from '@/components/AppProvider';
 import { usePathname, useRouter } from 'next/navigation';
+import { collection } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import {
     Dialog,
     DialogContent,
@@ -31,16 +33,23 @@ import {
     Layers, UsersRound
 } from 'lucide-react';
 import { useSettings, colorSchemes, type ColorScheme, type Settings as AppSettings } from '../providers/SettingsProvider';
-import type { StudentTheme } from '@/lib/types';
+import type { BackupInfo, StudentTheme } from '@/lib/types';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
+import { useToast } from '@/hooks/use-toast';
 import { AttendanceTimeZoneField } from '@/components/attendance/AttendanceTimeZoneField';
 import { VendingMotorPanel } from '@/components/VendingMotorPanel';
 import { ANIMATED_BACKGROUND_STYLES, type AnimatedBackgroundStyle } from '@/lib/animatedBackdrop';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
 import { cn } from '@/lib/utils';
 import { WELCOME_GREETING_STYLES } from '@/components/WelcomeGreeting';
+import { AdminBackupsTab } from '@/app/[schoolId]/admin/sections/AdminBackupsTab';
 
-type SettingsView = 'hub' | 'interface' | 'security' | 'features' | 'pillars';
+type SettingsView = 'hub' | 'interface' | 'security' | 'features' | 'pillars' | 'developer';
+type RoleView = 'global' | 'student' | 'teacher';
+type PreviewMode = 'live' | 'draft';
+
+type FeatureFilter = { query: string; enabledOnly: boolean };
+const FeatureFilterContext = createContext<FeatureFilter>({ query: '', enabledOnly: false });
 
 const FEATURE_SECTION_NAV = [
     { id: 'settings-features-core', label: 'Core' },
@@ -100,8 +109,15 @@ function FeatureRow({ id, label, desc, icon, settings, onToggle, onConfigure, is
     id: string; label: string; desc: string; icon: React.ReactNode;
     settings: any; onToggle: (key: string, val: any) => void; onConfigure?: () => void; isImplemented?: boolean; isAdmin?: boolean; isAllowed?: boolean; planLabel?: string;
 }) {
+    const filter = useContext(FeatureFilterContext);
     const isEnabled = settings[id] || false;
     const canUse = isImplemented && isAllowed;
+    if (filter.enabledOnly && !isEnabled) return null;
+    if (filter.query.trim()) {
+        const q = filter.query.trim().toLowerCase();
+        const hay = `${id} ${label} ${desc}`.toLowerCase();
+        if (!hay.includes(q)) return null;
+    }
     return (
         <div className="flex items-start justify-between py-4 px-3 border-b border-border/40 last:border-0 hover:bg-muted/30 rounded-xl transition-colors">
             <div className={`flex items-start gap-4 ${!canUse && 'opacity-60'} mr-6`}>
@@ -154,22 +170,56 @@ function FeatureRow({ id, label, desc, icon, settings, onToggle, onConfigure, is
 }
 
 export function SettingsModal() {
-    const { loginState, getAttendanceConfig, setAttendanceConfig, schoolId: appSchoolId } = useAppContext();
-    const isAdmin = loginState === 'admin' || loginState === 'developer';
+    const {
+        loginState,
+        isAdmin,
+        schoolId,
+        getAttendanceConfig,
+        setAttendanceConfig,
+        devCreateBackup,
+        devRestoreFromBackup,
+        devDownloadBackup,
+    } = useAppContext();
+    const canOpenSettings = loginState === 'admin' || loginState === 'developer' || loginState === 'teacher';
     const { settings, updateSettings, isFeatureAllowed, planLabel } = useSettings();
     const playSound = useArcadeSound();
+    const { toast } = useToast();
+    const firestore = useFirestore();
     const [open, setOpen] = useState(false);
     const [draft, setDraft] = useState<AppSettings | null>(null);
     const [view, setView] = useState<SettingsView>('hub');
     const [vendingSettingsOpen, setVendingSettingsOpen] = useState(false);
+    const [interfaceRole, setInterfaceRole] = useState<RoleView>(
+        isAdmin ? 'global' : (loginState === 'teacher' ? 'teacher' : 'student')
+    );
+    const [previewMode, setPreviewMode] = useState<PreviewMode>(isAdmin ? 'draft' : 'live');
+    const [featureQuery, setFeatureQuery] = useState('');
+    const [featuresEnabledOnly, setFeaturesEnabledOnly] = useState(false);
     const local = draft ?? settings;
     const pathname = usePathname();
     const router = useRouter();
+    const originalSettingsRef = useRef<AppSettings | null>(null);
+    const committedRef = useRef(false);
+    const isShortLinkKioskRoute = typeof pathname === 'string' && pathname.startsWith('/s/');
 
-    // For short-link kiosk entry routes, keep the UI minimal.
-    if (typeof pathname === 'string' && pathname.startsWith('/s/')) return null;
+    const canLivePreviewInterfaceRole = useMemo(() => {
+        if (interfaceRole === 'global') return true;
+        if (interfaceRole === 'student') return loginState === 'student';
+        if (interfaceRole === 'teacher') return loginState === 'teacher';
+        return false;
+    }, [interfaceRole, loginState]);
 
     const handleToggle = (key: string, value: any) => {
+        const isLivePreviewKey =
+            key === 'enableAnimatedBackground' ||
+            key === 'calmMode' ||
+            key === 'legacyMode' ||
+            key === 'animatedBackgroundStyle' ||
+            key === 'studentEnableAnimatedBackground' ||
+            key === 'teacherEnableAnimatedBackground' ||
+            key === 'studentAnimatedBackgroundStyle' ||
+            key === 'teacherAnimatedBackgroundStyle';
+
         setDraft((prev) => {
             if (!prev) return prev;
             let next: AppSettings = { ...prev, [key]: value } as AppSettings;
@@ -181,9 +231,27 @@ export function SettingsModal() {
             }
             return next;
         });
+
+        if (previewMode === 'live' && isLivePreviewKey && canLivePreviewInterfaceRole) {
+            updateSettings({ [key]: value } as Partial<AppSettings>);
+        }
         if (local.soundEnabled || key === 'soundEnabled') {
             playSound('click');
         }
+    };
+
+    const handleTeacherFeatureToggle = (key: string, value: boolean) => {
+        setDraft((prev) => {
+            if (!prev) return prev;
+            return {
+                ...prev,
+                teacherFeatures: {
+                    ...(prev.teacherFeatures || {}),
+                    [key]: value
+                }
+            };
+        });
+        if (local.soundEnabled) playSound('click');
     };
 
     const viewTitle: Record<SettingsView, string> = {
@@ -192,6 +260,32 @@ export function SettingsModal() {
         security: 'Security',
         features: 'Features & add-ons',
         pillars: 'Product Pillars',
+        developer: 'Developer tools',
+    };
+
+    const backupsQuery = useMemoFirebase(
+        () => (firestore && schoolId && loginState === 'developer' ? collection(firestore, 'schools', schoolId, 'backups') : null),
+        [firestore, schoolId, loginState],
+    );
+    const { data: backups } = useCollection<BackupInfo>(backupsQuery);
+
+    const handleCreateBackup = async () => {
+        if (!schoolId) return;
+        await devCreateBackup(schoolId);
+        playSound('success');
+        toast({ title: 'Backup created', description: 'A new snapshot has been saved.' });
+    };
+
+    const handleRestoreFromBackup = async (backupId: string) => {
+        if (!schoolId) return;
+        await devRestoreFromBackup(schoolId, backupId);
+        playSound('success');
+        toast({ title: 'Restore complete', description: 'School data has been restored from the snapshot.' });
+    };
+
+    const handleDownloadBackup = async (backupId: string) => {
+        if (!schoolId) return;
+        await devDownloadBackup(schoolId, backupId);
     };
 
     const visibleStyles = ANIMATED_BACKGROUND_STYLES.filter(s => !(local.hiddenAnimatedBackgroundIds || []).includes(s.id));
@@ -217,8 +311,11 @@ export function SettingsModal() {
 
     const handleOpenChange = (next: boolean) => {
         if (next) {
+            committedRef.current = false;
+            originalSettingsRef.current = cloneSettings(settings);
             setDraft(cloneSettings(settings));
             setView('hub');
+            setPreviewMode(isAdmin ? 'draft' : 'live');
         } else {
             setDraft(null);
             setView('hub');
@@ -226,9 +323,20 @@ export function SettingsModal() {
         setOpen(next);
     };
 
+    // If the user closes/cancels, revert any live-previewed changes.
+    useEffect(() => {
+        if (open) return;
+        if (committedRef.current) return;
+        const original = originalSettingsRef.current;
+        if (!original) return;
+        updateSettings(original);
+        originalSettingsRef.current = null;
+    }, [open, updateSettings]);
+
 
     const handleOk = () => {
         if (draft) {
+            committedRef.current = true;
             updateSettings({ ...draft });
         }
         setDraft(null);
@@ -236,38 +344,44 @@ export function SettingsModal() {
         setOpen(false);
     };
 
-    const trigger = (
-        <Button
-            variant="ghost"
-            size="icon"
-            className={cn(
-                "hover:bg-muted rounded-xl group relative z-50 transition-all active:scale-90",
-                !isAdmin && "text-muted-foreground/60"
-            )}
-            aria-label="Open settings"
-            onClick={(e) => {
-                if (!isAdmin) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    playSound('click');
-                    // Use a safe school ID or the one from context
-                    const sid = appSchoolId || (typeof window !== 'undefined' ? window.location.pathname.split('/')[1] : '');
-                    router.push(`/login?school=${encodeURIComponent(sid)}&redirect=${encodeURIComponent(pathname)}`);
-                }
-            }}
-        >
-            <Settings className="w-5 h-5 text-muted-foreground group-hover:rotate-45 transition-transform duration-300" />
-        </Button>
-    );
+    // For short-link kiosk entry routes, keep the UI minimal (and avoid showing settings).
+    if (isShortLinkKioskRoute) return null;
 
     return (
         <Dialog open={open} onOpenChange={handleOpenChange}>
-            {isAdmin ? (
+            {canOpenSettings ? (
                 <DialogTrigger asChild>
-                    {trigger}
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className={cn(
+                            "hover:bg-muted rounded-xl group relative z-50 transition-all active:scale-90",
+                            !canOpenSettings && "text-muted-foreground/60"
+                        )}
+                        aria-label="Open settings"
+                    >
+                        <Settings className="w-5 h-5 text-muted-foreground group-hover:rotate-45 transition-transform duration-300" />
+                    </Button>
                 </DialogTrigger>
             ) : (
-                trigger
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className={cn(
+                        "hover:bg-muted rounded-xl group relative z-50 transition-all active:scale-90",
+                        !canOpenSettings && "text-muted-foreground/60"
+                    )}
+                    aria-label="Open settings"
+                    onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        playSound('click');
+                        const sid = schoolId || (typeof window !== 'undefined' ? window.location.pathname.split('/')[1] : '');
+                        router.push(`/${sid}/admin-signin?redirect=${encodeURIComponent(pathname)}`);
+                    }}
+                >
+                    <Settings className="w-5 h-5 text-muted-foreground group-hover:rotate-45 transition-transform duration-300" />
+                </Button>
             )}
       <DialogContent size="lg" className="p-0 overflow-hidden border border-border bg-background flex flex-col shadow-2xl" data-settings-open="true">
                 {/* Header */}
@@ -313,48 +427,6 @@ export function SettingsModal() {
                             <button
                                 type="button"
                                 onClick={() => {
-                                    setView('security');
-                                    if (local.soundEnabled) playSound('click');
-                                }}
-                                className={cn(
-                                    'flex flex-col items-start gap-2 rounded-2xl border-2 p-4 text-left transition-all',
-                                    'border-indigo-200 dark:border-indigo-900/50 bg-indigo-50/80 dark:bg-indigo-950/20',
-                                    'hover:bg-indigo-100/80 dark:hover:bg-indigo-950/35',
-                                )}
-                            >
-                                <div className="flex w-full items-start justify-between gap-2">
-                                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-500 text-white shadow-inner">
-                                        <Shield className="h-5 w-5" />
-                                    </span>
-                                    <ChevronRight className="h-5 w-5 shrink-0 text-indigo-700/50 dark:text-indigo-400/50" aria-hidden />
-                                </div>
-                                <span className="font-black text-indigo-900 dark:text-indigo-100">Security</span>
-                                <span className="text-xs leading-snug text-indigo-800/90 dark:text-indigo-200/80">Admin and kiosk session timeouts</span>
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setView('pillars');
-                                    if (local.soundEnabled) playSound('click');
-                                }}
-                                className={cn(
-                                    'flex flex-col items-start gap-2 rounded-2xl border-2 p-4 text-left transition-all',
-                                    'border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/80 dark:bg-emerald-950/20',
-                                    'hover:bg-emerald-100/80 dark:hover:bg-emerald-950/35',
-                                )}
-                            >
-                                <div className="flex w-full items-start justify-between gap-2">
-                                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500 text-white shadow-inner">
-                                        <ShieldCheck className="h-5 w-5" />
-                                    </span>
-                                    <ChevronRight className="h-5 w-5 shrink-0 text-emerald-700/50 dark:text-emerald-400/50" aria-hidden />
-                                </div>
-                                <span className="font-black text-emerald-900 dark:text-emerald-100">Product Pillars</span>
-                                <span className="text-xs leading-snug text-emerald-800/90 dark:text-emerald-200/80">Select active paid plan products</span>
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => {
                                     setView('features');
                                     if (local.soundEnabled) playSound('click');
                                 }}
@@ -373,41 +445,244 @@ export function SettingsModal() {
                                 <span className="font-black text-amber-900 dark:text-amber-100">Features &amp; add-ons</span>
                                 <span className="text-xs leading-snug text-amber-800/90 dark:text-amber-200/80">Attendance, shop, recognition, library checkout, and more</span>
                             </button>
+                            {loginState === 'developer' && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setView('developer');
+                                        if (local.soundEnabled) playSound('click');
+                                    }}
+                                    className={cn(
+                                        'flex flex-col items-start gap-2 rounded-2xl border-2 p-4 text-left transition-all',
+                                        'border-fuchsia-200 dark:border-fuchsia-900/50 bg-fuchsia-50/80 dark:bg-fuchsia-950/20',
+                                        'hover:bg-fuchsia-100/80 dark:hover:bg-fuchsia-950/35',
+                                    )}
+                                >
+                                    <div className="flex w-full items-start justify-between gap-2">
+                                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-fuchsia-600 text-white shadow-inner">
+                                            <Database className="h-5 w-5" />
+                                        </span>
+                                        <ChevronRight className="h-5 w-5 shrink-0 text-fuchsia-700/50 dark:text-fuchsia-400/50" aria-hidden />
+                                    </div>
+                                    <span className="font-black text-fuchsia-900 dark:text-fuchsia-100">Developer tools</span>
+                                    <span className="text-xs leading-snug text-fuchsia-800/90 dark:text-fuchsia-200/80">Create, download, and restore snapshots for this school</span>
+                                </button>
+                            )}
+                            {isAdmin && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setView('security');
+                                        if (local.soundEnabled) playSound('click');
+                                    }}
+                                    className={cn(
+                                        'flex flex-col items-start gap-2 rounded-2xl border-2 p-4 text-left transition-all',
+                                        'border-indigo-200 dark:border-indigo-900/50 bg-indigo-50/80 dark:bg-indigo-950/20',
+                                        'hover:bg-indigo-100/80 dark:hover:bg-indigo-950/35',
+                                    )}
+                                >
+                                    <div className="flex w-full items-start justify-between gap-2">
+                                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-500 text-white shadow-inner">
+                                            <Shield className="h-5 w-5" />
+                                        </span>
+                                        <ChevronRight className="h-5 w-5 shrink-0 text-indigo-700/50 dark:text-indigo-400/50" aria-hidden />
+                                    </div>
+                                    <span className="font-black text-indigo-900 dark:text-indigo-100">Security</span>
+                                    <span className="text-xs leading-snug text-indigo-800/90 dark:text-indigo-200/80">Admin and kiosk session timeouts</span>
+                                </button>
+                            )}
+                            {isAdmin && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setView('pillars');
+                                        if (local.soundEnabled) playSound('click');
+                                    }}
+                                    className={cn(
+                                        'flex flex-col items-start gap-2 rounded-2xl border-2 p-4 text-left transition-all',
+                                        'border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/80 dark:bg-emerald-950/20',
+                                        'hover:bg-emerald-100/80 dark:hover:bg-emerald-950/35',
+                                    )}
+                                >
+                                    <div className="flex w-full items-start justify-between gap-2">
+                                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500 text-white shadow-inner">
+                                            <ShieldCheck className="h-5 w-5" />
+                                        </span>
+                                        <ChevronRight className="h-5 w-5 shrink-0 text-emerald-700/50 dark:text-emerald-400/50" aria-hidden />
+                                    </div>
+                                    <span className="font-black text-emerald-900 dark:text-emerald-100">Product Pillars</span>
+                                    <span className="text-xs leading-snug text-emerald-800/90 dark:text-emerald-200/80">Select active paid plan products</span>
+                                </button>
+                            )}
+                        </div>
+                    )}
+
+                    {view === 'developer' && loginState === 'developer' && (
+                        <div className="space-y-4">
+                            <AdminBackupsTab
+                                backups={backups}
+                                onCreateBackup={handleCreateBackup}
+                                onDownloadBackup={handleDownloadBackup}
+                                onRestoreFromBackup={handleRestoreFromBackup}
+                            />
                         </div>
                     )}
 
                     {view === 'interface' && (
                         <>
-                            <SettingsSectionJumpNav
+                             <SettingsSectionJumpNav
                                 sections={INTERFACE_SECTION_NAV}
                                 ariaLabel="Interface settings sections"
                                 onJump={jumpToSettingsSection}
                             />
 
-                            {/* APPEARANCE */}
-                            <div
-                                id="settings-interface-appearance"
-                                className="scroll-mt-[4.5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 mb-4 border border-slate-100 dark:border-slate-800/50"
-                            >
-                                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 pb-3 flex items-center gap-2">
-                                    <Palette className="w-3.5 h-3.5" /> Appearance
-                                </p>
-                                
-                                {/* Color Scheme */}
-                                <div className="grid grid-cols-3 gap-2 mt-1">
-                                    {(Object.keys(colorSchemes) as ColorScheme[]).map((key) => (
+                            <div className="mb-4 flex flex-col gap-3">
+                                {isAdmin && (
+                                    <div className="flex items-center gap-2 p-1 bg-muted/50 rounded-2xl border border-border/40">
+                                        {(['global', 'student', 'teacher'] as RoleView[]).map((role) => (
+                                            <button
+                                                key={role}
+                                                onClick={() => {
+                                                    setInterfaceRole(role);
+                                                    if (local.soundEnabled) playSound('click');
+                                                }}
+                                                className={cn(
+                                                    "flex-1 py-2 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                                                    interfaceRole === role 
+                                                        ? "bg-background text-foreground shadow-sm border border-border/50" 
+                                                        : "text-muted-foreground hover:text-foreground"
+                                                )}
+                                            >
+                                                {role} Portal
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {isAdmin ? (
+                                    <div className="rounded-2xl border border-border/40 bg-muted/30 p-3 flex items-center justify-between">
+                                        <div className="min-w-0">
+                                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+                                                Editing
+                                            </p>
+                                            <p className="text-sm font-black tracking-tight text-foreground mt-1">
+                                                {interfaceRole === 'global'
+                                                    ? 'Global defaults'
+                                                    : interfaceRole === 'student'
+                                                        ? 'Student portal overrides'
+                                                        : 'Teacher portal overrides'}
+                                            </p>
+                                        </div>
+                                        <div className="shrink-0 text-[10px] font-black uppercase tracking-widest rounded-full border border-border/60 bg-background/70 px-3 py-1.5 text-muted-foreground">
+                                            {interfaceRole === 'global' ? 'ALL USERS' : interfaceRole.toUpperCase()}
+                                        </div>
+                                    </div>
+                                ) : null}
+                            </div>
+
+                            {isAdmin && (
+                                <div className="mb-4 rounded-2xl border border-border/40 bg-muted/30 p-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                    <div className="min-w-0">
+                                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+                                            Preview mode
+                                        </p>
+                                        <p className="text-xs text-muted-foreground leading-snug mt-1">
+                                            {previewMode === 'live'
+                                                ? 'Changes apply immediately so you can verify motion/background instantly.'
+                                                : 'Changes stay in this dialog until you press OK.'}
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 rounded-2xl border border-border/50 bg-background/60 p-1 shrink-0">
                                         <button
-                                            key={key}
-                                            onClick={() => handleToggle('colorScheme', key)}
-                                            className={`flex items-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition-all border ${local.colorScheme === key ? 'border-primary bg-primary/5 text-primary ring-1 ring-primary' : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-muted'}`}
+                                            type="button"
+                                            onClick={() => {
+                                                setPreviewMode('draft');
+                                                if (local.soundEnabled) playSound('click');
+                                            }}
+                                            className={cn(
+                                                'px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all',
+                                                previewMode === 'draft'
+                                                    ? 'bg-background text-foreground shadow-sm border border-border/50'
+                                                    : 'text-muted-foreground hover:text-foreground',
+                                            )}
                                         >
-                                            <span className={`w-4 h-4 rounded-full ${colorSchemes[key].swatch} shrink-0`} />
-                                            {colorSchemes[key].label}
+                                            Apply on OK
                                         </button>
-                                    ))}
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setPreviewMode('live');
+                                                if (local.soundEnabled) playSound('click');
+                                            }}
+                                            className={cn(
+                                                'px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all',
+                                                previewMode === 'live'
+                                                    ? 'bg-background text-foreground shadow-sm border border-border/50'
+                                                    : 'text-muted-foreground hover:text-foreground',
+                                            )}
+                                        >
+                                            Live preview
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* APPEARANCE */}
+                            <div className="grid gap-4 md:grid-cols-[220px_1fr]">
+                                {/* Desktop left nav */}
+                                <div className="hidden md:block">
+                                    <div className="sticky top-0 rounded-2xl border border-border/40 bg-muted/20 p-2">
+                                        <p className="px-3 pt-3 pb-2 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+                                            Sections
+                                        </p>
+                                        <div className="flex flex-col gap-1 px-2 pb-2">
+                                            {INTERFACE_SECTION_NAV.map((s) => (
+                                                <button
+                                                    key={s.id}
+                                                    type="button"
+                                                    onClick={() => jumpToSettingsSection(s.id)}
+                                                    className="flex items-center justify-between rounded-xl border border-transparent px-3 py-2 text-left text-xs font-bold text-muted-foreground transition-colors hover:bg-background/60 hover:text-foreground"
+                                                >
+                                                    <span>{s.label}</span>
+                                                    <ChevronRight className="h-4 w-4 opacity-50" aria-hidden />
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
                                 </div>
 
-                            </div>
+                                <div className="min-w-0">
+                                    <div
+                                        id="settings-interface-appearance"
+                                        className="scroll-mt-[4.5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 mb-4 border border-slate-100 dark:border-slate-800/50"
+                                    >
+                                        <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 pb-3 flex items-center gap-2">
+                                            <Palette className="w-3.5 h-3.5" /> Appearance
+                                        </p>
+
+                                        {/* Color Scheme */}
+                                        <div className="grid grid-cols-3 gap-2 mt-1">
+                                            {(Object.keys(colorSchemes) as ColorScheme[]).map((key) => {
+                                                const roleKey = interfaceRole === 'student' ? 'studentColorScheme' : interfaceRole === 'teacher' ? 'teacherColorScheme' : 'colorScheme';
+                                                const isSelected = local[roleKey] === key;
+                                                return (
+                                                    <button
+                                                        key={key}
+                                                        onClick={() => handleToggle(roleKey, key)}
+                                                        className={cn(
+                                                            "flex items-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition-all border",
+                                                            isSelected 
+                                                                ? 'border-primary bg-primary/5 text-primary ring-1 ring-primary' 
+                                                                : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-muted'
+                                                        )}
+                                                    >
+                                                        <span className={`w-4 h-4 rounded-full ${colorSchemes[key].swatch} shrink-0`} />
+                                                        {colorSchemes[key].label}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
 
                             {/* MOTION & SOUND */}
                             <div
@@ -436,21 +711,50 @@ export function SettingsModal() {
                                     />
                                 </div>
 
+                                {/* Sound Effects */}
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`p-2 rounded-xl bg-muted text-muted-foreground`}>
+                                            <Volume2 className="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <h4 className="font-bold text-sm text-foreground">Sound FX</h4>
+                                            <p className="text-[11px] text-muted-foreground mt-0.5">Clicks and arcade UI sounds</p>
+                                        </div>
+                                    </div>
+                                    <Switch
+                                        checked={local.soundEnabled}
+                                        onCheckedChange={(checked) => handleToggle('soundEnabled', checked)}
+                                        className="data-[state=checked]:bg-emerald-500 scale-110"
+                                    />
+                                </div>
+
                                 <div className="flex items-center justify-between mb-4">
                                     <div className="flex items-center gap-3">
                                         <div className={`p-2 rounded-xl transition-colors ${local.enableAnimatedBackground && !local.calmMode ? 'bg-primary/20 text-primary shadow-sm' : 'bg-muted text-muted-foreground'}`}>
                                             <Sparkles className="w-5 h-5" />
                                         </div>
-                                        <div>
+                                         <div>
                                             <h4 className="font-bold text-sm text-foreground">Animated background</h4>
-                                            <p className="text-[11px] text-muted-foreground mt-0.5">Vibrant arcade style backdrop</p>
+                                            <p className="text-[11px] text-muted-foreground mt-0.5">
+                                                Vibrant arcade style backdrop
+                                                {!canLivePreviewInterfaceRole ? (
+                                                    <span className="ml-2 text-amber-700 dark:text-amber-400 font-bold">
+                                                        (preview applies only to your current portal)
+                                                    </span>
+                                                ) : null}
+                                            </p>
                                         </div>
                                     </div>
                                     <Switch
-                                        checked={local.enableAnimatedBackground}
+                                        checked={(() => {
+                                            if (interfaceRole === 'student') return local.studentEnableAnimatedBackground ?? local.enableAnimatedBackground;
+                                            if (interfaceRole === 'teacher') return local.teacherEnableAnimatedBackground ?? local.enableAnimatedBackground;
+                                            return local.enableAnimatedBackground;
+                                        })()}
                                         onCheckedChange={(checked) => {
-                                            // Only toggle the backdrop itself; don't force other UI modes.
-                                            handleToggle('enableAnimatedBackground', checked);
+                                            const roleKey = interfaceRole === 'student' ? 'studentEnableAnimatedBackground' : interfaceRole === 'teacher' ? 'teacherEnableAnimatedBackground' : 'enableAnimatedBackground';
+                                            handleToggle(roleKey, checked);
                                         }}
                                         className="scale-110"
                                     />
@@ -462,10 +766,14 @@ export function SettingsModal() {
                                         <div className="p-2 rounded-xl bg-muted text-muted-foreground">
                                             <Palette className="w-5 h-5" />
                                         </div>
-                                        <div>
+                                         <div>
                                             <h4 className="font-bold text-sm text-foreground">Background style</h4>
                                             <p className="text-[11px] text-muted-foreground mt-0.5">
-                                                Current: {currentStyle.label}
+                                                Current: {(() => {
+                                                    const roleStyle = interfaceRole === 'student' ? local.studentAnimatedBackgroundStyle : interfaceRole === 'teacher' ? local.teacherAnimatedBackgroundStyle : local.animatedBackgroundStyle;
+                                                    const s = ANIMATED_BACKGROUND_STYLES.find(x => x.id === (roleStyle || local.animatedBackgroundStyle));
+                                                    return s?.label || currentStyle.label;
+                                                })()}
                                                 {!backdropActive && backdropBlockedReason ? (
                                                     <span className="ml-2 text-amber-700 dark:text-amber-400 font-bold">
                                                         (not visible: {backdropBlockedReason})
@@ -481,31 +789,21 @@ export function SettingsModal() {
                                             backdropActive && "hover:bg-primary/10 hover:text-primary",
                                             !backdropActive && "opacity-50 cursor-not-allowed",
                                         )}
-                                        onClick={cycleBackground}
+                                        onClick={() => {
+                                            const roleKey = interfaceRole === 'student' ? 'studentAnimatedBackgroundStyle' : interfaceRole === 'teacher' ? 'teacherAnimatedBackgroundStyle' : 'animatedBackgroundStyle';
+                                            const roleStyle = local[roleKey] || local.animatedBackgroundStyle;
+                                            const idx = visibleStyles.findIndex(s => s.id === roleStyle);
+                                            const nextIdx = (idx + 1) % visibleStyles.length;
+                                            handleToggle(roleKey, visibleStyles[nextIdx].id);
+                                        }}
                                         disabled={!backdropActive || visibleStyles.length <= 1}
                                         title={!backdropActive && backdropBlockedReason ? `Background style is disabled: ${backdropBlockedReason}` : undefined}
->
-                                        {currentStyle.label} <ArrowRightLeft className="w-3 h-3" />
+                                    >
+                                        Cycle <ArrowRightLeft className="w-3 h-3" />
                                     </Button>
                                 </div>
 
-                                {/* Theme Animations */}
-                                <div className="flex items-center justify-between mb-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className={`p-2 rounded-xl transition-colors ${local.enableThemeAnimations ? 'bg-primary/20 text-primary shadow-sm' : 'bg-muted text-muted-foreground'}`}>
-                                            <Zap className="w-5 h-5" />
-                                        </div>
-                                        <div>
-                                            <h4 className="font-bold text-sm text-foreground">Theme animations</h4>
-                                            <p className="text-[11px] text-muted-foreground mt-0.5">Animate emojis + themed accents (kiosk & shop)</p>
-                                        </div>
-                                    </div>
-                                    <Switch
-                                        checked={local.enableThemeAnimations}
-                                        onCheckedChange={(checked) => handleToggle('enableThemeAnimations', checked)}
-                                        className="scale-110"
-                                    />
-                                </div>
+
 
                             </div>
 
@@ -523,11 +821,18 @@ export function SettingsModal() {
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
                                             <Moon className="w-4 h-4 text-muted-foreground" />
-                                            <span className="text-sm font-bold">Dark Mode</span>
+                                             <span className="text-sm font-bold">Dark Mode</span>
                                         </div>
                                         <Switch
-                                            checked={local.darkMode}
-                                            onCheckedChange={(checked) => handleToggle('darkMode', checked)}
+                                            checked={(() => {
+                                                if (interfaceRole === 'student') return local.studentDarkMode ?? local.darkMode;
+                                                if (interfaceRole === 'teacher') return local.teacherDarkMode ?? local.darkMode;
+                                                return local.darkMode;
+                                            })()}
+                                            onCheckedChange={(checked) => {
+                                                const roleKey = interfaceRole === 'student' ? 'studentDarkMode' : interfaceRole === 'teacher' ? 'teacherDarkMode' : 'darkMode';
+                                                handleToggle(roleKey, checked);
+                                            }}
                                         />
                                     </div>
                                     {/* Legacy Mode */}
@@ -558,34 +863,40 @@ export function SettingsModal() {
                                             onCheckedChange={(checked) => handleToggle('enableStudentThemes', checked)}
                                         />
                                     </div>
-                                    {/* Sound Effects */}
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <Volume2 className="w-4 h-4 text-muted-foreground" />
-                                            <span className="text-sm font-bold">Sound FX</span>
-                                        </div>
-                                        <Switch
-                                            checked={local.soundEnabled}
-                                            onCheckedChange={(checked) => handleToggle('soundEnabled', checked)}
-                                            className="data-[state=checked]:bg-emerald-500"
-                                        />
-                                    </div>
                                 </div>
 
-                                {/* Display Mode */}
-                                <div className="flex items-center justify-between bg-muted/40 p-1.5 rounded-2xl border border-border/50">
-                                    <button
-                                        onClick={() => handleToggle('displayMode', 'web')}
-                                        className={`flex-1 py-2 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${local.displayMode === 'web' ? 'bg-background text-foreground shadow-sm border border-border/50' : 'text-muted-foreground hover:text-foreground'}`}
-                                    >
-                                        Web
-                                    </button>
-                                    <button
-                                        onClick={() => handleToggle('displayMode', 'app')}
-                                        className={`flex-1 py-2 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${local.displayMode === 'app' ? 'bg-background text-foreground shadow-sm border border-border/50' : 'text-muted-foreground hover:text-foreground'}`}
-                                    >
-                                        App
-                                    </button>
+                                 {/* Display Mode */}
+                                 <div className="flex items-center justify-between bg-muted/40 p-1.5 rounded-2xl border border-border/50">
+                                     <button
+                                         onClick={() => {
+                                             const roleKey = interfaceRole === 'student' ? 'studentDisplayMode' : interfaceRole === 'teacher' ? 'teacherDisplayMode' : 'displayMode';
+                                             handleToggle(roleKey, 'web');
+                                         }}
+                                         className={cn(
+                                             "flex-1 py-2 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                                             (interfaceRole === 'student' ? (local.studentDisplayMode || local.displayMode) : interfaceRole === 'teacher' ? (local.teacherDisplayMode || local.displayMode) : local.displayMode) === 'web' 
+                                                 ? 'bg-background text-foreground shadow-sm border border-border/50' 
+                                                 : 'text-muted-foreground hover:text-foreground'
+                                         )}
+                                     >
+                                         Web
+                                     </button>
+                                     <button
+                                         onClick={() => {
+                                             const roleKey = interfaceRole === 'student' ? 'studentDisplayMode' : interfaceRole === 'teacher' ? 'teacherDisplayMode' : 'displayMode';
+                                             handleToggle(roleKey, 'app');
+                                         }}
+                                         className={cn(
+                                             "flex-1 py-2 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                                             (interfaceRole === 'student' ? (local.studentDisplayMode || local.displayMode) : interfaceRole === 'teacher' ? (local.teacherDisplayMode || local.displayMode) : local.displayMode) === 'app' 
+                                                 ? 'bg-background text-foreground shadow-sm border border-border/50' 
+                                                 : 'text-muted-foreground hover:text-foreground'
+                                         )}
+                                     >
+                                         App
+                                     </button>
+                                 </div>
+                            </div>
                                 </div>
                             </div>
                         </>
@@ -706,6 +1017,43 @@ export function SettingsModal() {
 
                     {view === 'features' && (
                         <div className="space-y-6 pb-2 -mx-1 px-1">
+                            <div className="rounded-2xl border border-border/40 bg-muted/20 p-3">
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                    <div className="min-w-0">
+                                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+                                            Find toggles
+                                        </p>
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                            Search by name (e.g. “attendance”, “notifications”, “vending”).
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        <div className="w-full sm:w-[240px]">
+                                            <Input
+                                                value={featureQuery}
+                                                onChange={(e) => setFeatureQuery(e.target.value)}
+                                                placeholder="Search features…"
+                                                className="h-9 rounded-xl bg-background/60 border-border/50"
+                                            />
+                                        </div>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            className={cn(
+                                                "h-9 rounded-xl text-[10px] font-black uppercase tracking-widest",
+                                                featuresEnabledOnly && "border-primary/40 text-primary bg-primary/5"
+                                            )}
+                                            onClick={() => {
+                                                setFeaturesEnabledOnly((v) => !v);
+                                                if (local.soundEnabled) playSound('click');
+                                            }}
+                                        >
+                                            Enabled only
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+
                             {/* Current Plan Banner */}
                             {planLabel === 'Enterprise' && (
                                 <div className="bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800/50 rounded-2xl p-4 flex items-center justify-between shadow-sm">
@@ -740,6 +1088,7 @@ export function SettingsModal() {
                                                 'enableAchievements', 'enableBadges', 'enableLevels', 'enableStreaks', 'enableGoals',
                                                 'enableClassAccumulations', 'enableBirthdayPoints', 'enableSpecialDayPoints',
                                                 'enablePrizeAiSurprise', 'enableVendingMachine', 'enableStudentEmojiOnPrizeTickets',
+                                                'enableThemeAnimations',
                                                 'enableColorPrinting', 'enableHelperMode', 'showIntroWizard'
                                             ];
                                             keys.forEach(k => {
@@ -766,6 +1115,7 @@ export function SettingsModal() {
                                                 'enableAchievements', 'enableBadges', 'enableLevels', 'enableStreaks', 'enableGoals',
                                                 'enableClassAccumulations', 'enableBirthdayPoints', 'enableSpecialDayPoints',
                                                 'enablePrizeAiSurprise', 'enableVendingMachine', 'enableStudentEmojiOnPrizeTickets',
+                                                'enableThemeAnimations',
                                                 'enableColorPrinting', 'enableHelperMode', 'showIntroWizard'
                                             ];
                                             keys.forEach(k => {
@@ -786,6 +1136,7 @@ export function SettingsModal() {
                                 onJump={jumpToSettingsSection}
                             />
 
+                            <FeatureFilterContext.Provider value={{ query: featureQuery, enabledOnly: featuresEnabledOnly }}>
                             <div className="space-y-4">
 
 
@@ -883,7 +1234,7 @@ export function SettingsModal() {
                                     {isFeatureAllowed('enableClassSignIn') && isAdmin ? (
                                         <div className="px-3 pb-4 pt-0">
                                             <AttendanceTimeZoneField
-                                                schoolId={appSchoolId}
+                                                schoolId={schoolId}
                                                 getAttendanceConfig={getAttendanceConfig}
                                                 setAttendanceConfig={setAttendanceConfig}
                                                 enabled
@@ -975,7 +1326,7 @@ export function SettingsModal() {
                                 <FeatureRow
                                     id="enablePrizeAiSurprise"
                                     label="AI Reward Surprise"
-                                    desc="After redemption, show a school-safe AI joke, riddle, or fortune for configured reward items. Uses server API keys."
+                                    desc="Adds an “AI Joke” reward in the shop that shows a school-safe AI joke when redeemed. Uses server API keys."
                                     icon={<Sparkles className="w-5 h-5" />}
                                     settings={local}
                                     onToggle={handleToggle}
@@ -1060,6 +1411,17 @@ export function SettingsModal() {
                                         />
                                     </div>
                                 ) : null}
+                                <FeatureRow
+                                    id="enableThemeAnimations"
+                                    label="Theme Animations"
+                                    desc="Animate emojis + themed accents (kiosk & shop)"
+                                    icon={<Zap className="w-5 h-5" />}
+                                    settings={local}
+                                    onToggle={handleToggle}
+                                    isImplemented={true}
+                                    isAdmin={isAdmin}
+                                    isAllowed={true}
+                                />
                                 <FeatureRow
                                     id="enableStudentWelcome"
                                     label="Student welcome styles"
@@ -1271,6 +1633,7 @@ export function SettingsModal() {
                                 />
                             </div>
                             </div>
+                            </FeatureFilterContext.Provider>
                         </div>
                 )}
 

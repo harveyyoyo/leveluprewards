@@ -6,6 +6,7 @@ import { SchoolDeveloperLoginForm } from '@/components/SchoolDeveloperLoginForm'
 import { useFirestore, useFirebase, useCollection, useMemoFirebase, useFunctions } from '@/firebase';
 import { collection, doc, getDoc, setDoc, query, getDocs, orderBy, limit } from 'firebase/firestore';
 import { schoolPublicDocRef, mainSchoolDocToPublicPayload } from '@/lib/schoolPublic';
+import { isAllowedDeveloperGoogleUser } from '@/lib/developerAccess';
 import {
   Plus, Trash2, Server, Pencil, Database, Download, Upload, ShieldCheck, LifeBuoy, RefreshCw, Link2, Check, Loader2, Image as ImageIcon, LogOut, Headset,
 } from 'lucide-react';
@@ -185,6 +186,15 @@ export default function DeveloperPage() {
   const { toast } = useToast();
   const playSound = useArcadeSound();
   const { settings, updateSettings } = useSettings();
+
+  const allowedDeveloper = isAllowedDeveloperGoogleUser(auth?.currentUser);
+
+  useEffect(() => {
+    if (!isInitialized || isUserLoading) return;
+    if (allowedDeveloper) return;
+    // Don’t reveal a developer surface to unauthorized users.
+    window.location.replace('/');
+  }, [allowedDeveloper, isInitialized, isUserLoading]);
 
   const [isCreateSchoolDialogOpen, setIsCreateSchoolDialogOpen] = useState(false);
   const [newSchoolId, setNewSchoolId] = useState('');
@@ -661,6 +671,10 @@ export default function DeveloperPage() {
         </Button>
       </div>
     );
+  }
+
+  if (!allowedDeveloper) {
+    return null;
   }
 
   if (loginState !== 'developer') {

@@ -64,6 +64,20 @@
   body {
     @apply bg-background text-foreground transition-colors duration-500 min-h-screen;
   }
+
+  /* Backdrop performance hardening:
+   * - When hidden/off/reduced-motion, pause all animations underneath the backdrop host.
+   * - Also neutralize transition churn on descendants (helps battery on kiosk tablets).
+   */
+  #arcade-backdrop-host.arcade-backdrop-paused *,
+  #arcade-backdrop-host.arcade-backdrop-off * {
+    animation-play-state: paused !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  #arcade-backdrop-host.arcade-backdrop-off {
+    opacity: 0 !important;
+  }
   
   /* Make all bold text use the primary scheme color by default */
   strong,

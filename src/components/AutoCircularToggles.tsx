@@ -49,14 +49,23 @@ export function AutoCircularToggles<T extends Record<string, any>>({
       {allDefs.map(({ key, label, shortLabel, missingMeansOn }) => {
         const raw = record[key];
         const val = missingMeansOn ? raw !== false : !!raw;
+        const isPill = shortLabel.trim().length > 3;
+        const inStockCount =
+          key === 'inStock' && typeof (record as any)?.stockCount === 'number'
+            ? ((record as any).stockCount as number)
+            : undefined;
+        const title = inStockCount !== undefined ? `${label} (${inStockCount} left)` : label;
         return (
           <Button
             key={key}
             type="button"
             variant="outline"
-            size="icon"
+            size={isPill ? "sm" : "icon"}
             className={cn(
-              "h-8 w-8 sm:h-9 sm:w-9 rounded-full transition-all border shrink-0 text-center flex items-center justify-center select-none shadow-sm",
+              isPill
+                ? "h-7 rounded-full px-2.5 text-[10px] font-black uppercase tracking-tight"
+                : "h-8 w-8 sm:h-9 sm:w-9 rounded-full",
+              "transition-all border shrink-0 text-center flex items-center justify-center select-none shadow-sm",
               val
                 ? "bg-primary/20 hover:bg-primary/30 border-primary/50 text-primary font-bold"
                 : "bg-muted/40 hover:bg-muted/60 border-border text-muted-foreground/60 font-medium"
@@ -65,11 +74,41 @@ export function AutoCircularToggles<T extends Record<string, any>>({
               e.stopPropagation();
               onToggle(key, !val);
             }}
-            title={label}
+            title={title}
           >
-            <span className="text-[9px] sm:text-[10px] leading-none tracking-tight uppercase font-bold">
-              {shortLabel}
-            </span>
+            {isPill ? (
+              <span className="inline-flex items-center gap-1 leading-none">
+                <span className="truncate">{shortLabel}</span>
+                {inStockCount !== undefined ? (
+                  <span
+                    className={cn(
+                      "rounded-full px-1.5 py-0.5 text-[9px] font-black leading-none",
+                      val ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground border border-border",
+                    )}
+                    aria-label={`${inStockCount} left`}
+                  >
+                    {inStockCount}
+                  </span>
+                ) : null}
+              </span>
+            ) : (
+              <span className="flex flex-col items-center justify-center leading-none">
+                <span className="text-[9px] sm:text-[10px] tracking-tight uppercase font-bold">
+                  {shortLabel}
+                </span>
+                {inStockCount !== undefined ? (
+                  <span
+                    className={cn(
+                      "mt-0.5 rounded-full px-1 py-px text-[8px] font-black leading-none",
+                      val ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground border border-border",
+                    )}
+                    aria-label={`${inStockCount} left`}
+                  >
+                    {inStockCount}
+                  </span>
+                ) : null}
+              </span>
+            )}
           </Button>
         );
       })}

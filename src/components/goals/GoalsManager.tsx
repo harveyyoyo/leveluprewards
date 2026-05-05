@@ -15,6 +15,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Plus, Target, Trash2 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 
 function studentLabel(s: Student) {
@@ -354,35 +355,37 @@ export function GoalsManager(props: {
           ) : filteredGoals.length === 0 ? (
             <p className="text-sm text-muted-foreground py-6 text-center">No goals yet.</p>
           ) : (
-            <ul className="space-y-3 max-h-[560px] overflow-y-auto pr-1">
-              {filteredGoals.map((g) => {
-                const p = progressFor(g);
-                const pct = g.targetPoints > 0 ? Math.min(100, Math.round((p / g.targetPoints) * 100)) : 0;
-                return (
-                  <li key={g.id} className="rounded-2xl border bg-muted/15 p-4 space-y-2">
-                    <div className="flex justify-between gap-2 items-start">
-                      <div>
-                        <p className="font-bold">{g.title}</p>
-                        <p className="text-[11px] text-muted-foreground uppercase tracking-wide">
-                          {g.type} · {g.status}
-                          {g.teacherId ? ` · teacher ${g.teacherId.slice(0, 6)}…` : ''}
-                        </p>
+            <ScrollArea className="h-[calc(100vh-22rem)] pr-1">
+              <ul className="space-y-3">
+                {filteredGoals.map((g) => {
+                  const p = progressFor(g);
+                  const pct = g.targetPoints > 0 ? Math.min(100, Math.round((p / g.targetPoints) * 100)) : 0;
+                  return (
+                    <li key={g.id} className="rounded-2xl border bg-muted/15 p-4 space-y-2">
+                      <div className="flex justify-between gap-2 items-start">
+                        <div>
+                          <p className="font-bold">{g.title}</p>
+                          <p className="text-[11px] text-muted-foreground uppercase tracking-wide">
+                            {g.type} · {g.status}
+                            {g.teacherId ? ` · teacher ${g.teacherId.slice(0, 6)}…` : ''}
+                          </p>
+                        </div>
+                        <Button variant="ghost" size="icon" className="shrink-0 text-destructive h-8 w-8" onClick={() => handleDelete(g.id)} aria-label="Delete goal">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </div>
-                      <Button variant="ghost" size="icon" className="shrink-0 text-destructive h-8 w-8" onClick={() => handleDelete(g.id)} aria-label="Delete goal">
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                    <div className="flex justify-between text-xs font-bold">
-                      <span>
-                        {p.toLocaleString()} / {g.targetPoints.toLocaleString()} pts
-                      </span>
-                      <span>{pct}%</span>
-                    </div>
-                    <Progress value={pct} className="h-2" />
-                  </li>
-                );
-              })}
-            </ul>
+                      <div className="flex justify-between text-xs font-bold">
+                        <span>
+                          {p.toLocaleString()} / {g.targetPoints.toLocaleString()} pts
+                        </span>
+                        <span>{pct}%</span>
+                      </div>
+                      <Progress value={pct} className="h-2" />
+                    </li>
+                  );
+                })}
+              </ul>
+            </ScrollArea>
           )}
         </CardContent>
       </Card>

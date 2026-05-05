@@ -1,6 +1,6 @@
 'use client';
 
-import { Cog, Edit3, Gift, Plus, Trash2, HelpCircle, GraduationCap, ShoppingBag, Wand2, UserMinus, Sparkles } from 'lucide-react';
+import { Cog, Edit3, Gift, Plus, Trash2, HelpCircle, GraduationCap, ShoppingBag, Wand2, UserMinus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import DynamicIcon from '@/components/DynamicIcon';
 import { cn } from '@/lib/utils';
-import type { Prize, Teacher, Class, VendingMotorConfig, PrizeAiFunReward } from '@/lib/types';
+import type { Prize, Teacher, Class, VendingMotorConfig } from '@/lib/types';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { AutoCircularToggles } from '@/components/AutoCircularToggles';
@@ -24,6 +24,7 @@ import {
   teacherListedOnPrize,
 } from '@/lib/prize-utils';
 import { useSettings } from '@/components/providers/SettingsProvider';
+import { createAiJokePrize, isAiJokePrize } from '@/lib/aiJokePrize';
 
 export function AdminPrizesTab({
   prizes,
@@ -66,7 +67,6 @@ export function AdminPrizesTab({
   const [wInStock, setWInStock] = useState(true);
   const [wStockCount, setWStockCount] = useState('');
   const [wOfferPrint, setWOfferPrint] = useState(false);
-  const [wAiFun, setWAiFun] = useState<'off' | PrizeAiFunReward>('off');
   /** Admin wizard: selected teacher ids; empty = school-wide. */
   const [wTeacherIds, setWTeacherIds] = useState<string[]>([]);
   const [wClassId, setWClassId] = useState<'all' | string>('all');
@@ -80,11 +80,15 @@ export function AdminPrizesTab({
     setWInStock(true);
     setWStockCount('');
     setWOfferPrint(false);
-    setWAiFun('off');
     setWTeacherIds([]);
     setWClassId('all');
     setWSchoolWide(false);
   };
+
+  const effectivePrizes = useMemo(() => {
+    const base = prizes || [];
+    return prizeAiSurpriseEnabled ? [...base, createAiJokePrize()] : base;
+  }, [prizes, prizeAiSurpriseEnabled]);
 
   const wizardTitle = useMemo(() => {
     const titles = [
@@ -151,19 +155,74 @@ export function AdminPrizesTab({
         </div>
       </CardHeader>
       <CardContent className="min-w-0">
-        <ul className="grid grid-cols-1 gap-4 h-[calc(100vh-22rem)] max-h-[420px] min-h-[250px] min-w-0 overflow-y-auto overflow-x-hidden pr-2">
-          {prizes
+        <ul className="grid grid-cols-1 gap-4 h-[calc(100vh-22rem)] min-h-[250px] min-w-0 overflow-y-auto overflow-x-hidden pr-2">
+          <li className="sticky top-0 z-20 rounded-2xl border bg-secondary/70 backdrop-blur px-3 py-2 shadow-sm">
+            <div className="grid grid-cols-[28px_36px_minmax(140px,240px)_56px_56px_72px_64px_56px_64px_96px] items-center gap-x-2 min-w-0">
+              <div className="h-7 w-7" aria-hidden />
+              <div className="size-9" aria-hidden />
+
+              <div className="min-w-0">
+                <div className="text-[12px] font-black uppercase tracking-[0.26em] text-foreground/90">
+                  Name
+                </div>
+              </div>
+
+              <div className="text-center">
+                <div className="text-[12px] font-black uppercase tracking-[0.26em] text-foreground/90">
+                  Pts
+                </div>
+              </div>
+
+              <div className="text-center">
+                <div className="text-[12px] font-black uppercase tracking-[0.26em] text-foreground/90">
+                  Qty
+                </div>
+              </div>
+
+              <div className="text-center">
+                <div className="text-[12px] font-black uppercase tracking-[0.26em] text-foreground/90">
+                  STK / PRT
+                </div>
+              </div>
+
+              <div>
+                <div className="text-[12px] font-black uppercase tracking-[0.26em] text-foreground/90">
+                  Icon
+                </div>
+              </div>
+
+              <div className="text-center">
+                <div className="text-[12px] font-black uppercase tracking-[0.26em] text-foreground/90">
+                  {mode === 'teacher' ? 'Wide' : 'Tchrs'}
+                </div>
+              </div>
+
+              <div className="text-center">
+                <div className="text-[12px] font-black uppercase tracking-[0.26em] text-foreground/90">
+                  Class
+                </div>
+              </div>
+
+              <div className="text-right pr-1">
+                <div className="text-[12px] font-black uppercase tracking-[0.26em] text-foreground/90">
+                  Actions
+                </div>
+              </div>
+            </div>
+          </li>
+          {effectivePrizes
             ?.sort((a, b) => a.points - b.points)
             .map((p) => (
               (() => {
+                const systemAi = isAiJokePrize(p);
                 const restrictionIds = prizeRestrictionTeacherIds(p);
                 const schoolWideT = isPrizeSchoolWideTeachers(p);
                 const isCreator = mode === 'teacher' && teacherId ? isTeacherPrizeCreator(p, teacherId) : false;
                 const listed = mode === 'teacher' && teacherId ? teacherListedOnPrize(p, teacherId) : false;
-                const canEditFull = mode === 'admin' || (mode === 'teacher' && isCreator);
+                const canEditFull = !systemAi && (mode === 'admin' || (mode === 'teacher' && isCreator));
                 const canRemoveSelf =
-                  mode === 'teacher' && teacherId && !isCreator && listed && !schoolWideT;
-                const canDelete = mode === 'admin' || (mode === 'teacher' && isCreator);
+                  !systemAi && mode === 'teacher' && teacherId && !isCreator && listed && !schoolWideT;
+                const canDelete = !systemAi && (mode === 'admin' || (mode === 'teacher' && isCreator));
                 const rowDimmed =
                   mode === 'teacher' &&
                   teacherId &&
@@ -191,351 +250,390 @@ export function AdminPrizesTab({
                   onUpdatePrize({ ...p, vendingMotor: next });
                 };
 
-                return (
-              <li
-                key={p.id}
-                className={cn(
-                  "flex items-center gap-x-2 rounded-2xl border bg-secondary/30 p-1.5 transition-all hover:bg-background group min-w-0",
-                  rowDimmed && "opacity-60"
-                )}
-              >
-                <div className="flex shrink-0 flex-col items-center">
-                  <AutoCircularToggles
-                    record={p}
-                    defs={[
-                      { key: 'inStock', label: 'In Stock', shortLabel: 'STK' },
-                      { key: 'offerPrintTicketOnRedeem', label: 'Offer print voucher', shortLabel: 'PRT' }
-                    ]}
-                    onToggle={(key, val) => {
-                      onUpdatePrize({ ...p, [key]: val });
-                    }}
-                  />
-                </div>
-                <div className="flex shrink-0 flex-col gap-0.5 w-14">
-                  <Label className="text-[8px] font-bold uppercase tracking-tighter opacity-50 leading-none">Qty</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    disabled={!canEditFull}
-                    className="h-7 text-[10px] px-1"
-                    placeholder="∞"
-                    title="Leave blank for unlimited stock"
-                    defaultValue={p.stockCount === undefined ? '' : String(p.stockCount)}
-                    key={`stock-${p.id}-${p.stockCount ?? 'x'}`}
-                    onBlur={(e) => {
-                      const raw = e.target.value.trim();
-                      const next = raw === '' ? undefined : Math.max(0, parseInt(raw, 10) || 0);
-                      if (next !== p.stockCount) onUpdatePrize({ ...p, stockCount: next });
-                    }}
-                  />
-                </div>
-                <div className="flex shrink-0 flex-col gap-0.5 w-14">
-                  <Label className="text-[8px] font-bold uppercase tracking-tighter opacity-50 leading-none">Points</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    disabled={!canEditFull}
-                    className="h-7 text-[10px] px-1"
-                    defaultValue={String(p.points ?? 0)}
-                    key={`points-${p.id}-${p.points}`}
-                    onBlur={(e) => {
-                      const raw = e.target.value.trim();
-                      const next = Math.max(0, parseInt(raw, 10) || 0);
-                      if (next !== p.points) onUpdatePrize({ ...p, points: next });
-                    }}
-                  />
-                </div>
-                <div className={cn("size-9 shrink-0 rounded-lg flex items-center justify-center bg-background border relative overflow-hidden", !p.inStock && "opacity-40 grayscale")}>
-                  {p.imageUrl ? (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img src={p.imageUrl} alt="" className="absolute inset-0 z-[5] size-full object-cover" />
-                  ) : (
-                    p.name && (
-                      <div className="absolute inset-0 opacity-40 mix-blend-overlay pointer-events-none z-0">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={`https://api.dicebear.com/9.x/shapes/svg?seed=${encodeURIComponent(p.name)}&backgroundColor=transparent`} alt="" className="w-full h-full object-cover" />
+                if (systemAi) {
+                  return (
+                    <li
+                      key={p.id}
+                      className={cn("flex items-center gap-x-2 rounded-2xl border bg-secondary/30 p-1.5 min-w-0")}
+                    >
+                      <div className="flex shrink-0 items-center">
+                        <div className="h-7 w-7" aria-hidden />
                       </div>
-                    )
-                  )}
-                  <DynamicIcon name={p.icon || 'Gift'} className="w-5 h-5 text-primary relative z-10 drop-shadow-sm" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <Label className="text-[8px] font-bold uppercase tracking-tighter opacity-50 leading-none flex items-center gap-1">
-                    Name
-                    {vendingEnabled && p.vendingMotor?.enabled ? (
-                      <span
-                        className="inline-flex items-center gap-0.5 rounded bg-emerald-100 px-1 py-px text-[8px] font-bold uppercase tracking-wider text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300"
-                        title={`Motor axis: ${p.vendingMotor.axis}`}
-                      >
-                        <Cog className="h-2.5 w-2.5" />
-                        {p.vendingMotor.axis}
-                      </span>
-                    ) : null}
-                  </Label>
-                  <Input
-                    className={cn("h-7 text-[10px] px-1.5 w-full min-w-0", !p.inStock && "opacity-70")}
-                    disabled={!canEditFull}
-                    defaultValue={p.name}
-                    key={`name-${p.id}-${p.name}`}
-                    onBlur={(e) => {
-                      const next = e.target.value.trim();
-                      if (next && next !== p.name) onUpdatePrize({ ...p, name: next });
-                    }}
-                  />
-                </div>
-                <div className="flex shrink-0 flex-col gap-0.5 w-16">
-                  <Label className="text-[8px] font-bold uppercase tracking-tighter opacity-50 leading-none">Icon</Label>
-                  <Input
-                    className="h-7 text-[10px] px-1 font-mono w-full"
-                    disabled={!canEditFull}
-                    placeholder="Gift"
-                    defaultValue={p.icon || 'Gift'}
-                    key={`icon-${p.id}-${p.icon}`}
-                    onBlur={(e) => {
-                      const next = (e.target.value.trim() || 'Gift') as string;
-                      if (next !== p.icon) onUpdatePrize({ ...p, icon: next });
-                    }}
-                  />
-                </div>
-                <div className="flex shrink-0 flex-col gap-0.5 w-14">
-                  {mode === 'teacher' ? (
-                    <>
-                      <Label className="text-[8px] font-bold uppercase tracking-tighter opacity-50 leading-none">Wide</Label>
-                      <div className="flex items-center justify-center h-7 rounded-md border bg-background">
-                        <Switch
-                          checked={schoolWideT}
-                          disabled={!canEditFull}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              onUpdatePrize({ ...p, teacherIds: undefined, teacherId: undefined });
-                            } else if (teacherId) {
-                              onUpdatePrize({ ...p, teacherIds: [teacherId], teacherId: undefined });
-                            }
-                          }}
-                          className="data-[state=checked]:bg-primary scale-50"
+                      <div className="size-9 shrink-0 rounded-lg flex items-center justify-center bg-background border relative overflow-hidden">
+                        <DynamicIcon
+                          name={p.icon || 'Sparkles'}
+                          className="w-5 h-5 text-amber-600 dark:text-amber-400 relative z-10 drop-shadow-sm"
                         />
                       </div>
-                    </>
-                  ) : (
-                    <>
-                      <Label className="text-[8px] font-bold uppercase tracking-tighter opacity-50 leading-none">Tchrs</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="h-7 w-full text-[10px] px-1 font-semibold"
-                            disabled={!canEditFull}
-                          >
-                            {restrictionIds.length === 0 ? 'All' : `${restrictionIds.length}`}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-64 p-3 z-[250]" align="start">
-                          <div className="space-y-3">
-                            <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
-                              <Checkbox
-                                checked={restrictionIds.length === 0}
-                                onCheckedChange={(c) => {
-                                  if (c === true) onUpdatePrize({ ...p, teacherIds: undefined, teacherId: undefined });
-                                }}
-                              />
-                              School-wide (all teachers)
-                            </label>
-                            <div className="border-t pt-2 max-h-52 overflow-y-auto space-y-2">
-                              {(teachers || []).map((t) => {
-                                const checked = restrictionIds.includes(t.id);
-                                return (
-                                  <label key={t.id} className="flex items-center gap-2 text-sm cursor-pointer">
-                                    <Checkbox
-                                      checked={checked}
-                                      disabled={!canEditFull}
-                                      onCheckedChange={(c) => {
-                                        const next =
-                                          c === true
-                                            ? [...new Set([...restrictionIds, t.id])]
-                                            : restrictionIds.filter((id) => id !== t.id);
-                                        onUpdatePrize({
-                                          ...p,
-                                          teacherIds: next.length ? next : undefined,
-                                          teacherId: undefined,
-                                        });
-                                      }}
-                                    />
-                                    <span className="truncate">{t.name}</span>
-                                  </label>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        </PopoverContent>
-                      </Popover>
-                    </>
-                  )}
-                </div>
-                <div className="flex shrink-0 flex-col gap-0.5 w-16">
-                  <Label className="text-[8px] font-bold uppercase tracking-tighter opacity-50 leading-none">Class</Label>
-                  <Select
-                    value={p.classId || 'all'}
-                    disabled={!canEditFull}
-                    onValueChange={(v) => onUpdatePrize({ ...p, classId: v === 'all' ? undefined : v })}
+                      <div className="min-w-0 min-w-[140px] max-w-[240px] flex-[0_1_240px]">
+                        <Input
+                          aria-label="Prize name"
+                          className="h-7 text-[10px] px-1.5 w-full min-w-0 font-semibold"
+                          disabled
+                          value={`${p.name} (built-in)`}
+                          readOnly
+                        />
+                      </div>
+                      <div className="flex shrink-0 flex-col w-14">
+                        <Input
+                          type="number"
+                          min={0}
+                          disabled
+                          aria-label="Points"
+                          className="h-7 text-[10px] px-1"
+                          value={String(p.points ?? 0)}
+                          readOnly
+                        />
+                      </div>
+                      <div className="flex shrink-0 flex-col w-14">
+                        <Input
+                          disabled
+                          aria-label="Quantity"
+                          className="h-7 text-[10px] px-1"
+                          placeholder="∞"
+                          value=""
+                          readOnly
+                        />
+                      </div>
+                      <div className="flex shrink-0 flex-col items-center">
+                        <AutoCircularToggles
+                          record={p}
+                          defs={[{ key: 'inStock', label: 'In Stock', shortLabel: 'In stock' }]}
+                          onToggle={() => {}}
+                        />
+                      </div>
+                      <div className="flex shrink-0 flex-col w-16">
+                        <Input
+                          className="h-7 text-[10px] px-1 font-mono w-full"
+                          disabled
+                          aria-label="Icon name"
+                          value={p.icon || 'Sparkles'}
+                          readOnly
+                        />
+                      </div>
+                      <div className="flex shrink-0 items-center justify-end gap-0.5 ml-auto pr-1">
+                        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/70">System</span>
+                      </div>
+                    </li>
+                  );
+                }
+
+                return (
+                  <li
+                    key={p.id}
+                    className={cn(
+                      "grid grid-cols-[28px_36px_minmax(140px,240px)_56px_56px_72px_64px_56px_64px_96px] items-center gap-x-2 rounded-2xl border bg-secondary/30 p-1.5 transition-all hover:bg-background group min-w-0",
+                      rowDimmed && "opacity-60"
+                    )}
                   >
-                    <SelectTrigger className="h-7 text-[10px] px-1 w-full">
-                      <SelectValue placeholder="All" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All</SelectItem>
-                      {(classes || []).map((c) => (
-                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex shrink-0 items-center justify-end gap-0.5 ml-auto">
-                  {prizeAiSurpriseEnabled ? (
-                  <Popover>
-                    <PopoverTrigger asChild>
+                    {/* 1. Edit Button (Moved from Actions) */}
+                    <div className="flex items-center">
+                      {onEditPrize ? (
                         <Button
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className={cn(
-                            'h-7 w-7 rounded-full hover:bg-muted',
-                            p.aiFunReward ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground',
-                          )}
+                          className="h-7 w-7 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
                           disabled={!canEditFull}
-                          title="AI joke / riddle / fortune after redeem"
+                          title="Edit item"
+                          onClick={() => onEditPrize(p)}
                         >
-                          <Sparkles className="w-3.5 h-3.5" />
+                          <Edit3 className="w-3.5 h-3.5" />
                         </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-72 p-3 z-[250]" align="end">
-                      <div className="space-y-2">
-                        <p className="text-sm font-bold leading-tight">AI surprise</p>
-                        <p className="text-xs text-muted-foreground leading-snug">
-                          After redemption, the kiosk can show one school-safe AI joke, riddle (with answer), or fortune line.
-                        </p>
-                        <Select
-                          value={p.aiFunReward ?? 'off'}
-                          onValueChange={(v) => {
-                            if (!canEditFull) return;
-                            if (v === 'off') onUpdatePrize({ ...p, aiFunReward: undefined });
-                            else onUpdatePrize({ ...p, aiFunReward: v as PrizeAiFunReward });
-                          }}
-                          disabled={!canEditFull}
-                        >
-                          <SelectTrigger className="h-9 text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="off">Off</SelectItem>
-                            <SelectItem value="random">Random</SelectItem>
-                            <SelectItem value="joke">Joke</SelectItem>
-                            <SelectItem value="riddle">Riddle</SelectItem>
-                            <SelectItem value="fortune">Fortune cookie</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                  ) : null}
-                  {onEditPrize ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
-                      disabled={!canEditFull}
-                      title="Edit item"
-                      onClick={() => onEditPrize(p)}
-                    >
-                      <Edit3 className="w-3.5 h-3.5" />
-                    </Button>
-                  ) : null}
+                      ) : null}
+                    </div>
 
-                  {vendingEnabled ? (
-                    <Popover>
-                      <PopoverTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className={cn(
-                              "h-7 w-7 rounded-full hover:bg-muted",
-                              motorEnabled ? "text-emerald-700 dark:text-emerald-300" : "text-muted-foreground",
-                            )}
-                            disabled={!canEditFull}
-                            title="Prize vending motor"
+                    {/* 2. Icon/Image (Identity) */}
+                    <div className={cn("size-9 rounded-lg flex items-center justify-center bg-background border relative overflow-hidden", !p.inStock && "opacity-40 grayscale")}>
+                      {p.imageUrl ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img src={p.imageUrl} alt="" className="absolute inset-0 z-[5] size-full object-cover" />
+                      ) : (
+                        p.name && (
+                          <div className="absolute inset-0 opacity-40 mix-blend-overlay pointer-events-none z-0">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={`https://api.dicebear.com/9.x/shapes/svg?seed=${encodeURIComponent(p.name)}&backgroundColor=transparent`} alt="" className="w-full h-full object-cover" />
+                          </div>
+                        )
+                      )}
+                      <DynamicIcon name={p.icon || 'Gift'} className="w-5 h-5 text-primary relative z-10 drop-shadow-sm" />
+                    </div>
+
+                    {/* 3. Name (Identity) */}
+                    <div className="min-w-0">
+                      <div className="relative min-w-0">
+                        <Input
+                          aria-label="Prize name"
+                          className={cn("h-7 text-[10px] px-1.5 w-full min-w-0", vendingEnabled && p.vendingMotor?.enabled && "pr-10", !p.inStock && "opacity-70")}
+                          disabled={!canEditFull}
+                          defaultValue={p.name}
+                          key={`name-${p.id}-${p.name}`}
+                          onBlur={(e) => {
+                            const next = e.target.value.trim();
+                            if (next && next !== p.name) onUpdatePrize({ ...p, name: next });
+                          }}
+                        />
+                        {vendingEnabled && p.vendingMotor?.enabled ? (
+                          <span
+                            className="absolute right-1 top-1/2 -translate-y-1/2 inline-flex items-center gap-0.5 rounded bg-emerald-100 px-1 py-px text-[8px] font-black uppercase tracking-wider text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300"
+                            title={`Motor axis: ${p.vendingMotor.axis}`}
                           >
-                            <Cog className="w-3.5 h-3.5" />
-                          </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-72 p-3 z-[250]" align="end">
-                        <div className="space-y-3">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <p className="text-sm font-bold leading-tight">Prize motor</p>
-                              <p className="text-xs text-muted-foreground leading-snug">
-                                Controls the motor triggered after redeem on the kiosk.
-                              </p>
-                            </div>
+                            <Cog className="h-2.5 w-2.5" />
+                            {p.vendingMotor.axis}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    {/* 4. Points (Cost) */}
+                    <div>
+                      <Input
+                        type="number"
+                        min={0}
+                        disabled={!canEditFull}
+                        aria-label="Points"
+                        className="h-7 text-[10px] px-1"
+                        defaultValue={String(p.points ?? 0)}
+                        key={`points-${p.id}-${p.points}`}
+                        onBlur={(e) => {
+                          const raw = e.target.value.trim();
+                          const next = Math.max(0, parseInt(raw, 10) || 0);
+                          if (next !== p.points) onUpdatePrize({ ...p, points: next });
+                        }}
+                      />
+                    </div>
+
+                    {/* 5. Qty (Stock) */}
+                    <div>
+                      <Input
+                        type="number"
+                        min={0}
+                        disabled={!canEditFull}
+                        aria-label="Quantity"
+                        className="h-7 text-[10px] px-1"
+                        placeholder="∞"
+                        title="Leave blank for unlimited stock"
+                        defaultValue={p.stockCount === undefined ? '' : String(p.stockCount)}
+                        key={`stock-${p.id}-${p.stockCount ?? 'x'}`}
+                        onBlur={(e) => {
+                          const raw = e.target.value.trim();
+                          const next = raw === '' ? undefined : Math.max(0, parseInt(raw, 10) || 0);
+                          if (next !== p.stockCount) onUpdatePrize({ ...p, stockCount: next });
+                        }}
+                      />
+                    </div>
+
+                    {/* 6. STK/PRT Toggles (Status) */}
+                    <div className="flex flex-col items-center">
+                      <AutoCircularToggles
+                        record={p}
+                        defs={[
+                          { key: 'inStock', label: 'In Stock', shortLabel: 'In stock' },
+                          { key: 'offerPrintTicketOnRedeem', label: 'Offer print voucher', shortLabel: 'Print' }
+                        ]}
+                        onToggle={(key, val) => {
+                          onUpdatePrize({ ...p, [key]: val });
+                        }}
+                      />
+                    </div>
+
+                    {/* 7. Icon Name (Metadata) */}
+                    <div>
+                      <Input
+                        className="h-7 text-[10px] px-1 font-mono w-full"
+                        disabled={!canEditFull}
+                        aria-label="Icon name"
+                        placeholder="Gift"
+                        defaultValue={p.icon || 'Gift'}
+                        key={`icon-${p.id}-${p.icon}`}
+                        onBlur={(e) => {
+                          const next = (e.target.value.trim() || 'Gift') as string;
+                          if (next !== p.icon) onUpdatePrize({ ...p, icon: next });
+                        }}
+                      />
+                    </div>
+
+                    {/* 8. Teachers (Access) */}
+                    <div className="flex flex-col gap-0.5">
+                      {mode === 'teacher' ? (
+                        <>
+                          <div className="flex items-center justify-center h-7 rounded-md border bg-background">
                             <Switch
-                              checked={motorEnabled}
-                              onCheckedChange={(checked) => updateMotor({ enabled: checked })}
-                              className="data-[state=checked]:bg-emerald-500"
+                              checked={schoolWideT}
+                              disabled={!canEditFull}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  onUpdatePrize({ ...p, teacherIds: undefined, teacherId: undefined });
+                                } else if (teacherId) {
+                                  onUpdatePrize({ ...p, teacherIds: [teacherId], teacherId: undefined });
+                                }
+                              }}
+                              className="data-[state=checked]:bg-primary scale-50"
                             />
                           </div>
-
-                          <div className={cn("grid grid-cols-1 gap-2", !motorEnabled && "opacity-50 pointer-events-none")}>
-                            <div className="space-y-1">
-                              <Label className="text-[10px] font-bold uppercase tracking-tighter opacity-60">Axis</Label>
-                              <Select
-                                value={motorAxis}
-                                onValueChange={(v) => updateMotor({ axis: v as 'X' | 'Y' | 'Z' | 'E' })}
+                        </>
+                      ) : (
+                        <>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className="h-7 w-full text-[10px] px-1 font-semibold"
+                                disabled={!canEditFull}
+                                aria-label="Teacher restrictions"
                               >
-                                <SelectTrigger className="h-8 text-xs px-2">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="X">X</SelectItem>
-                                  <SelectItem value="Y">Y</SelectItem>
-                                  <SelectItem value="Z">Z</SelectItem>
-                                  <SelectItem value="E">E</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  ) : null}
+                                {restrictionIds.length === 0 ? 'All' : `${restrictionIds.length}`}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-64 p-3 z-[250]" align="start">
+                              <div className="space-y-3">
+                                <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+                                  <Checkbox
+                                    checked={restrictionIds.length === 0}
+                                    onCheckedChange={(c) => {
+                                      if (c === true) onUpdatePrize({ ...p, teacherIds: undefined, teacherId: undefined });
+                                    }}
+                                  />
+                                  School-wide (all teachers)
+                                </label>
+                                <div className="border-t pt-2 max-h-52 overflow-y-auto space-y-2">
+                                  {(teachers || []).map((t) => {
+                                    const checked = restrictionIds.includes(t.id);
+                                    return (
+                                      <label key={t.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                                        <Checkbox
+                                          checked={checked}
+                                          disabled={!canEditFull}
+                                          onCheckedChange={(c) => {
+                                            const next =
+                                              c === true
+                                                ? [...new Set([...restrictionIds, t.id])]
+                                                : restrictionIds.filter((id) => id !== t.id);
+                                            onUpdatePrize({
+                                              ...p,
+                                              teacherIds: next.length ? next : undefined,
+                                              teacherId: undefined,
+                                            });
+                                          }}
+                                        />
+                                        <span className="truncate">{t.name}</span>
+                                      </label>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            </PopoverContent>
+                          </Popover>
+                        </>
+                      )}
+                    </div>
 
-                  {canRemoveSelf && teacherId ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
-                      title="Remove from my prizes (others keep access)"
-                      onClick={() => onUpdatePrize(removeTeacherFromPrize(p, teacherId))}
-                    >
-                      <UserMinus className="w-3.5 h-3.5" />
-                    </Button>
-                  ) : null}
-                  {(mode === 'admin' || canDelete) ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 rounded-full text-destructive hover:bg-destructive/10"
-                      disabled={mode === 'teacher' && !canDelete}
-                      title={mode === 'teacher' ? 'Delete item you created' : 'Delete item'}
-                      onClick={() => onDeletePrize(p.id)}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
-                  ) : null}
-                </div>
-              </li>
+                    {/* 9. Class (Access) */}
+                    <div className="flex flex-col gap-0.5">
+                      <Select
+                        value={p.classId || 'all'}
+                        disabled={!canEditFull}
+                        onValueChange={(v) => onUpdatePrize({ ...p, classId: v === 'all' ? undefined : v })}
+                      >
+                        <SelectTrigger className="h-7 text-[10px] px-1 w-full">
+                          <SelectValue placeholder="All" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All</SelectItem>
+                          {(classes || []).map((c) => (
+                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* 10. Actions (Remaining) */}
+                    <div className="flex items-center justify-end gap-0.5 pr-1">
+                      {vendingEnabled ? (
+                        <Popover>
+                          <PopoverTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className={cn(
+                                  "h-7 w-7 rounded-full hover:bg-muted",
+                                  motorEnabled ? "text-emerald-700 dark:text-emerald-300" : "text-muted-foreground",
+                                )}
+                                disabled={!canEditFull}
+                                title="Prize vending motor"
+                              >
+                                <Cog className="w-3.5 h-3.5" />
+                              </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-72 p-3 z-[250]" align="end">
+                            <div className="space-y-3">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <p className="text-sm font-bold leading-tight">Prize motor</p>
+                                  <p className="text-xs text-muted-foreground leading-snug">
+                                    Controls the motor triggered after redeem on the kiosk.
+                                  </p>
+                                </div>
+                                <Switch
+                                  checked={motorEnabled}
+                                  onCheckedChange={(checked) => updateMotor({ enabled: checked })}
+                                  className="data-[state=checked]:bg-emerald-500"
+                                />
+                              </div>
+
+                              <div className={cn("grid grid-cols-1 gap-2", !motorEnabled && "opacity-50 pointer-events-none")}>
+                                <div className="space-y-1">
+                                  <Label className="text-[10px] font-bold uppercase tracking-tighter opacity-60">Axis</Label>
+                                  <Select
+                                    value={motorAxis}
+                                    onValueChange={(v) => updateMotor({ axis: v as 'X' | 'Y' | 'Z' | 'E' })}
+                                  >
+                                    <SelectTrigger className="h-8 text-xs px-2">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="X">X</SelectItem>
+                                      <SelectItem value="Y">Y</SelectItem>
+                                      <SelectItem value="Z">Z</SelectItem>
+                                      <SelectItem value="E">E</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      ) : null}
+
+                      {canRemoveSelf && teacherId ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+                          title="Remove from my prizes (others keep access)"
+                          onClick={() => onUpdatePrize(removeTeacherFromPrize(p, teacherId))}
+                        >
+                          <UserMinus className="w-3.5 h-3.5" />
+                        </Button>
+                      ) : null}
+                      {(mode === 'admin' || canDelete) ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 rounded-full text-destructive hover:bg-destructive/10"
+                          disabled={mode === 'teacher' && !canDelete}
+                          title={mode === 'teacher' ? 'Delete item you created' : 'Delete item'}
+                          onClick={() => onDeletePrize(p.id)}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      ) : null}
+                    </div>
+                  </li>
                 );
               })()
             ))}
@@ -557,7 +655,6 @@ export function AdminPrizesTab({
               <li><span className="font-bold">Teachers</span>: pick multiple teachers or school-wide.</li>
               <li><span className="font-bold">Class</span>: optionally restrict by class.</li>
               <li><span className="font-bold">Vending motor</span>: enable the Vending Machine feature in settings, then use the prize motor button to pick axis X/Y/Z/E.</li>
-                                <li><span className="font-bold">AI surprise</span>: included on Pro+ plans — enable “AI Reward Surprise” under Settings → Features, then use the sparkle control. After redemption, the rewards shop can show an AI joke, riddle, or fortune.</li>
             </ul>
           </div>
           <DialogFooter>
@@ -640,29 +737,6 @@ export function AdminPrizesTab({
                 <Switch checked={wOfferPrint} onCheckedChange={setWOfferPrint} />
               </div>
 
-              {prizeAiSurpriseEnabled ? (
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-lg border p-3">
-                <div className="space-y-0.5 min-w-0">
-                  <Label>AI surprise after redeem</Label>
-                  <p className="text-xs text-muted-foreground">
-                                              Optional: show a clean AI joke, riddle, or fortune in the rewards shop after redemption.
-                  </p>
-                </div>
-                <Select value={wAiFun} onValueChange={(v) => setWAiFun(v as 'off' | PrizeAiFunReward)}>
-                  <SelectTrigger className="h-9 w-full sm:w-[148px] text-xs shrink-0">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="off">Off</SelectItem>
-                    <SelectItem value="random">Random</SelectItem>
-                    <SelectItem value="joke">Joke</SelectItem>
-                    <SelectItem value="riddle">Riddle</SelectItem>
-                    <SelectItem value="fortune">Fortune cookie</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              ) : null}
-
               {mode === 'teacher' ? (
                 <div className="flex items-center justify-between rounded-lg border p-3">
                   <div className="space-y-0.5">
@@ -732,12 +806,6 @@ export function AdminPrizesTab({
                   <li><span className="font-bold">In stock</span>: {wInStock ? 'Yes' : 'No'}</li>
                   <li><span className="font-bold">Qty</span>: {wStockCount.trim() ? wStockCount.trim() : 'Unlimited'}</li>
                   <li><span className="font-bold">Print voucher</span>: {wOfferPrint ? 'Yes' : 'No'}</li>
-                  {prizeAiSurpriseEnabled ? (
-                  <li>
-                    <span className="font-bold">AI surprise</span>:{' '}
-                    {wAiFun === 'off' ? 'Off' : wAiFun === 'random' ? 'Random' : wAiFun === 'fortune' ? 'Fortune cookie' : wAiFun}
-                  </li>
-                  ) : null}
                   {mode === 'admin' ? (
                     <li>
                       <span className="font-bold">Teachers</span>:{' '}
@@ -757,9 +825,6 @@ export function AdminPrizesTab({
                   <li>An activity log entry is created.</li>
                   <li>If Qty is set, it decreases until it reaches 0.</li>
                   <li>If Print is on, the shop offers a print voucher right after redeeming.</li>
-                  {prizeAiSurpriseEnabled ? (
-                  <li>If AI surprise is on, the kiosk shows one generated joke, riddle, or fortune after redeeming.</li>
-                  ) : null}
                 </ul>
               </div>
               <div className="flex flex-col sm:flex-row gap-2">
@@ -810,7 +875,6 @@ export function AdminPrizesTab({
                     inStock: wInStock,
                     stockCount,
                     offerPrintTicketOnRedeem: wOfferPrint,
-                    ...(prizeAiSurpriseEnabled && wAiFun !== 'off' ? { aiFunReward: wAiFun } : {}),
                     teacherIds: finalTeacherIds.length ? finalTeacherIds : undefined,
                     teacherId: undefined,
                     classId: finalClassId,
@@ -831,4 +895,3 @@ export function AdminPrizesTab({
     </Card>
   );
 }
-

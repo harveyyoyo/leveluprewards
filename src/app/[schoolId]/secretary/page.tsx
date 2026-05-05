@@ -122,6 +122,7 @@ export default function SecretaryPage() {
                                     value={username}
                                     onChange={(e) => setUsername(e.target.value)}
                                     className="h-12 rounded-xl"
+                                    autoFocus
                                 />
                             </div>
                             <div className="space-y-2">

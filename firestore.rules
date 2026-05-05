@@ -194,7 +194,7 @@ service cloud.firestore {
       
       match /classes/{classId} {
         allow read: if isSchoolMember(schoolId);
-        allow write: if isAdmin(schoolId);
+        allow write: if isAdmin(schoolId) || isTeacher(schoolId);
       }
       
       match /categories/{categoryId} {
@@ -214,19 +214,24 @@ service cloud.firestore {
       }
 
       match /achievements/{achievementId} {
-        allow read: if isAdmin(schoolId) || isTeacher(schoolId) || isReports(schoolId);
+        allow read: if isAdmin(schoolId) || isTeacher(schoolId) || isReports(schoolId) || isDeveloper();
         allow write: if isAdmin(schoolId);
       }
 
       match /badges/{badgeId} {
         // Read: staff can load badge definitions and earned badges.
-        allow read: if isAdmin(schoolId) || isTeacher(schoolId) || isReports(schoolId);
+        allow read: if isAdmin(schoolId) || isTeacher(schoolId) || isReports(schoolId) || isDeveloper();
         allow write: if isAdmin(schoolId);
       }
 
       match /goals/{goalId} {
         allow read: if isSchoolMember(schoolId);
         allow create, update, delete: if isAdmin(schoolId) || isTeacher(schoolId) || isDeveloper();
+      }
+
+      match /bulletinBoardIncentives/{incentiveId} {
+        allow read: if isSchoolMember(schoolId);
+        allow create, update, delete: if isAdmin(schoolId) || isDeveloper();
       }
 
       match /prizes/{prizeId} {

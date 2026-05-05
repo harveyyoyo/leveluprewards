@@ -354,10 +354,68 @@ function TeacherRosterTab({
     classes: Class[];
     isGraphic: boolean;
 }) {
-    const { updateStudent } = useAppContext();
+    const { updateStudent, addClass, updateClass } = useAppContext();
     const { toast } = useToast();
+    const confirm = useConfirm();
     const [search, setSearch] = useState('');
     const [busyStudentId, setBusyStudentId] = useState<string | null>(null);
+
+    const [isCreateClassDialogOpen, setIsCreateClassDialogOpen] = useState(false);
+    const [newClassName, setNewClassName] = useState('');
+    const [isClaimDialogOpen, setIsClaimDialogOpen] = useState(false);
+    const [isBusy, setIsBusy] = useState(false);
+
+    const myClasses = useMemo(() => classes.filter(c => c.primaryTeacherId === teacherId), [classes, teacherId]);
+    const unassignedClasses = useMemo(() => classes.filter(c => !c.primaryTeacherId), [classes]);
+
+    const handleCreateClass = async () => {
+        if (!newClassName.trim()) return;
+        setIsBusy(true);
+        try {
+            await addClass({ name: newClassName.trim(), primaryTeacherId: teacherId });
+            toast({ title: 'Class created', description: `"${newClassName}" has been created and assigned to you.` });
+            setIsCreateClassDialogOpen(false);
+            setNewClassName('');
+        } catch (e) {
+            toast({ variant: 'destructive', title: 'Failed to create class', description: (e as Error).message });
+        } finally {
+            setIsBusy(false);
+        }
+    };
+
+    const handleClaimClass = async (classId: string) => {
+        const cls = classes.find(c => c.id === classId);
+        if (!cls) return;
+        setIsBusy(true);
+        try {
+            await updateClass({ ...cls, primaryTeacherId: teacherId });
+            toast({ title: 'Class claimed', description: `You are now the primary teacher for "${cls.name}".` });
+            setIsClaimDialogOpen(false);
+        } catch (e) {
+            toast({ variant: 'destructive', title: 'Failed to claim class', description: (e as Error).message });
+        } finally {
+            setIsBusy(false);
+        }
+    };
+
+    const handleUnlinkClass = async (cls: Class) => {
+        const ok = await confirm({
+            title: `Unlink from ${cls.name}?`,
+            description: 'You will no longer be the primary teacher for this class. Students will remain in the class but won\'t show on your roster unless directly linked.',
+            confirmLabel: 'Unlink',
+            destructive: true,
+        });
+        if (!ok) return;
+        setIsBusy(true);
+        try {
+            await updateClass({ ...cls, primaryTeacherId: '' });
+            toast({ title: 'Class unlinked' });
+        } catch (e) {
+            toast({ variant: 'destructive', title: 'Failed to unlink class', description: (e as Error).message });
+        } finally {
+            setIsBusy(false);
+        }
+    };
 
     const classMap = useMemo(() => new Map(classes.map((c) => [c.id, c])), [classes]);
     const classIdsForTeacher = useMemo(
@@ -407,7 +465,75 @@ function TeacherRosterTab({
     };
 
     return (
-        <div className="flex justify-center">
+        <div className="flex flex-col gap-6 items-center">
+            {/* My Classes Management */}
+            <Card className={cn(
+                "w-full max-w-6xl border-t-8 transition-all duration-500 hover:shadow-2xl hover:-translate-y-1",
+                isGraphic ? 'bg-card/60 backdrop-blur-2xl border-chart-1 shadow-[0_20px_50px_rgba(0,0,0,0.1)]' : 'bg-white border-chart-1 shadow-lg'
+            )}>
+                <CardHeader className="p-4 md:p-6 pb-2">
+                    <div className="flex items-center justify-between">
+                        <CardTitle className="flex items-center gap-3">
+                            <div className={cn("p-2 rounded-xl", isGraphic ? 'bg-chart-1/20 text-chart-1' : 'bg-primary/10 text-primary')}>
+                                <Users className="w-6 h-6" />
+                            </div>
+                            My Classes
+                        </CardTitle>
+                        <Button
+                            variant="outline"
+                            className="rounded-xl gap-2 h-10 px-4"
+                            onClick={() => setIsCreateClassDialogOpen(true)}
+                        >
+                            <Plus className="w-4 h-4" />
+                            <span className="hidden sm:inline">New Class</span>
+                        </Button>
+                    </div>
+                    <CardDescription className={isGraphic ? 'text-muted-foreground/80' : ''}>
+                        Manage the classes you teach. Students in your classes are automatically added to your attendance and prize lists.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="p-4 md:p-6 pt-0">
+                    <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+                        {myClasses.map(c => (
+                            <div key={c.id} className={cn(
+                                "flex items-center justify-between p-3 rounded-2xl border group transition-all hover:border-chart-1/50",
+                                isGraphic ? 'bg-background/40 border-white/10' : 'bg-muted/30'
+                            )}>
+                                <span className="font-bold truncate px-1">{c.name}</span>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                                    onClick={() => void handleUnlinkClass(c)}
+                                    disabled={isBusy}
+                                >
+                                    <LogOut className="w-4 h-4" />
+                                </Button>
+                            </div>
+                        ))}
+                        {unassignedClasses.length > 0 && (
+                            <Button
+                                variant="ghost"
+                                className={cn(
+                                    "h-auto p-3 border-2 border-dashed rounded-2xl flex flex-row items-center justify-center gap-2 text-muted-foreground hover:text-foreground hover:border-chart-1/50 transition-all",
+                                    isGraphic ? 'border-white/10' : 'border-muted'
+                                )}
+                                onClick={() => setIsClaimDialogOpen(true)}
+                            >
+                                <Users className="w-5 h-5" />
+                                <span className="text-xs font-bold uppercase tracking-wider">Claim Class</span>
+                            </Button>
+                        )}
+                        {myClasses.length === 0 && unassignedClasses.length === 0 && (
+                            <div className="col-span-full py-4 text-center text-sm text-muted-foreground italic">
+                                No classes assigned. Create a new class or ask an admin to assign one to you.
+                            </div>
+                        )}
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Students Section */}
             <Card className={cn(
                 "w-full max-w-6xl border-t-8 transition-all duration-500 hover:shadow-2xl hover:-translate-y-1",
                 isGraphic ? 'bg-card/60 backdrop-blur-2xl border-chart-4 shadow-[0_20px_50px_rgba(0,0,0,0.1)]' : 'bg-white border-chart-4 shadow-lg'
@@ -502,6 +628,82 @@ function TeacherRosterTab({
                     </div>
                 </CardContent>
             </Card>
+
+            <Dialog open={isCreateClassDialogOpen} onOpenChange={setIsCreateClassDialogOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Create New Class</DialogTitle>
+                        <DialogDescription>
+                            Enter a name for the new class. You will be assigned as the primary teacher.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex items-center space-x-2 py-4">
+                        <div className="grid flex-1 gap-2">
+                            <Label htmlFor="className" className="sr-only">Class Name</Label>
+                            <Input
+                                id="className"
+                                placeholder="e.g. Grade 5B"
+                                value={newClassName}
+                                onChange={(e) => setNewClassName(e.target.value)}
+                                autoFocus
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter className="sm:justify-end">
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={() => setIsCreateClassDialogOpen(false)}
+                            disabled={isBusy}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="button"
+                            className="bg-chart-1 hover:bg-chart-1/90"
+                            onClick={handleCreateClass}
+                            disabled={isBusy || !newClassName.trim()}
+                        >
+                            {isBusy ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
+                            Create Class
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={isClaimDialogOpen} onOpenChange={setIsClaimDialogOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Claim Unassigned Class</DialogTitle>
+                        <DialogDescription>
+                            Choose an existing class to claim as yours.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-3 py-4 max-h-[300px] overflow-y-auto">
+                        {unassignedClasses.map(c => (
+                            <Button
+                                key={c.id}
+                                variant="outline"
+                                className="justify-between h-12 px-4 rounded-xl hover:border-chart-1/50 hover:bg-chart-1/5"
+                                onClick={() => handleClaimClass(c.id)}
+                                disabled={isBusy}
+                            >
+                                <span className="font-bold">{c.name}</span>
+                                <Plus className="w-4 h-4 text-muted-foreground" />
+                            </Button>
+                        ))}
+                    </div>
+                    <DialogFooter className="sm:justify-start">
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={() => setIsClaimDialogOpen(false)}
+                        >
+                            Close
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
@@ -1613,6 +1815,7 @@ function TeacherAttendanceRewardsPanel({
         ) : (rules || []).length === 0 ? (
           <p className="text-sm text-muted-foreground">No attendance rules yet. Create one above, then test a student sign-in during that period.</p>
         ) : (
+        <ScrollArea className="h-[calc(100vh-32rem)]">
           <div className="space-y-2">
             {(rules || []).slice().sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).map((r) => (
               <div key={r.id} className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl border bg-background/30">
@@ -1632,6 +1835,7 @@ function TeacherAttendanceRewardsPanel({
               </div>
             ))}
           </div>
+        </ScrollArea>
         )}
       </div>
     </div>
@@ -2949,7 +3153,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                       </Button>
 
                                       <div className="rounded-2xl border bg-muted/20">
-                                        <ScrollArea className="h-[calc(100vh-26rem)] max-h-[380px] min-h-[250px] w-full">
+                                        <ScrollArea className="h-[calc(100vh-26rem)] min-h-[250px] w-full">
                                           <ul className="p-3 space-y-2">
                                             {filteredStudents.map((s) => {
                                               const checked = selectedStudentIds.includes(s.id);

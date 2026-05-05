@@ -57,7 +57,7 @@ export function AdminBadgesTab(props: any) {
       </CardHeader>
       <CardContent>
         {badgesLoading ? (
-          <ul className="space-y-2 h-[calc(100vh-22rem)] max-h-[420px] min-h-[250px] overflow-y-auto pr-1">
+          <ul className="space-y-2 h-[calc(100vh-22rem)] min-h-[250px] overflow-y-auto pr-1">
             {[1, 2, 3].map((i: number) => (
               <li key={i} className="flex justify-between items-center bg-secondary/20 p-4 rounded-2xl border">
                 <Skeleton className="h-10 w-48" />
@@ -66,7 +66,7 @@ export function AdminBadgesTab(props: any) {
             ))}
           </ul>
         ) : (
-          <ul className="space-y-2 h-[calc(100vh-22rem)] max-h-[420px] min-h-[250px] overflow-y-auto pr-1">
+          <ul className="space-y-2 h-[calc(100vh-22rem)] min-h-[250px] overflow-y-auto pr-1">
             {(badges || []).map((b: any) => {
               const cat = categories?.find((c: any) => c.id === b.categoryId);
               const periodLabel = b.period === 'month' ? 'This month' : b.period === 'semester' ? 'This semester' : b.period === 'year' ? 'This year' : 'All time';
@@ -80,7 +80,18 @@ export function AdminBadgesTab(props: any) {
                     b.enabled === false ? 'bg-muted/30 opacity-75' : 'bg-secondary/20 hover:border-primary/20'
                   )}
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex shrink-0 items-center">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+                      onClick={() => { setEditingCategoryBadge(b); setIsCategoryBadgeModalOpen(true); }}
+                      title="Edit badge"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="flex items-center gap-3 flex-1">
                     <div
                       className="w-10 h-10 rounded-xl flex items-center justify-center border-2 shrink-0"
                       style={{ borderColor: b.accentColor || undefined, backgroundColor: b.accentColor ? `${b.accentColor}20` : undefined }}
@@ -123,14 +134,6 @@ export function AdminBadgesTab(props: any) {
                     >
                       <Users className="h-4 w-4" />
                       {earnersCount}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => { setEditingCategoryBadge(b); setIsCategoryBadgeModalOpen(true); }}
-                    >
-                      <Edit className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="ghost"

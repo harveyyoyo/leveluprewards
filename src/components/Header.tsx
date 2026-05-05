@@ -1,6 +1,6 @@
 
 'use client';
-import { usePathname } from 'next/navigation';
+import { useParams, usePathname } from 'next/navigation';
 import { doc } from 'firebase/firestore';
 import {
   Trophy,
@@ -39,14 +39,18 @@ import { AdminLoginButton } from './AdminLoginButton';
 
 export default function Header() {
   const pathname = usePathname();
-  const { loginState, schoolId, isInitialized, syncStatus, logout, isAdmin, userName, isKioskLocked } = useAppContext();
+  const params = useParams<{ schoolId?: string }>();
+  const { loginState, schoolId: contextSchoolId, isInitialized, syncStatus, logout, isAdmin, userName, isKioskLocked } = useAppContext();
   const { settings } = useSettings();
   const playSound = useArcadeSound();
   const { firestore } = useFirebase();
   const schoolDocRef = useSchoolMetadataDocRef();
 
   const { data: schoolData } = useDoc<{ name: string; logoUrl?: string }>(schoolDocRef);
-  const schoolName = schoolData?.name || (schoolId ? schoolId.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : '');
+  const schoolId = contextSchoolId ?? params?.schoolId ?? null;
+  const schoolName =
+    schoolData?.name ||
+    (schoolId ? schoolId.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()) : '');
 
   const appConfigDocRef = useMemoFirebase(() => {
     if (!firestore) return null;

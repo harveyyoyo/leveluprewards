@@ -41,7 +41,7 @@ export { addCategory, updateCategory, deleteCategory } from './categories';
 export { addPrize, updatePrize, deletePrize, redeemPrize, togglePrizeFulfillment } from './prizes';
 
 // Coupons
-export { addCoupons, deleteCoupon, redeemCoupon } from './coupons';
+export { addCoupons, deleteCoupon, deleteCoupons, redeemCoupon } from './coupons';
 
 // Achievements
 export { addAchievement, updateAchievement, deleteAchievement } from './achievements';

@@ -42,6 +42,24 @@ export const deleteCoupon = async (firestore: Firestore, schoolId: string, coupo
   }
 };
 
+export const deleteCoupons = async (firestore: Firestore, schoolId: string, couponIds: string[]) => {
+  // Stay under 500 writes per batch.
+  const BATCH_SIZE = 450;
+  for (let i = 0; i < couponIds.length; i += BATCH_SIZE) {
+    const slice = couponIds.slice(i, i + BATCH_SIZE);
+    const batch = writeBatch(firestore);
+    slice.forEach((id) => {
+      batch.delete(doc(firestore, 'schools', schoolId, 'coupons', id));
+    });
+    try {
+      await batch.commit();
+    } catch (error) {
+      reportFirestorePermissionError(error, { path: `schools/${schoolId}/coupons`, operation: 'delete' });
+      throw error;
+    }
+  }
+};
+
 export const redeemCoupon = async (
   firestore: Firestore,
   schoolId: string,

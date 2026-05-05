@@ -16,7 +16,7 @@ import { useAppContext } from '@/components/AppProvider';
 import { useFirebase } from '@/firebase';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useToast } from '@/hooks/use-toast';
-import type { Prize, Teacher, Class, PrizeAiFunReward } from '@/lib/types';
+import type { Prize, Teacher, Class } from '@/lib/types';
 import DynamicIcon from './DynamicIcon';
 import { Switch } from './ui/switch';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
@@ -40,13 +40,11 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses, cre
   const { addPrize, updatePrize, schoolId } = useAppContext();
   const { storage, firestore } = useFirebase();
   const { settings } = useSettings();
-  const prizeAiOn = settings.enablePrizeAiSurprise === true;
   const [name, setName] = useState('');
   const [points, setPoints] = useState('0');
   const [icon, setIcon] = useState('Gift');
   const [inStock, setInStock] = useState(true);
   const [offerPrintTicketOnRedeem, setOfferPrintTicketOnRedeem] = useState(false);
-  const [aiFun, setAiFun] = useState<'off' | PrizeAiFunReward>('off');
   const [teacherId, setTeacherId] = useState('');
   const [classId, setClassId] = useState('');
   const [pendingFile, setPendingFile] = useState<File | null>(null);
@@ -76,7 +74,6 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses, cre
         setIcon(prize.icon);
         setInStock(prize.inStock);
         setOfferPrintTicketOnRedeem(prize.offerPrintTicketOnRedeem === true);
-        setAiFun(prize.aiFunReward ?? 'off');
         const tidFromIds = (prize.teacherIds || []).find((id) => typeof id === 'string' && id.length > 0);
         setTeacherId(prize.teacherId || tidFromIds || '');
         setClassId(prize.classId || '');
@@ -86,7 +83,6 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses, cre
         setIcon('Gift');
         setInStock(true);
         setOfferPrintTicketOnRedeem(false);
-        setAiFun('off');
         setTeacherId(creatorTeacherId || '');
         setClassId('');
       }
@@ -134,7 +130,6 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses, cre
       icon,
       inStock,
       offerPrintTicketOnRedeem,
-      aiFunReward: prizeAiOn && aiFun !== 'off' ? aiFun : undefined,
       teacherId: teacherId || undefined,
       classId: classId || undefined,
     };
@@ -309,28 +304,6 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses, cre
                 onCheckedChange={setOfferPrintTicketOnRedeem}
               />
             </div>
-            {prizeAiOn ? (
-            <div className="flex flex-col gap-2 rounded-lg border p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="ai-fun">AI surprise after redeem</Label>
-                <p className="text-xs text-muted-foreground">
-                  Optional joke, riddle, or fortune on the rewards shop kiosk.
-                </p>
-              </div>
-              <Select value={aiFun} onValueChange={(v) => setAiFun(v as 'off' | PrizeAiFunReward)}>
-                <SelectTrigger id="ai-fun" className="w-full sm:w-[160px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="off">Off</SelectItem>
-                  <SelectItem value="random">Random</SelectItem>
-                  <SelectItem value="joke">Joke</SelectItem>
-                  <SelectItem value="riddle">Riddle</SelectItem>
-                  <SelectItem value="fortune">Fortune cookie</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            ) : null}
           </div>
         </div>
         <DialogFooter className="px-6 py-4 border-t bg-muted/30">

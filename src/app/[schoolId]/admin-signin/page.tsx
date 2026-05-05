@@ -101,6 +101,7 @@ export default function AdminSignInPage() {
                 onChange={(e) => setPasscode(e.target.value)}
                 className="h-12 rounded-xl font-mono tracking-[0.35em] text-center"
                 autoComplete="current-password"
+                autoFocus
               />
             </div>
 

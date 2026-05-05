@@ -200,7 +200,7 @@ export function AdminBulletinBoardTab({
               </CardDescription>
             </div>
             <Button asChild variant="outline" className="rounded-xl gap-2 shrink-0">
-              <Link href={`/${schoolId}/bulletin-board`}>
+              <Link href={`/${schoolId}/bulletin-board`} target="_blank" rel="noopener noreferrer">
                 View full page <ArrowUpRight className="w-4 h-4" aria-hidden />
               </Link>
             </Button>
@@ -367,7 +367,8 @@ export function AdminBulletinBoardTab({
               <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Quick Add Incentives
               </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 h-[calc(100vh-22rem)] max-h-[350px] min-h-[180px] overflow-y-auto pr-1">
+              <ScrollArea className="h-[calc(100vh-22rem)] min-h-[180px] pr-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {PRESET_BULLETIN_INCENTIVES.map((p, idx) => (
                   <Button
                     key={idx}
@@ -391,7 +392,8 @@ export function AdminBulletinBoardTab({
                     </span>
                   </Button>
                 ))}
-              </div>
+                </div>
+              </ScrollArea>
             </div>
 
             {/* Existing Incentives Listing */}
@@ -399,7 +401,7 @@ export function AdminBulletinBoardTab({
               <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-1.5">
                 <Tag className="w-3.5 h-3.5 text-indigo-500" /> Posted Incentives
               </h3>
-              <ScrollArea className="h-[calc(100vh-24rem)] max-h-[350px] min-h-[220px] border rounded-2xl bg-slate-50/40 dark:bg-slate-900/40">
+              <ScrollArea className="h-[calc(100vh-24rem)] min-h-[220px] border rounded-2xl bg-slate-50/40 dark:bg-slate-900/40">
                 {isLoading ? (
                   <p className="text-center text-sm text-muted-foreground p-8 animate-pulse">
                     Loading posted incentives...
@@ -409,11 +411,24 @@ export function AdminBulletinBoardTab({
                     {sortedIncentives.map((inc) => (
                       <li
                         key={inc.id}
-                        className="p-4 bg-white dark:bg-slate-950 rounded-2xl border flex flex-col justify-between hover:shadow-md hover:border-primary/40 transition-all duration-300"
+                        className="p-4 bg-white dark:bg-slate-950 rounded-2xl border flex flex-col justify-between hover:shadow-md hover:border-primary/40 transition-all duration-300 relative group"
                       >
+                        <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                           {/* We will move the edit button to the top left or start of content instead of absolute top right if we want "Edit First" flow */}
+                        </div>
                         <div className="space-y-2">
                           <div className="flex justify-between items-start gap-2">
                             <div className="flex items-center gap-2">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="w-8 h-8 p-0 rounded-full text-blue-600 dark:text-blue-400 shrink-0 hover:bg-blue-50 dark:hover:bg-blue-950/30"
+                                onClick={() => openModal(inc)}
+                                title="Edit incentive"
+                              >
+                                <Edit className="w-3.5 h-3.5" />
+                              </Button>
                               <span className="text-2xl" role="img" aria-label="incentive icon">
                                 {inc.icon || '🎉'}
                               </span>
@@ -443,16 +458,6 @@ export function AdminBulletinBoardTab({
                             {inc.active ? 'Active' : 'Inactive'}
                           </span>
                           <div className="flex items-center gap-2">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="w-8 h-8 p-0 rounded-full text-blue-600 dark:text-blue-400"
-                              onClick={() => openModal(inc)}
-                            >
-                              <Edit className="w-3.5 h-3.5" />
-                              <span className="sr-only">Edit</span>
-                            </Button>
                             <Button
                               type="button"
                               variant="ghost"

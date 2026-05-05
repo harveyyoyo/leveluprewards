@@ -15,6 +15,9 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "check:firestore-rules": "node scripts/check-firestore-rule-coverage.mjs && npx firebase-tools deploy --only firestore:rules --dry-run",
+    "test:permissions": "node e2e/test_no_permission_errors.mjs",
+    "predeploy:check": "npm run check:firestore-rules && npm run test:permissions",
     "test:themes": "node scripts/validate-themes.mjs",
     "backup:code": "node scripts/backup-code.mjs"
   },

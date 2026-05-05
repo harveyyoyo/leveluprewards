@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, Copy, Edit, FileText, Gift, Plus, Printer, Trash2, User, UserMinus, UserPlus } from 'lucide-react';
+import { ChevronDown, Copy, Edit, FileText, Gift, Minus, Plus, Printer, Trash2, User, UserMinus, UserPlus } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -65,6 +65,7 @@ export function AdminTeachersTab({
   onEditTeacher,
   onDeleteTeacher,
   onUpdateStudent,
+  onUpdateClass,
   onSaveStaffAccount,
   onDeleteStaffAccount,
 }: {
@@ -77,6 +78,7 @@ export function AdminTeachersTab({
   onEditTeacher: (t: Teacher) => void;
   onDeleteTeacher: (teacherId: string) => void;
   onUpdateStudent: (student: Student) => Promise<void>;
+  onUpdateClass?: (updatedClass: Class) => Promise<void>;
   onSaveStaffAccount: (account: StaffAccount | Omit<StaffAccount, 'id'>) => Promise<void>;
   onDeleteStaffAccount: (accountId: string) => Promise<void>;
 }) {
@@ -294,12 +296,12 @@ export function AdminTeachersTab({
     <Card className="border-t-4 border-primary shadow-md">
       <CardHeader className="flex flex-row justify-between items-center py-6">
         <div>
-          <Helper content="Manage teachers and limited desk accounts for this school.">
+          <Helper content="Manage faculty and limited desk accounts for this school.">
             <CardTitle className="flex items-center gap-2">
-              <User className="w-5 h-5 text-destructive" /> Staff
+              <User className="w-5 h-5 text-destructive" /> Faculty
             </CardTitle>
           </Helper>
-          <CardDescription>Teachers can issue rewards. Desk staff get limited coupon, prize, or reports access.</CardDescription>
+          <CardDescription>Faculty can issue rewards. Desk staff get limited coupon, prize, or reports access.</CardDescription>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button onClick={openNewDeskStaff} variant="outline" className="rounded-xl">
@@ -319,55 +321,144 @@ export function AdminTeachersTab({
               each teacher&apos;s scope (class primary teacher or explicit assignment on the student).
             </p>
           </div>
-          <ul className="space-y-2 h-[calc(100vh-22rem)] max-h-[420px] min-h-[280px] overflow-y-auto pr-1">
-          {teachers?.map((t) => {
-            const rows = scopedStudentsByTeacher.get(t.id) ?? [];
-            return (
-            <li
-              key={t.id}
-              className="bg-secondary/20 rounded-2xl border hover:border-purple-200 transition-colors overflow-hidden"
-            >
-              <div className="flex justify-between items-center gap-3 p-4">
-                <div className="flex min-w-0 items-center gap-3">
-                  <div className="w-10 h-10 shrink-0 rounded-full bg-purple-100 flex items-center justify-center font-bold text-purple-700">
-                    {t.name[0]}
+          <ul className="space-y-2 h-[calc(100vh-22rem)] min-h-[280px] overflow-y-auto pr-1">
+            {teachers?.map((t) => {
+              const rows = scopedStudentsByTeacher.get(t.id) ?? [];
+              const managedClasses = (classes || []).filter((c) => c.primaryTeacherId === t.id);
+              return (
+              <li
+                key={t.id}
+                className="bg-secondary/20 rounded-2xl border hover:border-purple-200 transition-colors overflow-hidden"
+              >
+                <div className="flex justify-between items-center gap-3 p-4">
+                  <div className="flex shrink-0 items-center">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+                      onClick={() => onEditTeacher(t)}
+                      title="Edit teacher"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
                   </div>
-                  <div className="min-w-0">
-                    <p className="font-bold">{t.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      User: <span className="font-code">{t.username}</span> | Pass: <span className="font-code">{t.passcode}</span>
-                    </p>
+                  <div className="flex min-w-0 items-center gap-3 flex-1">
+                    <div className="w-10 h-10 shrink-0 rounded-full bg-purple-100 flex items-center justify-center font-bold text-purple-700">
+                      {t.name[0]}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-bold">{t.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        User: <span className="font-code">{t.username}</span> | Pass: <span className="font-code">{t.passcode}</span>
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 gap-1">
+                    {renderCopyLinkButton(teacherPortalKey(t))}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                      onClick={() => onDeleteTeacher(t.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
-                <div className="flex shrink-0 gap-1">
-                  {renderCopyLinkButton(teacherPortalKey(t))}
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEditTeacher(t)}>
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-destructive hover:bg-destructive/10"
-                    onClick={() => onDeleteTeacher(t.id)}
+
+                <Collapsible className="border-t border-border/60 bg-background/40">
+                  <CollapsibleTrigger
+                    className={cn(
+                      'group flex w-full items-center justify-between gap-2 px-4 py-2.5 text-left text-sm font-medium text-muted-foreground',
+                      'hover:bg-muted/50 hover:text-foreground transition-colors',
+                      'data-[state=open]:bg-muted/30',
+                    )}
                   >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-              <Collapsible className="border-t border-border/60 bg-background/40">
-                <CollapsibleTrigger
-                  className={cn(
-                    'group flex w-full items-center justify-between gap-2 px-4 py-2.5 text-left text-sm font-medium text-muted-foreground',
-                    'hover:bg-muted/50 hover:text-foreground transition-colors',
-                    'data-[state=open]:bg-muted/30',
-                  )}
-                >
-                  <span>
-                    Linked students
-                    <span className="ml-1.5 tabular-nums text-foreground">({rows.length})</span>
-                  </span>
-                  <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-                </CollapsibleTrigger>
+                    <span>
+                      Managed classes
+                      <span className="ml-1.5 tabular-nums text-foreground">({managedClasses.length})</span>
+                    </span>
+                    <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="px-4 pb-3 pt-0 space-y-4">
+                      {managedClasses.length === 0 ? (
+                        <p className="text-xs text-muted-foreground leading-relaxed pt-2">
+                          This teacher is not assigned to any classes yet. Assign a class below.
+                        </p>
+                      ) : (
+                        <ul className="max-h-44 overflow-y-auto space-y-1 rounded-xl border border-border/50 bg-background/80 p-2 text-sm mt-2">
+                          {managedClasses.map((c) => (
+                            <li key={c.id} className="flex items-center justify-between gap-2 rounded-lg px-2 py-1 hover:bg-muted/40">
+                              <span className="min-w-0">
+                                <span className="block truncate font-medium text-foreground">{c.name}</span>
+                              </span>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 shrink-0 gap-1 text-destructive hover:bg-destructive/10"
+                                onClick={async () => {
+                                  if (!onUpdateClass) return;
+                                  await onUpdateClass({ ...c, primaryTeacherId: '' });
+                                }}
+                              >
+                                <Minus className="h-3.5 w-3.5" />
+                                Remove
+                              </Button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+
+                      <div className="space-y-2">
+                        <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Assign to class</p>
+                        <ul className="max-h-36 overflow-y-auto space-y-1 rounded-xl border border-border/50 bg-background/80 p-2 text-sm">
+                          {(classes || [])
+                            .filter((c) => c.primaryTeacherId !== t.id)
+                            .map((c) => (
+                              <li key={c.id} className="flex items-center justify-between gap-2 rounded-lg px-2 py-1 hover:bg-muted/40">
+                                <span className="min-w-0">
+                                  <span className="block truncate font-medium text-foreground">{c.name}</span>
+                                  <span className="block text-xs text-muted-foreground">
+                                    {c.primaryTeacherId ? `Current: ${teachers?.find(te => te.id === c.primaryTeacherId)?.name || 'Unknown'}` : 'Unassigned'}
+                                  </span>
+                                </span>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-8 shrink-0 gap-1"
+                                  onClick={async () => {
+                                    if (!onUpdateClass) return;
+                                    await onUpdateClass({ ...c, primaryTeacherId: t.id });
+                                  }}
+                                >
+                                  <Plus className="h-3.5 w-3.5" />
+                                  Assign
+                                </Button>
+                              </li>
+                            ))}
+                        </ul>
+                      </div>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+
+                <Collapsible className="border-t border-border/60 bg-background/40">
+                  <CollapsibleTrigger
+                    className={cn(
+                      'group flex w-full items-center justify-between gap-2 px-4 py-2.5 text-left text-sm font-medium text-muted-foreground',
+                      'hover:bg-muted/50 hover:text-foreground transition-colors',
+                      'data-[state=open]:bg-muted/30',
+                    )}
+                  >
+                    <span>
+                      Linked students
+                      <span className="ml-1.5 tabular-nums text-foreground">({rows.length})</span>
+                    </span>
+                    <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                  </CollapsibleTrigger>
                 <CollapsibleContent>
                   <div className="px-4 pb-3 pt-0">
                     {rows.length === 0 ? (
@@ -513,13 +604,24 @@ export function AdminTeachersTab({
             <h3 className="font-bold">Desk staff</h3>
             <p className="text-sm text-muted-foreground">Limited accounts for coupon sheets, prize redemption, or reports.</p>
           </div>
-          <ul className="space-y-2 h-[calc(100vh-24rem)] max-h-[360px] min-h-[200px] overflow-y-auto pr-1">
+          <ul className="space-y-2 h-[calc(100vh-24rem)] min-h-[200px] overflow-y-auto pr-1">
             {staffAccounts?.map((account) => (
               <li
                 key={account.id}
                 className="flex justify-between items-center gap-3 bg-secondary/20 p-4 rounded-2xl border hover:border-primary/30 transition-colors"
               >
-                <div className="flex min-w-0 items-center gap-3">
+                <div className="flex shrink-0 items-center">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+                    onClick={() => openEditDeskStaff(account)}
+                    title="Edit staff"
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="flex min-w-0 items-center gap-3 flex-1">
                   <div className="w-10 h-10 shrink-0 rounded-full bg-primary/15 flex items-center justify-center text-primary">
                     <StaffRoleIcon role={account.role} />
                   </div>
@@ -534,9 +636,6 @@ export function AdminTeachersTab({
                 </div>
                 <div className="flex shrink-0 gap-1">
                   {renderCopyLinkButton(`${account.role}:${account.id}`)}
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditDeskStaff(account)}>
-                    <Edit className="h-4 w-4" />
-                  </Button>
                   <Button
                     variant="ghost"
                     size="icon"
