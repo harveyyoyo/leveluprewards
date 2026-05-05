@@ -60,7 +60,7 @@ function isPermissionDeniedMessage(text) {
     await page.locator('#schoolId').waitFor({ timeout: 20000 });
     await page.locator('#schoolId').fill(DEMO_SCHOOL_ID);
     await page.locator('#passcode').fill(DEMO_SCHOOL_PASSCODE);
-    await page.getByRole('button', { name: /Continue/i }).click({ timeout: 20000 });
+    await page.getByRole('button', { name: /Sign in to school/i }).click({ timeout: 20000 });
 
     await page.waitForFunction(() => window.location.pathname.endsWith('/sign-in'), { timeout: 30000 });
     const schoolId = DEMO_SCHOOL_ID;
