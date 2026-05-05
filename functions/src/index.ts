@@ -2726,7 +2726,7 @@ export const onStudentActivityCreated = functions.firestore
 export const onPrizeUpdated = functions.firestore
   .document("schools/{schoolId}/prizes/{prizeId}")
   .onUpdate(async (change, context) => {
-    const { schoolId, prizeId } = context.params;
+    const { schoolId } = context.params;
     const before = change.before.data() as Record<string, any> | undefined;
     const after = change.after.data() as Record<string, any> | undefined;
     if (!after) return;
