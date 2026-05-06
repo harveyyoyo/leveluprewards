@@ -17,6 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { AdminRecordListHeader } from '@/components/admin/AdminRecordListHeader';
 import type { StaffAccount, StaffAccountRole } from '@/lib/types';
 
 export function AdminStaffAccountsTab({
@@ -99,44 +100,53 @@ export function AdminStaffAccountsTab({
         </Button>
       </CardHeader>
       <CardContent>
-        <ul className="space-y-2 h-[calc(100vh-22rem)] min-h-[250px] overflow-y-auto pr-1">
+        <ul className="h-[calc(100vh-22rem)] min-h-[250px] overflow-y-auto pr-1 space-y-1">
+          {staffAccounts && staffAccounts.length > 0 ? (
+            <AdminRecordListHeader
+              gridClassName="grid-cols-[76px_minmax(180px,1fr)_minmax(120px,160px)_minmax(120px,180px)_44px]"
+              columns={[
+                { label: 'Edit' },
+                { label: 'Staff Name' },
+                { label: 'Desk Role' },
+                { label: 'Login Username' },
+                { label: 'Delete', className: 'text-right' },
+              ]}
+            />
+          ) : null}
           {staffAccounts?.map((a) => (
             <li
               key={a.id}
-              className="flex justify-between items-center bg-secondary/20 p-4 rounded-2xl border hover:border-primary/30 transition-colors"
+              className="grid grid-cols-[76px_minmax(180px,1fr)_minmax(120px,160px)_minmax(120px,180px)_44px] items-center gap-3 rounded-xl border bg-secondary/20 px-3 py-2 transition-colors hover:border-primary/30 hover:bg-background"
             >
-              <div className="flex shrink-0 items-center">
+              <div className="flex items-center">
                 <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 gap-1.5 rounded-lg border-primary/20 bg-background hover:bg-primary/5 text-primary font-semibold"
                   onClick={() => openEdit(a)}
-                  title="Edit staff account"
                 >
-                  <Edit className="h-4 w-4" />
+                  <Edit className="h-3.5 w-3.5" />
+                  Edit
                 </Button>
               </div>
-              <div className="flex items-center gap-3 flex-1">
-                <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center text-primary">
-                  {a.role === 'secretary' ? <Printer className="w-5 h-5" /> : <Gift className="w-5 h-5" />}
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="size-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                  {a.role === 'secretary' ? <Printer className="w-4 h-4" /> : <Gift className="w-4 h-4" />}
                 </div>
-                <div>
-                  <p className="font-bold">{a.displayName}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {a.role === 'secretary' ? 'Secretary (print coupons)' : 'Prize desk (redeem prizes)'} · user:{' '}
-                    <span className="font-mono">{a.username}</span>
-                  </p>
-                </div>
+                <span className="truncate text-sm font-bold">{a.displayName}</span>
               </div>
-              <div className="flex gap-1">
-
+              <div className="truncate text-sm font-medium text-muted-foreground">
+                {a.role === 'secretary' ? 'Secretary' : 'Prize Desk'}
+              </div>
+              <div className="truncate font-mono text-[11px] text-muted-foreground">{a.username}</div>
+              <div className="flex items-center justify-end">
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                  className="h-8 w-8 text-destructive hover:bg-destructive/10 rounded-lg"
                   onClick={() => void onDelete(a.id)}
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="w-3.5 h-3.5" />
                 </Button>
               </div>
             </li>

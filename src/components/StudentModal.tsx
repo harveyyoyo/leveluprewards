@@ -35,6 +35,7 @@ import { cn, getStudentNickname } from '@/lib/utils';
 import { encryptField, decryptField } from '@/lib/crypto';
 import { WELCOME_GREETING_STYLES } from '@/components/WelcomeGreeting';
 import { STUDENT_WELCOME_STYLES_LIVE } from '@/lib/studentWelcome';
+import { normalizeStudentTheme } from '@/lib/themeContrast';
 
 interface StudentModalProps {
   isOpen: boolean;
@@ -98,7 +99,7 @@ export function StudentModal({
         setStudentEmail(decryptField(student.studentEmail) || '');
         setStudentPhone(decryptField(student.studentPhone) || '');
         setSelectedTeacherIds(student.teacherIds || []);
-        setTheme(student.theme);
+        setTheme(normalizeStudentTheme(student.theme) ?? student.theme);
         setBirthday(student.birthday || '');
         setStudentWelcomeAllowed(student.welcomePageEnabled !== false);
         setWelcomeBackAllowed(student.welcomeBackScreenEnabled !== false);
@@ -347,6 +348,7 @@ export function StudentModal({
 
     const finalClassId = classId === 'none' ? '' : classId;
     const normalizedNickname = nickname.trim();
+    const normalizedTheme = theme ? (normalizeStudentTheme(theme) ?? theme) : undefined;
 
     if (isEditing && student) {
       const updatedStudent: Student = {
@@ -360,7 +362,7 @@ export function StudentModal({
         classId: finalClassId,
         nfcId,
         teacherIds: selectedTeacherIds,
-        theme,
+        theme: normalizedTheme,
         parentEmail: encryptField(parentEmail.trim()) || undefined,
         parentPhone: encryptField(parentPhone.trim()) || undefined,
         studentEmail: encryptField(studentEmail.trim()) || undefined,
@@ -383,7 +385,7 @@ export function StudentModal({
         points: parseInt(points) || 0,
         classId: finalClassId,
         teacherIds: selectedTeacherIds,
-        ...(theme ? { theme } : {}),
+        ...(normalizedTheme ? { theme: normalizedTheme } : {}),
         parentEmail: encryptField(parentEmail.trim()) || undefined,
         parentPhone: encryptField(parentPhone.trim()) || undefined,
         studentEmail: encryptField(studentEmail.trim()) || undefined,

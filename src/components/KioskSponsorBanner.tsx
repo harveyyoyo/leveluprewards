@@ -48,8 +48,14 @@ export function KioskSponsorBanner({ className, previewOverride }: { className?:
     const bannerStyle = previewOverride ? previewOverride.bannerStyle : (matchedSchedule ? matchedSchedule.bannerStyle : (settings.kioskSponsorBannerStyle || 'primary'));
     const icon = previewOverride ? previewOverride.icon : (matchedSchedule ? matchedSchedule.icon : settings.kioskSponsorIcon);
 
-    // If we are not in preview mode, and neither a schedule nor an enabled sponsor with content exists, hide it.
-    if (!previewOverride && !matchedSchedule && (!settings.kioskSponsorEnabled || !msg)) {
+    // If we are not in preview mode, require explicit enablement.
+    // Schedules should not auto-show unless the sponsor banner is enabled.
+    if (!previewOverride && !settings.kioskSponsorEnabled) {
+        return null;
+    }
+
+    // If we are not in preview mode, and there is no schedule and no content, hide it.
+    if (!previewOverride && !matchedSchedule && !msg) {
         return null;
     }
 

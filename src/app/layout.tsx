@@ -34,6 +34,7 @@ export const metadata: Metadata = {
   metadataBase: appMetadataBase(),
   title: 'levelUp EDU',
   description: 'LevelUp rewards hub',
+  manifest: '/manifest.json',
   icons: {
     icon: [{ url: '/logo.png', type: 'image/png' }],
     apple: [{ url: '/logo.png', type: 'image/png' }],

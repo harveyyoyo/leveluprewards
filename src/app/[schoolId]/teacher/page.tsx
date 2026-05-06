@@ -16,6 +16,7 @@ import { LogIn, LogOut, UserCheck, Loader2 } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { cn } from '@/lib/utils';
 
 const TeacherPrinterInner = dynamic(
     () =>
@@ -61,27 +62,47 @@ function staffLandingPath(schoolId: string, type: StaffPortalLoginOption['type']
 }
 
 function TeacherPrinterSkeleton() {
+    const { settings } = useSettings();
+    const isGraphic = settings.graphicMode === 'graphics';
     return (
-        <div className="max-w-full mx-auto px-4 md:px-6 -mt-6 animate-pulse">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <Card className="border-t-8 border-primary">
-                    <CardHeader>
-                        <div className="h-6 w-32 bg-muted rounded" />
-                        <div className="h-4 w-48 bg-muted rounded" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="h-48 w-full rounded-xl bg-muted" />
-                    </CardContent>
-                </Card>
-                <Card className="border-t-8 border-chart-2">
-                    <CardHeader>
-                        <div className="h-6 w-32 bg-muted rounded" />
-                        <div className="h-4 w-48 bg-muted rounded" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="h-48 w-full rounded-xl bg-muted" />
-                    </CardContent>
-                </Card>
+        <div
+            className={cn(
+                'min-h-screen w-full bg-background font-sans relative overflow-hidden',
+                isGraphic && 'bg-gradient-to-br from-indigo-950/15 to-slate-900/15',
+            )}
+        >
+            <div className="max-w-full mx-auto p-4 md:p-8 space-y-6">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between animate-pulse">
+                    <div className="space-y-3 min-w-0">
+                        <div className="h-8 w-44 max-w-full bg-muted rounded-lg" />
+                        <div className="h-4 w-64 max-w-full bg-muted rounded" />
+                        <div className="h-4 w-36 max-w-full bg-muted rounded" />
+                    </div>
+                    <div className="h-10 w-36 bg-muted rounded-lg shrink-0 sm:self-start" />
+                </div>
+                <div className="flex justify-center overflow-x-auto animate-pulse">
+                    <div className="h-12 w-full max-w-3xl bg-muted/80 rounded-2xl" />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-pulse">
+                    <Card className="border-t-8 border-muted">
+                        <CardHeader>
+                            <div className="h-6 w-32 bg-muted rounded" />
+                            <div className="h-4 w-48 bg-muted rounded" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="h-48 w-full rounded-xl bg-muted" />
+                        </CardContent>
+                    </Card>
+                    <Card className="border-t-8 border-muted">
+                        <CardHeader>
+                            <div className="h-6 w-32 bg-muted rounded" />
+                            <div className="h-4 w-48 bg-muted rounded" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="h-48 w-full rounded-xl bg-muted" />
+                        </CardContent>
+                    </Card>
+                </div>
             </div>
         </div>
     );

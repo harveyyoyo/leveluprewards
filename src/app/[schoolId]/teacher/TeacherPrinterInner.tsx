@@ -1851,14 +1851,6 @@ function TeacherAttendanceRewardsPanel({
     );
 }
 
-type TeacherPortalAddOnTabDef = {
-    value: string;
-    label: string;
-    icon: LucideIcon;
-    isEligible: (s: Settings) => boolean;
-    onRemove: () => void;
-};
-
 export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretaryMode = false }: { teacherName: string, teacherId: string, onLogout: () => void, secretaryMode?: boolean }) {
     const { updateTeacher, addCoupons, setCouponsToPrint, addCategory, schoolId, awardPointsToMultipleStudents, deductPointsFromMultipleStudents, addPrize, updatePrize, deletePrize, getTeacherAttendanceConfig, setTeacherAttendanceConfig, listTeacherAttendanceLog, categories: globalCategories, isAdmin, isTeacher } = useAppContext();
     /** Admin using the teacher portal can act on the whole school (like secretary data scope) while keeping teacher tabs/tools. */
@@ -1874,52 +1866,14 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
 
     const [activeTeacherTab, setActiveTeacherTab] = useState('coupons');
 
-    const teacherAddOnTabDefs = useMemo<TeacherPortalAddOnTabDef[]>(() => ([
-        {
-            value: 'attendance',
-            label: 'Attendance',
-            icon: Clock,
-            isEligible: (s) => !!s.enableAttendance,
-            onRemove: () => updateSettings({ enableAttendance: false, enableClassSignIn: false }),
-        },
-        {
-            value: 'goals',
-            label: 'Goals',
-            icon: Target,
-            isEligible: (s) => !!s.enableGoals && isFeatureAllowed('enableGoals'),
-            onRemove: () => updateSettings({ enableGoals: false }),
-        },
-        {
-            value: 'homework',
-            label: 'Homework Rewards',
-            icon: BookOpen,
-            isEligible: (s) => !!s.enableHomework,
-            onRemove: () => updateSettings({ enableHomework: false }),
-        },
-    ]), [updateSettings, isFeatureAllowed]);
-
-    const visibleTeacherAddOnTabs = useMemo(() => {
-        const hidden = new Set(settings.teacherHiddenAddOnTabs || []);
-        return teacherAddOnTabDefs.filter((t) => t.isEligible(settings) && !hidden.has(t.value));
-    }, [teacherAddOnTabDefs, settings]);
-
-    const dismissTeacherAddOnTab = (tabValue: string) => {
-        const def = teacherAddOnTabDefs.find((t) => t.value === tabValue);
-        if (!def) return;
-        def.onRemove();
-        if (activeTeacherTab === tabValue) setActiveTeacherTab('coupons');
-    };
-
     useEffect(() => {
         if (secretaryMode) return;
-        const basicTabs = ['coupons', 'award', 'roster', 'prizes', 'redemptions', 'reports'];
-        const expertExtras = settings.expertMode ? visibleTeacherAddOnTabs.map((t) => t.value) : [];
-        const allowedTabs = new Set<string>([...basicTabs, ...expertExtras]);
-        if (!allowedTabs.has(activeTeacherTab)) {
+        const basicTabs = new Set<string>(['coupons', 'award', 'roster', 'prizes', 'redemptions', 'reports']);
+        if (!basicTabs.has(activeTeacherTab)) {
             const timer = setTimeout(() => setActiveTeacherTab('coupons'), 100);
             return () => clearTimeout(timer);
         }
-    }, [secretaryMode, settings.expertMode, activeTeacherTab, visibleTeacherAddOnTabs]);
+    }, [secretaryMode, activeTeacherTab]);
 
     const categoriesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'categories') : null, [firestore, schoolId]);
     const { data: categories, isLoading: categoriesLoading } = useCollection<Category>(categoriesQuery);
@@ -2606,7 +2560,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                         <Helper content={secretaryMode ? 'Generate coupon sheets for teachers to hand out. You cannot award points or edit prizes from here.' : 'Print coupons, award points, manage prizes, and take attendance from one place.'}>
                             <h2 className="text-2xl font-bold tracking-tight" style={{ color: teacherAccent }}>
-                                {secretaryMode ? 'Secretary - coupon printing' : 'Teacher Portal'}
+                                {secretaryMode ? 'Secretary - coupon printing' : 'Teacher & Faculty Portal'}
                             </h2>
                             <p className="text-muted-foreground">
                                 {secretaryMode
@@ -2628,15 +2582,12 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                             ) : null}
                         </Helper>
                         <div className="flex flex-wrap gap-2 shrink-0 sm:self-start justify-end items-center">
-                            {!secretaryMode && (
-                                <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/40 rounded-xl border">
-                                    <span className="text-[10px] font-black uppercase text-muted-foreground tracking-wider">Add ons</span>
-                                    <Switch
-                                        checked={settings.expertMode}
-                                        onCheckedChange={(val) => updateSettings({ expertMode: val })}
-                                    />
-                                </div>
-                            )}
+                            <Button variant="outline" size="sm" asChild className="gap-2 rounded-lg h-10 font-semibold">
+                                <Link href="/privacy" target="_blank" rel="noreferrer">
+                                    <FileText className="w-4 h-4" aria-hidden />
+                                    <span className="hidden sm:inline">Privacy &amp; Security</span>
+                                </Link>
+                            </Button>
                             {secretaryMode && (
                                 <Button variant="outline" onClick={onLogout} className="gap-2 rounded-lg h-10">
                                     <LogOut className="w-4 h-4" />
@@ -2708,90 +2659,8 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                     <FileText className="w-4 h-4 shrink-0 opacity-80" />
                                     Reports
                                 </TabsTrigger>
-                                {settings.expertMode &&
-                                    visibleTeacherAddOnTabs.map((t) => {
-                                        const Icon = t.icon;
-                                        return (
-                                            <Fragment key={t.value}>
-                                                <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground/45 pointer-events-none" aria-hidden />
-                                                <TabsTrigger
-                                                    value={t.value}
-                                                    className="rounded-xl px-3 py-2 font-bold text-sm flex items-center gap-1.5 text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--teacher-accent)]"
-                                                >
-                                                    <Icon className="w-4 h-4 shrink-0 opacity-80" />
-                                                    {t.label}
-                                                </TabsTrigger>
-                                            </Fragment>
-                                        );
-                                    })}
                             </TabsList>
                         </div>
-
-                        {settings.expertMode && (
-                            <div className="flex flex-col gap-3 animate-in fade-in slide-in-from-top-2 duration-500">
-                                <div className="flex items-center gap-4 px-4 max-w-6xl mx-auto w-full pt-1 opacity-40">
-                                    <div className="h-px bg-border flex-1" />
-                                    <span className="text-[10px] font-black uppercase tracking-[0.3em] whitespace-nowrap">Add ons</span>
-                                    <div className="h-px bg-border flex-1" />
-                                </div>
-                                <div className="flex items-start justify-between gap-3 px-4 max-w-6xl mx-auto w-full">
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        {visibleTeacherAddOnTabs.length === 0 ? (
-                                            <span className="text-xs text-muted-foreground">No add ons enabled.</span>
-                                        ) : (
-                                            visibleTeacherAddOnTabs.map((t) => {
-                                                const Icon = t.icon;
-                                                return (
-                                                    <div
-                                                        key={t.value}
-                                                        className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-muted/25 px-3 py-1.5 text-xs font-bold"
-                                                    >
-                                                        <Icon className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
-                                                        <button
-                                                            type="button"
-                                                            className="hover:underline"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                setActiveTeacherTab(t.value);
-                                                            }}
-                                                            title={`Open ${t.label}`}
-                                                        >
-                                                            {t.label}
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            className="ml-1 inline-flex h-6 w-6 items-center justify-center rounded-full hover:bg-background/70 text-muted-foreground hover:text-foreground"
-                                                            title={`Remove ${t.label}`}
-                                                            aria-label={`Remove ${t.label}`}
-                                                            onPointerDown={(e) => e.stopPropagation()}
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                dismissTeacherAddOnTab(t.value);
-                                                            }}
-                                                        >
-                                                            <X className="h-4 w-4" aria-hidden />
-                                                        </button>
-                                                    </div>
-                                                );
-                                            })
-                                        )}
-                                    </div>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="icon"
-                                        className="h-9 w-9 rounded-xl shrink-0"
-                                        title="Add add-on"
-                                        aria-label="Add add-on"
-                                        onClick={() => {
-                                            window.dispatchEvent(new CustomEvent('open-settings-modal', { detail: { view: 'features' } }));
-                                        }}
-                                    >
-                                        <Plus className="h-4 w-4" aria-hidden />
-                                    </Button>
-                                </div>
-                            </div>
-                        )}
                         </div>
                         )}
 

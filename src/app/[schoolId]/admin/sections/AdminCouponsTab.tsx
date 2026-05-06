@@ -7,6 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AdminRecordListHeader } from '@/components/admin/AdminRecordListHeader';
 import type { Coupon } from '@/lib/types';
 import { couponRedemptionLabelForPrint } from '@/lib/couponRedemptionRules';
 
@@ -163,43 +164,49 @@ export function AdminCouponsTab({
           </div>
           <ScrollArea className="h-[calc(100vh-28rem)] min-h-[350px] border rounded-2xl bg-muted/30">
             {filteredAvailable.length >= 1 ? (
-              <ul className="p-4 space-y-3">
+              <ul className="p-2 space-y-1">
+                <AdminRecordListHeader
+                  gridClassName="grid-cols-[44px_minmax(110px,150px)_minmax(180px,1fr)]"
+                  columns={[
+                    { label: 'Delete' },
+                    { label: 'Coupon Code' },
+                    { label: 'Value, Category, Teacher & Date' },
+                  ]}
+                />
                 {filteredAvailable.map((coupon) => {
                   const scopeLine = couponRedemptionLabelForPrint(coupon);
                   return (
-                    <li key={coupon.id} className="p-4 bg-card rounded-xl border shadow-sm group relative">
-                      <div className="flex justify-between items-center font-bold">
-                        <span className="font-code text-primary text-lg">{coupon.code}</span>
-                        <div className="flex items-center gap-3">
-                          <span className="text-sm bg-primary/10 text-primary px-2 py-0.5 rounded-lg">{coupon.value} pts</span>
-                          {onDeleteCoupon && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => {
-                                if (window.confirm(`Delete coupon ${coupon.code}?`)) onDeleteCoupon(coupon.id);
-                              }}
-                              className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+                    <li key={coupon.id} className="flex items-center gap-3 p-2 bg-card rounded-xl border shadow-sm group hover:bg-muted/50 transition-colors">
+                      {onDeleteCoupon && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            if (window.confirm(`Delete coupon ${coupon.code}?`)) onDeleteCoupon(coupon.id);
+                          }}
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg shrink-0"
+                          title="Delete coupon"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
+                      {!onDeleteCoupon && <div className="h-8 w-8 shrink-0" />}
+                      <div className="flex-1 min-w-0 flex items-center gap-3">
+                        <span className="font-code text-primary text-sm font-bold shrink-0">{coupon.code}</span>
+                        <div className="flex flex-wrap items-center gap-2 min-w-0">
+                          <span className="text-[11px] font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-lg shrink-0">{coupon.value} pts</span>
+                          <span className="text-[11px] font-medium text-muted-foreground truncate border px-2 py-0.5 rounded-lg bg-background">
+                            {coupon.category} <span className="text-muted-foreground/60">by</span> {coupon.teacher}
+                          </span>
+                          {scopeLine && (
+                            <span className="text-[10px] font-black uppercase tracking-wider text-amber-800 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-lg truncate max-w-[120px]" title={scopeLine}>
+                              {scopeLine}
+                            </span>
                           )}
+                          <span className="text-[10px] text-muted-foreground/60 hidden sm:inline">
+                            {new Date(coupon.createdAt).toLocaleDateString()}
+                          </span>
                         </div>
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-2 space-y-1">
-                        <p className="font-semibold text-foreground">
-                          {coupon.category} <span className="text-muted-foreground/60 font-normal">/ by</span> {coupon.teacher}
-                        </p>
-                        <p>Created {new Date(coupon.createdAt).toLocaleDateString()}</p>
-                        {(coupon.startsAt || coupon.expiresAt) && (
-                          <p className="flex items-center gap-1">
-                            <AlertCircle className="w-3 h-3" />
-                            {coupon.startsAt && <>From {new Date(coupon.startsAt).toLocaleDateString()}</>}
-                            {coupon.startsAt && coupon.expiresAt && ' · '}
-                            {coupon.expiresAt && <>Expires {new Date(coupon.expiresAt).toLocaleDateString()}</>}
-                          </p>
-                        )}
-                        {scopeLine && <p className="text-amber-800 dark:text-amber-400 font-bold mt-1 bg-amber-500/10 px-2 py-0.5 rounded-md inline-block">{scopeLine}</p>}
                       </div>
                     </li>
                   );
@@ -236,21 +243,31 @@ export function AdminCouponsTab({
           </div>
           <ScrollArea className="h-[calc(100vh-28rem)] min-h-[350px] border rounded-2xl bg-muted/30">
             {filteredRedeemed.length >= 1 ? (
-              <ul className="p-4 space-y-3">
+              <ul className="p-2 space-y-1">
+                <AdminRecordListHeader
+                  gridClassName="grid-cols-[44px_minmax(110px,150px)_minmax(180px,1fr)]"
+                  columns={[
+                    { label: 'Status' },
+                    { label: 'Coupon Code' },
+                    { label: 'Redeemed By, Value & Date' },
+                  ]}
+                />
                 {filteredRedeemed.map((coupon) => (
-                  <li key={coupon.id} className="p-4 bg-card/60 rounded-xl border border-dashed shadow-sm opacity-80">
-                    <div className="flex justify-between items-center font-bold">
-                      <span className="font-code text-muted-foreground line-through">{coupon.code}</span>
-                      <span className="text-sm">{coupon.value} pts</span>
+                  <li key={coupon.id} className="flex items-center gap-3 p-2 bg-card/60 rounded-xl border border-dashed shadow-sm opacity-80 hover:bg-muted/50 transition-colors">
+                    <div className="size-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                      <Ticket className="size-4 text-muted-foreground/40" />
                     </div>
-                    <div className="text-xs text-muted-foreground mt-2 space-y-1">
-                      <p>
-                        {coupon.category} / by {coupon.teacher}
-                      </p>
-                      <p className="text-foreground font-medium">
-                        Used by <span className="font-bold">{getStudentName(String(coupon.usedBy || '')) || 'Unknown'}</span> on{' '}
-                        {coupon.usedAt ? new Date(coupon.usedAt).toLocaleDateString() : 'N/A'}
-                      </p>
+                    <div className="flex-1 min-w-0 flex items-center gap-3">
+                      <span className="font-code text-muted-foreground text-sm font-bold shrink-0 line-through decoration-muted-foreground/40">{coupon.code}</span>
+                      <div className="flex flex-wrap items-center gap-2 min-w-0">
+                        <span className="text-[11px] font-bold bg-muted text-muted-foreground px-2 py-0.5 rounded-lg shrink-0">{coupon.value} pts</span>
+                        <span className="text-[11px] font-bold text-foreground truncate border px-2 py-0.5 rounded-lg bg-background">
+                          Used by {getStudentName(String(coupon.usedBy || '')) || 'Unknown'}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground/60 hidden sm:inline">
+                          {coupon.usedAt ? new Date(coupon.usedAt).toLocaleDateString() : 'N/A'}
+                        </span>
+                      </div>
                     </div>
                   </li>
                 ))}

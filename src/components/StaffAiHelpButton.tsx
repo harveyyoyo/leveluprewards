@@ -201,14 +201,31 @@ export function StaffAiHelpButton() {
   const canSend = Boolean(schoolId) && !sending;
   const canSendSupport = Boolean(schoolId) && !supportSending && supportText.trim().length > 0;
 
+  // If a sponsor banner is active on bottom-positioned kiosk screens, lift the floating chat button
+  // so it never competes with fixed banners (and stays reachable on touch devices).
+  const localDate = new Date().toLocaleDateString('en-CA'); // "YYYY-MM-DD"
+  const matchedSponsorSchedule = (settings.kioskSponsorSchedules || []).find((s) => s.date === localDate);
+  const sponsorHasContent =
+    !!matchedSponsorSchedule ||
+    !!settings.kioskSponsorMessage?.trim() ||
+    !!settings.kioskSponsorLogoUrl?.trim() ||
+    !!settings.kioskSponsorLink?.trim();
+  const sponsorBannerActive = settings.kioskSponsorEnabled && sponsorHasContent;
+  const sponsorBannerBottom = (settings.kioskSponsorPosition || 'bottom') === 'bottom';
+  const liftForSponsorBottom = sponsorBannerActive && sponsorBannerBottom;
+
   return (
     <>
       <div
         className={cn(
           'no-print fixed right-4 z-[120] flex flex-col items-end gap-2',
           isApp
-            ? 'bottom-[calc(5.75rem+env(safe-area-inset-bottom,0px))]'
-            : 'bottom-6',
+            ? liftForSponsorBottom
+              ? 'bottom-[calc(5.75rem+3.75rem+env(safe-area-inset-bottom,0px))]'
+              : 'bottom-[calc(5.75rem+env(safe-area-inset-bottom,0px))]'
+            : liftForSponsorBottom
+              ? 'bottom-[calc(1.5rem+3.75rem)]'
+              : 'bottom-6',
         )}
       >
         <Button

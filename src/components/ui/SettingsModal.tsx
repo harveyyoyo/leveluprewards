@@ -1,5 +1,5 @@
 
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useAppContext } from '@/components/AppProvider';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { collection } from 'firebase/firestore';
@@ -60,7 +60,6 @@ const FEATURE_SECTION_NAV = [
     { id: 'settings-features-students', label: 'Students' },
     { id: 'settings-features-occasions', label: 'Occasions' },
     { id: 'settings-features-sponsor', label: 'Sponsor' },
-    { id: 'settings-features-printing', label: 'Printing' },
 ] as const;
 
 const INTERFACE_SECTION_NAV = [
@@ -198,9 +197,7 @@ export function SettingsModal() {
     const [draft, setDraft] = useState<AppSettings | null>(null);
     const [view, setView] = useState<SettingsView>('hub');
     const [vendingSettingsOpen, setVendingSettingsOpen] = useState(false);
-    const [interfaceRole, setInterfaceRole] = useState<RoleView>(
-        isAdmin ? 'global' : (loginState === 'teacher' ? 'teacher' : 'student')
-    );
+    const [interfaceRole, setInterfaceRole] = useState<RoleView>('global');
     const [previewMode, setPreviewMode] = useState<PreviewMode>(isAdmin ? 'draft' : 'live');
     const [featureQuery, setFeatureQuery] = useState('');
     const [featuresEnabledOnly, setFeaturesEnabledOnly] = useState(false);
@@ -212,6 +209,10 @@ export function SettingsModal() {
     const committedRef = useRef(false);
     const isShortLinkKioskRoute = typeof pathname === 'string' && pathname.startsWith('/s/');
     const autoOpenedFromQueryRef = useRef(false);
+
+    useLayoutEffect(() => {
+        if (open) setInterfaceRole('global');
+    }, [open]);
 
     // In-app opener (avoids route transitions / layout jank).
     useEffect(() => {
@@ -284,8 +285,8 @@ export function SettingsModal() {
     const viewTitle: Record<SettingsView, string> = {
         hub: 'Settings',
         interface: 'Interface & display',
-        security: 'Security',
-        features: 'Features & add-ons',
+        security: 'Basic settings',
+        features: 'Extra features',
         pillars: 'Product Pillars',
         developer: 'Developer tools',
     };
@@ -351,7 +352,7 @@ export function SettingsModal() {
     };
 
     // Allow deep-linking into the settings modal via query param.
-    // Example: `?settings=features` opens the modal on "Features & add-ons".
+    // Example: `?settings=features` opens the modal on "Extra features".
     useEffect(() => {
         if (!canOpenSettings) return;
         if (!searchParams) return;
@@ -502,7 +503,7 @@ export function SettingsModal() {
                                     </span>
                                     <ChevronRight className="h-5 w-5 shrink-0 text-amber-700/50 dark:text-amber-400/50" aria-hidden />
                                 </div>
-                                <span className="font-black text-amber-900 dark:text-amber-100">Features &amp; add-ons</span>
+                            <span className="font-black text-amber-900 dark:text-amber-100">Extra features</span>
                                 <span className="text-xs leading-snug text-amber-800/90 dark:text-amber-200/80">Attendance, shop, recognition, library checkout, and more</span>
                             </button>
                             {loginState === 'developer' && (
@@ -547,8 +548,8 @@ export function SettingsModal() {
                                         </span>
                                         <ChevronRight className="h-5 w-5 shrink-0 text-indigo-700/50 dark:text-indigo-400/50" aria-hidden />
                                     </div>
-                                    <span className="font-black text-indigo-900 dark:text-indigo-100">Security</span>
-                                    <span className="text-xs leading-snug text-indigo-800/90 dark:text-indigo-200/80">Admin and kiosk session timeouts</span>
+                                    <span className="font-black text-indigo-900 dark:text-indigo-100">Basic settings</span>
+                                    <span className="text-xs leading-snug text-indigo-800/90 dark:text-indigo-200/80">Session timeouts, printing, and guidance</span>
                                 </button>
                             )}
                             {isAdmin && (
@@ -963,42 +964,119 @@ export function SettingsModal() {
                     )}
 
                     {view === 'security' && (
-                        <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 mb-4 border border-slate-100 dark:border-slate-800/50">
-                            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 pb-3 flex items-center gap-2">
-                                <Shield className="w-3.5 h-3.5" /> Security
-                            </p>
+                        <div className="space-y-4">
+                            <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 border border-slate-100 dark:border-slate-800/50">
+                                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 pb-3 flex items-center gap-2">
+                                    <Shield className="w-3.5 h-3.5" /> Basic settings
+                                </p>
 
-                            <div className="space-y-4 mt-1">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex flex-col">
-                                        <span className="text-sm font-bold">Admin Auto-Logout</span>
-                                        <p className="text-[11px] text-muted-foreground">Session duration (minutes)</p>
+                                <div className="space-y-4 mt-1">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-bold">Admin Auto-Logout</span>
+                                            <p className="text-[11px] text-muted-foreground">Session duration (minutes)</p>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Input
+                                                type="number"
+                                                className="w-20 h-9 rounded-xl text-center font-bold bg-background/50 border-border/50"
+                                                value={Math.round((local.adminSessionTimeoutMs || 0) / 60000)}
+                                                onChange={(e) => handleToggle('adminSessionTimeoutMs', Math.max(1, parseInt(e.target.value) || 1) * 60000)}
+                                                min={1}
+                                                max={1440}
+                                            />
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <Input
-                                            type="number"
-                                            className="w-20 h-9 rounded-xl text-center font-bold bg-background/50 border-border/50"
-                                            value={Math.round((local.adminSessionTimeoutMs || 0) / 60000)}
-                                            onChange={(e) => handleToggle('adminSessionTimeoutMs', Math.max(1, parseInt(e.target.value) || 1) * 60000)}
-                                            min={1}
-                                            max={1440}
-                                        />
+
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-bold">Kiosk Auto-Logout</span>
+                                            <p className="text-[11px] text-muted-foreground">Idle time (seconds)</p>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Input
+                                                type="number"
+                                                className="w-20 h-9 rounded-xl text-center font-bold bg-background/50 border-border/50"
+                                                value={local.kioskSessionTimeoutSec || 0}
+                                                onChange={(e) => handleToggle('kioskSessionTimeoutSec', Math.max(5, parseInt(e.target.value) || 5))}
+                                                min={5}
+                                                max={300}
+                                            />
+                                        </div>
                                     </div>
                                 </div>
+                            </div>
 
-                                <div className="flex items-center justify-between">
-                                    <div className="flex flex-col">
-                                        <span className="text-sm font-bold">Kiosk Auto-Logout</span>
-                                        <p className="text-[11px] text-muted-foreground">Idle time (seconds)</p>
+                            <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 border border-slate-100 dark:border-slate-800/50 space-y-4">
+                                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 pb-1 flex items-center gap-2">
+                                    <Monitor className="w-3.5 h-3.5" /> Printing &amp; Guidance
+                                </p>
+
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <Palette className="w-4 h-4 text-muted-foreground" />
+                                            <span className="text-sm font-bold">Color Printing</span>
+                                        </div>
+                                        <Switch
+                                            checked={local.enableColorPrinting}
+                                            onCheckedChange={(checked) => handleToggle('enableColorPrinting', checked)}
+                                        />
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <Input
-                                            type="number"
-                                            className="w-20 h-9 rounded-xl text-center font-bold bg-background/50 border-border/50"
-                                            value={local.kioskSessionTimeoutSec || 0}
-                                            onChange={(e) => handleToggle('kioskSessionTimeoutSec', Math.max(5, parseInt(e.target.value) || 5))}
-                                            min={5}
-                                            max={300}
+
+                                    {isAdmin && (
+                                        <div className="space-y-4 border-t border-slate-200/60 dark:border-slate-700/50 pt-4">
+                                            <p className="text-xs text-muted-foreground leading-relaxed">
+                                                Optional printer reminders for staff. Web apps cannot select a specific printer; these notes appear next to the right Print actions so the correct device is chosen in the print dialog.
+                                            </p>
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="printerReminderIdCards" className="text-xs font-bold">
+                                                    Student ID / card stock printing
+                                                </Label>
+                                                <Textarea
+                                                    id="printerReminderIdCards"
+                                                    rows={2}
+                                                    placeholder='e.g. "Use the Fargo DTC at the front desk — not the office copier."'
+                                                    className="min-h-[72px] rounded-xl text-sm bg-background/80 border-border/60 resize-y"
+                                                    value={local.printerReminderIdCards ?? ''}
+                                                    onChange={(e) => handleToggle('printerReminderIdCards', e.target.value)}
+                                                />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="printerReminderPrizeVouchers" className="text-xs font-bold">
+                                                    Prize vouchers &amp; coupon sheets
+                                                </Label>
+                                                <Textarea
+                                                    id="printerReminderPrizeVouchers"
+                                                    rows={2}
+                                                    placeholder='e.g. "Send redeem slips to the thermal printer in the office."'
+                                                    className="min-h-[72px] rounded-xl text-sm bg-background/80 border-border/60 resize-y"
+                                                    value={local.printerReminderPrizeVouchers ?? ''}
+                                                    onChange={(e) => handleToggle('printerReminderPrizeVouchers', e.target.value)}
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className="flex items-center justify-between border-t border-slate-200/60 dark:border-slate-700/50 pt-4">
+                                        <div className="flex items-center gap-2">
+                                            <HelpCircle className="w-4 h-4 text-muted-foreground" />
+                                            <span className="text-sm font-bold">Helper Tips</span>
+                                        </div>
+                                        <Switch
+                                            checked={local.enableHelperMode}
+                                            onCheckedChange={(checked) => handleToggle('enableHelperMode', checked)}
+                                        />
+                                    </div>
+
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <HelpCircle className="w-4 h-4 text-muted-foreground" />
+                                            <span className="text-sm font-bold">Show Welcome Tour</span>
+                                        </div>
+                                        <Switch
+                                            checked={local.showIntroWizard}
+                                            onCheckedChange={(checked) => handleToggle('showIntroWizard', checked)}
                                         />
                                     </div>
                                 </div>
@@ -1133,7 +1211,7 @@ export function SettingsModal() {
                             )}
 
                             <div className="flex items-center justify-between mb-3 border-b border-border/40 pb-3 mt-1">
-                                <h3 className="text-sm font-bold text-muted-foreground">Manage Features</h3>
+                                <h3 className="text-sm font-bold text-muted-foreground">Manage Extra Features</h3>
                                 <div className="flex items-center gap-2 shrink-0">
                                     <Button variant="outline" size="sm" className="h-8 rounded-xl text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-700 dark:hover:text-emerald-300" onClick={() => {
                                         if (local.soundEnabled) playSound('click');
@@ -1149,7 +1227,6 @@ export function SettingsModal() {
                                                 'enableClassAccumulations', 'enableBirthdayPoints', 'enableSpecialDayPoints',
                                                 'enablePrizeAiSurprise', 'enableVendingMachine', 'enableStudentEmojiOnPrizeTickets',
                                                 'enableThemeAnimations',
-                                                'enableColorPrinting', 'enableHelperMode', 'showIntroWizard'
                                             ];
                                             keys.forEach(k => {
                                                 if (isFeatureAllowed(k)) {
@@ -1176,7 +1253,6 @@ export function SettingsModal() {
                                                 'enableClassAccumulations', 'enableBirthdayPoints', 'enableSpecialDayPoints',
                                                 'enablePrizeAiSurprise', 'enableVendingMachine', 'enableStudentEmojiOnPrizeTickets',
                                                 'enableThemeAnimations',
-                                                'enableColorPrinting', 'enableHelperMode', 'showIntroWizard'
                                             ];
                                             keys.forEach(k => {
                                                 (next as any)[k] = false;
@@ -1371,7 +1447,7 @@ export function SettingsModal() {
                                 <FeatureRow
                                     id="enableClassAccumulations"
                                     label="Class Accumulations"
-                                    desc="Class standings (combined balances by class) live on Hall of Fame. This toggle is for future add-ons; it does not show class standings on the student kiosk."
+                                    desc="Class standings (combined balances by class) live on Hall of Fame. This toggle is for future extra features; it does not show class standings on the student kiosk."
                                     icon={<UsersRound className="w-5 h-5" />}
                                     settings={local}
                                     onToggle={handleToggle}
@@ -1681,72 +1757,6 @@ export function SettingsModal() {
                             </div>
 
 
-                            <div id="settings-features-printing" className="scroll-mt-[5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
-                                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><Monitor className="w-3.5 h-3.5" /> Printing & Guidance</p>
-                                <FeatureRow
-                                    id="enableColorPrinting"
-                                    label="Color Printing"
-                                    desc="Use color for coupons and badges when printing, instead of plain black-and-white."
-                                    icon={<Palette className="w-5 h-5" />}
-                                    settings={local}
-                                    onToggle={handleToggle}
-                                    isImplemented={true}
-                                    isAdmin={isAdmin}
-                                />
-                                {isAdmin && (
-                                    <div className="px-3 pb-4 space-y-4 border-t border-slate-200/60 dark:border-slate-700/50 pt-4 mt-1">
-                                        <p className="text-xs text-muted-foreground leading-relaxed">
-                                            Optional printer reminders for staff. Web apps cannot select a specific printer; these notes appear next to the right Print actions so the correct device is chosen in the print dialog.
-                                        </p>
-                                        <div className="space-y-1.5">
-                                            <Label htmlFor="printerReminderIdCards" className="text-xs font-bold">
-                                                Student ID / card stock printing
-                                            </Label>
-                                            <Textarea
-                                                id="printerReminderIdCards"
-                                                rows={2}
-                                                placeholder='e.g. "Use the Fargo DTC at the front desk — not the office copier."'
-                                                className="min-h-[72px] rounded-xl text-sm bg-background/80 border-border/60 resize-y"
-                                                value={local.printerReminderIdCards ?? ''}
-                                                onChange={(e) => handleToggle('printerReminderIdCards', e.target.value)}
-                                            />
-                                        </div>
-                                        <div className="space-y-1.5">
-                                            <Label htmlFor="printerReminderPrizeVouchers" className="text-xs font-bold">
-                                                Prize vouchers & coupon sheets
-                                            </Label>
-                                            <Textarea
-                                                id="printerReminderPrizeVouchers"
-                                                rows={2}
-                                                placeholder='e.g. "Send redeem slips to the thermal printer in the office."'
-                                                className="min-h-[72px] rounded-xl text-sm bg-background/80 border-border/60 resize-y"
-                                                value={local.printerReminderPrizeVouchers ?? ''}
-                                                onChange={(e) => handleToggle('printerReminderPrizeVouchers', e.target.value)}
-                                            />
-                                        </div>
-                                    </div>
-                                )}
-                                <FeatureRow
-                                    id="enableHelperMode"
-                                    label="Helper Tips"
-                                    desc="Show little “?” helpers and tooltips around the app to explain what things do."
-                                    icon={<HelpCircle className="w-5 h-5" />}
-                                    settings={local}
-                                    onToggle={handleToggle}
-                                    isImplemented={true}
-                                    isAdmin={isAdmin}
-                                />
-                                 <FeatureRow
-                                    id="showIntroWizard"
-                                    label="Show Welcome Tour"
-                                    desc="Display the introductory guide for new users that explains the basic features."
-                                    icon={<HelpCircle className="w-5 h-5" />}
-                                    settings={local}
-                                    onToggle={handleToggle}
-                                    isImplemented={true}
-                                    isAdmin={true}
-                                />
-                            </div>
                             </div>
                             </FeatureFilterContext.Provider>
                         </div>

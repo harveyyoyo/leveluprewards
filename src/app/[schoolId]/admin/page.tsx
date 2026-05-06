@@ -1,8 +1,9 @@
 
 'use client';
-import { useEffect, useMemo, useState, useRef, ChangeEvent } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useState, useRef, ChangeEvent } from 'react';
 import { useConfirm } from '@/components/providers/ConfirmProvider';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirestore, useCollection, useMemoFirebase, useFunctions } from '@/firebase';
 import { useAdminDashboardData } from './hooks/useAdminDashboardData';
@@ -13,10 +14,10 @@ import { useAuthFetch } from '@/lib/authFetch';
 import { collection, doc, updateDoc, setDoc, deleteDoc, getDocs, query, orderBy, limit } from 'firebase/firestore';
 
 import {
-   Users, Gift, BookOpen, Trash2, Edit, Plus, UploadCloud, Printer, LayoutDashboard, Database,
+   Users, Gift, BookOpen, Trash2, Edit, UploadCloud, Printer, LayoutDashboard, Database,
    Settings, History, Award, CheckCircle, Tag, Trophy, ArrowRight, Loader2, Play, ShieldCheck,
    User, Ticket, Upload, Download, Activity, Zap, Clock, Palette, Wand2, TableProperties,
-   FileText, Bell, Target, Megaphone, X,
+   FileText, Bell, Target, Megaphone, ChevronDown,
  } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -67,6 +68,13 @@ import {
 } from "@/components/ui/tooltip";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { rainbowTripletForNavId, rainbowForNavId, complementTripletForNavId } from '@/lib/rainbowNav';
@@ -420,131 +428,147 @@ function AdminDashboardInner() {
     value: string;
     label: string;
     icon: LucideIcon;
-    isEligible: (s: typeof settings) => boolean;
-    onRemove: () => void;
+    /** Whether this additional feature is enabled. */
+    isOn: (s: typeof settings) => boolean;
+    /** Whether this additional feature can be turned on from the UI. */
+    canEnable?: (s: typeof settings) => boolean;
+    enable: () => void;
+    disable: () => void;
   };
 
-  const addOnTabDefs = useMemo<AdminAddOnTabDef[]>(() => ([
-    {
-      value: 'coupons',
-      label: 'Coupons',
-      icon: Ticket,
-      isEligible: (s) => (s.payRewards ?? true),
-      onRemove: () => updateSettings({ payRewards: false }),
-    },
-    {
-      value: 'insights',
-      label: 'Insights',
-      icon: Activity,
-      isEligible: (s) => !!s.enableAdminAnalytics,
-      onRemove: () => updateSettings({ enableAdminAnalytics: false }),
-    },
-    {
-      value: 'attendance',
-      label: 'Attendance',
-      icon: Clock,
-      isEligible: (s) => !!s.enableAttendance || !!s.enableClassSignIn,
-      onRemove: () => updateSettings({ enableAttendance: false, enableClassSignIn: false }),
-    },
-    {
-      value: 'halloffame',
-      label: 'Hall of Fame',
-      icon: Trophy,
-      isEligible: (s) => !!s.enableClassLeaderboard,
-      onRemove: () => updateSettings({ enableClassLeaderboard: false }),
-    },
-    {
-      value: 'bulletinboard',
-      label: 'Bulletin',
-      icon: Megaphone,
-      isEligible: (s) => !!s.bulletinEnabled,
-      onRemove: () => updateSettings({ bulletinEnabled: false }),
-    },
-    {
-      value: 'library',
-      label: 'Library',
-      icon: BookOpen,
-      isEligible: (s) => (s.payLibrary ?? true),
-      onRemove: () => updateSettings({ payLibrary: false }),
-    },
-    {
-      value: 'bonuspoints',
-      label: 'Bonus Points',
-      icon: Trophy,
-      isEligible: (s) => !!s.enableAchievements,
-      onRemove: () => updateSettings({ enableAchievements: false }),
-    },
-    {
-      value: 'category-badges',
-      label: 'Badges',
-      icon: Award,
-      isEligible: (s) => !!s.enableBadges,
-      onRemove: () => updateSettings({ enableBadges: false }),
-    },
-    {
-      value: 'goals',
-      label: 'Goals',
-      icon: Target,
-      isEligible: (s) => !!s.enableGoals,
-      onRemove: () => updateSettings({ enableGoals: false }),
-    },
-    {
-      value: 'notifications',
-      label: 'Notifications',
-      icon: Bell,
-      isEligible: (s) => !!s.enableNotifications,
-      onRemove: () => updateSettings({ enableNotifications: false }),
-    },
-    {
-      value: 'backups',
-      label: 'Backups',
-      icon: Database,
-      isEligible: () => loginState === 'developer',
-      onRemove: () => {
-        updateSettings({
-          adminHiddenAddOnTabs: Array.from(new Set([...(settings.adminHiddenAddOnTabs || []), 'backups'])),
-        });
+  const addOnTabDefs = useMemo<AdminAddOnTabDef[]>(() => {
+    const hiddenNow = settings.adminHiddenAddOnTabs || [];
+    const addHidden = (v: string) => Array.from(new Set([...hiddenNow, v]));
+    const removeHidden = (v: string) => hiddenNow.filter((x) => x !== v);
+
+    return [
+      {
+        value: 'coupons',
+        label: 'Coupons',
+        icon: Ticket,
+        isOn: (s) => (s.payRewards ?? true),
+        canEnable: () => isFeatureAllowed?.('payRewards') ?? true,
+        enable: () => updateSettings({ payRewards: true, adminHiddenAddOnTabs: removeHidden('coupons') }),
+        disable: () => updateSettings({ payRewards: false, adminHiddenAddOnTabs: removeHidden('coupons') }),
       },
-    },
-    {
-      value: 'branding',
-      label: 'Branding',
-      icon: Palette,
-      isEligible: () => true,
-      onRemove: () => {
-        updateSettings({
-          adminHiddenAddOnTabs: Array.from(new Set([...(settings.adminHiddenAddOnTabs || []), 'branding'])),
-        });
+      {
+        value: 'insights',
+        label: 'Insights',
+        icon: Activity,
+        isOn: (s) => !!s.enableAdminAnalytics,
+        canEnable: () => isFeatureAllowed?.('enableAdminAnalytics') ?? true,
+        enable: () => updateSettings({ enableAdminAnalytics: true, adminHiddenAddOnTabs: removeHidden('insights') }),
+        disable: () => updateSettings({ enableAdminAnalytics: false, adminHiddenAddOnTabs: removeHidden('insights') }),
       },
-    },
-  ]), [loginState, settings.adminHiddenAddOnTabs, updateSettings]);
+      {
+        value: 'attendance',
+        label: 'Attendance',
+        icon: Clock,
+        isOn: (s) => !!s.enableAttendance || !!s.enableClassSignIn,
+        canEnable: () => (isFeatureAllowed?.('enableAttendance') ?? true) || (isFeatureAllowed?.('enableClassSignIn') ?? true),
+        enable: () => updateSettings({ enableAttendance: true, enableClassSignIn: true, adminHiddenAddOnTabs: removeHidden('attendance') }),
+        disable: () => updateSettings({ enableAttendance: false, enableClassSignIn: false, adminHiddenAddOnTabs: removeHidden('attendance') }),
+      },
+      {
+        value: 'halloffame',
+        label: 'Hall of Fame',
+        icon: Trophy,
+        isOn: (s) => !!s.enableClassLeaderboard,
+        canEnable: () => isFeatureAllowed?.('enableClassLeaderboard') ?? true,
+        enable: () => updateSettings({ enableClassLeaderboard: true, adminHiddenAddOnTabs: removeHidden('halloffame') }),
+        disable: () => updateSettings({ enableClassLeaderboard: false, adminHiddenAddOnTabs: removeHidden('halloffame') }),
+      },
+      {
+        value: 'bulletinboard',
+        label: 'Bulletin',
+        icon: Megaphone,
+        isOn: (s) => !!s.bulletinEnabled,
+        canEnable: () => isFeatureAllowed?.('bulletinEnabled') ?? true,
+        enable: () => updateSettings({ bulletinEnabled: true, adminHiddenAddOnTabs: removeHidden('bulletinboard') }),
+        disable: () => updateSettings({ bulletinEnabled: false, adminHiddenAddOnTabs: removeHidden('bulletinboard') }),
+      },
+      {
+        value: 'library',
+        label: 'Library',
+        icon: BookOpen,
+        isOn: (s) => (s.payLibrary ?? true),
+        canEnable: () => isFeatureAllowed?.('payLibrary') ?? true,
+        enable: () => updateSettings({ payLibrary: true, adminHiddenAddOnTabs: removeHidden('library') }),
+        disable: () => updateSettings({ payLibrary: false, adminHiddenAddOnTabs: removeHidden('library') }),
+      },
+      {
+        value: 'bonuspoints',
+        label: 'Bonus Points',
+        icon: Trophy,
+        isOn: (s) => !!s.enableAchievements,
+        canEnable: () => isFeatureAllowed?.('enableAchievements') ?? true,
+        enable: () => updateSettings({ enableAchievements: true, adminHiddenAddOnTabs: removeHidden('bonuspoints') }),
+        disable: () => updateSettings({ enableAchievements: false, adminHiddenAddOnTabs: removeHidden('bonuspoints') }),
+      },
+      {
+        value: 'category-badges',
+        label: 'Badges',
+        icon: Award,
+        isOn: (s) => !!s.enableBadges,
+        canEnable: () => isFeatureAllowed?.('enableBadges') ?? true,
+        enable: () => updateSettings({ enableBadges: true, adminHiddenAddOnTabs: removeHidden('category-badges') }),
+        disable: () => updateSettings({ enableBadges: false, adminHiddenAddOnTabs: removeHidden('category-badges') }),
+      },
+      {
+        value: 'goals',
+        label: 'Goals',
+        icon: Target,
+        isOn: (s) => !!s.enableGoals,
+        canEnable: () => isFeatureAllowed?.('enableGoals') ?? true,
+        enable: () => updateSettings({ enableGoals: true, adminHiddenAddOnTabs: removeHidden('goals') }),
+        disable: () => updateSettings({ enableGoals: false, adminHiddenAddOnTabs: removeHidden('goals') }),
+      },
+      {
+        value: 'notifications',
+        label: 'Notifications',
+        icon: Bell,
+        isOn: (s) => !!s.enableNotifications,
+        canEnable: () => isFeatureAllowed?.('enableNotifications') ?? true,
+        enable: () => updateSettings({ enableNotifications: true, adminHiddenAddOnTabs: removeHidden('notifications') }),
+        disable: () => updateSettings({ enableNotifications: false, adminHiddenAddOnTabs: removeHidden('notifications') }),
+      },
+      {
+        value: 'branding',
+        label: 'Branding',
+        icon: Palette,
+        isOn: () => !hiddenNow.includes('branding'),
+        enable: () => updateSettings({ adminHiddenAddOnTabs: removeHidden('branding') }),
+        disable: () => updateSettings({ adminHiddenAddOnTabs: addHidden('branding') }),
+      },
+    ];
+  }, [isFeatureAllowed, settings.adminHiddenAddOnTabs, updateSettings]);
 
   const visibleAddOnTabs = useMemo(() => {
-    const hidden = new Set(settings.adminHiddenAddOnTabs || []);
-    return addOnTabDefs.filter((t) => t.isEligible(settings) && !hidden.has(t.value));
+    return addOnTabDefs.filter((t) => t.isOn(settings));
   }, [addOnTabDefs, settings]);
 
-  const dismissAddOnTab = (tabValue: string) => {
+  const setAddOnEnabled = (tabValue: string, enabled: boolean) => {
     const def = addOnTabDefs.find((t) => t.value === tabValue);
     if (!def) return;
-    def.onRemove();
-    if (activeMainTab === tabValue) setActiveMainTab('students');
+    if (enabled) def.enable();
+    else {
+      def.disable();
+      if (activeMainTab === tabValue) setActiveMainTab('students');
+    }
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const basicTabs = ['students', 'classes', 'teachers', 'prizes', 'categories'];
+    if (loginState === 'developer') basicTabs.push('backups');
     const expertExtras = settings.expertMode ? visibleAddOnTabs.map((t) => t.value) : [];
 
     const allowedTabs = new Set<string>([...basicTabs, ...expertExtras]);
 
     if (!allowedTabs.has(activeMainTab)) {
-      // Delay the switch slightly so the animation has time to start/progress
-      const timer = setTimeout(() => {
-        setActiveMainTab('students');
-      }, 100);
-      return () => clearTimeout(timer);
+      // Apply immediately on toggle-off to avoid a visible "hiccup" (layout thrash + delayed tab jump).
+      setActiveMainTab('students');
     }
-  }, [settings.expertMode, activeMainTab, visibleAddOnTabs]);
+  }, [settings.expertMode, activeMainTab, visibleAddOnTabs, loginState]);
 
   const [bulkRosterOpen, setBulkRosterOpen] = useState(false);
   const [isPreviousLogosOpen, setIsPreviousLogosOpen] = useState(false);
@@ -948,10 +972,17 @@ function AdminDashboardInner() {
             </p>
           </Helper>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/40 rounded-xl border">
-              <span className="text-[10px] font-black uppercase text-muted-foreground tracking-wider">Add ons</span>
-              <Switch checked={settings.expertMode} onCheckedChange={(val) => updateSettings({ expertMode: val })} />
-            </div>
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-xl shrink-0 font-semibold gap-2"
+              asChild
+            >
+              <Link href="/privacy" target="_blank" rel="noreferrer">
+                <FileText className="w-4 h-4" aria-hidden />
+                Privacy &amp; Security
+              </Link>
+            </Button>
             <Button
               type="button"
               variant="outline"
@@ -1012,88 +1043,105 @@ function AdminDashboardInner() {
               <TabsTrigger value="categories" className="rounded-xl px-4 py-2 font-bold flex items-center gap-2 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)] transition-all">
                 <Tag className="w-4 h-4" /> Rewards
               </TabsTrigger>
-
-              {settings.expertMode && (
-                <>
-                  {visibleAddOnTabs.map((t) => {
-                    const Icon = t.icon;
-                    return (
-                      <TabsTrigger
-                        key={t.value}
-                        value={t.value}
-                        className="rounded-xl px-4 py-2 font-bold flex items-center gap-2 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)] transition-all"
-                      >
-                        <Icon className="w-4 h-4" /> {t.label}
-                      </TabsTrigger>
-                    );
-                  })}
-                </>
-              )}
+              {loginState === 'developer' ? (
+                <TabsTrigger value="backups" className="rounded-xl px-4 py-2 font-bold flex items-center gap-2 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)] transition-all">
+                  <Database className="w-4 h-4" /> Backups
+                </TabsTrigger>
+              ) : null}
             </TabsList>
 
-            {settings.expertMode && (
-              <div className="flex flex-col gap-3 mt-1 animate-in fade-in slide-in-from-top-2 duration-500">
-                <div className="flex items-center gap-4 px-4 max-w-6xl mx-auto w-full pt-2 opacity-40">
-                  <div className="h-px bg-border flex-1" />
-                  <span className="text-[10px] font-black uppercase tracking-[0.3em] whitespace-nowrap">Add ons</span>
-                  <div className="h-px bg-border flex-1" />
-                </div>
+            <div className="w-full max-w-6xl mx-auto px-1 flex justify-center items-center">
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/40 rounded-xl border">
+                <span className="text-[10px] font-black uppercase text-muted-foreground tracking-wider">Extra features</span>
+                <Switch checked={settings.expertMode} onCheckedChange={(val) => updateSettings({ expertMode: val })} />
+              </div>
 
-                <div className="flex items-start justify-between gap-3 px-4 max-w-6xl mx-auto w-full">
-                  <div className="flex flex-wrap items-center gap-2">
-                    {visibleAddOnTabs.length === 0 ? (
-                      <span className="text-xs text-muted-foreground">No add ons enabled.</span>
-                    ) : visibleAddOnTabs.map((t) => {
-                      const Icon = t.icon;
-                      return (
-                        <div
-                          key={t.value}
-                          className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-muted/25 px-3 py-1.5 text-xs font-bold"
-                        >
-                          <Icon className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
-                          <button
-                            type="button"
-                            className="hover:underline"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActiveMainTab(t.value);
-                            }}
-                            title={`Open ${t.label}`}
-                          >
-                            {t.label}
-                          </button>
-                          <button
-                            type="button"
-                            className="ml-1 inline-flex h-6 w-6 items-center justify-center rounded-full hover:bg-background/70 text-muted-foreground hover:text-foreground"
-                            title={`Remove ${t.label}`}
-                            aria-label={`Remove ${t.label}`}
-                            onPointerDown={(e) => e.stopPropagation()}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              dismissAddOnTab(t.value);
-                            }}
-                          >
-                            <X className="h-4 w-4" aria-hidden />
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  <Button
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
                     type="button"
-                    variant="outline"
-                    size="icon"
-                    className="h-9 w-9 rounded-xl shrink-0"
-                    title="Add add-on"
-                    aria-label="Add add-on"
+                    className="ml-2 rounded-xl px-3 py-1.5 font-bold flex items-center gap-2 text-sm text-foreground border bg-muted/40 hover:bg-muted/60 transition-all"
+                    title="Manage extra features"
+                    aria-label="Manage extra features"
+                  >
+                    <Settings className="w-4 h-4" aria-hidden />
+                    Manage
+                    <ChevronDown className="w-4 h-4 opacity-70" aria-hidden />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="min-w-[220px]">
+                  {addOnTabDefs.map((t) => {
+                    const Icon = t.icon;
+                    const checked = t.isOn(settings);
+                    const canEnable = t.canEnable ? t.canEnable(settings) : true;
+                    const disabled = !checked && !canEnable;
+                    return (
+                      <DropdownMenuCheckboxItem
+                        key={t.value}
+                        checked={checked}
+                        disabled={disabled}
+                        onCheckedChange={(next) => setAddOnEnabled(t.value, !!next)}
+                        className="flex items-center gap-2"
+                      >
+                        <Icon className="h-4 w-4 opacity-75" aria-hidden />
+                        <span className="flex-1">{t.label}</span>
+                      </DropdownMenuCheckboxItem>
+                    );
+                  })}
+                  <DropdownMenuSeparator />
+                  <button
+                    type="button"
+                    className="w-full text-left px-2 py-1.5 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground"
                     onClick={() => {
                       window.dispatchEvent(new CustomEvent('open-settings-modal', { detail: { view: 'features' } }));
                     }}
                   >
-                    <Plus className="h-4 w-4" aria-hidden />
-                  </Button>
-                </div>
+                    Open Extra features in Settings…
+                  </button>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+
+            {settings.expertMode && (
+              <div className="flex flex-col gap-3 mt-1 w-full max-w-6xl mx-auto px-4">
+                <TabsList
+                  className="bg-muted/50 p-1.5 rounded-2xl flex flex-wrap justify-center border shadow-sm gap-x-1 gap-y-1 h-auto w-full"
+                  style={{ ['--admin-accent' as any]: rainbowForNavId('admin', settings.colorScheme) }}
+                  aria-label="Extra feature shortcuts"
+                >
+                  {visibleAddOnTabs.length === 0 ? (
+                    <span className="text-xs text-muted-foreground px-3 py-2 font-medium">No extra features enabled.</span>
+                  ) : (
+                    visibleAddOnTabs.map((t) => {
+                      const Icon = t.icon;
+                      const active = activeMainTab === t.value;
+                      return (
+                        <div
+                          key={t.value}
+                          className={cn(
+                            'inline-flex items-center rounded-xl border border-transparent',
+                            active && 'bg-background shadow-sm border-border/40',
+                          )}
+                        >
+                          <button
+                            type="button"
+                            className={cn(
+                              'rounded-xl px-4 py-2 font-bold flex items-center gap-2 text-sm transition-all',
+                              active
+                                ? 'text-[color:var(--admin-accent)]'
+                                : 'text-foreground hover:bg-background/60',
+                            )}
+                            title={`Open ${t.label}`}
+                            onClick={() => setActiveMainTab(t.value)}
+                          >
+                            <Icon className="w-4 h-4 shrink-0 opacity-80" aria-hidden />
+                            {t.label}
+                          </button>
+                        </div>
+                      );
+                    })
+                  )}
+                </TabsList>
               </div>
             )}
           </div>

@@ -27,6 +27,9 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
       (typeof pathname === 'string' && pathname.includes('/student/welcome')) ||
       pathname.startsWith('/s/');
 
+    const isSignInPage = typeof pathname === 'string' && /\/sign-in\/?$/.test(pathname);
+    const hideAppChrome = isLoginPage || isSignInPage;
+
     // Unregister service workers to prevent stale cache issues
     useEffect(() => {
         if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
@@ -41,17 +44,19 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
     return (
         <TooltipProvider>
             <ConfirmProvider>
-                {!isLoginPage && <Header />}
+                {!hideAppChrome && <Header />}
                 <main id="screen-view" className={cn(
-                    /* Login/public landing routes: sit above fixed arcade backdrop host so links stay clickable */
-                    isLoginPage ? "relative z-10 flex-1 min-w-0 w-full" : "flex-1 w-full max-w-7xl mx-auto relative z-10",
+                    /* Login / sign-in: full-width shell so pages can center their own content */
+                    hideAppChrome
+                      ? 'relative z-10 flex min-h-screen min-w-0 w-full flex-col'
+                      : 'relative z-10 mx-auto w-full max-w-7xl flex-1',
                     settings.displayMode === 'app' && 'pb-24'
                 )}>
                     {children}
                 </main>
                 <IntroWizard />
-                {!isLoginPage && <StaffAiHelpButton />}
-                {!isLoginPage && <AnimatedSiteBackground />}
+                {!hideAppChrome && <StaffAiHelpButton />}
+                {!hideAppChrome && <AnimatedSiteBackground />}
             </ConfirmProvider>
             <Toaster />
         </TooltipProvider>

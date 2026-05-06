@@ -2968,7 +2968,7 @@ export function WelcomeGreeting({
   const Greeting = STYLE_COMPONENTS[styleId];
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 sm:p-6">
+    <div className="bg-slate-50 p-4 sm:p-6 pb-10">
       {!hideStylePicker && (
       <div className="mx-auto mb-4 max-w-5xl">
         <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-slate-500">

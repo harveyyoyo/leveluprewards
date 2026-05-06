@@ -46,6 +46,18 @@ export const WelcomeOverlay: React.FC<WelcomeOverlayProps> = ({
   const [isVisible, setIsVisible] = useState(true);
   const [displayedPoints, setDisplayedPoints] = useState(0);
   const prefersReducedMotion = useReducedMotion();
+  const lastCountSoundAtRef = useRef<number>(0);
+  const confettiParticles = useMemo(
+    () =>
+      Array.from({ length: 10 }, () => ({
+        xPercent: Math.random() * 100 - 50,
+        duration: 2.5 + Math.random() * 2,
+        delay: Math.random() * 2,
+        size: Math.random() < 0.5 ? 14 : 16,
+        round: Math.random() < 0.5,
+      })),
+    [],
+  );
 
   const targetPoints = Number.isFinite(points) ? Math.max(0, Math.round(points)) : 0;
 
@@ -81,6 +93,24 @@ export const WelcomeOverlay: React.FC<WelcomeOverlayProps> = ({
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, [targetPoints]);
+
+  useEffect(() => {
+    if (!isVisible) return;
+    if (prefersReducedMotion) return;
+    if (targetPoints <= 0) return;
+    if (displayedPoints <= 0) return;
+    if (displayedPoints >= targetPoints) return;
+    if (!playSoundRef.current) return;
+
+    // Throttle: keep it “synced” without spamming audio.
+    const now = performance.now();
+    const MIN_MS = 120;
+    if (now - lastCountSoundAtRef.current < MIN_MS) return;
+    lastCountSoundAtRef.current = now;
+
+    // Use the softest existing sound as the “count tick”.
+    playSoundRef.current('hover');
+  }, [displayedPoints, isVisible, prefersReducedMotion, targetPoints]);
 
   const primaryColor = theme?.primary || 'hsl(var(--primary))';
   const accentColor = theme?.accent || primaryColor;
@@ -153,33 +183,43 @@ export const WelcomeOverlay: React.FC<WelcomeOverlayProps> = ({
           {/* Confetti-like particles (clipped to panel) */}
           <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit] motion-reduce:hidden">
             {!prefersReducedMotion &&
-              [...Array(10)].map((_, i) => (
-              <motion.div
-                key={i}
-                initial={{ 
-                  x: Math.random() * 100 - 50 + '%', 
-                  y: '110%',
-                  rotate: 0,
-                  opacity: 1
-                }}
-                animate={{ 
-                  y: '-10%',
-                  rotate: 360,
-                  opacity: 0
-                }}
-                transition={{ 
-                  duration: 2.5 + Math.random() * 2, 
-                  repeat: Infinity,
-                  delay: Math.random() * 2,
-                  ease: "easeOut"
-                }}
-                className="absolute w-4 h-4"
-                style={{ 
-                  backgroundColor: i % 3 === 0 ? primaryColor : i % 3 === 1 ? accentColor : theme ? themeBg : primaryColor,
-                  borderRadius: i % 2 === 0 ? '50%' : '2px'
-                }}
-              />
-            ))}
+              confettiParticles.map((p, i) => (
+                <motion.div
+                  key={i}
+                  initial={{
+                    x: `${p.xPercent}%`,
+                    y: '110%',
+                    rotate: 0,
+                    opacity: 1,
+                  }}
+                  animate={{
+                    y: '-10%',
+                    rotate: 360,
+                    opacity: 0,
+                  }}
+                  transition={{
+                    duration: p.duration,
+                    repeat: Infinity,
+                    delay: p.delay,
+                    ease: 'easeOut',
+                  }}
+                  className="absolute will-change-transform"
+                  style={{
+                    width: p.size,
+                    height: p.size,
+                    backgroundColor:
+                      i % 3 === 0
+                        ? primaryColor
+                        : i % 3 === 1
+                          ? accentColor
+                          : theme
+                            ? themeBg
+                            : primaryColor,
+                    borderRadius: p.round ? '9999px' : '2px',
+                    transform: 'translateZ(0)',
+                  }}
+                />
+              ))}
           </div>
 
           {/* Main Content */}

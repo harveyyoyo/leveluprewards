@@ -17,11 +17,14 @@ export function AutoCircularToggles<T extends Record<string, any>>({
   onToggle,
   /** When true, only `defs` are shown (no auto-discovery of other boolean fields on `record`). */
   restrictToDefs = false,
+  /** When true, toggles can wrap onto multiple lines. */
+  wrap = true,
 }: {
   record: T;
   defs?: ToggleDef[];
   onToggle: (key: string, newValue: boolean) => void;
   restrictToDefs?: boolean;
+  wrap?: boolean;
 }) {
   // Combine explicitly given defs with any found boolean fields in the record instance
   const allDefs = [...defs];
@@ -45,7 +48,7 @@ export function AutoCircularToggles<T extends Record<string, any>>({
   if (allDefs.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap gap-1 items-center shrink-0">
+    <div className={cn("flex gap-1 items-center shrink-0", wrap ? "flex-wrap" : "flex-nowrap")}>
       {allDefs.map(({ key, label, shortLabel, missingMeansOn }) => {
         const raw = record[key];
         const val = missingMeansOn ? raw !== false : !!raw;
@@ -60,10 +63,10 @@ export function AutoCircularToggles<T extends Record<string, any>>({
             key={key}
             type="button"
             variant="outline"
-            size={isPill ? "sm" : "icon"}
+            size="icon"
             className={cn(
               isPill
-                ? "h-7 rounded-full px-2.5 text-[10px] font-black uppercase tracking-tight"
+                ? "h-7 w-auto min-w-0 min-h-0 min-w-[44px] rounded-full px-2 text-[9px] font-black tracking-tight"
                 : "h-8 w-8 sm:h-9 sm:w-9 rounded-full",
               "transition-all border shrink-0 text-center flex items-center justify-center select-none shadow-sm",
               val

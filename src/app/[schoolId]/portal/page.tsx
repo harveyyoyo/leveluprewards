@@ -250,8 +250,24 @@ export default function PortalPage() {
                     <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground/60">
                         beta · {process.env.NEXT_PUBLIC_VERSION || 'beta-1.1.0'} · {process.env.NEXT_PUBLIC_BUILD_TIME}
                     </p>
-                    <p className="mt-2 text-xs font-semibold text-muted-foreground/70">
-                        © 2026 LevelUp Enterprises LLC. All Rights Reserved.
+                    <p className="mt-3 text-xs font-semibold text-muted-foreground/70">
+                        © 2026 LevelUp Enterprises LLC. All rights reserved.{' '}
+                        <span className="text-muted-foreground/50">|</span>{' '}
+                        <Link
+                            href="/terms"
+                            onClick={() => playSound('click')}
+                            className="underline underline-offset-4 hover:text-foreground transition-colors"
+                        >
+                            Terms of Service
+                        </Link>{' '}
+                        <span className="text-muted-foreground/50">|</span>{' '}
+                        <Link
+                            href="/privacy"
+                            onClick={() => playSound('click')}
+                            className="underline underline-offset-4 hover:text-foreground transition-colors"
+                        >
+                            Privacy Policy
+                        </Link>
                     </p>
                 </div>
             </div>

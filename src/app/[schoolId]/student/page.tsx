@@ -199,7 +199,7 @@ function StudentActivityList({ schoolId, studentId, themed = false, onReprintTic
 
 
   return (
-    <ScrollArea className="w-full min-h-[28dvh] h-[min(48dvh,calc(100dvh-12rem))] lg:min-h-[min(320px,calc(100dvh-22rem))] lg:max-h-[min(420px,calc(100dvh-14rem))] pr-3">
+    <ScrollArea className="w-full h-full min-h-0 flex-1 pr-3">
       <ul className="space-y-2">
         {history && history.length > 0 ? (
           history.map((item, index) => {
@@ -1247,9 +1247,9 @@ function StudentDashboardInner({
           </DialogContent>
         </Dialog>
 
-        <div className="grid min-w-0 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_min(252px,28vw)] gap-4 relative z-10 flex-1 min-h-0 lg:items-stretch">
+        <div className="grid min-w-0 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_min(252px,28vw)] gap-4 relative z-10 flex-1 min-h-0 items-stretch">
           {/* Left Section: Content */}
-          <div className="min-w-0 space-y-3 flex flex-col min-h-0">
+          <div className="min-w-0 flex flex-1 min-h-0 flex-col gap-3">
             <StudentGoalsCard
               schoolId={schoolId!}
               student={student}
@@ -1380,7 +1380,7 @@ function StudentDashboardInner({
                     <div className="space-y-3 w-full min-w-0">
                       <div
                         className={cn(
-                          'flex flex-wrap items-center justify-center gap-2 sm:gap-3 rounded-xl border-2 border-dashed px-3 py-2.5 text-center',
+                          'flex flex-wrap items-center justify-center gap-2 sm:gap-3 rounded-xl border-2 border-dashed px-3 py-2.5 text-center motion-safe:animate-[pulse_1.35s_ease-in-out_infinite] motion-reduce:animate-none',
                           !activeTheme &&
                             'border-amber-400/80 bg-gradient-to-r from-amber-50/95 via-amber-100/80 to-amber-50/95 dark:from-amber-950/60 dark:via-amber-900/40 dark:to-amber-950/60 dark:border-amber-500/60',
                         )}
@@ -1407,8 +1407,7 @@ function StudentDashboardInner({
                           )}
                           style={activeTheme ? { color: 'var(--theme-primary)' } : undefined}
                         >
-                          <span className="sm:hidden">Scan coupon now</span>
-                          <span className="hidden sm:inline">Scan coupon — scanner or keyboard</span>
+                          Scan coupon
                         </span>
                       </div>
                       <form
@@ -1458,42 +1457,51 @@ function StudentDashboardInner({
               </CardContent>
             </Card>
 
-            {/* Eligible Rewards - Bottom Wide Section */}
+            {/* Eligible Rewards — full card is boxed; grid scrolls so “See all rewards” stays visible */}
             <Card
-              className={cn("border-none shadow-lg", !activeTheme ? "bg-white dark:bg-slate-900" : "")}
-              style={activeTheme ? { backgroundColor: 'var(--theme-card)', color: 'var(--theme-text)' } : undefined}
-            >
-              <CardHeader className="pb-2 pt-4">
+                className={cn(
+                  'flex flex-1 min-h-0 flex-col overflow-hidden rounded-2xl border-2 shadow-md ring-1 ring-black/5 dark:ring-white/10',
+                  !activeTheme && 'border-slate-200 bg-white dark:border-slate-600 dark:bg-slate-900',
+                )}
+                style={
+                  activeTheme
+                    ? {
+                        backgroundColor: 'var(--theme-card)',
+                        color: 'var(--theme-text)',
+                        borderColor: 'color-mix(in srgb, var(--theme-primary) 42%, transparent)',
+                        boxShadow: 'inset 0 1px 0 0 color-mix(in srgb, var(--theme-text) 6%, transparent)',
+                      }
+                    : undefined
+                }
+              >
+              <CardHeader
+                className="shrink-0 border-b pb-2.5 pt-3.5 px-3 sm:px-4 rounded-t-2xl bg-muted/25 dark:bg-slate-800/35"
+                style={
+                  activeTheme
+                    ? {
+                        borderColor: 'color-mix(in srgb, var(--theme-primary) 28%, transparent)',
+                        backgroundColor: 'color-mix(in srgb, var(--theme-bg) 50%, var(--theme-card))',
+                      }
+                    : undefined
+                }
+              >
                           <Helper content="Rewards you can afford right now. Tap one to redeem it here, or use See all rewards to browse the full rewards shop.">
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={activeTheme ? { backgroundColor: 'var(--theme-bg)' } : undefined}>
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={activeTheme ? { backgroundColor: 'var(--theme-bg)' } : undefined}>
                       <Award className="w-4 h-4" style={activeTheme ? { color: 'var(--theme-primary)' } : undefined} />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <CardTitle className="text-sm font-black">Eligible Rewards</CardTitle>
                       <CardDescription className="text-[10px] font-medium leading-snug" style={activeTheme ? { color: 'var(--theme-text)', opacity: 0.7 } : undefined}>Tap a reward to redeem it here.</CardDescription>
                     </div>
                   </div>
                 </Helper>
               </CardHeader>
-              <CardContent className="pt-0 pb-4 space-y-3">
-                <div
-                  className={cn(
-                    'rounded-2xl border-2 p-3 sm:p-4 shadow-inner',
-                    !activeTheme && 'border-slate-200 bg-slate-50/90 dark:border-slate-600 dark:bg-slate-800/50',
-                  )}
-                  style={
-                    activeTheme
-                      ? {
-                          borderColor: 'color-mix(in srgb, var(--theme-primary) 42%, transparent)',
-                          backgroundColor: 'color-mix(in srgb, var(--theme-bg) 65%, var(--theme-card))',
-                        }
-                      : undefined
-                  }
-                >
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+              <CardContent className="flex flex-1 flex-col gap-2 min-h-0 px-3 pb-3 pt-2 sm:px-4">
+                <div className="min-h-0 w-full flex-1 overflow-y-auto overscroll-y-contain pr-0.5 [-webkit-overflow-scrolling:touch] [scrollbar-gutter:stable]">
+                <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-1.5 sm:gap-2">
                   {prizesLoading ? (
-                    [...Array(3)].map((_, i) => <Skeleton key={i} className="h-20 w-full rounded-lg" />)
+                    [...Array(8)].map((_, i) => <Skeleton key={i} className="aspect-square max-h-[5.25rem] w-full rounded-lg" />)
                   ) : (prizes || [])
                     .filter(p => prizeIsListed(p) && p.points <= student.points && studentSeesPrizeByTeachers(student, p) && (!p.classId || student.classId === p.classId))
                     .sort((a, b) => b.points - a.points)
@@ -1507,7 +1515,7 @@ function StudentDashboardInner({
                         }}
                         aria-label={`Redeem ${reward.name || 'prize'}`}
                         className={cn(
-                          "p-2.5 rounded-lg transition-all flex flex-col items-center text-center gap-1 shadow-sm hover:shadow-md hover:-translate-y-0.5 transform duration-300 group relative overflow-hidden cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+                          "min-h-0 min-w-0 p-1.5 sm:p-2 rounded-md transition-all flex flex-col items-center text-center gap-0.5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transform duration-300 group relative overflow-hidden cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
                           !activeTheme && "border border-slate-100 dark:border-slate-800 bg-white/40 dark:bg-slate-800/40",
                         )}
                         style={activeTheme ? { backgroundColor: 'var(--theme-bg)', color: 'var(--theme-text)', borderColor: 'var(--theme-primary)', borderWidth: 1, borderStyle: 'solid' } : undefined}
@@ -1517,26 +1525,11 @@ function StudentDashboardInner({
                             <img src={`https://api.dicebear.com/9.x/shapes/svg?seed=${encodeURIComponent(reward.name)}&backgroundColor=transparent`} alt="" className="w-full h-full object-cover" />
                           </div>
                         )}
-                        <div
-                          className={cn(
-                            "w-9 h-9 rounded-full flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform relative overflow-hidden z-10",
-                            !activeTheme && "bg-indigo-100 dark:bg-indigo-900/50",
-                          )}
-                          style={activeTheme ? { backgroundColor: 'var(--theme-card)' } : undefined}
-                        >
-                          {reward.name && (
-                            <div className="absolute inset-0 opacity-40 mix-blend-overlay pointer-events-none">
-                              <img src={`https://api.dicebear.com/9.x/shapes/svg?seed=${encodeURIComponent(reward.name)}&backgroundColor=transparent`} alt="" className="w-full h-full object-cover" />
-                            </div>
-                          )}
-                          <DynamicIcon
-                            name={reward.icon}
-                            className={cn("w-5 h-5 relative z-10", !activeTheme && "text-primary")}
-                            style={activeTheme ? { color: 'var(--theme-primary)' } : undefined}
-                          />
-                        </div>
                         <p
-                          className={cn("text-xs sm:text-sm font-black leading-tight line-clamp-2", !activeTheme && "text-slate-800 dark:text-white")}
+                          className={cn(
+                            "text-[11px] sm:text-[12px] font-black leading-tight line-clamp-2 break-words [overflow-wrap:anywhere] z-10",
+                            !activeTheme && "text-slate-800 dark:text-white",
+                          )}
                           style={activeTheme ? { color: 'var(--theme-text)' } : undefined}
                         >
                           {reward.name}
@@ -1544,7 +1537,7 @@ function StudentDashboardInner({
                         <Badge
                           variant="secondary"
                           className={cn(
-                            "font-black text-[8px] tracking-widest rounded-md px-1.5 py-0",
+                            "font-black text-[7px] sm:text-[8px] tracking-wider rounded px-1 py-0",
                             !activeTheme && "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300",
                           )}
                           style={activeTheme ? { backgroundColor: 'var(--theme-primary)', color: primaryForeground } : undefined}
@@ -1575,33 +1568,34 @@ function StudentDashboardInner({
                   )}
                 </div>
                 </div>
-                <Button
-                  asChild
-                  className={cn(
-                    'w-full h-12 md:h-14 text-sm md:text-base font-black rounded-2xl shadow-lg transition-all active:scale-[0.99] uppercase tracking-wide',
-                    !activeTheme && 'bg-gradient-to-r from-primary to-primary/90',
-                  )}
-                  style={
-                    activeTheme
-                      ? {
-                          backgroundColor: 'var(--theme-primary)',
-                          color: primaryForeground,
-                        }
-                      : undefined
-                  }
-                >
-                  <Link
-                    href={`/${schoolId}/prize?student=${encodeURIComponent(student.id)}`}
-                    onClick={() => playSound('click')}
-                    className="flex items-center justify-center gap-2"
-                  >
-                    <Gift className="h-5 w-5 md:h-6 md:w-6 shrink-0" aria-hidden />
-                              See all rewards
-                    <ChevronRight className="h-4 w-4 md:h-5 md:w-5 shrink-0 opacity-90" aria-hidden />
-                  </Link>
-                </Button>
               </CardContent>
             </Card>
+
+            <Button
+              asChild
+              className={cn(
+                'mt-auto w-full h-11 sm:h-12 text-xs sm:text-sm font-black rounded-xl shadow-lg transition-all active:scale-[0.99] uppercase tracking-wide',
+                !activeTheme && 'bg-gradient-to-r from-primary to-primary/90',
+              )}
+              style={
+                activeTheme
+                  ? {
+                      backgroundColor: 'var(--theme-primary)',
+                      color: primaryForeground,
+                    }
+                  : undefined
+              }
+            >
+              <Link
+                href={`/${schoolId}/prize?student=${encodeURIComponent(student.id)}`}
+                onClick={() => playSound('click')}
+                className="flex items-center justify-center gap-2"
+              >
+                <Gift className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" aria-hidden />
+                Rewards/Prizes
+                <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0 opacity-90" aria-hidden />
+              </Link>
+            </Button>
 
             <AlertDialog open={!!confirmingPrize} onOpenChange={(open) => {
               if (!open && !isRedeemingPrize) setConfirmingPrize(null);
@@ -1713,8 +1707,8 @@ function StudentDashboardInner({
           {/* Right Section: Activity — narrow column, boxed frame */}
           <Card
             className={cn(
-              'min-w-0 w-full max-w-sm mx-auto lg:mx-0 lg:max-w-none flex flex-col min-h-0 rounded-2xl border-2 shadow-md ring-1 ring-black/5 dark:ring-white/10',
-              'lg:min-h-[min(calc(100dvh-14rem),520px)] max-lg:max-h-[52dvh]',
+              'min-w-0 w-full h-full max-w-sm mx-auto lg:mx-0 lg:max-w-none flex flex-col min-h-0 rounded-2xl border-2 shadow-md ring-1 ring-black/5 dark:ring-white/10',
+              'max-lg:max-h-[52dvh]',
               !activeTheme && 'border-slate-200 bg-white dark:border-slate-600 dark:bg-slate-900',
             )}
             style={
@@ -1751,7 +1745,7 @@ function StudentDashboardInner({
                 </CardTitle>
               </Helper>
             </CardHeader>
-            <CardContent className="flex-1 min-h-0 flex flex-col rounded-b-2xl pt-2 pb-3 px-0.5">
+            <CardContent className="flex-1 min-h-0 flex flex-col rounded-b-2xl overflow-hidden pt-2 pb-3 px-0.5">
               <StudentActivityList schoolId={schoolId} studentId={student.id} themed={!!activeTheme} onReprintTicket={handleReprint} />
             </CardContent>
           </Card>
@@ -1761,7 +1755,7 @@ function StudentDashboardInner({
           <>
             {/* One composited backdrop layer — avoids filter-blurring the whole dashboard (very janky). */}
             <div
-              className="fixed inset-0 z-[99] pointer-events-none bg-black/[0.07] backdrop-blur-sm motion-reduce:bg-black/25 motion-reduce:backdrop-blur-none dark:bg-black/25"
+              className="fixed inset-0 z-[99] pointer-events-none bg-background/10 dark:bg-black/15 backdrop-blur-md backdrop-saturate-150 motion-reduce:bg-transparent motion-reduce:backdrop-blur-none motion-reduce:backdrop-saturate-100"
               aria-hidden
             />
             <WelcomeOverlay

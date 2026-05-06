@@ -16,7 +16,7 @@ import { useAppContext } from '@/components/AppProvider';
 import { useToast } from '@/hooks/use-toast';
 import type { Category } from '@/lib/types';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
-import { getRandomColor } from '@/lib/utils';
+import { pickDistinctCategoryColor } from '@/lib/utils';
 
 interface CategoryModalProps {
     isOpen: boolean;
@@ -25,10 +25,10 @@ interface CategoryModalProps {
 }
 
 export function CategoryModal({ isOpen, setIsOpen, category }: CategoryModalProps) {
-    const { addCategory, updateCategory } = useAppContext();
+    const { addCategory, updateCategory, categories } = useAppContext();
     const [name, setName] = useState('');
     const [points, setPoints] = useState('10');
-    const [color, setColor] = useState(getRandomColor());
+    const [color, setColor] = useState(pickDistinctCategoryColor());
     const { toast } = useToast();
     const playSound = useArcadeSound();
 
@@ -43,10 +43,10 @@ export function CategoryModal({ isOpen, setIsOpen, category }: CategoryModalProp
             } else { // Create mode
                 setName('');
                 setPoints('10');
-                setColor(getRandomColor());
+                setColor(pickDistinctCategoryColor((categories || []).map((c) => c.color)));
             }
         }
-    }, [category, isOpen]);
+    }, [category, isOpen, categories]);
 
     const handleSave = async () => {
         const pointsValue = parseInt(points);

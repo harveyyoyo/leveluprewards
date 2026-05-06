@@ -7,6 +7,15 @@ import { Helper } from '@/components/ui/helper';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import DynamicIcon from '@/components/DynamicIcon';
+import { AdminRecordListHeader } from '@/components/admin/AdminRecordListHeader';
+
+function achievementCriteriaLabel(ach: any) {
+  if (ach.criteria.type === 'points') return `>= ${ach.criteria.threshold} current`;
+  if (ach.criteria.type === 'lifetimePoints') return `>= ${ach.criteria.threshold} lifetime`;
+  if (ach.criteria.type === 'coupons') return `Cat: ${ach.criteria.threshold}`;
+  if (ach.criteria.type === 'manual') return 'Manual';
+  return '-';
+}
 
 export function AdminBonusPointsTab(props: any) {
   const {
@@ -23,7 +32,7 @@ export function AdminBonusPointsTab(props: any) {
     <Card className="border-t-4 border-primary shadow-md">
       <CardHeader className="flex flex-row justify-between items-center py-6">
         <div>
-          <Helper content="Define bonus point milestones. When students hit these point thresholds they earn extra bonus points. Enable in Settings → Features → Recognition.">
+          <Helper content="Define bonus point milestones. When students hit these point thresholds they earn extra bonus points. Enable in Settings > Extra features > Recognition.">
             <CardTitle className="flex items-center gap-2">
               <Trophy className="w-5 h-5 text-destructive" /> Bonus Points
             </CardTitle>
@@ -51,49 +60,59 @@ export function AdminBonusPointsTab(props: any) {
             ))}
           </ul>
         ) : (
-          <ul className="space-y-2 h-[calc(100vh-22rem)] min-h-[250px] overflow-y-auto pr-1">
+          <ul className="h-[calc(100vh-22rem)] min-h-[250px] overflow-y-auto pr-1 space-y-1">
+            {achievements && achievements.length > 0 ? (
+              <AdminRecordListHeader
+                gridClassName="grid-cols-[76px_minmax(180px,1fr)_minmax(140px,180px)_100px_minmax(90px,120px)_44px]"
+                columns={[
+                  { label: 'Edit' },
+                  { label: 'Milestone Name' },
+                  { label: 'Requirement' },
+                  { label: 'Bonus Award', className: 'text-center' },
+                  { label: 'Tier' },
+                  { label: 'Delete', className: 'text-right' },
+                ]}
+              />
+            ) : null}
             {(achievements || []).map((ach: any) => (
-              <li key={ach.id} className="flex justify-between items-center bg-secondary/20 p-4 rounded-2xl border hover:border-primary/20 transition-colors">
-                <div className="flex shrink-0 items-center">
+              <li
+                key={ach.id}
+                className="grid grid-cols-[76px_minmax(180px,1fr)_minmax(140px,180px)_100px_minmax(90px,120px)_44px] items-center gap-3 rounded-xl border bg-secondary/20 px-3 py-2 transition-colors hover:border-primary/20 hover:bg-background"
+              >
+                <div className="flex items-center">
                   <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1.5 rounded-lg border-primary/20 bg-background hover:bg-primary/5 text-primary font-semibold"
                     onClick={() => { setEditingAchievement(ach); setIsBadgeModalOpen(true); }}
-                    title="Edit milestone"
                   >
-                    <Edit className="h-4 w-4" />
+                    <Edit className="h-3.5 w-3.5" />
+                    Edit
                   </Button>
                 </div>
-                <div className="flex items-center gap-3 flex-1">
+                <div className="flex min-w-0 items-center gap-3">
                   <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center border-2 shrink-0"
-                    style={{ borderColor: ach.accentColor || undefined, backgroundColor: ach.accentColor ? `${ach.accentColor}20` : undefined }}
+                    className="size-8 rounded-lg flex items-center justify-center border shrink-0 bg-background"
+                    style={{ borderColor: ach.accentColor || undefined }}
                   >
-                    <DynamicIcon name={ach.icon} className="w-5 h-5" style={ach.accentColor ? { color: ach.accentColor } : undefined} />
+                    <DynamicIcon name={ach.icon} className="w-4 h-4" style={ach.accentColor ? { color: ach.accentColor } : undefined} />
                   </div>
-                  <div>
-                    <p className="font-bold">{ach.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {ach.criteria.type === 'points' && `Current points ≥ ${ach.criteria.threshold}`}
-                      {ach.criteria.type === 'lifetimePoints' && `Lifetime points ≥ ${ach.criteria.threshold}`}
-                      {ach.criteria.type === 'coupons' && `Category threshold ${ach.criteria.threshold}`}
-                      {ach.criteria.type === 'manual' && 'Manual award only'}
-                      {ach.tier && ` · ${ach.tier}`}
-                      {(ach.bonusPoints ?? 0) >= 1 && ` · +${ach.bonusPoints} bonus pts`}
-                      {ach.enableWheelSpin && ` · 🎡 Wheel Spin`}
-                    </p>
-                  </div>
+                  <span className="truncate text-sm font-bold">{ach.name}</span>
                 </div>
-                <div className="flex gap-1">
-
+                <div className="truncate text-sm font-medium text-muted-foreground">{achievementCriteriaLabel(ach)}</div>
+                <div className="text-center text-sm font-bold text-primary">
+                  {(ach.bonusPoints ?? 0) >= 1 ? `+${ach.bonusPoints} pts` : '-'}
+                  {ach.enableWheelSpin ? ' + wheel' : ''}
+                </div>
+                <div className="truncate text-sm font-medium text-muted-foreground">{ach.tier || '-'}</div>
+                <div className="flex items-center justify-end">
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                    className="h-8 w-8 text-destructive hover:bg-destructive/10 rounded-lg"
                     onClick={() => setAchievementToDelete(ach)}
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-3.5 h-3.5" />
                   </Button>
                 </div>
               </li>
@@ -113,4 +132,3 @@ export function AdminBonusPointsTab(props: any) {
     </Card>
   );
 }
-

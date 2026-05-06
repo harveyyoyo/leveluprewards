@@ -16,8 +16,9 @@ export async function GET(request: NextRequest) {
     "id": id,
     "start_url": startUrl,
     "scope": scope,
-    "display": "standalone",
+    "display": "fullscreen",
     "display_override": [
+      "fullscreen",
       "window-controls-overlay",
       "standalone"
     ],

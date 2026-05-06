@@ -23,6 +23,7 @@ import { cn, getStudentNickname } from '@/lib/utils';
 import { encryptField, decryptField } from '@/lib/crypto';
 import type { Class, StaffAccount, StaffAccountRole, Student, Teacher } from '@/lib/types';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { AdminRecordListHeader } from '@/components/admin/AdminRecordListHeader';
 
 function normalizePortalKeyPart(value: string) {
   return value.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '');
@@ -322,6 +323,18 @@ export function AdminTeachersTab({
             </p>
           </div>
           <ul className="space-y-2 h-[calc(100vh-22rem)] min-h-[280px] overflow-y-auto pr-1">
+            {teachers && teachers.length > 0 ? (
+              <AdminRecordListHeader
+                gridClassName="grid-cols-[76px_minmax(180px,1fr)_minmax(180px,260px)_96px_44px]"
+                columns={[
+                  { label: 'Edit' },
+                  { label: 'Teacher Name' },
+                  { label: 'Login Username & Passcode' },
+                  { label: 'Copy Link', className: 'text-center' },
+                  { label: 'Delete', className: 'text-right' },
+                ]}
+              />
+            ) : null}
             {teachers?.map((t) => {
               const rows = scopedStudentsByTeacher.get(t.id) ?? [];
               const managedClasses = (classes || []).filter((c) => c.primaryTeacherId === t.id);
@@ -330,31 +343,29 @@ export function AdminTeachersTab({
                 key={t.id}
                 className="bg-secondary/20 rounded-2xl border hover:border-purple-200 transition-colors overflow-hidden"
               >
-                <div className="flex justify-between items-center gap-3 p-4">
-                  <div className="flex shrink-0 items-center">
+                <div className="grid grid-cols-[76px_minmax(180px,1fr)_minmax(180px,260px)_96px_44px] items-center gap-3 p-3">
+                  <div className="flex items-center">
                     <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 gap-1.5 rounded-lg border-primary/20 bg-background hover:bg-primary/5 text-primary font-semibold"
                       onClick={() => onEditTeacher(t)}
                       title="Edit teacher"
                     >
-                      <Edit className="h-4 w-4" />
+                      <Edit className="h-3.5 w-3.5" />
+                      Edit
                     </Button>
                   </div>
-                  <div className="flex min-w-0 items-center gap-3 flex-1">
-                    <div className="w-10 h-10 shrink-0 rounded-full bg-purple-100 flex items-center justify-center font-bold text-purple-700">
-                      {t.name[0]}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-bold">{t.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        User: <span className="font-code">{t.username}</span> | Pass: <span className="font-code">{t.passcode}</span>
-                      </p>
-                    </div>
+                  <div className="truncate text-sm font-bold">{t.name}</div>
+                  <div className="truncate text-xs text-muted-foreground">
+                    <span>User: <span className="font-code text-foreground">{t.username}</span></span>
+                    <span className="px-1 text-border">|</span>
+                    <span>Pass: <span className="font-code text-foreground">{t.passcode}</span></span>
                   </div>
-                  <div className="flex shrink-0 gap-1">
+                  <div className="flex items-center justify-center">
                     {renderCopyLinkButton(teacherPortalKey(t))}
+                  </div>
+                  <div className="flex items-center justify-end">
                     <Button
                       variant="ghost"
                       size="icon"
@@ -365,6 +376,7 @@ export function AdminTeachersTab({
                     </Button>
                   </div>
                 </div>
+
 
                 <Collapsible className="border-t border-border/60 bg-background/40">
                   <CollapsibleTrigger
@@ -605,37 +617,52 @@ export function AdminTeachersTab({
             <p className="text-sm text-muted-foreground">Limited accounts for coupon sheets, prize redemption, or reports.</p>
           </div>
           <ul className="space-y-2 h-[calc(100vh-24rem)] min-h-[200px] overflow-y-auto pr-1">
+            {staffAccounts && staffAccounts.length > 0 ? (
+              <AdminRecordListHeader
+                gridClassName="grid-cols-[76px_minmax(180px,1fr)_minmax(180px,260px)_96px_44px]"
+                columns={[
+                  { label: 'Edit' },
+                  { label: 'Staff Name' },
+                  { label: 'Role, Username & Passcode' },
+                  { label: 'Copy Link', className: 'text-center' },
+                  { label: 'Delete', className: 'text-right' },
+                ]}
+              />
+            ) : null}
             {staffAccounts?.map((account) => (
               <li
                 key={account.id}
-                className="flex justify-between items-center gap-3 bg-secondary/20 p-4 rounded-2xl border hover:border-primary/30 transition-colors"
+                className="grid grid-cols-[76px_minmax(180px,1fr)_minmax(180px,260px)_96px_44px] items-center gap-3 rounded-xl border bg-secondary/20 px-3 py-2 transition-colors hover:border-primary/30"
               >
-                <div className="flex shrink-0 items-center">
+                <div className="flex items-center">
                   <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1.5 rounded-lg border-primary/20 bg-background hover:bg-primary/5 text-primary font-semibold"
                     onClick={() => openEditDeskStaff(account)}
                     title="Edit staff"
                   >
-                    <Edit className="h-4 w-4" />
+                    <Edit className="h-3.5 w-3.5" />
+                    Edit
                   </Button>
                 </div>
-                <div className="flex min-w-0 items-center gap-3 flex-1">
-                  <div className="w-10 h-10 shrink-0 rounded-full bg-primary/15 flex items-center justify-center text-primary">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="w-8 h-8 shrink-0 rounded-full bg-primary/10 flex items-center justify-center text-primary">
                     <StaffRoleIcon role={account.role} />
                   </div>
-                  <div className="min-w-0">
-                    <p className="font-bold">{account.displayName}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {(account.roles?.length ? account.roles : [account.role]).map(staffRoleLabel).join(', ')} | User:{' '}
-                      <span className="font-code">{account.username}</span> | Pass:{' '}
-                      <span className="font-code">{account.passcode}</span>
-                    </p>
-                  </div>
+                  <span className="truncate text-sm font-bold">{account.displayName}</span>
                 </div>
-                <div className="flex shrink-0 gap-1">
+                <div className="truncate text-xs text-muted-foreground">
+                  <span>{(account.roles?.length ? account.roles : [account.role]).map(staffRoleLabel).join(', ')}</span>
+                  <span className="px-1 text-border">|</span>
+                  <span>User: <span className="font-code text-foreground">{account.username}</span></span>
+                  <span className="px-1 text-border">|</span>
+                  <span>Pass: <span className="font-code text-foreground">{account.passcode}</span></span>
+                </div>
+                <div className="flex items-center justify-center">
                   {renderCopyLinkButton(`${account.role}:${account.id}`)}
+                </div>
+                <div className="flex items-center justify-end">
                   <Button
                     variant="ghost"
                     size="icon"
@@ -646,6 +673,7 @@ export function AdminTeachersTab({
                   </Button>
                 </div>
               </li>
+
             ))}
             {(!staffAccounts || staffAccounts.length === 0) && (
               <EmptyState

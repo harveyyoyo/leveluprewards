@@ -114,6 +114,8 @@ export async function importParsedSchoolSnapshot(
     const errors: string[] = [];
     let success = 0;
     const namesLower = new Set((ctx.categories || []).map((c) => c.name.trim().toLowerCase()));
+    const { pickDistinctCategoryColor } = await import('@/lib/utils');
+    const usedColors = new Set((ctx.categories || []).map((c) => (c.color || '').trim().toLowerCase()).filter(Boolean));
     for (let i = 0; i < snapshot.categories.length; i++) {
       const c = snapshot.categories[i];
       const name = (c.name || '').trim();
@@ -124,7 +126,9 @@ export async function importParsedSchoolSnapshot(
       if (namesLower.has(name.toLowerCase())) continue;
       namesLower.add(name.toLowerCase());
       const pts = typeof c.points === 'number' && Number.isFinite(c.points) ? Math.round(c.points) : 1;
-      await addCategory(firestore, schoolId, { name, points: Math.max(1, pts) });
+      const color = pickDistinctCategoryColor(Array.from(usedColors));
+      usedColors.add(color.trim().toLowerCase());
+      await addCategory(firestore, schoolId, { name, points: Math.max(1, pts), color });
       success++;
     }
     const attempted = snapshot.categories.filter((c) => (c.name || '').trim()).length;

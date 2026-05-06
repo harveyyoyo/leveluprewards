@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Helper } from '@/components/ui/helper';
+import { AdminRecordListHeader } from '@/components/admin/AdminRecordListHeader';
 import { cn } from '@/lib/utils';
 import type { Class, Student, Teacher } from '@/lib/types';
 import { AutoCircularToggles, type ToggleDef } from '@/components/AutoCircularToggles';
@@ -268,6 +269,16 @@ export function AdminStudentsTab({
 
         <ScrollArea className="h-[calc(100vh-22rem)] min-h-[280px]">
           <ul className="flex flex-col gap-1.5 pr-4">
+            {filteredStudents.length > 0 ? (
+              <AdminRecordListHeader
+                gridClassName="grid-cols-1 sm:grid-cols-[44px_minmax(260px,1fr)_auto]"
+                columns={[
+                  { label: 'Edit', className: 'hidden sm:block' },
+                  { label: 'Student', className: 'hidden sm:block' },
+                  { label: 'Actions', className: 'hidden sm:block text-right' },
+                ]}
+              />
+            ) : null}
             {filteredStudents.map((s) => {
               const teacherLine = formatAssignedTeachers(s, teachers);
               const hasParentContact = !!(s.parentEmail?.trim() || s.parentPhone?.trim());
@@ -277,7 +288,7 @@ export function AdminStudentsTab({
               <li
                 key={s.id}
                 className={cn(
-                  'flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 py-2.5 px-3 rounded-xl border transition-all',
+                  'grid grid-cols-1 sm:grid-cols-[44px_minmax(260px,1fr)_auto] gap-2 sm:items-center sm:gap-3 py-2.5 px-3 rounded-xl border transition-all',
                   selectionMode && 'cursor-pointer',
                   selectedStudentIds.has(s.id)
                     ? 'bg-primary/5 border-primary/40 ring-1 ring-primary/20 hover:bg-primary/10 hover:border-primary/50 hover:ring-primary/30'

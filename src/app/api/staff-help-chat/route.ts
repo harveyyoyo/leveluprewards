@@ -7,8 +7,6 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import OpenAI from 'openai';
 import { guardAiRoute } from '@/lib/apiAuth';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-
 const MAX_MESSAGES = 18;
 const MAX_CONTENT_LEN = 3200;
 
@@ -96,7 +94,53 @@ function userFacingChatError(e: unknown): string {
   if (/404|not found|is not found|unsupported model|INVALID_ARGUMENT/i.test(msg)) {
     return 'The configured AI model could not be reached. Try again later or contact tech support.';
   }
-  return 'Could not complete the chat request.';
+  if (
+    /401|403|API key not valid|invalid api key|PERMISSION_DENIED|permission denied|billing|payment required|insufficient/i.test(
+      msg,
+    )
+  ) {
+    return 'The AI service is not correctly configured or authorized on the server. Ask your tech contact to check API keys and billing.';
+  }
+  if (/500|internal error|InternalServerError/i.test(msg)) {
+    return 'The AI provider returned an error. Please try again in a few minutes.';
+  }
+  return 'Could not complete the chat request. If this keeps happening, ask your tech contact to check server logs for staff-help-chat.';
+}
+
+function isProviderAuthConfigError(e: unknown): boolean {
+  const msg = e instanceof Error ? e.message : String(e);
+  return /401|403|API key not valid|invalid api key|leaked|PERMISSION_DENIED|permission denied|billing|payment required|insufficient/i.test(
+    msg,
+  );
+}
+
+async function generateOpenAiReply(params: {
+  model: string;
+  systemInstruction: string;
+  messages: ChatTurn[];
+}): Promise<string> {
+  const effectiveKey = process.env.OPENAI_API_KEY;
+  if (!effectiveKey) {
+    throw new Error('OpenAI API key is not configured on the server.');
+  }
+
+  const openaiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+    { role: 'system', content: params.systemInstruction },
+    ...params.messages.map((m) =>
+      m.role === 'user'
+        ? ({ role: 'user' as const, content: m.content })
+        : ({ role: 'assistant' as const, content: m.content }),
+    ),
+  ];
+
+  const openai = new OpenAI({ apiKey: effectiveKey });
+  const response = await openai.chat.completions.create({
+    model: params.model,
+    messages: openaiMessages,
+    max_tokens: 900,
+    temperature: 0.4,
+  });
+  return response.choices[0]?.message?.content?.trim() || '';
 }
 
 export async function POST(req: NextRequest) {
@@ -133,31 +177,11 @@ export async function POST(req: NextRequest) {
     let reply = '';
 
     if (selectedModel.startsWith('gpt')) {
-      const effectiveKey = process.env.OPENAI_API_KEY;
-      if (!effectiveKey) {
-        return NextResponse.json(
-          { error: 'OpenAI API key is not configured on the server.' },
-          { status: 503 },
-        );
-      }
-
-      const openaiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
-        { role: 'system', content: systemInstruction },
-        ...messages.map((m) =>
-          m.role === 'user'
-            ? ({ role: 'user' as const, content: m.content })
-            : ({ role: 'assistant' as const, content: m.content }),
-        ),
-      ];
-
-      const openai = new OpenAI({ apiKey: effectiveKey });
-      const response = await openai.chat.completions.create({
+      reply = await generateOpenAiReply({
         model: selectedModel as 'gpt-4o-mini',
-        messages: openaiMessages,
-        max_tokens: 900,
-        temperature: 0.4,
+        systemInstruction,
+        messages,
       });
-      reply = response.choices[0]?.message?.content?.trim() || '';
     } else {
       const effectiveKey = process.env.GEMINI_API_KEY;
       if (!effectiveKey) {
@@ -167,23 +191,38 @@ export async function POST(req: NextRequest) {
         );
       }
 
+      const genAI = new GoogleGenerativeAI(effectiveKey);
       const activeModel = genAI.getGenerativeModel({
         model: selectedModel,
         systemInstruction,
       });
 
-      if (messages.length === 1) {
-        const result = await activeModel.generateContent(messages[0]!.content);
-        reply = result.response.text().trim();
-      } else {
-        const history = messages.slice(0, -1).map((m) => ({
-          role: m.role === 'assistant' ? ('model' as const) : ('user' as const),
-          parts: [{ text: m.content }],
-        }));
-        const lastUser = messages[messages.length - 1]!.content;
-        const chat = activeModel.startChat({ history });
-        const result = await chat.sendMessage(lastUser);
-        reply = result.response.text().trim();
+      try {
+        if (messages.length === 1) {
+          const result = await activeModel.generateContent(messages[0]!.content);
+          reply = result.response.text().trim();
+        } else {
+          const history = messages.slice(0, -1).map((m) => ({
+            role: m.role === 'assistant' ? ('model' as const) : ('user' as const),
+            parts: [{ text: m.content }],
+          }));
+          const lastUser = messages[messages.length - 1]!.content;
+          const chat = activeModel.startChat({ history });
+          const result = await chat.sendMessage(lastUser);
+          reply = result.response.text().trim();
+        }
+      } catch (e) {
+        if (!isProviderAuthConfigError(e) || !process.env.OPENAI_API_KEY) {
+          throw e;
+        }
+        console.warn(
+          'staff-help-chat: Gemini provider rejected key/config; falling back to OpenAI gpt-4o-mini.',
+        );
+        reply = await generateOpenAiReply({
+          model: 'gpt-4o-mini',
+          systemInstruction,
+          messages,
+        });
       }
     }
 

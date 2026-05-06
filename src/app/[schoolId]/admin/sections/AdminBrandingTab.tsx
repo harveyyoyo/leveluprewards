@@ -422,12 +422,12 @@ export function AdminBrandingTab({
         }}
       />
 
-      {/* SECURITY & SESSION CARD */}
+      {/* BASIC SETTINGS CARD */}
       <Card className="border-t-4 border-amber-500 shadow-md">
         <CardHeader className="py-6">
           <Helper content="Configure session timeouts for admin and kiosk access.">
             <CardTitle className="flex items-center gap-2">
-              <Shield className="w-5 h-5 text-amber-500" /> Security & Session
+              <Shield className="w-5 h-5 text-amber-500" /> Basic settings
             </CardTitle>
           </Helper>
           <CardDescription>

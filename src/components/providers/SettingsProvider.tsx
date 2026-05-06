@@ -344,20 +344,9 @@ const defaultSettings: Settings = {
     payLibrary: true,
 
     // Role-based defaults
-    teacherFeatures: {
-        enableTeacherBudgets: true,
-        enableTeacherCharts: true,
-        enableHomework: true,
-        enableBulkPoints: true,
-        enableNotifications: true,
-        enableClassSignIn: true,
-        enableAttendance: true,
-        enableStudentProfiles: true,
-        enableAchievements: true,
-        enableBadges: true,
-        enableLevels: true,
-        enableStreaks: true,
-    },
+    // Additional (admin-controlled) teacher features should start OFF by default.
+    // `isTeacherAllowed` treats missing keys as `false`, so an empty map is the safest default.
+    teacherFeatures: {},
     expertMode: false,
     adminHiddenAddOnTabs: [],
     teacherHiddenAddOnTabs: [],

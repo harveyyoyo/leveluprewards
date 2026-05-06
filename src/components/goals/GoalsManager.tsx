@@ -203,7 +203,7 @@ export function GoalsManager(props: {
             Add goal
           </CardTitle>
           <CardDescription>
-            Personal targets, savings toward shop rewards, or class-wide milestones. Enable under Settings &gt; Features &gt; Goals.
+            Personal targets, savings toward shop rewards, or class-wide milestones. Enable under Settings &gt; Extra features &gt; Goals.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

@@ -39,7 +39,7 @@ export function Helper({ children, content, side = 'right', className, iconClass
             <HelpCircle style={{ width: iconSize, height: iconSize }} />
           </button>
         </PopoverTrigger>
-        <PopoverContent side={side} className="max-w-xs z-[101] text-sm p-3 bg-background border-2 shadow-lg w-auto">
+        <PopoverContent side={side} className="max-w-xs z-[101] text-sm p-3 bg-background border-2 shadow-xl w-auto">
           {content}
         </PopoverContent>
       </Popover>
