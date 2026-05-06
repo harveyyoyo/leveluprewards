@@ -8,6 +8,7 @@ import { format } from 'date-fns';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
 import { useSettings } from '@/components/providers/SettingsProvider';
+import { PrinterReminderCallout } from '@/components/PrinterReminderCallout';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirestore, useFirebase, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { useSchoolMetadataDocRef } from '@/hooks/useSchoolMetadataDocRef';
@@ -70,6 +71,7 @@ import {
   LogOut,
   Sparkles,
   Printer,
+  ScanBarcode,
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -1259,9 +1261,9 @@ function StudentDashboardInner({
           </DialogContent>
         </Dialog>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 relative z-10 flex-1 min-h-0 lg:items-stretch">
+        <div className="grid min-w-0 grid-cols-1 lg:grid-cols-3 gap-4 relative z-10 flex-1 min-h-0 lg:items-stretch">
           {/* Left Section: Content */}
-          <div className="lg:col-span-2 space-y-3 flex flex-col min-h-0">
+          <div className="lg:col-span-2 min-w-0 space-y-3 flex flex-col min-h-0">
             <StudentGoalsCard
               schoolId={schoolId!}
               student={student}
@@ -1272,10 +1274,18 @@ function StudentDashboardInner({
 
             <Card
               className={cn(
-                "border-none shadow-lg overflow-hidden rounded-3xl",
-                !activeTheme ? "bg-white dark:bg-slate-900" : "",
+                "relative z-20 w-full min-w-0 max-w-full origin-center overflow-hidden rounded-3xl border-2 shadow-[0_24px_60px_rgba(15,23,42,0.28)] ring-4 ring-offset-4 ring-offset-background transition-transform duration-300",
+                !activeTheme
+                  ? "border-amber-300/80 bg-white ring-amber-200/70 dark:border-amber-400/60 dark:bg-slate-900 dark:ring-amber-500/20"
+                  : "",
               )}
-              style={activeTheme ? { backgroundColor: 'var(--theme-card)', color: 'var(--theme-text)' } : undefined}
+              style={activeTheme ? {
+                backgroundColor: 'var(--theme-card)',
+                borderColor: 'var(--theme-primary)',
+                boxShadow: '0 24px 60px color-mix(in srgb, var(--theme-primary) 34%, transparent)',
+                color: 'var(--theme-text)',
+                ['--tw-ring-color' as string]: 'color-mix(in srgb, var(--theme-primary) 32%, transparent)',
+              } : undefined}
             >
               <CardHeader className="pb-3 border-b" style={activeTheme ? { borderColor: 'var(--theme-bg)' } : undefined}>
                 <Helper content="Scan or type a coupon code to add points. Use the camera tab to scan a QR code. Use the Logout button on this card to exit.">
@@ -1349,8 +1359,8 @@ function StudentDashboardInner({
                   </div>
                 </Helper>
               </CardHeader>
-              <CardContent className="pt-4">
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <CardContent className="pt-4 min-w-0 overflow-x-hidden">
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full min-w-0">
                   <TabsList 
                     className={cn(
                       "grid w-full grid-cols-2 mb-4 p-1 rounded-xl h-12 overflow-hidden min-w-0",
@@ -1381,26 +1391,59 @@ function StudentDashboardInner({
                   </TabsList>
 
                   {activeTab === 'manual' ? (
-                    <div className="space-y-3">
+                    <div className="space-y-3 w-full min-w-0">
+                      <div
+                        className={cn(
+                          'flex flex-wrap items-center justify-center gap-2 sm:gap-3 rounded-xl border-2 border-dashed px-3 py-2.5 text-center motion-safe:animate-pulse motion-reduce:animate-none',
+                          !activeTheme &&
+                            'border-amber-400/80 bg-gradient-to-r from-amber-50/95 via-amber-100/80 to-amber-50/95 dark:from-amber-950/60 dark:via-amber-900/40 dark:to-amber-950/60 dark:border-amber-500/60',
+                        )}
+                        style={
+                          activeTheme
+                            ? {
+                                borderColor: 'color-mix(in srgb, var(--theme-primary) 50%, transparent)',
+                                background: `linear-gradient(90deg, color-mix(in srgb, var(--theme-primary) 14%, var(--theme-card)), color-mix(in srgb, var(--theme-primary) 22%, var(--theme-card)), color-mix(in srgb, var(--theme-primary) 14%, var(--theme-card)))`,
+                              }
+                            : undefined
+                        }
+                        role="status"
+                        aria-live="polite"
+                      >
+                        <ScanBarcode
+                          className="h-5 w-5 shrink-0 motion-safe:animate-bounce motion-reduce:animate-none"
+                          style={activeTheme ? { color: 'var(--theme-primary)' } : undefined}
+                          aria-hidden
+                        />
+                        <span
+                          className={cn(
+                            'max-w-full text-[11px] sm:text-xs font-black uppercase tracking-[0.14em] sm:tracking-[0.22em] leading-snug',
+                            !activeTheme && 'text-amber-900 dark:text-amber-100',
+                          )}
+                          style={activeTheme ? { color: 'var(--theme-primary)' } : undefined}
+                        >
+                          <span className="sm:hidden">Scan coupon now</span>
+                          <span className="hidden sm:inline">Scan coupon — scanner or keyboard</span>
+                        </span>
+                      </div>
                       <form
-                        className="flex gap-2 min-w-0"
+                        className="flex flex-col gap-2 min-w-0 w-full sm:flex-row sm:gap-2"
                         onSubmit={(e) => {
                           e.preventDefault();
                           void handleRedeemCoupon();
                         }}
                       >
                         <Input
-                          placeholder="Scan coupon..."
+                          placeholder="Code appears here when scanned"
                           value={couponCode}
                           onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                          className="flex-1 min-w-0 font-mono text-left tracking-widest h-12 border-2 rounded-xl text-sm"
+                          className="w-full min-w-0 font-mono text-left tracking-widest h-12 border-2 rounded-xl text-sm sm:flex-1"
                           style={activeTheme ? { backgroundColor: 'var(--theme-bg)', borderColor: 'var(--theme-primary)', color: 'var(--theme-text)' } : undefined}
                           autoFocus
                           autoComplete="one-time-code"
                         />
                         <Button
                           type="submit"
-                          className="h-12 px-6 font-black rounded-xl shadow-lg transition-all active:scale-95 uppercase tracking-widest text-xs shrink-0"
+                          className="h-12 w-full sm:w-auto px-6 font-black rounded-xl shadow-lg transition-all active:scale-95 uppercase tracking-widest text-xs shrink-0"
                           style={activeTheme ? {
                             backgroundColor: 'var(--theme-primary)',
                             color: primaryForeground,
@@ -1596,6 +1639,11 @@ function StudentDashboardInner({
                     Print a voucher for <span className="font-bold">{prizeTicketData?.prizeName}</span>?
                   </AlertDialogDescription>
                 </AlertDialogHeader>
+                <PrinterReminderCallout
+                  title="Printer reminder"
+                  message={settings.printerReminderPrizeVouchers}
+                  className="mt-1 mb-2"
+                />
                 <AlertDialogFooter>
                   <AlertDialogCancel>No Thanks</AlertDialogCancel>
                   <Button type="button" onClick={handlePrintPrizeTicket}>
@@ -1663,7 +1711,7 @@ function StudentDashboardInner({
 
           {/* Right Section: Activity */}
           <Card
-            className={cn("lg:col-span-1 border-none shadow-lg flex flex-col min-h-0 lg:min-h-[calc(100dvh-16rem)]", !activeTheme ? "bg-white dark:bg-slate-900" : "")}
+            className={cn("lg:col-span-1 min-w-0 border-none shadow-lg flex flex-col min-h-0 lg:min-h-[calc(100dvh-16rem)]", !activeTheme ? "bg-white dark:bg-slate-900" : "")}
             style={activeTheme ? { backgroundColor: 'var(--theme-card)', color: 'var(--theme-text)' } : undefined}
           >
             <CardHeader className="pb-2 border-b shrink-0" style={activeTheme ? { borderColor: 'var(--theme-bg)' } : undefined}>
