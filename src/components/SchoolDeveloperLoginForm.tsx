@@ -284,6 +284,42 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
   const handleSampleLogin = async (id: string) => {
     playSound('click');
     const schoolId = id.trim().toLowerCase();
+
+    // Public demos: one callable (`verifySchoolPasscode`) instead of school gate + admin.
+    if (isPublicSampleSchoolId(schoolId)) {
+      router.prefetch(`/${schoolId}/admin`);
+      const adminOk = await login('admin', {
+        schoolId,
+        passcode: SAMPLE_ADMIN_PASSCODE,
+      });
+      if (adminOk) {
+        playSound('login');
+        router.push(`/${schoolId}/admin`);
+        return;
+      }
+      const schoolFallback = await login('school', {
+        schoolId,
+        passcode: SAMPLE_SCHOOL_ACCESS_PASSCODE,
+      });
+      if (schoolFallback) {
+        toast({
+          variant: 'destructive',
+          title: 'Demo admin unavailable',
+          description: 'You can still sign in from the next screen.',
+        });
+        playSound('login');
+        router.push(`/${schoolId}/sign-in`);
+        return;
+      }
+      playSound('error');
+      toast({
+        variant: 'destructive',
+        title: 'Login Failed',
+        description: 'Invalid School ID or passcode.',
+      });
+      return;
+    }
+
     const result = await login('school', {
       schoolId,
       passcode: SAMPLE_SCHOOL_ACCESS_PASSCODE,
@@ -296,22 +332,6 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
         description: 'Invalid School ID or passcode.',
       });
       return;
-    }
-    if (isPublicSampleSchoolId(schoolId)) {
-      const adminOk = await login('admin', {
-        schoolId,
-        passcode: SAMPLE_ADMIN_PASSCODE,
-      });
-      if (adminOk) {
-        playSound('login');
-        router.push(`/${schoolId}/admin`);
-        return;
-      }
-      toast({
-        variant: 'destructive',
-        title: 'Could not open demo admin',
-        description: 'Try signing in from the next screen, or contact support if this persists.',
-      });
     }
     playSound('login');
     router.push(`/${schoolId}/sign-in`);
