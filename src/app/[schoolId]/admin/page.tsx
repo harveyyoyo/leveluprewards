@@ -1,6 +1,6 @@
 
 'use client';
-import { useEffect, useState, useRef, ChangeEvent } from 'react';
+import { useEffect, useMemo, useState, useRef, ChangeEvent } from 'react';
 import { useConfirm } from '@/components/providers/ConfirmProvider';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
@@ -16,9 +16,9 @@ import {
    Users, Gift, BookOpen, Trash2, Edit, Plus, UploadCloud, Printer, LayoutDashboard, Database,
    Settings, History, Award, CheckCircle, Tag, Trophy, ArrowRight, Loader2, Play, ShieldCheck,
    User, Ticket, Upload, Download, Activity, Zap, Clock, Palette, Wand2, TableProperties,
-   FileText, Bell, Target, Megaphone,
+   FileText, Bell, Target, Megaphone, X,
  } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -162,6 +162,10 @@ const AdminHallOfFameTab = dynamic(
   () => import('./sections/AdminHallOfFameTab').then((m) => m.AdminHallOfFameTab),
   { loading: tabLoader, ssr: false },
 );
+const AdminBackupsTab = dynamic(
+  () => import('./sections/AdminBackupsTab').then((m) => m.AdminBackupsTab),
+  { loading: tabLoader, ssr: false },
+);
 import { getReadableErrorMessage } from '@/lib/errorMessage';
 import { BulkRosterSetupDialog } from '@/components/BulkRosterSetupDialog';
 
@@ -258,6 +262,7 @@ function AdminDashboardSkeleton() {
 
 function AdminDashboardInner() {
   const {
+    loginState,
     schoolId, setCouponsToPrint, deleteStudent,
     addClass, updateClass, deleteClass, deleteCategory, addCategory, updateCategory,
     addTeacher, updateTeacher, deleteTeacher,
@@ -274,6 +279,9 @@ function AdminDashboardInner() {
     listTeacherAttendanceLog,
     deleteCoupon,
     deleteCoupons,
+    devCreateBackup,
+    devRestoreFromBackup,
+    devDownloadBackup,
   } = useAppContext();
   const functions = useFunctions();
   const { toast } = useToast();
@@ -298,6 +306,43 @@ function AdminDashboardInner() {
     schoolData, schoolDocRef,
     appConfigGlobal,
   } = useAdminDashboardData(schoolId, settings.payLibrary);
+
+  const backupsQuery = useMemoFirebase(
+    () => (firestore && schoolId && loginState === 'developer' ? collection(firestore, 'schools', schoolId, 'backups') : null),
+    [firestore, schoolId, loginState],
+  );
+  const { data: backups } = useCollection<BackupInfo>(backupsQuery);
+
+  const handleCreateBackup = async () => {
+    if (!schoolId) return;
+    try {
+      await devCreateBackup(schoolId);
+      playSound('success');
+      toast({ title: 'Backup created', description: 'A new snapshot has been saved.' });
+    } catch (e) {
+      toast({ variant: 'destructive', title: 'Backup failed', description: getReadableErrorMessage(e, 'Backup failed.') });
+    }
+  };
+
+  const handleRestoreFromBackup = async (backupId: string) => {
+    if (!schoolId) return;
+    try {
+      await devRestoreFromBackup(schoolId, backupId);
+      playSound('success');
+      toast({ title: 'Restore complete', description: 'School data has been restored from the snapshot.' });
+    } catch (e) {
+      toast({ variant: 'destructive', title: 'Restore failed', description: getReadableErrorMessage(e, 'Restore failed.') });
+    }
+  };
+
+  const handleDownloadBackup = async (backupId: string) => {
+    if (!schoolId) return;
+    try {
+      await devDownloadBackup(schoolId, backupId);
+    } catch (e) {
+      toast({ variant: 'destructive', title: 'Download failed', description: getReadableErrorMessage(e, 'Download failed.') });
+    }
+  };
 
   // School logo state + upload/crop/remove pipeline (see hook for details).
   const {
@@ -371,16 +416,135 @@ function AdminDashboardInner() {
 
   const [activeMainTab, setActiveMainTab] = useState('students');
 
+  type AdminAddOnTabDef = {
+    value: string;
+    label: string;
+    icon: LucideIcon;
+    isEligible: (s: typeof settings) => boolean;
+    onRemove: () => void;
+  };
+
+  const addOnTabDefs = useMemo<AdminAddOnTabDef[]>(() => ([
+    {
+      value: 'coupons',
+      label: 'Coupons',
+      icon: Ticket,
+      isEligible: (s) => (s.payRewards ?? true),
+      onRemove: () => updateSettings({ payRewards: false }),
+    },
+    {
+      value: 'insights',
+      label: 'Insights',
+      icon: Activity,
+      isEligible: (s) => !!s.enableAdminAnalytics,
+      onRemove: () => updateSettings({ enableAdminAnalytics: false }),
+    },
+    {
+      value: 'attendance',
+      label: 'Attendance',
+      icon: Clock,
+      isEligible: (s) => !!s.enableAttendance || !!s.enableClassSignIn,
+      onRemove: () => updateSettings({ enableAttendance: false, enableClassSignIn: false }),
+    },
+    {
+      value: 'halloffame',
+      label: 'Hall of Fame',
+      icon: Trophy,
+      isEligible: (s) => !!s.enableClassLeaderboard,
+      onRemove: () => updateSettings({ enableClassLeaderboard: false }),
+    },
+    {
+      value: 'bulletinboard',
+      label: 'Bulletin',
+      icon: Megaphone,
+      isEligible: (s) => !!s.bulletinEnabled,
+      onRemove: () => updateSettings({ bulletinEnabled: false }),
+    },
+    {
+      value: 'library',
+      label: 'Library',
+      icon: BookOpen,
+      isEligible: (s) => (s.payLibrary ?? true),
+      onRemove: () => updateSettings({ payLibrary: false }),
+    },
+    {
+      value: 'bonuspoints',
+      label: 'Bonus Points',
+      icon: Trophy,
+      isEligible: (s) => !!s.enableAchievements,
+      onRemove: () => updateSettings({ enableAchievements: false }),
+    },
+    {
+      value: 'category-badges',
+      label: 'Badges',
+      icon: Award,
+      isEligible: (s) => !!s.enableBadges,
+      onRemove: () => updateSettings({ enableBadges: false }),
+    },
+    {
+      value: 'goals',
+      label: 'Goals',
+      icon: Target,
+      isEligible: (s) => !!s.enableGoals,
+      onRemove: () => updateSettings({ enableGoals: false }),
+    },
+    {
+      value: 'notifications',
+      label: 'Notifications',
+      icon: Bell,
+      isEligible: (s) => !!s.enableNotifications,
+      onRemove: () => updateSettings({ enableNotifications: false }),
+    },
+    {
+      value: 'backups',
+      label: 'Backups',
+      icon: Database,
+      isEligible: () => loginState === 'developer',
+      onRemove: () => {
+        updateSettings({
+          adminHiddenAddOnTabs: Array.from(new Set([...(settings.adminHiddenAddOnTabs || []), 'backups'])),
+        });
+      },
+    },
+    {
+      value: 'branding',
+      label: 'Branding',
+      icon: Palette,
+      isEligible: () => true,
+      onRemove: () => {
+        updateSettings({
+          adminHiddenAddOnTabs: Array.from(new Set([...(settings.adminHiddenAddOnTabs || []), 'branding'])),
+        });
+      },
+    },
+  ]), [loginState, settings.adminHiddenAddOnTabs, updateSettings]);
+
+  const visibleAddOnTabs = useMemo(() => {
+    const hidden = new Set(settings.adminHiddenAddOnTabs || []);
+    return addOnTabDefs.filter((t) => t.isEligible(settings) && !hidden.has(t.value));
+  }, [addOnTabDefs, settings]);
+
+  const dismissAddOnTab = (tabValue: string) => {
+    const def = addOnTabDefs.find((t) => t.value === tabValue);
+    if (!def) return;
+    def.onRemove();
+    if (activeMainTab === tabValue) setActiveMainTab('students');
+  };
+
   useEffect(() => {
     const basicTabs = ['students', 'classes', 'teachers', 'prizes', 'categories'];
-    if (!settings.expertMode && !basicTabs.includes(activeMainTab)) {
+    const expertExtras = settings.expertMode ? visibleAddOnTabs.map((t) => t.value) : [];
+
+    const allowedTabs = new Set<string>([...basicTabs, ...expertExtras]);
+
+    if (!allowedTabs.has(activeMainTab)) {
       // Delay the switch slightly so the animation has time to start/progress
       const timer = setTimeout(() => {
         setActiveMainTab('students');
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [settings.expertMode, activeMainTab]);
+  }, [settings.expertMode, activeMainTab, visibleAddOnTabs]);
 
   const [bulkRosterOpen, setBulkRosterOpen] = useState(false);
   const [isPreviousLogosOpen, setIsPreviousLogosOpen] = useState(false);
@@ -785,7 +949,7 @@ function AdminDashboardInner() {
           </Helper>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/40 rounded-xl border">
-              <span className="text-[10px] font-black uppercase text-muted-foreground tracking-wider">Expert Mode</span>
+              <span className="text-[10px] font-black uppercase text-muted-foreground tracking-wider">Add ons</span>
               <Switch checked={settings.expertMode} onCheckedChange={(val) => updateSettings({ expertMode: val })} />
             </div>
             <Button
@@ -825,8 +989,8 @@ function AdminDashboardInner() {
           />
         ) : null}
 
-        <motion.div layout className="w-full">
-          <Tabs key={`${String(settings.enableAchievements)}:${String(settings.enableBadges)}:${String(settings.enableAdminAnalytics)}:${String(settings.enableClassSignIn)}`} value={activeMainTab} onValueChange={setActiveMainTab} className="space-y-8">
+        <div className="w-full">
+          <Tabs key={`admin-tabs-${schoolId ?? 'unknown'}`} value={activeMainTab} onValueChange={setActiveMainTab} className="space-y-8">
           <div className="w-full flex flex-col gap-4">
             <TabsList 
               className="bg-muted/50 p-1.5 rounded-2xl flex flex-wrap justify-center border shadow-sm gap-x-1 gap-y-1 h-auto w-full max-w-6xl mx-auto"
@@ -848,83 +1012,93 @@ function AdminDashboardInner() {
               <TabsTrigger value="categories" className="rounded-xl px-4 py-2 font-bold flex items-center gap-2 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)] transition-all">
                 <Tag className="w-4 h-4" /> Rewards
               </TabsTrigger>
+
+              {settings.expertMode && (
+                <>
+                  {visibleAddOnTabs.map((t) => {
+                    const Icon = t.icon;
+                    return (
+                      <TabsTrigger
+                        key={t.value}
+                        value={t.value}
+                        className="rounded-xl px-4 py-2 font-bold flex items-center gap-2 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)] transition-all"
+                      >
+                        <Icon className="w-4 h-4" /> {t.label}
+                      </TabsTrigger>
+                    );
+                  })}
+                </>
+              )}
             </TabsList>
 
-            <AnimatePresence initial={false}>
-              {settings.expertMode && (
-                <motion.div 
-                  key="expert-tools-row"
-                  layout="position"
-                  initial={{ opacity: 0, height: 0, y: -20 }}
-                  animate={{ 
-                    opacity: 1, 
-                    height: 'auto',
-                    y: 0,
-                    transition: {
-                      height: { type: 'spring', duration: 0.6, bounce: 0 },
-                      opacity: { duration: 0.3, delay: 0.1 },
-                      y: { type: 'spring', duration: 0.6, bounce: 0 },
-                      staggerChildren: 0.03,
-                    }
-                  }}
-                  exit={{ 
-                    opacity: 0, 
-                    height: 0,
-                    y: -20,
-                    transition: {
-                      height: { type: 'spring', duration: 0.5, bounce: 0 },
-                      opacity: { duration: 0.2 },
-                      y: { type: 'spring', duration: 0.5, bounce: 0 },
-                    }
-                  }}
-                  className="flex flex-col gap-3 overflow-hidden mt-1"
-                >
-                  <div className="flex items-center gap-4 px-4 max-w-6xl mx-auto w-full pt-2 opacity-40">
-                    <div className="h-px bg-border flex-1" />
-                    <span className="text-[10px] font-black uppercase tracking-[0.3em] whitespace-nowrap">Expert Tools</span>
-                    <div className="h-px bg-border flex-1" />
-                  </div>
-                  <TabsList 
-                    className="bg-muted/15 p-1.5 rounded-2xl flex flex-wrap justify-center border border-dashed border-border/60 shadow-sm gap-x-1 gap-y-1 h-auto w-full max-w-6xl mx-auto"
-                    style={{ ['--admin-accent' as any]: rainbowForNavId('admin', settings.colorScheme) }}
-                  >
-                    {[
-                      { value: 'coupons', label: 'Coupons', icon: Ticket },
-                      { value: 'insights', label: 'Insights', icon: Activity },
-                      { value: 'attendance', label: 'Attendance', icon: Clock },
-                      { value: 'halloffame', label: 'Hall of Fame', icon: Trophy },
-                      { value: 'bulletinboard', label: 'Bulletin', icon: Megaphone },
-                      { value: 'library', label: 'Library', icon: BookOpen },
-                      { value: 'bonuspoints', label: 'Bonus Points', icon: Trophy },
-                      { value: 'category-badges', label: 'Badges', icon: Award },
-                      { value: 'goals', label: 'Goals', icon: Target },
-                      { value: 'notifications', label: 'Notifications', icon: Bell },
-                      { value: 'backups', label: 'Backups', icon: Database },
-                      { value: 'branding', label: 'Branding', icon: Palette },
-                    ].map((tab) => (
-                      <motion.div
-                        key={tab.value}
-                        variants={{
-                          hidden: { opacity: 0, scale: 0.95 },
-                          visible: { opacity: 1, scale: 1 },
-                          exit: { opacity: 0, scale: 0.95 }
-                        }}
-                      >
-                        <TabsTrigger 
-                          value={tab.value} 
-                          className="rounded-xl px-4 py-2 font-bold flex items-center gap-2 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)] transition-all"
+            {settings.expertMode && (
+              <div className="flex flex-col gap-3 mt-1 animate-in fade-in slide-in-from-top-2 duration-500">
+                <div className="flex items-center gap-4 px-4 max-w-6xl mx-auto w-full pt-2 opacity-40">
+                  <div className="h-px bg-border flex-1" />
+                  <span className="text-[10px] font-black uppercase tracking-[0.3em] whitespace-nowrap">Add ons</span>
+                  <div className="h-px bg-border flex-1" />
+                </div>
+
+                <div className="flex items-start justify-between gap-3 px-4 max-w-6xl mx-auto w-full">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {visibleAddOnTabs.length === 0 ? (
+                      <span className="text-xs text-muted-foreground">No add ons enabled.</span>
+                    ) : visibleAddOnTabs.map((t) => {
+                      const Icon = t.icon;
+                      return (
+                        <div
+                          key={t.value}
+                          className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-muted/25 px-3 py-1.5 text-xs font-bold"
                         >
-                          <tab.icon className="w-4 h-4" /> {tab.label}
-                        </TabsTrigger>
-                      </motion.div>
-                    ))}
-                  </TabsList>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                          <Icon className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+                          <button
+                            type="button"
+                            className="hover:underline"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveMainTab(t.value);
+                            }}
+                            title={`Open ${t.label}`}
+                          >
+                            {t.label}
+                          </button>
+                          <button
+                            type="button"
+                            className="ml-1 inline-flex h-6 w-6 items-center justify-center rounded-full hover:bg-background/70 text-muted-foreground hover:text-foreground"
+                            title={`Remove ${t.label}`}
+                            aria-label={`Remove ${t.label}`}
+                            onPointerDown={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              dismissAddOnTab(t.value);
+                            }}
+                          >
+                            <X className="h-4 w-4" aria-hidden />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9 rounded-xl shrink-0"
+                    title="Add add-on"
+                    aria-label="Add add-on"
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent('open-settings-modal', { detail: { view: 'features' } }));
+                    }}
+                  >
+                    <Plus className="h-4 w-4" aria-hidden />
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
 
-          <TabsContent value="students" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <TabsContent value="students" className="transition-opacity duration-150">
             <AdminStudentsTab
               settings={settings}
               classes={classes}
@@ -971,7 +1145,7 @@ function AdminDashboardInner() {
             />
           </TabsContent>
 
-          <TabsContent value="classes" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <TabsContent value="classes" className="transition-opacity duration-150">
             <AdminClassesTab
               classes={classes}
               teachers={teachers}
@@ -994,7 +1168,7 @@ function AdminDashboardInner() {
             />
           </TabsContent>
 
-          <TabsContent value="teachers" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <TabsContent value="teachers" className="transition-opacity duration-150">
             <AdminTeachersTab
               teachers={teachers}
               staffAccounts={staffAccounts}
@@ -1060,7 +1234,7 @@ function AdminDashboardInner() {
             />
           </TabsContent>
 
-          <TabsContent value="prizes" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <TabsContent value="prizes" className="transition-opacity duration-150">
             <AdminPrizesTab
               prizes={prizes}
               teachers={teachers}
@@ -1084,7 +1258,7 @@ function AdminDashboardInner() {
             />
           </TabsContent>
 
-          <TabsContent value="coupons" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <TabsContent value="coupons" className="transition-opacity duration-150">
             <AdminCouponsTab
               availableCoupons={availableCoupons}
               redeemedCoupons={redeemedCoupons}
@@ -1101,7 +1275,7 @@ function AdminDashboardInner() {
             />
           </TabsContent>
 
-          <TabsContent value="insights" className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <TabsContent value="insights" className="space-y-6 transition-opacity duration-150">
             <Tabs defaultValue="stats" className="space-y-6">
               <div className="flex justify-center">
                 <TabsList className="bg-muted/30 p-1 rounded-xl border shadow-sm">
@@ -1142,7 +1316,7 @@ function AdminDashboardInner() {
             </Tabs>
           </TabsContent>
 
-          <TabsContent value="categories" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <TabsContent value="categories" className="transition-opacity duration-150">
             <AdminCategoriesTab
               categories={categories}
               teachers={teachers}
@@ -1180,7 +1354,7 @@ function AdminDashboardInner() {
             />
           </TabsContent>
 
-          <TabsContent value="attendance" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <TabsContent value="attendance" className="transition-opacity duration-150">
             <AdminAttendanceTab
               schoolId={schoolId}
               teachers={teachers}
@@ -1217,11 +1391,11 @@ function AdminDashboardInner() {
             />
           </TabsContent>
 
-          <TabsContent value="halloffame" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <TabsContent value="halloffame" className="transition-opacity duration-150">
             <AdminHallOfFameTab schoolId={schoolId!} />
           </TabsContent>
 
-          <TabsContent value="bulletinboard" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <TabsContent value="bulletinboard" className="transition-opacity duration-150">
             <AdminBulletinBoardTab
               schoolId={schoolId!}
               schoolLogoUrl={schoolData?.logoUrl ?? null}
@@ -1230,7 +1404,7 @@ function AdminDashboardInner() {
             />
           </TabsContent>
 
-          <TabsContent value="library" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <TabsContent value="library" className="transition-opacity duration-150">
             <AdminLibraryTab
               libraryItems={library}
               getStudentName={getStudentName}
@@ -1241,7 +1415,7 @@ function AdminDashboardInner() {
             />
           </TabsContent>
 
-          <TabsContent value="bonuspoints" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <TabsContent value="bonuspoints" className="transition-opacity duration-150">
             <AdminBonusPointsTab
               achievementsLoading={achievementsLoading}
               achievements={achievements}
@@ -1253,7 +1427,7 @@ function AdminDashboardInner() {
             />
           </TabsContent>
 
-          <TabsContent value="category-badges" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <TabsContent value="category-badges" className="transition-opacity duration-150">
             <AdminBadgesTab
               categories={categories}
               badgesLoading={badgesLoading}
@@ -1276,7 +1450,7 @@ function AdminDashboardInner() {
             />
           </TabsContent>
 
-          <TabsContent value="goals" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <TabsContent value="goals" className="transition-opacity duration-150">
             <AdminGoalsTab
               schoolId={schoolId!}
               students={students || []}
@@ -1286,11 +1460,26 @@ function AdminDashboardInner() {
             />
           </TabsContent>
 
-          <TabsContent value="notifications" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <TabsContent value="notifications" className="transition-opacity duration-150">
             <AdminNotificationsTab />
           </TabsContent>
 
-          <TabsContent value="branding" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <TabsContent value="backups" className="transition-opacity duration-150">
+            {loginState === 'developer' ? (
+              <AdminBackupsTab
+                backups={backups}
+                onCreateBackup={handleCreateBackup}
+                onDownloadBackup={handleDownloadBackup}
+                onRestoreFromBackup={handleRestoreFromBackup}
+              />
+            ) : (
+              <div className="rounded-2xl border bg-muted/20 p-6 text-sm text-muted-foreground">
+                Backups are available in developer accounts. Sign in with a developer login to create and restore snapshots.
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="branding" className="transition-opacity duration-150">
             <AdminBrandingTab
               schoolId={schoolId}
               firestore={firestore}
@@ -1864,7 +2053,7 @@ function AdminDashboardInner() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-        </motion.div>
+        </div>
         {showPurgeFlash && (
           <div className="fixed inset-0 z-50 pointer-events-none flex items-center justify-center">
             <div className="absolute inset-0 bg-white/90 animate-pulse" />

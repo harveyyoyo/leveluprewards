@@ -204,6 +204,8 @@ interface Settings {
     expertMode: boolean;
     /** Admin-only UI preference: hides specific add-on tabs/chips without turning off the underlying feature toggles. */
     adminHiddenAddOnTabs?: string[];
+    /** Teacher portal: hides specific add-on tabs without turning off features (optional soft-hide). */
+    teacherHiddenAddOnTabs?: string[];
 }
 
 interface SettingsContextType {
@@ -356,6 +358,7 @@ const defaultSettings: Settings = {
     },
     expertMode: false,
     adminHiddenAddOnTabs: [],
+    teacherHiddenAddOnTabs: [],
 };
 
 const publicLoginSettings: Partial<Settings> = {

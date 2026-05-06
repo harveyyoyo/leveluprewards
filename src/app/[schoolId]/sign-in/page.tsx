@@ -4,10 +4,9 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useMemo, useState } from 'react';
 import { doc } from 'firebase/firestore';
-import { GraduationCap, ShieldCheck, Users, ChevronRight, Loader2 } from 'lucide-react';
+import { GraduationCap, Shield, User, ChevronRight, Loader2 } from 'lucide-react';
 
 import { useAppContext } from '@/components/AppProvider';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -25,6 +24,8 @@ type StaffPortalLoginOption = {
 };
 
 type SchoolPublicStaffDirectory = {
+  name?: string;
+  logoUrl?: string;
   staffDirectory?: StaffPortalLoginOption[];
 };
 
@@ -37,6 +38,9 @@ function officeRoleLabel(type: StaffPortalLoginOption['type']) {
   if (type === 'prizeClerk') return 'Prize desk';
   return 'Reports';
 }
+
+const rowButtonClass =
+  'group flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-slate-900 shadow-sm transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2';
 
 export default function SchoolSignInChooserPage() {
   const params = useParams<{ schoolId: string }>();
@@ -71,6 +75,11 @@ export default function SchoolSignInChooserPage() {
     list.sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }));
     return list;
   }, [staffOptions]);
+
+  const displaySchoolName = (schoolPublic?.name ?? '').trim() || schoolId || 'School';
+  const welcomeTitle = `Welcome to ${displaySchoolName}`;
+  const logoInitial = displaySchoolName.charAt(0).toUpperCase() || 'S';
+  const logoUrl = (schoolPublic?.logoUrl ?? '').trim();
 
   const goToStaffLogin = useCallback(
     (accountKey: string) => {
@@ -112,8 +121,8 @@ export default function SchoolSignInChooserPage() {
 
   if (!isInitialized) {
     return (
-      <div className="min-h-[calc(100vh-5rem)] flex items-center justify-center p-8">
-        <Button disabled variant="ghost" size="lg" className="text-muted-foreground">
+      <div className="flex min-h-screen items-center justify-center bg-[#f9fafb] p-8">
+        <Button disabled variant="ghost" size="lg" className="text-slate-500">
           <Loader2 className="mr-2 h-5 w-5 animate-spin" aria-hidden />
           Loading...
         </Button>
@@ -122,14 +131,23 @@ export default function SchoolSignInChooserPage() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-5rem)] flex items-center justify-center px-4 py-10">
-      <Card className="w-full max-w-4xl border-t-8 border-primary shadow-lg">
-        <CardHeader className="text-center space-y-2">
-          <CardTitle className="text-3xl font-black tracking-tight">Sign in</CardTitle>
-          <CardDescription>Choose how you want to sign in for this school.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="grid gap-3 sm:grid-cols-3">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-[#f9fafb] px-4 py-10 font-sans">
+      <div className="w-full max-w-md">
+        <div className="rounded-[28px] border border-slate-200/80 bg-white p-8 shadow-[0_12px_40px_-12px_rgba(15,23,42,0.12)]">
+          <div className="flex flex-col items-center text-center">
+            <div className="mb-5 flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-900 text-xl font-bold text-white shadow-inner">
+              {logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element -- school branding URLs from Firestore (same pattern as Header)
+                <img src={logoUrl} alt="" className="h-full w-full object-cover" />
+              ) : (
+                logoInitial
+              )}
+            </div>
+            <h1 className="text-balance text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">{welcomeTitle}</h1>
+            <p className="mt-1.5 text-sm text-slate-500">Choose your sign-in</p>
+          </div>
+
+          <div className="mt-8 space-y-3">
             <Link
               href={`/${schoolId}/admin-signin`}
               onClick={() => {
@@ -137,20 +155,11 @@ export default function SchoolSignInChooserPage() {
                 setFacultyStepActive(false);
                 setStaffAccount('');
               }}
-              className="block rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className={rowButtonClass}
             >
-              <div className="group relative flex h-full min-h-[8.5rem] flex-col justify-between rounded-2xl border bg-card px-4 py-4 transition-all hover:shadow-md hover:-translate-y-0.5 sm:px-5">
-                <div className="flex flex-col gap-3">
-                  <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center border border-border/60">
-                    <ShieldCheck className="h-6 w-6" aria-hidden />
-                  </div>
-                  <div className="min-w-0 text-left">
-                    <p className="font-black text-lg leading-tight truncate">Admin</p>
-                    <p className="text-sm text-muted-foreground leading-snug">Passcode sign-in for school setup.</p>
-                  </div>
-                </div>
-                <ChevronRight className="h-5 w-5 self-end text-muted-foreground/60 group-hover:text-muted-foreground transition-colors" aria-hidden />
-              </div>
+              <Shield className="h-5 w-5 shrink-0 text-slate-600" aria-hidden />
+              <span className="min-w-0 flex-1 text-center text-base font-semibold text-slate-900">Admin</span>
+              <ChevronRight className="h-5 w-5 shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5" aria-hidden />
             </Link>
 
             <button
@@ -162,25 +171,11 @@ export default function SchoolSignInChooserPage() {
               }}
               aria-expanded={facultyStepActive}
               aria-controls="faculty-staff-select-panel"
-              className={cn(
-                'text-left rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-                facultyStepActive && 'ring-2 ring-primary ring-offset-2 ring-offset-background',
-              )}
+              className={cn(rowButtonClass, facultyStepActive && 'ring-2 ring-slate-300 ring-offset-2 ring-offset-white')}
             >
-              <div className="group relative flex h-full min-h-[8.5rem] flex-col justify-between rounded-2xl border bg-card px-4 py-4 transition-all hover:shadow-md hover:-translate-y-0.5 sm:px-5">
-                <div className="flex flex-col gap-3">
-                  <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center border border-border/60">
-                    <Users className="h-6 w-6" aria-hidden />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="font-black text-lg leading-tight truncate">Faculty</p>
-                    <p className="text-sm text-muted-foreground leading-snug">
-                      Teachers and office staff — tap here, then pick your name below.
-                    </p>
-                  </div>
-                </div>
-                <ChevronRight className="h-5 w-5 self-end text-muted-foreground/60 group-hover:text-muted-foreground transition-colors" aria-hidden />
-              </div>
+              <User className="h-5 w-5 shrink-0 text-slate-600" aria-hidden />
+              <span className="min-w-0 flex-1 text-center text-base font-semibold text-slate-900">Faculty</span>
+              <ChevronRight className="h-5 w-5 shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5" aria-hidden />
             </button>
 
             <button
@@ -192,38 +187,23 @@ export default function SchoolSignInChooserPage() {
                 void enterStudentKiosk();
               }}
               disabled={!!loadingId}
-              className="text-left rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-80"
+              className={cn(rowButtonClass, 'disabled:pointer-events-none disabled:opacity-70')}
             >
-              <div
-                className={cn(
-                  'group relative flex h-full min-h-[8.5rem] flex-col justify-between rounded-2xl border bg-card px-4 py-4 transition-all',
-                  loadingId === 'student' ? 'opacity-80' : 'hover:shadow-md hover:-translate-y-0.5',
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center text-slate-600">
+                {loadingId === 'student' ? (
+                  <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
+                ) : (
+                  <GraduationCap className="h-5 w-5" aria-hidden />
                 )}
-              >
-                <div className="flex flex-col gap-3">
-                  <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center border border-border/60">
-                    {loadingId === 'student' ? (
-                      <Loader2 className="h-6 w-6 animate-spin" aria-hidden />
-                    ) : (
-                      <GraduationCap className="h-6 w-6" aria-hidden />
-                    )}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="font-black text-lg leading-tight truncate">Students</p>
-                    <p className="text-sm text-muted-foreground leading-snug">Kiosk: scan a badge to open the student dashboard.</p>
-                  </div>
-                </div>
-                <ChevronRight className="h-5 w-5 self-end text-muted-foreground/60 group-hover:text-muted-foreground transition-colors" aria-hidden />
-              </div>
+              </span>
+              <span className="min-w-0 flex-1 text-center text-base font-semibold text-slate-900">Students</span>
+              <ChevronRight className="h-5 w-5 shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5" aria-hidden />
             </button>
           </div>
 
           {facultyStepActive && (
-            <div
-              id="faculty-staff-select-panel"
-              className="rounded-2xl border bg-muted/30 px-4 py-4 sm:px-5"
-            >
-              <Label htmlFor="staff-account" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+            <div id="faculty-staff-select-panel" className="mt-4 rounded-xl border border-slate-200 bg-slate-50/90 px-4 py-4">
+              <Label htmlFor="staff-account" className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Staff account
               </Label>
               <Select
@@ -231,7 +211,7 @@ export default function SchoolSignInChooserPage() {
                 onValueChange={handleStaffPick}
                 disabled={staffLoading || allStaffForDropdown.length === 0}
               >
-                <SelectTrigger id="staff-account" className="mt-2 h-12 rounded-xl font-bold bg-card">
+                <SelectTrigger id="staff-account" className="mt-2 h-12 rounded-xl border-slate-200 bg-white font-semibold text-slate-900">
                   <SelectValue
                     placeholder={
                       staffLoading
@@ -255,19 +235,21 @@ export default function SchoolSignInChooserPage() {
             </div>
           )}
 
-          <div className="pt-3">
-            <Button
-              variant="outline"
-              className="w-full h-12 rounded-xl font-bold"
-              asChild
+          <div className="mt-6 border-t border-slate-100 pt-6 text-center">
+            <Link
+              href={`/${schoolId}/portal`}
+              onClick={() => playSound('click')}
+              className="text-sm font-medium text-slate-500 underline-offset-4 transition-colors hover:text-slate-800 hover:underline"
             >
-              <Link href={`/${schoolId}/portal`} onClick={() => playSound('click')}>
-                Back to portal
-              </Link>
-            </Button>
+              Back to portal
+            </Link>
           </div>
-        </CardContent>
-      </Card>
+
+          <p className="mt-6 text-center text-xs text-slate-400">{displaySchoolName}</p>
+        </div>
+
+        <p className="mt-6 text-center text-xs text-slate-400">By continuing you agree to the school IT policy.</p>
+      </div>
     </div>
   );
 }
