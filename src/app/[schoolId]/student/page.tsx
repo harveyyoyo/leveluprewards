@@ -46,7 +46,6 @@ import { Progress } from '@/components/ui/progress';
 import { cn, getStudentNickname, getContrastColor } from '@/lib/utils';
 import { resolveStudentThemeWithSchoolDefault, primaryForegroundFor } from '@/lib/themeContrast';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
-import { isAiJokePrize } from '@/lib/aiJokePrize';
 import { getReadableErrorMessage } from '@/lib/errorMessage';
 import {
   ArrowLeft,
@@ -451,6 +450,7 @@ function StudentDashboardInner({
   } | null>(null);
   const pendingPrizeTicketAfterAiRef = useRef<typeof prizeTicketData>(null);
   const lastAiSurpriseTextRef = useRef<string | undefined>(undefined);
+  const lastAiSurpriseCallRef = useRef(0);
   const aiSurpriseRequestIdRef = useRef(0);
   const [aiSurpriseOpen, setAiSurpriseOpen] = useState(false);
   const [aiSurpriseLoading, setAiSurpriseLoading] = useState(false);
@@ -1773,9 +1773,13 @@ export default function StudentLoginPage() {
       <TooltipProvider>
         <div
           className={cn(
-            "flex flex-col items-center justify-center py-4 px-4 font-sans",
+            // Fill the kiosk viewport below the header and center the scanner with equal visual top/bottom inset.
+            // App mode: subtract header + bottom tab reserve (pb-24 on main). Web: header only.
+            'flex flex-col items-center justify-center px-4 py-4 font-sans',
             isGraphic ? 'animate-in fade-in zoom-in-95 duration-500' : '',
-            settings.displayMode === 'app' && 'pb-24'
+            settings.displayMode === 'app'
+              ? 'min-h-[calc(100svh-11rem)]'
+              : 'min-h-[calc(100svh-5rem)]'
           )}
           style={{
             ['--primary' as any]: rainbowTripletForNavId('redeem', settings.colorScheme),
