@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
     Select,
     SelectContent,
@@ -105,13 +106,16 @@ function cloneSettings(s: AppSettings): AppSettings {
     return JSON.parse(JSON.stringify(s)) as AppSettings;
 }
 
-function FeatureRow({ id, label, desc, icon, settings, onToggle, onConfigure, isImplemented = true, isAdmin = true, isAllowed = true, planLabel }: {
+function FeatureRow({ id, label, desc, icon, settings, onToggle, onConfigure, isImplemented = true, isAdmin = true, isAllowed = true, planLabel, blockHint }: {
     id: string; label: string; desc: string; icon: React.ReactNode;
     settings: any; onToggle: (key: string, val: any) => void; onConfigure?: () => void; isImplemented?: boolean; isAdmin?: boolean; isAllowed?: boolean; planLabel?: string;
+    /** When set (e.g. product pillar off), the toggle is forced off and disabled even if the plan allows the feature. */
+    blockHint?: string;
 }) {
     const filter = useContext(FeatureFilterContext);
     const isEnabled = settings[id] || false;
-    const canUse = isImplemented && isAllowed;
+    const blockedByConfig = Boolean(blockHint);
+    const canUse = isImplemented && isAllowed && !blockedByConfig;
     if (filter.enabledOnly && !isEnabled) return null;
     if (filter.query.trim()) {
         const q = filter.query.trim().toLowerCase();
@@ -148,15 +152,20 @@ function FeatureRow({ id, label, desc, icon, settings, onToggle, onConfigure, is
                         ) : null}
                         <Switch
                             id={id}
-                            checked={isEnabled && isAllowed}
+                            checked={isEnabled && canUse}
                             onCheckedChange={(checked) => onToggle(id, checked)}
-                            disabled={!isAdmin || !isAllowed}
+                            disabled={!isAdmin || !isAllowed || blockedByConfig}
                         />
                     </div>
                     {!isAdmin && <span className="text-[10px] text-muted-foreground mt-2 font-black uppercase tracking-widest whitespace-nowrap">Admin Only</span>}
                     {isAdmin && !isAllowed && (
                         <span className="text-[10px] text-amber-700 dark:text-amber-400 mt-2 font-black uppercase tracking-widest whitespace-nowrap flex items-center gap-1" title={`Current plan: ${planLabel ?? 'Free'}`}>
                             <Lock className="h-3 w-3" /> Upgrade
+                        </span>
+                    )}
+                    {isAdmin && isAllowed && blockedByConfig && blockHint && (
+                        <span className="text-[10px] text-muted-foreground mt-2 font-semibold tracking-wide max-w-[220px] text-right leading-snug" title={blockHint}>
+                            {blockHint}
                         </span>
                     )}
                 </div>
@@ -243,6 +252,9 @@ export function SettingsModal() {
             }
             if (key === 'enableAttendance' && typeof value === 'boolean') {
                 next = { ...next, enableClassSignIn: value };
+            }
+            if (key === 'payHomework' && value === false) {
+                next = { ...next, enableHomework: false };
             }
             return next;
         });
@@ -1213,6 +1225,7 @@ export function SettingsModal() {
                                     isAdmin={isAdmin}
                                     isAllowed={isFeatureAllowed('enableHomework')}
                                     planLabel={planLabel}
+                                    blockHint={!(local.payHomework ?? true) ? 'Turn on the Homework product pillar in Settings → Product Pillars first.' : undefined}
                                 />
                                 <FeatureRow
                                     id="enableBulkPoints"
@@ -1680,6 +1693,39 @@ export function SettingsModal() {
                                     isImplemented={true}
                                     isAdmin={isAdmin}
                                 />
+                                {isAdmin && (
+                                    <div className="px-3 pb-4 space-y-4 border-t border-slate-200/60 dark:border-slate-700/50 pt-4 mt-1">
+                                        <p className="text-xs text-muted-foreground leading-relaxed">
+                                            Optional printer reminders for staff. Web apps cannot select a specific printer; these notes appear next to the right Print actions so the correct device is chosen in the print dialog.
+                                        </p>
+                                        <div className="space-y-1.5">
+                                            <Label htmlFor="printerReminderIdCards" className="text-xs font-bold">
+                                                Student ID / card stock printing
+                                            </Label>
+                                            <Textarea
+                                                id="printerReminderIdCards"
+                                                rows={2}
+                                                placeholder='e.g. "Use the Fargo DTC at the front desk — not the office copier."'
+                                                className="min-h-[72px] rounded-xl text-sm bg-background/80 border-border/60 resize-y"
+                                                value={local.printerReminderIdCards ?? ''}
+                                                onChange={(e) => handleToggle('printerReminderIdCards', e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <Label htmlFor="printerReminderPrizeVouchers" className="text-xs font-bold">
+                                                Prize vouchers & coupon sheets
+                                            </Label>
+                                            <Textarea
+                                                id="printerReminderPrizeVouchers"
+                                                rows={2}
+                                                placeholder='e.g. "Send redeem slips to the thermal printer in the office."'
+                                                className="min-h-[72px] rounded-xl text-sm bg-background/80 border-border/60 resize-y"
+                                                value={local.printerReminderPrizeVouchers ?? ''}
+                                                onChange={(e) => handleToggle('printerReminderPrizeVouchers', e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
                                 <FeatureRow
                                     id="enableHelperMode"
                                     label="Helper Tips"

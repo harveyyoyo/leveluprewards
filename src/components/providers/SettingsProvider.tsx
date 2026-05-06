@@ -202,6 +202,8 @@ interface Settings {
     // Teacher Feature Toggles (controlled by admin)
     teacherFeatures?: Record<string, boolean>;
     expertMode: boolean;
+    /** Admin-only UI preference: hides specific add-on tabs/chips without turning off the underlying feature toggles. */
+    adminHiddenAddOnTabs?: string[];
 }
 
 interface SettingsContextType {
@@ -353,6 +355,7 @@ const defaultSettings: Settings = {
         enableStreaks: true,
     },
     expertMode: false,
+    adminHiddenAddOnTabs: [],
 };
 
 const publicLoginSettings: Partial<Settings> = {
@@ -449,6 +452,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         if (!isAllowed('enableClassSignIn')) {
             next.enableClassSignIn = false;
             next.enableAttendance = false;
+        }
+        if (!(next.payHomework ?? true)) {
+            next.enableHomework = false;
         }
         return next;
     }, [isAllowed]);
