@@ -124,7 +124,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
     target.focus();
     if (desired === 'passcode') target.select?.();
     lastAutoFocusedRef.current = desired;
-  }, [isDeveloper, isDeveloperOnly, initialSchoolId, isInitialized, isUserLoading, mode, mounted]);
+  }, [isDeveloper, isDeveloperOnly, initialSchoolId, isInitialized, isUserLoading, mode, mounted, schoolId]);
 
   // Developer access should only be surfaced on the dedicated `/developer` route (mode: developer-only).
   // The public school login (`/login`) should not expose developer options.
