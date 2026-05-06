@@ -182,14 +182,14 @@ function StudentActivityList({ schoolId, studentId, themed = false, onReprintTic
 
   if (isLoading) {
     return (
-      <div className="space-y-3 p-4" role="status" aria-live="polite" aria-label="Loading activity">
+      <div className="space-y-2 p-3" role="status" aria-live="polite" aria-label="Loading activity">
         {[...Array(5)].map((_, i) => (
-          <div key={i} className="flex justify-between items-center py-3 border-b border-border/50">
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-3 w-16" />
+          <div key={i} className="flex justify-between items-center py-2 border-b border-border/50">
+            <div className="space-y-1.5">
+              <Skeleton className="h-3.5 w-28" />
+              <Skeleton className="h-2.5 w-14" />
             </div>
-            <Skeleton className="h-6 w-12 rounded-full" />
+            <Skeleton className="h-5 w-10 rounded-full" />
           </div>
         ))}
         <span className="sr-only">Loading activity…</span>
@@ -199,8 +199,8 @@ function StudentActivityList({ schoolId, studentId, themed = false, onReprintTic
 
 
   return (
-    <ScrollArea className="w-full min-h-[36dvh] h-[min(65dvh,calc(100dvh-11rem))] lg:min-h-[calc(100dvh-20rem)] lg:max-h-[calc(100dvh-12rem)] pr-4">
-      <ul className="space-y-3">
+    <ScrollArea className="w-full min-h-[28dvh] h-[min(48dvh,calc(100dvh-12rem))] lg:min-h-[min(320px,calc(100dvh-22rem))] lg:max-h-[min(420px,calc(100dvh-14rem))] pr-3">
+      <ul className="space-y-2">
         {history && history.length > 0 ? (
           history.map((item, index) => {
             const isRedemption = item.desc.startsWith('Redeemed:');
@@ -210,36 +210,36 @@ function StudentActivityList({ schoolId, studentId, themed = false, onReprintTic
                             <li
                                 key={index}
                                 className={cn(
-                                  "group p-3 rounded-2xl transition-all duration-300",
+                                  "group p-2 rounded-xl transition-all duration-300",
                                   !themed && "border border-slate-50 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 hover:bg-slate-50 dark:hover:bg-slate-800/80",
                                 )}
                                 style={themed ? { backgroundColor: 'rgba(255,255,255,0.08)', borderColor: 'rgba(127,127,127,0.25)', borderWidth: 1, borderStyle: 'solid' } : undefined}
                             >
-                                <div className="flex justify-between items-start mb-2">
-                                    <div className="flex gap-3">
+                                <div className="flex justify-between items-start mb-1">
+                                    <div className="flex gap-2">
                                         <div className={cn(
-                                            "w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5",
+                                            "w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5",
                                             isRedemption ? "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400" :
                                                 (item.desc.toLowerCase().includes('attendance') || item.desc.toLowerCase().includes('sign-in')) ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400" :
                                                     "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
                                         )}>
-                                            {isRedemption ? <Gift className="w-4 h-4" /> :
-                                                (item.desc.toLowerCase().includes('attendance') || item.desc.toLowerCase().includes('sign-in')) ? <CheckCircle2 className="w-4 h-4" /> :
-                                                    <Ticket className="w-4 h-4" />}
+                                            {isRedemption ? <Gift className="w-3.5 h-3.5" /> :
+                                                (item.desc.toLowerCase().includes('attendance') || item.desc.toLowerCase().includes('sign-in')) ? <CheckCircle2 className="w-3.5 h-3.5" /> :
+                                                    <Ticket className="w-3.5 h-3.5" />}
                                         </div>
                                         <div>
                                             <p
-                                                className={cn("font-bold leading-tight", !themed && "text-slate-800 dark:text-slate-200")}
+                                                className={cn("text-[13px] font-bold leading-tight", !themed && "text-slate-800 dark:text-slate-200")}
                                                 style={themedTextStyle}
                                             >
                                                 {item.desc}
                                             </p>
                                             <div
-                                                className={cn("flex items-center gap-1.5 mt-1", !themed && "text-muted-foreground")}
+                                                className={cn("flex items-center gap-1 mt-0.5", !themed && "text-muted-foreground")}
                                                 style={themedMutedStyle}
                                             >
-                                                <Clock className="w-3 h-3" aria-hidden="true" />
-                                                <span className="text-[11px] font-semibold tracking-wide">
+                                                <Clock className="w-2.5 h-2.5" aria-hidden="true" />
+                                                <span className="text-[10px] font-semibold tracking-wide">
                                                     {item.date ? format(new Date(item.date), 'MMM d, h:mm a') : 'Recently'}
                                                 </span>
                                             </div>
@@ -248,7 +248,7 @@ function StudentActivityList({ schoolId, studentId, themed = false, onReprintTic
                                     <Badge
                                         variant={isPointGain ? 'default' : 'secondary'}
                                         className={cn(
-                                            "font-black text-[10px] px-2 py-0.5 rounded-full tracking-tighter shrink-0",
+                                            "font-black text-[9px] px-1.5 py-0 rounded-full tracking-tighter shrink-0",
                                             !themed && (isPointGain ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'),
                                         )}
                                         style={themed ? {
@@ -1024,6 +1024,9 @@ function StudentDashboardInner({
   const computedThemeText = activeTheme?.text || (getContrastColor(themeBg) === 'black' ? '#020617' : '#ffffff');
   const primaryForeground = activeTheme ? primaryForegroundFor(activeTheme) : '#ffffff';
 
+  const welcomeBackdropActive =
+    showWelcome && studentSeesWelcomeBackOverlay(settings, student);
+
   return (
     <TooltipProvider>
       <div
@@ -1058,29 +1061,7 @@ function StudentDashboardInner({
       >
         {activeTheme?.fontFamily && <GoogleFontLoader fontFamily={activeTheme.fontFamily} />}
 
-        {showWelcome && student && studentSeesWelcomeBackOverlay(settings, student) && (
-          <WelcomeOverlay
-            key={student.id}
-            studentName={`${student.firstName} ${student.lastName}`}
-            points={student.points || 0}
-            photoUrl={student.photoUrl}
-            visibleDurationMs={Math.min(60, Math.max(1, settings.studentWelcomeBackDurationSec ?? 3)) * 1000}
-            theme={activeTheme ? {
-              primary: activeTheme.primary,
-              text: computedThemeText,
-              background: activeTheme.background,
-              accent: activeTheme.accent,
-              cardBackground: activeTheme.cardBackground,
-              backgroundStyle: activeTheme.backgroundStyle,
-              primaryForeground,
-              emoji: student.customEmojiUrl || activeTheme.emoji,
-              fontFamily: activeTheme.fontFamily,
-            } : undefined}
-            onClose={dismissWelcome}
-            playSound={playSound}
-          />
-        )}
-
+        <div className="flex flex-1 flex-col min-h-0 min-w-0 w-full space-y-3 md:space-y-4">
         <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
           {celebrationMessage || (flyPointsValue !== null ? `You earned ${flyPointsValue} points` : '')}
         </div>
@@ -1105,7 +1086,7 @@ function StudentDashboardInner({
         {/* Graphic Elements */}
         {isGraphic && !activeTheme && (
           <div className="absolute -top-12 right-0 w-32 h-32 opacity-20 pointer-events-none z-0">
-            <Star className="w-full h-full text-amber-400 fill-amber-400 animate-pulse" />
+            <Star className="w-full h-full text-amber-400 fill-amber-400 opacity-80" />
           </div>
         )}
 
@@ -1266,9 +1247,9 @@ function StudentDashboardInner({
           </DialogContent>
         </Dialog>
 
-        <div className="grid min-w-0 grid-cols-1 lg:grid-cols-3 gap-4 relative z-10 flex-1 min-h-0 lg:items-stretch">
+        <div className="grid min-w-0 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_min(252px,28vw)] gap-4 relative z-10 flex-1 min-h-0 lg:items-stretch">
           {/* Left Section: Content */}
-          <div className="lg:col-span-2 min-w-0 space-y-3 flex flex-col min-h-0">
+          <div className="min-w-0 space-y-3 flex flex-col min-h-0">
             <StudentGoalsCard
               schoolId={schoolId!}
               student={student}
@@ -1399,7 +1380,7 @@ function StudentDashboardInner({
                     <div className="space-y-3 w-full min-w-0">
                       <div
                         className={cn(
-                          'flex flex-wrap items-center justify-center gap-2 sm:gap-3 rounded-xl border-2 border-dashed px-3 py-2.5 text-center motion-safe:animate-pulse motion-reduce:animate-none',
+                          'flex flex-wrap items-center justify-center gap-2 sm:gap-3 rounded-xl border-2 border-dashed px-3 py-2.5 text-center',
                           !activeTheme &&
                             'border-amber-400/80 bg-gradient-to-r from-amber-50/95 via-amber-100/80 to-amber-50/95 dark:from-amber-950/60 dark:via-amber-900/40 dark:to-amber-950/60 dark:border-amber-500/60',
                         )}
@@ -1415,13 +1396,13 @@ function StudentDashboardInner({
                         aria-live="polite"
                       >
                         <ScanBarcode
-                          className="h-5 w-5 shrink-0 motion-safe:animate-bounce motion-reduce:animate-none"
+                          className="h-7 w-7 shrink-0 sm:h-8 sm:w-8"
                           style={activeTheme ? { color: 'var(--theme-primary)' } : undefined}
                           aria-hidden
                         />
                         <span
                           className={cn(
-                            'max-w-full text-[11px] sm:text-xs font-black uppercase tracking-[0.14em] sm:tracking-[0.22em] leading-snug',
+                            'max-w-full text-base sm:text-lg md:text-xl font-black uppercase tracking-[0.12em] sm:tracking-[0.18em] leading-snug',
                             !activeTheme && 'text-amber-900 dark:text-amber-100',
                           )}
                           style={activeTheme ? { color: 'var(--theme-primary)' } : undefined}
@@ -1468,7 +1449,7 @@ function StudentDashboardInner({
                     <div className="relative h-36 sm:h-40 rounded-xl overflow-hidden bg-black border-2 border-slate-100 dark:border-slate-800 shadow-inner">
                       <video ref={videoRef as RefObject<HTMLVideoElement>} className="w-full h-full object-cover" playsInline muted />
                       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <div className="w-3/4 h-3/2 border-2 border-white/40 rounded-2xl border-dashed animate-pulse" />
+                        <div className="w-3/4 h-3/2 border-2 border-white/40 rounded-2xl border-dashed" />
                       </div>
                     </div>
                   )}
@@ -1496,7 +1477,21 @@ function StudentDashboardInner({
                 </Helper>
               </CardHeader>
               <CardContent className="pt-0 pb-4 space-y-3">
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                <div
+                  className={cn(
+                    'rounded-2xl border-2 p-3 sm:p-4 shadow-inner',
+                    !activeTheme && 'border-slate-200 bg-slate-50/90 dark:border-slate-600 dark:bg-slate-800/50',
+                  )}
+                  style={
+                    activeTheme
+                      ? {
+                          borderColor: 'color-mix(in srgb, var(--theme-primary) 42%, transparent)',
+                          backgroundColor: 'color-mix(in srgb, var(--theme-bg) 65%, var(--theme-card))',
+                        }
+                      : undefined
+                  }
+                >
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                   {prizesLoading ? (
                     [...Array(3)].map((_, i) => <Skeleton key={i} className="h-20 w-full rounded-lg" />)
                   ) : (prizes || [])
@@ -1578,6 +1573,7 @@ function StudentDashboardInner({
                       </div>
                     </div>
                   )}
+                </div>
                 </div>
                 <Button
                   asChild
@@ -1714,28 +1710,82 @@ function StudentDashboardInner({
             />
           </div>
 
-          {/* Right Section: Activity */}
+          {/* Right Section: Activity — narrow column, boxed frame */}
           <Card
-            className={cn("lg:col-span-1 min-w-0 border-none shadow-lg flex flex-col min-h-0 lg:min-h-[calc(100dvh-16rem)]", !activeTheme ? "bg-white dark:bg-slate-900" : "")}
-            style={activeTheme ? { backgroundColor: 'var(--theme-card)', color: 'var(--theme-text)' } : undefined}
+            className={cn(
+              'min-w-0 w-full max-w-sm mx-auto lg:mx-0 lg:max-w-none flex flex-col min-h-0 rounded-2xl border-2 shadow-md ring-1 ring-black/5 dark:ring-white/10',
+              'lg:min-h-[min(calc(100dvh-14rem),520px)] max-lg:max-h-[52dvh]',
+              !activeTheme && 'border-slate-200 bg-white dark:border-slate-600 dark:bg-slate-900',
+            )}
+            style={
+              activeTheme
+                ? {
+                    backgroundColor: 'var(--theme-card)',
+                    color: 'var(--theme-text)',
+                    borderColor: 'color-mix(in srgb, var(--theme-primary) 42%, transparent)',
+                    boxShadow: 'inset 0 1px 0 0 color-mix(in srgb, var(--theme-text) 8%, transparent)',
+                  }
+                : undefined
+            }
           >
-            <CardHeader className="pb-2 border-b shrink-0" style={activeTheme ? { borderColor: 'var(--theme-bg)' } : undefined}>
+            <CardHeader
+              className="py-2.5 pb-2 border-b shrink-0 rounded-t-2xl bg-muted/30 dark:bg-slate-800/40"
+              style={
+                activeTheme
+                  ? {
+                      borderColor: 'color-mix(in srgb, var(--theme-primary) 28%, transparent)',
+                      backgroundColor: 'color-mix(in srgb, var(--theme-bg) 55%, var(--theme-card))',
+                    }
+                  : undefined
+              }
+            >
               <Helper content="A log of your most recent point transactions, including coupons redeemed and prizes purchased.">
                 <CardTitle
-                  className={cn("text-sm font-black flex items-center gap-2", !activeTheme && "text-slate-800 dark:text-white")}
+                  className={cn("text-xs font-black flex items-center gap-1.5", !activeTheme && "text-slate-800 dark:text-white")}
                   style={activeTheme ? { color: 'var(--theme-text)' } : undefined}
                 >
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={activeTheme ? { backgroundColor: 'var(--theme-bg)' } : undefined}>
-                    <ChevronRight className="w-4 h-4 text-chart-1" style={activeTheme ? { color: 'var(--theme-primary)' } : undefined} />
+                  <div className="w-6 h-6 rounded-md flex items-center justify-center" style={activeTheme ? { backgroundColor: 'var(--theme-bg)' } : undefined}>
+                    <ChevronRight className="w-3.5 h-3.5 text-chart-1" style={activeTheme ? { color: 'var(--theme-primary)' } : undefined} />
                   </div>
                   <span style={activeTheme ? { color: 'var(--theme-text)' } : undefined}>Activity</span>
                 </CardTitle>
               </Helper>
             </CardHeader>
-            <CardContent className="flex-1 min-h-0 flex flex-col pt-3 pb-4">
+            <CardContent className="flex-1 min-h-0 flex flex-col rounded-b-2xl pt-2 pb-3 px-0.5">
               <StudentActivityList schoolId={schoolId} studentId={student.id} themed={!!activeTheme} onReprintTicket={handleReprint} />
             </CardContent>
           </Card>
+        </div>
+
+        {welcomeBackdropActive && (
+          <>
+            {/* One composited backdrop layer — avoids filter-blurring the whole dashboard (very janky). */}
+            <div
+              className="fixed inset-0 z-[99] pointer-events-none bg-black/[0.07] backdrop-blur-sm motion-reduce:bg-black/25 motion-reduce:backdrop-blur-none dark:bg-black/25"
+              aria-hidden
+            />
+            <WelcomeOverlay
+              key={student.id}
+              studentName={`${student.firstName} ${student.lastName}`}
+              points={student.points || 0}
+              photoUrl={student.photoUrl}
+              visibleDurationMs={Math.min(60, Math.max(1, settings.studentWelcomeBackDurationSec ?? 3)) * 1000}
+              theme={activeTheme ? {
+                primary: activeTheme.primary,
+                text: computedThemeText,
+                background: activeTheme.background,
+                accent: activeTheme.accent,
+                cardBackground: activeTheme.cardBackground,
+                backgroundStyle: activeTheme.backgroundStyle,
+                primaryForeground,
+                emoji: student.customEmojiUrl || activeTheme.emoji,
+                fontFamily: activeTheme.fontFamily,
+              } : undefined}
+              onClose={dismissWelcome}
+              playSound={playSound}
+            />
+          </>
+        )}
         </div>
       </div>
     </TooltipProvider>

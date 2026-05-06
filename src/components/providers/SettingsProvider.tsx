@@ -657,11 +657,23 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         }
     }, [settings.darkMode, isLoaded]);
 
-    // Apply color scheme data attribute for classic mode
+    // Apply color scheme data attribute — must match student/teacher overrides so CSS `--primary` matches UI (e.g. portal).
     useEffect(() => {
         if (!isLoaded) return;
-        document.documentElement.setAttribute('data-color-scheme', settings.colorScheme ?? 'default');
-    }, [settings.colorScheme, isLoaded]);
+        let scheme = settings.colorScheme ?? 'default';
+        if (loginState === 'student' && settings.studentColorScheme) {
+            scheme = settings.studentColorScheme;
+        } else if (loginState === 'teacher' && settings.teacherColorScheme) {
+            scheme = settings.teacherColorScheme;
+        }
+        document.documentElement.setAttribute('data-color-scheme', scheme);
+    }, [
+        isLoaded,
+        loginState,
+        settings.colorScheme,
+        settings.studentColorScheme,
+        settings.teacherColorScheme,
+    ]);
 
     // Apply legacy class to document root
     useEffect(() => {

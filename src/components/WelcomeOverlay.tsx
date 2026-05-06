@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Trophy, Ticket } from 'lucide-react';
 import type { SoundEffect } from '@/hooks/useArcadeSound';
 import { LEVELUP_BRAND_PRIMARY_HEX } from '@/lib/app-branding';
@@ -45,6 +45,7 @@ export const WelcomeOverlay: React.FC<WelcomeOverlayProps> = ({
 }) => {
   const [isVisible, setIsVisible] = useState(true);
   const [displayedPoints, setDisplayedPoints] = useState(0);
+  const prefersReducedMotion = useReducedMotion();
 
   const targetPoints = Number.isFinite(points) ? Math.max(0, Math.round(points)) : 0;
 
@@ -130,10 +131,14 @@ export const WelcomeOverlay: React.FC<WelcomeOverlayProps> = ({
 
           {/* Floating panel — centered; theme matches student kiosk */}
           <motion.div
-            initial={{ y: 22, opacity: 0, scale: 0.96 }}
+            initial={{ y: 14, opacity: 0, scale: prefersReducedMotion ? 1 : 0.98 }}
             animate={{ y: 0, opacity: 1, scale: 1 }}
-            exit={{ y: -16, opacity: 0, scale: 0.96 }}
-            transition={{ type: 'spring', damping: 24, stiffness: 340 }}
+            exit={{ y: -10, opacity: 0, scale: 0.98 }}
+            transition={
+              prefersReducedMotion
+                ? { duration: 0.22, ease: 'easeOut' }
+                : { type: 'spring', damping: 32, stiffness: 260, mass: 0.85 }
+            }
             style={panelFrameStyle}
             className="relative z-10 flex w-full max-w-md shrink-0 flex-col overflow-hidden rounded-[1.75rem] sm:rounded-[2rem] max-h-[min(82svh,42rem)]"
           >
@@ -146,8 +151,9 @@ export const WelcomeOverlay: React.FC<WelcomeOverlayProps> = ({
           />
 
           {/* Confetti-like particles (clipped to panel) */}
-          <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]">
-            {[...Array(20)].map((_, i) => (
+          <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit] motion-reduce:hidden">
+            {!prefersReducedMotion &&
+              [...Array(10)].map((_, i) => (
               <motion.div
                 key={i}
                 initial={{ 
@@ -162,7 +168,7 @@ export const WelcomeOverlay: React.FC<WelcomeOverlayProps> = ({
                   opacity: 0
                 }}
                 transition={{ 
-                  duration: 2 + Math.random() * 2, 
+                  duration: 2.5 + Math.random() * 2, 
                   repeat: Infinity,
                   delay: Math.random() * 2,
                   ease: "easeOut"
@@ -178,17 +184,25 @@ export const WelcomeOverlay: React.FC<WelcomeOverlayProps> = ({
 
           {/* Main Content */}
           <motion.div
-            initial={{ y: 16, opacity: 0 }}
+            initial={{ y: prefersReducedMotion ? 0 : 10, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.06, type: "spring", damping: 20, stiffness: 100 }}
+            transition={
+              prefersReducedMotion
+                ? { duration: 0.2, ease: 'easeOut' }
+                : { delay: 0.05, type: 'spring', damping: 26, stiffness: 220 }
+            }
             style={{ color: textColor }}
             className="relative z-10 flex min-h-0 flex-1 flex-col items-center overflow-y-auto text-center px-5 py-6 sm:p-8"
           >
             {/* Profile Picture / Avatar */}
             <motion.div
-              initial={{ scale: 0 }}
+              initial={{ scale: prefersReducedMotion ? 1 : 0.92 }}
               animate={{ scale: 1 }}
-              transition={{ delay: 0.2, type: "spring" }}
+              transition={
+                prefersReducedMotion
+                  ? { duration: 0.18 }
+                  : { delay: 0.12, type: 'spring', damping: 22, stiffness: 280 }
+              }
               className="relative mb-6"
             >
               <div
@@ -207,12 +221,19 @@ export const WelcomeOverlay: React.FC<WelcomeOverlayProps> = ({
                   </span>
                 )}
               </div>
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-                className="absolute -inset-2 rounded-full border-2 border-dashed opacity-55"
-                style={{ borderColor: primaryColor }}
-              />
+              {prefersReducedMotion ? (
+                <div
+                  className="absolute -inset-2 rounded-full border-2 border-dashed opacity-45"
+                  style={{ borderColor: primaryColor }}
+                />
+              ) : (
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 28, repeat: Infinity, ease: 'linear' }}
+                  className="absolute -inset-2 rounded-full border-2 border-dashed opacity-55"
+                  style={{ borderColor: primaryColor }}
+                />
+              )}
               <div
                 className="absolute -bottom-2 -right-2 rounded-full p-2 shadow-lg"
                 style={{ backgroundColor: primaryColor, color: primaryFg }}

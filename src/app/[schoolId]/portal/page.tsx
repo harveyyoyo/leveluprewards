@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from '@/components/ui/button';
 import { rainbowByIndex, rainbowForPortalId } from '@/lib/rainbowNav';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
+import { LEVELUP_BRAND_PRIMARY_HEX, LEVELUP_BRAND_PRIMARY_ON_DARK_HEX } from '@/lib/app-branding';
 
 type PortalArea = {
     id: string;
@@ -56,6 +57,14 @@ export default function PortalPage() {
             window.removeEventListener('scroll', onActivity, { capture: true });
         };
     }, [isInitialized, loginState, schoolId, router]);
+    /** Default scheme: real brand hex — `hsl(var(--primary))` stays near-white in `.dark` by design. */
+    const defaultPortalAccent =
+        settings.colorScheme === 'default'
+            ? settings.darkMode
+                ? LEVELUP_BRAND_PRIMARY_ON_DARK_HEX
+                : LEVELUP_BRAND_PRIMARY_HEX
+            : null;
+
     const showPortalLocalDecor =
         settings.graphicMode === 'graphics' &&
         !animBackdrop &&
@@ -129,11 +138,11 @@ export default function PortalPage() {
                     <h2
                         className="text-5xl font-black tracking-tighter font-headline drop-shadow-md px-6 py-2 inline-block"
                         style={{
-                            color: settings.colorScheme === 'default' ? 'hsl(var(--primary))' : rainbowByIndex(0, settings.colorScheme),
+                            color: defaultPortalAccent ?? rainbowByIndex(0, settings.colorScheme),
                             textShadow:
-                                settings.colorScheme === 'default'
-                                    ? undefined
-                                    : `0 0 14px ${rainbowByIndex(0, settings.colorScheme)}55, 0 0 28px ${rainbowByIndex(0, settings.colorScheme)}33`,
+                                defaultPortalAccent === null
+                                    ? `0 0 14px ${rainbowByIndex(0, settings.colorScheme)}55, 0 0 28px ${rainbowByIndex(0, settings.colorScheme)}33`
+                                    : undefined,
                         }}
                     >
                         Where to?
@@ -144,9 +153,7 @@ export default function PortalPage() {
                     {portals.map((area, index) => {
                         const Icon = area.icon;
                         const rainbowColor =
-                            settings.colorScheme === 'default'
-                                ? 'hsl(var(--primary))'
-                                : rainbowForPortalId(area.id, settings.colorScheme);
+                            defaultPortalAccent ?? rainbowForPortalId(area.id, settings.colorScheme);
                         const portalCard = (
                                 <motion.div
                                     initial={{ opacity: 0, x: -50 }}
