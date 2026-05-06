@@ -1,5 +1,5 @@
 
-import { test, expect } from '@playwright/test';
+import { test } from '@playwright/test';
 
 test('login to school and then to admin portal', async ({ page }) => {
     page.on('console', msg => console.log(`BROWSER MSG: ${msg.text()}`));
@@ -21,29 +21,17 @@ test('login to school and then to admin portal', async ({ page }) => {
     await schoolAbcBtn.waitFor({ state: 'visible', timeout: 10000 });
     await schoolAbcBtn.click();
 
-    console.log("Waiting for choice page...");
-    await page.waitForURL(url => url.pathname.includes('/sign-in'), { timeout: 15000 });
-    console.log("Reached choice page!");
-
-    // 2. Admin Login
-    console.log("Clicking Admin option...");
-    await page.click('text=Admin');
-
-    console.log("Entering admin passcode...");
-    await page.fill('input[type="password"]', '1234');
-    await page.click('button:has-text("Sign in")');
-
-    console.log("Waiting for admin portal...");
+    console.log("Waiting for admin dashboard (demo auto-sign-in)...");
     try {
-        await page.waitForURL(url => url.pathname.endsWith('/portal'), { timeout: 15000 });
-        console.log("Successfully reached Admin Portal!");
+        await page.waitForURL(url => url.pathname.endsWith('/admin'), { timeout: 15000 });
+        console.log("Successfully reached Admin dashboard!");
     } catch (e) {
         await page.screenshot({ path: 'admin_login_failure.png', fullPage: true });
         console.log("Saved admin_login_failure.png");
         throw e;
     }
 
-    // 3. Verify tabs
+    // 2. Verify tabs
     const tabs = page.locator('button[role="tab"]');
     const tabTexts = await tabs.allInnerTexts();
     console.log("Current tabs:", tabTexts);

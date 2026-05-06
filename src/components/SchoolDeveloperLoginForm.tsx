@@ -7,6 +7,11 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter, usePathname } from 'next/navigation';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useSettings } from '@/components/providers/SettingsProvider';
+import {
+  isPublicSampleSchoolId,
+  SAMPLE_ADMIN_PASSCODE,
+  SAMPLE_SCHOOL_ACCESS_PASSCODE,
+} from '@/lib/sample-schools';
 import { cn } from '@/lib/utils';
 import Logo from '@/components/Logo';
 import { useFirestore, useMemoFirebase, useDoc, useFirebase } from '@/firebase';
@@ -278,18 +283,38 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
 
   const handleSampleLogin = async (id: string) => {
     playSound('click');
-    const result = await login('school', { schoolId: id, passcode: '1234' });
-    if (result) {
-      playSound('login');
-      router.push(`/${id}/sign-in`);
-    } else {
+    const schoolId = id.trim().toLowerCase();
+    const result = await login('school', {
+      schoolId,
+      passcode: SAMPLE_SCHOOL_ACCESS_PASSCODE,
+    });
+    if (!result) {
       playSound('error');
       toast({
         variant: 'destructive',
         title: 'Login Failed',
         description: 'Invalid School ID or passcode.',
       });
+      return;
     }
+    if (isPublicSampleSchoolId(schoolId)) {
+      const adminOk = await login('admin', {
+        schoolId,
+        passcode: SAMPLE_ADMIN_PASSCODE,
+      });
+      if (adminOk) {
+        playSound('login');
+        router.push(`/${schoolId}/admin`);
+        return;
+      }
+      toast({
+        variant: 'destructive',
+        title: 'Could not open demo admin',
+        description: 'Try signing in from the next screen, or contact support if this persists.',
+      });
+    }
+    playSound('login');
+    router.push(`/${schoolId}/sign-in`);
   };
 
   if (!mounted || !isInitialized || isUserLoading) {

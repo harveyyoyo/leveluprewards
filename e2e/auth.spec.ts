@@ -21,15 +21,18 @@ test('login and navigate to portal and student pages', async ({ page }) => {
     await schoolAbcBtn.waitFor({ state: 'visible', timeout: 10000 });
     await schoolAbcBtn.click();
 
-    // Verify it goes to portal and stays there
-    console.log("Waiting for portal...");
+    // Demo schools auto-sign into admin; continue test from the school portal.
+    console.log("Waiting for admin (demo auto-sign-in)...");
     try {
-        await page.waitForURL(url => url.pathname.endsWith('/portal'), { timeout: 15000 });
+        await page.waitForURL(url => url.pathname.endsWith('/admin'), { timeout: 15000 });
     } catch (e) {
         await page.screenshot({ path: 'auth_test_failure.png', fullPage: true });
         console.log("Saved auth_test_failure.png");
         throw e;
     }
+
+    console.log("Navigating to portal...");
+    await page.goto(`${baseUrl}/schoolabc/portal`);
 
     console.log("Successfully reached Portal page!");
 
