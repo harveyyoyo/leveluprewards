@@ -76,6 +76,7 @@ import { Helper } from '@/components/ui/helper';
 import dynamic from 'next/dynamic';
 import { CategoryModal } from '@/components/CategoryModal';
 import { StudentIdCard } from '@/components/StudentIdCard';
+import { IdCardPrintSetupDialog } from '@/components/admin/IdCardPrintSetupDialog';
 import { AchievementModal } from '@/components/AchievementModal';
 import { BadgeModal } from '@/components/BadgeModal';
 
@@ -383,7 +384,19 @@ function AdminDashboardInner() {
 
   const [bulkRosterOpen, setBulkRosterOpen] = useState(false);
   const [isPreviousLogosOpen, setIsPreviousLogosOpen] = useState(false);
-  const [isDtcAlertOpen, setIsDtcAlertOpen] = useState(false);
+  const [idCardPrintJob, setIdCardPrintJob] = useState<{ students: Student[]; classes: Class[] } | null>(null);
+
+  const handleOpenIdCardPrintSetup = (args: { students: Student[]; classes: Class[] }) => {
+    if (args.students.length === 0) {
+      toast({
+        variant: 'destructive',
+        title: 'No students to print',
+        description: 'Adjust filters or selection and try again.',
+      });
+      return;
+    }
+    setIdCardPrintJob(args);
+  };
 
   // All attendance dashboard state + orchestration lives behind one hook so
   // this component only worries about the tab's presentation. It covers:
@@ -744,20 +757,6 @@ function AdminDashboardInner() {
   const availableCoupons = coupons?.filter(c => !c.used).sort((a, b) => b.createdAt - a.createdAt) || [];
   const redeemedCoupons = coupons?.filter(c => c.used).sort((a, b) => (b.usedAt ?? 0) - (a.usedAt ?? 0)) || [];
 
-  const handleDtcPrintClick = () => {
-    if (selectionMode) {
-      if (selectedStudentIds.size === 1) {
-        const selected = students?.filter(s => selectedStudentIds.has(s.id)) || [];
-        setStudentsToPrint({ students: selected, classes: classes || [], printerType: 'dtc4500e' });
-      }
-      // Button is disabled for > 1, so no action needed.
-    } else {
-      // This is for "Bulk Print" or "Print Class"
-      setIsDtcAlertOpen(true);
-    }
-  };
-
-
   return (
     <TooltipProvider>
       <div
@@ -810,6 +809,21 @@ function AdminDashboardInner() {
           onStudentsCsv={handleBulkStudentsCsv}
           onAiCommitSnapshot={handleAiCommitSnapshot}
         />
+
+        {idCardPrintJob ? (
+          <IdCardPrintSetupDialog
+            open
+            onOpenChange={(o) => {
+              if (!o) setIdCardPrintJob(null);
+            }}
+            students={idCardPrintJob.students}
+            classes={idCardPrintJob.classes}
+            onConfirm={(args) => {
+              setStudentsToPrint(args);
+              setIdCardPrintJob(null);
+            }}
+          />
+        ) : null}
 
         <motion.div layout className="w-full">
           <Tabs key={`${String(settings.enableAchievements)}:${String(settings.enableBadges)}:${String(settings.enableAdminAnalytics)}:${String(settings.enableClassSignIn)}`} value={activeMainTab} onValueChange={setActiveMainTab} className="space-y-8">
@@ -931,8 +945,7 @@ function AdminDashboardInner() {
               setStudentSortOption={setStudentSortOption}
               studentFilterClass={studentFilterClass}
               setStudentFilterClass={setStudentFilterClass}
-              setStudentsToPrint={(args) => setStudentsToPrint(args as any)}
-              handleDtcPrintClick={handleDtcPrintClick}
+              onOpenIdPrintSetup={handleOpenIdCardPrintSetup}
               getClassName={getClassName}
               teachers={teachers || []}
               handleOpenStudentModal={handleOpenStudentModal}
@@ -1848,19 +1861,6 @@ function AdminDashboardInner() {
                 {isAddingSampleCategoryBadges ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 Add 4 badges
               </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-        <AlertDialog open={isDtcAlertOpen} onOpenChange={setIsDtcAlertOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Bulk DTC Printing</AlertDialogTitle>
-              <AlertDialogDescription>
-                Direct-to-card (DTC) printers print one card at a time. To prevent issues, please use the &quot;Select&quot; mode to choose and print one student ID at a time.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogAction onClick={() => setIsDtcAlertOpen(false)}>OK</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

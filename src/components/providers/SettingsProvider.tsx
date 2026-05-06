@@ -21,6 +21,7 @@ import {
     type SchoolPlanConfig,
 } from '@/lib/plans';
 import type { StudentTheme } from '@/lib/types';
+import type { IdCardPrintProfile } from '@/lib/id-card-print-catalog';
 import { STUDENT_WELCOME_STYLES_LIVE } from '@/lib/studentWelcome';
 
 type ColorScheme = 'default' | 'sky' | 'rose' | 'mint' | 'lavender' | 'peach';
@@ -82,6 +83,14 @@ interface Settings {
     /** When on, include the student's theme emoji (or school default theme) on printed prize redeem vouchers. */
     enableStudentEmojiOnPrizeTickets: boolean;
     enableColorPrinting: boolean;
+    /** Optional staff reminder shown near student ID / bulk card print (browser cannot pick a printer). */
+    printerReminderIdCards?: string;
+    /** Saved ID card print setups (printer family + paper) for Admin → Students. */
+    idCardPrintProfiles?: IdCardPrintProfile[];
+    /** Last selected saved profile id for ID card printing (optional). */
+    lastIdCardPrintProfileId?: string;
+    /** Optional staff reminder for prize redeem slips and printed coupon sheets. */
+    printerReminderPrizeVouchers?: string;
     // Admin Tools
     enableBulkPoints: boolean;
     enablePointApproval: boolean;
@@ -255,6 +264,10 @@ const defaultSettings: Settings = {
     enableVendingMachine: false,
     enableStudentEmojiOnPrizeTickets: false,
     enableColorPrinting: true,
+    printerReminderIdCards: '',
+    idCardPrintProfiles: [],
+    lastIdCardPrintProfileId: undefined,
+    printerReminderPrizeVouchers: '',
     enableBulkPoints: false,
     enablePointApproval: false,
     enableAuditLog: false,

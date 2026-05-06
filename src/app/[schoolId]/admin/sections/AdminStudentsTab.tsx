@@ -70,8 +70,7 @@ export function AdminStudentsTab({
   setStudentSortOption,
   studentFilterClass,
   setStudentFilterClass,
-  setStudentsToPrint,
-  handleDtcPrintClick,
+  onOpenIdPrintSetup,
   getClassName,
   teachers,
   handleOpenStudentModal,
@@ -109,8 +108,7 @@ export function AdminStudentsTab({
   setStudentSortOption: (v: string) => void;
   studentFilterClass: string;
   setStudentFilterClass: (v: string) => void;
-  setStudentsToPrint: (args: { students: Student[]; classes: Class[]; printerType?: 'dtc4500e' }) => void;
-  handleDtcPrintClick: () => void;
+  onOpenIdPrintSetup: (args: { students: Student[]; classes: Class[] }) => void;
   getClassName: (id: string) => string;
   teachers: Teacher[];
   handleOpenStudentModal?: (s: Student | null) => void;
@@ -144,9 +142,9 @@ export function AdminStudentsTab({
 
               if (selectionMode && selectedStudentIds.size > 0) {
                 const selected = students?.filter((s) => selectedStudentIds.has(s.id)) || [];
-                setStudentsToPrint({ students: selected, classes: classes || [] });
+                onOpenIdPrintSetup({ students: selected, classes: classes || [] });
               } else {
-                setStudentsToPrint({ students: filtered, classes: classes || [] });
+                onOpenIdPrintSetup({ students: filtered, classes: classes || [] });
               }
             }}
             variant={(selectionMode && selectedStudentIds.size >= 1) || studentFilterClass !== 'all' ? 'default' : 'outline'}
@@ -157,24 +155,10 @@ export function AdminStudentsTab({
           >
             <Printer className="mr-2 h-4 w-4" />
             {selectionMode && selectedStudentIds.size >= 1
-              ? `Print Selected (${selectedStudentIds.size})`
+              ? `Print IDs (${selectedStudentIds.size})`
               : studentFilterClass !== 'all'
-                ? `Print Class (${students?.filter((s) => s.classId === studentFilterClass).length || 0})`
-                : 'Bulk ID Print'}
-          </Button>
-          <Button
-            onClick={handleDtcPrintClick}
-            disabled={selectionMode && selectedStudentIds.size > 1}
-            variant={selectionMode && selectedStudentIds.size === 1 ? 'default' : 'outline'}
-            className={cn(
-              'rounded-xl px-4',
-              selectionMode && selectedStudentIds.size === 1
-                ? 'bg-primary hover:bg-primary/90 font-bold text-primary-foreground'
-                : 'bg-primary/10 hover:bg-primary/15 text-primary border-primary/20'
-            )}
-          >
-            <Printer className="mr-2 h-4 w-4" />
-            {selectionMode && selectedStudentIds.size === 1 ? 'Print Selected (DTC)' : 'DTC Card Print'}
+                ? `Print IDs — class (${students?.filter((s) => s.classId === studentFilterClass).length || 0})`
+                : 'Print ID cards'}
           </Button>
           <Button onClick={() => handleOpenStudentModal?.(null)} className="rounded-xl">
             <Plus className="mr-2 h-4 w-4" /> Add Student
