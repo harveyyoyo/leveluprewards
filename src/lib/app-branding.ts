@@ -5,6 +5,9 @@
 export const APP_NAME = 'LevelUp';
 export const APP_TAGLINE = 'School Rewards System';
 
+/** Matches `LevelUpLogo` arrow fill: `oklch(0.28 0.06 252)`. */
+export const LEVELUP_BRAND_PRIMARY_HEX = '#003d42';
+
 /**
  * URL for the LevelUp logo / wordmark across the app (default: preschool org sign-in chooser).
  * Set `NEXT_PUBLIC_LEVELUP_LOGO_HREF` to override per deployment.

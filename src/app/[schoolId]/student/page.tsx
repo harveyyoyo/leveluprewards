@@ -1069,7 +1069,12 @@ function StudentDashboardInner({
               primary: activeTheme.primary,
               text: computedThemeText,
               background: activeTheme.background,
+              accent: activeTheme.accent,
+              cardBackground: activeTheme.cardBackground,
+              backgroundStyle: activeTheme.backgroundStyle,
+              primaryForeground,
               emoji: student.customEmojiUrl || activeTheme.emoji,
+              fontFamily: activeTheme.fontFamily,
             } : undefined}
             onClose={dismissWelcome}
             playSound={playSound}

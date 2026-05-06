@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import OpenAI from 'openai';
 import { guardAiRoute } from '@/lib/apiAuth';
+import { normalizeStudentTheme } from '@/lib/themeContrast';
+import { LEVELUP_BRAND_PRIMARY_HEX } from '@/lib/app-branding';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 const defaultOpenAI = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || '' });
@@ -74,7 +76,7 @@ function sanitizeTheme(raw: unknown): ThemeResponse | null {
     return {
         background: requireHex(data.background, '#020617'),
         text: requireHex(data.text, '#ffffff'),
-        primary: requireHex(data.primary, '#0ea5e9'),
+        primary: requireHex(data.primary, LEVELUP_BRAND_PRIMARY_HEX),
         cardBackground: requireHex(data.cardBackground, '#111827'),
         accent: requireHex(data.accent, '#22c55e'),
         emoji: emoji ? Array.from(emoji)[0] : '⭐',
@@ -160,7 +162,9 @@ Required schema:
             if (!theme) {
                 throw new Error('AI response was not an object');
             }
-            return NextResponse.json(theme);
+            // Student themes are untrusted input — clamp to WCAG contrast rules before returning.
+            const normalized = normalizeStudentTheme(theme as any) ?? theme;
+            return NextResponse.json(normalized);
         } catch (parseError) {
             const preview =
                 responseText.length > 500 ? `${responseText.slice(0, 500)}…` : responseText;

@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Wand2, Loader2, Trash2 } from 'lucide-react';
 import { StudentTheme } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { cn, getContrastColor } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { GoogleFontLoader } from './GoogleFontLoader';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useAppContext } from '@/components/AppProvider';
@@ -16,7 +16,8 @@ import type { Student } from '@/lib/types';
 import { StudentIdCard } from '@/components/StudentIdCard';
 import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
-import { APP_NAME, APP_TAGLINE } from '@/lib/app-branding';
+import { APP_NAME, APP_TAGLINE, LEVELUP_BRAND_PRIMARY_HEX } from '@/lib/app-branding';
+import { normalizeStudentTheme } from '@/lib/themeContrast';
 
 function hexForColorInput(color: string | undefined, fallback: string): string {
     if (!color) return fallback;
@@ -155,7 +156,7 @@ export function ThemeGeneratorModal({
     const previewWrapRef = useRef<HTMLDivElement | null>(null);
     const [idPreviewScale, setIdPreviewScale] = useState(1.35);
     const [gradientAngle, setGradientAngle] = useState('135');
-    const [gradientA, setGradientA] = useState(initialTheme?.primary || '#0ea5e9');
+    const [gradientA, setGradientA] = useState(initialTheme?.primary || LEVELUP_BRAND_PRIMARY_HEX);
     const [gradientB, setGradientB] = useState(initialTheme?.accent || '#22c55e');
     const [backgroundMode, setBackgroundMode] = useState<'solid' | 'gradient' | 'custom'>(() =>
         inferBackgroundMode(initialTheme),
@@ -222,7 +223,7 @@ export function ThemeGeneratorModal({
         const parsed = parseWizardLinearGradient(previewTheme.backgroundStyle);
         if (!parsed) return;
         setGradientAngle(parsed.angle);
-        setGradientA(cssColorToHexForPicker(parsed.colorA, previewTheme.primary || '#0ea5e9'));
+        setGradientA(cssColorToHexForPicker(parsed.colorA, previewTheme.primary || LEVELUP_BRAND_PRIMARY_HEX));
         setGradientB(cssColorToHexForPicker(parsed.colorB, previewTheme.accent || '#22c55e'));
     }, [
         previewTheme,
@@ -279,7 +280,8 @@ export function ThemeGeneratorModal({
 
     const handleSave = () => {
         if (!previewTheme) return;
-        onSave(previewTheme);
+        // Persist only contrast-normalized themes so low-contrast palettes can't be stored.
+        onSave(normalizeStudentTheme(previewTheme) ?? previewTheme);
         onOpenChange(false);
     };
 
@@ -586,7 +588,7 @@ export function ThemeGeneratorModal({
                                                     if (mode === 'solid') {
                                                         updateTheme({ backgroundStyle: null });
                                                     } else if (mode === 'gradient') {
-                                                        const a = gradientA || previewTheme.primary || '#0ea5e9';
+                                                        const a = gradientA || previewTheme.primary || LEVELUP_BRAND_PRIMARY_HEX;
                                                         const b = gradientB || previewTheme.accent || '#22c55e';
                                                         setGradientA(a);
                                                         setGradientB(b);
@@ -833,7 +835,7 @@ export function ThemeGeneratorModal({
                                 )}
                                 style={previewTheme ? {
                                     ['--theme-bg' as any]: previewTheme.backgroundStyle ? 'transparent' : (previewTheme.background || '#020617'),
-                                    ['--theme-primary' as any]: previewTheme.primary || '#0ea5e9',
+                                    ['--theme-primary' as any]: previewTheme.primary || LEVELUP_BRAND_PRIMARY_HEX,
                                     ['--theme-accent' as any]: previewTheme.accent || '#22c55e',
                                 } : undefined}
                             >
@@ -884,38 +886,38 @@ export function ThemeGeneratorModal({
                                     })()
                                 )}
                             </div>
+
+                            <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                                    {canRemoveThemeFromWizard ? (
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                            disabled={isRemovingTheme}
+                                            onClick={() => void handleRemoveTheme()}
+                                        >
+                                            {isRemovingTheme ? (
+                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                            ) : (
+                                                <Trash2 className="mr-2 h-4 w-4" />
+                                            )}
+                                            Remove theme
+                                        </Button>
+                                    ) : null}
+                                </div>
+                                <div className="flex w-full justify-end gap-2 sm:w-auto">
+                                    <Button variant="outline" onClick={() => onOpenChange(false)}>
+                                        Cancel
+                                    </Button>
+                                    <Button onClick={handleSave} disabled={!previewTheme}>
+                                        Save & Apply Theme
+                                    </Button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-
-                <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-between sm:items-center pb-24 md:pb-16">
-                    <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-                        {canRemoveThemeFromWizard ? (
-                            <Button
-                                type="button"
-                                variant="outline"
-                                className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                                disabled={isRemovingTheme}
-                                onClick={() => void handleRemoveTheme()}
-                            >
-                                {isRemovingTheme ? (
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                ) : (
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                )}
-                                Remove theme
-                            </Button>
-                        ) : null}
-                    </div>
-                    <div className="flex w-full justify-end gap-2 sm:w-auto">
-                        <Button variant="outline" onClick={() => onOpenChange(false)}>
-                            Cancel
-                        </Button>
-                        <Button onClick={handleSave} disabled={!previewTheme}>
-                            Save & Apply Theme
-                        </Button>
-                    </div>
-                </DialogFooter>
             </DialogContent>
         </Dialog>
     );

@@ -7,6 +7,7 @@ import {
   primaryForegroundFor,
   resolveStudentThemeWithSchoolDefault,
 } from './themeContrast';
+import { LEVELUP_BRAND_PRIMARY_HEX } from './app-branding';
 
 describe('contrastRatio', () => {
   it('returns 21 for pure black on pure white', () => {
@@ -74,7 +75,7 @@ describe('normalizeStudentTheme', () => {
     const out = normalizeStudentTheme({
       background: '#0b0b24',
       text: '#ffffff',
-      primary: '#0ea5e9',
+      primary: LEVELUP_BRAND_PRIMARY_HEX,
       cardBackground: '#ffffff',
       accent: '#22c55e',
     })!;
@@ -110,7 +111,7 @@ describe('normalizeStudentTheme', () => {
     const input = {
       background: '#0f172a',
       text: '#f8fafc',
-      primary: '#0ea5e9',
+      primary: '#38bdf8',
       cardBackground: '#1e293b',
       accent: '#22c55e',
     };

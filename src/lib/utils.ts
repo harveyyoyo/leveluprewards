@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { LEVELUP_BRAND_PRIMARY_HEX } from "@/lib/app-branding"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -20,12 +21,45 @@ export function getContrastColor(hexColor: string): 'black' | 'white' {
   return yiq >= 128 ? 'black' : 'white';
 }
 
+export const CATEGORY_COLOR_PALETTE = [
+  '#ef4444',
+  '#f97316',
+  '#f59e0b',
+  '#eab308',
+  '#84cc16',
+  '#22c55e',
+  '#10b981',
+  '#14b8a6',
+  '#06b6d4',
+  LEVELUP_BRAND_PRIMARY_HEX,
+  '#3b82f6',
+  '#6366f1',
+  '#8b5cf6',
+  '#a855f7',
+  '#d946ef',
+  '#ec4899',
+  '#f43f5e',
+];
+
+function normalizeHexColor(c: string) {
+  return c.trim().toLowerCase();
+}
+
+/**
+ * Picks a palette color not currently in use. If all are used, falls back to a
+ * random palette color (duplicates unavoidable past the palette size).
+ */
+export function pickDistinctCategoryColor(usedColors: Array<string | undefined | null> = []): string {
+  const used = new Set(
+    usedColors
+      .filter(Boolean)
+      .map((c) => normalizeHexColor(String(c)))
+  );
+  const available = CATEGORY_COLOR_PALETTE.filter((c) => !used.has(normalizeHexColor(c)));
+  const pool = available.length ? available : CATEGORY_COLOR_PALETTE;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
 export function getRandomColor(): string {
-  const colors = [
-    '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', 
-    '#22c55e', '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9', 
-    '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef', 
-    '#ec4899', '#f43f5e'
-  ];
-  return colors[Math.floor(Math.random() * colors.length)];
+  return CATEGORY_COLOR_PALETTE[Math.floor(Math.random() * CATEGORY_COLOR_PALETTE.length)];
 }

@@ -20,6 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { Checkbox } from '@/components/ui/checkbox';
 import { BonusSpinWheelModal } from './BonusSpinWheelModal';
+import { LEVELUP_BRAND_PRIMARY_HEX } from '@/lib/app-branding';
 
 interface AchievementModalProps {
     isOpen: boolean;
@@ -266,14 +267,14 @@ export function AchievementModal({ isOpen, setIsOpen, achievement, categories, o
                                     <input
                                         id="ach-accent"
                                         type="color"
-                                        value={accentColor && /^#[0-9A-Fa-f]{6}$/.test(accentColor) ? accentColor : '#0ea5e9'}
+                                        value={accentColor && /^#[0-9A-Fa-f]{6}$/.test(accentColor) ? accentColor : LEVELUP_BRAND_PRIMARY_HEX}
                                         onChange={e => setAccentColor(e.target.value)}
                                         className="w-10 h-10 rounded border border-input cursor-pointer"
                                     />
                                     <Input
                                         value={accentColor}
                                         onChange={e => setAccentColor(e.target.value)}
-                                        placeholder="#0ea5e9"
+                                        placeholder={LEVELUP_BRAND_PRIMARY_HEX}
                                         className="font-mono text-sm"
                                     />
                                 </div>

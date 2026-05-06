@@ -6,6 +6,7 @@ import { RotateCcw, Trophy, XCircle, Sparkles, Loader2 } from 'lucide-react';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { LEVELUP_BRAND_PRIMARY_HEX } from '@/lib/app-branding';
 
 interface BonusSpinWheelModalProps {
     isOpen: boolean;
@@ -18,7 +19,7 @@ export function BonusSpinWheelModal({
     isOpen,
     achievement,
     onWon,
-    primaryColor = '#0ea5e9',
+    primaryColor = LEVELUP_BRAND_PRIMARY_HEX,
 }: BonusSpinWheelModalProps) {
     const [isSpinning, setIsSpinning] = useState(false);
     const [result, setResult] = useState<number | null>(null);

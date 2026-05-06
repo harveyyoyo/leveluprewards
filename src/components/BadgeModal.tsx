@@ -18,6 +18,7 @@ import DynamicIcon from './DynamicIcon';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { Switch } from '@/components/ui/switch';
+import { LEVELUP_BRAND_PRIMARY_HEX } from '@/lib/app-branding';
 
 const PERIOD_LABELS: Record<Badge['period'], string> = {
   month: 'This month',
@@ -201,11 +202,11 @@ export function BadgeModal({ isOpen, setIsOpen, badge, categories, onSave }: Bad
                 <input
                   id="badge-accent"
                   type="color"
-                  value={accentColor && /^#[0-9A-Fa-f]{6}$/.test(accentColor) ? accentColor : '#0ea5e9'}
+                  value={accentColor && /^#[0-9A-Fa-f]{6}$/.test(accentColor) ? accentColor : LEVELUP_BRAND_PRIMARY_HEX}
                   onChange={(e) => setAccentColor(e.target.value)}
                   className="w-10 h-10 rounded border cursor-pointer"
                 />
-                <Input value={accentColor} onChange={(e) => setAccentColor(e.target.value)} placeholder="#0ea5e9" className="font-mono text-sm" />
+                <Input value={accentColor} onChange={(e) => setAccentColor(e.target.value)} placeholder={LEVELUP_BRAND_PRIMARY_HEX} className="font-mono text-sm" />
               </div>
             </div>
           </div>

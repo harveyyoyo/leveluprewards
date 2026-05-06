@@ -51,6 +51,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import DynamicIcon from '@/components/DynamicIcon';
 import { cn, getStudentNickname, getContrastColor } from '@/lib/utils';
+import { LEVELUP_BRAND_PRIMARY_HEX } from '@/lib/app-branding';
 import { resolveStudentThemeWithSchoolDefault, primaryForegroundFor } from '@/lib/themeContrast';
 import { getReadableErrorMessage } from '@/lib/errorMessage';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -59,6 +60,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { motion, AnimatePresence } from "framer-motion";
 import { useSettings } from '@/components/providers/SettingsProvider';
+import { PrinterReminderCallout } from '@/components/PrinterReminderCallout';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -840,7 +842,7 @@ export function PrizeDashboard({
     );
     const fontScale = activeTheme?.fontScale ?? 1.15;
     const themeBg = activeTheme?.background || 'transparent';
-    const computedThemeText = activeTheme?.text || (getContrastColor(activeTheme?.background || activeTheme?.cardBackground || activeTheme?.primary || '#0ea5e9') === 'black' ? '#020617' : '#ffffff');
+    const computedThemeText = activeTheme?.text || (getContrastColor(activeTheme?.background || activeTheme?.cardBackground || activeTheme?.primary || LEVELUP_BRAND_PRIMARY_HEX) === 'black' ? '#020617' : '#ffffff');
     // Readable foreground for anything rendered on top of `--theme-primary`
     // (redeem buttons, points badges). Falls back to white when there is
     // no custom theme (matching the existing default-theme look).
@@ -1029,6 +1031,12 @@ export function PrizeDashboard({
                                 </div>
                                 </div>
                             </div>
+
+                            <PrinterReminderCallout
+                                title="Voucher / slip printer"
+                                message={settings.printerReminderPrizeVouchers}
+                                className="mb-6"
+                            />
 
                             <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-10">
                                 <div className="flex flex-col gap-4 min-w-0">
@@ -1324,6 +1332,11 @@ export function PrizeDashboard({
                                 Print a voucher for <span className="font-bold">{ticketData?.prizeName}</span>{ticketData && ticketData.quantity > 1 ? ` (x${ticketData.quantity})` : ''}.
                             </AlertDialogDescription>
                         </AlertDialogHeader>
+                        <PrinterReminderCallout
+                            title="Printer reminder"
+                            message={settings.printerReminderPrizeVouchers}
+                            className="mt-1 mb-2"
+                        />
                         <AlertDialogFooter className="flex-col gap-2 sm:flex-col sm:justify-end sm:space-x-0">
                             <AlertDialogCancel onClick={() => setTicketData(null)}>No Thanks</AlertDialogCancel>
                             <AlertDialogAction className="w-full sm:w-auto" onClick={handlePrintTicket}>Print Voucher</AlertDialogAction>

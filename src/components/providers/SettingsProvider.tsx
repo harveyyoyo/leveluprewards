@@ -23,6 +23,7 @@ import {
 import type { StudentTheme } from '@/lib/types';
 import type { IdCardPrintProfile } from '@/lib/id-card-print-catalog';
 import { STUDENT_WELCOME_STYLES_LIVE } from '@/lib/studentWelcome';
+import { LEVELUP_BRAND_PRIMARY_HEX } from '@/lib/app-branding';
 
 type ColorScheme = 'default' | 'sky' | 'rose' | 'mint' | 'lavender' | 'peach';
 
@@ -220,7 +221,8 @@ interface SettingsContextType {
 }
 
 const colorSchemes: Record<ColorScheme, { bg: string; card: string; accent: string; border: string; label: string; swatch: string }> = {
-    default: { bg: 'bg-slate-50', card: 'bg-white', accent: 'text-slate-800', border: 'border-slate-200', label: 'Default', swatch: 'bg-slate-200' },
+    /* Swatch must stay a literal `bg-[…]` so Tailwind JIT includes it (matches LEVELUP_BRAND_PRIMARY_HEX). */
+    default: { bg: 'bg-slate-50', card: 'bg-white', accent: 'text-slate-800', border: 'border-slate-200', label: 'Default', swatch: 'bg-[#003d42]' },
     sky: { bg: 'bg-sky-50', card: 'bg-white', accent: 'text-sky-700', border: 'border-sky-200', label: 'Sky', swatch: 'bg-sky-300' },
     rose: { bg: 'bg-rose-50', card: 'bg-white', accent: 'text-rose-700', border: 'border-rose-200', label: 'Rose', swatch: 'bg-rose-300' },
     mint: { bg: 'bg-emerald-50', card: 'bg-white', accent: 'text-emerald-700', border: 'border-emerald-200', label: 'Mint', swatch: 'bg-emerald-300' },
@@ -307,7 +309,7 @@ const defaultSettings: Settings = {
         fontScale: 1.15,
         background: '#f8fafc',
         text: '#020617',
-        primary: '#0ea5e9',
+        primary: LEVELUP_BRAND_PRIMARY_HEX,
         cardBackground: '#ffffff',
         accent: '#64748b',
     },
