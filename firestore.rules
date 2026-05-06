@@ -230,7 +230,9 @@ service cloud.firestore {
       }
 
       match /bulletinBoardIncentives/{incentiveId} {
-        allow read: if isSchoolMember(schoolId);
+        // Bulletin board incentives are intentionally readable after auth
+        // (e.g. demo / kiosk flows) even before role/kioskMember docs exist.
+        allow read: if isAuth();
         allow create, update, delete: if isAdmin(schoolId) || isDeveloper();
       }
 
