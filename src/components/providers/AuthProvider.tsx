@@ -530,7 +530,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 try {
                     // 1. Call the function to set the role on the backend
                     const verify = httpsCallable(functions, 'verifySchoolPasscode');
-                    await verify({ schoolId: lowerSchoolId, passcode: credentials.passcode });
+                    await verify({
+                        schoolId: lowerSchoolId,
+                        passcode: credentials.passcode ?? '',
+                    });
 
                     // 2. Poll the server to confirm the admin role is readable
                     const adminRoleRef = doc(firestore, 'schools', lowerSchoolId, 'roles_admin', auth.currentUser.uid);

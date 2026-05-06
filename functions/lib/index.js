@@ -59,6 +59,8 @@ function schoolAccessPasscodeFrom(data) {
 function adminPasscodeFrom(data) {
     return trimmedString(data.adminPasscode) || trimmedString(data.passcode) || "1234";
 }
+/** Schools where `verifySchoolPasscode` skips passcode verification (public demos). Sync with `src/lib/sample-schools.ts`. */
+const PUBLIC_DEMO_ADMIN_SCHOOL_IDS = new Set(["schoolabc", "yeshiva"]);
 async function hasSchoolRole(schoolId, uid, roles) {
     const db = admin.firestore();
     const roleCollections = {
@@ -525,18 +527,28 @@ exports.scheduledFullBackup = functions
 exports.verifySchoolPasscode = functions.https.onCall(async (data, context) => {
     requireAuth(context);
     requireString(data.schoolId, "schoolId");
-    if (typeof data.passcode !== "string" || data.passcode.length === 0) {
-        throw new functions.https.HttpsError("invalid-argument", "A valid passcode is required.");
-    }
     const schoolId = String(data.schoolId).trim().toLowerCase();
+    const passcode = typeof data.passcode === "string" ? String(data.passcode).trim() : "";
     const db = admin.firestore();
     const schoolDoc = await db.collection("schools").doc(schoolId).get();
     if (!schoolDoc.exists) {
         throw new functions.https.HttpsError("not-found", "School not found.");
     }
-    const schoolData = schoolDoc.data();
-    if (adminPasscodeFrom(schoolData) !== String(data.passcode).trim()) {
-        throw new functions.https.HttpsError("permission-denied", "Invalid passcode.");
+    const publicDemoAdmin = PUBLIC_DEMO_ADMIN_SCHOOL_IDS.has(schoolId);
+    if (!publicDemoAdmin) {
+        if (passcode.length === 0) {
+            throw new functions.https.HttpsError("invalid-argument", "A valid passcode is required.");
+        }
+        const schoolData = schoolDoc.data();
+        if (adminPasscodeFrom(schoolData) !== passcode) {
+            throw new functions.https.HttpsError("permission-denied", "Invalid passcode.");
+        }
+    }
+    else {
+        functions.logger.info("verifySchoolPasscode public demo allowlist (passcode not checked)", {
+            schoolId,
+            uid: context.auth.uid,
+        });
     }
     // Provision admin role using the Admin SDK (path must match client: schools/{schoolId}/roles_admin/{uid})
     const adminRoleRef = db.collection("schools").doc(schoolId).collection("roles_admin").doc(context.auth.uid);
