@@ -3,6 +3,8 @@
 const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ['pdf-parse', 'mammoth'],
+    /** Faster dev compiles for barrel-import packages (tree-shaken imports). */
+    optimizePackageImports: ['lucide-react'],
   },
   /* config options here */
   webpack: (config) => {
