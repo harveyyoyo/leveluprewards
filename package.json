@@ -8,8 +8,8 @@
   },
   "scripts": {
     "postinstall": "node scripts/copy-face-models.mjs",
-    "dev": "next dev --turbo",
-    "dev:webpack": "next dev",
+    "dev": "next dev",
+    "dev:turbo": "next dev --turbo",
     "prebuild": "node scripts/copy-face-models.mjs",
     "build": "next build",
     "start": "next start",
