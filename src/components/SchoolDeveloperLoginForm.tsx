@@ -47,6 +47,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
   );
   const schoolIdRef = useRef<HTMLInputElement | null>(null);
   const passcodeRef = useRef<HTMLInputElement | null>(null);
+  const lastAutoFocusedRef = useRef<null | 'schoolId' | 'passcode'>(null);
   const { login, isInitialized, isUserLoading } = useAppContext();
   const { toast } = useToast();
   const router = useRouter();
@@ -108,13 +109,22 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
   useEffect(() => {
     if (!mounted || !isInitialized || isUserLoading) return;
 
+    // Only auto-advance focus to passcode when the School ID was *prefilled* (e.g. via `?school=`).
+    // Never auto-focus on every keystroke (it will keep selecting the field and feel like typing is broken).
     const shouldFocusPasscode =
-      isDeveloperOnly || isDeveloper || (mode === 'full' && schoolId.trim().length > 0);
+      isDeveloperOnly || isDeveloper || (mode === 'full' && !!initialSchoolId?.trim() && schoolId.trim().length > 0);
 
-    const target = shouldFocusPasscode ? passcodeRef.current : schoolIdRef.current;
-    target?.focus();
-    target?.select?.();
-  }, [isDeveloper, isDeveloperOnly, isInitialized, isUserLoading, mode, mounted, schoolId]);
+    const desired: 'schoolId' | 'passcode' = shouldFocusPasscode ? 'passcode' : 'schoolId';
+    if (lastAutoFocusedRef.current === desired) return;
+
+    const target = desired === 'passcode' ? passcodeRef.current : schoolIdRef.current;
+    if (!target) return;
+
+    // Only select when we intentionally moved focus (prefill/toggle) — not while the user is typing.
+    target.focus();
+    if (desired === 'passcode') target.select?.();
+    lastAutoFocusedRef.current = desired;
+  }, [isDeveloper, isDeveloperOnly, initialSchoolId, isInitialized, isUserLoading, mode, mounted]);
 
   // Developer access should only be surfaced on the dedicated `/developer` route (mode: developer-only).
   // The public school login (`/login`) should not expose developer options.
