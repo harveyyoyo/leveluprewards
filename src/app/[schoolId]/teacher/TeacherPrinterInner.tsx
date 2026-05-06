@@ -2637,14 +2637,12 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                     />
                                 </div>
                             )}
-                            {secretaryMode && schoolId ? (
-                                <>
-                                </>
-                            ) : null}
-                            <Button variant="outline" onClick={onLogout} className="gap-2 rounded-lg h-10">
-                                <LogOut className="w-4 h-4" />
-                                <span className="hidden sm:inline">{secretaryMode ? 'Log out' : 'Switch Teacher'}</span>
-                            </Button>
+                            {secretaryMode && (
+                                <Button variant="outline" onClick={onLogout} className="gap-2 rounded-lg h-10">
+                                    <LogOut className="w-4 h-4" />
+                                    <span className="hidden sm:inline">Log out</span>
+                                </Button>
+                            )}
                         </div>
                     </div>
 
