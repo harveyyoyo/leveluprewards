@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Megaphone, Sparkles, Loader2 } from 'lucide-react';
 import { useAppContext } from '@/components/AppProvider';
@@ -12,6 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { cn } from '@/lib/utils';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
 import { DEFAULT_BULLETIN_SUBTITLE, bulletinLogoBoxClass, getBulletinBoardCardClassName } from '@/lib/bulletinBoard';
+import { getLevelUpLogoHref } from '@/lib/app-branding';
 
 import { motion } from 'framer-motion';
 import { rainbowTripletForNavId, complementTripletForNavId } from '@/lib/rainbowNav';
@@ -44,7 +46,10 @@ export default function BulletinBoardViewPage() {
   const animBackdrop = globalAnimatedBackdropActive(settings);
 
   const schoolDocRef = useSchoolMetadataDocRef();
-  const { data: schoolMeta } = useDoc<{ logoUrl?: string }>(schoolDocRef);
+  const { data: schoolMeta } = useDoc<{ logoUrl?: string; name?: string }>(schoolDocRef);
+  const schoolName =
+    schoolMeta?.name ||
+    (schoolId ? schoolId.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()) : '');
 
   const bulletinQuery = useMemoFirebase(
     () => (schoolId ? query(collection(firestore, 'schools', schoolId, 'bulletinBoardIncentives')) : null),
@@ -101,17 +106,31 @@ export default function BulletinBoardViewPage() {
         ['--ring' as any]: complementTripletForNavId('admin', settings.colorScheme),
       } as any}
     >
+      <div className="w-full mb-6 rounded-2xl border bg-card/70 backdrop-blur-md px-4 py-3 flex items-center justify-between gap-3">
+        <Link
+          href={getLevelUpLogoHref()}
+          className="min-w-0 no-underline outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-lg"
+          aria-label="LevelUp EDU — school sign-in"
+        >
+          <p className="text-xs font-black uppercase tracking-[0.22em] text-muted-foreground">levelUp EDU</p>
+          <p className="text-sm font-bold truncate">{schoolName}</p>
+        </Link>
+        <div className="shrink-0 rounded-xl border bg-muted/20 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+          Bulletin Board
+        </div>
+      </div>
+
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className="w-full text-center mb-12"
+        className="w-full text-center mb-10"
       >
-        <h1 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tighter text-primary drop-shadow-sm mb-4 flex items-center justify-center gap-4">
-          <Megaphone className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 text-indigo-500" />
+        <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tighter text-primary drop-shadow-sm mb-3 flex items-center justify-center gap-3">
+          <Megaphone className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-indigo-500" />
           {bulletinTitle}
         </h1>
-        <p className="text-xs sm:text-sm font-bold text-muted-foreground uppercase tracking-[0.3em] max-w-2xl mx-auto">
+        <p className="text-[10px] sm:text-xs font-bold text-muted-foreground uppercase tracking-[0.3em] max-w-2xl mx-auto">
           {bulletinSubtitle}
         </p>
       </motion.div>

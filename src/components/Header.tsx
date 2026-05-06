@@ -1,6 +1,6 @@
 
 'use client';
-import { useParams, usePathname } from 'next/navigation';
+import { useParams, usePathname, useSearchParams } from 'next/navigation';
 import { doc } from 'firebase/firestore';
 import {
   Trophy,
@@ -35,10 +35,12 @@ import { useSchoolMetadataDocRef } from '@/hooks/useSchoolMetadataDocRef';
 import Logo from './Logo';
 import { portalHoverTextClass, portalTextClass, type PortalColorKey } from '@/lib/portalColors';
 import { AdminLoginButton } from './AdminLoginButton';
+import { getLevelUpLogoHref } from '@/lib/app-branding';
 
 
 export default function Header() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const params = useParams<{ schoolId?: string }>();
   const { loginState, schoolId: contextSchoolId, isInitialized, syncStatus, logout, isAdmin, userName, isKioskLocked } = useAppContext();
   const { settings } = useSettings();
@@ -62,17 +64,20 @@ export default function Header() {
 
   const isLoginPage = pathname === '/' || pathname.startsWith('/s/');
   const isDeveloperMode = loginState === 'developer' && !schoolId;
+  const fullscreen = searchParams?.get('fullscreen') === '1';
+  const isFullscreenSpecialPage =
+    fullscreen && (pathname?.includes('/halloffame') || pathname?.includes('/bulletin-board'));
 
   const handleLogout = () => {
     playSound('swoosh');
     logout();
   };
 
-  if (isLoginPage || !isInitialized || isDeveloperMode) {
+  if (isLoginPage || !isInitialized || isDeveloperMode || isFullscreenSpecialPage) {
     return null;
   }
 
-  const logoLink = schoolId ? `/${schoolId}/portal` : '/';
+  const logoLink = getLevelUpLogoHref();
   const centerLabel = schoolName;
   const centerHref = schoolId ? `/${schoolId}/sign-in` : '/portal';
   const isStaff =

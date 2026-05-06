@@ -9,11 +9,13 @@ import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import {
   isPublicSampleSchoolId,
-  SAMPLE_ADMIN_PASSCODE,
+  PUBLIC_DEMO_ADMIN_PASSCODE,
   SAMPLE_SCHOOL_ACCESS_PASSCODE,
 } from '@/lib/sample-schools';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
 import Logo from '@/components/Logo';
+import { getLevelUpLogoHref } from '@/lib/app-branding';
 import { useFirestore, useMemoFirebase, useDoc, useFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import {
@@ -290,7 +292,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
       router.prefetch(`/${schoolId}/admin`);
       const adminOk = await login('admin', {
         schoolId,
-        passcode: SAMPLE_ADMIN_PASSCODE,
+        passcode: PUBLIC_DEMO_ADMIN_PASSCODE,
       });
       if (adminOk) {
         playSound('login');
@@ -360,7 +362,11 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
           )}
         >
           <div className="text-center mb-6">
-            <div className="flex items-center justify-center gap-4">
+            <Link
+              href={getLevelUpLogoHref()}
+              className="flex items-center justify-center gap-4 no-underline outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-xl"
+              aria-label="LevelUp EDU — school sign-in"
+            >
               {appLogoUrl ? (
                 <div className="h-14 w-14 rounded-2xl overflow-hidden bg-muted border border-border/70 flex items-center justify-center">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -381,7 +387,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
                 <h1 className="text-2xl font-bold font-headline text-foreground">levelUp EDU</h1>
                 <p className="text-sm text-muted-foreground">School rewards system</p>
               </div>
-            </div>
+            </Link>
             <p className="mt-4 text-sm text-muted-foreground leading-relaxed">
               {isDeveloperOnly ? (
                 <>

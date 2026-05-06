@@ -4,7 +4,6 @@ import { useState, useEffect, type ComponentType, type CSSProperties } from 'rea
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
-import { LevelUpKioskLogo } from '@/components/LevelUpKioskLogo';
 import { GraduationCap, Printer, UserCog, Trophy, ChevronRight, Loader2, Megaphone } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
@@ -243,6 +242,9 @@ export default function PortalPage() {
                 <div className="mt-16 text-center">
                     <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground/60">
                         beta · {process.env.NEXT_PUBLIC_VERSION || 'beta-1.1.0'} · {process.env.NEXT_PUBLIC_BUILD_TIME}
+                    </p>
+                    <p className="mt-2 text-xs font-semibold text-muted-foreground/70">
+                        © 2026 LevelUp Enterprises LLC. All Rights Reserved.
                     </p>
                 </div>
             </div>
