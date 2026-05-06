@@ -1,6 +1,6 @@
 'use client';
 
-import { Cog, Edit3, Gift, Plus, Trash2, HelpCircle, GraduationCap, ShoppingBag, Wand2, UserMinus } from 'lucide-react';
+import { Cog, Edit3, Gift, Plus, Trash2, HelpCircle, GraduationCap, ShoppingBag, Sparkles, Wand2, UserMinus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
@@ -13,6 +13,7 @@ import type { Prize, Teacher, Class, VendingMotorConfig } from '@/lib/types';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { AutoCircularToggles } from '@/components/AutoCircularToggles';
+import { AdminRecordListHeader } from '@/components/admin/AdminRecordListHeader';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -24,7 +25,7 @@ import {
   teacherListedOnPrize,
 } from '@/lib/prize-utils';
 import { useSettings } from '@/components/providers/SettingsProvider';
-import { createAiJokePrize, isAiJokePrize } from '@/lib/aiJokePrize';
+import type { PrizeAiFunReward } from '@/lib/types';
 
 export function AdminPrizesTab({
   prizes,
@@ -56,9 +57,21 @@ export function AdminPrizesTab({
   const { settings } = useSettings();
   const vendingEnabled = settings.enableVendingMachine === true;
   const prizeAiSurpriseEnabled = settings.enablePrizeAiSurprise === true;
+  const aiDefaultPoints = Math.max(0, settings.prizeAiSurpriseDefaultPoints ?? 25);
   const [helpOpen, setHelpOpen] = useState(false);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardStep, setWizardStep] = useState(0);
+  const [aiAddOpen, setAiAddOpen] = useState(false);
+  const [aiName, setAiName] = useState('');
+  const [aiIcon, setAiIcon] = useState('Sparkles');
+  const [aiPoints, setAiPoints] = useState(String(aiDefaultPoints));
+  const [aiKind, setAiKind] = useState<PrizeAiFunReward>('joke');
+  const [aiOfferPrint, setAiOfferPrint] = useState(true);
+  const [aiInStock, setAiInStock] = useState(true);
+  const [aiStockCount, setAiStockCount] = useState('');
+  const [aiTeacherIds, setAiTeacherIds] = useState<string[]>([]);
+  const [aiClassId, setAiClassId] = useState<'all' | string>('all');
+  const [aiSchoolWide, setAiSchoolWide] = useState(false);
 
   // --- REAL prize creation wizard state ---
   const [wName, setWName] = useState('');
@@ -85,11 +98,6 @@ export function AdminPrizesTab({
     setWSchoolWide(false);
   };
 
-  const effectivePrizes = useMemo(() => {
-    const base = prizes || [];
-    return prizeAiSurpriseEnabled ? [...base, createAiJokePrize()] : base;
-  }, [prizes, prizeAiSurpriseEnabled]);
-
   const wizardTitle = useMemo(() => {
     const titles = [
       'Item Wizard',
@@ -106,6 +114,15 @@ export function AdminPrizesTab({
     if (wizardStep === 2) return !Number.isNaN(parseInt(wPoints, 10)) && parseInt(wPoints, 10) >= 0;
     return true;
   }, [wizardStep, wName, wPoints]);
+
+  const defaultAiNameForKind = (k: PrizeAiFunReward) =>
+    k === 'joke'
+      ? 'School-safe joke surprise'
+      : k === 'riddle'
+        ? 'Brain teaser surprise'
+        : k === 'fortune'
+          ? 'Encouraging fortune surprise'
+          : 'Surprise (random style)';
 
   return (
     <Card className="border-t-4 border-primary shadow-md">
@@ -127,7 +144,29 @@ export function AdminPrizesTab({
           </CardTitle>
           <CardDescription>Items available for student redemption.</CardDescription>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {prizeAiSurpriseEnabled ? (
+            <Button
+              type="button"
+              variant="secondary"
+              className="rounded-xl"
+              onClick={() => {
+                setAiKind('joke');
+                setAiName(defaultAiNameForKind('joke'));
+                setAiIcon('Sparkles');
+                setAiOfferPrint(true);
+                setAiInStock(true);
+                setAiStockCount('');
+                setAiTeacherIds([]);
+                setAiClassId('all');
+                setAiSchoolWide(false);
+                setAiPoints(String(aiDefaultPoints));
+                setAiAddOpen(true);
+              }}
+            >
+              <Sparkles className="mr-2 h-4 w-4" /> Add AI surprise prize
+            </Button>
+          ) : null}
           <Button
             variant="outline"
             className="rounded-xl"
@@ -156,73 +195,33 @@ export function AdminPrizesTab({
       </CardHeader>
       <CardContent className="min-w-0">
         <ul className="grid grid-cols-1 gap-4 h-[calc(100vh-22rem)] min-h-[250px] min-w-0 overflow-y-auto overflow-x-hidden pr-2">
-          <li className="sticky top-0 z-20 rounded-2xl border bg-secondary/70 backdrop-blur px-3 py-2 shadow-sm">
-            <div className="grid grid-cols-[28px_36px_minmax(140px,240px)_56px_56px_72px_64px_56px_64px_96px] items-center gap-x-2 min-w-0">
-              <div className="h-7 w-7" aria-hidden />
-              <div className="size-9" aria-hidden />
-
-              <div className="min-w-0">
-                <div className="text-[12px] font-black uppercase tracking-[0.26em] text-foreground/90">
-                  Name
-                </div>
-              </div>
-
-              <div className="text-center">
-                <div className="text-[12px] font-black uppercase tracking-[0.26em] text-foreground/90">
-                  Pts
-                </div>
-              </div>
-
-              <div className="text-center">
-                <div className="text-[12px] font-black uppercase tracking-[0.26em] text-foreground/90">
-                  Qty
-                </div>
-              </div>
-
-              <div className="text-center">
-                <div className="text-[12px] font-black uppercase tracking-[0.26em] text-foreground/90">
-                  STK / PRT
-                </div>
-              </div>
-
-              <div>
-                <div className="text-[12px] font-black uppercase tracking-[0.26em] text-foreground/90">
-                  Icon
-                </div>
-              </div>
-
-              <div className="text-center">
-                <div className="text-[12px] font-black uppercase tracking-[0.26em] text-foreground/90">
-                  {mode === 'teacher' ? 'Wide' : 'Tchrs'}
-                </div>
-              </div>
-
-              <div className="text-center">
-                <div className="text-[12px] font-black uppercase tracking-[0.26em] text-foreground/90">
-                  Class
-                </div>
-              </div>
-
-              <div className="text-right pr-1">
-                <div className="text-[12px] font-black uppercase tracking-[0.26em] text-foreground/90">
-                  Actions
-                </div>
-              </div>
-            </div>
-          </li>
-          {effectivePrizes
-            ?.sort((a, b) => a.points - b.points)
+          <AdminRecordListHeader
+            gridClassName="grid-cols-[80px_minmax(140px,240px)_56px_72px_200px_44px_72px_72px_64px_96px]"
+            columns={[
+              { label: 'Edit' },
+              { label: 'Item Name' },
+              { label: 'Cost', className: 'text-center' },
+              { label: 'Stock', className: 'text-center' },
+              { label: 'Shop Visibility', className: 'text-center' },
+              { label: 'Icon', className: 'text-center' },
+              { label: mode === 'teacher' ? 'School-Wide' : 'Teachers', className: 'text-center' },
+              { label: 'Class Access', className: 'text-center' },
+              { label: 'Motor', className: 'text-center' },
+              { label: 'Delete', className: 'text-right pr-1' },
+            ]}
+          />
+          {(prizes || [])
+            .sort((a, b) => a.points - b.points)
             .map((p) => (
               (() => {
-                const systemAi = isAiJokePrize(p);
                 const restrictionIds = prizeRestrictionTeacherIds(p);
                 const schoolWideT = isPrizeSchoolWideTeachers(p);
                 const isCreator = mode === 'teacher' && teacherId ? isTeacherPrizeCreator(p, teacherId) : false;
                 const listed = mode === 'teacher' && teacherId ? teacherListedOnPrize(p, teacherId) : false;
-                const canEditFull = !systemAi && (mode === 'admin' || (mode === 'teacher' && isCreator));
+                const canEditFull = mode === 'admin' || (mode === 'teacher' && isCreator);
                 const canRemoveSelf =
-                  !systemAi && mode === 'teacher' && teacherId && !isCreator && listed && !schoolWideT;
-                const canDelete = !systemAi && (mode === 'admin' || (mode === 'teacher' && isCreator));
+                  mode === 'teacher' && teacherId && !isCreator && listed && !schoolWideT;
+                const canDelete = mode === 'admin' || (mode === 'teacher' && isCreator);
                 const rowDimmed =
                   mode === 'teacher' &&
                   teacherId &&
@@ -250,121 +249,51 @@ export function AdminPrizesTab({
                   onUpdatePrize({ ...p, vendingMotor: next });
                 };
 
-                if (systemAi) {
-                  return (
-                    <li
-                      key={p.id}
-                      className={cn("flex items-center gap-x-2 rounded-2xl border bg-secondary/30 p-1.5 min-w-0")}
-                    >
-                      <div className="flex shrink-0 items-center">
-                        <div className="h-7 w-7" aria-hidden />
-                      </div>
-                      <div className="size-9 shrink-0 rounded-lg flex items-center justify-center bg-background border relative overflow-hidden">
-                        <DynamicIcon
-                          name={p.icon || 'Sparkles'}
-                          className="w-5 h-5 text-amber-600 dark:text-amber-400 relative z-10 drop-shadow-sm"
-                        />
-                      </div>
-                      <div className="min-w-0 min-w-[140px] max-w-[240px] flex-[0_1_240px]">
-                        <Input
-                          aria-label="Prize name"
-                          className="h-7 text-[10px] px-1.5 w-full min-w-0 font-semibold"
-                          disabled
-                          value={`${p.name} (built-in)`}
-                          readOnly
-                        />
-                      </div>
-                      <div className="flex shrink-0 flex-col w-14">
-                        <Input
-                          type="number"
-                          min={0}
-                          disabled
-                          aria-label="Points"
-                          className="h-7 text-[10px] px-1"
-                          value={String(p.points ?? 0)}
-                          readOnly
-                        />
-                      </div>
-                      <div className="flex shrink-0 flex-col w-14">
-                        <Input
-                          disabled
-                          aria-label="Quantity"
-                          className="h-7 text-[10px] px-1"
-                          placeholder="∞"
-                          value=""
-                          readOnly
-                        />
-                      </div>
-                      <div className="flex shrink-0 flex-col items-center">
-                        <AutoCircularToggles
-                          record={p}
-                          defs={[{ key: 'inStock', label: 'In Stock', shortLabel: 'In stock' }]}
-                          onToggle={() => {}}
-                        />
-                      </div>
-                      <div className="flex shrink-0 flex-col w-16">
-                        <Input
-                          className="h-7 text-[10px] px-1 font-mono w-full"
-                          disabled
-                          aria-label="Icon name"
-                          value={p.icon || 'Sparkles'}
-                          readOnly
-                        />
-                      </div>
-                      <div className="flex shrink-0 items-center justify-end gap-0.5 ml-auto pr-1">
-                        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/70">System</span>
-                      </div>
-                    </li>
-                  );
-                }
-
                 return (
                   <li
                     key={p.id}
                     className={cn(
-                      "grid grid-cols-[28px_36px_minmax(140px,240px)_56px_56px_72px_64px_56px_64px_96px] items-center gap-x-2 rounded-2xl border bg-secondary/30 p-1.5 transition-all hover:bg-background group min-w-0",
+                      "grid grid-cols-[80px_minmax(140px,240px)_56px_72px_200px_44px_72px_72px_64px_96px] items-center gap-x-2 rounded-2xl border bg-secondary/30 p-1.5 transition-all hover:bg-background group min-w-0",
                       rowDimmed && "opacity-60"
                     )}
                   >
-                    {/* 1. Edit Button (Moved from Actions) */}
+                    {/* 1. Edit Button First */}
                     <div className="flex items-center">
                       {onEditPrize ? (
                         <Button
                           type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 gap-1.5 rounded-lg border-primary/20 bg-background hover:bg-primary/5 text-primary font-semibold"
                           disabled={!canEditFull}
-                          title="Edit item"
                           onClick={() => onEditPrize(p)}
                         >
                           <Edit3 className="w-3.5 h-3.5" />
+                          Edit
                         </Button>
                       ) : null}
                     </div>
 
-                    {/* 2. Icon/Image (Identity) */}
-                    <div className={cn("size-9 rounded-lg flex items-center justify-center bg-background border relative overflow-hidden", !p.inStock && "opacity-40 grayscale")}>
-                      {p.imageUrl ? (
-                        /* eslint-disable-next-line @next/next/no-img-element */
-                        <img src={p.imageUrl} alt="" className="absolute inset-0 z-[5] size-full object-cover" />
-                      ) : (
-                        p.name && (
-                          <div className="absolute inset-0 opacity-40 mix-blend-overlay pointer-events-none z-0">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={`https://api.dicebear.com/9.x/shapes/svg?seed=${encodeURIComponent(p.name)}&backgroundColor=transparent`} alt="" className="w-full h-full object-cover" />
-                          </div>
-                        )
-                      )}
-                      <DynamicIcon name={p.icon || 'Gift'} className="w-5 h-5 text-primary relative z-10 drop-shadow-sm" />
-                    </div>
-
-                    {/* 3. Name (Identity) */}
-                    <div className="min-w-0">
-                      <div className="relative min-w-0">
+                    {/* 2. Name */}
+                    <div className="min-w-0 flex items-center gap-2">
+                      <div className={cn("size-8 shrink-0 rounded-lg flex items-center justify-center bg-background border relative overflow-hidden", !p.inStock && "opacity-40 grayscale")}>
+                        {p.imageUrl ? (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img src={p.imageUrl} alt="" className="absolute inset-0 z-[5] size-full object-cover" />
+                        ) : (
+                          p.name && (
+                            <div className="absolute inset-0 opacity-40 mix-blend-overlay pointer-events-none z-0">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={`https://api.dicebear.com/9.x/shapes/svg?seed=${encodeURIComponent(p.name)}&backgroundColor=transparent`} alt="" className="w-full h-full object-cover" />
+                            </div>
+                          )
+                        )}
+                        <DynamicIcon name={p.icon || 'Gift'} className="w-4 h-4 text-primary relative z-10 drop-shadow-sm" />
+                      </div>
+                      <div className="relative min-w-0 flex-1 flex items-center gap-1.5">
                         <Input
                           aria-label="Prize name"
-                          className={cn("h-7 text-[10px] px-1.5 w-full min-w-0", vendingEnabled && p.vendingMotor?.enabled && "pr-10", !p.inStock && "opacity-70")}
+                          className={cn("h-7 text-[10px] px-1.5 w-full min-w-0 border-none bg-transparent shadow-none focus-visible:ring-1", vendingEnabled && p.vendingMotor?.enabled && "pr-10", !p.inStock && "opacity-70")}
                           disabled={!canEditFull}
                           defaultValue={p.name}
                           key={`name-${p.id}-${p.name}`}
@@ -373,19 +302,18 @@ export function AdminPrizesTab({
                             if (next && next !== p.name) onUpdatePrize({ ...p, name: next });
                           }}
                         />
-                        {vendingEnabled && p.vendingMotor?.enabled ? (
+                        {p.aiFunReward ? (
                           <span
-                            className="absolute right-1 top-1/2 -translate-y-1/2 inline-flex items-center gap-0.5 rounded bg-emerald-100 px-1 py-px text-[8px] font-black uppercase tracking-wider text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300"
-                            title={`Motor axis: ${p.vendingMotor.axis}`}
+                            className="shrink-0 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-amber-900 dark:text-amber-100"
+                            title={`AI surprise: ${p.aiFunReward}`}
                           >
-                            <Cog className="h-2.5 w-2.5" />
-                            {p.vendingMotor.axis}
+                            AI
                           </span>
                         ) : null}
                       </div>
                     </div>
 
-                    {/* 4. Points (Cost) */}
+                    {/* 3. Points */}
                     <div>
                       <Input
                         type="number"
@@ -403,16 +331,15 @@ export function AdminPrizesTab({
                       />
                     </div>
 
-                    {/* 5. Qty (Stock) */}
+                    {/* 4. Qty */}
                     <div>
                       <Input
                         type="number"
                         min={0}
                         disabled={!canEditFull}
-                        aria-label="Quantity"
+                        aria-label="Stock on hand"
                         className="h-7 text-[10px] px-1"
                         placeholder="∞"
-                        title="Leave blank for unlimited stock"
                         defaultValue={p.stockCount === undefined ? '' : String(p.stockCount)}
                         key={`stock-${p.id}-${p.stockCount ?? 'x'}`}
                         onBlur={(e) => {
@@ -423,7 +350,7 @@ export function AdminPrizesTab({
                       />
                     </div>
 
-                    {/* 6. STK/PRT Toggles (Status) */}
+                    {/* 5. Toggles */}
                     <div className="flex flex-col items-center">
                       <AutoCircularToggles
                         record={p}
@@ -431,112 +358,97 @@ export function AdminPrizesTab({
                           { key: 'inStock', label: 'In Stock', shortLabel: 'In stock' },
                           { key: 'offerPrintTicketOnRedeem', label: 'Offer print voucher', shortLabel: 'Print' }
                         ]}
+                        wrap={false}
                         onToggle={(key, val) => {
                           onUpdatePrize({ ...p, [key]: val });
                         }}
                       />
                     </div>
 
-                    {/* 7. Icon Name (Metadata) */}
-                    <div>
-                      <Input
-                        className="h-7 text-[10px] px-1 font-mono w-full"
-                        disabled={!canEditFull}
-                        aria-label="Icon name"
-                        placeholder="Gift"
-                        defaultValue={p.icon || 'Gift'}
-                        key={`icon-${p.id}-${p.icon}`}
-                        onBlur={(e) => {
-                          const next = (e.target.value.trim() || 'Gift') as string;
-                          if (next !== p.icon) onUpdatePrize({ ...p, icon: next });
-                        }}
-                      />
+                    {/* 6. Icon */}
+                    <div className="flex justify-center">
+                      <DynamicIcon name={p.icon || 'Gift'} className="w-5 h-5 text-muted-foreground/60" />
                     </div>
 
-                    {/* 8. Teachers (Access) */}
+                    {/* 7. Teachers */}
                     <div className="flex flex-col gap-0.5">
                       {mode === 'teacher' ? (
-                        <>
-                          <div className="flex items-center justify-center h-7 rounded-md border bg-background">
-                            <Switch
-                              checked={schoolWideT}
-                              disabled={!canEditFull}
-                              onCheckedChange={(checked) => {
-                                if (checked) {
-                                  onUpdatePrize({ ...p, teacherIds: undefined, teacherId: undefined });
-                                } else if (teacherId) {
-                                  onUpdatePrize({ ...p, teacherIds: [teacherId], teacherId: undefined });
-                                }
-                              }}
-                              className="data-[state=checked]:bg-primary scale-50"
-                            />
-                          </div>
-                        </>
+                        <div className="flex items-center justify-center h-8 rounded-md border bg-background">
+                          <Switch
+                            checked={schoolWideT}
+                            disabled={!canEditFull}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                onUpdatePrize({ ...p, teacherIds: undefined, teacherId: undefined });
+                              } else if (teacherId) {
+                                onUpdatePrize({ ...p, teacherIds: [teacherId], teacherId: undefined });
+                              }
+                            }}
+                            className="data-[state=checked]:bg-primary scale-50"
+                          />
+                        </div>
                       ) : (
-                        <>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                className="h-7 w-full text-[10px] px-1 font-semibold"
-                                disabled={!canEditFull}
-                                aria-label="Teacher restrictions"
-                              >
-                                {restrictionIds.length === 0 ? 'All' : `${restrictionIds.length}`}
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-64 p-3 z-[250]" align="start">
-                              <div className="space-y-3">
-                                <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
-                                  <Checkbox
-                                    checked={restrictionIds.length === 0}
-                                    onCheckedChange={(c) => {
-                                      if (c === true) onUpdatePrize({ ...p, teacherIds: undefined, teacherId: undefined });
-                                    }}
-                                  />
-                                  School-wide (all teachers)
-                                </label>
-                                <div className="border-t pt-2 max-h-52 overflow-y-auto space-y-2">
-                                  {(teachers || []).map((t) => {
-                                    const checked = restrictionIds.includes(t.id);
-                                    return (
-                                      <label key={t.id} className="flex items-center gap-2 text-sm cursor-pointer">
-                                        <Checkbox
-                                          checked={checked}
-                                          disabled={!canEditFull}
-                                          onCheckedChange={(c) => {
-                                            const next =
-                                              c === true
-                                                ? [...new Set([...restrictionIds, t.id])]
-                                                : restrictionIds.filter((id) => id !== t.id);
-                                            onUpdatePrize({
-                                              ...p,
-                                              teacherIds: next.length ? next : undefined,
-                                              teacherId: undefined,
-                                            });
-                                          }}
-                                        />
-                                        <span className="truncate">{t.name}</span>
-                                      </label>
-                                    );
-                                  })}
-                                </div>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="h-8 w-full min-h-8 text-[10px] px-1 font-semibold"
+                              disabled={!canEditFull}
+                            >
+                              {restrictionIds.length === 0 ? 'All' : `${restrictionIds.length}`}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-64 p-3 z-[250]" align="start">
+                            <div className="space-y-3">
+                              <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+                                <Checkbox
+                                  checked={restrictionIds.length === 0}
+                                  onCheckedChange={(c) => {
+                                    if (c === true) onUpdatePrize({ ...p, teacherIds: undefined, teacherId: undefined });
+                                  }}
+                                />
+                                School-wide (all teachers)
+                              </label>
+                              <div className="border-t pt-2 max-h-52 overflow-y-auto space-y-2">
+                                {(teachers || []).map((t) => {
+                                  const checked = restrictionIds.includes(t.id);
+                                  return (
+                                    <label key={t.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                                      <Checkbox
+                                        checked={checked}
+                                        disabled={!canEditFull}
+                                        onCheckedChange={(c) => {
+                                          const next =
+                                            c === true
+                                              ? [...new Set([...restrictionIds, t.id])]
+                                              : restrictionIds.filter((id) => id !== t.id);
+                                          onUpdatePrize({
+                                            ...p,
+                                            teacherIds: next.length ? next : undefined,
+                                            teacherId: undefined,
+                                          });
+                                        }}
+                                      />
+                                      <span className="truncate">{t.name}</span>
+                                    </label>
+                                  );
+                                })}
                               </div>
-                            </PopoverContent>
-                          </Popover>
-                        </>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
                       )}
                     </div>
 
-                    {/* 9. Class (Access) */}
+                    {/* 8. Class */}
                     <div className="flex flex-col gap-0.5">
                       <Select
                         value={p.classId || 'all'}
                         disabled={!canEditFull}
                         onValueChange={(v) => onUpdatePrize({ ...p, classId: v === 'all' ? undefined : v })}
                       >
-                        <SelectTrigger className="h-7 text-[10px] px-1 w-full">
+                        <SelectTrigger className="h-8 min-h-8 text-[10px] px-1 w-full">
                           <SelectValue placeholder="All" />
                         </SelectTrigger>
                         <SelectContent>
@@ -548,8 +460,8 @@ export function AdminPrizesTab({
                       </Select>
                     </div>
 
-                    {/* 10. Actions (Remaining) */}
-                    <div className="flex items-center justify-end gap-0.5 pr-1">
+                    {/* 9. Vending */}
+                    <div className="flex justify-center">
                       {vendingEnabled ? (
                         <Popover>
                           <PopoverTrigger asChild>
@@ -605,8 +517,11 @@ export function AdminPrizesTab({
                             </div>
                           </PopoverContent>
                         </Popover>
-                      ) : null}
+                      ) : <div />}
+                    </div>
 
+                    {/* 10. Delete/Remove */}
+                    <div className="flex items-center justify-end gap-0.5 pr-1">
                       {canRemoveSelf && teacherId ? (
                         <Button
                           type="button"
@@ -619,17 +534,20 @@ export function AdminPrizesTab({
                           <UserMinus className="w-3.5 h-3.5" />
                         </Button>
                       ) : null}
-                      {(mode === 'admin' || canDelete) ? (
+                      {mode === 'admin' || canDelete ? (
                         <Button
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 rounded-full text-destructive hover:bg-destructive/10"
+                          className={cn(
+                            'h-7 w-7 rounded-full',
+                            p.aiFunReward ? 'text-muted-foreground hover:bg-muted hover:text-foreground' : 'text-destructive hover:bg-destructive/10',
+                          )}
                           disabled={mode === 'teacher' && !canDelete}
-                          title={mode === 'teacher' ? 'Delete item you created' : 'Delete item'}
+                          title={p.aiFunReward ? 'Remove AI surprise prize' : mode === 'teacher' ? 'Delete item you created' : 'Delete item'}
                           onClick={() => onDeletePrize(p.id)}
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          {p.aiFunReward ? <X className="w-3.5 h-3.5" /> : <Trash2 className="w-3.5 h-3.5" />}
                         </Button>
                       ) : null}
                     </div>
@@ -650,8 +568,9 @@ export function AdminPrizesTab({
             <ul className="list-disc pl-5 space-y-1">
               <li><span className="font-bold">Points</span>: cost per redemption.</li>
               <li><span className="font-bold">In Stock</span>: whether it appears in the shop.</li>
-              <li><span className="font-bold">Qty</span>: optional inventory. Blank = unlimited.</li>
-              <li><span className="font-bold">Print</span>: if on, the shop offers a redeem voucher after redemption.</li>
+              <li><span className="font-bold">Stock</span>: optional count on hand. Blank = unlimited.</li>
+              <li><span className="font-bold">Shop</span>: list in shop and print voucher toggles.</li>
+              <li><span className="font-bold">AI surprises</span>: turn on in Settings, then use &quot;Add AI surprise prize&quot; to create age-appropriate joke/riddle/fortune rewards.</li>
               <li><span className="font-bold">Teachers</span>: pick multiple teachers or school-wide.</li>
               <li><span className="font-bold">Class</span>: optionally restrict by class.</li>
               <li><span className="font-bold">Vending motor</span>: enable the Vending Machine feature in settings, then use the prize motor button to pick axis X/Y/Z/E.</li>
@@ -713,16 +632,15 @@ export function AdminPrizesTab({
                 <Switch checked={wInStock} onCheckedChange={setWInStock} />
               </div>
               <div className="space-y-1">
-                <Label>Quantity (optional)</Label>
+                <Label>Stock on hand (optional)</Label>
                 <Input
                   type="number"
                   min={0}
                   placeholder="Leave blank for unlimited"
                   value={wStockCount}
                   onChange={(e) => setWStockCount(e.target.value)}
-                  disabled={!wInStock}
                 />
-                <p className="text-xs text-muted-foreground">If set, each redemption reduces inventory.</p>
+                <p className="text-xs text-muted-foreground">If set, each redemption reduces inventory until it reaches zero.</p>
               </div>
             </div>
           )}
@@ -804,7 +722,7 @@ export function AdminPrizesTab({
                   <li><span className="font-bold">Name</span>: {wName.trim() || '—'}</li>
                   <li><span className="font-bold">Points</span>: {Math.max(0, parseInt(wPoints || '0', 10) || 0)}</li>
                   <li><span className="font-bold">In stock</span>: {wInStock ? 'Yes' : 'No'}</li>
-                  <li><span className="font-bold">Qty</span>: {wStockCount.trim() ? wStockCount.trim() : 'Unlimited'}</li>
+                  <li><span className="font-bold">Stock on hand</span>: {wStockCount.trim() ? wStockCount.trim() : 'Unlimited'}</li>
                   <li><span className="font-bold">Print voucher</span>: {wOfferPrint ? 'Yes' : 'No'}</li>
                   {mode === 'admin' ? (
                     <li>
@@ -889,6 +807,176 @@ export function AdminPrizesTab({
                 {wizardStep >= 4 ? 'Create Prize' : 'Next'}
               </Button>
             </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={aiAddOpen} onOpenChange={setAiAddOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Add AI surprise prize</DialogTitle>
+            <DialogDescription>
+              Creates a shop item that spends points like other prizes. After redemption, students see short,
+              school-appropriate text (English)—never violent, scary, romantic, or rude—matching the style you pick below.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-2">
+            <div className="space-y-1">
+              <Label htmlFor="ai-kind">Surprise style</Label>
+              <Select
+                value={aiKind}
+                onValueChange={(v) => {
+                  const nk = v as PrizeAiFunReward;
+                  setAiKind(nk);
+                  setAiName(defaultAiNameForKind(nk));
+                }}
+              >
+                <SelectTrigger id="ai-kind">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="joke">Short joke</SelectItem>
+                  <SelectItem value="riddle">Riddle (with answer)</SelectItem>
+                  <SelectItem value="fortune">Encouraging fortune line</SelectItem>
+                  <SelectItem value="random">Surprise me (random style)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="ai-name">Display name</Label>
+              <Input id="ai-name" value={aiName} onChange={(e) => setAiName(e.target.value)} placeholder={defaultAiNameForKind(aiKind)} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label htmlFor="ai-points">Point cost</Label>
+                <Input id="ai-points" type="number" min={0} value={aiPoints} onChange={(e) => setAiPoints(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="ai-icon">Icon</Label>
+                <div className="flex gap-2">
+                  <Input id="ai-icon" value={aiIcon} onChange={(e) => setAiIcon(e.target.value)} />
+                  <div className="h-10 w-10 shrink-0 rounded-lg border bg-background flex items-center justify-center">
+                    <DynamicIcon name={aiIcon || 'Sparkles'} className="h-5 w-5" />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div className="space-y-0.5">
+                <Label>Offer print voucher</Label>
+                <p className="text-xs text-muted-foreground">Include AI text on the printed slip when printing is enabled.</p>
+              </div>
+              <Switch checked={aiOfferPrint} onCheckedChange={setAiOfferPrint} />
+            </div>
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div className="space-y-0.5">
+                <Label>List in shop</Label>
+                <p className="text-xs text-muted-foreground">Turn off to hide while you finish setup.</p>
+              </div>
+              <Switch checked={aiInStock} onCheckedChange={setAiInStock} />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="ai-stock">Stock on hand (optional)</Label>
+              <Input
+                id="ai-stock"
+                type="number"
+                min={0}
+                placeholder="Unlimited"
+                value={aiStockCount}
+                onChange={(e) => setAiStockCount(e.target.value)}
+              />
+            </div>
+            {mode === 'teacher' ? (
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <div className="space-y-0.5">
+                  <Label>School-wide prize</Label>
+                  <p className="text-xs text-muted-foreground">If off, only your students see it.</p>
+                </div>
+                <Switch checked={aiSchoolWide} onCheckedChange={setAiSchoolWide} />
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div>
+                  <Label>Teachers who can offer this prize</Label>
+                  <p className="text-xs text-muted-foreground">Leave none checked for school-wide (all teachers).</p>
+                </div>
+                <label className="flex items-center gap-2 text-sm font-medium cursor-pointer rounded-md border p-2">
+                  <Checkbox
+                    checked={aiTeacherIds.length === 0}
+                    onCheckedChange={(c) => {
+                      if (c === true) setAiTeacherIds([]);
+                    }}
+                  />
+                  School-wide (all teachers)
+                </label>
+                <div className="max-h-36 overflow-y-auto space-y-2 rounded-md border p-2">
+                  {(teachers || []).map((t) => (
+                    <label key={t.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                      <Checkbox
+                        checked={aiTeacherIds.includes(t.id)}
+                        onCheckedChange={(c) => {
+                          setAiTeacherIds((prev) => {
+                            if (c === true) return [...new Set([...prev, t.id])];
+                            return prev.filter((id) => id !== t.id);
+                          });
+                        }}
+                      />
+                      <span className="truncate">{t.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="space-y-1">
+              <Label>Class restriction</Label>
+              <Select value={aiClassId} onValueChange={(v) => setAiClassId(v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All (school-wide)</SelectItem>
+                  {(classes || []).map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button type="button" variant="ghost" onClick={() => setAiAddOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={async () => {
+                const points = Math.max(0, parseInt(aiPoints || '0', 10) || 0);
+                const rawStock = aiStockCount.trim();
+                const stockCount = rawStock === '' ? undefined : Math.max(0, parseInt(rawStock, 10) || 0);
+                const finalClassId = aiClassId === 'all' ? undefined : aiClassId;
+                const finalAiTeacherIds =
+                  mode === 'teacher'
+                    ? (aiSchoolWide ? [] : (teacherId ? [teacherId] : []))
+                    : aiTeacherIds;
+                const nm = aiName.trim() || defaultAiNameForKind(aiKind);
+                await onCreatePrize({
+                  name: nm,
+                  points,
+                  icon: (aiIcon || 'Sparkles').trim() || 'Sparkles',
+                  inStock: aiInStock,
+                  stockCount,
+                  offerPrintTicketOnRedeem: aiOfferPrint,
+                  aiFunReward: aiKind,
+                  teacherIds: finalAiTeacherIds.length ? finalAiTeacherIds : undefined,
+                  teacherId: undefined,
+                  classId: finalClassId,
+                  addedBy: mode === 'teacher' ? 'teacher' : 'Admin',
+                  createdByTeacherId: mode === 'teacher' && teacherId ? teacherId : undefined,
+                });
+                setAiAddOpen(false);
+              }}
+            >
+              Create prize
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

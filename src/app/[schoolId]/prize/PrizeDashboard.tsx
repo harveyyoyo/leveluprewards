@@ -72,7 +72,7 @@ import { prizeIsListed, stripLeadingEmojiFromPrizeName, studentSeesPrizeByTeache
 import { runMotor as runVendingMotor, isConnected as motorIsConnected } from '@/lib/vendingMotor';
 import { useAuthFetch } from '@/lib/authFetch';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { createAiJokePrize, isAiJokePrize } from '@/lib/aiJokePrize';
+import { isAiFunPrize } from '@/lib/aiJokePrize';
 
 /** Max units per redemption for 0-point prizes when stock is unlimited (balance does not limit). */
 const FREE_PRIZE_MAX_QTY = 99;
@@ -104,7 +104,7 @@ function ConfirmRedemptionDialog({
 
     const studentPoints = student && typeof student.points === 'number' ? student.points : 0;
     const prizePoints = prize && typeof prize.points === 'number' ? prize.points : 0;
-    const aiPrize = isAiJokePrize(prize);
+    const aiPrize = isAiFunPrize(prize);
     /** Free (0 pt) prizes are not limited by balance — cap + optional stock count. */
     const maxByPoints =
         !prize ? 1 :
@@ -528,39 +528,6 @@ export function PrizeDashboard({
             return;
         }
         try {
-            if (isAiJokePrize(prize)) {
-                const aiCooldownOk = Date.now() - lastAiSurpriseCallRef.current > 10_000;
-                if (!schoolId || settings.enablePrizeAiSurprise !== true || !aiCooldownOk) {
-                    return;
-                }
-                lastAiSurpriseCallRef.current = Date.now();
-                setAiSurpriseErr(null);
-                setAiSurpriseBody(null);
-                setAiSurpriseLoading(true);
-                try {
-                    const res = await authFetch('/api/prize-ai-fun', {
-                        method: 'POST',
-                        body: JSON.stringify({
-                            schoolId,
-                            mode: 'joke',
-                        }),
-                    });
-                    const j = (await res.json()) as { error?: string; kind?: string; text?: string; answer?: string };
-                    if (!res.ok) throw new Error(j.error || 'Could not load surprise.');
-                    setAiSurpriseBody({
-                        kind: typeof j.kind === 'string' ? j.kind : 'joke',
-                        text: typeof j.text === 'string' ? j.text : '',
-                        answer: typeof j.answer === 'string' ? j.answer : undefined,
-                    });
-                    setAiSurpriseOpen(true);
-                } catch (e: unknown) {
-                    console.warn('Prize AI surprise unavailable:', e);
-                } finally {
-                    setAiSurpriseLoading(false);
-                }
-                return;
-            }
-
             const result = await redeemPrize(student.id, prize, quantity);
             if (!result.success) {
                 throw new Error(result.message || 'An error occurred during redemption.');
@@ -826,16 +793,11 @@ export function PrizeDashboard({
             return teacherMatch && classMatch;
         });
 
-    const effectiveVisiblePrizes =
-        settings.enablePrizeAiSurprise === true
-            ? [...baseVisiblePrizes, createAiJokePrize()]
-            : baseVisiblePrizes;
-
     const filteredPrizes = searchTerm.trim()
-        ? effectiveVisiblePrizes.filter(p =>
+        ? baseVisiblePrizes.filter(p =>
             (p.name || '').toLowerCase().includes(searchTerm.trim().toLowerCase())
         )
-        : effectiveVisiblePrizes;
+        : baseVisiblePrizes;
 
     const visiblePrizes = [...filteredPrizes].sort((a, b) => {
         const ap = a.points || 0;
@@ -1387,7 +1349,7 @@ export function PrizeDashboard({
                                     : (AI_SURPRISE_KIND_LABEL[aiSurpriseBody?.kind ?? ''] ?? 'Your surprise')}
                             </DialogTitle>
                             <DialogDescription className="sr-only">
-                                AI-generated joke, riddle, or fortune after redeeming a prize.
+                                Short school-safe surprise text after redeeming this reward.
                             </DialogDescription>
                         </DialogHeader>
                         <div className="min-h-[100px] py-1">

@@ -762,59 +762,15 @@ function StudentDashboardInner({
 
     setIsRedeemingPrize(true);
     try {
-      if (isAiJokePrize(confirmingPrize)) {
-        if (!schoolId || settings.enablePrizeAiSurprise !== true) return;
-        pendingPrizeTicketAfterAiRef.current = null;
-        const requestId = aiSurpriseRequestIdRef.current + 1;
-        aiSurpriseRequestIdRef.current = requestId;
-        const instantSurprise = fallbackPrizeSurprise('joke', confirmingPrize.name, lastAiSurpriseTextRef.current);
-        lastAiSurpriseTextRef.current = instantSurprise.text;
-        setAiSurpriseBody(instantSurprise);
-        setAiSurpriseLoading(false);
-        setAiSurpriseOpen(true);
-        void (async () => {
-          const controller = new AbortController();
-          const timeoutId = window.setTimeout(() => controller.abort(), 1200);
-          try {
-            const res = await authFetch('/api/prize-ai-fun', {
-              method: 'POST',
-              signal: controller.signal,
-              body: JSON.stringify({
-                schoolId,
-                mode: 'joke',
-              }),
-            });
-            const j = (await res.json()) as { error?: string; kind?: string; text?: string; answer?: string };
-            if (!res.ok) throw new Error(j.error || 'Could not load joke.');
-            const kind = j.kind === 'riddle' || j.kind === 'fortune' ? j.kind : 'joke';
-            const text = typeof j.text === 'string' ? j.text.trim() : '';
-            if (!text || aiSurpriseRequestIdRef.current !== requestId) return;
-            lastAiSurpriseTextRef.current = text;
-            setAiSurpriseBody({
-              kind,
-              text,
-              answer: kind === 'riddle' && typeof j.answer === 'string' ? j.answer : undefined,
-            });
-          } catch (e: unknown) {
-            if ((e as { name?: string })?.name !== 'AbortError') {
-              console.warn('Prize AI surprise unavailable:', e);
-            }
-          } finally {
-            window.clearTimeout(timeoutId);
-          }
-        })();
-        setConfirmingPrize(null);
-        return;
-      }
-
-      const result = await redeemPrize(student.id, confirmingPrize, 1);
+      const prize = confirmingPrize;
+      const result = await redeemPrize(student.id, prize, 1);
       if (!result.success) {
         throw new Error(result.message || 'Could not redeem this prize.');
       }
       playSound('redeem');
       toast({
         title: 'Prize Redeemed!',
-        description: `Successfully redeemed ${confirmingPrize.name}.`,
+        description: `Successfully redeemed ${prize.name}.`,
       });
 
       if (settings.enableGoals && isFeatureAllowed('enableGoals') && schoolId && firestore) {
@@ -826,7 +782,7 @@ function StudentDashboardInner({
       const { activityId, redeemedAt, totalCost } = result;
       let ticketPayload: typeof prizeTicketData = null;
       if (
-        confirmingPrize.offerPrintTicketOnRedeem === true &&
+        prize.offerPrintTicketOnRedeem === true &&
         activityId &&
         redeemedAt &&
         typeof totalCost === 'number'
@@ -849,14 +805,61 @@ function StudentDashboardInner({
           studentName: `${displayFirst} ${student.lastName}`.trim(),
           studentNickname: nick && legalFirst && displayFirst.trim() !== legalFirst ? legalFirst : undefined,
           studentEmoji,
-          prizeName: confirmingPrize.name,
-          prizeIcon: confirmingPrize.icon || 'Gift',
+          prizeName: prize.name,
+          prizeIcon: prize.icon || 'Gift',
           quantity: 1,
           totalCost,
         };
       }
 
-      if (ticketPayload) {
+      if (prize.aiFunReward && schoolId && settings.enablePrizeAiSurprise === true) {
+        const aiCooldownOk = Date.now() - lastAiSurpriseCallRef.current > 10_000;
+        if (!aiCooldownOk) {
+          if (ticketPayload) setPrizeTicketData(ticketPayload);
+        } else {
+          lastAiSurpriseCallRef.current = Date.now();
+          pendingPrizeTicketAfterAiRef.current = ticketPayload;
+          const aiMode = prize.aiFunReward;
+          const requestId = aiSurpriseRequestIdRef.current + 1;
+          aiSurpriseRequestIdRef.current = requestId;
+          const instantSurprise = fallbackPrizeSurprise(aiMode, prize.name, lastAiSurpriseTextRef.current);
+          lastAiSurpriseTextRef.current = instantSurprise.text;
+          setAiSurpriseBody(instantSurprise);
+          setAiSurpriseLoading(false);
+          setAiSurpriseOpen(true);
+          void (async () => {
+            const controller = new AbortController();
+            const timeoutId = window.setTimeout(() => controller.abort(), 1200);
+            try {
+              const res = await authFetch('/api/prize-ai-fun', {
+                method: 'POST',
+                signal: controller.signal,
+                body: JSON.stringify({
+                  schoolId,
+                  mode: aiMode,
+                }),
+              });
+              const j = (await res.json()) as { error?: string; kind?: string; text?: string; answer?: string };
+              if (!res.ok) throw new Error(j.error || 'Could not load surprise.');
+              const kind = j.kind === 'riddle' || j.kind === 'fortune' ? j.kind : 'joke';
+              const text = typeof j.text === 'string' ? j.text.trim() : '';
+              if (!text || aiSurpriseRequestIdRef.current !== requestId) return;
+              lastAiSurpriseTextRef.current = text;
+              setAiSurpriseBody({
+                kind,
+                text,
+                answer: kind === 'riddle' && typeof j.answer === 'string' ? j.answer : undefined,
+              });
+            } catch (e: unknown) {
+              if ((e as { name?: string })?.name !== 'AbortError') {
+                console.warn('Prize AI surprise unavailable:', e);
+              }
+            } finally {
+              window.clearTimeout(timeoutId);
+            }
+          })();
+        }
+      } else if (ticketPayload) {
         setPrizeTicketData(ticketPayload);
       }
       setConfirmingPrize(null);

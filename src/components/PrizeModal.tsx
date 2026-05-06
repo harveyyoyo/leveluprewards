@@ -16,7 +16,7 @@ import { useAppContext } from '@/components/AppProvider';
 import { useFirebase } from '@/firebase';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useToast } from '@/hooks/use-toast';
-import type { Prize, Teacher, Class } from '@/lib/types';
+import type { Prize, PrizeAiFunReward, Teacher, Class } from '@/lib/types';
 import DynamicIcon from './DynamicIcon';
 import { Switch } from './ui/switch';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
@@ -44,9 +44,11 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses, cre
   const [points, setPoints] = useState('0');
   const [icon, setIcon] = useState('Gift');
   const [inStock, setInStock] = useState(true);
+  const [stockCountStr, setStockCountStr] = useState('');
   const [offerPrintTicketOnRedeem, setOfferPrintTicketOnRedeem] = useState(false);
   const [teacherId, setTeacherId] = useState('');
   const [classId, setClassId] = useState('');
+  const [aiFunRewardKind, setAiFunRewardKind] = useState<PrizeAiFunReward>('joke');
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [stripImage, setStripImage] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -73,15 +75,18 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses, cre
         setPoints(prize.points.toString());
         setIcon(prize.icon);
         setInStock(prize.inStock);
+        setStockCountStr(prize.stockCount === undefined ? '' : String(prize.stockCount));
         setOfferPrintTicketOnRedeem(prize.offerPrintTicketOnRedeem === true);
         const tidFromIds = (prize.teacherIds || []).find((id) => typeof id === 'string' && id.length > 0);
         setTeacherId(prize.teacherId || tidFromIds || '');
         setClassId(prize.classId || '');
+        setAiFunRewardKind((prize.aiFunReward as PrizeAiFunReward) || 'joke');
       } else { // Create mode
         setName('');
         setPoints('0');
         setIcon('Gift');
         setInStock(true);
+        setStockCountStr('');
         setOfferPrintTicketOnRedeem(false);
         setTeacherId(creatorTeacherId || '');
         setClassId('');
@@ -124,14 +129,19 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses, cre
       return;
     }
 
+    const rawStock = stockCountStr.trim();
+    const stockCount = rawStock === '' ? undefined : Math.max(0, parseInt(rawStock, 10) || 0);
+
     const coreFields = {
       name,
       points: pointsValue,
       icon,
       inStock,
+      stockCount,
       offerPrintTicketOnRedeem,
       teacherId: teacherId || undefined,
       classId: classId || undefined,
+      ...(prize?.aiFunReward ? { aiFunReward: aiFunRewardKind } : {}),
     };
 
     setUploading(true);
@@ -189,9 +199,37 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses, cre
               <Label htmlFor="prize-name">Item name</Label>
               <Input id="prize-name" value={name} onChange={e => setName(e.target.value)} />
             </div>
-             <div className="space-y-1">
+            <div className="space-y-1">
               <Label htmlFor="prize-points">Point cost</Label>
-              <Input id="prize-points" type="number" value={points} onChange={e => setPoints(e.target.value)} />
+              <Input id="prize-points" type="number" min={0} value={points} onChange={e => setPoints(e.target.value)} />
+            </div>
+            {prize?.aiFunReward ? (
+              <div className="space-y-1">
+                <Label htmlFor="prize-ai-kind">AI experience type</Label>
+                <Select value={aiFunRewardKind} onValueChange={(v) => setAiFunRewardKind(v as PrizeAiFunReward)}>
+                  <SelectTrigger id="prize-ai-kind" className="h-10">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="random">Random (joke, riddle, or fortune)</SelectItem>
+                    <SelectItem value="joke">Short joke</SelectItem>
+                    <SelectItem value="riddle">Riddle (with answer)</SelectItem>
+                    <SelectItem value="fortune">Encouraging fortune line</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  After redemption, students see short school-safe text generated for your school (English, age-appropriate).
+                </p>
+              </div>
+            ) : null}
+            <div className="space-y-1">
+              <Label htmlFor="prize-icon">Icon name</Label>
+              <div className="flex items-center gap-2">
+                <Input id="prize-icon" value={icon} onChange={e => setIcon(e.target.value)} placeholder="e.g., 'Gift', 'Star', 'Trophy'" />
+                <div className="p-2 border rounded-md bg-secondary shrink-0">
+                  <DynamicIcon name={icon} className="w-6 h-6 text-primary" />
+                </div>
+              </div>
             </div>
             <div className="space-y-2">
               <Label>Reward picture (optional)</Label>
@@ -239,34 +277,25 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses, cre
                 </div>
               </div>
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="prize-icon">Icon name</Label>
-              <div className="flex items-center gap-2">
-                <Input id="prize-icon" value={icon} onChange={e => setIcon(e.target.value)} placeholder="e.g., 'Gift', 'Star', 'Trophy'" />
-                <div className="p-2 border rounded-md bg-secondary">
-                  <DynamicIcon name={icon} className="w-6 h-6 text-primary" />
-                </div>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+              <div className="space-y-1 min-w-0">
                 <Label htmlFor="prize-teacher">Teacher restriction</Label>
                 <Select value={teacherId || 'all'} onValueChange={(v) => setTeacherId(v === 'all' ? '' : v)}>
-                  <SelectTrigger id="prize-teacher">
+                  <SelectTrigger id="prize-teacher" className="h-10 w-full">
                     <SelectValue placeholder="School-wide" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">School-wide</SelectItem>
                     {teachers.map(t => (
-                      <SelectItem key={t.id} value={t.id}>{t.name}'s rewards</SelectItem>
+                      <SelectItem key={t.id} value={t.id}>{t.name}&apos;s rewards</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1">
+              <div className="space-y-1 min-w-0">
                 <Label htmlFor="prize-class">Class restriction</Label>
                 <Select value={classId || 'all'} onValueChange={(v) => setClassId(v === 'all' ? '' : v)}>
-                  <SelectTrigger id="prize-class">
+                  <SelectTrigger id="prize-class" className="h-10 w-full">
                     <SelectValue placeholder="School-wide" />
                   </SelectTrigger>
                   <SelectContent>
@@ -278,18 +307,35 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses, cre
                 </Select>
               </div>
             </div>
-            <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
-              <div className="space-y-0.5">
-                <Label htmlFor="in-stock">In stock</Label>
+            <div className="rounded-lg border p-3 shadow-sm space-y-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="space-y-0.5 min-w-0">
+                  <Label htmlFor="in-stock">List in shop</Label>
+                  <p className="text-xs text-muted-foreground">
+                    When off, students will not see this item until you turn it back on.
+                  </p>
+                </div>
+                <Switch
+                  id="in-stock"
+                  checked={inStock}
+                  onCheckedChange={setInStock}
+                  className="shrink-0"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="prize-stock">How many on hand (optional)</Label>
+                <Input
+                  id="prize-stock"
+                  type="number"
+                  min={0}
+                  placeholder="Unlimited"
+                  value={stockCountStr}
+                  onChange={(e) => setStockCountStr(e.target.value)}
+                />
                 <p className="text-xs text-muted-foreground">
-                  Is this reward item currently available for redemption?
+                  Leave blank for unlimited. When you enter a number, each redemption reduces it until it reaches zero.
                 </p>
               </div>
-              <Switch
-                id="in-stock"
-                checked={inStock}
-                onCheckedChange={setInStock}
-              />
             </div>
             <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
               <div className="space-y-0.5">

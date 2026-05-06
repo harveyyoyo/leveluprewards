@@ -73,6 +73,8 @@ interface Settings {
     // Prize/Rewards shop
     enablePrizeImages: boolean;
     enablePrizeAiSurprise: boolean;
+    /** Default point cost shown when staff adds a new AI surprise prize (each prize can be edited afterward). */
+    prizeAiSurpriseDefaultPoints: number;
     enablePrizeCategories: boolean;
     enableWishlist: boolean;
     enableSeasonalPrizes: boolean;
@@ -246,6 +248,7 @@ const defaultSettings: Settings = {
     enableShoutouts: false,
     enablePrizeImages: false,
     enablePrizeAiSurprise: false,
+    prizeAiSurpriseDefaultPoints: 25,
     enablePrizeCategories: false,
     enableWishlist: false,
     enableSeasonalPrizes: false,
@@ -665,24 +668,6 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     const effectiveSettings = useMemo(() => {
         const s = { ...settings };
         
-        if (s.expertMode) {
-            // Expert Mode forces all functional feature toggles to true
-            Object.keys(s).forEach(key => {
-                if (key.startsWith('enable') && typeof (s as any)[key] === 'boolean') {
-                    // Skip purely visual toggles that might be disruptive
-                    if (key !== 'enableAnimatedBackground' && key !== 'enableThemeAnimations') {
-                        (s as any)[key] = true;
-                    }
-                }
-            });
-            // Also enable pillars
-            s.payRewards = true;
-            s.payAttendance = true;
-            s.payHomework = true;
-            s.payLibrary = true;
-            s.bulletinEnabled = true;
-        }
-
         if (loginState === 'student') {
             if (s.studentDisplayMode) s.displayMode = s.studentDisplayMode;
             if (s.studentColorScheme) s.colorScheme = s.studentColorScheme;

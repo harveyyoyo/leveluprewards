@@ -62,9 +62,11 @@ export async function POST(req: NextRequest) {
     const selectedModel = typeof model === 'string' ? model : 'gemini-2.5-flash';
     const kind = resolveKind(mode);
 
-    const systemInstruction = `You write short, wholesome content for elementary and middle school students.
+    const systemInstruction = `You write short, wholesome content for elementary and middle school students (ages roughly 5–14).
 Rules:
-- Language must be English. Keep everything strictly PG / school-appropriate: no violence, romance, politics, insults, scary themes, or crude humor.
+- Language must be English only.
+- Content must be strictly safe for children and classrooms: no violence, weapons, injury, death, fear, horror, romance, dating, politics, religion debates, insults, stereotypes, scary themes, crude humor, bathroom humor, brands, or references to alcohol, drugs, or gambling.
+- Jokes and riddles must be gentle and inclusive—never mean-spirited or embarrassing toward anyone.
 - Output MUST be a single JSON object only (no markdown fences, no commentary).
 
 Schema:

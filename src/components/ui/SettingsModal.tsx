@@ -1,7 +1,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useAppContext } from '@/components/AppProvider';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { collection } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import {
@@ -198,9 +198,24 @@ export function SettingsModal() {
     const local = draft ?? settings;
     const pathname = usePathname();
     const router = useRouter();
+    const searchParams = useSearchParams();
     const originalSettingsRef = useRef<AppSettings | null>(null);
     const committedRef = useRef(false);
     const isShortLinkKioskRoute = typeof pathname === 'string' && pathname.startsWith('/s/');
+    const autoOpenedFromQueryRef = useRef(false);
+
+    // In-app opener (avoids route transitions / layout jank).
+    useEffect(() => {
+        if (!canOpenSettings) return;
+        const handler = (e: Event) => {
+            const detail = (e as CustomEvent<{ view?: SettingsView }>).detail;
+            const requestedView = detail?.view ?? 'hub';
+            setOpen(true);
+            setView(requestedView);
+        };
+        window.addEventListener('open-settings-modal', handler as EventListener);
+        return () => window.removeEventListener('open-settings-modal', handler as EventListener);
+    }, [canOpenSettings]);
 
     const canLivePreviewInterfaceRole = useMemo(() => {
         if (interfaceRole === 'global') return true;
@@ -322,6 +337,39 @@ export function SettingsModal() {
         }
         setOpen(next);
     };
+
+    // Allow deep-linking into the settings modal via query param.
+    // Example: `?settings=features` opens the modal on "Features & add-ons".
+    useEffect(() => {
+        if (!canOpenSettings) return;
+        if (!searchParams) return;
+        const requested = searchParams.get('settings');
+        if (!requested) return;
+        if (autoOpenedFromQueryRef.current) return;
+
+        const requestedView = ((): SettingsView | null => {
+            if (requested === 'features') return 'features';
+            if (requested === 'interface') return 'interface';
+            if (requested === 'security') return 'security';
+            if (requested === 'pillars') return 'pillars';
+            if (requested === 'developer') return 'developer';
+            return null;
+        })();
+        if (!requestedView) return;
+
+        autoOpenedFromQueryRef.current = true;
+        setOpen(true);
+        setView(requestedView);
+
+        // Clean the URL so refresh/back doesn't reopen.
+        requestAnimationFrame(() => {
+            try {
+                router.replace(pathname);
+            } catch {
+                // ignore
+            }
+        });
+    }, [canOpenSettings, pathname, router, searchParams]);
 
     // If the user closes/cancels, revert any live-previewed changes.
     useEffect(() => {
@@ -1325,8 +1373,8 @@ export function SettingsModal() {
                                 <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><ShoppingBag className="w-3.5 h-3.5" /> Rewards Shop</p>
                                 <FeatureRow
                                     id="enablePrizeAiSurprise"
-                                    label="AI Reward Surprise"
-                                    desc="Adds an “AI Joke” reward in the shop that shows a school-safe AI joke when redeemed. Uses server API keys."
+                                    label="AI reward surprises"
+                                    desc="Lets staff add dedicated AI surprise prizes (school-safe short text after redemption). Requires API keys on the server; staff choose point cost per prize and can remove a prize anytime."
                                     icon={<Sparkles className="w-5 h-5" />}
                                     settings={local}
                                     onToggle={handleToggle}
@@ -1335,6 +1383,27 @@ export function SettingsModal() {
                                     isAllowed={isFeatureAllowed('enablePrizeAiSurprise')}
                                     planLabel={planLabel}
                                 />
+                                {local.enablePrizeAiSurprise && isFeatureAllowed('enablePrizeAiSurprise') ? (
+                                    <div className="px-3 pb-4 pt-0 border-t border-slate-100 dark:border-slate-800/50 mt-1">
+                                        <Label htmlFor="prizeAiSurpriseDefaultPoints" className="text-xs font-bold text-foreground">
+                                            Default point cost for new AI surprise prizes
+                                        </Label>
+                                        <p className="mt-1 text-xs text-muted-foreground">
+                                            Shown when you click &quot;Add AI surprise prize&quot; in Admin → Prizes. You can still change the cost on each prize afterward.
+                                        </p>
+                                        <Input
+                                            id="prizeAiSurpriseDefaultPoints"
+                                            type="number"
+                                            min={0}
+                                            className="mt-3 max-w-[8rem] rounded-xl"
+                                            value={local.prizeAiSurpriseDefaultPoints ?? 25}
+                                            onChange={(e) => {
+                                                const n = parseInt(e.target.value, 10);
+                                                handleToggle('prizeAiSurpriseDefaultPoints', Number.isFinite(n) ? Math.max(0, n) : 25);
+                                            }}
+                                        />
+                                    </div>
+                                ) : null}
                                 <FeatureRow
                                     id="enableVendingMachine"
                                     label="Vending Machine"
