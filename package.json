@@ -85,6 +85,7 @@
     "@vitejs/plugin-react": "^4.3.1",
     "axe-core": "^4.11.1",
     "cross-env": "^7.0.3",
+    "esbuild": "^0.19.12",
     "eslint": "^8.57.1",
     "eslint-config-next": "^14.2.18",
     "eslint-plugin-jsx-a11y": "^6.10.2",
