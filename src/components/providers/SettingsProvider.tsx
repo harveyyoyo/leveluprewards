@@ -211,6 +211,8 @@ interface Settings {
     adminPinnedAddOnTabs?: string[];
     /** Admin-only UI preference: persists the main Admin tab order (including pinned add-ons). */
     adminMainTabOrder?: string[];
+    /** Admin-only UI preference: persists the Extra features row order (unpinned add-ons). */
+    adminExtraTabOrder?: string[];
     /** Teacher portal: hides specific add-on tabs without turning off features (optional soft-hide). */
     teacherHiddenAddOnTabs?: string[];
 
@@ -367,6 +369,7 @@ const defaultSettings: Settings = {
     adminHiddenAddOnTabs: [],
     adminPinnedAddOnTabs: [],
     adminMainTabOrder: [],
+    adminExtraTabOrder: [],
     teacherHiddenAddOnTabs: [],
 
     hallOfFameRankType: 'students',

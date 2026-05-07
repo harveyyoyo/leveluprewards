@@ -614,6 +614,39 @@ function AdminDashboardInner() {
     updateSettings({ adminMainTabOrder: cleaned });
   };
 
+  const unpinnedVisibleAddOnTabs = useMemo(() => {
+    const pinned = new Set(settings.adminPinnedAddOnTabs || []);
+    return visibleAddOnTabs.filter((t) => !pinned.has(t.value));
+  }, [settings.adminPinnedAddOnTabs, visibleAddOnTabs]);
+
+  const orderedExtraTabs = useMemo(() => {
+    const availableByValue = new Map(unpinnedVisibleAddOnTabs.map((t) => [t.value, t]));
+    const saved = settings.adminExtraTabOrder || [];
+    const cleanedSaved = saved.filter((v) => availableByValue.has(v));
+
+    const out: AdminAddOnTabDef[] = [];
+    const seen = new Set<string>();
+    for (const v of cleanedSaved) {
+      const def = availableByValue.get(v);
+      if (!def || seen.has(def.value)) continue;
+      out.push(def);
+      seen.add(def.value);
+    }
+    for (const def of unpinnedVisibleAddOnTabs) {
+      if (seen.has(def.value)) continue;
+      out.push(def);
+      seen.add(def.value);
+    }
+    return out;
+  }, [settings.adminExtraTabOrder, unpinnedVisibleAddOnTabs]);
+
+  const persistExtraTabOrder = (next: string[]) => {
+    const available = new Set(unpinnedVisibleAddOnTabs.map((t) => t.value));
+    const seen = new Set<string>();
+    const cleaned = next.filter((v) => available.has(v) && !seen.has(v) && (seen.add(v), true));
+    updateSettings({ adminExtraTabOrder: cleaned });
+  };
+
   const moveInArray = <T,>(arr: T[], from: number, to: number) => {
     if (from === to) return arr;
     const next = arr.slice();
@@ -622,18 +655,23 @@ function AdminDashboardInner() {
     return next;
   };
 
-  const unpinnedVisibleAddOnTabs = useMemo(() => {
-    const pinned = new Set(settings.adminPinnedAddOnTabs || []);
-    return visibleAddOnTabs.filter((t) => !pinned.has(t.value));
-  }, [settings.adminPinnedAddOnTabs, visibleAddOnTabs]);
-
   const pinAddOnTab = (value: string) => {
     const def = addOnTabDefs.find((t) => t.value === value);
     if (!def) return;
     if (!def.isOn(settings)) return;
     const now = settings.adminPinnedAddOnTabs || [];
     if (now.includes(value)) return;
-    updateSettings({ adminPinnedAddOnTabs: [...now, value] });
+    const extraOrderNow = settings.adminExtraTabOrder || [];
+    updateSettings({
+      adminPinnedAddOnTabs: [...now, value],
+      adminExtraTabOrder: extraOrderNow.filter((v) => v !== value),
+    });
+  };
+
+  const unpinAddOnTab = (value: string) => {
+    const now = settings.adminPinnedAddOnTabs || [];
+    if (!now.includes(value)) return;
+    updateSettings({ adminPinnedAddOnTabs: now.filter((v) => v !== value) });
   };
 
   const setAddOnEnabled = (tabValue: string, enabled: boolean) => {
@@ -1229,11 +1267,37 @@ function AdminDashboardInner() {
                   className="bg-muted/50 p-1.5 rounded-2xl flex flex-wrap justify-center border shadow-sm gap-x-1 gap-y-1 h-auto w-full"
                   style={{ ['--admin-accent' as any]: rainbowForNavId('admin', settings.colorScheme) }}
                   aria-label="Extra feature shortcuts"
+                  onDragOver={(e) => {
+                    // Allow dropping pinned add-on tabs here to unpin them.
+                    if (e.dataTransfer.types.includes('text/admin-main-tab')) {
+                      const v = e.dataTransfer.getData('text/admin-main-tab');
+                      const pinned = new Set(settings.adminPinnedAddOnTabs || []);
+                      if (v && pinned.has(v)) {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = 'move';
+                      }
+                    }
+                  }}
+                  onDrop={(e) => {
+                    const v = e.dataTransfer.getData('text/admin-main-tab');
+                    if (!v) return;
+                    const pinned = new Set(settings.adminPinnedAddOnTabs || []);
+                    if (!pinned.has(v)) return;
+                    e.preventDefault();
+
+                    // Unpin from main row + remove from saved main order.
+                    unpinAddOnTab(v);
+                    persistMainTabOrder((settings.adminMainTabOrder || []).filter((x) => x !== v));
+
+                    // Append to end of extra row order (can be re-ordered immediately after).
+                    const nowExtra = settings.adminExtraTabOrder || [];
+                    if (!nowExtra.includes(v)) persistExtraTabOrder([...nowExtra, v]);
+                  }}
                 >
-                  {unpinnedVisibleAddOnTabs.length === 0 ? (
+                  {orderedExtraTabs.length === 0 ? (
                     <span className="text-xs text-muted-foreground px-3 py-2 font-medium">No extra features enabled.</span>
                   ) : (
-                    unpinnedVisibleAddOnTabs.map((t) => {
+                    orderedExtraTabs.map((t) => {
                       const Icon = t.icon;
                       const active = activeMainTab === t.value;
                       return (
@@ -1244,10 +1308,52 @@ function AdminDashboardInner() {
                             'inline-flex items-center rounded-xl border border-transparent',
                             active && 'bg-background shadow-sm border-border/40',
                           )}
-                          title="Drag into the main Admin tabs to pin"
+                          title="Drag to reorder, or drag into main tabs to pin"
                           onDragStart={(e) => {
                             e.dataTransfer.setData('text/admin-addon-tab', t.value);
                             e.dataTransfer.effectAllowed = 'move';
+                          }}
+                          onDragOver={(e) => {
+                            // Reorder within extra row.
+                            if (e.dataTransfer.types.includes('text/admin-addon-tab')) {
+                              e.preventDefault();
+                              const dragged = e.dataTransfer.getData('text/admin-addon-tab');
+                              if (!dragged || dragged === t.value) return;
+
+                              const values = orderedExtraTabs.map((x) => x.value);
+                              const from = values.indexOf(dragged);
+                              const to = values.indexOf(t.value);
+                              if (from < 0 || to < 0 || from === to) return;
+                              persistExtraTabOrder(moveInArray(values, from, to));
+                              return;
+                            }
+
+                            // Accept pinned add-on tabs from main row, drop-inserting before this chip.
+                            if (e.dataTransfer.types.includes('text/admin-main-tab')) {
+                              const dragged = e.dataTransfer.getData('text/admin-main-tab');
+                              const pinned = new Set(settings.adminPinnedAddOnTabs || []);
+                              if (!dragged || !pinned.has(dragged)) return;
+                              e.preventDefault();
+                              e.dataTransfer.dropEffect = 'move';
+                            }
+                          }}
+                          onDrop={(e) => {
+                            const dragged = e.dataTransfer.getData('text/admin-main-tab');
+                            if (!dragged) return;
+                            const pinned = new Set(settings.adminPinnedAddOnTabs || []);
+                            if (!pinned.has(dragged)) return;
+                            e.preventDefault();
+
+                            unpinAddOnTab(dragged);
+                            persistMainTabOrder((settings.adminMainTabOrder || []).filter((x) => x !== dragged));
+
+                            const values = orderedExtraTabs.map((x) => x.value);
+                            const to = values.indexOf(t.value);
+                            if (to < 0) return;
+                            const next = values.includes(dragged)
+                              ? moveInArray(values, values.indexOf(dragged), to)
+                              : [...values.slice(0, to), dragged, ...values.slice(to)];
+                            persistExtraTabOrder(next);
                           }}
                         >
                           <button
