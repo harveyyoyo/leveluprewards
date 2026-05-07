@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { SchoolDeveloperLoginForm } from '@/components/SchoolDeveloperLoginForm';
 
@@ -14,8 +14,44 @@ function LoginFallback() {
 
 function LoginFormWithQuery() {
   const sp = useSearchParams();
-  const school = sp.get('school') ?? undefined;
-  return <SchoolDeveloperLoginForm mode="full" initialSchoolId={school} />;
+  const schoolFromQuery = (sp.get('school') || '').trim();
+  const [initialSchoolId, setInitialSchoolId] = useState<string | undefined>(
+    schoolFromQuery ? schoolFromQuery : undefined,
+  );
+
+  useEffect(() => {
+    if (schoolFromQuery) {
+      setInitialSchoolId(schoolFromQuery);
+      return;
+    }
+
+    let fromReferrer = '';
+    try {
+      const ref = typeof document !== 'undefined' ? document.referrer : '';
+      if (ref) {
+        const u = new URL(ref);
+        const first = u.pathname.split('/').filter(Boolean)[0] || '';
+        // If we came from a school-scoped route like `/{schoolId}/…`, infer that schoolId.
+        if (first && !['login', 'developer', 'api'].includes(first)) {
+          fromReferrer = first;
+        }
+      }
+    } catch {
+      // ignore
+    }
+
+    let fromStorage = '';
+    try {
+      fromStorage = typeof localStorage !== 'undefined' ? localStorage.getItem('schoolId') || '' : '';
+    } catch {
+      // ignore
+    }
+
+    const inferred = (fromReferrer || fromStorage).trim().toLowerCase();
+    if (inferred) setInitialSchoolId(inferred);
+  }, [schoolFromQuery]);
+
+  return <SchoolDeveloperLoginForm mode="full" initialSchoolId={initialSchoolId} />;
 }
 
 export default function LoginPage() {

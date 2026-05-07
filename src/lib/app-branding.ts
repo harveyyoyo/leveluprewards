@@ -21,5 +21,6 @@ export function getLevelUpLogoHref(): string {
       ? process.env.NEXT_PUBLIC_LEVELUP_LOGO_HREF.trim()
       : '';
   if (env) return env;
-  return '/preschool/sign-in';
+  // Default to the public login screen. (Avoid hardcoded schoolIds like "preschool".)
+  return '/login';
 }

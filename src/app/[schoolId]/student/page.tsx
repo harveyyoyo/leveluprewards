@@ -1592,7 +1592,7 @@ function StudentDashboardInner({
                 className="flex items-center justify-center gap-2"
               >
                 <Gift className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" aria-hidden />
-                Rewards/Prizes
+                Click here for more rewards and prizes
                 <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0 opacity-90" aria-hidden />
               </Link>
             </Button>
@@ -1707,8 +1707,9 @@ function StudentDashboardInner({
           {/* Right Section: Activity — narrow column, boxed frame */}
           <Card
             className={cn(
-              'min-w-0 w-full h-full max-w-sm mx-auto lg:mx-0 lg:max-w-none flex flex-col min-h-0 rounded-2xl border-2 shadow-md ring-1 ring-black/5 dark:ring-white/10',
-              'max-lg:max-h-[52dvh]',
+              'min-w-0 w-full max-w-sm mx-auto lg:mx-0 lg:max-w-none flex flex-col min-h-0 rounded-2xl border-2 shadow-md ring-1 ring-black/5 dark:ring-white/10',
+              // Keep Activity fully visible on-screen on wide layouts.
+              'lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100dvh-8rem)]',
               !activeTheme && 'border-slate-200 bg-white dark:border-slate-600 dark:bg-slate-900',
             )}
             style={

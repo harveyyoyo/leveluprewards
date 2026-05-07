@@ -77,7 +77,7 @@ export default function Header() {
     return null;
   }
 
-  const logoLink = getLevelUpLogoHref();
+  const logoLink = schoolId ? `/${schoolId}/portal` : getLevelUpLogoHref();
   const centerLabel = schoolName;
   const centerHref = schoolId ? `/${schoolId}/sign-in` : '/portal';
   const isStaff =
