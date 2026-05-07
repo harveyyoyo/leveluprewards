@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     });
     if (!guarded.ok) return guarded.response;
 
-    const { schoolId: rawSchoolId, mode: rawMode, model = 'gemini-2.5-flash' } = guarded.value.body;
+    const { schoolId: rawSchoolId, mode: rawMode, model = 'gpt-4o-mini' } = guarded.value.body;
 
     if (typeof rawSchoolId !== 'string' || !rawSchoolId.trim()) {
       return NextResponse.json({ error: 'schoolId is required.' }, { status: 400 });
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'mode must be random, joke, riddle, or fortune.' }, { status: 400 });
     }
     const mode = rawMode as PrizeAiFunReward;
-    const selectedModel = typeof model === 'string' ? model : 'gemini-2.5-flash';
+    const selectedModel = typeof model === 'string' ? model : 'gpt-4o-mini';
     const kind = resolveKind(mode);
 
     const systemInstruction = `You write short, wholesome content for elementary and middle school students (ages roughly 5–14).

@@ -25,6 +25,7 @@ import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { ScrollArea } from './ui/scroll-area';
 import { Checkbox } from './ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 
 import { httpsCallable } from 'firebase/functions';
 import { ThemeGeneratorModal } from './ThemeGeneratorModal';
@@ -69,6 +70,8 @@ export function StudentModal({
   const [parentPhone, setParentPhone] = useState('');
   const [studentEmail, setStudentEmail] = useState('');
   const [studentPhone, setStudentPhone] = useState('');
+  const [parentNotificationsAllowed, setParentNotificationsAllowed] = useState(true);
+  const [studentNotificationsAllowed, setStudentNotificationsAllowed] = useState(true);
   const [selectedTeacherIds, setSelectedTeacherIds] = useState<string[]>([]);
   const [isPhotoUploading, setIsPhotoUploading] = useState(false);
   const [isCustomEmojiUploading, setIsCustomEmojiUploading] = useState(false);
@@ -98,6 +101,8 @@ export function StudentModal({
         setParentPhone(decryptField(student.parentPhone) || '');
         setStudentEmail(decryptField(student.studentEmail) || '');
         setStudentPhone(decryptField(student.studentPhone) || '');
+        setParentNotificationsAllowed(student.notificationPrefs?.parentEnabled !== false);
+        setStudentNotificationsAllowed(student.notificationPrefs?.studentEnabled !== false);
         setSelectedTeacherIds(student.teacherIds || []);
         setTheme(normalizeStudentTheme(student.theme) ?? student.theme);
         setBirthday(student.birthday || '');
@@ -116,6 +121,8 @@ export function StudentModal({
         setParentPhone('');
         setStudentEmail('');
         setStudentPhone('');
+        setParentNotificationsAllowed(true);
+        setStudentNotificationsAllowed(true);
         setSelectedTeacherIds([]);
         setTheme(undefined);
         setBirthday('');
@@ -367,6 +374,10 @@ export function StudentModal({
         parentPhone: encryptField(parentPhone.trim()) || undefined,
         studentEmail: encryptField(studentEmail.trim()) || undefined,
         studentPhone: encryptField(studentPhone.trim()) || undefined,
+        notificationPrefs: {
+          parentEnabled: parentNotificationsAllowed,
+          studentEnabled: studentNotificationsAllowed,
+        },
         birthday: birthday || undefined,
         welcomePageEnabled: studentWelcomeAllowed ? true : false,
         welcomeBackScreenEnabled: welcomeBackAllowed ? true : false,
@@ -390,6 +401,10 @@ export function StudentModal({
         parentPhone: encryptField(parentPhone.trim()) || undefined,
         studentEmail: encryptField(studentEmail.trim()) || undefined,
         studentPhone: encryptField(studentPhone.trim()) || undefined,
+        notificationPrefs: {
+          parentEnabled: parentNotificationsAllowed,
+          studentEnabled: studentNotificationsAllowed,
+        },
         birthday: birthday || undefined,
         welcomePageEnabled: studentWelcomeAllowed ? true : false,
         welcomeBackScreenEnabled: welcomeBackAllowed ? true : false,
@@ -609,6 +624,22 @@ export function StudentModal({
                 onChange={e => setParentPhone(e.target.value)}
                 placeholder="555-0123"
               />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex items-center justify-between rounded-lg border bg-muted/30 px-3 py-2">
+              <div className="space-y-0.5">
+                <Label className="text-sm font-bold">Parent notifications</Label>
+                <p className="text-[11px] text-muted-foreground leading-snug">Allow alerts to parent email/phone for this student.</p>
+              </div>
+              <Switch checked={parentNotificationsAllowed} onCheckedChange={setParentNotificationsAllowed} />
+            </div>
+            <div className="flex items-center justify-between rounded-lg border bg-muted/30 px-3 py-2">
+              <div className="space-y-0.5">
+                <Label className="text-sm font-bold">Student notifications</Label>
+                <p className="text-[11px] text-muted-foreground leading-snug">Allow direct alerts to student email/phone.</p>
+              </div>
+              <Switch checked={studentNotificationsAllowed} onCheckedChange={setStudentNotificationsAllowed} />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">

@@ -1,20 +1,16 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import Link from 'next/link';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, doc, addDoc, updateDoc, deleteDoc, query } from 'firebase/firestore';
 import {
   Megaphone,
-  ArrowUpRight,
   Plus,
   Edit,
   Trash2,
   Sparkles,
   CheckCircle2,
-  Image as ImageIcon,
   Tag,
-  Star,
   Palette,
   Eye,
   Settings2,
@@ -47,6 +43,7 @@ import {
 } from '@/lib/bulletinBoard';
 import { cn } from '@/lib/utils';
 import { AdminRecordListHeader } from '@/components/admin/AdminRecordListHeader';
+import { LiveScreenPreview } from '@/components/admin/LiveScreenPreview';
 
 export function AdminBulletinBoardTab({
   schoolId,
@@ -200,11 +197,14 @@ export function AdminBulletinBoardTab({
                 Preview and open the full Bulletin Board page (no header). This is the staff-facing board; it is not shown on the student kiosk.
               </CardDescription>
             </div>
-            <Button asChild variant="outline" className="rounded-xl gap-2 shrink-0">
-              <Link href={`/${schoolId}/bulletin-board?fullscreen=1`} target="_blank" rel="noopener noreferrer">
-                View full page <ArrowUpRight className="w-4 h-4" aria-hidden />
-              </Link>
-            </Button>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-xs font-semibold text-muted-foreground">Enabled</span>
+              <Switch
+                checked={bulletinEnabled}
+                onCheckedChange={(checked) => updateSettings({ bulletinEnabled: checked })}
+                aria-label="Enable bulletin board"
+              />
+            </div>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
             <div className="flex flex-wrap items-center gap-2">
@@ -497,108 +497,20 @@ export function AdminBulletinBoardTab({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {bulletinEnabled ? (
-              <div
-                className={cn(
-                  getBulletinBoardCardClassName(bulletinTheme),
-                  'rounded-3xl border-2 p-5 min-h-[450px] flex flex-col justify-between transition-all duration-500 select-none',
-                )}
-              >
-                <div>
-                  <div className="flex items-center justify-between gap-3 border-b border-black/10 dark:border-white/10 pb-4 mb-4">
-                    <div className="flex items-center gap-2 min-w-0">
-                      {schoolLogoUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={schoolLogoUrl}
-                          alt="School Logo"
-                          className={cn(
-                            bulletinLogoBoxClass(bulletinLogoSize),
-                            'object-contain bg-white/30 backdrop-blur-md p-1 shadow-md shrink-0',
-                          )}
-                        />
-                      ) : (
-                        <div
-                          className={cn(
-                            bulletinLogoBoxClass(bulletinLogoSize),
-                            'bg-indigo-500/20 backdrop-blur-md border border-white/20 flex items-center justify-center font-black text-indigo-700 dark:text-indigo-300 shadow-md shrink-0',
-                          )}
-                        >
-                          🏫
-                        </div>
-                      )}
-                      <div className="min-w-0">
-                        <h4 className="font-black text-base md:text-lg tracking-wide leading-tight">
-                          {bulletinTitle}
-                        </h4>
-                        <p className="text-[10px] font-semibold opacity-80 leading-snug line-clamp-2">
-                          {displaySubtitle}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    {sortedIncentives.filter((i) => i.active !== false).length > 0 ? (
-                      sortedIncentives
-                        .filter((i) => i.active !== false)
-                        .slice(0, 3)
-                        .map((inc) => (
-                          <div
-                            key={inc.id}
-                            className="p-3 bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-2xl border border-white/20 dark:border-white/10 flex items-center justify-between gap-2 shadow-sm transition-all duration-300 hover:scale-[1.02]"
-                          >
-                            <div className="flex items-center gap-2.5">
-                              <span className="text-2xl" role="img" aria-label="incentive">
-                                {inc.icon || '🎯'}
-                              </span>
-                              <div>
-                                <h5 className="font-bold text-xs md:text-sm leading-tight">{inc.title}</h5>
-                                <p className="text-[10px] opacity-70 leading-relaxed mt-0.5">{inc.description}</p>
-                              </div>
-                            </div>
-                            <span className="text-xs font-black bg-emerald-500/20 text-emerald-800 dark:text-emerald-200 px-2.5 py-1 rounded-full shrink-0 border border-emerald-500/30">
-                              +{inc.points} PTS
-                            </span>
-                          </div>
-                        ))
-                    ) : (
-                      <div className="text-center py-10 opacity-70 flex flex-col items-center justify-center gap-2">
-                        <ImageIcon className="w-8 h-8 opacity-40 animate-pulse" />
-                        <span className="text-xs font-bold">No active incentives to preview</span>
-                      </div>
-                    )}
-                    {sortedIncentives.filter((i) => i.active !== false).length > 3 && (
-                      <p className="text-[10px] text-center font-bold opacity-60 uppercase tracking-widest pt-2">
-                        + {sortedIncentives.filter((i) => i.active !== false).length - 3} more items
-                      </p>
-                    )}
+              {bulletinEnabled ? (
+                <LiveScreenPreview
+                  href={`/${schoolId}/bulletin-board?fullscreen=1`}
+                  title="Live preview (matches big screen)"
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center py-16 text-center space-y-3 opacity-60 border-2 border-dashed rounded-3xl p-6">
+                  <Megaphone className="w-10 h-10 text-muted-foreground animate-pulse" />
+                  <div>
+                    <p className="font-black text-sm uppercase tracking-wider">Bulletin Board Disabled</p>
+                    <p className="text-xs text-muted-foreground">Turn on the feature to see the preview.</p>
                   </div>
                 </div>
-
-                {bulletinShowWowBadge ? (
-                  <div className="pt-4 border-t border-black/5 dark:border-white/5 flex items-center justify-between text-[10px] opacity-70">
-                    <span className="font-black tracking-widest uppercase">Premium Display</span>
-                    <span className="flex items-center gap-1">
-                      <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
-                      Wowed Design
-                    </span>
-                  </div>
-                ) : (
-                  <div className="pt-4 border-t border-black/5 dark:border-white/5 text-[10px] opacity-50 font-semibold">
-                    Flair hidden in preview (toggle above to show).
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-16 text-center space-y-3 opacity-60 border-2 border-dashed rounded-3xl p-6">
-                <Megaphone className="w-10 h-10 text-muted-foreground animate-pulse" />
-                <div>
-                  <p className="font-black text-sm uppercase tracking-wider">Bulletin Board Disabled</p>
-                  <p className="text-xs text-muted-foreground">Turn on the feature to see the preview.</p>
-                </div>
-              </div>
-            )}
+              )}
           </CardContent>
         </Card>
       </div>

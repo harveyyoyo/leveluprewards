@@ -53,6 +53,15 @@ function requireString(value, name) {
 function trimmedString(value) {
     return typeof value === "string" ? value.trim() : "";
 }
+function maskRecipient(to) {
+    const s = typeof to === "string" ? to.trim() : "";
+    if (!s)
+        return "—";
+    const at = s.indexOf("@");
+    if (at < 1)
+        return `${s.slice(0, 3)}…`;
+    return `${s.slice(0, 2)}***${s.slice(at)}`;
+}
 function schoolAccessPasscodeFrom(data) {
     return trimmedString(data.schoolAccessPasscode) || trimmedString(data.passcode) || "1234";
 }
@@ -1347,7 +1356,7 @@ exports.awardSpecialDayPoints = functions.https.onCall(async (data, context) => 
 // ========================================================================
 // Callable: Upload school logo (server-side to avoid client Storage hangs)
 // ========================================================================
-const LOGO_MAX_BYTES = 5 * 1024 * 1024; // 5MB
+const LOGO_MAX_BYTES = 10 * 1024 * 1024; // 10MB
 const LOGO_ALLOWED_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
 const STUDENT_PHOTO_MAX_BYTES = 5 * 1024 * 1024; // 5MB
 const STUDENT_PHOTO_ALLOWED_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
@@ -1380,7 +1389,7 @@ exports.uploadSchoolLogo = functions.https.onCall(async (data, context) => {
             throw new functions.https.HttpsError("invalid-argument", "Invalid base64 image data.");
         }
         if (buffer.length > LOGO_MAX_BYTES) {
-            throw new functions.https.HttpsError("invalid-argument", "Image must be under 5MB.");
+            throw new functions.https.HttpsError("invalid-argument", "Image must be under 10MB.");
         }
         const bucket = admin.storage().bucket();
         const timestamp = Date.now();
@@ -1456,7 +1465,7 @@ exports.uploadAppLogo = functions.https.onCall(async (data, context) => {
             throw new functions.https.HttpsError("invalid-argument", "Invalid base64 image data.");
         }
         if (buffer.length > LOGO_MAX_BYTES) {
-            throw new functions.https.HttpsError("invalid-argument", "Image must be under 5MB.");
+            throw new functions.https.HttpsError("invalid-argument", "Image must be under 10MB.");
         }
         const bucket = admin.storage().bucket();
         const timestamp = Date.now();
@@ -2127,6 +2136,11 @@ exports.onStudentActivityCreated = functions.firestore
     const studentData = studentSnap.data();
     if (!studentData)
         return;
+    const prefs = studentData.notificationPrefs && typeof studentData.notificationPrefs === "object"
+        ? studentData.notificationPrefs
+        : {};
+    const parentNotifEnabled = prefs.parentEnabled !== false;
+    const studentNotifEnabled = prefs.studentEnabled !== false;
     const studentName = [studentData.firstName, studentData.lastName].filter(Boolean).join(" ") || "A student";
     const isRedemption = activityData.amount < 0;
     const amountAbs = Math.abs(activityData.amount);
@@ -2134,23 +2148,39 @@ exports.onStudentActivityCreated = functions.firestore
     const isAchievement = desc.startsWith("Achievement earned:");
     const isBadge = desc.startsWith("Badge earned:");
     const isMilestone = isAchievement || isBadge;
-    if (isMilestone && settings.notificationMilestonesEnabled === false)
-        return;
-    if (!isMilestone && !settings.notificationRewardsEnabled)
-        return;
+    const isLibraryCheckout = /^Checked out library item:/i.test(desc);
+    const isLibraryReturn = /^Returned library item:/i.test(desc);
+    const isLibraryEvent = isLibraryCheckout || isLibraryReturn;
+    if (isLibraryEvent) {
+        // Library pillar + dedicated toggle gate library activity notifications.
+        if (settings.payLibrary === false)
+            return;
+        if (!settings.notificationLibraryEnabled)
+            return;
+    }
+    else {
+        if (isMilestone && settings.notificationMilestonesEnabled === false)
+            return;
+        if (!isMilestone && !settings.notificationRewardsEnabled)
+            return;
+    }
     const unlockedName = desc.replace(/^Achievement earned:\s*/i, "").replace(/^Badge earned:\s*/i, "").trim();
-    const subject = isBadge
-        ? "Badge Unlocked"
-        : isAchievement
-            ? "Milestone Unlocked"
+    const subject = isLibraryEvent
+        ? (isLibraryCheckout ? "Library Checkout Alert" : "Library Return Alert")
+        : isBadge
+            ? "Badge Unlocked"
+            : isAchievement
+                ? "Milestone Unlocked"
+                : isRedemption
+                    ? "Reward Redemption Alert"
+                    : "Point Award Alert";
+    const message = isLibraryEvent
+        ? `${studentName} ${isLibraryCheckout ? "checked out" : "returned"}: ${desc.replace(/^Checked out library item:\s*/i, "").replace(/^Returned library item:\s*/i, "").trim() || "a library item"}.`
+        : isMilestone
+            ? `${studentName} unlocked ${unlockedName || "a new achievement"}${amountAbs ? ` and earned ${amountAbs} bonus points` : ""}.`
             : isRedemption
-                ? "Reward Redemption Alert"
-                : "Point Award Alert";
-    const message = isMilestone
-        ? `${studentName} unlocked ${unlockedName || "a new achievement"}${amountAbs ? ` and earned ${amountAbs} bonus points` : ""}.`
-        : isRedemption
-            ? `${studentName} just redeemed ${amountAbs} points for: ${desc}`
-            : `${studentName} just earned ${amountAbs} points for: ${desc}`;
+                ? `${studentName} just redeemed ${amountAbs} points for: ${desc}`
+                : `${studentName} just earned ${amountAbs} points for: ${desc}`;
     const alerts = [];
     const pEmail = (0, crypto_1.decryptField)(studentData.parentEmail);
     const pPhone = (0, crypto_1.decryptField)(studentData.parentPhone);
@@ -2160,18 +2190,22 @@ exports.onStudentActivityCreated = functions.firestore
     const fromEmail = `"${schoolName} Alerts" <alerts@levelup-edu.com>`;
     const html = buildCelebrationEmailHtml({
         title: isMilestone ? unlockedName || subject : subject,
-        subtitle: isBadge ? "Badge unlocked" : isAchievement ? "Milestone reached" : isRedemption ? "Reward redeemed" : "Points earned",
+        subtitle: isLibraryEvent
+            ? (isLibraryCheckout ? "Library checkout" : "Library return")
+            : isBadge ? "Badge unlocked" : isAchievement ? "Milestone reached" : isRedemption ? "Reward redeemed" : "Points earned",
         message,
         studentName,
-        accent: isBadge ? "#f59e0b" : isAchievement ? "#2563eb" : isRedemption ? "#db2777" : "#16a34a",
-        icon: isBadge ? "*" : isAchievement ? "T" : isRedemption ? "!" : "+",
+        accent: isLibraryEvent ? "#4f46e5" : isBadge ? "#f59e0b" : isAchievement ? "#2563eb" : isRedemption ? "#db2777" : "#16a34a",
+        icon: isLibraryEvent ? "B" : isBadge ? "*" : isAchievement ? "T" : isRedemption ? "!" : "+",
         showArtwork: settings.notificationArtworkEnabled !== false && isMilestone,
     });
-    queueContactAlerts({
-        alerts, db, email: pEmail, phone: pPhone, subject: `${subject}: ${studentName}`,
-        message, html, fromEmail, schoolId, studentId, whatsappEnabled: settings.notificationWhatsAppEnabled,
-    });
-    if (settings.notificationStudentsEnabled) {
+    if (parentNotifEnabled) {
+        queueContactAlerts({
+            alerts, db, email: pEmail, phone: pPhone, subject: `${subject}: ${studentName}`,
+            message, html, fromEmail, schoolId, studentId, whatsappEnabled: settings.notificationWhatsAppEnabled,
+        });
+    }
+    if (settings.notificationStudentsEnabled && studentNotifEnabled) {
         queueContactAlerts({
             alerts, db, email: sEmail, phone: sPhone, subject,
             message, html, fromEmail, schoolId, studentId, whatsappEnabled: settings.notificationWhatsAppEnabled,
@@ -2323,6 +2357,11 @@ exports.onAttendanceLogCreated = functions.firestore
     const studentData = studentSnap.data();
     if (!studentData)
         return;
+    const prefs = studentData.notificationPrefs && typeof studentData.notificationPrefs === "object"
+        ? studentData.notificationPrefs
+        : {};
+    const parentNotifEnabled = prefs.parentEnabled !== false;
+    const studentNotifEnabled = prefs.studentEnabled !== false;
     const studentName = logData.studentName || "A student";
     const status = logData.onTime ? "on time" : "signed in";
     const period = logData.periodLabel ? ` for ${logData.periodLabel}` : "";
@@ -2343,11 +2382,13 @@ exports.onAttendanceLogCreated = functions.firestore
         icon: "OK",
         showArtwork: false,
     });
-    queueContactAlerts({
-        alerts, db, email: pEmail, phone: pPhone, subject: `Attendance Alert: ${studentName}`,
-        message, html, fromEmail, schoolId, studentId, whatsappEnabled: settings.notificationWhatsAppEnabled,
-    });
-    if (settings.notificationStudentsEnabled) {
+    if (parentNotifEnabled) {
+        queueContactAlerts({
+            alerts, db, email: pEmail, phone: pPhone, subject: `Attendance Alert: ${studentName}`,
+            message, html, fromEmail, schoolId, studentId, whatsappEnabled: settings.notificationWhatsAppEnabled,
+        });
+    }
+    if (settings.notificationStudentsEnabled && studentNotifEnabled) {
         queueContactAlerts({
             alerts, db, email: sEmail, phone: sPhone, subject: "Attendance Alert",
             message, html, fromEmail, schoolId, studentId, whatsappEnabled: settings.notificationWhatsAppEnabled,
@@ -2374,13 +2415,44 @@ exports.adminListMailQueue = functions.https.onCall(async (data, context) => {
         const message = v.message;
         const delivery = v.delivery;
         const subj = (message === null || message === void 0 ? void 0 : message.subject) != null ? String(message.subject) : "";
-        const del = (delivery === null || delivery === void 0 ? void 0 : delivery.state) != null
+        const deliveryState = (delivery === null || delivery === void 0 ? void 0 : delivery.state) != null
             ? String(delivery.state)
-            : (delivery === null || delivery === void 0 ? void 0 : delivery.error) != null
-                ? String(delivery.error)
-                : (delivery === null || delivery === void 0 ? void 0 : delivery.message) != null
-                    ? String(delivery.message)
-                    : "";
+            : typeof v.state === "string"
+                ? v.state
+                : "";
+        const deliveryError = (delivery === null || delivery === void 0 ? void 0 : delivery.error) != null
+            ? String(delivery.error)
+            : typeof v.error === "string"
+                ? v.error
+                : "";
+        const deliveryMessage = (delivery === null || delivery === void 0 ? void 0 : delivery.message) != null
+            ? String(delivery.message)
+            : typeof v.deliveryMessage === "string"
+                ? v.deliveryMessage
+                : "";
+        const deliveryAttempts = typeof (delivery === null || delivery === void 0 ? void 0 : delivery.attempts) === "number" && Number.isFinite(delivery.attempts)
+            ? Math.max(0, Math.floor(delivery.attempts))
+            : null;
+        const toMillisMaybe = (ts) => {
+            if (!ts)
+                return null;
+            if (typeof ts === "number" && Number.isFinite(ts))
+                return Math.floor(ts);
+            if (typeof ts === "object" && ts) {
+                const anyTs = ts;
+                if (typeof anyTs.toMillis === "function")
+                    return Number(anyTs.toMillis());
+                const seconds = typeof anyTs.seconds === "number" ? anyTs.seconds : null;
+                const nanos = typeof anyTs.nanoseconds === "number" ? anyTs.nanoseconds : 0;
+                if (seconds != null && Number.isFinite(seconds) && Number.isFinite(nanos)) {
+                    return Math.floor(seconds * 1000 + nanos / 1000000);
+                }
+            }
+            return null;
+        };
+        const deliveryStartTimeMs = toMillisMaybe(delivery === null || delivery === void 0 ? void 0 : delivery.startTime);
+        const deliveryEndTimeMs = toMillisMaybe(delivery === null || delivery === void 0 ? void 0 : delivery.endTime);
+        const del = deliveryState || deliveryError || deliveryMessage || "queued";
         const to = v.to;
         const toStr = typeof to === "string" ? to.trim() : "";
         let toMasked = "—";
@@ -2390,13 +2462,161 @@ exports.adminListMailQueue = functions.https.onCall(async (data, context) => {
         }
         return {
             id: d.id,
+            createdAtMs: d.createTime ? d.createTime.toMillis() : null,
             toMasked,
             subject: subj || "—",
-            delivery: del || "—",
+            delivery: del,
+            deliveryState: deliveryState || null,
+            deliveryAttempts,
+            deliveryError: deliveryError || null,
+            deliveryMessage: deliveryMessage || null,
+            deliveryStartTimeMs,
+            deliveryEndTimeMs,
             studentId: typeof v.studentId === "string" ? v.studentId : undefined,
         };
     });
     return { items };
+});
+/** Callable: build a preview of a notification email without enqueuing delivery. */
+exports.adminPreviewTestNotification = functions.https.onCall(async (data, context) => {
+    var _a, _b;
+    requireAuth(context);
+    requireString(data.schoolId, "schoolId");
+    requireString(data.studentId, "studentId");
+    requireString(data.template, "template");
+    const schoolId = String(data.schoolId).trim().toLowerCase();
+    const studentId = String(data.studentId).trim();
+    if (!(await isDeveloper(context))) {
+        await requireSchoolAdmin(schoolId, context);
+    }
+    const template = String(data.template).trim();
+    const db = admin.firestore();
+    const [schoolSnap, studentSnap] = await Promise.all([
+        db.collection("schools").doc(schoolId).get(),
+        db.collection("schools").doc(schoolId).collection("students").doc(studentId).get(),
+    ]);
+    if (!studentSnap.exists) {
+        throw new functions.https.HttpsError("not-found", "Student not found");
+    }
+    const studentData = studentSnap.data() || {};
+    const studentName = [studentData.firstName, studentData.lastName].filter(Boolean).join(" ") || studentData.nickname || "A student";
+    let subject = "Test Notification";
+    let subtitle = "Test alert";
+    let message = `${studentName} triggered a test notification.`;
+    let accent = "#2563eb";
+    let icon = "T";
+    let showArtwork = true;
+    if (template === "reward_redemption") {
+        subject = `Reward Redemption Alert: ${studentName}`;
+        subtitle = "Reward redeemed";
+        message = `${studentName} just redeemed 10 points for: Test prize.`;
+        accent = "#db2777";
+        icon = "!";
+        showArtwork = false;
+    }
+    else if (template === "points_award") {
+        subject = `Point Award Alert: ${studentName}`;
+        subtitle = "Points earned";
+        message = `${studentName} just earned 5 points for: Test activity.`;
+        accent = "#16a34a";
+        icon = "+";
+        showArtwork = false;
+    }
+    else if (template === "milestone") {
+        subject = `Milestone Unlocked: ${studentName}`;
+        subtitle = "Milestone reached";
+        message = `${studentName} unlocked Monthly Champion and earned 25 bonus points.`;
+        accent = "#2563eb";
+        icon = "T";
+        showArtwork = true;
+    }
+    else if (template === "attendance") {
+        subject = `Attendance Alert: ${studentName}`;
+        subtitle = "Class sign-in";
+        message = `${studentName} signed in for Period 1 at ${new Date().toLocaleTimeString()}.`;
+        accent = "#10b981";
+        icon = "OK";
+        showArtwork = false;
+    }
+    else if (template === "library_checkout") {
+        subject = `Library Checkout Alert: ${studentName}`;
+        subtitle = "Library checkout";
+        message = `${studentName} checked out: Test book.`;
+        accent = "#4f46e5";
+        icon = "B";
+        showArtwork = false;
+    }
+    else if (template === "library_return") {
+        subject = `Library Return Alert: ${studentName}`;
+        subtitle = "Library return";
+        message = `${studentName} returned: Test book.`;
+        accent = "#4f46e5";
+        icon = "B";
+        showArtwork = false;
+    }
+    else {
+        throw new functions.https.HttpsError("invalid-argument", "Unknown template");
+    }
+    const settings = ((_a = schoolSnap.data()) === null || _a === void 0 ? void 0 : _a.appSettings) || {};
+    const schoolName = ((_b = schoolSnap.data()) === null || _b === void 0 ? void 0 : _b.name) || "School";
+    const fromEmail = `"${schoolName} Alerts" <alerts@levelup-edu.com>`;
+    const html = buildCelebrationEmailHtml({
+        title: subject.replace(/:\s*.*$/, ""),
+        subtitle,
+        message,
+        studentName,
+        accent,
+        icon,
+        showArtwork: settings.notificationArtworkEnabled !== false && showArtwork,
+    });
+    const toParent = (0, crypto_1.decryptField)(studentData.parentEmail) || "";
+    const toStudent = (0, crypto_1.decryptField)(studentData.studentEmail) || "";
+    return {
+        subject,
+        fromEmail,
+        html,
+        text: message,
+        to: {
+            parentEmail: toParent ? maskRecipient(toParent) : "—",
+            studentEmail: toStudent ? maskRecipient(toStudent) : "—",
+        },
+    };
+});
+/** Callable: enqueue a test notification email into the Trigger Email queue. */
+exports.adminSendTestNotification = functions.https.onCall(async (data, context) => {
+    requireAuth(context);
+    requireString(data.schoolId, "schoolId");
+    requireString(data.studentId, "studentId");
+    requireString(data.template, "template");
+    const schoolId = String(data.schoolId).trim().toLowerCase();
+    const studentId = String(data.studentId).trim();
+    if (!(await isDeveloper(context))) {
+        await requireSchoolAdmin(schoolId, context);
+    }
+    const recipientRaw = typeof data.recipient === "string" ? data.recipient : "parent";
+    const recipient = recipientRaw === "student" ? "student" : "parent";
+    const preview = await exports.adminPreviewTestNotification(Object.assign(Object.assign({}, data), { schoolId, studentId }), context);
+    const db = admin.firestore();
+    const studentSnap = await db.collection("schools").doc(schoolId).collection("students").doc(studentId).get();
+    const studentData = studentSnap.data() || {};
+    const toEmail = recipient === "student" ? (0, crypto_1.decryptField)(studentData.studentEmail) : (0, crypto_1.decryptField)(studentData.parentEmail);
+    if (!toEmail) {
+        throw new functions.https.HttpsError("failed-precondition", `No ${recipient} email on student record.`);
+    }
+    const docRef = await db.collection("mail").add({
+        to: toEmail,
+        from: preview.fromEmail,
+        message: {
+            subject: preview.subject,
+            text: preview.text,
+            html: preview.html,
+        },
+        schoolId,
+        studentId,
+        test: true,
+        createdAt: firestore_1.FieldValue.serverTimestamp(),
+    });
+    return { mailDocId: docRef.id };
 });
 // Note: onStudentActivityCreated and onAttendanceLogCreated are exported via
 // `export const` above (ES module syntax). No duplicate CommonJS assignment needed.

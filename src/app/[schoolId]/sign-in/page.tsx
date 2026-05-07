@@ -135,14 +135,16 @@ export default function SchoolSignInChooserPage() {
       <div className="w-full max-w-md">
         <div className="rounded-[28px] border border-slate-200/80 bg-white p-8 shadow-[0_12px_40px_-12px_rgba(15,23,42,0.12)]">
           <div className="flex flex-col items-center text-center">
-            <div className="mb-5 flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-900 text-xl font-bold text-white shadow-inner">
-              {logoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element -- school branding URLs from Firestore (same pattern as Header)
-                <img src={logoUrl} alt="" className="h-full w-full object-cover" />
-              ) : (
-                logoInitial
-              )}
-            </div>
+            {logoUrl ? (
+              <div className="mb-5 flex h-14 w-full max-w-[220px] shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white px-3 shadow-sm">
+                {/* eslint-disable-next-line @next/next/no-img-element -- school branding URLs from Firestore (same pattern as Header) */}
+                <img src={logoUrl} alt="" className="h-full w-full object-contain" />
+              </div>
+            ) : (
+              <div className="mb-5 flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-900 text-xl font-bold text-white shadow-inner">
+                {logoInitial}
+              </div>
+            )}
             <h1 className="text-balance text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">{welcomeTitle}</h1>
             <p className="mt-1.5 text-sm text-slate-500">Choose your sign-in</p>
           </div>

@@ -192,10 +192,10 @@ export function PrizeRedeemTicketPrintSheet({
 
               {hasSurprise ? (
                 <div className="prize-ticket__surprise" aria-label="Prize surprise">
-                  <p className="prize-ticket__surprise-kind">
+                  <p className="prize-ticket__surprise-kind">{surpriseText}</p>
+                  <p className="prize-ticket__surprise-label">
                     {PRINT_AI_KIND_LABEL[surpriseKind] ?? 'Surprise'}
                   </p>
-                  <p className="prize-ticket__surprise-text">{surpriseText}</p>
                   {surpriseAnswer ? (
                     <p className="prize-ticket__surprise-answer">
                       <span className="prize-ticket__surprise-answer-label">Answer: </span>

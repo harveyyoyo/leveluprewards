@@ -20,6 +20,10 @@ function milestonesGloballyOff(settings: Settings): boolean {
   return settings.notificationMilestonesEnabled === false;
 }
 
+function libraryGloballyOff(settings: Settings): boolean {
+  return settings.notificationLibraryEnabled === false || settings.payLibrary === false;
+}
+
 /**
  * Mirrors the high-level gates in `functions/src/index.ts` for
  * `onStudentActivityCreated` and `onAttendanceLogCreated`.
@@ -98,6 +102,23 @@ export function buildNotificationDiagnostics(args: {
     });
   }
 
+  if (settings.payLibrary === false) {
+    lines.push({
+      level: 'info',
+      text: 'Library pillar is off — library scan activity is ignored for notification purposes.',
+    });
+  } else if (settings.notificationLibraryEnabled === false) {
+    lines.push({
+      level: 'warn',
+      text: 'Library activity will NOT notify — "Library activity" is off (checkout/return logs are treated separately from rewards).',
+    });
+  } else if (settings.enableNotifications && notificationsPlanOk) {
+    lines.push({
+      level: 'pass',
+      text: 'Library checkout/return activity will enqueue parent alerts when a student activity desc starts with "Checked out library item:" or "Returned library item:".',
+    });
+  }
+
   if (!settings.notificationStudentsEnabled) {
     lines.push({
       level: 'info',
@@ -141,6 +162,10 @@ export function buildNotificationDiagnostics(args: {
     notificationsPlanOk &&
     settings.enableNotifications &&
     settings.notificationAttendanceEnabled;
+  const libraryOpen =
+    notificationsPlanOk &&
+    settings.enableNotifications &&
+    !libraryGloballyOff(settings);
 
   const activeRows: ActiveNotificationRow[] = [
     {
@@ -187,6 +212,17 @@ export function buildNotificationDiagnostics(args: {
         ? 'Uses Attendance Sign-ins toggle. Staff path not implemented for attendance.'
         : 'Blocked by plan, master switch, or Attendance Sign-ins toggle.',
     },
+    {
+      id: 'library',
+      label: 'Library checkout / return',
+      trigger: 'Activity desc starts with "Checked out library item:" or "Returned library item:"',
+      parentQueue: libraryOpen,
+      studentQueue: libraryOpen && settings.notificationStudentsEnabled,
+      staffQueue: libraryOpen && settings.notificationStaffAlertsEnabled,
+      gateNote: libraryOpen
+        ? 'Uses Library activity toggle + master switch + plan (+ Library pillar).'
+        : 'Blocked by plan, master switch, Library pillar, or Library activity toggle.',
+    },
   ];
 
   let headlineStatus: 'blocked' | 'limited' | 'active' = 'active';
@@ -195,7 +231,8 @@ export function buildNotificationDiagnostics(args: {
   } else if (
     !settings.notificationRewardsEnabled &&
     !settings.notificationAttendanceEnabled &&
-    milestonesGloballyOff(settings)
+    milestonesGloballyOff(settings) &&
+    libraryGloballyOff(settings)
   ) {
     headlineStatus = 'limited';
   }

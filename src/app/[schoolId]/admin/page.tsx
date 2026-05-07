@@ -1,6 +1,6 @@
 
 'use client';
-import { useEffect, useLayoutEffect, useMemo, useState, useRef, ChangeEvent } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useState, useRef, ChangeEvent, type ComponentType } from 'react';
 import { useConfirm } from '@/components/providers/ConfirmProvider';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -440,6 +440,8 @@ function AdminDashboardInner() {
     const hiddenNow = settings.adminHiddenAddOnTabs || [];
     const addHidden = (v: string) => Array.from(new Set([...hiddenNow, v]));
     const removeHidden = (v: string) => hiddenNow.filter((x) => x !== v);
+    const pinnedNow = settings.adminPinnedAddOnTabs || [];
+    const removePinned = (v: string) => pinnedNow.filter((x) => x !== v);
 
     return [
       {
@@ -449,7 +451,7 @@ function AdminDashboardInner() {
         isOn: (s) => (s.payRewards ?? true),
         canEnable: () => isFeatureAllowed?.('payRewards') ?? true,
         enable: () => updateSettings({ payRewards: true, adminHiddenAddOnTabs: removeHidden('coupons') }),
-        disable: () => updateSettings({ payRewards: false, adminHiddenAddOnTabs: removeHidden('coupons') }),
+        disable: () => updateSettings({ payRewards: false, adminHiddenAddOnTabs: removeHidden('coupons'), adminPinnedAddOnTabs: removePinned('coupons') }),
       },
       {
         value: 'insights',
@@ -458,7 +460,7 @@ function AdminDashboardInner() {
         isOn: (s) => !!s.enableAdminAnalytics,
         canEnable: () => isFeatureAllowed?.('enableAdminAnalytics') ?? true,
         enable: () => updateSettings({ enableAdminAnalytics: true, adminHiddenAddOnTabs: removeHidden('insights') }),
-        disable: () => updateSettings({ enableAdminAnalytics: false, adminHiddenAddOnTabs: removeHidden('insights') }),
+        disable: () => updateSettings({ enableAdminAnalytics: false, adminHiddenAddOnTabs: removeHidden('insights'), adminPinnedAddOnTabs: removePinned('insights') }),
       },
       {
         value: 'attendance',
@@ -467,7 +469,7 @@ function AdminDashboardInner() {
         isOn: (s) => !!s.enableAttendance || !!s.enableClassSignIn,
         canEnable: () => (isFeatureAllowed?.('enableAttendance') ?? true) || (isFeatureAllowed?.('enableClassSignIn') ?? true),
         enable: () => updateSettings({ enableAttendance: true, enableClassSignIn: true, adminHiddenAddOnTabs: removeHidden('attendance') }),
-        disable: () => updateSettings({ enableAttendance: false, enableClassSignIn: false, adminHiddenAddOnTabs: removeHidden('attendance') }),
+        disable: () => updateSettings({ enableAttendance: false, enableClassSignIn: false, adminHiddenAddOnTabs: removeHidden('attendance'), adminPinnedAddOnTabs: removePinned('attendance') }),
       },
       {
         value: 'halloffame',
@@ -476,7 +478,7 @@ function AdminDashboardInner() {
         isOn: (s) => !!s.enableClassLeaderboard,
         canEnable: () => isFeatureAllowed?.('enableClassLeaderboard') ?? true,
         enable: () => updateSettings({ enableClassLeaderboard: true, adminHiddenAddOnTabs: removeHidden('halloffame') }),
-        disable: () => updateSettings({ enableClassLeaderboard: false, adminHiddenAddOnTabs: removeHidden('halloffame') }),
+        disable: () => updateSettings({ enableClassLeaderboard: false, adminHiddenAddOnTabs: removeHidden('halloffame'), adminPinnedAddOnTabs: removePinned('halloffame') }),
       },
       {
         value: 'bulletinboard',
@@ -485,7 +487,7 @@ function AdminDashboardInner() {
         isOn: (s) => !!s.bulletinEnabled,
         canEnable: () => isFeatureAllowed?.('bulletinEnabled') ?? true,
         enable: () => updateSettings({ bulletinEnabled: true, adminHiddenAddOnTabs: removeHidden('bulletinboard') }),
-        disable: () => updateSettings({ bulletinEnabled: false, adminHiddenAddOnTabs: removeHidden('bulletinboard') }),
+        disable: () => updateSettings({ bulletinEnabled: false, adminHiddenAddOnTabs: removeHidden('bulletinboard'), adminPinnedAddOnTabs: removePinned('bulletinboard') }),
       },
       {
         value: 'library',
@@ -494,7 +496,7 @@ function AdminDashboardInner() {
         isOn: (s) => (s.payLibrary ?? true),
         canEnable: () => isFeatureAllowed?.('payLibrary') ?? true,
         enable: () => updateSettings({ payLibrary: true, adminHiddenAddOnTabs: removeHidden('library') }),
-        disable: () => updateSettings({ payLibrary: false, adminHiddenAddOnTabs: removeHidden('library') }),
+        disable: () => updateSettings({ payLibrary: false, adminHiddenAddOnTabs: removeHidden('library'), adminPinnedAddOnTabs: removePinned('library') }),
       },
       {
         value: 'bonuspoints',
@@ -503,7 +505,7 @@ function AdminDashboardInner() {
         isOn: (s) => !!s.enableAchievements,
         canEnable: () => isFeatureAllowed?.('enableAchievements') ?? true,
         enable: () => updateSettings({ enableAchievements: true, adminHiddenAddOnTabs: removeHidden('bonuspoints') }),
-        disable: () => updateSettings({ enableAchievements: false, adminHiddenAddOnTabs: removeHidden('bonuspoints') }),
+        disable: () => updateSettings({ enableAchievements: false, adminHiddenAddOnTabs: removeHidden('bonuspoints'), adminPinnedAddOnTabs: removePinned('bonuspoints') }),
       },
       {
         value: 'category-badges',
@@ -512,7 +514,7 @@ function AdminDashboardInner() {
         isOn: (s) => !!s.enableBadges,
         canEnable: () => isFeatureAllowed?.('enableBadges') ?? true,
         enable: () => updateSettings({ enableBadges: true, adminHiddenAddOnTabs: removeHidden('category-badges') }),
-        disable: () => updateSettings({ enableBadges: false, adminHiddenAddOnTabs: removeHidden('category-badges') }),
+        disable: () => updateSettings({ enableBadges: false, adminHiddenAddOnTabs: removeHidden('category-badges'), adminPinnedAddOnTabs: removePinned('category-badges') }),
       },
       {
         value: 'goals',
@@ -521,7 +523,7 @@ function AdminDashboardInner() {
         isOn: (s) => !!s.enableGoals,
         canEnable: () => isFeatureAllowed?.('enableGoals') ?? true,
         enable: () => updateSettings({ enableGoals: true, adminHiddenAddOnTabs: removeHidden('goals') }),
-        disable: () => updateSettings({ enableGoals: false, adminHiddenAddOnTabs: removeHidden('goals') }),
+        disable: () => updateSettings({ enableGoals: false, adminHiddenAddOnTabs: removeHidden('goals'), adminPinnedAddOnTabs: removePinned('goals') }),
       },
       {
         value: 'notifications',
@@ -530,7 +532,7 @@ function AdminDashboardInner() {
         isOn: (s) => !!s.enableNotifications,
         canEnable: () => isFeatureAllowed?.('enableNotifications') ?? true,
         enable: () => updateSettings({ enableNotifications: true, adminHiddenAddOnTabs: removeHidden('notifications') }),
-        disable: () => updateSettings({ enableNotifications: false, adminHiddenAddOnTabs: removeHidden('notifications') }),
+        disable: () => updateSettings({ enableNotifications: false, adminHiddenAddOnTabs: removeHidden('notifications'), adminPinnedAddOnTabs: removePinned('notifications') }),
       },
       {
         value: 'branding',
@@ -538,14 +540,101 @@ function AdminDashboardInner() {
         icon: Palette,
         isOn: () => !hiddenNow.includes('branding'),
         enable: () => updateSettings({ adminHiddenAddOnTabs: removeHidden('branding') }),
-        disable: () => updateSettings({ adminHiddenAddOnTabs: addHidden('branding') }),
+        disable: () => updateSettings({ adminHiddenAddOnTabs: addHidden('branding'), adminPinnedAddOnTabs: removePinned('branding') }),
       },
     ];
-  }, [isFeatureAllowed, settings.adminHiddenAddOnTabs, updateSettings]);
+  }, [isFeatureAllowed, settings.adminHiddenAddOnTabs, settings.adminPinnedAddOnTabs, updateSettings]);
 
   const visibleAddOnTabs = useMemo(() => {
     return addOnTabDefs.filter((t) => t.isOn(settings));
   }, [addOnTabDefs, settings]);
+
+  const pinnedAddOnTabs = useMemo(() => {
+    const pinned = settings.adminPinnedAddOnTabs || [];
+    if (pinned.length === 0) return [];
+    const byValue = new Map(visibleAddOnTabs.map((t) => [t.value, t]));
+    return pinned.map((v) => byValue.get(v)).filter(Boolean) as AdminAddOnTabDef[];
+  }, [settings.adminPinnedAddOnTabs, visibleAddOnTabs]);
+
+  type AdminMainTabDef = {
+    value: string;
+    label: string;
+    icon: ComponentType<{ className?: string }>;
+    title?: string;
+  };
+
+  const orderedMainTabs = useMemo<AdminMainTabDef[]>(() => {
+    const base: AdminMainTabDef[] = [
+      { value: 'students', label: 'Students', icon: Users },
+      { value: 'classes', label: 'Classes', icon: BookOpen },
+      { value: 'teachers', label: 'Faculty', icon: User },
+      { value: 'prizes', label: 'Prizes', icon: Gift },
+      { value: 'categories', label: 'Rewards', icon: Tag },
+    ];
+
+    const pinnedExtras: AdminMainTabDef[] = pinnedAddOnTabs.map((t) => ({
+      value: t.value,
+      label: t.label,
+      icon: t.icon,
+      title: `${t.label} (pinned from Extra features)`,
+    }));
+
+    const maybeDev: AdminMainTabDef[] =
+      loginState === 'developer' ? [{ value: 'backups', label: 'Backups', icon: Database }] : [];
+
+    const available = [...base, ...pinnedExtras, ...maybeDev];
+    const availableByValue = new Map(available.map((t) => [t.value, t]));
+
+    const saved = settings.adminMainTabOrder || [];
+    const cleanedSaved = saved.filter((v) => availableByValue.has(v));
+
+    const out: AdminMainTabDef[] = [];
+    const seen = new Set<string>();
+    for (const v of cleanedSaved) {
+      const def = availableByValue.get(v);
+      if (!def || seen.has(def.value)) continue;
+      out.push(def);
+      seen.add(def.value);
+    }
+
+    for (const def of available) {
+      if (seen.has(def.value)) continue;
+      out.push(def);
+      seen.add(def.value);
+    }
+
+    return out;
+  }, [loginState, pinnedAddOnTabs, settings.adminMainTabOrder]);
+
+  const persistMainTabOrder = (next: string[]) => {
+    // Keep storage small + resilient (no unknown values / no duplicates).
+    const available = new Set(orderedMainTabs.map((t) => t.value));
+    const seen = new Set<string>();
+    const cleaned = next.filter((v) => available.has(v) && !seen.has(v) && (seen.add(v), true));
+    updateSettings({ adminMainTabOrder: cleaned });
+  };
+
+  const moveInArray = <T,>(arr: T[], from: number, to: number) => {
+    if (from === to) return arr;
+    const next = arr.slice();
+    const [item] = next.splice(from, 1);
+    next.splice(to, 0, item);
+    return next;
+  };
+
+  const unpinnedVisibleAddOnTabs = useMemo(() => {
+    const pinned = new Set(settings.adminPinnedAddOnTabs || []);
+    return visibleAddOnTabs.filter((t) => !pinned.has(t.value));
+  }, [settings.adminPinnedAddOnTabs, visibleAddOnTabs]);
+
+  const pinAddOnTab = (value: string) => {
+    const def = addOnTabDefs.find((t) => t.value === value);
+    if (!def) return;
+    if (!def.isOn(settings)) return;
+    const now = settings.adminPinnedAddOnTabs || [];
+    if (now.includes(value)) return;
+    updateSettings({ adminPinnedAddOnTabs: [...now, value] });
+  };
 
   const setAddOnEnabled = (tabValue: string, enabled: boolean) => {
     const def = addOnTabDefs.find((t) => t.value === tabValue);
@@ -560,15 +649,16 @@ function AdminDashboardInner() {
   useLayoutEffect(() => {
     const basicTabs = ['students', 'classes', 'teachers', 'prizes', 'categories'];
     if (loginState === 'developer') basicTabs.push('backups');
-    const expertExtras = settings.expertMode ? visibleAddOnTabs.map((t) => t.value) : [];
+    const pinnedExtras = pinnedAddOnTabs.map((t) => t.value);
+    const expertExtras = settings.expertMode ? unpinnedVisibleAddOnTabs.map((t) => t.value) : [];
 
-    const allowedTabs = new Set<string>([...basicTabs, ...expertExtras]);
+    const allowedTabs = new Set<string>([...basicTabs, ...pinnedExtras, ...expertExtras]);
 
     if (!allowedTabs.has(activeMainTab)) {
       // Apply immediately on toggle-off to avoid a visible "hiccup" (layout thrash + delayed tab jump).
       setActiveMainTab('students');
     }
-  }, [settings.expertMode, activeMainTab, visibleAddOnTabs, loginState]);
+  }, [settings.expertMode, activeMainTab, pinnedAddOnTabs, unpinnedVisibleAddOnTabs, loginState]);
 
   const [bulkRosterOpen, setBulkRosterOpen] = useState(false);
   const [isPreviousLogosOpen, setIsPreviousLogosOpen] = useState(false);
@@ -1027,27 +1117,58 @@ function AdminDashboardInner() {
               className="bg-muted/50 p-1.5 rounded-2xl flex flex-wrap justify-center border shadow-sm gap-x-1 gap-y-1 h-auto w-full max-w-6xl mx-auto"
               style={{ ['--admin-accent' as any]: rainbowForNavId('admin', settings.colorScheme) }}
               aria-label="Admin categories"
+              onDragOver={(e) => {
+                // Allow dropping add-on tabs here to "pin" them into the main row.
+                if (e.dataTransfer.types.includes('text/admin-addon-tab')) {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = 'move';
+                }
+              }}
+              onDrop={(e) => {
+                const v = e.dataTransfer.getData('text/admin-addon-tab');
+                if (!v) return;
+                e.preventDefault();
+                pinAddOnTab(v);
+              }}
             >
-              <TabsTrigger value="students" className="rounded-xl px-4 py-2 font-bold flex items-center gap-2 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)] transition-all">
-                <Users className="w-4 h-4" /> Students
-              </TabsTrigger>
-              <TabsTrigger value="classes" className="rounded-xl px-4 py-2 font-bold flex items-center gap-2 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)] transition-all">
-                <BookOpen className="w-4 h-4" /> Classes
-              </TabsTrigger>
-              <TabsTrigger value="teachers" className="rounded-xl px-4 py-2 font-bold flex items-center gap-2 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)] transition-all">
-                <User className="w-4 h-4" /> Faculty
-              </TabsTrigger>
-              <TabsTrigger value="prizes" className="rounded-xl px-4 py-2 font-bold flex items-center gap-2 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)] transition-all">
-                <Gift className="w-4 h-4" /> Prizes
-              </TabsTrigger>
-              <TabsTrigger value="categories" className="rounded-xl px-4 py-2 font-bold flex items-center gap-2 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)] transition-all">
-                <Tag className="w-4 h-4" /> Rewards
-              </TabsTrigger>
-              {loginState === 'developer' ? (
-                <TabsTrigger value="backups" className="rounded-xl px-4 py-2 font-bold flex items-center gap-2 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)] transition-all">
-                  <Database className="w-4 h-4" /> Backups
-                </TabsTrigger>
-              ) : null}
+              {orderedMainTabs.map((t) => {
+                const Icon = t.icon;
+                return (
+                  <div
+                    key={t.value}
+                    draggable
+                    className="inline-flex"
+                    title={t.title ?? 'Drag to reorder'}
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData('text/admin-main-tab', t.value);
+                      e.dataTransfer.effectAllowed = 'move';
+                    }}
+                    onDragOver={(e) => {
+                      if (!e.dataTransfer.types.includes('text/admin-main-tab')) return;
+                      if (e.dataTransfer.types.includes('text/admin-addon-tab')) return;
+                      e.preventDefault();
+
+                      const dragged = e.dataTransfer.getData('text/admin-main-tab');
+                      if (!dragged || dragged === t.value) return;
+
+                      const values = orderedMainTabs.map((x) => x.value);
+                      const from = values.indexOf(dragged);
+                      const to = values.indexOf(t.value);
+                      if (from < 0 || to < 0 || from === to) return;
+
+                      persistMainTabOrder(moveInArray(values, from, to));
+                    }}
+                  >
+                    <TabsTrigger
+                      value={t.value}
+                      className="rounded-xl px-4 py-2 font-bold flex items-center gap-2 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)] transition-all"
+                      title={t.title}
+                    >
+                      <Icon className="w-4 h-4" /> {t.label}
+                    </TabsTrigger>
+                  </div>
+                );
+              })}
             </TabsList>
 
             <div className="w-full max-w-6xl mx-auto px-1 flex justify-center items-center">
@@ -1109,19 +1230,25 @@ function AdminDashboardInner() {
                   style={{ ['--admin-accent' as any]: rainbowForNavId('admin', settings.colorScheme) }}
                   aria-label="Extra feature shortcuts"
                 >
-                  {visibleAddOnTabs.length === 0 ? (
+                  {unpinnedVisibleAddOnTabs.length === 0 ? (
                     <span className="text-xs text-muted-foreground px-3 py-2 font-medium">No extra features enabled.</span>
                   ) : (
-                    visibleAddOnTabs.map((t) => {
+                    unpinnedVisibleAddOnTabs.map((t) => {
                       const Icon = t.icon;
                       const active = activeMainTab === t.value;
                       return (
                         <div
                           key={t.value}
+                          draggable
                           className={cn(
                             'inline-flex items-center rounded-xl border border-transparent',
                             active && 'bg-background shadow-sm border-border/40',
                           )}
+                          title="Drag into the main Admin tabs to pin"
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData('text/admin-addon-tab', t.value);
+                            e.dataTransfer.effectAllowed = 'move';
+                          }}
                         >
                           <button
                             type="button"
@@ -2200,7 +2327,7 @@ function UniversalPeriodsAdmin({ schoolId }: { schoolId: string }) {
         }
       }
 
-      const model = localStorage.getItem('arcade_ai_model') || 'gemini-2.5-flash';
+      const model = localStorage.getItem('arcade_ai_model') || 'gpt-4o-mini';
       const res = await authFetch('/api/parse-schedule', {
         method: 'POST',
         body: JSON.stringify({ prompt: aiPrompt, model, schoolId }),

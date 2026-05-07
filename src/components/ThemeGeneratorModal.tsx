@@ -1,10 +1,10 @@
-import { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef, type CSSProperties } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Wand2, Loader2, Trash2 } from 'lucide-react';
+import { Award, ChevronRight, Loader2, ScanBarcode, Trash2, Wallet, Wand2 } from 'lucide-react';
 import { StudentTheme } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -17,7 +17,8 @@ import { StudentIdCard } from '@/components/StudentIdCard';
 import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { APP_NAME, APP_TAGLINE, LEVELUP_BRAND_PRIMARY_HEX } from '@/lib/app-branding';
-import { normalizeStudentTheme } from '@/lib/themeContrast';
+import { normalizeStudentTheme, primaryForegroundFor } from '@/lib/themeContrast';
+import { useSchoolMetadataDocRef } from '@/hooks/useSchoolMetadataDocRef';
 
 function hexForColorInput(color: string | undefined, fallback: string): string {
     if (!color) return fallback;
@@ -78,6 +79,185 @@ function inferBackgroundMode(theme: StudentTheme | undefined): 'solid' | 'gradie
     return 'custom';
 }
 
+function StudentPortalThemePreview({
+    theme,
+    studentName,
+}: {
+    theme: StudentTheme;
+    studentName: string;
+}) {
+    const primaryForeground = primaryForegroundFor(theme);
+    const themeBg = theme.background || '#020617';
+    const fontScale = theme.fontScale ?? 1.05;
+    const previewStyle: CSSProperties = {
+        ['--theme-bg' as string]: themeBg,
+        ['--theme-text' as string]: theme.text || '#ffffff',
+        ['--theme-primary' as string]: theme.primary || LEVELUP_BRAND_PRIMARY_HEX,
+        ['--theme-primary-foreground' as string]: primaryForeground,
+        ['--theme-card' as string]: theme.cardBackground || themeBg,
+        ['--theme-accent' as string]: theme.accent || '#22c55e',
+        background:
+            theme.backgroundStyle ||
+            `radial-gradient(circle at top left, ${theme.primary || LEVELUP_BRAND_PRIMARY_HEX}22 0, transparent 45%), radial-gradient(circle at bottom right, ${theme.accent || '#22c55e'}22 0, ${themeBg} 55%)`,
+        color: 'var(--theme-text)',
+        fontFamily: theme.fontFamily || undefined,
+        fontSize: fontScale !== 1 ? `${fontScale}em` : undefined,
+    } as CSSProperties;
+
+    return (
+        <div className="overflow-hidden rounded-2xl border border-border shadow-inner" style={previewStyle}>
+            {theme.fontFamily && <GoogleFontLoader fontFamily={theme.fontFamily} />}
+            <div className="space-y-3 p-3">
+                <div
+                    className="rounded-xl border px-3 py-2.5"
+                    style={{
+                        backgroundColor: 'var(--theme-card)',
+                        borderColor: 'var(--theme-primary)',
+                        color: 'var(--theme-text)',
+                    }}
+                >
+                    <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                            <p className="text-[10px] font-bold uppercase tracking-widest opacity-70">Welcome back,</p>
+                            <div className="mt-1 flex items-center gap-2">
+                                <div
+                                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-black"
+                                    style={{
+                                        backgroundColor: 'var(--theme-bg)',
+                                        color: 'var(--theme-primary)',
+                                    }}
+                                >
+                                    {theme.emoji || studentName.trim().charAt(0).toUpperCase() || 'S'}
+                                </div>
+                                <p className="truncate text-base font-black leading-tight">{studentName || 'Student Preview'}</p>
+                            </div>
+                        </div>
+                        <div className="shrink-0 text-right">
+                            <p className="text-[10px] font-bold uppercase tracking-widest opacity-70">Balance</p>
+                            <p className="text-2xl font-black leading-none" style={{ color: 'var(--theme-primary)' }}>
+                                1,250
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                    <div
+                        className="rounded-xl border p-3"
+                        style={{
+                            backgroundColor: 'var(--theme-card)',
+                            borderColor: 'color-mix(in srgb, var(--theme-primary) 42%, transparent)',
+                            color: 'var(--theme-text)',
+                        }}
+                    >
+                        <div className="mb-2 flex items-center gap-2">
+                            <div
+                                className="flex h-7 w-7 items-center justify-center rounded-lg"
+                                style={{ backgroundColor: 'var(--theme-bg)' }}
+                            >
+                                <Wallet className="h-4 w-4" style={{ color: 'var(--theme-primary)' }} />
+                            </div>
+                            <p className="text-xs font-black">Redeem Coupon Code</p>
+                        </div>
+                        <div
+                            className="mb-2 flex items-center justify-center gap-2 rounded-lg border-2 border-dashed px-2 py-2"
+                            style={{
+                                background: 'color-mix(in srgb, var(--theme-primary) 16%, var(--theme-card))',
+                                borderColor: 'color-mix(in srgb, var(--theme-primary) 50%, transparent)',
+                            }}
+                        >
+                            <ScanBarcode className="h-5 w-5" style={{ color: 'var(--theme-primary)' }} />
+                            <span className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--theme-primary)' }}>
+                                Scan coupon
+                            </span>
+                        </div>
+                        <div className="flex gap-2">
+                            <div
+                                className="min-w-0 flex-1 rounded-lg border px-2 py-2 font-mono text-[10px] tracking-widest"
+                                style={{
+                                    backgroundColor: 'var(--theme-bg)',
+                                    borderColor: 'var(--theme-primary)',
+                                    color: 'var(--theme-text)',
+                                }}
+                            >
+                                ABC123
+                            </div>
+                            <div
+                                className="rounded-lg px-3 py-2 text-[10px] font-black uppercase"
+                                style={{
+                                    backgroundColor: 'var(--theme-primary)',
+                                    color: 'var(--theme-primary-foreground)',
+                                }}
+                            >
+                                Redeem
+                            </div>
+                        </div>
+                    </div>
+
+                    <div
+                        className="rounded-xl border p-3"
+                        style={{
+                            backgroundColor: 'var(--theme-card)',
+                            borderColor: 'color-mix(in srgb, var(--theme-primary) 42%, transparent)',
+                            color: 'var(--theme-text)',
+                        }}
+                    >
+                        <div className="mb-2 flex items-center gap-2">
+                            <div
+                                className="flex h-7 w-7 items-center justify-center rounded-lg"
+                                style={{ backgroundColor: 'var(--theme-bg)' }}
+                            >
+                                <Award className="h-4 w-4" style={{ color: 'var(--theme-primary)' }} />
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-xs font-black">Eligible Rewards</p>
+                                <p className="text-[10px] font-medium opacity-70">Tap a reward to redeem it here.</p>
+                            </div>
+                        </div>
+                        {['Homework Pass', 'Prize Box'].map((label, index) => (
+                            <div
+                                key={label}
+                                className="mb-2 flex items-center justify-between gap-2 rounded-lg border px-2 py-1.5 last:mb-0"
+                                style={{
+                                    backgroundColor: 'var(--theme-bg)',
+                                    borderColor: 'color-mix(in srgb, var(--theme-primary) 35%, transparent)',
+                                    color: 'var(--theme-text)',
+                                }}
+                            >
+                                <span className="truncate text-[11px] font-black">{label}</span>
+                                <span
+                                    className="rounded px-1.5 py-0.5 text-[8px] font-black tracking-wider"
+                                    style={{
+                                        backgroundColor: 'var(--theme-primary)',
+                                        color: 'var(--theme-primary-foreground)',
+                                    }}
+                                >
+                                    {index === 0 ? '500' : '900'} PTS
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <div
+                    className="flex items-center justify-between rounded-xl border px-3 py-2"
+                    style={{
+                        backgroundColor: 'var(--theme-card)',
+                        borderColor: 'color-mix(in srgb, var(--theme-primary) 35%, transparent)',
+                        color: 'var(--theme-text)',
+                    }}
+                >
+                    <div className="min-w-0">
+                        <p className="text-xs font-black">Activity</p>
+                        <p className="truncate text-[10px] font-medium opacity-70">+50 points from kindness coupon</p>
+                    </div>
+                    <ChevronRight className="h-4 w-4 shrink-0" style={{ color: 'var(--theme-primary)' }} />
+                </div>
+            </div>
+        </div>
+    );
+}
+
 async function readJsonErrorMessage(response: Response, fallback: string): Promise<string> {
     try {
         const text = await response.text();
@@ -134,10 +314,8 @@ export function ThemeGeneratorModal({
     const { schoolId } = useAppContext();
     const authFetch = useAuthFetch();
     const firestore = useFirestore();
-    const schoolDocRef = useMemoFirebase(
-        () => (schoolId ? doc(firestore, 'schools', schoolId) : null),
-        [firestore, schoolId],
-    );
+    // Students/kiosks cannot read private `schools/{id}`. Use public mirror when not staff.
+    const schoolDocRef = useSchoolMetadataDocRef();
     const { data: schoolData } = useDoc<{ name?: string; logoUrl?: string }>(schoolDocRef);
     const appConfigRef = useMemoFirebase(
         () => (firestore ? doc(firestore, 'appConfig', 'global') : null),
@@ -278,10 +456,12 @@ export function ThemeGeneratorModal({
         }
     };
 
+    const normalizedPreviewTheme = normalizeStudentTheme(previewTheme);
+
     const handleSave = () => {
         if (!previewTheme) return;
         // Persist only contrast-normalized themes so low-contrast palettes can't be stored.
-        onSave(normalizeStudentTheme(previewTheme) ?? previewTheme);
+        onSave(normalizedPreviewTheme ?? previewTheme);
         onOpenChange(false);
     };
 
@@ -603,7 +783,7 @@ export function ThemeGeneratorModal({
                                                 <SelectContent>
                                                     <SelectItem value="solid">Solid</SelectItem>
                                                     <SelectItem value="gradient">Gradient</SelectItem>
-                                                    <SelectItem value="custom">CSS / Image</SelectItem>
+                                                    <SelectItem value="custom">Advanced / Image</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>
@@ -761,7 +941,7 @@ export function ThemeGeneratorModal({
                                                         setBackgroundMode('custom');
                                                         updateTheme({ backgroundStyle: e.target.value || null });
                                                     }}
-                                                    placeholder="CSS value, e.g. linear-gradient(...)"
+                                                    placeholder="Background value, e.g. linear-gradient(...)"
                                                     className="font-mono text-xs"
                                                     disabled={backgroundMode !== 'custom'}
                                                 />
@@ -786,7 +966,7 @@ export function ThemeGeneratorModal({
                                                     className="text-xs"
                                                 />
                                                 <p className="text-[10px] text-muted-foreground">
-                                                    Paste a CSS background or upload an image (small files recommended).
+                                                    Paste a background value or upload an image (small files recommended).
                                                 </p>
                                             </div>
                                         )}
@@ -830,18 +1010,18 @@ export function ThemeGeneratorModal({
                                 className={cn(
                                     "w-full h-64 md:h-72 lg:h-[520px] rounded-2xl border border-border shadow-inner overflow-hidden relative transition-colors duration-500",
                                     "bg-gradient-to-br from-muted/80 to-muted",
-                                    settings.enableThemeAnimations && previewTheme && animatePreview && "theme-idcard-animated",
-                                    !previewTheme && "flex items-center justify-center text-muted-foreground"
+                                    settings.enableThemeAnimations && normalizedPreviewTheme && animatePreview && "theme-idcard-animated",
+                                    !normalizedPreviewTheme && "flex items-center justify-center text-muted-foreground"
                                 )}
-                                style={previewTheme ? {
-                                    ['--theme-bg' as any]: previewTheme.backgroundStyle ? 'transparent' : (previewTheme.background || '#020617'),
-                                    ['--theme-primary' as any]: previewTheme.primary || LEVELUP_BRAND_PRIMARY_HEX,
-                                    ['--theme-accent' as any]: previewTheme.accent || '#22c55e',
+                                style={normalizedPreviewTheme ? {
+                                    ['--theme-bg' as any]: normalizedPreviewTheme.backgroundStyle ? 'transparent' : (normalizedPreviewTheme.background || '#020617'),
+                                    ['--theme-primary' as any]: normalizedPreviewTheme.primary || LEVELUP_BRAND_PRIMARY_HEX,
+                                    ['--theme-accent' as any]: normalizedPreviewTheme.accent || '#22c55e',
                                 } : undefined}
                             >
-                                {previewTheme?.fontFamily && <GoogleFontLoader fontFamily={previewTheme.fontFamily} />}
+                                {normalizedPreviewTheme?.fontFamily && <GoogleFontLoader fontFamily={normalizedPreviewTheme.fontFamily} />}
 
-                                {!previewTheme ? (
+                                {!normalizedPreviewTheme ? (
                                     <p>No theme generated yet</p>
                                 ) : (
                                     (() => {
@@ -853,10 +1033,10 @@ export function ThemeGeneratorModal({
                                             lastName,
                                             points: 0,
                                             nfcId: '00000000',
-                                            theme: previewTheme!,
+                                            theme: normalizedPreviewTheme,
                                         };
                                         const cardStudent: Student = previewStudent
-                                            ? { ...previewStudent, theme: previewTheme! }
+                                            ? { ...previewStudent, theme: normalizedPreviewTheme }
                                             : synthetic;
 
                                         return (
@@ -886,6 +1066,21 @@ export function ThemeGeneratorModal({
                                     })()
                                 )}
                             </div>
+
+                            {normalizedPreviewTheme ? (
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between gap-2">
+                                        <Label>Student Portal Preview</Label>
+                                        <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+                                            Readability check
+                                        </span>
+                                    </div>
+                                    <StudentPortalThemePreview
+                                        theme={normalizedPreviewTheme}
+                                        studentName={displayTitleName}
+                                    />
+                                </div>
+                            ) : null}
 
                             <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                                 <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">

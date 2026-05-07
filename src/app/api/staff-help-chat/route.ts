@@ -159,7 +159,7 @@ export async function POST(req: NextRequest) {
 
     const modelRaw = body.model;
     const selectedModel =
-      typeof modelRaw === 'string' && modelRaw.trim() ? modelRaw.trim() : 'gemini-2.5-flash';
+      typeof modelRaw === 'string' && modelRaw.trim() ? modelRaw.trim() : 'gpt-4o-mini';
 
     const pathname = typeof body.pathname === 'string' ? body.pathname : undefined;
     const loginState = typeof body.loginState === 'string' ? body.loginState : undefined;

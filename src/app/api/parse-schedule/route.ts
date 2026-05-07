@@ -11,12 +11,12 @@ export async function POST(req: NextRequest) {
     try {
         const guarded = await guardAiRoute(req, { requireSchoolStaff: true, maxRequests: 8, maxBodyBytes: 48 * 1024 });
         if (!guarded.ok) return guarded.response;
-        const { prompt, model = 'gemini-2.5-flash' } = guarded.value.body;
+        const { prompt, model = 'gpt-4o-mini' } = guarded.value.body;
 
         if (typeof prompt !== 'string' || !prompt.trim()) {
             return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
         }
-        const selectedModel = typeof model === 'string' ? model : 'gemini-2.5-flash';
+        const selectedModel = typeof model === 'string' ? model : 'gpt-4o-mini';
 
         const systemInstruction = `You are a scheduling assistant. Your task is to parse a raw text schedule into a structured array of JSON class objects.
         

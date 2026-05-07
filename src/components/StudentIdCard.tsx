@@ -158,7 +158,7 @@ export function StudentIdCard({
           {appLogoUrl && (
             <div className="print-id-app-logo">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={appLogoUrl} alt="" className={settings.logoDisplayMode === 'cover' ? 'object-cover' : 'object-contain'} />
+              <img src={appLogoUrl} alt="" className="object-contain" />
             </div>
           )}
           <div className="print-id-app-text">
@@ -172,7 +172,7 @@ export function StudentIdCard({
           {schoolLogoUrl && (
             <div className="print-id-school-logo">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={schoolLogoUrl} alt="" className={settings.logoDisplayMode === 'cover' ? 'object-cover' : 'object-contain'} />
+              <img src={schoolLogoUrl} alt="" className="object-contain" />
             </div>
           )}
         </div>

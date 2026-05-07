@@ -128,6 +128,16 @@ export interface Student {
   studentEmail?: string;
   /** Optional student-owned phone number for direct alerts. */
   studentPhone?: string;
+  /**
+   * Per-student notification overrides (in addition to school-wide settings).
+   * When omitted, defaults to enabled.
+   */
+  notificationPrefs?: {
+    /** If false, parent/guardian notifications are skipped for this student. */
+    parentEnabled?: boolean;
+    /** If false, direct-to-student notifications are skipped for this student. */
+    studentEnabled?: boolean;
+  };
   /** Optional image URL for a sticker shown by the student's name (set in admin, Students). */
   customEmojiUrl?: string;
   /** When the student record was created (ms since epoch). */

@@ -41,7 +41,7 @@ export function AiStudentImporter({ classes, onSaveAll }: AiStudentImporterProps
                 method: 'POST',
                 body: JSON.stringify({ 
                     prompt: rawText, 
-                    model: localStorage.getItem('arcade_ai_model') || 'gemini-2.5-flash',
+                    model: localStorage.getItem('arcade_ai_model') || 'gpt-4o-mini',
                     classNames,
                     schoolId,
                 })

@@ -297,11 +297,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  max-width: 86px;
 }
 .print-id-app-logo img {
-  width: 100%;
+  width: auto;
+  max-width: 100%;
   height: 100%;
   display: block;
+  object-fit: contain;
 }
 .print-id-app-text {
   display: flex;
@@ -335,11 +338,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  max-width: 86px;
 }
 .print-id-school-logo img {
-  width: 100%;
+  width: auto;
+  max-width: 100%;
   height: 100%;
   display: block;
+  object-fit: contain;
 }
 .print-id-header {
   font-size: calc(10px * var(--print-id-font-scale));
@@ -934,18 +940,20 @@
     }
 
     body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__surprise-kind {
-      font-size: 1.85mm !important;
+      font-size: 2.15mm !important;
       font-weight: 800 !important;
       letter-spacing: 0.06em !important;
-      text-transform: uppercase !important;
-      margin: 0 0 0.35mm !important;
+      text-transform: none !important;
+      margin: 0 0 0.4mm !important;
       color: #000 !important;
     }
 
-    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__surprise-text {
-      font-size: 1.85mm !important;
-      font-weight: 600 !important;
-      line-height: 1.25 !important;
+    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__surprise-label {
+      font-size: 1.55mm !important;
+      font-weight: 800 !important;
+      letter-spacing: 0.08em !important;
+      text-transform: uppercase !important;
+      line-height: 1.15 !important;
       margin: 0 !important;
       color: #000 !important;
       word-break: break-word !important;
@@ -1120,11 +1128,14 @@
     overflow: hidden;
     flex-shrink: 0;
     background: #f3f4f6;
+    max-width: 86px;
   }
   .print-id-app-logo img {
-    width: 100%;
+    width: auto;
+    max-width: 100%;
     height: 100%;
     display: block;
+    object-fit: contain;
   }
   .print-id-app-text {
     display: flex;
@@ -1158,11 +1169,14 @@
     flex-shrink: 0;
     background: #f3f4f6;
     border: 1px solid rgba(0,0,0,0.08);
+    max-width: 86px;
   }
   .print-id-school-logo img {
-    width: 100%;
+    width: auto;
+    max-width: 100%;
     height: 100%;
     display: block;
+    object-fit: contain;
   }
   .print-id-header {
     font-size: calc(10px * var(--print-id-font-scale));
@@ -1746,19 +1760,21 @@
 
   .prize-ticket__surprise-kind {
     margin: 0 0 1.5mm;
-    font-size: 3.2mm;
+    font-size: 4.15mm;
     font-weight: 800;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    letter-spacing: 0.01em;
+    text-transform: none;
     color: #000 !important;
     line-height: 1.1;
   }
 
-  .prize-ticket__surprise-text {
+  .prize-ticket__surprise-label {
     margin: 0;
-    font-size: 3.8mm;
-    font-weight: 600;
-    line-height: 1.25;
+    font-size: 2.7mm;
+    font-weight: 900;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    line-height: 1.2;
     color: #000 !important;
     word-break: break-word;
   }

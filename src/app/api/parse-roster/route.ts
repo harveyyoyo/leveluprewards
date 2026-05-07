@@ -262,7 +262,7 @@ export async function POST(req: NextRequest) {
       typeof kindRaw === 'string' && ['classes', 'teachers', 'students', 'auto'].includes(kindRaw)
         ? kindRaw
         : 'auto';
-    const model = typeof body.model === 'string' ? body.model : 'gemini-2.5-flash';
+    const model = typeof body.model === 'string' ? body.model : 'gpt-4o-mini';
     const classNames = Array.isArray(body.classNames)
       ? body.classNames.filter((n): n is string => typeof n === 'string').slice(0, 300)
       : [];

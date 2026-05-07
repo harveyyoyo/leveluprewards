@@ -92,13 +92,16 @@ export function StaffAiHelpButton() {
     setSending(true);
 
     try {
+      const model =
+        (typeof window !== 'undefined' ? localStorage.getItem('arcade_ai_model') : null) ||
+        'gpt-4o-mini';
       const res = await authFetch('/api/staff-help-chat', {
         method: 'POST',
         body: JSON.stringify({
           schoolId,
           pathname,
           loginState,
-          model: 'gemini-2.5-flash',
+          model,
           messages: nextForApi,
         }),
       });

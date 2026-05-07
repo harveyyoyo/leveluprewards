@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useRouter } from 'next/navigation';
 import { Megaphone, Sparkles, Loader2 } from 'lucide-react';
 import { useAppContext } from '@/components/AppProvider';
@@ -41,9 +42,11 @@ const VIEWER_LOGIN_STATES = new Set([
 export default function BulletinBoardViewPage() {
   const { loginState, isInitialized, schoolId } = useAppContext();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { settings } = useSettings();
   const firestore = useFirestore();
   const animBackdrop = globalAnimatedBackdropActive(settings);
+  const isFullscreen = (searchParams?.get('fullscreen') || '').trim() === '1';
 
   const schoolDocRef = useSchoolMetadataDocRef();
   const { data: schoolMeta } = useDoc<{ logoUrl?: string; name?: string }>(schoolDocRef);
@@ -93,7 +96,8 @@ export default function BulletinBoardViewPage() {
   return (
     <div
       className={cn(
-        'min-h-screen text-foreground font-sans p-4 md:p-8 max-w-4xl mx-auto flex flex-col items-center',
+        'min-h-screen text-foreground font-sans flex flex-col',
+        isFullscreen ? 'w-full max-w-none mx-0 p-4 md:p-8' : 'p-4 md:p-8 max-w-4xl mx-auto items-center',
         animBackdrop ? 'bg-transparent' : 'bg-background',
       )}
       style={{
@@ -106,7 +110,7 @@ export default function BulletinBoardViewPage() {
         ['--ring' as any]: complementTripletForNavId('admin', settings.colorScheme),
       } as any}
     >
-      <div className="w-full mb-6 rounded-2xl border bg-card/70 backdrop-blur-md px-4 py-3 flex items-center justify-between gap-3">
+      <div className={cn("w-full mb-6 rounded-2xl border bg-card/70 backdrop-blur-md px-4 py-3 flex items-center justify-between gap-3", isFullscreen && "max-w-none")}>
         <Link
           href={getLevelUpLogoHref()}
           className="min-w-0 no-underline outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-lg"
@@ -124,7 +128,7 @@ export default function BulletinBoardViewPage() {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className="w-full text-center mb-10"
+        className={cn('w-full text-center mb-10', isFullscreen ? 'max-w-none' : 'max-w-4xl')}
       >
         <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tighter text-primary drop-shadow-sm mb-3 flex items-center justify-center gap-3">
           <Megaphone className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-indigo-500" />
@@ -136,7 +140,7 @@ export default function BulletinBoardViewPage() {
       </motion.div>
 
       {!bulletinEnabled ? (
-        <Card className="border-dashed w-full max-w-2xl">
+        <Card className={cn('border-dashed w-full', isFullscreen ? 'max-w-none' : 'max-w-2xl')}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <Megaphone className="h-5 w-5 text-muted-foreground" />

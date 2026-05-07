@@ -49,13 +49,14 @@ export default function HallOfFamePage() {
     const { settings } = useSettings();
     const [hoveredIndex, setHoveredIndex] = useState<string | null>(null);
 
-    const [rankType, setRankType] = useState<'students' | 'classes' | 'goals'>('students');
-    const [sortBy, setSortBy] = useState<string>('lifetimePoints');
-    const [scope, setScope] = useState<'all' | string>('all');
-    const [limit, setLimit] = useState<number>(50);
-    const [podiumSize, setPodiumSize] = useState<number>(3);
-    const [autoScroll, setAutoScroll] = useState<boolean>(false);
-    const [gridLayout, setGridLayout] = useState<boolean>(true);
+    const [rankType, setRankType] = useState<'students' | 'classes' | 'goals'>(settings.hallOfFameRankType ?? 'students');
+    const [sortBy, setSortBy] = useState<string>(settings.hallOfFameSortBy ?? 'lifetimePoints');
+    const [scope, setScope] = useState<'all' | string>(settings.hallOfFameScope ?? 'all');
+    const [limit, setLimit] = useState<number>(settings.hallOfFameLimit ?? 50);
+    const [podiumSize, setPodiumSize] = useState<number>(settings.hallOfFamePodiumSize ?? 3);
+    const [autoScroll, setAutoScroll] = useState<boolean>(settings.hallOfFameAutoScroll ?? false);
+    const [gridLayout, setGridLayout] = useState<boolean>(settings.hallOfFameGridLayout ?? true);
+    const [isLockedToUrlConfig, setIsLockedToUrlConfig] = useState(false);
     const [goalsProgressMap, setGoalsProgressMap] = useState<Record<string, number>>({});
 
     const schoolDocRef = useSchoolMetadataDocRef();
@@ -64,7 +65,7 @@ export default function HallOfFamePage() {
       schoolMeta?.name ||
       (schoolId ? schoolId.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()) : '');
 
-    // Load settings from URL (Admin tab owns the controls).
+    // Back-compat: allow URL params to lock a display (otherwise settings are live via school appSettings).
     useEffect(() => {
         if (typeof window !== 'undefined') {
             const params = new URLSearchParams(window.location.search);
@@ -75,6 +76,9 @@ export default function HallOfFamePage() {
             const pod = parseInt((params.get('podiumSize') || '').trim(), 10);
             const auto = (params.get('autoScroll') || '').trim();
             const grid = (params.get('grid') || '').trim();
+
+            const hasUrlConfig = !!(rank || s || sc || params.get('limit') || params.get('podiumSize') || auto || grid);
+            if (hasUrlConfig) setIsLockedToUrlConfig(true);
 
             if (rank === 'classes' || rank === 'class-standings' || rank === 'class_standings') setRankType('classes');
             else if (rank === 'goals' || rank === 'school-goals' || rank === 'school_goals') setRankType('goals');
@@ -103,6 +107,26 @@ export default function HallOfFamePage() {
             }
         }
     }, []);
+
+    useEffect(() => {
+        if (isLockedToUrlConfig) return;
+        setRankType(settings.hallOfFameRankType ?? 'students');
+        setSortBy(settings.hallOfFameSortBy ?? 'lifetimePoints');
+        setScope(settings.hallOfFameScope ?? 'all');
+        setLimit(settings.hallOfFameLimit ?? 50);
+        setPodiumSize(settings.hallOfFamePodiumSize ?? 3);
+        setAutoScroll(settings.hallOfFameAutoScroll ?? false);
+        setGridLayout(settings.hallOfFameGridLayout ?? true);
+    }, [
+        isLockedToUrlConfig,
+        settings.hallOfFameRankType,
+        settings.hallOfFameSortBy,
+        settings.hallOfFameScope,
+        settings.hallOfFameLimit,
+        settings.hallOfFamePodiumSize,
+        settings.hallOfFameAutoScroll,
+        settings.hallOfFameGridLayout,
+    ]);
 
     useEffect(() => {
         if (isInitialized && !canAccessHallOfFameRoute(loginState)) {
@@ -417,21 +441,23 @@ export default function HallOfFamePage() {
                 )}>
                     <CardContent className="p-4 sm:p-6 md:p-8">
                         <div className="mb-8">
-                          <div className="w-full rounded-2xl border bg-card/70 backdrop-blur-md px-4 py-3 flex items-center justify-between gap-3">
-                            <Link
-                              href={getLevelUpLogoHref()}
-                              className="min-w-0 no-underline outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-lg"
-                              aria-label="LevelUp EDU — school sign-in"
-                            >
-                              <p className="text-xs font-black uppercase tracking-[0.22em] text-muted-foreground">levelUp EDU</p>
-                              <p className="text-sm font-bold truncate">{schoolName}</p>
-                            </Link>
-                            <div className="shrink-0 rounded-xl border bg-muted/20 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                              Hall of Fame
+                          <div className="sticky top-0 z-20 -mx-4 sm:-mx-6 md:-mx-8 px-4 sm:px-6 md:px-8 py-3 bg-card/85 backdrop-blur-md border-b">
+                            <div className="w-full rounded-2xl border bg-card/70 backdrop-blur-md px-4 py-3 flex items-center justify-between gap-3">
+                              <Link
+                                href={getLevelUpLogoHref()}
+                                className="min-w-0 no-underline outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-lg"
+                                aria-label="LevelUp EDU — school sign-in"
+                              >
+                                <p className="text-xs font-black uppercase tracking-[0.22em] text-muted-foreground">levelUp EDU</p>
+                                <p className="text-sm font-bold truncate">{schoolName}</p>
+                              </Link>
+                              <div className="shrink-0 rounded-xl border bg-muted/20 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                                Hall of Fame
+                              </div>
                             </div>
-                          </div>
-                          <div className="mt-3 text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground text-center">
-                            {getScopeName()} &bull; {getSortByLabel()}
+                            <div className="mt-3 text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground text-center">
+                              {getScopeName()} &bull; {getSortByLabel()}
+                            </div>
                           </div>
                         </div>
 

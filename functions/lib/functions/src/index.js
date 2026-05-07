@@ -468,7 +468,7 @@ exports.setAttendanceConfig = functions.https.onCall(async (data, context) => {
 // ========================================================================
 // Callable: Upload school logo (server-side to avoid client Storage hangs)
 // ========================================================================
-const LOGO_MAX_BYTES = 5 * 1024 * 1024; // 5MB
+const LOGO_MAX_BYTES = 10 * 1024 * 1024; // 10MB
 const LOGO_ALLOWED_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
 const STUDENT_PHOTO_MAX_BYTES = 5 * 1024 * 1024; // 5MB
 const STUDENT_PHOTO_ALLOWED_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
@@ -493,7 +493,7 @@ exports.uploadSchoolLogo = functions.https.onCall(async (data, context) => {
             throw new functions.https.HttpsError("invalid-argument", "Invalid base64 image data.");
         }
         if (buffer.length > LOGO_MAX_BYTES) {
-            throw new functions.https.HttpsError("invalid-argument", "Image must be under 5MB.");
+            throw new functions.https.HttpsError("invalid-argument", "Image must be under 10MB.");
         }
         const bucket = admin.storage().bucket();
         const timestamp = Date.now();
@@ -563,7 +563,7 @@ exports.uploadAppLogo = functions.https.onCall(async (data, context) => {
             throw new functions.https.HttpsError("invalid-argument", "Invalid base64 image data.");
         }
         if (buffer.length > LOGO_MAX_BYTES) {
-            throw new functions.https.HttpsError("invalid-argument", "Image must be under 5MB.");
+            throw new functions.https.HttpsError("invalid-argument", "Image must be under 10MB.");
         }
         const bucket = admin.storage().bucket();
         const timestamp = Date.now();

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2, Trash2, UploadCloud, Palette, User, Shield, Clock, Megaphone } from 'lucide-react';
+import { Loader2, Trash2, UploadCloud, Palette, User, Shield, Clock, Megaphone, Tv } from 'lucide-react';
 import type { DocumentReference, Firestore } from 'firebase/firestore';
 import { updateDoc, setDoc } from 'firebase/firestore';
 import { schoolPublicDocRef } from '@/lib/schoolPublic';
@@ -94,7 +94,7 @@ export function AdminBrandingTab({
               <UploadCloud className="w-5 h-5 text-primary" /> School Logo
             </CardTitle>
           </Helper>
-          <CardDescription>Logo appears beside the school name in the header. PNG, JPG, or WebP under 5MB.</CardDescription>
+          <CardDescription>Logo appears beside the school name in the header. PNG, JPG, or WebP under 10MB.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col sm:flex-row items-center gap-6">
           <div className="flex flex-col items-center gap-1">
@@ -484,6 +484,31 @@ export function AdminBrandingTab({
                 </div>
                 <p className="text-[11px] text-muted-foreground">
                     Inactivity before the student dashboard or rewards shop returns to the home screen.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="welcome-back-duration" className="text-sm font-bold flex items-center gap-2">
+                  <Tv className="w-4 h-4" /> Welcome back splash duration
+                </Label>
+                <div className="flex items-center gap-3">
+                  <Input
+                    id="welcome-back-duration"
+                    type="number"
+                    min={1}
+                    max={60}
+                    value={settings.studentWelcomeBackDurationSec ?? 3}
+                    onChange={(e) => {
+                      const n = parseInt(e.target.value, 10);
+                      const secs = Number.isFinite(n) ? Math.min(60, Math.max(1, n)) : 3;
+                      updateSettings({ studentWelcomeBackDurationSec: secs });
+                    }}
+                    className="w-24 font-bold"
+                  />
+                  <span className="text-sm font-medium text-muted-foreground">seconds</span>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  How long the kiosk “Welcome back” screen stays up (1–60). Students can still tap Skip to dismiss sooner.
                 </p>
               </div>
             </div>

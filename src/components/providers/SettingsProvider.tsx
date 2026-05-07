@@ -52,6 +52,8 @@ interface Settings {
     enableNotifications: boolean;
     notificationRewardsEnabled: boolean;
     notificationAttendanceEnabled: boolean;
+    /** Library-related activity alerts (checkout/return). */
+    notificationLibraryEnabled: boolean;
     notificationMilestonesEnabled: boolean;
     notificationStudentsEnabled: boolean;
     notificationArtworkEnabled: boolean;
@@ -205,8 +207,21 @@ interface Settings {
     expertMode: boolean;
     /** Admin-only UI preference: hides specific add-on tabs/chips without turning off the underlying feature toggles. */
     adminHiddenAddOnTabs?: string[];
+    /** Admin-only UI preference: pins enabled add-on tabs into the main Admin tab row. */
+    adminPinnedAddOnTabs?: string[];
+    /** Admin-only UI preference: persists the main Admin tab order (including pinned add-ons). */
+    adminMainTabOrder?: string[];
     /** Teacher portal: hides specific add-on tabs without turning off features (optional soft-hide). */
     teacherHiddenAddOnTabs?: string[];
+
+    // Hall of Fame (big screen defaults)
+    hallOfFameRankType?: 'students' | 'classes' | 'goals';
+    hallOfFameSortBy?: string;
+    hallOfFameScope?: 'all' | string;
+    hallOfFameLimit?: number;
+    hallOfFamePodiumSize?: number;
+    hallOfFameAutoScroll?: boolean;
+    hallOfFameGridLayout?: boolean;
 }
 
 interface SettingsContextType {
@@ -250,6 +265,7 @@ const defaultSettings: Settings = {
     enableNotifications: true,
     notificationRewardsEnabled: true,
     notificationAttendanceEnabled: true,
+    notificationLibraryEnabled: false,
     notificationMilestonesEnabled: true,
     notificationStudentsEnabled: false,
     notificationArtworkEnabled: true,
@@ -349,7 +365,17 @@ const defaultSettings: Settings = {
     teacherFeatures: {},
     expertMode: false,
     adminHiddenAddOnTabs: [],
+    adminPinnedAddOnTabs: [],
+    adminMainTabOrder: [],
     teacherHiddenAddOnTabs: [],
+
+    hallOfFameRankType: 'students',
+    hallOfFameSortBy: 'lifetimePoints',
+    hallOfFameScope: 'all',
+    hallOfFameLimit: 50,
+    hallOfFamePodiumSize: 3,
+    hallOfFameAutoScroll: false,
+    hallOfFameGridLayout: true,
 };
 
 const publicLoginSettings: Partial<Settings> = {

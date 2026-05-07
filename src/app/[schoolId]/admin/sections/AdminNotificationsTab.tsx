@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   Award,
   Bell,
+  BookOpenCheck,
   Check,
   CheckCircle2,
   ClipboardList,
@@ -44,14 +45,34 @@ import {
   type ActiveNotificationRow,
   type DiagnosticLine,
 } from './notificationDiagnostics';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import type { Student } from '@/lib/types';
+import { doc, getDoc } from 'firebase/firestore';
 
 type MailQueueRow = {
   id: string;
+  createdAtMs?: number | null;
   toMasked: string;
   subject: string;
   delivery: string;
+  deliveryState?: string | null;
+  deliveryAttempts?: number | null;
+  deliveryError?: string | null;
+  deliveryMessage?: string | null;
+  deliveryStartTimeMs?: number | null;
+  deliveryEndTimeMs?: number | null;
   studentId?: string;
 };
+
+function formatWhen(ms: number | null | undefined): string {
+  if (!ms || !Number.isFinite(ms)) return '—';
+  try {
+    return new Date(ms).toLocaleString();
+  } catch {
+    return '—';
+  }
+}
 
 function LogIcon({ level }: { level: DiagnosticLine['level'] }) {
   switch (level) {
@@ -104,12 +125,29 @@ function statusBadge(headlineStatus: 'blocked' | 'limited' | 'active') {
 export function AdminNotificationsTab() {
   const { settings, updateSettings, isFeatureAllowed, planLabel } = useSettings();
   const { schoolId, loginState } = useAuth();
-  const { functions } = useFirebase();
+  const { functions, firestore } = useFirebase();
   const notificationsPlanOk = isFeatureAllowed('enableNotifications');
+  const attendancePillarOn = !!settings.enableAttendance || !!settings.enableClassSignIn;
+  const libraryPillarOn = settings.payLibrary ?? true;
 
   const [mailRows, setMailRows] = useState<MailQueueRow[] | null>(null);
   const [mailLoading, setMailLoading] = useState(false);
   const [mailError, setMailError] = useState<string | null>(null);
+
+  const [testStudentId, setTestStudentId] = useState('');
+  const [testTemplate, setTestTemplate] = useState<
+    'reward_redemption' | 'points_award' | 'milestone' | 'attendance' | 'library_checkout' | 'library_return'
+  >('reward_redemption');
+  const [testRecipient, setTestRecipient] = useState<'parent' | 'student'>('parent');
+  const [testPreview, setTestPreview] = useState<{
+    subject: string;
+    fromEmail: string;
+    html: string;
+    text: string;
+    to: { parentEmail: string; studentEmail: string };
+  } | null>(null);
+  const [testSending, setTestSending] = useState(false);
+  const [testError, setTestError] = useState<string | null>(null);
 
   const { lines: diagnosticLines, activeRows, headlineStatus } = useMemo(
     () =>
@@ -146,9 +184,69 @@ export function AdminNotificationsTab() {
     }
   }, [functions, schoolId, loginState]);
 
+  const loadTestPreview = useCallback(async () => {
+    if (!functions || !schoolId) return;
+    if (loginState !== 'admin' && loginState !== 'developer') return;
+    if (!testStudentId.trim()) return;
+    setTestError(null);
+    try {
+      const fn = httpsCallable<
+        { schoolId: string; studentId: string; template: string; recipient?: string },
+        { subject: string; fromEmail: string; html: string; text: string; to: { parentEmail: string; studentEmail: string } }
+      >(functions, 'adminPreviewTestNotification');
+      const res = await fn({
+        schoolId: schoolId.trim().toLowerCase(),
+        studentId: testStudentId.trim(),
+        template: testTemplate,
+        recipient: testRecipient,
+      });
+      setTestPreview(res.data ?? null);
+    } catch (e: unknown) {
+      const msg =
+        e && typeof e === 'object' && 'message' in e && typeof (e as { message: unknown }).message === 'string'
+          ? (e as { message: string }).message
+          : 'Preview failed';
+      setTestPreview(null);
+      setTestError(msg);
+    }
+  }, [functions, schoolId, loginState, testStudentId, testTemplate, testRecipient]);
+
+  const sendTestEmail = useCallback(async () => {
+    if (!functions || !schoolId) return;
+    if (loginState !== 'admin' && loginState !== 'developer') return;
+    if (!testStudentId.trim()) return;
+    setTestSending(true);
+    setTestError(null);
+    try {
+      const fn = httpsCallable<
+        { schoolId: string; studentId: string; template: string; recipient?: string },
+        { mailDocId: string }
+      >(functions, 'adminSendTestNotification');
+      await fn({
+        schoolId: schoolId.trim().toLowerCase(),
+        studentId: testStudentId.trim(),
+        template: testTemplate,
+        recipient: testRecipient,
+      });
+      await loadMailQueue();
+    } catch (e: unknown) {
+      const msg =
+        e && typeof e === 'object' && 'message' in e && typeof (e as { message: unknown }).message === 'string'
+          ? (e as { message: string }).message
+          : 'Send failed';
+      setTestError(msg);
+    } finally {
+      setTestSending(false);
+    }
+  }, [functions, schoolId, loginState, testStudentId, testTemplate, testRecipient, loadMailQueue]);
+
   useEffect(() => {
     void loadMailQueue();
   }, [loadMailQueue]);
+
+  useEffect(() => {
+    void loadTestPreview();
+  }, [loadTestPreview]);
 
   const sortedMail = useMemo(() => {
     if (!mailRows?.length) return [];
@@ -275,6 +373,83 @@ export function AdminNotificationsTab() {
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
+            <div className="rounded-xl border bg-muted/20 p-4 space-y-3">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div>
+                  <p className="font-bold text-sm">Send a test email</p>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    Generates a preview using the same HTML builder, then enqueues a test mail document.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="gap-1.5"
+                  disabled={testSending || !functions || !schoolId || !testStudentId.trim()}
+                  onClick={() => void sendTestEmail()}
+                >
+                  {testSending ? 'Sending…' : 'Send test'}
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Student ID</Label>
+                  <Input
+                    value={testStudentId}
+                    onChange={(e) => setTestStudentId(e.target.value)}
+                    placeholder="e.g. 12345678"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Template</Label>
+                  <Select value={testTemplate} onValueChange={(v) => setTestTemplate(v as any)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="reward_redemption">Reward redemption</SelectItem>
+                      <SelectItem value="points_award">Points award</SelectItem>
+                      <SelectItem value="milestone">Milestone</SelectItem>
+                      <SelectItem value="attendance">Attendance</SelectItem>
+                      <SelectItem value="library_checkout">Library checkout</SelectItem>
+                      <SelectItem value="library_return">Library return</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Recipient</Label>
+                  <Select value={testRecipient} onValueChange={(v) => setTestRecipient(v as any)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="parent">Parent email</SelectItem>
+                      <SelectItem value="student">Student email</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {testError ? (
+                <Alert variant="destructive">
+                  <AlertTitle>Test tool error</AlertTitle>
+                  <AlertDescription className="text-xs leading-relaxed">{testError}</AlertDescription>
+                </Alert>
+              ) : null}
+
+              {testPreview ? (
+                <div className="rounded-lg border bg-background p-3 space-y-2">
+                  <div className="text-xs">
+                    <div><span className="font-semibold">To (masked)</span>: {testRecipient === 'parent' ? testPreview.to.parentEmail : testPreview.to.studentEmail}</div>
+                    <div><span className="font-semibold">Subject</span>: {testPreview.subject}</div>
+                  </div>
+                  <div className="rounded-md border bg-muted/10 p-2">
+                    <div className="text-[11px] font-semibold mb-1">Preview</div>
+                    <div className="text-xs whitespace-pre-wrap">{testPreview.text}</div>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">Enter a student ID to preview.</p>
+              )}
+            </div>
+
             {mailError ? (
               <Alert variant="destructive">
                 <AlertTitle>Could not load mail queue</AlertTitle>
@@ -296,6 +471,7 @@ export function AdminNotificationsTab() {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-[100px]">Doc</TableHead>
+                      <TableHead className="min-w-[140px]">When</TableHead>
                       <TableHead>To</TableHead>
                       <TableHead>Subject</TableHead>
                       <TableHead className="w-[90px]">Delivery</TableHead>
@@ -305,9 +481,32 @@ export function AdminNotificationsTab() {
                     {sortedMail.map((row) => (
                       <TableRow key={row.id}>
                         <TableCell className="font-mono text-[10px] align-top">{row.id.slice(0, 8)}…</TableCell>
+                        <TableCell className="text-[10px] align-top text-muted-foreground whitespace-nowrap">
+                          {formatWhen(row.createdAtMs)}
+                        </TableCell>
                         <TableCell className="text-xs align-top">{row.toMasked}</TableCell>
                         <TableCell className="text-xs align-top max-w-[200px] break-words">{row.subject}</TableCell>
-                        <TableCell className="text-[10px] align-top text-muted-foreground break-words">{row.delivery}</TableCell>
+                        <TableCell className="text-[10px] align-top text-muted-foreground break-words">
+                          <div className="space-y-1">
+                            <div>{row.delivery}</div>
+                            {row.deliveryAttempts != null || row.deliveryError || row.deliveryMessage ? (
+                              <div className="text-[10px] text-muted-foreground/90 leading-snug">
+                                {row.deliveryAttempts != null ? (
+                                  <span className="mr-2">attempts: {row.deliveryAttempts}</span>
+                                ) : null}
+                                {row.deliveryError ? <span className="text-destructive">{row.deliveryError}</span> : null}
+                                {!row.deliveryError && row.deliveryMessage ? <span>{row.deliveryMessage}</span> : null}
+                              </div>
+                            ) : null}
+                            {row.deliveryStartTimeMs || row.deliveryEndTimeMs ? (
+                              <div className="text-[10px] text-muted-foreground/80 leading-snug">
+                                {row.deliveryStartTimeMs ? <span>start: {formatWhen(row.deliveryStartTimeMs)}</span> : null}
+                                {row.deliveryStartTimeMs && row.deliveryEndTimeMs ? <span className="mx-1">·</span> : null}
+                                {row.deliveryEndTimeMs ? <span>end: {formatWhen(row.deliveryEndTimeMs)}</span> : null}
+                              </div>
+                            ) : null}
+                          </div>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -382,40 +581,55 @@ export function AdminNotificationsTab() {
               />
             </div>
 
-            <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
-              <div className="space-y-0.5">
-                <Label className="text-sm font-bold">Attendance Sign-ins</Label>
-                <p className="text-[11px] text-muted-foreground">Notify when a student signs in for a class period.</p>
+            {attendancePillarOn ? (
+              <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                <div className="space-y-0.5">
+                  <Label className="text-sm font-bold">Attendance Sign-ins</Label>
+                  <p className="text-[11px] text-muted-foreground">Notify when a student signs in for a class period.</p>
+                </div>
+                <Switch
+                  checked={settings.notificationAttendanceEnabled}
+                  onCheckedChange={(checked) => updateSettings({ notificationAttendanceEnabled: checked })}
+                />
               </div>
-              <Switch
-                checked={settings.notificationAttendanceEnabled}
-                onCheckedChange={(checked) => updateSettings({ notificationAttendanceEnabled: checked })}
-              />
-            </div>
+            ) : null}
+
+            {libraryPillarOn ? (
+              <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                <div className="space-y-0.5">
+                  <Label className="text-sm font-bold flex items-center gap-2">
+                    Library activity <BookOpenCheck className="w-3.5 h-3.5 text-indigo-500" />
+                  </Label>
+                  <p className="text-[11px] text-muted-foreground">Notify when a student checks out or returns a library item.</p>
+                </div>
+                <Switch
+                  checked={settings.notificationLibraryEnabled}
+                  onCheckedChange={(checked) => updateSettings({ notificationLibraryEnabled: checked })}
+                />
+              </div>
+            ) : null}
 
             <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
               <div className="space-y-0.5">
                 <Label className="text-sm font-bold flex items-center gap-2">
                   Milestones & Badges <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                  <span className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
+                    <input
+                      type="checkbox"
+                      className="h-3 w-3 accent-sky-600"
+                      checked={settings.notificationArtworkEnabled !== false}
+                      disabled={settings.notificationMilestonesEnabled === false}
+                      onChange={(e) => updateSettings({ notificationArtworkEnabled: e.target.checked })}
+                      aria-label="Include celebration artwork in milestone/badge emails"
+                    />
+                    Artwork
+                  </span>
                 </Label>
                 <p className="text-[11px] text-muted-foreground">Notify when a student unlocks bonus milestones or category badges.</p>
               </div>
               <Switch
                 checked={settings.notificationMilestonesEnabled}
                 onCheckedChange={(checked) => updateSettings({ notificationMilestonesEnabled: checked })}
-              />
-            </div>
-
-            <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
-              <div className="space-y-0.5">
-                <Label className="text-sm font-bold flex items-center gap-2">
-                  Celebration Artwork <ImageIcon className="w-3.5 h-3.5 text-sky-500" />
-                </Label>
-                <p className="text-[11px] text-muted-foreground">Include badge-style artwork in milestone and badge emails.</p>
-              </div>
-              <Switch
-                checked={settings.notificationArtworkEnabled}
-                onCheckedChange={(checked) => updateSettings({ notificationArtworkEnabled: checked })}
               />
             </div>
 
@@ -445,9 +659,13 @@ export function AdminNotificationsTab() {
             <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
               <div className="space-y-0.5">
                 <Label className="text-sm font-bold">Parents / Guardians</Label>
-                <p className="text-[11px] text-muted-foreground">Always notified if student contact info is provided.</p>
+                <p className="text-[11px] text-muted-foreground">
+                  Default recipients when parent contact info is provided. Can be disabled per student.
+                </p>
               </div>
-              <div className="text-[10px] uppercase font-bold text-blue-500 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded">Always On</div>
+              <div className="text-[10px] uppercase font-bold text-blue-500 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded">
+                Default On
+              </div>
             </div>
 
             <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">

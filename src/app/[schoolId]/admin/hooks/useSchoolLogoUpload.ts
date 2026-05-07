@@ -35,7 +35,7 @@ export interface UseSchoolLogoUploadDeps {
 }
 
 const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
-const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
+const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
 
 /**
  * Owns the three pieces of state that drive the "School logo" section of
@@ -125,7 +125,7 @@ export function useSchoolLogoUpload({
         toast({
           variant: 'destructive',
           title: 'File too large',
-          description: 'Logo must be under 5MB. Try compressing or resizing the image.',
+          description: 'Logo must be under 10MB. Try compressing or resizing the image.',
         });
         e.target.value = '';
         return;
@@ -202,7 +202,7 @@ export function useSchoolLogoUpload({
         } else if (code === 'functions/permission-denied') {
           description = 'You need admin access to update the school logo.';
         } else if (code === 'functions/invalid-argument') {
-          description = message || 'Invalid image. Use PNG, JPG, or WebP under 5MB.';
+          description = message || 'Invalid image. Use PNG, JPG, or WebP under 10MB.';
         } else if (!message || message === 'undefined') {
           description = 'Could not save the logo. Try again or use a smaller image.';
         }
