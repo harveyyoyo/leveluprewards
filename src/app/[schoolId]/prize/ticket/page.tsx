@@ -6,6 +6,7 @@ import { PrizeRedeemTicketPrintSheet } from '@/components/PrizeRedeemTicketPrint
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { useAuth } from '@/components/providers/AuthProvider';
+import { useSettings } from '@/components/providers/SettingsProvider';
 import { schoolPublicDocRef } from '@/lib/schoolPublic';
 
 type TicketParams = {
@@ -73,6 +74,9 @@ export default function PrizeRedeemTicketPage() {
   const { data: schoolData } = useDoc<{ name?: string; logoUrl?: string }>(schoolRef);
   const schoolName = (schoolData?.name ?? '').trim() || schoolId;
   const logoUrl = (schoolData?.logoUrl ?? '').trim() || null;
+  const { settings } = useSettings();
+  const prizeVoucherPaperFormat =
+    settings.prizeVoucherPaperFormat === 'thermal_80mm' ? 'thermal_80mm' : 'label_50x70';
 
   const prizeTickets = useMemo(() => {
     if (!ticket.activityId || !ticket.studentId || !ticket.prizeName) return null;
@@ -150,6 +154,7 @@ export default function PrizeRedeemTicketPage() {
         tickets={prizeTickets}
         schoolName={schoolName}
         logoUrl={logoUrl}
+        paperFormat={prizeVoucherPaperFormat}
       />
     </div>
   );

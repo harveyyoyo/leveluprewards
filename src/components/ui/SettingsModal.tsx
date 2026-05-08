@@ -1,3 +1,4 @@
+'use client';
 
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useAppContext } from '@/components/AppProvider';
@@ -1022,6 +1023,33 @@ export function SettingsModal() {
                                             checked={local.enableColorPrinting}
                                             onCheckedChange={(checked) => handleToggle('enableColorPrinting', checked)}
                                         />
+                                    </div>
+
+                                    <div className="space-y-1.5 border-t border-slate-200/60 dark:border-slate-700/50 pt-4">
+                                        <Label htmlFor="prizeVoucherPaperFormat" className="text-xs font-bold flex items-center gap-2">
+                                            <Printer className="w-3.5 h-3.5 text-muted-foreground" />
+                                            Prize voucher paper size
+                                        </Label>
+                                        <Select
+                                            value={local.prizeVoucherPaperFormat ?? 'label_50x70'}
+                                            onValueChange={(v) =>
+                                                handleToggle(
+                                                    'prizeVoucherPaperFormat',
+                                                    v === 'thermal_80mm' ? 'thermal_80mm' : 'label_50x70'
+                                                )
+                                            }
+                                        >
+                                            <SelectTrigger id="prizeVoucherPaperFormat" className="rounded-xl">
+                                                <SelectValue placeholder="Paper format" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="label_50x70">Small label (50 × 70 mm)</SelectItem>
+                                                <SelectItem value="thermal_80mm">80 mm thermal receipt (e.g. VCP-8370)</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <p className="text-[11px] text-muted-foreground leading-snug">
+                                            Matches browser print page size to your hardware. Thermal rolls use a wider slip; label stock keeps the compact ticket layout.
+                                        </p>
                                     </div>
 
                                     {isAdmin && (

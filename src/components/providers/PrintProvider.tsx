@@ -19,6 +19,8 @@ import { useAuth } from './AuthProvider';
 import { useDoc } from '@/firebase';
 import { useSchoolMetadataDocRef } from '@/hooks/useSchoolMetadataDocRef';
 import type { CouponPrintPageSize } from '@/lib/coupon-print';
+import { useSettings } from '@/components/providers/SettingsProvider';
+import type { PrizeVoucherPaperFormat } from '@/lib/prize-voucher-print';
 
 interface PrintContextType {
     setCouponsToPrint: (coupons: Coupon[], options?: { couponsPerPage?: CouponPrintPageSize }) => void;
@@ -46,6 +48,9 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
     const [couponPrintJob, setCouponPrintJob] = useState<{ coupons: Coupon[]; couponsPerPage: CouponPrintPageSize } | null>(null);
     const [printData, setPrintData] = useState<{ students: Student[]; classes: Class[]; printerType?: 'dtc4500e' } | null>(null);
     const [prizeTicketsToPrint, setPrizeTicketsToPrint] = useState<PrizeRedeemTicket[]>([]);
+    const { settings } = useSettings();
+    const prizeVoucherPaperFormat: PrizeVoucherPaperFormat =
+        settings.prizeVoucherPaperFormat === 'thermal_80mm' ? 'thermal_80mm' : 'label_50x70';
     const playSound = useArcadeSound();
     const { schoolId } = useAuth();
     const schoolDocRef = useSchoolMetadataDocRef();
@@ -135,6 +140,7 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
                     tickets={prizeTicketsToPrint}
                     schoolName={printSchoolName}
                     logoUrl={printSchoolLogoUrl}
+                    paperFormat={prizeVoucherPaperFormat}
                 />
             )}
         </PrintContext.Provider>

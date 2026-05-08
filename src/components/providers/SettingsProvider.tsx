@@ -22,6 +22,7 @@ import {
 } from '@/lib/plans';
 import type { StudentTheme } from '@/lib/types';
 import type { IdCardPrintProfile } from '@/lib/id-card-print-catalog';
+import type { PrizeVoucherPaperFormat } from '@/lib/prize-voucher-print';
 import { STUDENT_WELCOME_STYLES_LIVE } from '@/lib/studentWelcome';
 import { LEVELUP_BRAND_PRIMARY_HEX } from '@/lib/app-branding';
 
@@ -94,6 +95,8 @@ interface Settings {
     lastIdCardPrintProfileId?: string;
     /** Optional staff reminder for prize redeem slips and printed coupon sheets. */
     printerReminderPrizeVouchers?: string;
+    /** Browser print page size for prize redeem vouchers (thermal receipt vs small label). */
+    prizeVoucherPaperFormat?: PrizeVoucherPaperFormat;
     // Admin Tools
     enableBulkPoints: boolean;
     enablePointApproval: boolean;
@@ -292,6 +295,7 @@ const defaultSettings: Settings = {
     idCardPrintProfiles: [],
     lastIdCardPrintProfileId: undefined,
     printerReminderPrizeVouchers: '',
+    prizeVoucherPaperFormat: 'label_50x70',
     enableBulkPoints: false,
     enablePointApproval: false,
     enableAuditLog: false,

@@ -710,6 +710,8 @@
   body.coupon-printing #coupon-print-root *,
   body.prize-ticket-printing #prize-ticket-print-wrapper,
   body.prize-ticket-printing #prize-ticket-print-wrapper *,
+  body.prize-ticket-printing #prize-ticket-standalone,
+  body.prize-ticket-printing #prize-ticket-standalone *,
   body.id-card-printing #student-id-print-wrapper,
   body.id-card-printing #student-id-print-wrapper * {
     visibility: visible !important;
@@ -748,13 +750,14 @@
   }
   
   /* Prize tickets: keep only the wrapper to avoid layout gaps. */
-  body.prize-ticket-printing [data-app-view-root] > *:not(#prize-ticket-print-wrapper) {
+  body.prize-ticket-printing [data-app-view-root] > *:not(#prize-ticket-print-wrapper):not(#prize-ticket-standalone) {
     display: none !important;
   }
 
   /* Whitelist the print wrappers - PRODUCTION VERBATIM */
   body.coupon-printing #coupon-print-root,
   body.prize-ticket-printing #prize-ticket-print-wrapper,
+  body.prize-ticket-printing #prize-ticket-standalone,
   body.id-card-printing #student-id-print-wrapper {
     display: flex !important;
     flex-direction: column !important;
@@ -970,6 +973,25 @@
 
     body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__surprise-answer-label {
       font-weight: 800 !important;
+    }
+
+    /* 80 mm thermal receipt roll (e.g. VCP-8370): wider page — drop fixed label height */
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='thermal_80mm'] .prize-ticket,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='thermal_80mm'] .prize-ticket {
+      height: auto !important;
+      max-height: none !important;
+      min-height: 0 !important;
+      overflow: visible !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='thermal_80mm'] .prize-ticket__prize-name,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='thermal_80mm'] .prize-ticket__prize-name {
+      font-size: 8.5mm !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='thermal_80mm'] .prize-ticket__student-name,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='thermal_80mm'] .prize-ticket__student-name {
+      font-size: 4.6mm !important;
     }
   }
   
@@ -1895,6 +1917,25 @@
 .legacy .bg-gradient-to-l {
   background-image: none !important;
   background-color: hsl(var(--secondary) / 0.1) !important;
+}
+
+.legacy .kiosk-sponsor-banner {
+  background-image: none !important;
+  background-color: hsl(var(--primary)) !important;
+  border-color: hsl(var(--primary-foreground) / 0.35) !important;
+  color: hsl(var(--primary-foreground)) !important;
+}
+
+.legacy .kiosk-sponsor-banner *,
+.legacy .kiosk-sponsor-banner .font-black,
+.legacy .kiosk-sponsor-banner .font-extrabold {
+  color: hsl(var(--primary-foreground)) !important;
+}
+
+.legacy .kiosk-sponsor-banner img {
+  background-color: hsl(var(--primary-foreground) / 0.92);
+  border-radius: 0.5rem;
+  padding: 0.125rem 0.375rem;
 }
 
 .legacy .backdrop-blur-md,

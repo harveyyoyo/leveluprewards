@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
 import DynamicIcon from '@/components/DynamicIcon';
 import { leadingEmojiSequenceFromName, stripLeadingEmojiFromPrizeName } from '@/lib/prize-utils';
+import type { PrizeVoucherPaperFormat } from '@/lib/prize-voucher-print';
+
+export type { PrizeVoucherPaperFormat } from '@/lib/prize-voucher-print';
 
 export type PrizeRedeemTicket = {
   activityId: string;
@@ -37,11 +40,14 @@ export function PrizeRedeemTicketPrintSheet({
   schoolName,
   /** `overlay` = off-screen for window.print() from the root provider; `page` = visible full-page (e.g. /prize/ticket). */
   displayMode = 'overlay' as 'overlay' | 'page',
+  /** School setting: label stock (e.g. M110S) vs 80mm thermal receipt (e.g. VCP-8370). */
+  paperFormat = 'label_50x70' as PrizeVoucherPaperFormat,
 }: {
   tickets: PrizeRedeemTicket[];
   logoUrl?: string | null;
   schoolName?: string | null;
   displayMode?: 'overlay' | 'page';
+  paperFormat?: PrizeVoucherPaperFormat;
 }) {
   const [logoError, setLogoError] = useState(false);
 
@@ -52,12 +58,13 @@ export function PrizeRedeemTicketPrintSheet({
   useEffect(() => {
     const style = document.createElement('style');
     style.setAttribute('data-prize-ticket-print', 'true');
-    // Ensure the browser lays out the ticket on the actual label size (e.g. M110S 50x70mm),
-    // otherwise global print CSS (Letter) will create a huge blank area.
+    const page =
+      paperFormat === 'thermal_80mm'
+        ? '@page{size:80mm 160mm;margin:2mm;}'
+        : '@page{size:50mm 70mm;margin:1mm;}';
     style.textContent =
       '@media print{' +
-      // Small margin prevents edge clipping on many label printers/browsers.
-      '@page{size:50mm 70mm;margin:1mm;}' +
+      page +
       'html,body{margin:0 !important;padding:0 !important;background:#fff !important;}' +
       '}';
     document.head.appendChild(style);
@@ -67,7 +74,7 @@ export function PrizeRedeemTicketPrintSheet({
       document.body.classList.remove('prize-ticket-printing');
       style.remove();
     };
-  }, []);
+  }, [paperFormat]);
 
   if (!tickets || tickets.length === 0) return null;
 
@@ -80,6 +87,7 @@ export function PrizeRedeemTicketPrintSheet({
       id={wrapperId}
       className="prize-ticket-root"
       data-ticket-pages={multiPage ? 'multi' : 'single'}
+      data-prize-voucher-paper={paperFormat}
     >
       {tickets.map((t) => {
         const rawPrizeName = (t.prizeName || '').trim();
