@@ -236,6 +236,14 @@ service cloud.firestore {
         allow create, update, delete: if isAdmin(schoolId) || isDeveloper();
       }
 
+      // Celebration posts (e.g. birthdays) written by Cloud Functions only.
+      // Same read stance as bulletinBoardIncentives: any authenticated user can
+      // load the board (school portal / demo flows before role docs exist).
+      match /bulletinBoardPosts/{postId} {
+        allow read: if isAuth();
+        allow create, update, delete: if false;
+      }
+
       match /prizes/{prizeId} {
         allow read: if isSchoolMember(schoolId);
         allow create: if isAdmin(schoolId) || isTeacherOwnedPrizeCreate(schoolId);
