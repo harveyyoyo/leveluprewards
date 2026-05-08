@@ -28,12 +28,6 @@ export type PrizeRedeemTicket = {
   aiSurpriseAnswer?: string;
 };
 
-const PRINT_AI_KIND_LABEL: Record<string, string> = {
-  joke: 'Joke',
-  riddle: 'Riddle',
-  fortune: 'Fortune',
-};
-
 export function PrizeRedeemTicketPrintSheet({
   tickets,
   logoUrl,
@@ -60,7 +54,8 @@ export function PrizeRedeemTicketPrintSheet({
     style.setAttribute('data-prize-ticket-print', 'true');
     const page =
       paperFormat === 'thermal_80mm'
-        ? '@page{size:80mm 160mm;margin:2mm;}'
+        ? /* auto height shrinks preview / cut length to content (Chrome + most thermal drivers) */
+          '@page{size:80mm auto;margin:2mm;}'
         : '@page{size:50mm 70mm;margin:1mm;}';
     style.textContent =
       '@media print{' +
@@ -102,6 +97,10 @@ export function PrizeRedeemTicketPrintSheet({
         const surpriseKind = t.aiSurpriseKind === 'riddle' || t.aiSurpriseKind === 'fortune' ? t.aiSurpriseKind : 'joke';
         const surpriseAnswer =
           surpriseKind === 'riddle' && (t.aiSurpriseAnswer || '').trim() ? (t.aiSurpriseAnswer || '').trim() : '';
+
+        /** AI joke/riddle/fortune text belongs in the hero headline (where the prize name usually is), not under metadata. */
+        const heroHeadline = hasSurprise ? surpriseText : titleText || rawPrizeName;
+        const showHeroHeadline = hasSurprise ? Boolean(surpriseText) : showTitle;
 
         return (
           <article
@@ -145,8 +144,16 @@ export function PrizeRedeemTicketPrintSheet({
                   />
                 )}
               </div>
-              {showTitle ? (
-                <h2 className="prize-ticket__prize-name">{titleText || rawPrizeName}</h2>
+              {showHeroHeadline ? (
+                <h2
+                  className={
+                    hasSurprise
+                      ? 'prize-ticket__prize-name prize-ticket__prize-name--surprise-body'
+                      : 'prize-ticket__prize-name'
+                  }
+                >
+                  {heroHeadline}
+                </h2>
               ) : null}
             </div>
 
@@ -198,18 +205,12 @@ export function PrizeRedeemTicketPrintSheet({
                 ) : null}
               </div>
 
-              {hasSurprise ? (
-                <div className="prize-ticket__surprise" aria-label="Prize surprise">
-                  <p className="prize-ticket__surprise-kind">{surpriseText}</p>
-                  <p className="prize-ticket__surprise-label">
-                    {PRINT_AI_KIND_LABEL[surpriseKind] ?? 'Surprise'}
+              {hasSurprise && surpriseKind === 'riddle' && surpriseAnswer ? (
+                <div className="prize-ticket__surprise" aria-label="Riddle answer">
+                  <p className="prize-ticket__surprise-answer">
+                    <span className="prize-ticket__surprise-answer-label">Answer: </span>
+                    {surpriseAnswer}
                   </p>
-                  {surpriseAnswer ? (
-                    <p className="prize-ticket__surprise-answer">
-                      <span className="prize-ticket__surprise-answer-label">Answer: </span>
-                      {surpriseAnswer}
-                    </p>
-                  ) : null}
                 </div>
               ) : null}
             </div>
