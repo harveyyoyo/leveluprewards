@@ -7,6 +7,10 @@
  * `next build` while a dev server is running — mixed writes to `.next` reproduce the crash.
  *
  * Set SKIP_CLEAN_NEXT=1 to skip the delete (faster restarts; risk of stale cache).
+ *
+ * Port: defaults to 3000 (`PORT` env overrides). Opening a different host/port than the
+ * running dev server serves stale HTML that references chunk hashes the wrong process
+ * does not have → 404 on `_next/static/chunks/*.js` and a stuck "Loading levelUp EDU" shell.
  */
 const { spawn } = require('child_process');
 const fs = require('fs');
@@ -48,8 +52,10 @@ if (!process.env.SKIP_CLEAN_NEXT) {
   }
 }
 
+const port = String(process.env.PORT || '3000').trim() || '3000';
 const nextCli = path.join(root, 'node_modules', 'next', 'dist', 'bin', 'next');
-const child = spawn(process.execPath, [nextCli, 'dev', '--turbo'], {
+console.log(`[dev:turbo] Listening on http://localhost:${port} — use this URL only.\n`);
+const child = spawn(process.execPath, [nextCli, 'dev', '--turbo', '-p', port], {
   cwd: root,
   stdio: 'inherit',
   env: process.env,
