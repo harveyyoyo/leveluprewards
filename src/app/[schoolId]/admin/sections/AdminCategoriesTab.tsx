@@ -24,7 +24,7 @@ export function AdminCategoriesTab({
   onDeleteCategory: (categoryId: string) => void;
 }) {
   return (
-    <Card className="border-t-4 border-primary shadow-md">
+    <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden">
       <CardHeader className="flex flex-row justify-between items-center py-6">
         <div>
           <Helper content="Define categories and default point values for coupons.">
@@ -44,7 +44,7 @@ export function AdminCategoriesTab({
         </div>
       </CardHeader>
       <CardContent>
-        <ul className="space-y-2 h-[calc(100vh-22rem)] min-h-[250px] overflow-y-auto pr-1">
+        <ul className="space-y-2 pr-1">
           {categories && categories.length > 0 ? (
             <AdminRecordListHeader
               gridClassName="grid-cols-[76px_minmax(160px,1fr)_76px_minmax(120px,180px)_44px]"

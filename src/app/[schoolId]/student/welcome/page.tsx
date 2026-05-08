@@ -4,7 +4,12 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { ArrowLeft, Loader2, Sparkles } from 'lucide-react';
 
-import { WelcomeGreeting } from '@/components/WelcomeGreeting';
+import dynamic from 'next/dynamic';
+// 122 KB — 30 style themes + palettes. Lazy-loaded while SchoolGate renders.
+const WelcomeGreeting = dynamic(
+  () => import('@/components/WelcomeGreeting').then(m => m.WelcomeGreeting),
+  { ssr: false, loading: () => <div className="animate-pulse h-96 w-full rounded-xl bg-muted/40" /> },
+);
 import { useAppContext } from '@/components/AppProvider';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useStudentKioskSession } from '@/components/providers/StudentKioskSessionProvider';

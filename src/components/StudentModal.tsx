@@ -1,4 +1,4 @@
-import { ChangeEvent, useEffect, useState } from 'react';
+import { ChangeEvent, useEffect, useMemo, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -75,6 +75,7 @@ export function StudentModal({
   const [selectedTeacherIds, setSelectedTeacherIds] = useState<string[]>([]);
   const [isPhotoUploading, setIsPhotoUploading] = useState(false);
   const [isCustomEmojiUploading, setIsCustomEmojiUploading] = useState(false);
+  const [localPhotoPreviewUrl, setLocalPhotoPreviewUrl] = useState<string | null>(null);
   const [theme, setTheme] = useState<StudentTheme | undefined>(undefined);
   const [birthday, setBirthday] = useState('');
   const [studentWelcomeAllowed, setStudentWelcomeAllowed] = useState(true);
@@ -89,6 +90,7 @@ export function StudentModal({
 
   useEffect(() => {
     if (isOpen) {
+      setLocalPhotoPreviewUrl(null);
       if (student) { // Edit mode
         setFirstName(student.firstName);
         setMiddleName(student.middleName || '');
@@ -132,6 +134,16 @@ export function StudentModal({
       }
     }
   }, [student, isOpen]);
+
+  useEffect(() => {
+    return () => {
+      if (localPhotoPreviewUrl) URL.revokeObjectURL(localPhotoPreviewUrl);
+    };
+  }, [localPhotoPreviewUrl]);
+
+  const effectivePhotoUrl = useMemo(() => {
+    return localPhotoPreviewUrl || student?.photoUrl || '';
+  }, [localPhotoPreviewUrl, student?.photoUrl]);
 
   const handlePhotoUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -177,6 +189,8 @@ export function StudentModal({
     if (!student?.id || !schoolId || !functions) return;
 
     try {
+      if (localPhotoPreviewUrl) URL.revokeObjectURL(localPhotoPreviewUrl);
+      setLocalPhotoPreviewUrl(URL.createObjectURL(croppedBlob));
       setIsPhotoUploading(true);
       const imageBase64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
@@ -203,11 +217,13 @@ export function StudentModal({
 
       if (!res.data?.photoUrl) throw new Error('No photo URL returned');
       await updateStudent({ ...student, photoUrl: res.data.photoUrl });
+      setLocalPhotoPreviewUrl(null);
       playSound('success');
       toast({ title: 'Profile photo updated!' });
     } catch (err: any) {
       console.error('Student photo upload failed', err);
       playSound('error');
+      setLocalPhotoPreviewUrl(null);
       toast({
         variant: 'destructive',
         title: 'Photo upload failed',
@@ -222,6 +238,7 @@ export function StudentModal({
     if (!student?.id || !schoolId || !functions) return;
     try {
       setIsPhotoUploading(true);
+      setLocalPhotoPreviewUrl(null);
       await updateStudent({ ...student, photoUrl: '' });
       playSound('success');
       toast({ title: 'Profile photo removed' });
@@ -432,14 +449,14 @@ export function StudentModal({
               <div className="flex items-center gap-3">
                 <div className="relative group">
                   <div className="h-12 w-12 rounded-full overflow-hidden bg-muted border border-border/60 flex items-center justify-center text-xs font-semibold text-muted-foreground">
-                    {student?.photoUrl ? (
+                    {effectivePhotoUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={student.photoUrl} alt="Student profile" className={settings.photoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />
+                      <img src={effectivePhotoUrl} alt="Student profile" className={settings.photoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />
                     ) : (
                       <span>{(firstName[0] || '')}{(lastName[0] || '')}</span>
                     )}
                   </div>
-                  {student?.photoUrl && (
+                  {effectivePhotoUrl && (
                     <button
                       onClick={handleRemovePhoto}
                       className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -450,6 +467,14 @@ export function StudentModal({
                       <Trash2 className="w-3 h-3" />
                     </button>
                   )}
+                  {isPhotoUploading ? (
+                    <div
+                      className="absolute inset-0 rounded-full bg-background/45 backdrop-blur-[1px] flex items-center justify-center"
+                      aria-label="Uploading profile photo"
+                    >
+                      <Loader2 className="h-4 w-4 animate-spin text-foreground/80" aria-hidden />
+                    </div>
+                  ) : null}
                 </div>
                 <div className="flex-1">
                   <Input
@@ -459,6 +484,12 @@ export function StudentModal({
                     disabled={isPhotoUploading}
                   />
                   <p className="text-[11px] text-muted-foreground mt-1">PNG/JPG/WebP under 5MB.</p>
+                  {isPhotoUploading ? (
+                    <p className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1.5">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" aria-hidden />
+                      Uploading / processing photo…
+                    </p>
+                  ) : null}
                 </div>
               </div>
             </div>

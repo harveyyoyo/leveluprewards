@@ -118,7 +118,7 @@ export default function AdminSignInPage() {
           </form>
 
           <Button variant="outline" className="w-full h-12 rounded-xl font-bold" asChild>
-            <Link href={`/${schoolId}/sign-in`} onClick={() => playSound('click')}>
+            <Link href={`/${schoolId}/portal`} onClick={() => playSound('click')}>
               <ArrowLeft className="mr-2 h-4 w-4" aria-hidden="true" />
               Back
             </Link>

@@ -6,8 +6,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import LayoutClientWrapper from "@/components/LayoutClientWrapper";
 import "./globals.css";
 
-// Client-only Firebase apps should not be statically pre-rendered in Next.js.
-export const dynamic = 'force-dynamic';
+
 
 /** Base URL for resolving relative OG / Twitter image paths (set NEXT_PUBLIC_SITE_URL in prod). */
 function appMetadataBase(): URL {
@@ -72,9 +71,22 @@ export default function RootLayout({
           href="https://fonts.gstatic.com"
           crossOrigin="anonymous"
         />
+        {/* Critical fonts – preloaded for fast text rendering */}
         <link
-          href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&family=Ubuntu:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400;1,500;1,700&family=Source+Code+Pro:wght@400;600&family=Libre+Barcode+39&family=Fraunces:wght@600;700;800&family=DM+Sans:wght@500;600;700;800&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=DM+Sans:wght@500;600;700;800&display=swap"
           rel="stylesheet"
+        />
+        {/* Non-critical fonts – loaded after initial paint via low-priority link */}
+        <link
+          id="deferred-fonts"
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=JetBrains+Mono:wght@400;600;700&family=Ubuntu:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400;1,500;1,700&family=Source+Code+Pro:wght@400;600&family=Libre+Barcode+39&family=Fraunces:wght@600;700;800&display=swap"
+          media="print"
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `requestIdleCallback?requestIdleCallback(function(){var l=document.getElementById('deferred-fonts');if(l)l.media='all'}):setTimeout(function(){var l=document.getElementById('deferred-fonts');if(l)l.media='all'},100)`,
+          }}
         />
       </head>
       <body className="font-sans antialiased bg-background text-foreground transition-colors duration-500 min-h-screen" suppressHydrationWarning>

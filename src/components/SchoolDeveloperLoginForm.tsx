@@ -9,7 +9,6 @@ import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import {
   isPublicSampleSchoolId,
-  PUBLIC_DEMO_ADMIN_PASSCODE,
   SAMPLE_SCHOOL_ACCESS_PASSCODE,
 } from '@/lib/sample-schools';
 import { cn } from '@/lib/utils';
@@ -26,6 +25,7 @@ import {
   signInWithPopup,
   signInWithRedirect,
 } from 'firebase/auth';
+import { Loader2 } from 'lucide-react';
 
 export type SchoolDeveloperLoginFormMode = 'full' | 'developer-only';
 
@@ -41,6 +41,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
   const [schoolPasscode, setSchoolPasscode] = useState('');
   const [isDeveloper, setIsDeveloper] = useState(false);
   const [isShaking, setIsShaking] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleSigningIn, setIsGoogleSigningIn] = useState(false);
   const [googleSignInBlocked, setGoogleSignInBlocked] = useState<null | 'operation-not-allowed'>(
     null,
@@ -234,6 +235,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
   };
 
   const handleSchoolEntry = async () => {
+    if (isSubmitting) return;
     const sid = schoolId.trim().toLowerCase();
     if (!sid || !schoolPasscode.trim()) {
       playSound('error');
@@ -247,23 +249,29 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
     }
 
     playSound('click');
-    const result = await login('school', { schoolId: sid, passcode: schoolPasscode.trim() });
-    if (!result) {
-      playSound('error');
-      triggerShake();
-      toast({
-        variant: 'destructive',
-        title: 'Login failed',
-        description: 'Invalid School ID or passcode.',
-      });
-      return;
-    }
+    setIsSubmitting(true);
+    try {
+      const result = await login('school', { schoolId: sid, passcode: schoolPasscode.trim() });
+      if (!result) {
+        playSound('error');
+        triggerShake();
+        toast({
+          variant: 'destructive',
+          title: 'Login failed',
+          description: 'Invalid School ID or passcode.',
+        });
+        return;
+      }
 
-    playSound('login');
-    router.push(`/${sid}/sign-in`);
+      playSound('login');
+      router.push(`/${sid}/portal`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleDeveloperLogin = async () => {
+    if (isSubmitting) return;
     if (!schoolPasscode) {
       playSound('error');
       triggerShake();
@@ -274,22 +282,27 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
       });
       return;
     }
-    const result = await login('developer', { passcode: schoolPasscode });
-    if (result) {
-      playSound('login');
-      if (pathname !== '/developer') {
-        router.push('/developer');
+    setIsSubmitting(true);
+    try {
+      const result = await login('developer', { passcode: schoolPasscode });
+      if (result) {
+        playSound('login');
+        if (pathname !== '/developer') {
+          router.push('/developer');
+        }
+      } else {
+        playSound('error');
+        triggerShake();
+        toast({
+          variant: 'destructive',
+          title: 'Developer login failed',
+          description:
+            'Wrong passcode, no Firebase user session yet, or Cloud Functions could not add your UID to developerUids (check DEV_PASSCODE matches on Functions).',
+        });
+        setSchoolPasscode('');
       }
-    } else {
-      playSound('error');
-      triggerShake();
-      toast({
-        variant: 'destructive',
-        title: 'Developer login failed',
-        description:
-          'Wrong passcode, no Firebase user session yet, or Cloud Functions could not add your UID to developerUids (check DEV_PASSCODE matches on Functions).',
-      });
-      setSchoolPasscode('');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -297,56 +310,18 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
     playSound('click');
     const schoolId = id.trim().toLowerCase();
 
-    // Public demos: one callable (`verifySchoolPasscode`) instead of school gate + admin.
+    // Demo schools should log in like any other school (user must enter the passcode).
+    // The buttons just make it easy to pick a known School ID.
     if (isPublicSampleSchoolId(schoolId)) {
-      router.prefetch(`/${schoolId}/admin`);
-      const adminOk = await login('admin', {
-        schoolId,
-        passcode: PUBLIC_DEMO_ADMIN_PASSCODE,
-      });
-      if (adminOk) {
-        playSound('login');
-        router.push(`/${schoolId}/admin`);
-        return;
-      }
-      const schoolFallback = await login('school', {
-        schoolId,
-        passcode: SAMPLE_SCHOOL_ACCESS_PASSCODE,
-      });
-      if (schoolFallback) {
-        toast({
-          variant: 'destructive',
-          title: 'Demo admin unavailable',
-          description: 'You can still sign in from the next screen.',
-        });
-        playSound('login');
-        router.push(`/${schoolId}/sign-in`);
-        return;
-      }
-      playSound('error');
+      setSchoolId(schoolId);
+      setSchoolPasscode('');
+      // Focus will naturally shift to the passcode input via the existing autofocus effect.
       toast({
-        variant: 'destructive',
-        title: 'Login Failed',
-        description: 'Invalid School ID or passcode.',
+        title: 'Demo school selected',
+        description: 'Enter the school passcode to continue.',
       });
       return;
     }
-
-    const result = await login('school', {
-      schoolId,
-      passcode: SAMPLE_SCHOOL_ACCESS_PASSCODE,
-    });
-    if (!result) {
-      playSound('error');
-      toast({
-        variant: 'destructive',
-        title: 'Login Failed',
-        description: 'Invalid School ID or passcode.',
-      });
-      return;
-    }
-    playSound('login');
-    router.push(`/${schoolId}/sign-in`);
   };
 
   if (!mounted || !isInitialized || isUserLoading) {
@@ -474,9 +449,11 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
               <button
                 type="submit"
                 aria-label={isDeveloperOnly || isDeveloper ? 'Sign in as developer' : 'Sign in to school'}
-                className="w-full h-12 font-bold rounded-xl transition-all active:scale-[0.99] bg-primary hover:bg-primary/90 text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                disabled={isSubmitting}
+                className="w-full h-12 font-bold rounded-xl transition-all active:scale-[0.99] bg-primary hover:bg-primary/90 text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-70 inline-flex items-center justify-center gap-2"
               >
-                {isDeveloperOnly || isDeveloper ? 'Dev Login' : 'Continue'}
+                {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
+                {isSubmitting ? 'Signing in...' : isDeveloperOnly || isDeveloper ? 'Dev Login' : 'Continue'}
               </button>
 
               {!isDeveloperOnly && allowDeveloperLogin && !hasGoogleUser && (
@@ -495,7 +472,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
                       onClick={() => void handleGoogleSignIn()}
                       disabled={isGoogleSigningIn || googleSignInBlocked === 'operation-not-allowed'}
                       className={cn(
-                        'shrink-0 h-9 px-3 rounded-lg border border-border bg-card hover:bg-muted transition-colors text-xs font-semibold',
+                        'shrink-0 h-9 px-3 rounded-lg border border-border bg-card hover:bg-muted transition-colors text-xs font-semibold inline-flex items-center justify-center',
                         (isGoogleSigningIn || googleSignInBlocked === 'operation-not-allowed') &&
                           'opacity-60 pointer-events-none',
                       )}

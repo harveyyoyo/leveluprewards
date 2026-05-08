@@ -184,7 +184,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
   const { data: badges, isLoading: badgesLoading } = useCollection<Badge>(badgesQuery);
 
   const { settings } = useSettings();
-  const { loginState, logout } = authCtx;
+  const { loginState, logout, studentKioskSessionEstablished } = authCtx;
 
   // Kiosk entry: optional `?kioskEntry=` or `?entry=` on the student URL verifies with Cloud Functions
   // and grants `kioskMembers` when the school has configured `secrets/entry` (see verifySchoolEntryCode).
@@ -282,6 +282,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
   // Background refresh: download coupon snapshot for offline validation.
   React.useEffect(() => {
     if (!schoolId || !functions || schoolId === 'schoolabc') return;
+    if (loginState === 'student' && !studentKioskSessionEstablished) return;
     if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
     const fn = httpsCallable(functions, 'getCouponSnapshot');
     void fn({ schoolId })
@@ -308,7 +309,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
         saveCouponSnapshot(schoolId, { updatedAt, couponsByCode });
       })
       .catch(() => {});
-  }, [schoolId, functions]);
+  }, [schoolId, functions, loginState, studentKioskSessionEstablished]);
 
   // Background sync: push offline pending redemptions when internet returns.
   React.useEffect(() => {

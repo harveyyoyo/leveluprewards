@@ -10,11 +10,5 @@ export function isPublicSampleSchoolId(id: string | null | undefined): boolean {
   return (PUBLIC_SAMPLE_SCHOOL_IDS as readonly string[]).includes(s);
 }
 
-/** School gate for manual `/sign-in` fallback when demo admin callable fails (matches seeded access passcode). */
-export const SAMPLE_SCHOOL_ACCESS_PASSCODE = '1234';
-
-/**
- * Sent with demo auto-admin login. Empty pairs with `PUBLIC_DEMO_ADMIN_SCHOOL_IDS` in
- * Cloud Function `verifySchoolPasscode` (no passcode verified server-side for those IDs).
- */
-export const PUBLIC_DEMO_ADMIN_PASSCODE = '';
+/** Demo schools should log in like any other school (matches seeded access passcode). */
+export const SAMPLE_SCHOOL_ACCESS_PASSCODE = '911';

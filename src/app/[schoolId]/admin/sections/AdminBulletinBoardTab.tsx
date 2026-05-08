@@ -20,7 +20,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Dialog,
   DialogContent,
@@ -184,9 +183,39 @@ export function AdminBulletinBoardTab({
     bulletinColumns === '1' ? 'grid grid-cols-1 gap-3' : 'grid grid-cols-1 sm:grid-cols-2 gap-3';
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      {/* Left Pane: Config & List */}
-      <div className="xl:col-span-2 space-y-6">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+      {/* Top: Full-width live preview */}
+      <Card className="border-t-4 border-emerald-500 shadow-xl">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Eye className="w-4 h-4 text-emerald-500" /> Interactive Live Preview
+          </CardTitle>
+          <CardDescription>
+            This matches the staff Board page (`/bulletin-board`); it is not shown on the student kiosk.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {bulletinEnabled ? (
+            <LiveScreenPreview
+              href={`/${schoolId}/bulletin-board?fullscreen=1`}
+              title="Live preview (matches big screen)"
+              className="max-w-none"
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center py-16 text-center space-y-3 opacity-60 border-2 border-dashed rounded-3xl p-6">
+              <Megaphone className="w-10 h-10 text-muted-foreground animate-pulse" />
+              <div>
+                <p className="font-black text-sm uppercase tracking-wider">Bulletin Board Disabled</p>
+                <p className="text-xs text-muted-foreground">Turn on the feature to see the preview.</p>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Below: Config & management */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <div className="space-y-6">
         <Card className="border-t-4 border-indigo-500 shadow-md">
           <CardHeader className="py-6 flex flex-row items-start justify-between gap-4">
             <div className="min-w-0">
@@ -196,14 +225,6 @@ export function AdminBulletinBoardTab({
               <CardDescription>
                 Preview and open the full Bulletin Board page (no header). This is the staff-facing board; it is not shown on the student kiosk.
               </CardDescription>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="text-xs font-semibold text-muted-foreground">Enabled</span>
-              <Switch
-                checked={bulletinEnabled}
-                onCheckedChange={(checked) => updateSettings({ bulletinEnabled: checked })}
-                aria-label="Enable bulletin board"
-              />
             </div>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
@@ -368,7 +389,7 @@ export function AdminBulletinBoardTab({
               <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Quick Add Incentives
               </h3>
-              <ScrollArea className="h-[calc(100vh-22rem)] min-h-[180px] pr-1">
+              <div className="pr-1">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {PRESET_BULLETIN_INCENTIVES.map((p, idx) => (
                   <Button
@@ -394,7 +415,7 @@ export function AdminBulletinBoardTab({
                   </Button>
                 ))}
                 </div>
-              </ScrollArea>
+              </div>
             </div>
 
             {/* Existing Incentives Listing */}
@@ -402,7 +423,7 @@ export function AdminBulletinBoardTab({
               <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-1.5">
                 <Tag className="w-3.5 h-3.5 text-indigo-500" /> Posted Incentives
               </h3>
-              <ScrollArea className="h-[calc(100vh-24rem)] min-h-[220px] border rounded-2xl bg-slate-50/40 dark:bg-slate-900/40">
+              <div className="border rounded-2xl bg-slate-50/40 dark:bg-slate-900/40">
                 {isLoading ? (
                   <p className="text-center text-sm text-muted-foreground p-8 animate-pulse">
                     Loading posted incentives...
@@ -479,40 +500,12 @@ export function AdminBulletinBoardTab({
                     No custom incentives created yet. Add presets or create custom options above.
                   </p>
                 )}
-              </ScrollArea>
+              </div>
             </div>
           </CardContent>
         </Card>
-      </div>
-
-      {/* Right Pane: Premium Theme Interactive Preview */}
-      <div className="space-y-4">
-        <Card className="border-t-4 border-emerald-500 shadow-xl">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Eye className="w-4 h-4 text-emerald-500" /> Interactive Live Preview
-            </CardTitle>
-            <CardDescription>
-              This matches the staff Board page (`/bulletin-board`); it is not shown on the student kiosk.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-              {bulletinEnabled ? (
-                <LiveScreenPreview
-                  href={`/${schoolId}/bulletin-board?fullscreen=1`}
-                  title="Live preview (matches big screen)"
-                />
-              ) : (
-                <div className="flex flex-col items-center justify-center py-16 text-center space-y-3 opacity-60 border-2 border-dashed rounded-3xl p-6">
-                  <Megaphone className="w-10 h-10 text-muted-foreground animate-pulse" />
-                  <div>
-                    <p className="font-black text-sm uppercase tracking-wider">Bulletin Board Disabled</p>
-                    <p className="text-xs text-muted-foreground">Turn on the feature to see the preview.</p>
-                  </div>
-                </div>
-              )}
-          </CardContent>
-        </Card>
+        </div>
+        <div className="hidden xl:block" />
       </div>
 
       {/* Creation / Editing Incentive Modal */}

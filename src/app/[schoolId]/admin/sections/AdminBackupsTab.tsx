@@ -5,7 +5,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Helper } from '@/components/ui/helper';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import type { BackupInfo } from '@/lib/types';
 
 export function AdminBackupsTab({
@@ -20,7 +19,7 @@ export function AdminBackupsTab({
   onRestoreFromBackup: (backupId: string) => void;
 }) {
   return (
-    <Card className="border-t-4 border-primary shadow-md">
+    <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden">
       <CardHeader className="flex flex-row justify-between items-center py-6">
         <div>
           <Helper content="Create and restore full data snapshots of your school. This is a critical tool for data safety and recovery.">
@@ -35,7 +34,7 @@ export function AdminBackupsTab({
         </Button>
       </CardHeader>
       <CardContent className="p-6">
-        <ScrollArea className="h-[calc(100vh-22rem)] min-h-[250px]">
+        <div>
           <ul className="space-y-2.5 pr-4">
             {(backups || [])
               .slice()
@@ -99,7 +98,7 @@ export function AdminBackupsTab({
                 </li>
               ))}
           </ul>
-        </ScrollArea>
+        </div>
       </CardContent>
     </Card>
   );

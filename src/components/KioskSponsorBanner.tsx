@@ -105,12 +105,12 @@ export function KioskSponsorBanner({ className, previewOverride }: { className?:
     // In preview mode, use a relative wrapper instead of fixed, and rounded corners
     const wrapperClasses = isPreview
         ? cn(
-              'relative flex w-full items-center justify-center overflow-hidden select-none rounded-xl border-2',
+              'kiosk-sponsor-banner relative flex w-full items-center justify-center overflow-hidden select-none rounded-xl border-2',
               bannerStyleClass,
               className,
           )
         : cn(
-              'fixed inset-x-0 z-[90] flex w-full min-w-0 items-center justify-center overflow-hidden select-none',
+              'kiosk-sponsor-banner fixed inset-x-0 z-[90] flex w-full min-w-0 items-center justify-center overflow-hidden select-none',
               position === 'top' ? 'top-20 bottom-auto border-b-2' : bottomPlacement,
               bannerStyleClass,
               className,

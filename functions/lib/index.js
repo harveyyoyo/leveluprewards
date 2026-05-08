@@ -68,8 +68,7 @@ function schoolAccessPasscodeFrom(data) {
 function adminPasscodeFrom(data) {
     return trimmedString(data.adminPasscode) || trimmedString(data.passcode) || "1234";
 }
-/** Schools where `verifySchoolPasscode` skips passcode verification (public demos). Sync with `src/lib/sample-schools.ts`. */
-const PUBLIC_DEMO_ADMIN_SCHOOL_IDS = new Set(["schoolabc", "yeshiva"]);
+// Demo schools should authenticate like any other school (no passcode bypass).
 async function hasSchoolRole(schoolId, uid, roles) {
     const db = admin.firestore();
     const roleCollections = {
@@ -543,21 +542,12 @@ exports.verifySchoolPasscode = functions.https.onCall(async (data, context) => {
     if (!schoolDoc.exists) {
         throw new functions.https.HttpsError("not-found", "School not found.");
     }
-    const publicDemoAdmin = PUBLIC_DEMO_ADMIN_SCHOOL_IDS.has(schoolId);
-    if (!publicDemoAdmin) {
-        if (passcode.length === 0) {
-            throw new functions.https.HttpsError("invalid-argument", "A valid passcode is required.");
-        }
-        const schoolData = schoolDoc.data();
-        if (adminPasscodeFrom(schoolData) !== passcode) {
-            throw new functions.https.HttpsError("permission-denied", "Invalid passcode.");
-        }
+    if (passcode.length === 0) {
+        throw new functions.https.HttpsError("invalid-argument", "A valid passcode is required.");
     }
-    else {
-        functions.logger.info("verifySchoolPasscode public demo allowlist (passcode not checked)", {
-            schoolId,
-            uid: context.auth.uid,
-        });
+    const schoolData = schoolDoc.data();
+    if (adminPasscodeFrom(schoolData) !== passcode) {
+        throw new functions.https.HttpsError("permission-denied", "Invalid passcode.");
     }
     // Provision admin role using the Admin SDK (path must match client: schools/{schoolId}/roles_admin/{uid})
     const adminRoleRef = db.collection("schools").doc(schoolId).collection("roles_admin").doc(context.auth.uid);
@@ -1320,7 +1310,7 @@ exports.awardSpecialDayPoints = functions.https.onCall(async (data, context) => 
             const birthMD = student.birthday.length >= 10 ? student.birthday.substring(5, 10) : "";
             const amount = Number(settings.birthdayPointsAmount || 0);
             if (birthMD === today.monthDay && lastAwarded.birthday !== today.full && amount > 0) {
-                awards.push({ desc: `Happy Birthday! (+${amount} pts)`, amount });
+                awards.push({ desc: `Happy Birthday! 🎂 (+${amount} pts)`, amount });
                 lastAwarded.birthday = today.full;
             }
         }

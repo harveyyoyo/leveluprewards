@@ -58,7 +58,7 @@ function staffLandingPath(schoolId: string, type: StaffPortalLoginOption['type']
     if (type === 'secretary') return `/${schoolId}/secretary`;
     if (type === 'prizeClerk') return `/${schoolId}/prize-clerk`;
     if (type === 'reports') return `/${schoolId}/reports`;
-    return `/${schoolId}/teacher`;
+    return `/${schoolId}/portal`;
 }
 
 function TeacherPrinterSkeleton() {
@@ -133,6 +133,7 @@ export default function TeacherPage() {
 
     const [selectedLoginKey, setSelectedLoginKey] = useState('');
     const [passcode, setPasscode] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const passcodeRef = useRef<HTMLInputElement | null>(null);
     const directAccountKey = searchParams.get('account') || '';
     const schoolId = useMemo(
@@ -206,6 +207,7 @@ export default function TeacherPage() {
     }, [isInitialized, selectedLoginKey]);
 
     const handleLogin = async () => {
+        if (isSubmitting) return;
         if (!schoolId || !selectedLoginKey || !passcode) {
             playSound('error');
             toast({ variant: 'destructive', title: 'Please select your name and enter a passcode.' });
@@ -219,22 +221,27 @@ export default function TeacherPage() {
             return;
         }
 
-        const result = await login(selected.type, {
-            schoolId: schoolId || undefined,
-            username: selected.username,
-            passcode,
-            teacherName: selected.label,
-            teacherDocId: selected.type === 'teacher' ? selected.sourceId || selected.id.replace(/^teacher:/, '') : undefined,
-        });
+        setIsSubmitting(true);
+        try {
+            const result = await login(selected.type, {
+                schoolId: schoolId || undefined,
+                username: selected.username,
+                passcode,
+                teacherName: selected.label,
+                teacherDocId: selected.type === 'teacher' ? selected.sourceId || selected.id.replace(/^teacher:/, '') : undefined,
+            });
 
-        if (result) {
-            playSound('login');
-            toast({ title: 'Logged in successfully.' });
-            router.replace(staffLandingPath(schoolId, selected.type));
-        } else {
-            playSound('error');
-            toast({ variant: 'destructive', title: 'Login failed', description: 'Check your passcode and try again.' });
-            setPasscode('');
+            if (result) {
+                playSound('login');
+                toast({ title: 'Logged in successfully.' });
+                router.replace(staffLandingPath(schoolId, selected.type));
+            } else {
+                playSound('error');
+                toast({ variant: 'destructive', title: 'Login failed', description: 'Check your passcode and try again.' });
+                setPasscode('');
+            }
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -284,7 +291,7 @@ export default function TeacherPage() {
                             className="space-y-6"
                             onSubmit={(e) => {
                                 e.preventDefault();
-                                void handleLogin();
+                                if (!isSubmitting) void handleLogin();
                             }}
                         >
                             <div className="space-y-4">
@@ -336,8 +343,17 @@ export default function TeacherPage() {
                                 </div>
                             </div>
 
-                            <Button type="submit" className="w-full h-16 rounded-2xl font-black text-lg uppercase tracking-widest shadow-xl transition-all active:scale-95 text-primary-foreground bg-primary hover:bg-primary/90 shadow-primary/20" disabled={optionsLoading}>
-                                <LogIn className="mr-3 w-6 h-6" /> Login
+                            <Button type="submit" className="w-full h-16 rounded-2xl font-black text-lg uppercase tracking-widest shadow-xl transition-all active:scale-95 text-primary-foreground bg-primary hover:bg-primary/90 shadow-primary/20" disabled={optionsLoading || isSubmitting}>
+                                {isSubmitting ? (
+                                    <>
+                                        <Loader2 className="mr-3 w-6 h-6 animate-spin" aria-hidden />
+                                        Signing in...
+                                    </>
+                                ) : (
+                                    <>
+                                        <LogIn className="mr-3 w-6 h-6" aria-hidden /> Login
+                                    </>
+                                )}
                             </Button>
                         </form>
                     </CardContent>

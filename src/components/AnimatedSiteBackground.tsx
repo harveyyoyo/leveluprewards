@@ -929,8 +929,10 @@ function StyleBody({ style }: { style: AnimatedBackgroundStyle }) {
 
 /** Full-viewport decorative layer; respects Features → animated background and Legacy mode. */
 export function AnimatedSiteBackground() {
-  const { settings } = useSettings();
-  const active = globalAnimatedBackdropActive(settings);
+  const { settings, isLoaded } = useSettings();
+  // Avoid a brief animated flash while settings hydrate (defaults are "on").
+  // Keep hook order stable by gating via `active` rather than early-returning.
+  const active = isLoaded && globalAnimatedBackdropActive(settings);
   const style = resolveAnimatedBackgroundStyle(
     normalizeAnimatedBackgroundStyle(settings.animatedBackgroundStyle),
     sanitizeHiddenAnimatedBackgroundIds(settings.hiddenAnimatedBackgroundIds),

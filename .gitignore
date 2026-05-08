@@ -12,6 +12,9 @@
 
 # testing
 /coverage
+/playwright-report/
+/test-results/
+auth_test_failure.png
 
 # next.js
 /.next/

@@ -12,7 +12,7 @@ import React, {
 import { useRouter } from 'next/navigation';
 import { useFirebase } from '@/firebase';
 import { httpsCallable } from 'firebase/functions';
-import { doc, getDocFromServer, onSnapshot } from 'firebase/firestore';
+import { doc, getDocFromServer, onSnapshot, type DocumentReference } from 'firebase/firestore';
 import { schoolPublicDocRef } from '@/lib/schoolPublic';
 import { getReadableErrorMessage } from '@/lib/errorMessage';
 import { isPublicSampleSchoolId } from '@/lib/sample-schools';
@@ -55,6 +55,33 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function waitForReadableRole(
+    roleRef: DocumentReference,
+    expectedRole: string,
+    options: { quick?: boolean } = {},
+) {
+    const attempts = options.quick ? 50 : 24;
+    const fastDelay = options.quick ? 80 : 150;
+    const slowDelay = options.quick ? 80 : 350;
+
+    for (let i = 0; i < attempts; i++) {
+        try {
+            const roleDoc = await getDocFromServer(roleRef);
+            const data = roleDoc.exists() ? roleDoc.data() : null;
+            if (data?.role === expectedRole) {
+                return data;
+            }
+        } catch {
+            // Permission errors are expected for a moment while the role grant propagates.
+        }
+        await wait(i < 10 ? fastDelay : slowDelay);
+    }
+
+    return null;
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [isMounted, setIsMounted] = useState(false);
@@ -113,8 +140,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.removeItem('teacherDocId');
 
         if (loginState === 'admin' || loginState === 'teacher' || loginState === 'secretary' || loginState === 'prizeClerk' || loginState === 'reports') {
-            localStorage.setItem('loginState', 'student');
-            setLoginState('student');
+            // When leaving a privileged staff session, return to the school chooser (Portal),
+            // not directly into student kiosk mode.
+            localStorage.setItem('loginState', 'school');
+            setLoginState('school');
             if (schoolId) {
                 const dest = options?.staffNavigateTo === 'teacher' ? 'teacher' : 'portal';
                 router.push(`/${schoolId}/${dest}`);
@@ -537,25 +566,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
                     // 2. Poll the server to confirm the admin role is readable
                     const adminRoleRef = doc(firestore, 'schools', lowerSchoolId, 'roles_admin', auth.currentUser.uid);
-                    let roleConfirmed = false;
-                    const demoQuickPoll = isPublicSampleSchoolId(lowerSchoolId);
-                    const pollIntervalMs = demoQuickPoll ? 80 : 500;
-                    const maxPollAttempts = demoQuickPoll ? 50 : 15;
-                    for (let i = 0; i < maxPollAttempts; i++) {
-                        try {
-                            // Force a server read to bypass cache and check for rule consistency
-                            const adminDoc = await getDocFromServer(adminRoleRef);
-                            if (adminDoc.exists() && adminDoc.data().role === 'admin') {
-                                roleConfirmed = true;
-                                break;
-                            }
-                        } catch (e) {
-                            // Ignore permission errors during polling, as they are expected while rules propagate
-                        }
-                        await new Promise(resolve => setTimeout(resolve, pollIntervalMs)); // Wait before retrying
-                    }
+                    const roleData = await waitForReadableRole(adminRoleRef, 'admin', {
+                        quick: isPublicSampleSchoolId(lowerSchoolId),
+                    });
 
-                    if (!roleConfirmed) {
+                    if (!roleData) {
                         throw new Error("Could not confirm admin role after login. Your permissions might be out of sync. Please try again.");
                     }
 
@@ -587,23 +602,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         passcode: credentials.passcode
                     });
 
-                    // Poll the server to confirm the teacher role is readable
                     const teacherRoleRef = doc(firestore, 'schools', lowerSchoolId, 'roles_teacher', auth.currentUser.uid);
-                    let roleConfirmed = false;
-                    let teacherIdFromDb = null;
-                    for (let i = 0; i < 15; i++) {
-                        try {
-                            const roleDoc = await getDocFromServer(teacherRoleRef);
-                            if (roleDoc.exists() && roleDoc.data().role === 'teacher') {
-                                roleConfirmed = true;
-                                teacherIdFromDb = roleDoc.data().teacherId;
-                                break;
-                            }
-                        } catch (e) { }
-                        await new Promise(resolve => setTimeout(resolve, 500));
-                    }
+                    const roleData = await waitForReadableRole(teacherRoleRef, 'teacher', {
+                        quick: isPublicSampleSchoolId(lowerSchoolId),
+                    });
 
-                    if (!roleConfirmed) {
+                    if (!roleData) {
                         throw new Error("Could not confirm teacher role after login.");
                     }
 
@@ -618,7 +622,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     setUserName(name);
                     setUserId(auth.currentUser.uid);
                     
-                    const finalTeacherDocId = teacherIdFromDb || credentials.teacherDocId;
+                    const finalTeacherDocId =
+                        typeof roleData.teacherId === 'string' ? roleData.teacherId : credentials.teacherDocId;
                     if (finalTeacherDocId) {
                         setTeacherDocId(finalTeacherDocId);
                         localStorage.setItem('teacherDocId', finalTeacherDocId);
@@ -661,19 +666,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     const hasReports = grantedRoles.includes('reports');
 
                     const roleRef = doc(firestore, 'schools', lowerSchoolId, roleCollection, auth.currentUser.uid);
-                    let roleConfirmed = false;
-                    for (let i = 0; i < 15; i++) {
-                        try {
-                            const roleDoc = await getDocFromServer(roleRef);
-                            if (roleDoc.exists() && roleDoc.data().role === expectedRole) {
-                                roleConfirmed = true;
-                                break;
-                            }
-                        } catch (e) { /* ignore */ }
-                        await new Promise((resolve) => setTimeout(resolve, 500));
-                    }
+                    const roleData = await waitForReadableRole(roleRef, expectedRole, {
+                        quick: isPublicSampleSchoolId(lowerSchoolId),
+                    });
 
-                    if (!roleConfirmed) {
+                    if (!roleData) {
                         throw new Error('Could not confirm desk staff role after login.');
                     }
 
@@ -784,7 +781,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         ]
     );
 
-    if (!isMounted) {
+    const allowRenderBeforeMount =
+        typeof window !== 'undefined' &&
+        (() => {
+            try {
+                return new URLSearchParams(window.location.search).has('print');
+            } catch {
+                return false;
+            }
+        })();
+
+    if (!isMounted && !allowRenderBeforeMount) {
         return (
             <AuthContext.Provider value={value}>
                 <div className="min-h-screen flex items-center justify-center bg-background text-foreground p-6 text-center">

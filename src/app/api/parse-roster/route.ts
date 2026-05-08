@@ -3,6 +3,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import OpenAI from 'openai';
 import { guardAiRoute } from '@/lib/apiAuth';
 import type { ParsedSchoolSnapshot } from '@/lib/schoolDataImport';
+import { parseLooseJson } from '@/lib/server/looseJson';
 
 function unwrapArray(parsed: unknown, keys: string[]): unknown[] {
   if (Array.isArray(parsed)) return parsed;
@@ -48,7 +49,18 @@ ${classList}
 
 Return ONLY valid JSON as an array OR wrapped in { "students": [...] }:
 [
-  { "firstName": "string", "lastName": "string", "className": "string (optional)" }
+  {
+    "firstName": "string",
+    "lastName": "string",
+    "className": "string (optional)",
+    "middleName": "string (optional)",
+    "nickname": "string (optional)",
+    "birthday": "string (optional, ISO YYYY-MM-DD if possible; otherwise omit)",
+    "parentEmail": "string (optional)",
+    "parentPhone": "string (optional)",
+    "studentEmail": "string (optional)",
+    "studentPhone": "string (optional)"
+  }
 ]`;
 }
 
@@ -70,7 +82,18 @@ Entity types (all optional arrays):
 
 2) "teachers" — adults who need a teacher portal login. [{ "name": "string", "username"?: "string", "passcode"?: "string" }]
 
-3) "students" — pupils. [{ "firstName": "string", "lastName": "string", "className"?: "string" }]
+3) "students" — pupils. [{
+  "firstName": "string",
+  "lastName": "string",
+  "className"?: "string",
+  "middleName"?: "string",
+  "nickname"?: "string",
+  "birthday"?: "string (ISO YYYY-MM-DD if you can confidently convert; otherwise omit)",
+  "parentEmail"?: "string",
+  "parentPhone"?: "string",
+  "studentEmail"?: "string",
+  "studentPhone"?: "string"
+}]
 
 4) "periods" — bell schedule / timetable slots with times (Period 1, Block A, etc.). Times must be parseable. [{ "label": "string", "startTime": "string", "endTime": "string" }] Use 24h HH:mm when possible; AM/PM is OK.
 
@@ -130,6 +153,41 @@ function normalizeTeachersFromRows(raw: unknown[]): ParsedSchoolSnapshot['teache
   return teachers;
 }
 
+function normalizeBirthdayToIso(input: unknown): string | undefined {
+  if (typeof input !== 'string') return undefined;
+  const s = input.trim();
+  if (!s) return undefined;
+
+  // ISO: YYYY-MM-DD
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (iso) return s;
+
+  // YYYY/MM/DD
+  const ymd = s.match(/^(\d{4})[\/.](\d{1,2})[\/.](\d{1,2})$/);
+  if (ymd) {
+    const y = Number(ymd[1]);
+    const m = Number(ymd[2]);
+    const d = Number(ymd[3]);
+    if (y >= 1900 && y <= 2100 && m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+      return `${String(y).padStart(4, '0')}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    }
+  }
+
+  // MM/DD/YYYY or M/D/YY
+  const mdy = s.match(/^(\d{1,2})[\/.](\d{1,2})[\/.](\d{2}|\d{4})$/);
+  if (mdy) {
+    const m = Number(mdy[1]);
+    const d = Number(mdy[2]);
+    const yRaw = mdy[3];
+    const y = yRaw.length === 2 ? 2000 + Number(yRaw) : Number(yRaw);
+    if (y >= 1900 && y <= 2100 && m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+      return `${String(y).padStart(4, '0')}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    }
+  }
+
+  return undefined;
+}
+
 function normalizeStudentsFromRows(raw: unknown[]): ParsedSchoolSnapshot['students'] {
   const students: NonNullable<ParsedSchoolSnapshot['students']> = [];
   for (const row of raw) {
@@ -137,6 +195,13 @@ function normalizeStudentsFromRows(raw: unknown[]): ParsedSchoolSnapshot['studen
     const o = row as Record<string, unknown>;
     let firstName = typeof o.firstName === 'string' ? o.firstName.trim() : '';
     let lastName = typeof o.lastName === 'string' ? o.lastName.trim() : '';
+    const middleName = typeof o.middleName === 'string' ? o.middleName.trim() : '';
+    const nickname =
+      typeof o.nickname === 'string'
+        ? o.nickname.trim()
+        : typeof o.preferredName === 'string'
+          ? o.preferredName.trim()
+          : '';
     const className =
       typeof o.className === 'string'
         ? o.className.trim()
@@ -145,6 +210,25 @@ function normalizeStudentsFromRows(raw: unknown[]): ParsedSchoolSnapshot['studen
           : typeof o.section === 'string'
             ? o.section.trim()
             : undefined;
+    const birthday =
+      normalizeBirthdayToIso(o.birthday) ||
+      normalizeBirthdayToIso(o.birthdate) ||
+      normalizeBirthdayToIso(o.dateOfBirth) ||
+      normalizeBirthdayToIso(o.dob);
+    const parentEmail =
+      typeof o.parentEmail === 'string'
+        ? o.parentEmail.trim()
+        : typeof o.guardianEmail === 'string'
+          ? o.guardianEmail.trim()
+          : '';
+    const parentPhone =
+      typeof o.parentPhone === 'string'
+        ? o.parentPhone.trim()
+        : typeof o.guardianPhone === 'string'
+          ? o.guardianPhone.trim()
+          : '';
+    const studentEmail = typeof o.studentEmail === 'string' ? o.studentEmail.trim() : '';
+    const studentPhone = typeof o.studentPhone === 'string' ? o.studentPhone.trim() : '';
     if (!firstName && !lastName && typeof o.fullName === 'string') {
       const parts = o.fullName.trim().split(/\s+/);
       firstName = parts[0] || '';
@@ -155,6 +239,13 @@ function normalizeStudentsFromRows(raw: unknown[]): ParsedSchoolSnapshot['studen
       firstName: firstName || '—',
       lastName: lastName || '—',
       ...(className ? { className } : {}),
+      ...(middleName ? { middleName } : {}),
+      ...(nickname ? { nickname } : {}),
+      ...(birthday ? { birthday } : {}),
+      ...(parentEmail ? { parentEmail } : {}),
+      ...(parentPhone ? { parentPhone } : {}),
+      ...(studentEmail ? { studentEmail } : {}),
+      ...(studentPhone ? { studentPhone } : {}),
     });
   }
   return students;
@@ -319,11 +410,16 @@ export async function POST(req: NextRequest) {
     }
 
     let parsed: unknown;
-    try {
-      parsed = JSON.parse(responseText);
-    } catch {
-      console.error('parse-roster JSON failure:', responseText.slice(0, 600));
-      return NextResponse.json({ error: 'Invalid response format from AI' }, { status: 500 });
+    {
+      const parsedRes = parseLooseJson(responseText);
+      if (!parsedRes.ok) {
+        console.error('parse-roster JSON failure:', parsedRes.error, parsedRes.cleaned.slice(0, 600));
+        return NextResponse.json(
+          { error: `Invalid response format from AI (JSON parse failed: ${parsedRes.error}).` },
+          { status: 500 },
+        );
+      }
+      parsed = parsedRes.value;
     }
 
     if (!isLegacy) {

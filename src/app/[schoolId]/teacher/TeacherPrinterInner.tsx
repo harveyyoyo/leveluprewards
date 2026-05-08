@@ -2582,12 +2582,6 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                             ) : null}
                         </Helper>
                         <div className="flex flex-wrap gap-2 shrink-0 sm:self-start justify-end items-center">
-                            <Button variant="outline" size="sm" asChild className="gap-2 rounded-lg h-10 font-semibold">
-                                <Link href="/privacy" target="_blank" rel="noreferrer">
-                                    <FileText className="w-4 h-4" aria-hidden />
-                                    <span className="hidden sm:inline">Privacy &amp; Security</span>
-                                </Link>
-                            </Button>
                             {secretaryMode && (
                                 <Button variant="outline" onClick={onLogout} className="gap-2 rounded-lg h-10">
                                     <LogOut className="w-4 h-4" />

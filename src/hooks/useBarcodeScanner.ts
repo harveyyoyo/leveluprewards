@@ -10,14 +10,6 @@ interface UseBarcodeScanner {
     stopScanning: () => void;
 }
 
-/**
- * Custom hook that encapsulates camera initialization and barcode scanning.
- * 
- * @param isActive - Whether scanning should be active (e.g., based on tab selection)
- * @param onScan - Callback invoked when a barcode is successfully decoded
- * @param onError - Optional callback for camera/scanning errors
- * @returns Object with videoRef, permission state, and start/stop controls
- */
 export function useBarcodeScanner(
     isActive: boolean,
     onScan: (code: string) => void,
@@ -27,15 +19,39 @@ export function useBarcodeScanner(
     const [hasCameraPermission, setHasCameraPermission] = useState(true);
     const codeReaderRef = useRef(new BrowserMultiFormatReader());
     const streamRef = useRef<MediaStream | null>(null);
+    const controlsRef = useRef<{ stop: () => void } | null>(null);
+    const isStartingRef = useRef(false);
+    const onScanRef = useRef(onScan);
+    const onErrorRef = useRef(onError);
+
+    useEffect(() => {
+        onScanRef.current = onScan;
+    }, [onScan]);
+
+    useEffect(() => {
+        onErrorRef.current = onError;
+    }, [onError]);
 
     const stopScanning = useCallback(() => {
+        controlsRef.current?.stop();
+        controlsRef.current = null;
+        isStartingRef.current = false;
+
         if (streamRef.current) {
             streamRef.current.getTracks().forEach(track => track.stop());
             streamRef.current = null;
         }
+        if (videoRef.current) {
+            videoRef.current.onloadedmetadata = null;
+            videoRef.current.pause();
+            videoRef.current.srcObject = null;
+        }
     }, []);
 
     const startScanning = useCallback(async () => {
+        if (isStartingRef.current || streamRef.current || controlsRef.current) return;
+        isStartingRef.current = true;
+
         try {
             // First, request camera permission with facingMode preference.
             // This triggers the permission prompt on mobile browsers and
@@ -75,32 +91,47 @@ export function useBarcodeScanner(
             streamRef.current = stream;
 
             if (videoRef.current) {
-                videoRef.current.srcObject = stream;
-                videoRef.current.onloadedmetadata = async () => {
-                    if (videoRef.current) {
-                        try {
-                            await videoRef.current.play();
-                            codeReaderRef.current.decodeFromVideoElement(videoRef.current, (result, error) => {
-                                if (result) {
-                                    onScan(result.getText());
-                                }
-                                if (error && error.name !== 'NotFoundException') {
-                                    console.error('Barcode scan error:', error);
-                                }
-                            });
-                        } catch (e) {
-                            console.error('Video play failed', e);
-                        }
+                const video = videoRef.current;
+                video.srcObject = stream;
+                const beginDecode = async () => {
+                    try {
+                        await video.play();
+                        controlsRef.current = await codeReaderRef.current.decodeFromVideoElement(video, (result, error) => {
+                            if (result) {
+                                onScanRef.current(result.getText());
+                            }
+                            if (error && error.name !== 'NotFoundException') {
+                                console.error('Barcode scan error:', error);
+                            }
+                        });
+                    } catch (e) {
+                        console.error('Video play failed', e);
+                    } finally {
+                        isStartingRef.current = false;
                     }
                 };
+
+                if (video.readyState >= HTMLMediaElement.HAVE_METADATA) {
+                    void beginDecode();
+                } else {
+                    video.onloadedmetadata = () => {
+                        video.onloadedmetadata = null;
+                        void beginDecode();
+                    };
+                }
                 setHasCameraPermission(true);
+            } else {
+                isStartingRef.current = false;
+                stream.getTracks().forEach(track => track.stop());
+                streamRef.current = null;
             }
         } catch (err: any) {
             console.error('Camera initialization error:', err);
             setHasCameraPermission(false);
-            onError?.(err.message || 'Could not access the camera. Please check permissions.');
+            onErrorRef.current?.(err.message || 'Could not access the camera. Please check permissions.');
+            stopScanning();
         }
-    }, [onScan, onError]);
+    }, [stopScanning]);
 
     useEffect(() => {
         if (!isActive) {
@@ -122,3 +153,4 @@ export function useBarcodeScanner(
         stopScanning,
     };
 }
+

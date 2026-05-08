@@ -82,7 +82,7 @@ export function AdminStaffAccountsTab({
   };
 
   return (
-    <Card className="border-t-4 border-primary shadow-md">
+    <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden">
       <CardHeader className="flex flex-row justify-between items-center py-6">
         <div>
           <Helper content="Limited accounts: coupon printing only, or prize redemption desk only. Share the URL and login separately from teacher accounts.">
@@ -100,7 +100,7 @@ export function AdminStaffAccountsTab({
         </Button>
       </CardHeader>
       <CardContent>
-        <ul className="h-[calc(100vh-22rem)] min-h-[250px] overflow-y-auto pr-1 space-y-1">
+        <ul className="pr-1 space-y-1">
           {staffAccounts && staffAccounts.length > 0 ? (
             <AdminRecordListHeader
               gridClassName="grid-cols-[76px_minmax(180px,1fr)_minmax(120px,160px)_minmax(120px,180px)_44px]"

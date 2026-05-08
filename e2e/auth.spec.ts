@@ -5,6 +5,7 @@ test('login and navigate to portal and student pages', async ({ page }) => {
     page.on('pageerror', error => console.log(`BROWSER ERROR: ${error.message}`));
 
     const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+    const demoPasscode = process.env.DEMO_SCHOOL_PASSCODE || '911';
     // Go to login page
     console.log(`Navigating to login page at ${baseUrl}/login...`);
     await page.goto(`${baseUrl}/login`);
@@ -21,10 +22,13 @@ test('login and navigate to portal and student pages', async ({ page }) => {
     await schoolAbcBtn.waitFor({ state: 'visible', timeout: 10000 });
     await schoolAbcBtn.click();
 
-    // Demo schools auto-sign into admin; continue test from the school portal.
-    console.log("Waiting for admin (demo auto-sign-in)...");
+    // Demo schools should log in like any other school (passcode required).
+    await page.locator('#passcode').fill(String(demoPasscode));
+    await page.getByRole('button', { name: /continue/i }).click();
+
+    console.log("Waiting for sign-in chooser...");
     try {
-        await page.waitForURL(url => url.pathname.endsWith('/admin'), { timeout: 15000 });
+        await page.waitForURL(url => url.pathname.endsWith('/sign-in'), { timeout: 15000 });
     } catch (e) {
         await page.screenshot({ path: 'auth_test_failure.png', fullPage: true });
         console.log("Saved auth_test_failure.png");

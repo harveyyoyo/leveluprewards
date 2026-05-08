@@ -1,0 +1,5 @@
+@media (min-width: 640px) {
+  .studentsListGrid {
+    grid-template-columns: var(--students-list-cols);
+  }
+}

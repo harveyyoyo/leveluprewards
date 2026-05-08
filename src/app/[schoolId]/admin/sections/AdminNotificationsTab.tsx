@@ -28,7 +28,6 @@ import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Table,
   TableBody,
@@ -332,7 +331,7 @@ export function AdminNotificationsTab() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="h-[calc(100vh-28rem)] pr-3">
+            <div className="pr-3">
               <ul className="space-y-3 text-sm">
                 {diagnosticLines.map((line, i) => (
                   <li key={i} className="flex gap-2 items-start">
@@ -341,7 +340,7 @@ export function AdminNotificationsTab() {
                   </li>
                 ))}
               </ul>
-            </ScrollArea>
+            </div>
           </CardContent>
         </Card>
 
@@ -466,7 +465,7 @@ export function AdminNotificationsTab() {
                 if still empty, check Functions deployment and logs for <code className="text-xs">onStudentActivityCreated</code>.
               </p>
             ) : (
-              <ScrollArea className="h-[calc(100vh-28rem)] border rounded-md">
+              <div className="overflow-x-auto rounded-md border">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -511,7 +510,7 @@ export function AdminNotificationsTab() {
                     ))}
                   </TableBody>
                 </Table>
-              </ScrollArea>
+              </div>
             )}
           </CardContent>
         </Card>

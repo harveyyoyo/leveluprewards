@@ -3,7 +3,6 @@ import Link from 'next/link';
 import { Ticket, Search, Trash2, X, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Helper } from '@/components/ui/helper';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -77,7 +76,7 @@ export function AdminCouponsTab({
   };
 
   return (
-    <Card className="border-t-4 border-primary shadow-md">
+    <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden">
       <CardHeader>
         <Helper content="This section shows all coupons that have been generated in the system, separated into those that are still available and those that have already been redeemed by a student.">
           <CardTitle className="flex items-center gap-2">
@@ -162,7 +161,7 @@ export function AdminCouponsTab({
               <span className="text-[10px] font-bold text-muted-foreground uppercase pb-1">Filtered from {availableCoupons.length}</span>
             )}
           </div>
-          <ScrollArea className="h-[calc(100vh-28rem)] min-h-[350px] border rounded-2xl bg-muted/30">
+          <div className="rounded-2xl border bg-muted/30">
             {filteredAvailable.length >= 1 ? (
               <ul className="p-2 space-y-1">
                 <AdminRecordListHeader
@@ -218,7 +217,7 @@ export function AdminCouponsTab({
                 <p className="text-sm font-medium">No available coupons found.</p>
               </div>
             )}
-          </ScrollArea>
+          </div>
         </div>
 
         <div className="space-y-4">
@@ -241,7 +240,7 @@ export function AdminCouponsTab({
               )}
             </div>
           </div>
-          <ScrollArea className="h-[calc(100vh-28rem)] min-h-[350px] border rounded-2xl bg-muted/30">
+          <div className="rounded-2xl border bg-muted/30">
             {filteredRedeemed.length >= 1 ? (
               <ul className="p-2 space-y-1">
                 <AdminRecordListHeader
@@ -278,7 +277,7 @@ export function AdminCouponsTab({
                 <p className="text-sm font-medium">No redeemed coupons found.</p>
               </div>
             )}
-          </ScrollArea>
+          </div>
         </div>
       </CardContent>
     </Card>

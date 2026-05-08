@@ -2,6 +2,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, orderBy, limit as firestoreLimit } from 'firebase/firestore';
@@ -46,8 +47,11 @@ export default function HallOfFamePage() {
     const { loginState, isInitialized, schoolId } = useAppContext();
     const firestore = useFirestore();
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { settings } = useSettings();
     const [hoveredIndex, setHoveredIndex] = useState<string | null>(null);
+
+    const isFullscreen = (searchParams?.get('fullscreen') || '').trim() === '1';
 
     const [rankType, setRankType] = useState<'students' | 'classes' | 'goals'>(settings.hallOfFameRankType ?? 'students');
     const [sortBy, setSortBy] = useState<string>(settings.hallOfFameSortBy ?? 'lifetimePoints');
@@ -392,6 +396,7 @@ export default function HallOfFamePage() {
         <div
           className={cn(
             "min-h-screen text-foreground relative overflow-hidden font-sans flex flex-col items-center",
+            isFullscreen && "h-dvh min-h-dvh overflow-hidden",
             animBackdrop ? "bg-transparent" : "bg-background",
           )}
           style={{
@@ -433,25 +438,33 @@ export default function HallOfFamePage() {
             <div className={cn(
                 "relative z-10 w-full px-4 sm:px-8 pt-8 md:pt-12 transition-all duration-500",
                 "max-w-full",
-                settings.displayMode === 'app' ? 'pb-24' : 'pb-12'
+                settings.displayMode === 'app' ? 'pb-24' : 'pb-12',
+                isFullscreen && "h-full min-h-0"
             )}>
                 <Card className={cn(
                     "border-t-8 border-chart-5 shadow-2xl backdrop-blur-md",
                     animBackdrop ? "bg-card/92 border-border/40" : "bg-card/80",
+                    isFullscreen && "h-full min-h-0 flex flex-col"
                 )}>
-                    <CardContent className="p-4 sm:p-6 md:p-8">
-                        <div className="mb-8">
+                    <CardContent className={cn("p-4 sm:p-6 md:p-8", isFullscreen && "flex flex-col min-h-0")}>
+                        <div className={cn("mb-8", isFullscreen && "mb-4 shrink-0")}>
                           <div className="sticky top-0 z-20 -mx-4 sm:-mx-6 md:-mx-8 px-4 sm:px-6 md:px-8 py-3 bg-card/85 backdrop-blur-md border-b">
-                            <div className="w-full rounded-2xl border bg-card/70 backdrop-blur-md px-4 py-3 flex items-center justify-between gap-3">
+                            <div className="w-full rounded-2xl border bg-card/70 backdrop-blur-md px-4 py-3 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
                               <Link
                                 href={getLevelUpLogoHref()}
-                                className="min-w-0 no-underline outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-lg"
+                                className="min-w-0 justify-self-start no-underline outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-lg"
                                 aria-label="LevelUp EDU — school sign-in"
                               >
                                 <p className="text-xs font-black uppercase tracking-[0.22em] text-muted-foreground">levelUp EDU</p>
-                                <p className="text-sm font-bold truncate">{schoolName}</p>
                               </Link>
-                              <div className="shrink-0 rounded-xl border bg-muted/20 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+
+                              <div className="min-w-0 max-w-[70vw] sm:max-w-[60vw] text-center">
+                                <p className="text-sm sm:text-base font-black tracking-tight text-foreground truncate">
+                                  {schoolName}
+                                </p>
+                              </div>
+
+                              <div className="justify-self-end shrink-0 rounded-xl border bg-muted/20 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                                 Hall of Fame
                               </div>
                             </div>
@@ -460,6 +473,12 @@ export default function HallOfFamePage() {
                             </div>
                           </div>
                         </div>
+
+                        <div
+                          className={cn(
+                            isFullscreen ? "flex-1 min-h-0 overflow-y-auto overscroll-contain pr-1" : ""
+                          )}
+                        >
 
                         {/* Podium */}
                         {rankType !== 'goals' && podium.length > 0 && (
@@ -673,6 +692,7 @@ export default function HallOfFamePage() {
                                 No items have earned points yet for this view.
                             </motion.div>
                         )}
+                        </div>
                     </CardContent>
                 </Card>
             </div>

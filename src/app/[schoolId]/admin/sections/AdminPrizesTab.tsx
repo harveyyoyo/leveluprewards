@@ -125,7 +125,7 @@ export function AdminPrizesTab({
           : 'Surprise (random style)';
 
   return (
-    <Card className="border-t-4 border-primary shadow-md">
+    <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden">
       <CardHeader className="flex flex-row justify-between items-center py-6">
         <div>
           <CardTitle className="flex items-center gap-2">
@@ -194,7 +194,7 @@ export function AdminPrizesTab({
         </div>
       </CardHeader>
       <CardContent className="min-w-0">
-        <ul className="grid grid-cols-1 gap-4 h-[calc(100vh-22rem)] min-h-[250px] min-w-0 overflow-y-auto overflow-x-hidden pr-2">
+        <ul className="grid grid-cols-1 gap-4 min-w-0 overflow-x-hidden pr-2">
           <AdminRecordListHeader
             gridClassName="grid-cols-[80px_minmax(140px,240px)_56px_72px_200px_44px_72px_72px_64px_96px]"
             columns={[

@@ -1040,47 +1040,54 @@ export function ThemeGeneratorModal({
                                             : synthetic;
 
                                         return (
-                                            <div ref={previewWrapRef} className="h-full w-full flex items-center justify-center p-3 md:p-4">
+                                            <div className="h-full w-full grid grid-cols-1 lg:grid-cols-2 gap-3 p-3 md:p-4">
                                                 <div
-                                                    className="shrink-0"
-                                                    style={{
-                                                        transform: `scale(${idPreviewScale})`,
-                                                        transformOrigin: 'center',
-                                                        filter: 'drop-shadow(0 16px 28px rgba(0,0,0,0.22))',
-                                                    }}
+                                                    ref={previewWrapRef}
+                                                    className="min-h-0 min-w-0 flex items-center justify-center rounded-xl bg-black/5 dark:bg-white/5"
                                                 >
-                                                    <StudentIdCard
-                                                        student={cardStudent}
-                                                        schoolName={previewSchoolName}
-                                                        schoolLogoUrl={previewSchoolLogoUrl}
-                                                        className={classLabel}
-                                                        isColorEnabled={settings.enableColorPrinting}
-                                                        appLogoUrl={previewAppLogoUrl}
-                                                        appName={previewAppName}
-                                                        appTagline={previewAppTagline}
-                                                        forceStudentThemePreview
-                                                    />
+                                                    <div
+                                                        className="shrink-0"
+                                                        style={{
+                                                            transform: `scale(${idPreviewScale})`,
+                                                            transformOrigin: 'center',
+                                                            filter: 'drop-shadow(0 16px 28px rgba(0,0,0,0.22))',
+                                                        }}
+                                                    >
+                                                        <StudentIdCard
+                                                            student={cardStudent}
+                                                            schoolName={previewSchoolName}
+                                                            schoolLogoUrl={previewSchoolLogoUrl}
+                                                            className={classLabel}
+                                                            isColorEnabled={settings.enableColorPrinting}
+                                                            appLogoUrl={previewAppLogoUrl}
+                                                            appName={previewAppName}
+                                                            appTagline={previewAppTagline}
+                                                            forceStudentThemePreview
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <div className="min-h-0 min-w-0 flex flex-col rounded-xl bg-black/5 dark:bg-white/5 overflow-hidden">
+                                                    <div className="shrink-0 flex items-center justify-between gap-2 px-3 py-2 border-b border-border/40">
+                                                        <span className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">
+                                                            Student Portal Preview
+                                                        </span>
+                                                        <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+                                                            Readability check
+                                                        </span>
+                                                    </div>
+                                                    <div className="min-h-0 flex-1 overflow-auto p-3">
+                                                        <StudentPortalThemePreview
+                                                            theme={normalizedPreviewTheme}
+                                                            studentName={displayTitleName}
+                                                        />
+                                                    </div>
                                                 </div>
                                             </div>
                                         );
                                     })()
                                 )}
                             </div>
-
-                            {normalizedPreviewTheme ? (
-                                <div className="space-y-2">
-                                    <div className="flex items-center justify-between gap-2">
-                                        <Label>Student Portal Preview</Label>
-                                        <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
-                                            Readability check
-                                        </span>
-                                    </div>
-                                    <StudentPortalThemePreview
-                                        theme={normalizedPreviewTheme}
-                                        studentName={displayTitleName}
-                                    />
-                                </div>
-                            ) : null}
 
                             <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                                 <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">

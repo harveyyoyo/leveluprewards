@@ -76,8 +76,7 @@ function adminPasscodeFrom(data: Record<string, any>): string {
   return trimmedString(data.adminPasscode) || trimmedString(data.passcode) || "1234";
 }
 
-/** Schools where `verifySchoolPasscode` skips passcode verification (public demos). Sync with `src/lib/sample-schools.ts`. */
-const PUBLIC_DEMO_ADMIN_SCHOOL_IDS = new Set<string>(["schoolabc", "yeshiva"]);
+// Demo schools should authenticate like any other school (no passcode bypass).
 
 async function hasSchoolRole(
   schoolId: string,
@@ -682,21 +681,12 @@ exports.verifySchoolPasscode = functions.https.onCall(
       throw new functions.https.HttpsError("not-found", "School not found.");
     }
 
-    const publicDemoAdmin = PUBLIC_DEMO_ADMIN_SCHOOL_IDS.has(schoolId);
-
-    if (!publicDemoAdmin) {
-      if (passcode.length === 0) {
-        throw new functions.https.HttpsError("invalid-argument", "A valid passcode is required.");
-      }
-      const schoolData = schoolDoc.data()!;
-      if (adminPasscodeFrom(schoolData) !== passcode) {
-        throw new functions.https.HttpsError("permission-denied", "Invalid passcode.");
-      }
-    } else {
-      functions.logger.info("verifySchoolPasscode public demo allowlist (passcode not checked)", {
-        schoolId,
-        uid: context.auth!.uid,
-      });
+    if (passcode.length === 0) {
+      throw new functions.https.HttpsError("invalid-argument", "A valid passcode is required.");
+    }
+    const schoolData = schoolDoc.data()!;
+    if (adminPasscodeFrom(schoolData) !== passcode) {
+      throw new functions.https.HttpsError("permission-denied", "Invalid passcode.");
     }
 
     // Provision admin role using the Admin SDK (path must match client: schools/{schoolId}/roles_admin/{uid})
@@ -1582,8 +1572,24 @@ exports.awardSpecialDayPoints = functions.https.onCall(
         const birthMD = student.birthday.length >= 10 ? student.birthday.substring(5, 10) : "";
         const amount = Number(settings.birthdayPointsAmount || 0);
         if (birthMD === today.monthDay && lastAwarded.birthday !== today.full && amount > 0) {
-          awards.push({ desc: `Happy Birthday! (+${amount} pts)`, amount });
+          awards.push({ desc: `Happy Birthday! 🎂 (+${amount} pts)`, amount });
           lastAwarded.birthday = today.full;
+
+          // Auto-post a celebration to the school bulletin board (deduped by deterministic id).
+          const studentName = [trimmedString(student.firstName), trimmedString(student.lastName)].filter(Boolean).join(" ").trim() || "A student";
+          const postId = `birthday_${studentId}_${today.full}`;
+          tx.set(schoolRef.collection("bulletinBoardPosts").doc(postId), {
+            id: postId,
+            kind: "birthday",
+            emoji: "🎂",
+            title: "Birthday Celebration",
+            message: `Happy Birthday to ${studentName}!`,
+            studentId,
+            studentName,
+            date: today.full,
+            createdAt: now,
+            updatedAt: now,
+          }, { merge: true });
         }
       }
 

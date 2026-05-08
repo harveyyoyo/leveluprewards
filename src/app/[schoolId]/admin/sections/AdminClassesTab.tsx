@@ -40,7 +40,7 @@ export function AdminClassesTab({
   };
 
   return (
-    <Card className="border-t-4 border-primary shadow-md">
+    <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden">
       <CardHeader className="flex flex-row justify-between items-center py-6">
         <div>
           <Helper content="Manage class groups for your school.">
@@ -55,7 +55,7 @@ export function AdminClassesTab({
         </Button>
       </CardHeader>
       <CardContent>
-        <ul className="space-y-4 h-[calc(100vh-22rem)] min-h-[400px] overflow-y-auto pr-1">
+        <ul className="space-y-4 pr-1">
           {classes && classes.length > 0 ? (
             <AdminRecordListHeader
               gridClassName="grid-cols-[minmax(180px,1fr)_minmax(160px,220px)_110px_44px]"

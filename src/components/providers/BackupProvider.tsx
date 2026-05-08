@@ -232,10 +232,10 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
         // Re-seed from built-in sample data
         let schoolData: Record<string, any>, newPasscode: string;
         if (cleanId === 'yeshiva') {
-            newPasscode = '1234';
+            newPasscode = '911';
             schoolData = YESHIVA_DATA;
         } else {
-            newPasscode = '1234';
+            newPasscode = '911';
             schoolData = SCHOOL_DATA;
         }
 

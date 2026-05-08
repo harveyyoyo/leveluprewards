@@ -6,6 +6,7 @@ test('login to school and then to admin portal', async ({ page }) => {
     page.on('pageerror', error => console.log(`BROWSER ERROR: ${error.message}`));
 
     const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+    const demoPasscode = process.env.DEMO_SCHOOL_PASSCODE || '911';
     
     // 1. School Login Gate
     console.log(`Navigating to login page at ${baseUrl}/login...`);
@@ -21,15 +22,27 @@ test('login to school and then to admin portal', async ({ page }) => {
     await schoolAbcBtn.waitFor({ state: 'visible', timeout: 10000 });
     await schoolAbcBtn.click();
 
-    console.log("Waiting for admin dashboard (demo auto-sign-in)...");
+    await page.locator('#passcode').fill(String(demoPasscode));
+    await page.getByRole('button', { name: /continue/i }).click();
+
+    console.log("Waiting for sign-in chooser...");
     try {
-        await page.waitForURL(url => url.pathname.endsWith('/admin'), { timeout: 15000 });
-        console.log("Successfully reached Admin dashboard!");
+        await page.waitForURL(url => url.pathname.endsWith('/sign-in'), { timeout: 15000 });
+        console.log("Successfully reached sign-in chooser!");
     } catch (e) {
         await page.screenshot({ path: 'admin_login_failure.png', fullPage: true });
         console.log("Saved admin_login_failure.png");
         throw e;
     }
+
+    // 2. Navigate to admin sign-in and enter passcode
+    await page.getByRole('link', { name: 'Admin' }).click();
+    await page.waitForURL(url => url.pathname.endsWith('/admin-signin'), { timeout: 15000 });
+    await page.locator('input[type="password"]').fill(String(demoPasscode));
+    await page.getByRole('button', { name: /sign in|login|continue/i }).click();
+
+    await page.waitForURL(url => url.pathname.endsWith('/admin'), { timeout: 20000 });
+    console.log("Successfully reached Admin dashboard!");
 
     // 2. Verify tabs
     const tabs = page.locator('button[role="tab"]');

@@ -8,7 +8,7 @@ import { Megaphone, Sparkles, Loader2 } from 'lucide-react';
 import { useAppContext } from '@/components/AppProvider';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query } from 'firebase/firestore';
+import { collection, query, orderBy, limit } from 'firebase/firestore';
 import { useSchoolMetadataDocRef } from '@/hooks/useSchoolMetadataDocRef';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -26,6 +26,15 @@ type BulletinIncentive = {
   points: number;
   icon?: string;
   active?: boolean;
+};
+
+type BulletinPost = {
+  id: string;
+  kind?: string;
+  emoji?: string;
+  title?: string;
+  message?: string;
+  createdAt?: number;
 };
 
 /** Staff and school accounts only - not the signed-in student kiosk. */
@@ -59,6 +68,19 @@ export default function BulletinBoardViewPage() {
     [firestore, schoolId],
   );
   const { data: bulletinIncentives, isLoading } = useCollection<BulletinIncentive>(bulletinQuery);
+
+  const postsQuery = useMemoFirebase(
+    () =>
+      schoolId
+        ? query(
+            collection(firestore, 'schools', schoolId, 'bulletinBoardPosts'),
+            orderBy('createdAt', 'desc'),
+            limit(10),
+          )
+        : null,
+    [firestore, schoolId],
+  );
+  const { data: bulletinPosts } = useCollection<BulletinPost>(postsQuery);
 
   const sortedBulletin = useMemo(() => {
     if (!bulletinIncentives?.length) return [];
@@ -178,6 +200,41 @@ export default function BulletinBoardViewPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-3 pb-6">
+            {(bulletinPosts || []).length > 0 && (
+              <div className="mb-5">
+                <div className="flex items-center justify-between gap-3 px-1 pb-2">
+                  <p className="text-[10px] font-black uppercase tracking-widest opacity-75">Celebrations</p>
+                  <span className="text-[10px] font-bold uppercase tracking-widest opacity-60">
+                    Latest {Math.min(10, (bulletinPosts || []).length)}
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {(bulletinPosts || []).slice(0, 10).map((p) => (
+                    <div
+                      key={p.id}
+                      className="p-3 bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-2xl border border-white/20 dark:border-white/10 flex items-center justify-between gap-3 shadow-sm"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="text-2xl select-none" role="img" aria-label="celebration">
+                          {p.emoji || '🎉'}
+                        </span>
+                        <div className="min-w-0">
+                          <h5 className="font-bold text-xs md:text-sm leading-tight truncate">{p.title || 'Celebration'}</h5>
+                          <p className="text-[10px] opacity-70 leading-relaxed mt-0.5 break-words line-clamp-2">
+                            {p.message || ''}
+                          </p>
+                        </div>
+                      </div>
+                      {typeof p.createdAt === 'number' ? (
+                        <span className="text-[10px] font-black uppercase tracking-widest opacity-60 shrink-0">
+                          {new Date(p.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                        </span>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             {isLoading ? (
               <div className="flex justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />

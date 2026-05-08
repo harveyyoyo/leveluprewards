@@ -25,4 +25,4 @@
 - Code font: 'Source Code Pro' for displaying code snippets.
 - Use consistent and clear icons from Lucide to represent different actions and categories.
 - Use a clean, modern layout with rounded corners and subtle shadows for a user-friendly interface.
-- Subtle animations and transitions for interactive elements, such as button hover effects and modal ظهور.
+- Subtle animations and transitions for interactive elements, such as button hover effects and modal appearance.

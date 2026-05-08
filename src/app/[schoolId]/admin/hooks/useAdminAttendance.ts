@@ -14,6 +14,7 @@ import {
 } from 'firebase/firestore';
 import { useCollection, useMemoFirebase } from '@/firebase';
 import { getReadableErrorMessage } from '@/lib/errorMessage';
+import { getStudentNickname } from '@/lib/utils';
 import type { SoundEffect } from '@/hooks/useArcadeSound';
 import type { useToast } from '@/hooks/use-toast';
 import type {
@@ -159,7 +160,7 @@ export function useAdminAttendance(deps: AdminAttendanceDeps) {
           const activitiesRef = collection(firestore, 'schools', schoolId, 'students', s.id, 'activities');
           const q = query(activitiesRef, orderBy('date', 'desc'), fsLimit(40));
           const snap = await getDocs(q);
-          const studentName = `${s.firstName || ''} ${s.lastName || ''}`.trim() || s.nickname || s.id;
+          const studentName = `${getStudentNickname(s)} ${s.lastName || ''}`.trim() || s.id;
           snap.forEach((docSnap) => {
             const data = docSnap.data() as { date?: number; desc?: string; amount?: number };
             rows.push({

@@ -1,12 +1,12 @@
 'use client';
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 
 
-import { Award, Edit, History, IdCard, LayoutDashboard, Mail, Phone, Plus, Printer, ScanFace, Trash2, UploadCloud, Users, Wand2, X, Zap } from 'lucide-react';
+import { Award, Cake, Edit, History, IdCard, LayoutDashboard, Plus, Printer, ScanFace, Trash2, UploadCloud, Users, Wand2, X, Zap } from 'lucide-react';
+import styles from './AdminStudentsTab.module.css';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Helper } from '@/components/ui/helper';
 import { AdminRecordListHeader } from '@/components/admin/AdminRecordListHeader';
@@ -49,6 +49,20 @@ function formatAssignedTeachers(student: Student, teachers: Teacher[]): string |
   if (names.length === 1) return names[0];
   if (names.length === 2) return `${names[0]} · ${names[1]}`;
   return `${names.length} teachers`;
+}
+
+function kioskToggleHeaderLabel(def: ToggleDef): string {
+  if (def.key === 'welcomeBackScreenEnabled') return 'Splash';
+  if (def.key === 'welcomePageEnabled') return 'Style';
+  return def.shortLabel;
+}
+
+function isBirthdayToday(birthdayIso?: string): boolean {
+  if (!birthdayIso || birthdayIso.length < 10) return false;
+  const md = birthdayIso.slice(5, 10);
+  const now = new Date();
+  const todayMd = `${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  return md === todayMd;
 }
 
 export function AdminStudentsTab({
@@ -124,8 +138,22 @@ export function AdminStudentsTab({
 }) {
   const [selectedTeacherIdForBulk, setSelectedTeacherIdForBulk] = useState('');
   const studentKioskWelcomeToggleDefs = buildStudentKioskWelcomeToggleDefs(settings);
+  const studentActionHeaderLabels = [
+    ...studentKioskWelcomeToggleDefs.map(kioskToggleHeaderLabel),
+    ...(settings.enableFaceLogin ? (['Face'] as const) : []),
+    'Theme',
+    'ID',
+    'Activity',
+    ...(settings.enableBadges ? (['Badges'] as const) : []),
+    'Purge',
+    'Delete',
+  ];
+  const studentsListGridCols = `44px minmax(260px, 1fr) repeat(${studentActionHeaderLabels.length}, minmax(2.25rem, auto))`;
+  const studentsListGridStyle = {
+    ['--students-list-cols' as string]: studentsListGridCols,
+  } as CSSProperties;
   return (
-    <Card className="border-t-4 border-primary shadow-md overflow-hidden">
+    <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden">
       <CardHeader className="bg-primary/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 py-8">
         <Helper content="Manage your enrollments, view student activity, and print ID cards. Points are awarded from the Teacher Portal.">
           <CardTitle className="text-2xl flex items-center gap-2">
@@ -267,15 +295,20 @@ export function AdminStudentsTab({
           </div>
         </div>
 
-        <ScrollArea className="h-[calc(100vh-22rem)] min-h-[280px]">
+        <div className="w-full overflow-x-auto">
           <ul className="flex flex-col gap-1.5 pr-4">
             {filteredStudents.length > 0 ? (
               <AdminRecordListHeader
-                gridClassName="grid-cols-1 sm:grid-cols-[44px_minmax(260px,1fr)_auto]"
+                gridClassName={cn('grid-cols-1', styles.studentsListGrid)}
+                style={studentsListGridStyle}
                 columns={[
-                  { label: 'Edit', className: 'hidden sm:block' },
-                  { label: 'Student', className: 'hidden sm:block' },
-                  { label: 'Actions', className: 'hidden sm:block text-right' },
+                  { id: 'hdr-edit', label: 'Edit', className: 'hidden sm:block' },
+                  { id: 'hdr-student', label: 'Student', className: 'hidden sm:block' },
+                  ...studentActionHeaderLabels.map((label, i) => ({
+                    id: `hdr-act-${i}-${label}`,
+                    label,
+                    className: 'hidden sm:block text-center whitespace-nowrap',
+                  })),
                 ]}
               />
             ) : null}
@@ -288,12 +321,14 @@ export function AdminStudentsTab({
               <li
                 key={s.id}
                 className={cn(
-                  'grid grid-cols-1 sm:grid-cols-[44px_minmax(260px,1fr)_auto] gap-2 sm:items-center sm:gap-3 py-2.5 px-3 rounded-xl border transition-all',
+                  'flex items-center gap-3 py-2 px-3 rounded-xl border transition-all min-w-0 sm:grid sm:items-center',
+                  styles.studentsListGrid,
                   selectionMode && 'cursor-pointer',
                   selectedStudentIds.has(s.id)
                     ? 'bg-primary/5 border-primary/40 ring-1 ring-primary/20 hover:bg-primary/10 hover:border-primary/50 hover:ring-primary/30'
                     : 'bg-secondary/20 border-transparent hover:bg-background'
                 )}
+                style={studentsListGridStyle}
                 role={selectionMode ? 'button' : undefined}
                 tabIndex={selectionMode ? 0 : undefined}
                 onClick={() => {
@@ -322,14 +357,14 @@ export function AdminStudentsTab({
                   <Button
                     variant="outline"
                     size="icon"
-                    className="h-8 w-8 sm:h-9 sm:w-9 rounded-full"
+                    className="h-8 w-8 sm:h-9 sm:w-9 rounded-full sm:justify-self-center"
                     onClick={() => handleOpenStudentModal?.(s)}
                     title="Edit student"
                   >
                     <Edit className="w-4 h-4 text-primary" />
                   </Button>
                 </div>
-                <div className="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0">
+                <div className="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0 overflow-hidden">
                   <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden bg-primary/10 border border-border/40 flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">
                     {s.photoUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -346,77 +381,55 @@ export function AdminStudentsTab({
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0">
-                      <p className="font-bold text-sm sm:text-base leading-tight truncate max-w-full">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <p className="font-bold text-sm sm:text-base leading-tight truncate min-w-0">
                         {s.lastName}, {s.firstName}
                         {middle ? <span className="font-medium text-muted-foreground"> {middle}</span> : null}
                       </p>
-                      <span className="text-primary font-bold text-xs tabular-nums">{s.points} pts</span>
-                      {typeof s.lifetimePoints === 'number' && s.lifetimePoints !== s.points ? (
-                        <span className="text-muted-foreground font-semibold text-[11px] tabular-nums" title="Lifetime points awarded">
-                          · {s.lifetimePoints} career
+                      {isBirthdayToday(s.birthday) ? (
+                        <span
+                          className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20 px-2 py-0.5 text-[10px] font-black uppercase tracking-widest"
+                          title="Birthday today"
+                        >
+                          <Cake className="w-3 h-3" />
+                          Birthday
                         </span>
                       ) : null}
+                      <span className="shrink-0 text-primary font-bold text-xs tabular-nums">{s.points} pts</span>
                     </div>
-                    <p className="text-[11px] sm:text-xs text-muted-foreground leading-snug truncate mt-0.5">
+                    <p className="text-[11px] sm:text-xs text-muted-foreground leading-snug truncate">
                       {getClassName(s.classId || '')}
                       <span className="text-border mx-1.5">·</span>
                       <span className="font-code">{s.nfcId || '—'}</span>
-                      {typeof s.createdAt === 'number' && s.createdAt > 0 ? (
+                      {teacherLine ? (
                         <>
                           <span className="text-border mx-1.5">·</span>
-                          <span className="tabular-nums" title={new Date(s.createdAt).toLocaleString()}>
-                            {new Date(s.createdAt).toLocaleDateString(undefined, {
-                              month: 'short',
-                              day: 'numeric',
-                              year: 'numeric',
-                            })}
-                          </span>
+                          <span className="truncate" title={teacherLine}>{teacherLine}</span>
                         </>
                       ) : null}
-                      {s.nickname?.trim() ? (
+                      {hasParentContact || hasStudentContact ? (
                         <>
                           <span className="text-border mx-1.5">·</span>
-                          <span title={s.nickname.trim()}>&ldquo;{s.nickname.trim()}&rdquo;</span>
+                          <span className="inline-flex items-center gap-1" title="Contact on file">
+                            {hasParentContact ? <span className="font-semibold">Parent</span> : null}
+                            {hasStudentContact ? <span className="font-semibold">Student</span> : null}
+                          </span>
                         </>
                       ) : null}
                     </p>
-                    {(teacherLine || hasParentContact || hasStudentContact || s.birthday) ? (
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 text-[10px] sm:text-[11px] text-muted-foreground">
-                        {teacherLine ? (
-                          <span className="truncate max-w-full" title={teacherLine}>
-                            <span className="font-semibold text-foreground/80">Teachers:</span> {teacherLine}
-                          </span>
-                        ) : null}
-                        {s.birthday ? (
-                          <span className="tabular-nums shrink-0" title="Birthday on file">
-                            <span className="font-semibold text-foreground/80">DOB:</span> {s.birthday}
-                          </span>
-                        ) : null}
-                        <span className="flex items-center gap-1 shrink-0" aria-label="Contact on file">
-                          {hasParentContact ? (
-                            <span className="inline-flex items-center gap-0.5 rounded-full bg-muted/80 px-1.5 py-px" title="Parent/guardian email or phone on file">
-                              <Mail className="w-3 h-3" />
-                              <Phone className="w-3 h-3" />
-                            </span>
-                          ) : null}
-                          {hasStudentContact ? (
-                            <span className="inline-flex items-center gap-0.5 rounded-full bg-muted/80 px-1.5 py-px" title="Student email or phone on file">
-                              <span className="text-[9px] font-bold text-foreground/70">Stu</span>
-                              <Mail className="w-3 h-3" />
-                            </span>
-                          ) : null}
-                        </span>
-                      </div>
-                    ) : null}
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-1 justify-end sm:justify-end shrink-0 sm:pl-1" onClick={(e) => e.stopPropagation()}>
+                <div
+                  className="flex flex-wrap gap-1 justify-end shrink-0 sm:contents sm:pl-1 min-w-0"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   {studentKioskWelcomeToggleDefs.length > 0 ? (
                     <AutoCircularToggles
                       record={s}
                       defs={studentKioskWelcomeToggleDefs}
                       restrictToDefs
+                      containerClassName="sm:contents shrink-0 flex-nowrap"
+                      toggleButtonClassName="sm:justify-self-center"
                       onToggle={(key, val) => {
                         if (onUpdateStudent) {
                           onUpdateStudent({ ...s, [key]: val });
@@ -428,7 +441,7 @@ export function AdminStudentsTab({
                     <Button
                       variant="outline"
                       size="icon"
-                      className="h-8 w-8 sm:h-9 sm:w-9 rounded-full"
+                      className="h-8 w-8 sm:h-9 sm:w-9 rounded-full sm:justify-self-center"
                       onClick={() => onOpenFaceTraining?.(s)}
                       title="Face login training"
                     >
@@ -438,7 +451,7 @@ export function AdminStudentsTab({
                   <Button
                     variant="outline"
                     size="icon"
-                    className="h-8 w-8 sm:h-9 sm:w-9 rounded-full"
+                    className="h-8 w-8 sm:h-9 sm:w-9 rounded-full sm:justify-self-center"
                     onClick={() => setThemeStudent?.(s)}
                     title="Generate AI Theme"
                   >
@@ -447,7 +460,7 @@ export function AdminStudentsTab({
                   <Button
                     variant="outline"
                     size="icon"
-                    className="h-8 w-8 sm:h-9 sm:w-9 rounded-full"
+                    className="h-8 w-8 sm:h-9 sm:w-9 rounded-full sm:justify-self-center"
                     onClick={() => previewIdCardStudent?.(s)}
                     title="Preview ID Card"
                   >
@@ -456,7 +469,7 @@ export function AdminStudentsTab({
                   <Button
                     variant="outline"
                     size="icon"
-                    className="h-8 w-8 sm:h-9 sm:w-9 rounded-full"
+                    className="h-8 w-8 sm:h-9 sm:w-9 rounded-full sm:justify-self-center"
                     onClick={() => handleOpenActivityModal?.(s)}
                     title="Activity history"
                   >
@@ -467,7 +480,7 @@ export function AdminStudentsTab({
                       variant="outline"
                       size="icon"
                       className={cn(
-                        'h-8 w-8 sm:h-9 sm:w-9 rounded-full',
+                        'h-8 w-8 sm:h-9 sm:w-9 rounded-full sm:justify-self-center',
                         (!s.earnedBadges || s.earnedBadges.length === 0) && 'opacity-40'
                       )}
                       disabled={!s.earnedBadges || s.earnedBadges.length === 0}
@@ -485,7 +498,7 @@ export function AdminStudentsTab({
                   <Button
                     variant="outline"
                     size="icon"
-                    className="h-8 w-8 sm:h-9 sm:w-9 rounded-full text-primary hover:bg-primary/10"
+                    className="h-8 w-8 sm:h-9 sm:w-9 rounded-full text-primary hover:bg-primary/10 sm:justify-self-center"
                     title="Purge points & badges"
                     onClick={() => setStudentToPurge?.(s)}
                   >
@@ -494,7 +507,7 @@ export function AdminStudentsTab({
                   <Button
                     variant="outline"
                     size="icon"
-                    className="h-8 w-8 sm:h-9 sm:w-9 rounded-full text-destructive hover:bg-destructive/10"
+                    className="h-8 w-8 sm:h-9 sm:w-9 rounded-full text-destructive hover:bg-destructive/10 sm:justify-self-center"
                     onClick={() => deleteStudent?.(s.id)}
                     title="Delete student"
                   >
@@ -505,7 +518,7 @@ export function AdminStudentsTab({
             );
             })}
           </ul>
-        </ScrollArea>
+        </div>
       </CardContent>
     </Card>
   );

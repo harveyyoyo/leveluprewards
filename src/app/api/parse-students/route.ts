@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import OpenAI from 'openai';
 import { guardAiRoute } from '@/lib/apiAuth';
+import { parseLooseJson } from '@/lib/server/looseJson';
 
 export async function POST(req: NextRequest) {
     try {
@@ -76,17 +77,28 @@ You MUST reply with ONLY a JSON array containing objects matching this schema:
         }
 
         try {
-            let parsed = JSON.parse(responseText);
+            const parsedRes = parseLooseJson(responseText);
+            if (!parsedRes.ok) {
+                console.error('Failed to parse AI response as JSON:', parsedRes.error, parsedRes.cleaned.slice(0, 600));
+                return NextResponse.json(
+                    {
+                        error: `Invalid response format from AI (JSON parse failed: ${parsedRes.error}).`,
+                    },
+                    { status: 500 }
+                );
+            }
+            let parsed: unknown = parsedRes.value;
             // Handle different JSON structures returned by models
-            if (parsed.students && Array.isArray(parsed.students)) {
-                parsed = parsed.students;
+            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                const maybeStudents = (parsed as Record<string, unknown>).students;
+                if (Array.isArray(maybeStudents)) parsed = maybeStudents;
             }
             if (!Array.isArray(parsed)) {
                 throw new Error("Parsed result is not an array");
             }
             return NextResponse.json(parsed);
         } catch (parseError) {
-            console.error('Failed to parse AI response as JSON:', responseText);
+            console.error('Failed to normalize AI response:', parseError);
             return NextResponse.json({ error: 'Invalid response format from AI' }, { status: 500 });
         }
 

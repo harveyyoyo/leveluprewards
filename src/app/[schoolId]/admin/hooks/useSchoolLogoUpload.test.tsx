@@ -117,14 +117,13 @@ describe('useSchoolLogoUpload', () => {
       );
     });
 
-    it('rejects files larger than 5MB', async () => {
+    it('rejects files larger than 10MB', async () => {
       const deps = makeDeps();
       const { result } = renderHook(() => useSchoolLogoUpload(deps));
-      // Build a 6 MiB Blob-backed File — the constructor accepts an ArrayBuffer
-      // so we don't have to materialize an actual 6 MB buffer. Instead, fake
-      // `size` on the File via Object.defineProperty to keep this cheap.
+      // Fake a too-large file by overriding the File size without allocating
+      // a huge buffer.
       const file = new File(['x'], 'big.png', { type: 'image/png' });
-      Object.defineProperty(file, 'size', { value: 6 * 1024 * 1024 });
+      Object.defineProperty(file, 'size', { value: 11 * 1024 * 1024 });
       await act(async () => {
         await result.current.handleLogoUpload(fakeChangeEvent(file));
       });

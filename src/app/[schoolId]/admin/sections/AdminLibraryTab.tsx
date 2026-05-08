@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Helper } from '@/components/ui/helper';
 import { EmptyState } from '@/components/ui/empty-state';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { AdminRecordListHeader } from '@/components/admin/AdminRecordListHeader';
 import type { LibraryItem } from '@/lib/types';
 
@@ -25,7 +24,7 @@ export function AdminLibraryTab({
   onReturnLibraryItem: (id: string) => void;
 }) {
   return (
-    <Card className="border-t-4 border-primary shadow-md">
+    <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden">
       <CardHeader className="flex flex-row justify-between items-center py-6">
         <div>
           <Helper content="Manage library items available for checkout. Assign a unique UPC barcode to each item.">
@@ -42,7 +41,7 @@ export function AdminLibraryTab({
         </div>
       </CardHeader>
       <CardContent>
-        <ScrollArea className="h-[calc(100vh-22rem)] min-h-[250px] border rounded-lg bg-background/50 p-3">
+        <div className="rounded-lg border bg-background/50 p-3">
           {(!libraryItems || libraryItems.length === 0) ? (
             <EmptyState
               icon={Book}
@@ -114,7 +113,7 @@ export function AdminLibraryTab({
               ))}
             </ul>
           )}
-        </ScrollArea>
+        </div>
       </CardContent>
     </Card>
   );

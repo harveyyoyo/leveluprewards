@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Helper } from '@/components/ui/helper';
 import { EmptyState } from '@/components/ui/empty-state';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -22,7 +23,6 @@ import { studentsInTeacherScope } from '@/lib/reportsScope';
 import { cn, getStudentNickname } from '@/lib/utils';
 import { encryptField, decryptField } from '@/lib/crypto';
 import type { Class, StaffAccount, StaffAccountRole, Student, Teacher } from '@/lib/types';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { AdminRecordListHeader } from '@/components/admin/AdminRecordListHeader';
 
 function normalizePortalKeyPart(value: string) {
@@ -99,6 +99,8 @@ export function AdminTeachersTab({
   const [copiedKey, setCopiedKey] = useState('');
   const [origin, setOrigin] = useState('');
   const [studentSearchTerms, setStudentSearchTerms] = useState<Record<string, string>>({});
+  const [expandedClassesTeacherId, setExpandedClassesTeacherId] = useState('');
+  const [expandedStudentsTeacherId, setExpandedStudentsTeacherId] = useState('');
 
 
   useEffect(() => {
@@ -294,7 +296,7 @@ export function AdminTeachersTab({
   };
 
   return (
-    <Card className="border-t-4 border-primary shadow-md">
+    <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden">
       <CardHeader className="flex flex-row justify-between items-center py-6">
         <div>
           <Helper content="Manage faculty and limited desk accounts for this school.">
@@ -322,14 +324,16 @@ export function AdminTeachersTab({
               each teacher&apos;s scope (class primary teacher or explicit assignment on the student).
             </p>
           </div>
-          <ul className="space-y-2 h-[calc(100vh-22rem)] min-h-[280px] overflow-y-auto pr-1">
+          <ul className="space-y-2 pr-1">
             {teachers && teachers.length > 0 ? (
               <AdminRecordListHeader
-                gridClassName="grid-cols-[76px_minmax(180px,1fr)_minmax(180px,260px)_96px_44px]"
+                gridClassName="grid-cols-[76px_minmax(140px,1fr)_minmax(180px,260px)_116px_116px_96px_44px]"
                 columns={[
                   { label: 'Edit' },
                   { label: 'Teacher Name' },
                   { label: 'Login Username & Passcode' },
+                  { label: 'Classes', className: 'text-center' },
+                  { label: 'Students', className: 'text-center' },
                   { label: 'Copy Link', className: 'text-center' },
                   { label: 'Delete', className: 'text-right' },
                 ]}
@@ -343,7 +347,7 @@ export function AdminTeachersTab({
                 key={t.id}
                 className="bg-secondary/20 rounded-2xl border hover:border-purple-200 transition-colors overflow-hidden"
               >
-                <div className="grid grid-cols-[76px_minmax(180px,1fr)_minmax(180px,260px)_96px_44px] items-center gap-3 p-3">
+                <div className="grid grid-cols-[76px_minmax(140px,1fr)_minmax(180px,260px)_116px_116px_96px_44px] items-center gap-3 px-3 py-2">
                   <div className="flex items-center">
                     <Button
                       variant="outline"
@@ -363,6 +367,48 @@ export function AdminTeachersTab({
                     <span>Pass: <span className="font-code text-foreground">{t.passcode}</span></span>
                   </div>
                   <div className="flex items-center justify-center">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 w-full justify-between gap-1 rounded-lg px-2 text-xs font-semibold"
+                      onClick={() => {
+                        setExpandedClassesTeacherId((current) => (current === t.id ? '' : t.id));
+                        setExpandedStudentsTeacherId('');
+                      }}
+                      title="Manage classes"
+                    >
+                      <span className="truncate">Classes ({managedClasses.length})</span>
+                      <ChevronDown
+                        className={cn(
+                          'h-3.5 w-3.5 shrink-0 transition-transform',
+                          expandedClassesTeacherId === t.id && 'rotate-180',
+                        )}
+                      />
+                    </Button>
+                  </div>
+                  <div className="flex items-center justify-center">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 w-full justify-between gap-1 rounded-lg px-2 text-xs font-semibold"
+                      onClick={() => {
+                        setExpandedStudentsTeacherId((current) => (current === t.id ? '' : t.id));
+                        setExpandedClassesTeacherId('');
+                      }}
+                      title="Manage linked students"
+                    >
+                      <span className="truncate">Students ({rows.length})</span>
+                      <ChevronDown
+                        className={cn(
+                          'h-3.5 w-3.5 shrink-0 transition-transform',
+                          expandedStudentsTeacherId === t.id && 'rotate-180',
+                        )}
+                      />
+                    </Button>
+                  </div>
+                  <div className="flex items-center justify-center">
                     {renderCopyLinkButton(teacherPortalKey(t))}
                   </div>
                   <div className="flex items-center justify-end">
@@ -378,21 +424,8 @@ export function AdminTeachersTab({
                 </div>
 
 
-                <Collapsible className="border-t border-border/60 bg-background/40">
-                  <CollapsibleTrigger
-                    className={cn(
-                      'group flex w-full items-center justify-between gap-2 px-4 py-2.5 text-left text-sm font-medium text-muted-foreground',
-                      'hover:bg-muted/50 hover:text-foreground transition-colors',
-                      'data-[state=open]:bg-muted/30',
-                    )}
-                  >
-                    <span>
-                      Managed classes
-                      <span className="ml-1.5 tabular-nums text-foreground">({managedClasses.length})</span>
-                    </span>
-                    <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
+                {expandedClassesTeacherId === t.id ? (
+                  <div className="border-t border-border/60 bg-background/40">
                     <div className="px-4 pb-3 pt-0 space-y-4">
                       {managedClasses.length === 0 ? (
                         <p className="text-xs text-muted-foreground leading-relaxed pt-2">
@@ -454,24 +487,11 @@ export function AdminTeachersTab({
                         </ul>
                       </div>
                     </div>
-                  </CollapsibleContent>
-                </Collapsible>
+                  </div>
+                ) : null}
 
-                <Collapsible className="border-t border-border/60 bg-background/40">
-                  <CollapsibleTrigger
-                    className={cn(
-                      'group flex w-full items-center justify-between gap-2 px-4 py-2.5 text-left text-sm font-medium text-muted-foreground',
-                      'hover:bg-muted/50 hover:text-foreground transition-colors',
-                      'data-[state=open]:bg-muted/30',
-                    )}
-                  >
-                    <span>
-                      Linked students
-                      <span className="ml-1.5 tabular-nums text-foreground">({rows.length})</span>
-                    </span>
-                    <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-                  </CollapsibleTrigger>
-                <CollapsibleContent>
+                {expandedStudentsTeacherId === t.id ? (
+                <div className="border-t border-border/60 bg-background/40">
                   <div className="px-4 pb-3 pt-0">
                     {rows.length === 0 ? (
                       <p className="text-xs text-muted-foreground leading-relaxed">
@@ -595,8 +615,8 @@ export function AdminTeachersTab({
                       </ul>
                     </div>
                   </div>
-                </CollapsibleContent>
-              </Collapsible>
+                </div>
+              ) : null}
             </li>
             );
           })}
@@ -616,7 +636,7 @@ export function AdminTeachersTab({
             <h3 className="font-bold">Desk staff</h3>
             <p className="text-sm text-muted-foreground">Limited accounts for coupon sheets, prize redemption, or reports.</p>
           </div>
-          <ul className="space-y-2 h-[calc(100vh-24rem)] min-h-[200px] overflow-y-auto pr-1">
+          <ul className="space-y-2 pr-1">
             {staffAccounts && staffAccounts.length > 0 ? (
               <AdminRecordListHeader
                 gridClassName="grid-cols-[76px_minmax(180px,1fr)_minmax(180px,260px)_96px_44px]"

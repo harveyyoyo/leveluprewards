@@ -29,7 +29,7 @@ export function AdminBonusPointsTab(props: any) {
   } = props;
 
   return (
-    <Card className="border-t-4 border-primary shadow-md">
+    <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden">
       <CardHeader className="flex flex-row justify-between items-center py-6">
         <div>
           <Helper content="Define bonus point milestones. When students hit these point thresholds they earn extra bonus points. Enable in Settings > Extra features > Recognition.">
@@ -51,7 +51,7 @@ export function AdminBonusPointsTab(props: any) {
       </CardHeader>
       <CardContent>
         {achievementsLoading ? (
-          <ul className="space-y-2 h-[calc(100vh-22rem)] min-h-[250px] overflow-y-auto pr-1">
+          <ul className="space-y-2 pr-1">
             {[1, 2, 3].map((i: number) => (
               <li key={i} className="flex justify-between items-center bg-secondary/20 p-4 rounded-2xl border">
                 <Skeleton className="h-10 w-48" />
@@ -60,7 +60,7 @@ export function AdminBonusPointsTab(props: any) {
             ))}
           </ul>
         ) : (
-          <ul className="h-[calc(100vh-22rem)] min-h-[250px] overflow-y-auto pr-1 space-y-1">
+          <ul className="pr-1 space-y-1">
             {achievements && achievements.length > 0 ? (
               <AdminRecordListHeader
                 gridClassName="grid-cols-[76px_minmax(180px,1fr)_minmax(140px,180px)_100px_minmax(90px,120px)_44px]"

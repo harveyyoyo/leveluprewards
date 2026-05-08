@@ -58,7 +58,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
-import { motion, AnimatePresence } from "framer-motion";
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { PrinterReminderCallout } from '@/components/PrinterReminderCallout';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -378,7 +377,6 @@ export function PrizeDashboard({
     const firestore = useFirestore();
     const { toast } = useToast();
     const playSound = useArcadeSound();
-    const [hoveredPrize, setHoveredPrize] = useState<string | null>(null);
     const { settings } = useSettings();
     const animBackdrop = globalAnimatedBackdropActive(settings);
     const [confirmingPrize, setConfirmingPrize] = useState<Prize | null>(null);
@@ -406,6 +404,7 @@ export function PrizeDashboard({
     const [isRedeeming, setIsRedeeming] = useState(false);
     /** Client-side cooldown for AI surprise calls to prevent rapid-fire abuse. */
     const lastAiSurpriseCallRef = useRef(0);
+    const lastActivityResetRef = useRef(0);
 
     const pendingTicketRef = useRef<any>(null);
     const [aiSurpriseLoading, setAiSurpriseLoading] = useState(false);
@@ -505,10 +504,13 @@ export function PrizeDashboard({
     useEffect(() => {
         if (isKioskLocked) return;
         const handleActivity = () => {
+            const now = Date.now();
+            if (now - lastActivityResetRef.current < 1000) return;
+            lastActivityResetRef.current = now;
             resetTimer();
         };
         const events: (keyof WindowEventMap)[] = ['mousemove', 'mousedown', 'keydown', 'touchstart'];
-        events.forEach((ev) => window.addEventListener(ev, handleActivity));
+        events.forEach((ev) => window.addEventListener(ev, handleActivity, { passive: true }));
         return () => {
             events.forEach((ev) => window.removeEventListener(ev, handleActivity));
         };
@@ -1115,9 +1117,8 @@ export function PrizeDashboard({
                                             )}
                                         </div>
                                     ) : (
-                                        visiblePrizes.map((prize: Prize, index) => {
+                                        visiblePrizes.map((prize: Prize) => {
                                             const canAfford = student.points >= prize.points;
-                                            const isHovered = hoveredPrize === prize.id;
                                             const displayName =
                                                 stripLeadingEmojiFromPrizeName(prize.name) || prize.name;
                                             const pctTowardCost = Math.min(
@@ -1126,39 +1127,22 @@ export function PrizeDashboard({
                                             );
 
                                             return (
-                                                <motion.div
+                                                <div
                                                     key={prize.id}
-                                                    initial={{ opacity: 0, y: 20 }}
-                                                    animate={{ opacity: 1, y: 0 }}
-                                                    transition={{ delay: index * 0.05 }}
-                                                    onMouseEnter={() => setHoveredPrize(prize.id)}
-                                                    onMouseLeave={() => setHoveredPrize(null)}
                                                     className={cn(
-                                                        "group relative flex min-w-0 w-full flex-col items-center justify-between text-center p-8 rounded-3xl border-2 border-transparent transition-all duration-300 backdrop-blur-sm",
+                                                        "group relative flex min-w-0 w-full flex-col items-center justify-between text-center p-8 rounded-3xl border-2 border-transparent transition-all duration-300 backdrop-blur-sm hover:border-[var(--prize-card-hover-border)]",
                                                         canAfford ? "hover:shadow-2xl hover:shadow-primary/5 hover:-translate-y-1" : "opacity-75 cursor-not-allowed"
                                                     )}
                                                     style={activeTheme ? {
                                                         backgroundColor: canAfford ? 'var(--theme-card)' : 'transparent',
-                                                        borderColor: (isHovered && canAfford) ? 'var(--theme-primary)' : 'transparent',
                                                         color: 'var(--theme-text)',
+                                                        ['--prize-card-hover-border' as any]: canAfford ? 'var(--theme-primary)' : 'transparent',
                                                     } : {
-                                                        backgroundColor: canAfford ? 'hsl(var(--card) / 0.4)' : 'hsl(var(--card) / 0.1)'
+                                                        backgroundColor: canAfford ? 'hsl(var(--card) / 0.4)' : 'hsl(var(--card) / 0.1)',
+                                                        ['--prize-card-hover-border' as any]: canAfford ? 'hsl(var(--primary))' : 'transparent',
                                                     }}
                                                 >
-                                                    {/* SVG Border Draw Animation */}
-                                                    {isHovered && canAfford && (
-                                                        <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible rounded-3xl z-20">
-                                                            <motion.rect
-                                                                initial={{ pathLength: 0 }}
-                                                                animate={{ pathLength: 1 }}
-                                                                transition={{ duration: 0.6 }}
-                                                                width="100%"
-                                                                height="100%"
-                                                                rx="24"
-                                                                className="stroke-primary stroke-[3px] fill-none"
-                                                            />
-                                                        </svg>
-                                                    )}
+                                                    <div className="absolute inset-0 rounded-3xl pointer-events-none bg-primary opacity-0 transition-opacity duration-300 group-hover:opacity-5" />
 
                                                     <div className={cn(
                                                         "w-24 h-24 rounded-[2rem] flex items-center justify-center mb-6 transition-transform duration-500 bg-gradient-to-br shadow-inner relative overflow-hidden",
@@ -1260,12 +1244,7 @@ export function PrizeDashboard({
                                                         <Gift className="mr-2 w-4 h-4" /> Redeem Now
                                                     </Button>
 
-                                                    <AnimatePresence>
-                                                        {isHovered && canAfford && (
-                                                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 0.05 }} exit={{ opacity: 0 }} className="absolute inset-0 rounded-3xl pointer-events-none bg-primary" />
-                                                        )}
-                                                    </AnimatePresence>
-                                                </motion.div>
+                                                </div>
                                             );
                                         })
                                     )}

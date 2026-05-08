@@ -12,12 +12,13 @@ import { useAdminAttendance } from './hooks/useAdminAttendance';
 import { useSchoolLogoUpload } from './hooks/useSchoolLogoUpload';
 import { useAuthFetch } from '@/lib/authFetch';
 import { collection, doc, updateDoc, setDoc, deleteDoc, getDocs, query, orderBy, limit } from 'firebase/firestore';
+import { idCardJobPrinterOptions, isValidPaperForFamily } from '@/lib/id-card-print-catalog';
 
 import {
    Users, Gift, BookOpen, Trash2, Edit, UploadCloud, Printer, LayoutDashboard, Database,
    Settings, History, Award, CheckCircle, Tag, Trophy, ArrowRight, Loader2, Play, ShieldCheck,
    User, Ticket, Upload, Download, Activity, Zap, Clock, Palette, Wand2, TableProperties,
-   FileText, Bell, Target, Megaphone, ChevronDown,
+   FileText, Bell, Target, Megaphone, ChevronDown, X,
  } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -99,7 +100,7 @@ import {
   type SchoolSnapshotImportResult,
 } from '@/lib/schoolDataImport';
 import { SAMPLE_BADGES, getSampleCategoryBadges } from '@/lib/sample-badges';
-import { AdminNotificationsTab } from './sections/AdminNotificationsTab';
+
 // The Students tab is the default tab, so keep it eager. Every other tab is
 // code-split with `next/dynamic` so its chunk is only fetched when the admin
 // actually clicks into it — this dramatically reduces the initial admin JS.
@@ -112,6 +113,10 @@ const tabLoader = () => (
 
 const AdminStatsTab = dynamic(
   () => import('./sections/AdminStatsTab').then((m) => m.AdminStatsTab),
+  { loading: tabLoader, ssr: false },
+);
+const AdminNotificationsTab = dynamic(
+  () => import('./sections/AdminNotificationsTab').then((m) => m.AdminNotificationsTab),
   { loading: tabLoader, ssr: false },
 );
 const AdminBrandingTab = dynamic(
@@ -225,6 +230,9 @@ function describeSnapshotImport(result: SchoolSnapshotImportResult): {
     totalAdded === 0 && anyErr ? 'destructive' : 'default';
   return { title, description, variant };
 }
+
+const fittedAdminTabClassName = 'transition-opacity duration-150 h-full min-h-0 w-full overflow-y-auto overflow-x-hidden pb-6';
+const scrollingAdminTabClassName = fittedAdminTabClassName;
 
 function AdminDashboardSkeleton() {
   return (
@@ -614,38 +622,8 @@ function AdminDashboardInner() {
     updateSettings({ adminMainTabOrder: cleaned });
   };
 
-  const unpinnedVisibleAddOnTabs = useMemo(() => {
-    const pinned = new Set(settings.adminPinnedAddOnTabs || []);
-    return visibleAddOnTabs.filter((t) => !pinned.has(t.value));
-  }, [settings.adminPinnedAddOnTabs, visibleAddOnTabs]);
-
-  const orderedExtraTabs = useMemo(() => {
-    const availableByValue = new Map(unpinnedVisibleAddOnTabs.map((t) => [t.value, t]));
-    const saved = settings.adminExtraTabOrder || [];
-    const cleanedSaved = saved.filter((v) => availableByValue.has(v));
-
-    const out: AdminAddOnTabDef[] = [];
-    const seen = new Set<string>();
-    for (const v of cleanedSaved) {
-      const def = availableByValue.get(v);
-      if (!def || seen.has(def.value)) continue;
-      out.push(def);
-      seen.add(def.value);
-    }
-    for (const def of unpinnedVisibleAddOnTabs) {
-      if (seen.has(def.value)) continue;
-      out.push(def);
-      seen.add(def.value);
-    }
-    return out;
-  }, [settings.adminExtraTabOrder, unpinnedVisibleAddOnTabs]);
-
-  const persistExtraTabOrder = (next: string[]) => {
-    const available = new Set(unpinnedVisibleAddOnTabs.map((t) => t.value));
-    const seen = new Set<string>();
-    const cleaned = next.filter((v) => available.has(v) && !seen.has(v) && (seen.add(v), true));
-    updateSettings({ adminExtraTabOrder: cleaned });
-  };
+  // Extra-tab ordering is no longer used; feature tabs are added directly into the main row.
+  const persistExtraTabOrder = (_next: string[]) => {};
 
   const moveInArray = <T,>(arr: T[], from: number, to: number) => {
     if (from === to) return arr;
@@ -655,16 +633,17 @@ function AdminDashboardInner() {
     return next;
   };
 
+  const draggingMainTabValueRef = useRef<string | null>(null);
+  const draggingAddOnTabValueRef = useRef<string | null>(null);
+
   const pinAddOnTab = (value: string) => {
     const def = addOnTabDefs.find((t) => t.value === value);
     if (!def) return;
     if (!def.isOn(settings)) return;
     const now = settings.adminPinnedAddOnTabs || [];
     if (now.includes(value)) return;
-    const extraOrderNow = settings.adminExtraTabOrder || [];
     updateSettings({
       adminPinnedAddOnTabs: [...now, value],
-      adminExtraTabOrder: extraOrderNow.filter((v) => v !== value),
     });
   };
 
@@ -688,19 +667,20 @@ function AdminDashboardInner() {
     const basicTabs = ['students', 'classes', 'teachers', 'prizes', 'categories'];
     if (loginState === 'developer') basicTabs.push('backups');
     const pinnedExtras = pinnedAddOnTabs.map((t) => t.value);
-    const expertExtras = settings.expertMode ? unpinnedVisibleAddOnTabs.map((t) => t.value) : [];
-
-    const allowedTabs = new Set<string>([...basicTabs, ...pinnedExtras, ...expertExtras]);
-
-    if (!allowedTabs.has(activeMainTab)) {
-      // Apply immediately on toggle-off to avoid a visible "hiccup" (layout thrash + delayed tab jump).
-      setActiveMainTab('students');
-    }
-  }, [settings.expertMode, activeMainTab, pinnedAddOnTabs, unpinnedVisibleAddOnTabs, loginState]);
+    const allowedTabs = new Set<string>([...basicTabs, ...pinnedExtras]);
+    if (!allowedTabs.has(activeMainTab)) setActiveMainTab('students');
+  }, [activeMainTab, pinnedAddOnTabs, loginState]);
 
   const [bulkRosterOpen, setBulkRosterOpen] = useState(false);
   const [isPreviousLogosOpen, setIsPreviousLogosOpen] = useState(false);
   const [idCardPrintJob, setIdCardPrintJob] = useState<{ students: Student[]; classes: Class[] } | null>(null);
+  const getPreferredIdCardPrinterFamily = () => {
+    const profiles = settings.idCardPrintProfiles ?? [];
+    const lastId = settings.lastIdCardPrintProfileId;
+    const match = lastId ? profiles.find((p) => p.id === lastId) : null;
+    if (match && isValidPaperForFamily(match.family, match.paperId)) return match.family;
+    return 'browser_sheet' as const;
+  };
 
   const handleOpenIdCardPrintSetup = (args: { students: Student[]; classes: Class[] }) => {
     if (args.students.length === 0) {
@@ -984,7 +964,7 @@ function AdminDashboardInner() {
     }
   };
 
-  const handleAiCommitSnapshot = async (snapshot: ParsedSchoolSnapshot) => {
+  const handleAiCommitSnapshot = async (snapshot: ParsedSchoolSnapshot, options?: { upsertStudents?: boolean }) => {
     if (!firestore || !schoolId) return;
     try {
       const result = await importParsedSchoolSnapshot(firestore, schoolId, snapshot, {
@@ -995,7 +975,7 @@ function AdminDashboardInner() {
         categories: categories || [],
         prizes: prizes || [],
         staffAccounts: staffAccounts || [],
-      });
+      }, options);
       const anySuccess = Object.values(result).some((r) => r && r.success > 0);
       playSound(anySuccess ? 'success' : 'error');
       const msg = describeSnapshotImport(result);
@@ -1076,7 +1056,9 @@ function AdminDashboardInner() {
   return (
     <TooltipProvider>
       <div
-        className={cn("space-y-6 max-w-full mx-auto p-4 md:p-8", settings.displayMode === 'app' && 'pb-24')}
+        className={cn(
+          "mx-auto flex h-full min-h-0 w-full max-w-7xl flex-col gap-6 p-4 md:p-8",
+        )}
         style={{
           ['--primary' as any]: rainbowTripletForNavId('admin', settings.colorScheme),
           ['--chart-1' as any]: rainbowTripletForNavId('admin', settings.colorScheme),
@@ -1100,17 +1082,6 @@ function AdminDashboardInner() {
             </p>
           </Helper>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <Button
-              type="button"
-              variant="outline"
-              className="rounded-xl shrink-0 font-semibold gap-2"
-              asChild
-            >
-              <Link href="/privacy" target="_blank" rel="noreferrer">
-                <FileText className="w-4 h-4" aria-hidden />
-                Privacy &amp; Security
-              </Link>
-            </Button>
             <Button
               type="button"
               variant="outline"
@@ -1148,27 +1119,123 @@ function AdminDashboardInner() {
           />
         ) : null}
 
-        <div className="w-full">
-          <Tabs key={`admin-tabs-${schoolId ?? 'unknown'}`} value={activeMainTab} onValueChange={setActiveMainTab} className="space-y-8">
+        <div className="flex min-h-0 w-full flex-1 flex-col">
+          <Tabs
+            key={`admin-tabs-${schoolId ?? 'unknown'}`}
+            value={activeMainTab}
+            onValueChange={setActiveMainTab}
+            className="flex min-h-0 w-full flex-1 flex-col gap-6"
+          >
           <div className="w-full flex flex-col gap-4">
             <TabsList 
-              className="bg-muted/50 p-1.5 rounded-2xl flex flex-wrap justify-center border shadow-sm gap-x-1 gap-y-1 h-auto w-full max-w-6xl mx-auto"
+              className="bg-muted/50 p-1.5 rounded-2xl flex flex-wrap justify-center border shadow-sm gap-x-1 gap-y-1 h-auto w-full"
               style={{ ['--admin-accent' as any]: rainbowForNavId('admin', settings.colorScheme) }}
               aria-label="Admin categories"
               onDragOver={(e) => {
                 // Allow dropping add-on tabs here to "pin" them into the main row.
-                if (e.dataTransfer.types.includes('text/admin-addon-tab')) {
+                if (draggingAddOnTabValueRef.current || e.dataTransfer.types.includes('text/admin-addon-tab')) {
                   e.preventDefault();
                   e.dataTransfer.dropEffect = 'move';
                 }
               }}
               onDrop={(e) => {
-                const v = e.dataTransfer.getData('text/admin-addon-tab');
+                const v = draggingAddOnTabValueRef.current || e.dataTransfer.getData('text/admin-addon-tab');
                 if (!v) return;
                 e.preventDefault();
                 pinAddOnTab(v);
+                draggingAddOnTabValueRef.current = null;
               }}
             >
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="rounded-xl px-3 py-2 font-bold inline-flex items-center gap-2 text-sm text-foreground border bg-muted/40 hover:bg-muted/60 transition-all"
+                    title="Additional features"
+                    aria-label="Additional features"
+                  >
+                    <Settings className="w-4 h-4" aria-hidden />
+                    Features
+                    <ChevronDown className="w-4 h-4 opacity-70" aria-hidden />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="min-w-[240px]">
+                  <div className="px-2 py-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[10px] font-black uppercase text-muted-foreground tracking-wider">
+                        Feature tabs
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          className="rounded-md border bg-background px-2 py-1 text-[10px] font-black uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            for (const def of addOnTabDefs) {
+                              const canEnable = def.canEnable ? def.canEnable(settings) : true;
+                              if (!canEnable) continue;
+                              setAddOnEnabled(def.value, true);
+                              pinAddOnTab(def.value);
+                            }
+                          }}
+                          aria-label="Turn on all feature tabs"
+                          title="Turn on all"
+                        >
+                          All on
+                        </button>
+                        <button
+                          type="button"
+                          className="rounded-md border bg-background px-2 py-1 text-[10px] font-black uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            for (const def of addOnTabDefs) {
+                              if (!def.isOn(settings)) continue;
+                              setAddOnEnabled(def.value, false);
+                              unpinAddOnTab(def.value);
+                            }
+                          }}
+                          aria-label="Turn off all feature tabs"
+                          title="Turn off all"
+                        >
+                          All off
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  <DropdownMenuSeparator />
+                  {addOnTabDefs.map((t) => {
+                    const Icon = t.icon;
+                    const pinned = new Set(settings.adminPinnedAddOnTabs || []);
+                    const checked = t.isOn(settings) && pinned.has(t.value);
+                    const canEnable = t.canEnable ? t.canEnable(settings) : true;
+                    const disabled = !checked && !canEnable;
+                    return (
+                      <DropdownMenuCheckboxItem
+                        key={t.value}
+                        checked={checked}
+                        disabled={disabled}
+                        onCheckedChange={(next) => {
+                          const on = !!next;
+                          setAddOnEnabled(t.value, on);
+                          // Always keep enabled feature-tabs in the main row.
+                          if (on) {
+                            pinAddOnTab(t.value);
+                            setActiveMainTab(t.value);
+                          } else {
+                            unpinAddOnTab(t.value);
+                          }
+                        }}
+                        className="flex items-center gap-2"
+                      >
+                        <Icon className="h-4 w-4 opacity-75" aria-hidden />
+                        <span className="flex-1">{t.label}</span>
+                      </DropdownMenuCheckboxItem>
+                    );
+                  })}
+                </DropdownMenuContent>
+              </DropdownMenu>
               {orderedMainTabs.map((t) => {
                 const Icon = t.icon;
                 return (
@@ -1180,13 +1247,19 @@ function AdminDashboardInner() {
                     onDragStart={(e) => {
                       e.dataTransfer.setData('text/admin-main-tab', t.value);
                       e.dataTransfer.effectAllowed = 'move';
+                      draggingMainTabValueRef.current = t.value;
+                    }}
+                    onDragEnd={() => {
+                      draggingMainTabValueRef.current = null;
+                    }}
+                    onDrop={() => {
+                      draggingMainTabValueRef.current = null;
                     }}
                     onDragOver={(e) => {
-                      if (!e.dataTransfer.types.includes('text/admin-main-tab')) return;
-                      if (e.dataTransfer.types.includes('text/admin-addon-tab')) return;
+                      const dragged = draggingMainTabValueRef.current;
+                      if (!dragged) return;
                       e.preventDefault();
 
-                      const dragged = e.dataTransfer.getData('text/admin-main-tab');
                       if (!dragged || dragged === t.value) return;
 
                       const values = orderedMainTabs.map((x) => x.value);
@@ -1209,177 +1282,10 @@ function AdminDashboardInner() {
               })}
             </TabsList>
 
-            <div className="w-full max-w-6xl mx-auto px-1 flex justify-center items-center">
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/40 rounded-xl border">
-                <span className="text-[10px] font-black uppercase text-muted-foreground tracking-wider">Extra features</span>
-                <Switch checked={settings.expertMode} onCheckedChange={(val) => updateSettings({ expertMode: val })} />
-              </div>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    className="ml-2 rounded-xl px-3 py-1.5 font-bold flex items-center gap-2 text-sm text-foreground border bg-muted/40 hover:bg-muted/60 transition-all"
-                    title="Manage extra features"
-                    aria-label="Manage extra features"
-                  >
-                    <Settings className="w-4 h-4" aria-hidden />
-                    Manage
-                    <ChevronDown className="w-4 h-4 opacity-70" aria-hidden />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="min-w-[220px]">
-                  {addOnTabDefs.map((t) => {
-                    const Icon = t.icon;
-                    const checked = t.isOn(settings);
-                    const canEnable = t.canEnable ? t.canEnable(settings) : true;
-                    const disabled = !checked && !canEnable;
-                    return (
-                      <DropdownMenuCheckboxItem
-                        key={t.value}
-                        checked={checked}
-                        disabled={disabled}
-                        onCheckedChange={(next) => setAddOnEnabled(t.value, !!next)}
-                        className="flex items-center gap-2"
-                      >
-                        <Icon className="h-4 w-4 opacity-75" aria-hidden />
-                        <span className="flex-1">{t.label}</span>
-                      </DropdownMenuCheckboxItem>
-                    );
-                  })}
-                  <DropdownMenuSeparator />
-                  <button
-                    type="button"
-                    className="w-full text-left px-2 py-1.5 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground"
-                    onClick={() => {
-                      window.dispatchEvent(new CustomEvent('open-settings-modal', { detail: { view: 'features' } }));
-                    }}
-                  >
-                    Open Extra features in Settings…
-                  </button>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-
-            {settings.expertMode && (
-              <div className="flex flex-col gap-3 mt-1 w-full max-w-6xl mx-auto px-4">
-                <TabsList
-                  className="bg-muted/50 p-1.5 rounded-2xl flex flex-wrap justify-center border shadow-sm gap-x-1 gap-y-1 h-auto w-full"
-                  style={{ ['--admin-accent' as any]: rainbowForNavId('admin', settings.colorScheme) }}
-                  aria-label="Extra feature shortcuts"
-                  onDragOver={(e) => {
-                    // Allow dropping pinned add-on tabs here to unpin them.
-                    if (e.dataTransfer.types.includes('text/admin-main-tab')) {
-                      const v = e.dataTransfer.getData('text/admin-main-tab');
-                      const pinned = new Set(settings.adminPinnedAddOnTabs || []);
-                      if (v && pinned.has(v)) {
-                        e.preventDefault();
-                        e.dataTransfer.dropEffect = 'move';
-                      }
-                    }
-                  }}
-                  onDrop={(e) => {
-                    const v = e.dataTransfer.getData('text/admin-main-tab');
-                    if (!v) return;
-                    const pinned = new Set(settings.adminPinnedAddOnTabs || []);
-                    if (!pinned.has(v)) return;
-                    e.preventDefault();
-
-                    // Unpin from main row + remove from saved main order.
-                    unpinAddOnTab(v);
-                    persistMainTabOrder((settings.adminMainTabOrder || []).filter((x) => x !== v));
-
-                    // Append to end of extra row order (can be re-ordered immediately after).
-                    const nowExtra = settings.adminExtraTabOrder || [];
-                    if (!nowExtra.includes(v)) persistExtraTabOrder([...nowExtra, v]);
-                  }}
-                >
-                  {orderedExtraTabs.length === 0 ? (
-                    <span className="text-xs text-muted-foreground px-3 py-2 font-medium">No extra features enabled.</span>
-                  ) : (
-                    orderedExtraTabs.map((t) => {
-                      const Icon = t.icon;
-                      const active = activeMainTab === t.value;
-                      return (
-                        <div
-                          key={t.value}
-                          draggable
-                          className={cn(
-                            'inline-flex items-center rounded-xl border border-transparent',
-                            active && 'bg-background shadow-sm border-border/40',
-                          )}
-                          title="Drag to reorder, or drag into main tabs to pin"
-                          onDragStart={(e) => {
-                            e.dataTransfer.setData('text/admin-addon-tab', t.value);
-                            e.dataTransfer.effectAllowed = 'move';
-                          }}
-                          onDragOver={(e) => {
-                            // Reorder within extra row.
-                            if (e.dataTransfer.types.includes('text/admin-addon-tab')) {
-                              e.preventDefault();
-                              const dragged = e.dataTransfer.getData('text/admin-addon-tab');
-                              if (!dragged || dragged === t.value) return;
-
-                              const values = orderedExtraTabs.map((x) => x.value);
-                              const from = values.indexOf(dragged);
-                              const to = values.indexOf(t.value);
-                              if (from < 0 || to < 0 || from === to) return;
-                              persistExtraTabOrder(moveInArray(values, from, to));
-                              return;
-                            }
-
-                            // Accept pinned add-on tabs from main row, drop-inserting before this chip.
-                            if (e.dataTransfer.types.includes('text/admin-main-tab')) {
-                              const dragged = e.dataTransfer.getData('text/admin-main-tab');
-                              const pinned = new Set(settings.adminPinnedAddOnTabs || []);
-                              if (!dragged || !pinned.has(dragged)) return;
-                              e.preventDefault();
-                              e.dataTransfer.dropEffect = 'move';
-                            }
-                          }}
-                          onDrop={(e) => {
-                            const dragged = e.dataTransfer.getData('text/admin-main-tab');
-                            if (!dragged) return;
-                            const pinned = new Set(settings.adminPinnedAddOnTabs || []);
-                            if (!pinned.has(dragged)) return;
-                            e.preventDefault();
-
-                            unpinAddOnTab(dragged);
-                            persistMainTabOrder((settings.adminMainTabOrder || []).filter((x) => x !== dragged));
-
-                            const values = orderedExtraTabs.map((x) => x.value);
-                            const to = values.indexOf(t.value);
-                            if (to < 0) return;
-                            const next = values.includes(dragged)
-                              ? moveInArray(values, values.indexOf(dragged), to)
-                              : [...values.slice(0, to), dragged, ...values.slice(to)];
-                            persistExtraTabOrder(next);
-                          }}
-                        >
-                          <button
-                            type="button"
-                            className={cn(
-                              'rounded-xl px-4 py-2 font-bold flex items-center gap-2 text-sm transition-all',
-                              active
-                                ? 'text-[color:var(--admin-accent)]'
-                                : 'text-foreground hover:bg-background/60',
-                            )}
-                            title={`Open ${t.label}`}
-                            onClick={() => setActiveMainTab(t.value)}
-                          >
-                            <Icon className="w-4 h-4 shrink-0 opacity-80" aria-hidden />
-                            {t.label}
-                          </button>
-                        </div>
-                      );
-                    })
-                  )}
-                </TabsList>
-              </div>
-            )}
           </div>
 
-          <TabsContent value="students" className="transition-opacity duration-150">
+          <div className="min-h-0 w-full flex-1">
+          <TabsContent value="students" className={fittedAdminTabClassName}>
             <AdminStudentsTab
               settings={settings}
               classes={classes}
@@ -1426,7 +1332,7 @@ function AdminDashboardInner() {
             />
           </TabsContent>
 
-          <TabsContent value="classes" className="transition-opacity duration-150">
+          <TabsContent value="classes" className={fittedAdminTabClassName}>
             <AdminClassesTab
               classes={classes}
               teachers={teachers}
@@ -1449,7 +1355,7 @@ function AdminDashboardInner() {
             />
           </TabsContent>
 
-          <TabsContent value="teachers" className="transition-opacity duration-150">
+          <TabsContent value="teachers" className={fittedAdminTabClassName}>
             <AdminTeachersTab
               teachers={teachers}
               staffAccounts={staffAccounts}
@@ -1515,7 +1421,7 @@ function AdminDashboardInner() {
             />
           </TabsContent>
 
-          <TabsContent value="prizes" className="transition-opacity duration-150">
+          <TabsContent value="prizes" className={fittedAdminTabClassName}>
             <AdminPrizesTab
               prizes={prizes}
               teachers={teachers}
@@ -1539,7 +1445,7 @@ function AdminDashboardInner() {
             />
           </TabsContent>
 
-          <TabsContent value="coupons" className="transition-opacity duration-150">
+          <TabsContent value="coupons" className={fittedAdminTabClassName}>
             <AdminCouponsTab
               availableCoupons={availableCoupons}
               redeemedCoupons={redeemedCoupons}
@@ -1556,7 +1462,7 @@ function AdminDashboardInner() {
             />
           </TabsContent>
 
-          <TabsContent value="insights" className="space-y-6 transition-opacity duration-150">
+          <TabsContent value="insights" className={`${scrollingAdminTabClassName} space-y-6`}>
             <Tabs defaultValue="stats" className="space-y-6">
               <div className="flex justify-center">
                 <TabsList className="bg-muted/30 p-1 rounded-xl border shadow-sm">
@@ -1597,7 +1503,7 @@ function AdminDashboardInner() {
             </Tabs>
           </TabsContent>
 
-          <TabsContent value="categories" className="transition-opacity duration-150">
+          <TabsContent value="categories" className={fittedAdminTabClassName}>
             <AdminCategoriesTab
               categories={categories}
               teachers={teachers}
@@ -1635,7 +1541,7 @@ function AdminDashboardInner() {
             />
           </TabsContent>
 
-          <TabsContent value="attendance" className="transition-opacity duration-150">
+          <TabsContent value="attendance" className={scrollingAdminTabClassName}>
             <AdminAttendanceTab
               schoolId={schoolId}
               teachers={teachers}
@@ -1672,11 +1578,11 @@ function AdminDashboardInner() {
             />
           </TabsContent>
 
-          <TabsContent value="halloffame" className="transition-opacity duration-150">
+          <TabsContent value="halloffame" className={scrollingAdminTabClassName}>
             <AdminHallOfFameTab schoolId={schoolId!} />
           </TabsContent>
 
-          <TabsContent value="bulletinboard" className="transition-opacity duration-150">
+          <TabsContent value="bulletinboard" className={scrollingAdminTabClassName}>
             <AdminBulletinBoardTab
               schoolId={schoolId!}
               schoolLogoUrl={schoolData?.logoUrl ?? null}
@@ -1685,7 +1591,7 @@ function AdminDashboardInner() {
             />
           </TabsContent>
 
-          <TabsContent value="library" className="transition-opacity duration-150">
+          <TabsContent value="library" className={fittedAdminTabClassName}>
             <AdminLibraryTab
               libraryItems={library}
               getStudentName={getStudentName}
@@ -1696,7 +1602,7 @@ function AdminDashboardInner() {
             />
           </TabsContent>
 
-          <TabsContent value="bonuspoints" className="transition-opacity duration-150">
+          <TabsContent value="bonuspoints" className={fittedAdminTabClassName}>
             <AdminBonusPointsTab
               achievementsLoading={achievementsLoading}
               achievements={achievements}
@@ -1708,7 +1614,7 @@ function AdminDashboardInner() {
             />
           </TabsContent>
 
-          <TabsContent value="category-badges" className="transition-opacity duration-150">
+          <TabsContent value="category-badges" className={fittedAdminTabClassName}>
             <AdminBadgesTab
               categories={categories}
               badgesLoading={badgesLoading}
@@ -1731,7 +1637,7 @@ function AdminDashboardInner() {
             />
           </TabsContent>
 
-          <TabsContent value="goals" className="transition-opacity duration-150">
+          <TabsContent value="goals" className={scrollingAdminTabClassName}>
             <AdminGoalsTab
               schoolId={schoolId!}
               students={students || []}
@@ -1741,11 +1647,11 @@ function AdminDashboardInner() {
             />
           </TabsContent>
 
-          <TabsContent value="notifications" className="transition-opacity duration-150">
+          <TabsContent value="notifications" className={scrollingAdminTabClassName}>
             <AdminNotificationsTab />
           </TabsContent>
 
-          <TabsContent value="backups" className="transition-opacity duration-150">
+          <TabsContent value="backups" className={fittedAdminTabClassName}>
             {loginState === 'developer' ? (
               <AdminBackupsTab
                 backups={backups}
@@ -1760,7 +1666,7 @@ function AdminDashboardInner() {
             )}
           </TabsContent>
 
-          <TabsContent value="branding" className="transition-opacity duration-150">
+          <TabsContent value="branding" className={scrollingAdminTabClassName}>
             <AdminBrandingTab
               schoolId={schoolId}
               firestore={firestore}
@@ -1780,6 +1686,7 @@ function AdminDashboardInner() {
               playSound={(s: any) => playSound(s)}
             />
           </TabsContent>
+          </div>
         </Tabs>
 
         {/* Modals outside Tabs */}
@@ -2092,6 +1999,32 @@ function AdminDashboardInner() {
                   />
                 </div>
               </div>
+              <DialogFooter className="shrink-0">
+                <Button type="button" variant="secondary" className="rounded-xl" onClick={() => setIdPreviewStudent(null)}>
+                  Close
+                </Button>
+                <Button
+                  type="button"
+                  className="rounded-xl"
+                  onClick={() => {
+                    const s = idPreviewStudent;
+                    if (!s) return;
+                    const family = getPreferredIdCardPrinterFamily();
+                    // Close the preview first so it never ends up on the printout.
+                    setIdPreviewStudent(null);
+                    requestAnimationFrame(() => {
+                      setStudentsToPrint({
+                        students: [s],
+                        classes: classes ?? [],
+                        ...idCardJobPrinterOptions(family),
+                      });
+                    });
+                  }}
+                >
+                  <Printer className="mr-2 h-4 w-4" aria-hidden />
+                  Print
+                </Button>
+              </DialogFooter>
             </DialogContent>
           </Dialog>
         )}
@@ -2776,7 +2709,14 @@ function AdminLogin({ onLogin }: { onLogin: (passcode: string) => Promise<boolea
               className="w-full h-12 text-lg font-bold shadow-md"
               disabled={isLoading || !passcode}
             >
-              {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Enter Dashboard'}
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 w-5 h-5 animate-spin" aria-hidden />
+                  Signing in...
+                </>
+              ) : (
+                'Enter Dashboard'
+              )}
             </Button>
           </form>
         </CardContent>
@@ -2814,6 +2754,3 @@ export default function AdminPage() {
     </ErrorBoundary>
   );
 }
-
-
-

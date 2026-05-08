@@ -41,6 +41,7 @@ export default function PrizeClerkPage() {
     const { toast } = useToast();
     const [username, setUsername] = useState('');
     const [passcode, setPasscode] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [deskStudentId, setDeskStudentId] = useState<string | null>(null);
 
     useEffect(() => {
@@ -71,27 +72,33 @@ export default function PrizeClerkPage() {
     }, [handleDone, playSound, toast]);
 
     const handleLogin = async () => {
+        if (isSubmitting) return;
         if (!schoolId || !username.trim() || !passcode) {
             playSound('error');
             toast({ variant: 'destructive', title: 'Enter username and passcode.' });
             return;
         }
-        const ok = await login('prizeClerk', {
-            schoolId,
-            username: username.trim(),
-            passcode,
-        });
-        if (ok) {
-            playSound('login');
-            toast({ title: 'Signed in' });
-        } else {
-            playSound('error');
-            toast({
-                variant: 'destructive',
-                title: 'Login failed',
-                description: 'Check credentials or ask an admin to add this account under Desk staff.',
+        setIsSubmitting(true);
+        try {
+            const ok = await login('prizeClerk', {
+                schoolId,
+                username: username.trim(),
+                passcode,
             });
-            setPasscode('');
+            if (ok) {
+                playSound('login');
+                toast({ title: 'Signed in' });
+            } else {
+                playSound('error');
+                toast({
+                    variant: 'destructive',
+                    title: 'Login failed',
+                    description: 'Check credentials or ask an admin to add this account under Desk staff.',
+                });
+                setPasscode('');
+            }
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -189,7 +196,7 @@ export default function PrizeClerkPage() {
                             className="space-y-4"
                             onSubmit={(e) => {
                                 e.preventDefault();
-                                void handleLogin();
+                                if (!isSubmitting) void handleLogin();
                             }}
                         >
                             <div className="space-y-2">
@@ -214,9 +221,18 @@ export default function PrizeClerkPage() {
                                     className="h-12 rounded-xl font-mono tracking-widest text-center"
                                 />
                             </div>
-                            <Button type="submit" className="w-full h-14 rounded-2xl font-black gap-2">
-                                <LogIn className="w-5 h-5" />
-                                Sign in
+                            <Button type="submit" className="w-full h-14 rounded-2xl font-black gap-2" disabled={isSubmitting}>
+                                {isSubmitting ? (
+                                    <>
+                                        <Loader2 className="w-5 h-5 animate-spin" aria-hidden />
+                                        Signing in...
+                                    </>
+                                ) : (
+                                    <>
+                                        <LogIn className="w-5 h-5" aria-hidden />
+                                        Sign in
+                                    </>
+                                )}
                             </Button>
                         </form>
                         <div className="text-center text-xs text-muted-foreground border-t pt-4">

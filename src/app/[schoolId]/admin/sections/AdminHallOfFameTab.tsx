@@ -66,7 +66,7 @@ export function AdminHallOfFameTab({ schoolId }: { schoolId: string }) {
   }, [schoolId]);
 
   return (
-    <Card className="border-t-4 border-primary shadow-md">
+    <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden">
       <CardHeader className="py-6 flex flex-row items-start justify-between gap-4">
         <div className="min-w-0">
           <CardTitle className="flex items-center gap-2">
@@ -83,8 +83,8 @@ export function AdminHallOfFameTab({ schoolId }: { schoolId: string }) {
         </Button>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-          <div className="lg:col-span-2 rounded-2xl border bg-muted/10 p-4">
+        <div className="space-y-4 mb-6">
+          <div className="w-full rounded-2xl border bg-muted/10 p-4">
             <div className="flex items-center gap-2 mb-3">
               <Settings2 className="w-4 h-4 text-muted-foreground" aria-hidden />
               <p className="text-sm font-bold">Display settings</p>
@@ -222,14 +222,14 @@ export function AdminHallOfFameTab({ schoolId }: { schoolId: string }) {
             </div>
           </div>
 
-          <div className="rounded-2xl border bg-muted/10 p-4">
+          <div className="w-full rounded-2xl border bg-muted/10 p-4">
             {isLoading ? (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
                 Loading…
               </div>
             ) : (
-              <LiveScreenPreview href={fullHref} title="Live preview (matches big screen)" />
+              <LiveScreenPreview href={fullHref} title="Live preview (matches big screen)" viewport="fullscreen" />
             )}
           </div>
         </div>
@@ -237,4 +237,3 @@ export function AdminHallOfFameTab({ schoolId }: { schoolId: string }) {
     </Card>
   );
 }
-

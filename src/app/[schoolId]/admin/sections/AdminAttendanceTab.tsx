@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import type { AttendanceRewardRule } from '@/lib/types';
@@ -114,7 +113,7 @@ export function AdminAttendanceTab(props: any) {
   };
 
   return (
-    <>
+    <div className="w-full space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-muted/30 px-4 py-3">
         <div className="max-w-prose">
           <p className="text-sm font-bold">Preferred setup: periods, primary teacher, teacher reward rule.</p>
@@ -325,7 +324,7 @@ export function AdminAttendanceTab(props: any) {
                         {inClass.length === 0 ? (
                           <p className="text-sm text-muted-foreground">No sign-ins recorded yet for this period.</p>
                         ) : (
-                          <ScrollArea className="h-[calc(100vh-28rem)] w-full pr-3">
+                          <div className="w-full overflow-x-auto pr-3">
                             <ul className="space-y-2">
                               {inClass.map((e: any) => (
                                 <li
@@ -344,7 +343,7 @@ export function AdminAttendanceTab(props: any) {
                                 </li>
                               ))}
                             </ul>
-                          </ScrollArea>
+                          </div>
                         )}
                       </div>
                     );
@@ -703,7 +702,7 @@ export function AdminAttendanceTab(props: any) {
               {teacherAttendanceLog.length > 0 && (
                 <div className="space-y-2">
                   <Label>Recent sign-ins (teacher)</Label>
-                  <ScrollArea className="h-[calc(100vh-28rem)] w-full pr-4">
+                  <div className="w-full overflow-x-auto pr-4">
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b text-left">
@@ -724,7 +723,7 @@ export function AdminAttendanceTab(props: any) {
                         ))}
                       </tbody>
                     </table>
-                  </ScrollArea>
+                  </div>
                 </div>
               )}
             </div>
@@ -749,7 +748,7 @@ export function AdminAttendanceTab(props: any) {
               Refresh activity log
             </Button>
           </div>
-          <ScrollArea className="h-[calc(100vh-28rem)] w-full pr-4">
+          <div className="w-full overflow-x-auto pr-4">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-left">
@@ -777,10 +776,10 @@ export function AdminAttendanceTab(props: any) {
                 )}
               </tbody>
             </table>
-          </ScrollArea>
+          </div>
         </CardContent>
       </Card>
-    </>
+    </div>
   );
 }
 

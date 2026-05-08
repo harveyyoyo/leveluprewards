@@ -1,7 +1,7 @@
 
 'use client';
 import type { CSSProperties } from 'react';
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { FaceMismatchBanner } from '@/components/FaceMismatchBanner';
 import { PrizeDashboard } from './PrizeDashboard';
+import { StudentKioskTransitionFlash } from '@/components/StudentKioskTransitionFlash';
 
 const StudentScanner = dynamic(
     () =>
@@ -38,14 +39,34 @@ export default function PrizePage() {
     const { settings } = useSettings();
 
     const { activeStudentId, setActiveStudentId, handleDone, loginMeta, setLoginMeta } = useActiveStudentSession();
+    const [pendingStudentLogin, setPendingStudentLogin] = useState<{
+        id: string;
+        meta?: StudentFoundMeta | { source: 'manual' };
+    } | null>(null);
     const playSound = useArcadeSound();
 
     useEffect(() => {
         const linkedStudentId = searchParams.get('student')?.trim();
-        if (!linkedStudentId || activeStudentId === linkedStudentId) return;
-        setActiveStudentId(linkedStudentId);
-        setLoginMeta({ source: 'manual' });
-    }, [activeStudentId, searchParams, setActiveStudentId, setLoginMeta]);
+        if (!linkedStudentId || activeStudentId === linkedStudentId || pendingStudentLogin?.id === linkedStudentId) return;
+        setPendingStudentLogin({ id: linkedStudentId, meta: { source: 'manual' } });
+    }, [activeStudentId, pendingStudentLogin?.id, searchParams]);
+
+    useEffect(() => {
+        if (!pendingStudentLogin) return;
+        const timerId = window.setTimeout(() => {
+            setActiveStudentId(pendingStudentLogin.id);
+            const meta = pendingStudentLogin.meta;
+            if (meta?.source === 'face') {
+                setLoginMeta({ source: 'face', confidence: meta.confidence });
+            } else if (meta?.source === 'manual') {
+                setLoginMeta({ source: 'manual' });
+            } else {
+                setLoginMeta(null);
+            }
+            setPendingStudentLogin(null);
+        }, 900);
+        return () => window.clearTimeout(timerId);
+    }, [pendingStudentLogin, setActiveStudentId, setLoginMeta]);
 
     const handlePrizeSessionExit = useCallback(() => {
         playSound('swoosh');
@@ -55,14 +76,9 @@ export default function PrizePage() {
 
     const onScannerStudent = useCallback(
         (id: string, meta?: StudentFoundMeta) => {
-            setActiveStudentId(id);
-            if (meta?.source === 'face') {
-                setLoginMeta({ source: 'face', confidence: meta.confidence });
-            } else {
-                setLoginMeta(null);
-            }
+            setPendingStudentLogin({ id, meta });
         },
-        [setActiveStudentId, setLoginMeta],
+        [],
     );
 
     if (!isInitialized || !['student', 'teacher', 'admin', 'school', 'developer', 'prizeClerk'].includes(loginState)) {
@@ -93,6 +109,10 @@ export default function PrizePage() {
                 />
             </>
         );
+    }
+
+    if (pendingStudentLogin) {
+        return <StudentKioskTransitionFlash title="Reward account found" message="Opening rewards..." />;
     }
 
     return (

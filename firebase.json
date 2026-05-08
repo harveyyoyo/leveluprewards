@@ -1,6 +1,9 @@
 {
   "hosting": {
     "source": ".",
+    "predeploy": [
+      "npm run firebase:ssr:prepare"
+    ],
     "ignore": [
       "firebase.json",
       "**/.*",

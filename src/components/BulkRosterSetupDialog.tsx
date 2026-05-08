@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -49,7 +50,7 @@ type Props = {
   onClassesCsv: (text: string) => Promise<void>;
   onTeachersCsv: (text: string) => Promise<void>;
   onStudentsCsv: (text: string) => Promise<void>;
-  onAiCommitSnapshot: (snapshot: ParsedSchoolSnapshot) => Promise<void>;
+  onAiCommitSnapshot: (snapshot: ParsedSchoolSnapshot, options?: { upsertStudents?: boolean }) => Promise<void>;
 };
 
 function snapshotCounts(s: ParsedSchoolSnapshot): Record<string, number> {
@@ -94,12 +95,14 @@ export function BulkRosterSetupDialog({
   const [aiParsing, setAiParsing] = useState(false);
   const [aiImporting, setAiImporting] = useState(false);
   const [aiSnapshot, setAiSnapshot] = useState<ParsedSchoolSnapshot | null>(null);
+  const [aiUpsertStudents, setAiUpsertStudents] = useState(true);
 
   const resetAi = () => {
     setAiPaste('');
     setExtractedDocText('');
     setExtractedDocName('');
     setAiSnapshot(null);
+    setAiUpsertStudents(true);
   };
 
   const wrap =
@@ -221,7 +224,7 @@ export function BulkRosterSetupDialog({
     if (!aiSnapshot || totalInSnapshot(aiSnapshot) === 0) return;
     setAiImporting(true);
     try {
-      await onAiCommitSnapshot(aiSnapshot);
+      await onAiCommitSnapshot(aiSnapshot, { upsertStudents: aiUpsertStudents });
       resetAi();
     } catch (err: unknown) {
       toast({
@@ -479,6 +482,23 @@ export function BulkRosterSetupDialog({
                     {aiImporting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                     Import all ({previewTotal})
                   </Button>
+                </div>
+
+                <div className="flex items-start gap-3 rounded-xl border bg-muted/20 p-3">
+                  <Checkbox
+                    id="ai-upsert-students"
+                    checked={aiUpsertStudents}
+                    onCheckedChange={(v: boolean | 'indeterminate') => setAiUpsertStudents(v === true)}
+                  />
+                  <div className="space-y-1">
+                    <Label htmlFor="ai-upsert-students" className="text-xs font-bold">
+                      Update existing students (merge)
+                    </Label>
+                    <p className="text-[11px] text-muted-foreground leading-snug">
+                      When enabled, students are matched by <span className="font-semibold">first + last name</span>. Missing fields like birthday and contact info are filled in,
+                      and new students are created when no match exists. Existing fields are not overwritten.
+                    </p>
+                  </div>
                 </div>
 
                 {previewTotal > 0 && aiSnapshot && (

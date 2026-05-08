@@ -40,7 +40,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import type { Student, Prize, HistoryItem, AttendanceScheduleSlot, Class, AttendanceRewardRule, LibraryItem } from '@/lib/types';
+import type { Student, Prize, HistoryItem, Class, LibraryItem } from '@/lib/types';
 import { performKioskAttendanceSignIn, describeAttendanceKioskOutcome } from '@/lib/attendance/kioskSignIn';
 import DynamicIcon from '@/components/DynamicIcon';
 import { Progress } from '@/components/ui/progress';
@@ -96,7 +96,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Helper } from '@/components/ui/helper';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -110,6 +109,7 @@ import { studentSeesWelcomeBackOverlay, studentSeesWelcomePage } from '@/lib/stu
 import { prizeIsListed, studentSeesPrizeByTeachers } from '@/lib/prize-utils';
 import { useAuthFetch } from '@/lib/authFetch';
 import { WelcomeOverlay } from '@/components/WelcomeOverlay';
+import { StudentKioskTransitionFlash } from '@/components/StudentKioskTransitionFlash';
 
 const AI_SURPRISE_KIND_LABEL: Record<string, string> = {
   joke: 'Your joke',
@@ -164,7 +164,19 @@ function fallbackPrizeSurprise(
   return selected;
 }
 
-function StudentActivityList({ schoolId, studentId, themed = false, onReprintTicket }: { schoolId: string; studentId: string; themed?: boolean; onReprintTicket?: (item: HistoryItem) => void }) {
+function StudentActivityList({
+  schoolId,
+  studentId,
+  themed = false,
+  onReprintTicket,
+  maxItems,
+}: {
+  schoolId: string;
+  studentId: string;
+  themed?: boolean;
+  onReprintTicket?: (item: HistoryItem) => void;
+  maxItems?: number;
+}) {
   const firestore = useFirestore();
   const activitiesQuery = useMemoFirebase(() => (
     query(
@@ -197,12 +209,13 @@ function StudentActivityList({ schoolId, studentId, themed = false, onReprintTic
     );
   }
 
+  const visibleHistory = typeof maxItems === 'number' ? (history || []).slice(0, Math.max(0, maxItems)) : (history || []);
 
   return (
-    <ScrollArea className="w-full h-full min-h-0 flex-1 pr-3">
+    <div className="w-full overflow-hidden">
       <ul className="space-y-2">
         {history && history.length > 0 ? (
-          history.map((item, index) => {
+          visibleHistory.map((item, index) => {
             const isRedemption = item.desc.startsWith('Redeemed:');
             const isPointGain = item.amount > 0;
 
@@ -323,7 +336,7 @@ function StudentActivityList({ schoolId, studentId, themed = false, onReprintTic
           </div>
         )}
       </ul>
-    </ScrollArea>
+    </div>
   );
 }
 
@@ -340,7 +353,7 @@ function StudentDashboardInner({
   const router = useRouter();
   const { redeemCoupon, redeemPrize, printPrizeTickets, schoolId, isKioskLocked, badges } = useAppContext();
   const firestore = useFirestore();
-  const { functions } = useFirebase();
+  const { functions, auth } = useFirebase();
   const { toast } = useToast();
   const { settings, isFeatureAllowed } = useSettings();
   const authFetch = useAuthFetch();
@@ -350,6 +363,56 @@ function StudentDashboardInner({
   const [showWelcome, setShowWelcome] = useState(true);
   const hasShownWelcomeRef = useRef<string | null>(null);
   const dismissWelcome = useCallback(() => setShowWelcome(false), []);
+
+  // Student kiosk should stay open indefinitely:
+  // - Do not auto-logout on a countdown.
+  // - Keep the screen awake (where supported).
+  // - Refresh auth token periodically so the kiosk session doesn't expire due to inactivity.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (typeof document === 'undefined') return;
+
+    let cancelled = false;
+    let wakeLock: any = null;
+
+    const requestWakeLock = async () => {
+      try {
+        if (cancelled) return;
+        const navAny = navigator as any;
+        if (!navAny?.wakeLock?.request) return;
+        wakeLock = await navAny.wakeLock.request('screen');
+        wakeLock?.addEventListener?.('release', () => {});
+      } catch {
+        // Wake Lock is best-effort: ignore errors (unsupported, permission, etc.).
+      }
+    };
+
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        void requestWakeLock();
+      }
+    };
+
+    void requestWakeLock();
+    document.addEventListener('visibilitychange', onVisibility);
+
+    const refreshId = window.setInterval(() => {
+      const user = auth?.currentUser;
+      if (!user) return;
+      void user.getIdToken(true).catch(() => {});
+    }, 5 * 60 * 1000);
+
+    return () => {
+      cancelled = true;
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.clearInterval(refreshId);
+      try {
+        void wakeLock?.release?.();
+      } catch {
+        // ignore
+      }
+    };
+  }, [auth]);
 
   useEffect(() => {
     // Only show welcome if it's a new student ID session
@@ -365,6 +428,39 @@ function StudentDashboardInner({
 
   const studentDocRef = useMemoFirebase(() => schoolId ? doc(firestore, 'schools', schoolId, 'students', studentId) : null, [firestore, schoolId, studentId]);
   const { data: student, isLoading: studentLoading } = useDoc<Student>(studentDocRef);
+  const attendanceConfigRef = useMemoFirebase(
+    () => (schoolId ? doc(firestore, 'schools', schoolId, 'attendance', 'config') : null),
+    [firestore, schoolId],
+  );
+  const { data: attendanceConfig } = useDoc<{ attendanceTimeZone?: string }>(attendanceConfigRef);
+
+  const todayInSchoolTz = useMemo(() => {
+    const tz = typeof attendanceConfig?.attendanceTimeZone === 'string' ? attendanceConfig.attendanceTimeZone.trim() : '';
+    const d = new Date();
+    if (!tz) {
+      const full = format(d, 'yyyy-MM-dd');
+      const md = format(d, 'MM-dd');
+      return { full, md };
+    }
+    try {
+      const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: tz,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).formatToParts(d);
+      const year = parts.find((p) => p.type === 'year')?.value || format(d, 'yyyy');
+      const month = parts.find((p) => p.type === 'month')?.value || format(d, 'MM');
+      const day = parts.find((p) => p.type === 'day')?.value || format(d, 'dd');
+      return { full: `${year}-${month}-${day}`, md: `${month}-${day}` };
+    } catch {
+      const full = format(d, 'yyyy-MM-dd');
+      const md = format(d, 'MM-dd');
+      return { full, md };
+    }
+  }, [attendanceConfig?.attendanceTimeZone]);
+
+  const birthdayToday = !!student?.birthday && student.birthday.substring(5) === todayInSchoolTz.md;
 
   const appConfigRef = useMemoFirebase(() => (firestore ? doc(firestore, 'appConfig', 'global') : null), [firestore]);
   const { data: appConfig } = useDoc<{ appLogoUrl?: string; appName?: string; appTagline?: string }>(appConfigRef);
@@ -384,20 +480,7 @@ function StudentDashboardInner({
   const classesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'classes') : null, [firestore, schoolId]);
   const { data: classes } = useCollection<Class>(classesQuery);
 
-  const periodsQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'periods') : null, [firestore, schoolId]);
-  const { data: periods } = useCollection<AttendanceScheduleSlot>(periodsQuery);
-
-  const teacherRewardsQuery = useMemoFirebase(() => {
-    if (!schoolId || !student?.classId || !classes) return null;
-    const cls = classes.find((c) => c.id === student.classId);
-    const teacherId = cls?.primaryTeacherId;
-    if (!teacherId) return null;
-    return collection(firestore, 'schools', schoolId, 'teachers', teacherId, 'attendanceRewards');
-  }, [firestore, schoolId, student?.classId, classes]);
-  const { data: teacherRewards } = useCollection<AttendanceRewardRule>(teacherRewardsQuery);
-
   const [couponCode, setCouponCode] = useState('');
-  const [logoutTimer, setLogoutTimer] = useState(settings.kioskSessionTimeoutSec ?? 15);
   const [flyPointsValue, setFlyPointsValue] = useState<number | null>(null);
   const [celebrationMessage, setCelebrationMessage] = useState<string | null>(null);
   const celebrationQueueRef = useRef<string[]>([]);
@@ -499,6 +582,38 @@ function StudentDashboardInner({
     toast({ title: 'Logged Out', description: 'Returning to kiosk home.' });
   }, [onDone, playSound, toast]);
 
+  const [logoutTimer, setLogoutTimer] = useState(settings.kioskSessionTimeoutSec ?? 15);
+
+  const resetLogoutTimer = useCallback(() => {
+    if (isKioskLocked) return;
+    setLogoutTimer(settings.kioskSessionTimeoutSec ?? 15);
+  }, [isKioskLocked, settings.kioskSessionTimeoutSec]);
+
+  useEffect(() => {
+    if (isKioskLocked) return;
+    if (logoutTimer <= 0) {
+      onDone();
+      toast({ title: 'Session ended', description: 'Returning to kiosk home.' });
+      return;
+    }
+    const timerId = window.setTimeout(() => setLogoutTimer((t) => t - 1), 1000);
+    return () => window.clearTimeout(timerId);
+  }, [isKioskLocked, logoutTimer, onDone, toast]);
+
+  useEffect(() => {
+    if (isKioskLocked) return;
+    const onActivity = () => resetLogoutTimer();
+    const events: (keyof WindowEventMap)[] = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'pointerdown', 'wheel', 'scroll'];
+    for (const ev of events) {
+      window.addEventListener(ev, onActivity, { passive: true });
+    }
+    return () => {
+      for (const ev of events) {
+        window.removeEventListener(ev, onActivity);
+      }
+    };
+  }, [isKioskLocked, resetLogoutTimer]);
+
   const [activeTab, setActiveTab] = useState('manual');
   const [hasCameraPermission, setHasCameraPermission] = useState(true);
 
@@ -575,8 +690,8 @@ function StudentDashboardInner({
   useEffect(() => {
     if (!student || !schoolId || !functions) return;
     
-    const todayFull = format(new Date(), 'yyyy-MM-dd');
-    const todayMD = format(new Date(), 'MM-dd');
+    const todayFull = todayInSchoolTz.full;
+    const todayMD = todayInSchoolTz.md;
     const lastAwarded = student.lastSpecialDayAwarded || {};
     
     let totalAward = 0;
@@ -589,7 +704,7 @@ function StudentDashboardInner({
         const birthMD = student.birthday.substring(5); // MM-DD
         if (birthMD === todayMD && lastAwarded.birthday !== todayFull) {
             totalAward += settings.birthdayPointsAmount || 0;
-            descriptions.push(`Happy Birthday! 🎉 (+${settings.birthdayPointsAmount} pts)`);
+            descriptions.push(`Happy Birthday! 🎂 (+${settings.birthdayPointsAmount} pts)`);
             newLastAwarded.birthday = todayFull;
         }
     }
@@ -628,39 +743,56 @@ function StudentDashboardInner({
         })();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [student?.id, settings.enableBirthdayPoints, settings.enableSpecialDayPoints, schoolId, functions, playSound, queueCelebration]);
+  }, [
+    student?.id,
+    todayInSchoolTz.full,
+    todayInSchoolTz.md,
+    settings.enableBirthdayPoints,
+    settings.enableSpecialDayPoints,
+    schoolId,
+    functions,
+    playSound,
+    queueCelebration,
+  ]);
 
-  const resetTimer = useCallback(() => {
-    if (!isKioskLocked) {
-      setLogoutTimer(settings.kioskSessionTimeoutSec ?? 15);
-    }
-  }, [isKioskLocked, settings.kioskSessionTimeoutSec]);
+  const resetTimer = useCallback(() => {}, []);
 
+  const [activityMaxItems, setActivityMaxItems] = useState(7);
+  const activityPanelRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
-    if (isKioskLocked || confirmingPrize || isRedeemingPrize || prizeTicketData || aiSurpriseOpen) return;
-    if (logoutTimer <= 0) {
-      onDone();
-      return;
-    }
-    const timerId = setTimeout(() => {
-      setLogoutTimer(logoutTimer - 1);
-    }, 1000);
+    if (typeof window === 'undefined') return;
+    const rowPx = 66; // approximates one activity row including spacing
+    const headerAndPadding = 64; // Activity card header + padding inside content area
 
-    return () => clearTimeout(timerId);
-  }, [logoutTimer, onDone, isKioskLocked, confirmingPrize, isRedeemingPrize, prizeTicketData, aiSurpriseOpen]);
-
-  // Also reset auto‑logout timer when there is general user activity (mouse / keyboard / touch).
-  useEffect(() => {
-    if (isKioskLocked) return;
-    const handleActivity = () => {
-      resetTimer();
+    const computeFromPanel = () => {
+      const el = activityPanelRef.current;
+      if (!el) return;
+      const h = el.getBoundingClientRect().height || 0;
+      const available = Math.max(0, h - headerAndPadding);
+      const rows = Math.floor(available / rowPx);
+      setActivityMaxItems(Math.max(3, Math.min(20, rows || 3)));
     };
-    const events: (keyof WindowEventMap)[] = ['mousemove', 'mousedown', 'keydown', 'touchstart'];
-    events.forEach((ev) => window.addEventListener(ev, handleActivity));
+
+    computeFromPanel();
+    window.addEventListener('resize', computeFromPanel, { passive: true });
+
+    let ro: ResizeObserver | null = null;
+    try {
+      ro = new ResizeObserver(() => computeFromPanel());
+      if (activityPanelRef.current) ro.observe(activityPanelRef.current);
+    } catch {
+      // ignore
+    }
+
     return () => {
-      events.forEach((ev) => window.removeEventListener(ev, handleActivity));
+      window.removeEventListener('resize', computeFromPanel);
+      try {
+        ro?.disconnect();
+      } catch {
+        // ignore
+      }
     };
-  }, [resetTimer, isKioskLocked]);
+  }, []);
 
   const handleRedeemCoupon = useCallback(async (codeToRedeem?: string) => {
     if (!student) return;
@@ -1014,15 +1146,32 @@ function StudentDashboardInner({
   }
 
   // Normalize: per-student theme, else school default from admin settings.
-  const activeTheme = resolveStudentThemeWithSchoolDefault(
+  const baseTheme = resolveStudentThemeWithSchoolDefault(
     student.theme,
     settings.defaultStudentTheme,
     settings.enableStudentThemes,
   );
-  const fontScale = activeTheme?.fontScale ?? 1.15;
-  const themeBg = activeTheme?.background || '#020617';
-  const computedThemeText = activeTheme?.text || (getContrastColor(themeBg) === 'black' ? '#020617' : '#ffffff');
-  const primaryForeground = activeTheme ? primaryForegroundFor(activeTheme) : '#ffffff';
+  const birthdayRainbowTheme = birthdayToday
+    ? {
+        background: '#070A18',
+        primary: '#ff2d55',
+        accent: '#22d3ee',
+        cardBackground: 'rgba(10, 15, 35, 0.72)',
+        backgroundStyle:
+          'radial-gradient(circle at 15% 20%, rgba(255, 45, 85, 0.28) 0%, transparent 46%), radial-gradient(circle at 85% 10%, rgba(34, 211, 238, 0.24) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(168, 85, 247, 0.22) 0%, transparent 55%), radial-gradient(circle at 20% 85%, rgba(34, 197, 94, 0.20) 0%, transparent 55%), linear-gradient(135deg, rgba(59, 130, 246, 0.18), rgba(236, 72, 153, 0.16), rgba(245, 158, 11, 0.14))',
+        emoji: '🎂',
+      }
+    : null;
+  const effectiveTheme = birthdayRainbowTheme
+    ? ({ ...(baseTheme || {}), ...birthdayRainbowTheme } as NonNullable<typeof baseTheme>)
+    : baseTheme;
+  // Keep legacy variable name used widely in this file.
+  const activeTheme = effectiveTheme;
+
+  const fontScale = effectiveTheme?.fontScale ?? 1.15;
+  const themeBg = effectiveTheme?.background || '#020617';
+  const computedThemeText = effectiveTheme?.text || (getContrastColor(themeBg) === 'black' ? '#020617' : '#ffffff');
+  const primaryForeground = effectiveTheme ? primaryForegroundFor(effectiveTheme) : '#ffffff';
 
   const welcomeBackdropActive =
     showWelcome && studentSeesWelcomeBackOverlay(settings, student);
@@ -1031,22 +1180,29 @@ function StudentDashboardInner({
     <TooltipProvider>
       <div
         className={cn(
-          "mt-3 md:mt-8 space-y-3 md:space-y-4 relative max-w-full mx-auto px-3 md:px-6 min-h-screen flex flex-col",
-          settings.enableThemeAnimations && !!activeTheme && "theme-theme-elements-animated theme-motion-override",
+          // Lock the dashboard to the viewport so inner panes scroll
+          // (prevents Activity + CTA from falling below the fold).
+          "w-full max-w-none pt-3 md:pt-8 space-y-3 md:space-y-4 relative px-3 md:px-6 h-[calc(100dvh-4.25rem)] overflow-x-hidden overflow-y-hidden flex flex-col",
+          settings.enableThemeAnimations && !!effectiveTheme && "theme-theme-elements-animated theme-motion-override",
           isGraphic ? 'animate-in fade-in duration-500' : '',
           // Avoid large bottom padding that leaves a visible gap.
           settings.displayMode === 'app' && 'pb-6'
         )}
-        style={activeTheme ? ({
+        style={effectiveTheme ? ({
           '--theme-bg': themeBg,
           '--theme-text': computedThemeText,
-          '--theme-primary': activeTheme.primary || 'hsl(var(--primary))',
+          '--theme-primary': effectiveTheme.primary || 'hsl(var(--primary))',
           '--theme-primary-foreground': primaryForeground,
-          '--theme-card': activeTheme.cardBackground || 'hsl(var(--card))',
-          '--theme-accent': activeTheme.accent || 'hsl(var(--accent))',
-          background: activeTheme.backgroundStyle || `radial-gradient(circle at top left, ${activeTheme.primary || 'hsl(var(--primary))'}22 0, transparent 45%), radial-gradient(circle at bottom right, ${activeTheme.accent || 'hsl(var(--accent))'}22 0, ${themeBg || 'transparent'} 55%)`,
+          '--theme-card': effectiveTheme.cardBackground || 'hsl(var(--card))',
+          '--theme-accent': effectiveTheme.accent || 'hsl(var(--accent))',
+          ...(effectiveTheme.backgroundStyle
+            ? { background: effectiveTheme.backgroundStyle }
+            : {
+                backgroundColor: themeBg,
+                backgroundImage: `radial-gradient(circle at top left, ${effectiveTheme.primary || 'hsl(var(--primary))'}22 0, transparent 45%), radial-gradient(circle at bottom right, ${effectiveTheme.accent || 'hsl(var(--accent))'}22 0, transparent 55%)`,
+              }),
           color: 'var(--theme-text)',
-          fontFamily: activeTheme.fontFamily || 'inherit',
+          fontFamily: effectiveTheme.fontFamily || 'inherit',
           fontSize: fontScale !== 1 ? `${fontScale}em` : undefined,
         } as unknown as React.CSSProperties) : ({
           fontSize: '1.15em',
@@ -1059,7 +1215,7 @@ function StudentDashboardInner({
           ['--ring' as any]: complementTripletForNavId('redeem', settings.colorScheme),
         } as any)}
       >
-        {activeTheme?.fontFamily && <GoogleFontLoader fontFamily={activeTheme.fontFamily} />}
+        {effectiveTheme?.fontFamily && <GoogleFontLoader fontFamily={effectiveTheme.fontFamily} />}
 
         <div className="flex flex-1 flex-col min-h-0 min-w-0 w-full space-y-3 md:space-y-4">
         <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
@@ -1084,7 +1240,7 @@ function StudentDashboardInner({
         )}
 
         {/* Graphic Elements */}
-        {isGraphic && !activeTheme && (
+        {isGraphic && !effectiveTheme && (
           <div className="absolute -top-12 right-0 w-32 h-32 opacity-20 pointer-events-none z-0">
             <Star className="w-full h-full text-amber-400 fill-amber-400 opacity-80" />
           </div>
@@ -1094,17 +1250,17 @@ function StudentDashboardInner({
         <Card
           className={cn(
             "overflow-hidden shadow-xl border-t-8 border-chart-1",
-            isGraphic && !activeTheme
+            isGraphic && !effectiveTheme
               ? animBackdrop
                 ? "bg-card/90 backdrop-blur-md border-border/40"
                 : "bg-gradient-to-br from-indigo-100/50 to-indigo-50/30 dark:from-indigo-950/40 dark:to-slate-900/40"
-              : !activeTheme ? "bg-card dark:bg-slate-800" : "",
+              : !effectiveTheme ? "bg-card dark:bg-slate-800" : "",
           )}
-          style={activeTheme ? { backgroundColor: 'var(--theme-card)', color: 'var(--theme-text)', borderColor: 'var(--theme-primary)' } : undefined}
+          style={effectiveTheme ? { backgroundColor: 'var(--theme-card)', color: 'var(--theme-text)', borderColor: 'var(--theme-primary)' } : undefined}
         >
           <CardContent className="p-4 md:p-5 flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="space-y-1 text-center md:text-left">
-              <p className="text-xs font-bold uppercase tracking-widest" style={{ color: activeTheme ? 'var(--theme-text)' : undefined, opacity: activeTheme ? 0.7 : undefined }}>Welcome back,</p>
+              <p className="text-xs font-bold uppercase tracking-widest" style={{ color: effectiveTheme ? 'var(--theme-text)' : undefined, opacity: effectiveTheme ? 0.7 : undefined }}>Welcome back,</p>
               <div className="flex items-center gap-3 mt-1">
                 <div className="w-12 h-12 rounded-full overflow-hidden bg-primary/10 border border-border/60 flex items-center justify-center font-bold text-primary flex-shrink-0">
                   {student.photoUrl ? (
@@ -1119,21 +1275,29 @@ function StudentDashboardInner({
                     <h2 className="text-2xl md:text-4xl font-black leading-tight">
                       {student.firstName} {student.lastName}
                     </h2>
-                    {(student.customEmojiUrl || activeTheme?.emoji) && (
+                    {birthdayToday ? (
+                      <span
+                        className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20 px-2 py-1 text-[10px] font-black uppercase tracking-widest"
+                        title="Birthday today"
+                      >
+                        🎂 Birthday
+                      </span>
+                    ) : null}
+                    {(student.customEmojiUrl || effectiveTheme?.emoji) && (
                       student.customEmojiUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={student.customEmojiUrl}
                           alt=""
                           className="theme-animated-emoji h-9 w-9 md:h-11 md:w-11 shrink-0 object-contain"
-                          style={{ filter: activeTheme?.primary ? `drop-shadow(0 0 8px ${activeTheme.primary}) drop-shadow(0 0 16px ${activeTheme.primary})` : undefined }}
+                          style={{ filter: effectiveTheme?.primary ? `drop-shadow(0 0 8px ${effectiveTheme.primary}) drop-shadow(0 0 16px ${effectiveTheme.primary})` : undefined }}
                         />
                       ) : (
                         <span
                           className="theme-animated-emoji text-3xl md:text-4xl leading-none"
-                          style={{ filter: activeTheme?.primary ? `drop-shadow(0 0 8px ${activeTheme.primary}) drop-shadow(0 0 16px ${activeTheme.primary})` : undefined }}
+                          style={{ filter: effectiveTheme?.primary ? `drop-shadow(0 0 8px ${effectiveTheme.primary}) drop-shadow(0 0 16px ${effectiveTheme.primary})` : undefined }}
                         >
-                          {activeTheme?.emoji ?? ''}
+                          {effectiveTheme?.emoji ?? ''}
                         </span>
                       )
                     )}
@@ -1168,12 +1332,12 @@ function StudentDashboardInner({
               </div>
             </div>
             <div className="text-center md:text-right">
-              <p className="text-xs font-bold uppercase tracking-widest mb-0.5" style={{ color: activeTheme ? 'var(--theme-text)' : undefined, opacity: activeTheme ? 0.7 : undefined }}>Current Balance</p>
-              <div className="flex items-baseline gap-1.5" style={{ color: activeTheme ? 'var(--theme-primary)' : undefined }}>
-                <span className="text-4xl md:text-5xl font-black leading-none" style={{ color: activeTheme ? 'var(--theme-primary)' : 'hsl(var(--primary))' }}>
+              <p className="text-xs font-bold uppercase tracking-widest mb-0.5" style={{ color: effectiveTheme ? 'var(--theme-text)' : undefined, opacity: effectiveTheme ? 0.7 : undefined }}>Current Balance</p>
+              <div className="flex items-baseline gap-1.5" style={{ color: effectiveTheme ? 'var(--theme-primary)' : undefined }}>
+                <span className="text-4xl md:text-5xl font-black leading-none" style={{ color: effectiveTheme ? 'var(--theme-primary)' : 'hsl(var(--primary))' }}>
                   {(student.points || 0).toLocaleString()}
                 </span>
-                <span className="text-lg md:text-xl font-bold uppercase tracking-widest" style={{ color: activeTheme ? 'var(--theme-primary)' : 'hsl(var(--primary) / 0.6)', opacity: 0.6 }}>pts</span>
+                <span className="text-lg md:text-xl font-bold uppercase tracking-widest" style={{ color: effectiveTheme ? 'var(--theme-primary)' : 'hsl(var(--primary) / 0.6)', opacity: 0.6 }}>pts</span>
               </div>
               <div className="mt-3 flex flex-wrap items-center justify-center gap-2 md:justify-end">
                 <Button
@@ -1247,25 +1411,25 @@ function StudentDashboardInner({
           </DialogContent>
         </Dialog>
 
-        <div className="grid min-w-0 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_min(252px,28vw)] gap-4 relative z-10 flex-1 min-h-0 items-stretch">
+        <div className="grid w-full min-w-0 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_min(320px,28vw)] gap-4 relative z-10 flex-1 min-h-0 items-stretch">
           {/* Left Section: Content */}
-          <div className="min-w-0 flex flex-1 min-h-0 flex-col gap-3">
+          <div className="min-w-0 flex flex-1 min-h-0 flex-col gap-3 overflow-y-auto pr-1">
             <StudentGoalsCard
               schoolId={schoolId!}
               student={student}
               enabled={settings.enableGoals && isFeatureAllowed('enableGoals')}
-              themed={!!activeTheme}
-              themeForeground={activeTheme ? 'var(--theme-primary)' : undefined}
+              themed={!!effectiveTheme}
+              themeForeground={effectiveTheme ? 'var(--theme-primary)' : undefined}
             />
 
             <Card
               className={cn(
                 "relative z-20 w-full min-w-0 max-w-full origin-center overflow-hidden rounded-3xl border-2 shadow-[0_24px_60px_rgba(15,23,42,0.28)] ring-4 ring-offset-4 ring-offset-background transition-transform duration-300",
-                !activeTheme
+                !effectiveTheme
                   ? "border-amber-300/80 bg-white ring-amber-200/70 dark:border-amber-400/60 dark:bg-slate-900 dark:ring-amber-500/20"
                   : "",
               )}
-              style={activeTheme ? {
+              style={effectiveTheme ? {
                 backgroundColor: 'var(--theme-card)',
                 borderColor: 'var(--theme-primary)',
                 boxShadow: '0 24px 60px color-mix(in srgb, var(--theme-primary) 34%, transparent)',
@@ -1273,12 +1437,12 @@ function StudentDashboardInner({
                 ['--tw-ring-color' as string]: 'color-mix(in srgb, var(--theme-primary) 32%, transparent)',
               } : undefined}
             >
-              <CardHeader className="pb-3 border-b" style={activeTheme ? { borderColor: 'var(--theme-bg)' } : undefined}>
+              <CardHeader className="pb-3 border-b" style={effectiveTheme ? { borderColor: 'var(--theme-bg)' } : undefined}>
                 <Helper content="Scan or type a coupon code to add points. Use the camera tab to scan a QR code. Use the Logout button on this card to exit.">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <CardTitle className="text-sm font-black flex items-center gap-2">
-                      <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", !activeTheme && "bg-slate-100 dark:bg-slate-800")} style={activeTheme ? { backgroundColor: 'var(--theme-bg)' } : undefined}>
-                        <Wallet className="w-4 h-4" style={activeTheme ? { color: 'var(--theme-primary)' } : undefined} />
+                      <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", !effectiveTheme && "bg-slate-100 dark:bg-slate-800")} style={effectiveTheme ? { backgroundColor: 'var(--theme-bg)' } : undefined}>
+                        <Wallet className="w-4 h-4" style={effectiveTheme ? { color: 'var(--theme-primary)' } : undefined} />
                       </div>
                       Redeem Coupon Code
                     </CardTitle>
@@ -1288,55 +1452,23 @@ function StudentDashboardInner({
                           "px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-colors whitespace-nowrap",
                           isKioskLocked
                             ? "bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-red-100 dark:border-red-800"
-                            : "bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-800"
+                            : "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border-emerald-100 dark:border-emerald-800"
                         )}
-                        role="timer"
-                        aria-live={logoutTimer <= 5 ? 'assertive' : 'off'}
                         aria-label={isKioskLocked ? 'Kiosk locked' : `Auto logout in ${logoutTimer} seconds`}
                       >
-                        <span>{isKioskLocked ? 'Kiosk Locked • ' : ''}Auto-logout in {logoutTimer}s</span>
+                        <span>
+                          {isKioskLocked ? 'Kiosk Locked • ' : ''}
+                          {isKioskLocked ? 'Stays signed in' : `Auto-logout: ${logoutTimer}s`}
+                        </span>
                       </div>
                       <div className="relative">
-                        {!isKioskLocked && (
-                          <svg
-                            className="absolute inset-0 w-full h-full pointer-events-none motion-reduce:hidden"
-                            viewBox="0 0 36 36"
-                            aria-hidden="true"
-                          >
-                            <circle
-                              cx="18"
-                              cy="18"
-                              r="16"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeOpacity="0.15"
-                              strokeWidth="2"
-                            />
-                            <circle
-                              cx="18"
-                              cy="18"
-                              r="16"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeDasharray={2 * Math.PI * 16}
-                              strokeDashoffset={2 * Math.PI * 16 * (1 - Math.max(0, Math.min(1, logoutTimer / 15)))}
-                              transform="rotate(-90 18 18)"
-                              className={cn(
-                                "transition-[stroke-dashoffset] duration-500 ease-linear",
-                                logoutTimer <= 5 ? "text-rose-500" : "text-amber-500"
-                              )}
-                            />
-                          </svg>
-                        )}
                         <Button
                           type="button"
                           variant="outline"
                           size="sm"
                           className="relative h-8 px-3.5 rounded-full text-[11px] font-bold uppercase tracking-widest whitespace-nowrap"
                           onClick={handleManualLogout}
-                          aria-label={`Log out now. Auto logout in ${logoutTimer} seconds.`}
+                          aria-label="Log out now."
                         >
                           Logout
                         </Button>
@@ -1457,10 +1589,10 @@ function StudentDashboardInner({
               </CardContent>
             </Card>
 
-            {/* Eligible Rewards — full card is boxed; grid scrolls so “See all rewards” stays visible */}
+            {/* Eligible Rewards */}
             <Card
                 className={cn(
-                  'flex flex-1 min-h-0 flex-col overflow-hidden rounded-2xl border-2 shadow-md ring-1 ring-black/5 dark:ring-white/10',
+                  'flex flex-col overflow-hidden rounded-2xl border-2 shadow-md ring-1 ring-black/5 dark:ring-white/10',
                   !activeTheme && 'border-slate-200 bg-white dark:border-slate-600 dark:bg-slate-900',
                 )}
                 style={
@@ -1485,23 +1617,23 @@ function StudentDashboardInner({
                     : undefined
                 }
               >
-                          <Helper content="Rewards you can afford right now. Tap one to redeem it here, or use See all rewards to browse the full rewards shop.">
+                          <Helper content="Rewards you can afford right now. Tap a box to redeem.">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={activeTheme ? { backgroundColor: 'var(--theme-bg)' } : undefined}>
                       <Award className="w-4 h-4" style={activeTheme ? { color: 'var(--theme-primary)' } : undefined} />
                     </div>
                     <div className="min-w-0">
                       <CardTitle className="text-sm font-black">Eligible Rewards</CardTitle>
-                      <CardDescription className="text-[10px] font-medium leading-snug" style={activeTheme ? { color: 'var(--theme-text)', opacity: 0.7 } : undefined}>Tap a reward to redeem it here.</CardDescription>
+                      <CardDescription className="text-[10px] font-medium leading-snug" style={activeTheme ? { color: 'var(--theme-text)', opacity: 0.7 } : undefined}>Tap a reward box to redeem.</CardDescription>
                     </div>
                   </div>
                 </Helper>
               </CardHeader>
-              <CardContent className="flex flex-1 flex-col gap-2 min-h-0 px-3 pb-3 pt-2 sm:px-4">
-                <div className="min-h-0 w-full flex-1 overflow-y-auto overscroll-y-contain pr-0.5 [-webkit-overflow-scrolling:touch] [scrollbar-gutter:stable]">
-                <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-1.5 sm:gap-2">
+              <CardContent className="px-3 pb-3 pt-2 sm:px-4">
+                <div className="w-full pr-0.5">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-2.5">
                   {prizesLoading ? (
-                    [...Array(8)].map((_, i) => <Skeleton key={i} className="aspect-square max-h-[5.25rem] w-full rounded-lg" />)
+                    [...Array(8)].map((_, i) => <Skeleton key={i} className="min-h-[7.5rem] sm:min-h-[8rem] w-full rounded-xl" />)
                   ) : (prizes || [])
                     .filter(p => prizeIsListed(p) && p.points <= student.points && studentSeesPrizeByTeachers(student, p) && (!p.classId || student.classId === p.classId))
                     .sort((a, b) => b.points - a.points)
@@ -1515,7 +1647,7 @@ function StudentDashboardInner({
                         }}
                         aria-label={`Redeem ${reward.name || 'prize'}`}
                         className={cn(
-                          "min-h-0 min-w-0 p-1.5 sm:p-2 rounded-md transition-all flex flex-col items-center text-center gap-0.5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transform duration-300 group relative overflow-hidden cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+                          "min-h-[7.5rem] sm:min-h-[8rem] min-w-0 p-3 sm:p-3.5 rounded-2xl transition-all flex flex-col items-center justify-between text-center gap-1.5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transform duration-300 group relative overflow-hidden cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
                           !activeTheme && "border border-slate-100 dark:border-slate-800 bg-white/40 dark:bg-slate-800/40",
                         )}
                         style={activeTheme ? { backgroundColor: 'var(--theme-bg)', color: 'var(--theme-text)', borderColor: 'var(--theme-primary)', borderWidth: 1, borderStyle: 'solid' } : undefined}
@@ -1527,23 +1659,34 @@ function StudentDashboardInner({
                         )}
                         <p
                           className={cn(
-                            "text-[11px] sm:text-[12px] font-black leading-tight line-clamp-2 break-words [overflow-wrap:anywhere] z-10",
+                            "text-sm sm:text-base font-black leading-tight line-clamp-2 break-words [overflow-wrap:anywhere] z-10",
                             !activeTheme && "text-slate-800 dark:text-white",
                           )}
                           style={activeTheme ? { color: 'var(--theme-text)' } : undefined}
                         >
                           {reward.name}
                         </p>
-                        <Badge
-                          variant="secondary"
-                          className={cn(
-                            "font-black text-[7px] sm:text-[8px] tracking-wider rounded px-1 py-0",
-                            !activeTheme && "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300",
-                          )}
-                          style={activeTheme ? { backgroundColor: 'var(--theme-primary)', color: primaryForeground } : undefined}
-                        >
-                          {(reward.points || 0).toLocaleString()} PTS
-                        </Badge>
+                        <div className="flex flex-col items-center gap-1 z-10 w-full shrink-0">
+                          <Badge
+                            variant="secondary"
+                            className={cn(
+                              "font-black text-[10px] tracking-wider rounded-full px-2 py-0.5",
+                              !activeTheme && "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300",
+                            )}
+                            style={activeTheme ? { backgroundColor: 'var(--theme-primary)', color: primaryForeground } : undefined}
+                          >
+                            {(reward.points || 0).toLocaleString()} PTS
+                          </Badge>
+                          <span
+                            className={cn(
+                              'text-[10px] font-bold uppercase tracking-wide',
+                              !activeTheme && 'text-slate-500 dark:text-slate-400',
+                            )}
+                            style={activeTheme ? { color: 'var(--theme-text)', opacity: 0.85 } : undefined}
+                          >
+                            click here
+                          </span>
+                        </div>
                       </button>
                     ))}
                   {!prizesLoading && (prizes || []).filter(p => prizeIsListed(p) && p.points <= student.points).length === 0 && (
@@ -1570,32 +1713,6 @@ function StudentDashboardInner({
                 </div>
               </CardContent>
             </Card>
-
-            <Button
-              asChild
-              className={cn(
-                'mt-auto w-full h-11 sm:h-12 text-xs sm:text-sm font-black rounded-xl shadow-lg transition-all active:scale-[0.99] uppercase tracking-wide',
-                !activeTheme && 'bg-gradient-to-r from-primary to-primary/90',
-              )}
-              style={
-                activeTheme
-                  ? {
-                      backgroundColor: 'var(--theme-primary)',
-                      color: primaryForeground,
-                    }
-                  : undefined
-              }
-            >
-              <Link
-                href={`/${schoolId}/prize?student=${encodeURIComponent(student.id)}`}
-                onClick={() => playSound('click')}
-                className="flex items-center justify-center gap-2"
-              >
-                <Gift className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" aria-hidden />
-                Click here for more rewards and prizes
-                <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0 opacity-90" aria-hidden />
-              </Link>
-            </Button>
 
             <AlertDialog open={!!confirmingPrize} onOpenChange={(open) => {
               if (!open && !isRedeemingPrize) setConfirmingPrize(null);
@@ -1704,12 +1821,13 @@ function StudentDashboardInner({
             />
           </div>
 
-          {/* Right Section: Activity — narrow column, boxed frame */}
+          {/* Right Section: Activity — stays on the right, no scroll, truncated to fit */}
           <Card
+            ref={activityPanelRef}
             className={cn(
-              'min-w-0 w-full max-w-sm mx-auto lg:mx-0 lg:max-w-none flex flex-col min-h-0 rounded-2xl border-2 shadow-md ring-1 ring-black/5 dark:ring-white/10',
+              'min-w-0 w-full max-w-sm mx-auto lg:mx-0 lg:max-w-none flex flex-col min-h-0 rounded-2xl border-2 shadow-md ring-1 ring-black/5 dark:ring-white/10 overflow-hidden',
               // Keep Activity fully visible on-screen on wide layouts.
-              'lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100dvh-8rem)]',
+              'lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100dvh-8.75rem)]',
               !activeTheme && 'border-slate-200 bg-white dark:border-slate-600 dark:bg-slate-900',
             )}
             style={
@@ -1734,7 +1852,7 @@ function StudentDashboardInner({
                   : undefined
               }
             >
-              <Helper content="A log of your most recent point transactions, including coupons redeemed and prizes purchased.">
+              <Helper content="A log of your most recent point transactions. Activity is truncated to what fits on-screen.">
                 <CardTitle
                   className={cn("text-xs font-black flex items-center gap-1.5", !activeTheme && "text-slate-800 dark:text-white")}
                   style={activeTheme ? { color: 'var(--theme-text)' } : undefined}
@@ -1746,8 +1864,14 @@ function StudentDashboardInner({
                 </CardTitle>
               </Helper>
             </CardHeader>
-            <CardContent className="flex-1 min-h-0 flex flex-col rounded-b-2xl overflow-hidden pt-2 pb-3 px-0.5">
-              <StudentActivityList schoolId={schoolId} studentId={student.id} themed={!!activeTheme} onReprintTicket={handleReprint} />
+            <CardContent className="flex-1 min-h-0 overflow-hidden pt-2 pb-3 px-0.5">
+              <StudentActivityList
+                schoolId={schoolId}
+                studentId={student.id}
+                themed={!!effectiveTheme}
+                onReprintTicket={handleReprint}
+                maxItems={activityMaxItems}
+              />
             </CardContent>
           </Card>
         </div>
@@ -1788,7 +1912,7 @@ function StudentDashboardInner({
 }
 
 export default function StudentLoginPage() {
-  const { loginState, isInitialized, schoolId } = useAppContext();
+  const { loginState, isInitialized, schoolId, login } = useAppContext();
   const router = useRouter();
   const { toast } = useToast();
   const playSound = useArcadeSound();
@@ -1804,20 +1928,34 @@ export default function StudentLoginPage() {
   const { data: appConfig } = useDoc<{ appLogoUrl?: string }>(appConfigDocRef);
 
   const { activeStudentId, setActiveStudentId, handleDone, loginMeta, setLoginMeta } = useStudentKioskSession();
+  const [pendingStudentLogin, setPendingStudentLogin] = useState<{
+    id: string;
+    meta?: StudentFoundMeta;
+  } | null>(null);
   const activeStudentIdRef = useRef<string | null>(null);
   activeStudentIdRef.current = activeStudentId;
 
   const onScannerStudent = useCallback(
     (id: string, meta?: StudentFoundMeta) => {
-      setActiveStudentId(id);
+      setPendingStudentLogin({ id, meta });
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (!pendingStudentLogin) return;
+    const timerId = window.setTimeout(() => {
+      setActiveStudentId(pendingStudentLogin.id);
+      const meta = pendingStudentLogin.meta;
       if (meta?.source === 'face') {
         setLoginMeta({ source: 'face', confidence: meta.confidence });
       } else {
         setLoginMeta(null);
       }
-    },
-    [setActiveStudentId, setLoginMeta],
-  );
+      setPendingStudentLogin(null);
+    }, 900);
+    return () => window.clearTimeout(timerId);
+  }, [pendingStudentLogin, setActiveStudentId, setLoginMeta]);
 
   const handleStudentLogout = useCallback(() => {
     playSound('swoosh');
@@ -1834,14 +1972,38 @@ export default function StudentLoginPage() {
     return () => window.removeEventListener(STUDENT_KIOSK_REQUEST_EXIT_EVENT, handleStudentLogout);
   }, [handleStudentLogout]);
 
-  if (!isInitialized || !['student', 'teacher', 'admin', 'school', 'developer'].includes(loginState)) {
+  /** School chooser has no kiosk token — upgrade to student session in-place so scanning works (no extra screen). */
+  useEffect(() => {
+    if (!isInitialized || !schoolId) return;
+    if (loginState !== 'school') return;
+    let cancelled = false;
+    void (async () => {
+      const ok = await login('student', { schoolId });
+      if (cancelled || ok) return;
+      playSound('error');
+      toast({
+        variant: 'destructive',
+        title: 'Could not start kiosk',
+        description: 'Check your connection and try again from the portal.',
+      });
+      router.replace(`/${schoolId}/portal`);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isInitialized, login, loginState, playSound, router, schoolId, toast]);
+
+  if (
+    !isInitialized ||
+    !['student', 'teacher', 'admin', 'school', 'developer', 'secretary', 'prizeClerk', 'reports'].includes(loginState)
+  ) {
     return <div className={cn(
       "min-h-screen flex items-center justify-center p-8",
       animBackdrop ? "bg-transparent" : "bg-background",
     )}>
       <div className="text-center space-y-4">
         <Loader2 className="w-8 h-8 animate-spin mx-auto text-muted-foreground" />
-        <p className="text-muted-foreground font-medium animate-pulse">Loading Student Portal...</p>
+        <p className="text-muted-foreground font-medium animate-pulse">Loading kiosk…</p>
       </div>
     </div>;
   }
@@ -1869,6 +2031,10 @@ export default function StudentLoginPage() {
     );
   }
 
+  if (pendingStudentLogin) {
+    return <StudentKioskTransitionFlash />;
+  }
+
   return (
     <ErrorBoundary name="StudentLoginPage">
       <TooltipProvider>
@@ -1894,7 +2060,6 @@ export default function StudentLoginPage() {
         >
           <StudentScanner
             onStudentFound={onScannerStudent}
-            title="Student Portal"
             icon={<LevelUpKioskLogo className="" />}
           />
         </div>

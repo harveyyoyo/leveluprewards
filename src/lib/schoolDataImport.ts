@@ -19,7 +19,19 @@ import { normalizeTimeToHHMM } from '@/lib/normalizeScheduleTime';
 export type ParsedSchoolSnapshot = {
   classes?: { name: string }[];
   teachers?: { name: string; username?: string; passcode?: string }[];
-  students?: { firstName: string; lastName: string; className?: string }[];
+  students?: {
+    firstName: string;
+    lastName: string;
+    className?: string;
+    middleName?: string;
+    nickname?: string;
+    /** ISO date string (YYYY-MM-DD). */
+    birthday?: string;
+    parentEmail?: string;
+    parentPhone?: string;
+    studentEmail?: string;
+    studentPhone?: string;
+  }[];
   periods?: { label: string; startTime: string; endTime: string }[];
   categories?: { name: string; points?: number }[];
   prizes?: { name: string; points?: number }[];
@@ -53,11 +65,20 @@ export type SchoolSnapshotImportResult = {
   staffAccounts?: ImportChunkReport;
 };
 
+export type SchoolSnapshotImportOptions = {
+  /**
+   * When true, student imports will update existing records (matched by name)
+   * by filling in missing fields like birthday/contact info, and will also create new students when no match exists.
+   */
+  upsertStudents?: boolean;
+};
+
 export async function importParsedSchoolSnapshot(
   firestore: Firestore,
   schoolId: string,
   snapshot: ParsedSchoolSnapshot,
   ctx: SchoolImportContext,
+  options?: SchoolSnapshotImportOptions,
 ): Promise<SchoolSnapshotImportResult> {
   const out: SchoolSnapshotImportResult = {};
 
@@ -77,6 +98,7 @@ export async function importParsedSchoolSnapshot(
       snapshot.students,
       ctx.students,
       ctx.classes,
+      { upsert: options?.upsertStudents === true },
     );
   }
 

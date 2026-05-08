@@ -30,7 +30,7 @@ export function AdminBadgesTab(props: any) {
   } = props;
 
   return (
-    <Card className="border-t-4 border-primary shadow-md">
+    <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden">
       <CardHeader className="flex flex-row justify-between items-center py-6">
         <div>
           <Helper content="Define badges students earn by reaching a points threshold in a category within a time period (e.g. Good Behavior badge for 50 points this month).">
@@ -57,7 +57,7 @@ export function AdminBadgesTab(props: any) {
       </CardHeader>
       <CardContent>
         {badgesLoading ? (
-          <ul className="space-y-2 h-[calc(100vh-22rem)] min-h-[250px] overflow-y-auto pr-1">
+          <ul className="space-y-2 pr-1">
             {[1, 2, 3].map((i: number) => (
               <li key={i} className="flex justify-between items-center bg-secondary/20 p-4 rounded-2xl border">
                 <Skeleton className="h-10 w-48" />
@@ -66,7 +66,7 @@ export function AdminBadgesTab(props: any) {
             ))}
           </ul>
         ) : (
-          <ul className="h-[calc(100vh-22rem)] min-h-[250px] overflow-y-auto pr-1 space-y-1">
+          <ul className="pr-1 space-y-1">
             {badges && badges.length > 0 ? (
               <AdminRecordListHeader
                 gridClassName="grid-cols-[76px_minmax(180px,1fr)_minmax(120px,160px)_82px_minmax(100px,140px)_70px_84px]"

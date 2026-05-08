@@ -26,7 +26,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { SettingsModal } from './ui/SettingsModal';
+import dynamic from 'next/dynamic';
+// 120 KB modal — only fetched when the user actually opens settings.
+const SettingsModal = dynamic(
+  () => import('./ui/SettingsModal').then(m => m.SettingsModal),
+  { ssr: false },
+);
 import { useSettings } from './providers/SettingsProvider';
 import { cn } from '@/lib/utils';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
@@ -79,7 +84,7 @@ export default function Header() {
 
   const logoLink = schoolId ? `/login?school=${encodeURIComponent(schoolId)}` : getLevelUpLogoHref();
   const centerLabel = schoolName;
-  const centerHref = schoolId ? `/${schoolId}/sign-in` : '/portal';
+  const centerHref = schoolId ? `/${schoolId}/portal` : '/portal';
   const isStaff =
     loginState === 'teacher' ||
     loginState === 'admin' ||

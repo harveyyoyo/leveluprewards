@@ -397,28 +397,120 @@ async function persistStudentDocuments(firestore: Firestore, schoolId: string, s
   }
 }
 
+async function persistStudentUpdates(
+  firestore: Firestore,
+  schoolId: string,
+  updates: Array<{ id: string; patch: Partial<Student> }>,
+) {
+  if (updates.length === 0) return;
+  const BATCH_LIMIT = 499;
+  try {
+    for (let i = 0; i < updates.length; i += BATCH_LIMIT) {
+      const chunk = updates.slice(i, i + BATCH_LIMIT);
+      const batch = writeBatch(firestore);
+      for (const u of chunk) {
+        const ref = doc(firestore, 'schools', schoolId, 'students', u.id);
+        batch.update(ref, removeUndefined(u.patch as unknown as Record<string, unknown>));
+      }
+      await batch.commit();
+    }
+  } catch (error) {
+    reportFirestorePermissionError(error, {
+      path: `schools/${schoolId}/students`,
+      operation: 'write',
+    });
+    throw error;
+  }
+}
+
 /** Import students from structured rows (e.g. AI-parsed). Matches className to existing classes case-insensitively. */
 export const importStudentsFromParsedRows = async (
   firestore: Firestore,
   schoolId: string,
-  rows: { firstName: string; lastName: string; className?: string }[],
+  rows: {
+    firstName: string;
+    lastName: string;
+    className?: string;
+    middleName?: string;
+    nickname?: string;
+    birthday?: string;
+    parentEmail?: string;
+    parentPhone?: string;
+    studentEmail?: string;
+    studentPhone?: string;
+  }[],
   currentStudents: Student[],
   allClasses: Class[],
+  options?: { upsert?: boolean },
 ): Promise<{ success: number; failed: number; errors: string[] }> => {
   const errors: string[] = [];
   const existingNfcIds = new Set(currentStudents.map((s) => s.nfcId || s.id));
   const studentsToCreate: Student[] = [];
+  let updatedCount = 0;
+  const studentUpdates: Array<{ id: string; patch: Partial<Student> }> = [];
 
-  rows.forEach((row, index) => {
+  const byNameKey = new Map<string, Student[]>();
+  if (options?.upsert) {
+    for (const s of currentStudents) {
+      const k = `${(s.firstName || '').trim().toLowerCase()}|${(s.lastName || '').trim().toLowerCase()}`;
+      if (!k || k === '|') continue;
+      const arr = byNameKey.get(k) || [];
+      arr.push(s);
+      byNameKey.set(k, arr);
+    }
+  }
+
+  for (let index = 0; index < rows.length; index++) {
+    const row = rows[index];
     const rawFn = (row.firstName || '').trim();
     const rawLn = (row.lastName || '').trim();
     const firstName = rawFn === '—' ? '' : rawFn;
     const lastName = rawLn === '—' ? '' : rawLn;
     const studentClassName = (row.className || '').trim();
+    const middleName = (row.middleName || '').trim();
+    const nickname = (row.nickname || '').trim();
+    const birthday = (row.birthday || '').trim();
+    const parentEmail = (row.parentEmail || '').trim();
+    const parentPhone = (row.parentPhone || '').trim();
+    const studentEmail = (row.studentEmail || '').trim();
+    const studentPhone = (row.studentPhone || '').trim();
 
     if (!firstName || !lastName) {
       errors.push(`Row ${index + 1}: Missing first or last name.`);
-      return;
+      continue;
+    }
+
+    const nameKey = `${firstName.toLowerCase()}|${lastName.toLowerCase()}`;
+    if (options?.upsert) {
+      const matches = byNameKey.get(nameKey) || [];
+      if (matches.length === 1) {
+        const existing = matches[0];
+        const classObj = allClasses.find(
+          (c) => studentClassName && c.name.toLowerCase() === studentClassName.toLowerCase(),
+        );
+
+        // Only fill missing fields; do not overwrite existing data.
+        const patch: Partial<Student> = {};
+        if (middleName && !(existing.middleName || '').trim()) patch.middleName = middleName;
+        if (nickname && !(existing.nickname || '').trim()) patch.nickname = nickname;
+        if (birthday && !(existing.birthday || '').trim()) patch.birthday = birthday;
+        if (parentEmail && !(existing.parentEmail || '').trim()) patch.parentEmail = parentEmail;
+        if (parentPhone && !(existing.parentPhone || '').trim()) patch.parentPhone = parentPhone;
+        if (studentEmail && !(existing.studentEmail || '').trim()) patch.studentEmail = studentEmail;
+        if (studentPhone && !(existing.studentPhone || '').trim()) patch.studentPhone = studentPhone;
+        if (classObj?.id && !(existing.classId || '').trim()) patch.classId = classObj.id;
+
+        if (Object.keys(patch).length > 0) {
+          studentUpdates.push({ id: existing.id, patch });
+          updatedCount++;
+        }
+        continue;
+      }
+      if (matches.length > 1) {
+        errors.push(`Row ${index + 1}: Multiple existing students match "${firstName} ${lastName}". Skipped update.`);
+        continue;
+      }
+      // else: no match → create new student below.
     }
 
     let newStudentId: string;
@@ -436,6 +528,13 @@ export const importStudentsFromParsedRows = async (
       nfcId: newStudentId,
       firstName,
       lastName,
+      ...(middleName ? { middleName } : {}),
+      ...(nickname ? { nickname } : {}),
+      ...(birthday ? { birthday } : {}),
+      ...(parentEmail ? { parentEmail } : {}),
+      ...(parentPhone ? { parentPhone } : {}),
+      ...(studentEmail ? { studentEmail } : {}),
+      ...(studentPhone ? { studentPhone } : {}),
       createdAt: Date.now(),
       points: 0,
       lifetimePoints: 0,
@@ -446,12 +545,13 @@ export const importStudentsFromParsedRows = async (
       earnedAchievements: [],
       earnedBadges: [],
     });
-  });
+  }
 
+  await persistStudentUpdates(firestore, schoolId, studentUpdates);
   await persistStudentDocuments(firestore, schoolId, studentsToCreate);
 
-  const successCount = studentsToCreate.length;
-  const failedCount = rows.length - successCount;
+  const successCount = studentsToCreate.length + updatedCount;
+  const failedCount = Math.max(0, rows.length - studentsToCreate.length - updatedCount);
   return { success: successCount, failed: failedCount, errors };
 };
 
@@ -467,16 +567,49 @@ export const uploadStudents = async (firestore: Firestore, schoolId: string, csv
   let successCount = 0;
   const studentsToCreate: Student[] = [];
 
+  const header = (lines[0] || '').trim();
+  const headerPartsRaw = header
+    ? (header.includes(';') ? header.split(';') : header.split(',')).map((v) => v.trim().replace(/^"|"$/g, ''))
+    : [];
+  const headerParts = headerPartsRaw.map((h) => h.toLowerCase().replace(/\s+/g, ' ').trim());
+  const hasHeader = headerParts.some((h) => h.includes('first')) && headerParts.some((h) => h.includes('last'));
+
+  const colIndex = (names: string[]) => {
+    for (let i = 0; i < headerParts.length; i++) {
+      const h = headerParts[i];
+      if (names.some((n) => h === n || h.includes(n))) return i;
+    }
+    return -1;
+  };
+
+  const idxFirst = hasHeader ? colIndex(['first name', 'firstname', 'first']) : 0;
+  const idxLast = hasHeader ? colIndex(['last name', 'lastname', 'last']) : 1;
+  const idxClass = hasHeader ? colIndex(['class name', 'classname', 'class', 'homeroom', 'section']) : 2;
+  const idxMiddle = hasHeader ? colIndex(['middle name', 'middlename', 'middle']) : -1;
+  const idxNick = hasHeader ? colIndex(['nickname', 'preferred name', 'preferredname']) : -1;
+  const idxBirthday = hasHeader ? colIndex(['birthday', 'birthdate', 'date of birth', 'dateofbirth', 'dob']) : -1;
+  const idxParentEmail = hasHeader ? colIndex(['parent email', 'guardian email', 'guardianemail', 'parentemail']) : -1;
+  const idxParentPhone = hasHeader ? colIndex(['parent phone', 'guardian phone', 'guardianphone', 'parentphone']) : -1;
+  const idxStudentEmail = hasHeader ? colIndex(['student email', 'studentemail']) : -1;
+  const idxStudentPhone = hasHeader ? colIndex(['student phone', 'studentphone']) : -1;
+
   let dataLines = lines;
-  if (lines[0].toLowerCase().includes('first')) {
-    dataLines = lines.slice(1);
-  }
+  if (hasHeader) dataLines = lines.slice(1);
 
   dataLines.forEach((row, index) => {
     if (!row.trim()) return;
     const delimiter = row.includes(';') ? ';' : ',';
     const values = row.split(delimiter).map(v => v.trim().replace(/^"|"$/g, ''));
-    const [firstName, lastName, studentClassName] = values;
+    const firstName = values[idxFirst] || '';
+    const lastName = values[idxLast] || '';
+    const studentClassName = idxClass >= 0 ? (values[idxClass] || '') : '';
+    const middleName = idxMiddle >= 0 ? (values[idxMiddle] || '') : '';
+    const nickname = idxNick >= 0 ? (values[idxNick] || '') : '';
+    const birthday = idxBirthday >= 0 ? (values[idxBirthday] || '') : '';
+    const parentEmail = idxParentEmail >= 0 ? (values[idxParentEmail] || '') : '';
+    const parentPhone = idxParentPhone >= 0 ? (values[idxParentPhone] || '') : '';
+    const studentEmail = idxStudentEmail >= 0 ? (values[idxStudentEmail] || '') : '';
+    const studentPhone = idxStudentPhone >= 0 ? (values[idxStudentPhone] || '') : '';
 
     if (!firstName || !lastName) {
       errors.push(`Row ${index + 2}: Missing first or last name.`);
@@ -496,6 +629,13 @@ export const uploadStudents = async (firestore: Firestore, schoolId: string, csv
       nfcId: newStudentId,
       firstName,
       lastName,
+      ...(middleName ? { middleName } : {}),
+      ...(nickname ? { nickname } : {}),
+      ...(birthday ? { birthday } : {}),
+      ...(parentEmail ? { parentEmail } : {}),
+      ...(parentPhone ? { parentPhone } : {}),
+      ...(studentEmail ? { studentEmail } : {}),
+      ...(studentPhone ? { studentPhone } : {}),
       createdAt: Date.now(),
       points: 0,
       lifetimePoints: 0,

@@ -7,10 +7,12 @@ export function LiveScreenPreview({
   href,
   title = 'Live preview',
   className,
+  viewport = 'fullscreen',
 }: {
   href: string;
   title?: string;
   className?: string;
+  viewport?: 'video' | 'fullscreen';
 }) {
   return (
     <div className={cn('space-y-3', className)}>
@@ -30,7 +32,12 @@ export function LiveScreenPreview({
         </div>
       </div>
 
-      <div className="aspect-video w-full overflow-hidden rounded-2xl border bg-black">
+      <div
+        className={cn(
+          'w-full overflow-hidden rounded-2xl border bg-black',
+          viewport === 'video' ? 'aspect-video' : 'h-[70vh] min-h-[520px] md:h-[78vh]'
+        )}
+      >
         <iframe
           title={title}
           src={href}

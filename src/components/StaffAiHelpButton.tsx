@@ -221,14 +221,14 @@ export function StaffAiHelpButton() {
     <>
       <div
         className={cn(
-          'no-print fixed right-4 z-[120] flex flex-col items-end gap-2',
+          'no-print fixed right-4 z-[260] flex flex-col items-end gap-2',
           isApp
             ? liftForSponsorBottom
-              ? 'bottom-[calc(5.75rem+3.75rem+env(safe-area-inset-bottom,0px))]'
-              : 'bottom-[calc(5.75rem+env(safe-area-inset-bottom,0px))]'
+              ? 'bottom-[calc(6rem+3.75rem+env(safe-area-inset-bottom,0px))]'
+              : 'bottom-[calc(6rem+env(safe-area-inset-bottom,0px))]'
             : liftForSponsorBottom
-              ? 'bottom-[calc(1.5rem+3.75rem)]'
-              : 'bottom-6',
+              ? 'bottom-[calc(4.75rem+3.75rem+env(safe-area-inset-bottom,0px))]'
+              : 'bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))]',
         )}
       >
         <Button
