@@ -146,7 +146,7 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
                             hideAppChrome
                                 ? 'relative z-10 flex w-full flex-col'
                                 : isStudentKioskPage
-                                    ? 'relative z-10 flex w-full flex-col'
+                                    ? 'relative z-10 flex w-full min-h-0 flex-col'
                                     : isAdminDashboardPage
                                         ? 'relative z-10 w-full max-w-none'
                                         : 'relative z-10 mx-auto w-full max-w-7xl',

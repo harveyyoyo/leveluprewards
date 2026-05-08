@@ -1182,7 +1182,7 @@ function StudentDashboardInner({
         className={cn(
           // Lock the dashboard to the viewport so inner panes scroll
           // (prevents Activity + CTA from falling below the fold).
-          "w-full max-w-none pt-3 md:pt-8 space-y-3 md:space-y-4 relative px-3 md:px-6 h-[calc(100dvh-4.25rem)] overflow-x-hidden overflow-y-hidden flex flex-col",
+          "w-full max-w-none flex-1 min-h-0 pt-3 md:pt-8 space-y-3 md:space-y-4 relative px-3 md:px-6 overflow-x-hidden overflow-y-hidden flex flex-col",
           settings.enableThemeAnimations && !!effectiveTheme && "theme-theme-elements-animated theme-motion-override",
           isGraphic ? 'animate-in fade-in duration-500' : '',
           // Avoid large bottom padding that leaves a visible gap.
@@ -1633,7 +1633,7 @@ function StudentDashboardInner({
                 <div className="w-full pr-0.5">
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-2.5">
                   {prizesLoading ? (
-                    [...Array(8)].map((_, i) => <Skeleton key={i} className="min-h-[7.5rem] sm:min-h-[8rem] w-full rounded-xl" />)
+                    [...Array(8)].map((_, i) => <Skeleton key={i} className="min-h-[9rem] sm:min-h-[9.5rem] w-full rounded-xl" />)
                   ) : (prizes || [])
                     .filter(p => prizeIsListed(p) && p.points <= student.points && studentSeesPrizeByTeachers(student, p) && (!p.classId || student.classId === p.classId))
                     .sort((a, b) => b.points - a.points)
@@ -1647,26 +1647,26 @@ function StudentDashboardInner({
                         }}
                         aria-label={`Redeem ${reward.name || 'prize'}`}
                         className={cn(
-                          "min-h-[7.5rem] sm:min-h-[8rem] min-w-0 p-3 sm:p-3.5 rounded-2xl transition-all flex flex-col items-center justify-between text-center gap-1.5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transform duration-300 group relative overflow-hidden cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+                          "min-h-[9rem] sm:min-h-[9.5rem] min-w-0 p-2.5 sm:p-3 rounded-2xl transition-all flex flex-col items-stretch justify-between text-center gap-1 shadow-sm hover:shadow-md hover:-translate-y-0.5 transform duration-300 group relative overflow-visible cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
                           !activeTheme && "border border-slate-100 dark:border-slate-800 bg-white/40 dark:bg-slate-800/40",
                         )}
                         style={activeTheme ? { backgroundColor: 'var(--theme-bg)', color: 'var(--theme-text)', borderColor: 'var(--theme-primary)', borderWidth: 1, borderStyle: 'solid' } : undefined}
                       >
                         {reward.name && (
-                          <div className="absolute inset-0 opacity-5 pointer-events-none">
+                          <div className="absolute inset-0 overflow-hidden rounded-2xl opacity-5 pointer-events-none">
                             <img src={`https://api.dicebear.com/9.x/shapes/svg?seed=${encodeURIComponent(reward.name)}&backgroundColor=transparent`} alt="" className="w-full h-full object-cover" />
                           </div>
                         )}
                         <p
                           className={cn(
-                            "text-sm sm:text-base font-black leading-tight line-clamp-2 break-words [overflow-wrap:anywhere] z-10",
+                            "text-sm sm:text-base font-black leading-tight line-clamp-2 break-words [overflow-wrap:anywhere] z-10 min-h-0 shrink",
                             !activeTheme && "text-slate-800 dark:text-white",
                           )}
                           style={activeTheme ? { color: 'var(--theme-text)' } : undefined}
                         >
                           {reward.name}
                         </p>
-                        <div className="flex flex-col items-center gap-1 z-10 w-full shrink-0">
+                        <div className="flex flex-col items-center gap-1.5 z-10 w-full shrink-0 mt-auto pt-0.5">
                           <Badge
                             variant="secondary"
                             className={cn(
@@ -1679,12 +1679,20 @@ function StudentDashboardInner({
                           </Badge>
                           <span
                             className={cn(
-                              'text-[10px] font-bold uppercase tracking-wide',
-                              !activeTheme && 'text-slate-500 dark:text-slate-400',
+                              'inline-flex items-center justify-center rounded-full px-2.5 py-1 text-[11px] font-black uppercase tracking-widest',
+                              !activeTheme && 'bg-primary/10 text-primary ring-1 ring-inset ring-primary/25 dark:bg-primary/20 dark:text-primary',
                             )}
-                            style={activeTheme ? { color: 'var(--theme-text)', opacity: 0.85 } : undefined}
+                            style={
+                              activeTheme
+                                ? {
+                                    backgroundColor: 'color-mix(in srgb, var(--theme-primary) 18%, transparent)',
+                                    color: 'var(--theme-primary)',
+                                    boxShadow: 'inset 0 0 0 1px color-mix(in srgb, var(--theme-primary) 38%, transparent)',
+                                  }
+                                : undefined
+                            }
                           >
-                            click here
+                            Click here
                           </span>
                         </div>
                       </button>
