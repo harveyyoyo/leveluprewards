@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { AlertCircle, RefreshCw, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +10,10 @@ import { getReadableErrorMessage } from '@/lib/errorMessage';
 /**
  * School-scoped error boundary. Keeps the user inside their school session by
  * linking back to `/{schoolId}/portal` instead of the login screen.
+ *
+ * Uses `usePathname()` instead of `useParams()`: in some Next.js error-recovery
+ * paths, the params context is not available and `useParams` can break this
+ * component—then the app shows "missing required error components, refreshing…".
  */
 export default function SchoolRouteError({
   error,
@@ -18,11 +22,12 @@ export default function SchoolRouteError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  const params = useParams<{ schoolId: string }>();
-  const schoolId = params?.schoolId;
+  const pathname = usePathname() ?? '';
+  const firstSegment = pathname.split('/').filter(Boolean)[0];
+  const schoolId = typeof firstSegment === 'string' ? firstSegment : '';
 
   useEffect(() => {
-    console.error(`School-route error (${schoolId ?? 'unknown'}):`, error);
+    console.error(`School-route error (${schoolId || 'unknown'}):`, error);
   }, [error, schoolId]);
 
   const portalHref = schoolId ? `/${schoolId}/portal` : '/';
