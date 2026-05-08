@@ -5,6 +5,7 @@ import React, {
     useContext,
     useState,
     useEffect,
+    useLayoutEffect,
     useCallback,
     useMemo,
     useRef,
@@ -161,7 +162,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Auto-logout logic moved to AppContextBridge in AppProvider.tsx to allow for configurable timeouts from SettingsProvider.
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         setIsMounted(true);
     }, []);
 
@@ -171,6 +172,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         const restore = async () => {
+            try {
             const savedState = localStorage.getItem('loginState') as LoginState | null;
             const savedSchoolId = localStorage.getItem('schoolId');
             const savedName = localStorage.getItem('userName');
@@ -366,11 +368,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 setIsPrizeClerk(false);
                 setIsReports(false);
             }
-
-            setIsInitialized(true);
+            } catch (e) {
+                console.error('Auth session restore failed:', e);
+            } finally {
+                setIsInitialized(true);
+            }
         };
 
-        restore();
+        void restore();
     }, [isMounted, isUserLoading, firestore, auth]);
 
     // Student kiosk: `login()` already calls `enterSchoolKioskSession`, but session restore from localStorage
