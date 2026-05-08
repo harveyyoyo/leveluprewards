@@ -14,7 +14,9 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
   // that can cause hydration errors.
   const firebaseServices = useMemo(() => {
     try {
-      console.log('FirebaseClientProvider: Initializing Firebase...');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('FirebaseClientProvider: Initializing Firebase...');
+      }
       const sdks = initializeFirebase();
       if (!sdks) {
         console.error('FirebaseClientProvider: initializeFirebase returned null');
