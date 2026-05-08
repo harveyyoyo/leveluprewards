@@ -791,9 +791,9 @@
     box-sizing: border-box !important;
   }
 
-  /* Prize tickets should not be stretched to full-page height (creates huge gaps). */
-  body.prize-ticket-printing #prize-ticket-print-wrapper {
-    /* Disable any scaling that can shift/left-align the ticket in preview */
+  /* Label stock (50×70 mm): overlay slip centered — thermal uses separate rules below */
+  body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'],
+  body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] {
     --prize-print-scale: 1 !important;
     transform: none !important;
     height: auto !important;
@@ -828,18 +828,28 @@
     grid-template-rows: unset !important;
   }
 
-  /* Force the ticket itself to not stretch or "space-between" in print. */
-  body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket {
+  /* Label stock only — never apply Letter-width grid (8.5in / 1fr) to thermal */
+  body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket,
+  body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket {
+    width: 100% !important;
+    max-width: 100% !important;
     height: 100% !important;
-    display: grid !important;
-    grid-template-rows: auto 1fr auto auto !important;
-    width: 8.5in !important;
-    max-width: 8.5in !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    box-sizing: border-box !important;
   }
 
-  /* If printing to a label-sized page (e.g. 50x70mm / M110S), fill the label instead of Letter. */
+  /* Label-sized @page (50×70 mm / M110S): typography & fixed slip height — scoped to label format only */
   @media (max-width: 100mm) {
-    body.prize-ticket-printing #prize-ticket-print-wrapper {
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] {
+      transform: none !important;
+      height: 100% !important;
+      overflow: visible !important;
+      align-items: stretch !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] {
       transform: none !important;
       height: 100% !important;
       overflow: visible !important;
@@ -852,7 +862,8 @@
       align-items: flex-start !important;
     }
 
-    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket {
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket {
       width: 100% !important;
       max-width: 100% !important;
       /* Account for @page margin to avoid clipping. */
@@ -866,20 +877,23 @@
     }
 
     /* AI joke / riddle / fortune can extend the slip instead of clipping. */
-    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket[data-has-ai-surprise='true'] {
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket[data-has-ai-surprise='true'],
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket[data-has-ai-surprise='true'] {
       height: auto !important;
       max-height: none !important;
       min-height: 68mm !important;
       overflow: visible !important;
     }
 
-    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__head {
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__head,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__head {
       padding: 1.6mm 2.1mm !important;
       border-bottom-width: 1.8px !important;
       gap: 1.8mm !important;
     }
 
-    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__logo-box {
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__logo-box,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__logo-box {
       width: 10mm !important;
       height: 10mm !important;
       min-width: 10mm !important;
@@ -888,69 +902,84 @@
       padding: 0.6mm !important;
     }
 
-    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__brandline {
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__brandline,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__brandline {
       letter-spacing: 0.08em !important;
     }
 
-    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__brand-lu,
-    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__brand-redeem {
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__brand-lu,
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__brand-redeem,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__brand-lu,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__brand-redeem {
       font-size: 2.5mm !important;
     }
 
-    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__school {
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__school,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__school {
       font-size: 3.3mm !important;
       margin-top: 0.4mm !important;
       line-height: 1.05 !important;
     }
 
-    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__hero {
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__hero,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__hero {
       gap: 0.8mm !important;
     }
 
-    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__icon-ring {
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__icon-ring,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__icon-ring {
       width: 13mm !important;
       height: 13mm !important;
       margin: 0 auto !important;
     }
 
-    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__prize-name {
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__prize-name,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__prize-name {
       font-size: 7.2mm !important;
       line-height: 0.88 !important;
       padding: 0 2mm !important;
     }
 
-    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__prize-name--surprise-body {
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__prize-name--surprise-body,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__prize-name--surprise-body {
       font-size: 4.5mm !important;
       line-height: 1.1 !important;
     }
 
-    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__student-name {
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__student-name,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__student-name {
       font-size: 4.1mm !important;
       margin: 0.35mm 0 !important;
     }
 
-    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__student-emoji {
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__student-emoji,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__student-emoji {
       font-size: 4.6mm !important;
       line-height: 1 !important;
     }
 
-    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__lucide {
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__lucide,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__lucide {
       width: 8.5mm !important;
       height: 8.5mm !important;
     }
 
-    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__hero-emoji {
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__hero-emoji,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__hero-emoji {
       font-size: 8.5mm !important;
       line-height: 1 !important;
     }
 
     /* Keep school logo/fallback visible on small labels. */
-    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__logo,
-    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__logo-fallback {
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__logo,
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__logo-fallback,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__logo,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__logo-fallback {
       display: block !important;
     }
 
-    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__banner {
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__banner,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__banner {
       padding: 0.9mm 0 !important;
       border-top-width: 1.8px !important;
       border-bottom-width: 1.8px !important;
@@ -958,29 +987,34 @@
       letter-spacing: 0.11em !important;
     }
 
-    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__details {
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__details,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__details {
       gap: 0.35mm !important;
       margin-top: 0 !important;
     }
 
-    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__stats {
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__stats,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__stats {
       padding: 0.45mm 2.1mm 0.3mm !important;
       gap: 0.4mm !important;
     }
 
-    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__stat-line {
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__stat-line,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__stat-line {
       font-size: 1.95mm !important;
       grid-template-columns: 9.5mm 1fr !important;
       gap: 0.7mm !important;
     }
 
-    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__surprise {
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__surprise,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__surprise {
       padding: 0.5mm 2.1mm 1.2mm !important;
       margin-top: 0.2mm !important;
       border-top: 1px solid #000 !important;
     }
 
-    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__surprise-kind {
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__surprise-kind,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__surprise-kind {
       font-size: 2.15mm !important;
       font-weight: 800 !important;
       letter-spacing: 0.06em !important;
@@ -989,7 +1023,8 @@
       color: #000 !important;
     }
 
-    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__surprise-label {
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__surprise-label,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__surprise-label {
       font-size: 1.55mm !important;
       font-weight: 800 !important;
       letter-spacing: 0.08em !important;
@@ -1000,7 +1035,8 @@
       word-break: break-word !important;
     }
 
-    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__surprise-answer {
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__surprise-answer,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__surprise-answer {
       font-size: 1.75mm !important;
       font-weight: 600 !important;
       line-height: 1.2 !important;
@@ -1009,7 +1045,8 @@
       word-break: break-word !important;
     }
 
-    body.prize-ticket-printing #prize-ticket-print-wrapper .prize-ticket__surprise-answer-label {
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__surprise-answer-label,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__surprise-answer-label {
       font-weight: 800 !important;
     }
 
@@ -1040,7 +1077,8 @@
     }
   }
   
-  body.prize-ticket-printing #prize-ticket-print-wrapper * {
+  body.prize-ticket-printing #prize-ticket-print-wrapper *,
+  body.prize-ticket-printing #prize-ticket-standalone * {
     visibility: visible !important;
   }
 

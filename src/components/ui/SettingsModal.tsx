@@ -1043,12 +1043,12 @@ export function SettingsModal() {
                                                 <SelectValue placeholder="Paper format" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="label_50x70">Small label (50 × 70 mm)</SelectItem>
-                                                <SelectItem value="thermal_80mm">80 mm thermal receipt (e.g. VCP-8370)</SelectItem>
+                                                <SelectItem value="label_50x70">Small label / M110-class (50 × 70 mm)</SelectItem>
+                                                <SelectItem value="thermal_80mm">80 mm thermal receipt (POS / VCP-8370)</SelectItem>
                                             </SelectContent>
                                         </Select>
                                         <p className="text-[11px] text-muted-foreground leading-snug">
-                                            Matches browser print page size to your hardware. Thermal rolls use a wider slip; label stock keeps the compact ticket layout.
+                                            One school, one choice: use <span className="font-semibold">small label</span> for portable label printers (e.g. Phomemo M110/M110S) and <span className="font-semibold">80 mm thermal</span> for desk receipt printers (POS-80, VCP-8370, etc.). Change this before printing if you switch devices.
                                         </p>
                                     </div>
 

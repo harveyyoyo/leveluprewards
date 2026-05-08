@@ -65,8 +65,10 @@ export function PrizeRedeemTicketPrintSheet({
     document.head.appendChild(style);
 
     document.body.classList.add('prize-ticket-printing');
+    document.body.dataset.prizeVoucherPrint = paperFormat;
     return () => {
       document.body.classList.remove('prize-ticket-printing');
+      delete document.body.dataset.prizeVoucherPrint;
       style.remove();
     };
   }, [paperFormat]);

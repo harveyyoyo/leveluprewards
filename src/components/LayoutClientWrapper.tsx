@@ -119,8 +119,8 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
                 <div
                     className={cn(
                         'min-h-screen min-h-dvh flex flex-col',
-                        // For app-shell routes, lock viewport height so only inner panels scroll.
-                        appShellNoPageScroll && 'h-dvh overflow-hidden'
+                        // Lock viewport height so only inner panels scroll (student kiosk + app-shell staff routes).
+                        (appShellNoPageScroll || isStudentKioskPage) && 'h-dvh max-h-dvh overflow-hidden'
                     )}
                 >
                     {!hideAppChrome && (
@@ -146,7 +146,7 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
                             hideAppChrome
                                 ? 'relative z-10 flex w-full flex-col'
                                 : isStudentKioskPage
-                                    ? 'relative z-10 flex w-full min-h-0 flex-col'
+                                    ? 'relative z-10 flex w-full min-h-0 flex-col overflow-hidden'
                                     : isAdminDashboardPage
                                         ? 'relative z-10 w-full max-w-none'
                                         : 'relative z-10 mx-auto w-full max-w-7xl',
@@ -162,7 +162,7 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
                         </div>
                     )}
                     <IntroWizard />
-                    {!hideAppChrome && !isFullscreenSpecialPage && <StaffAiHelpButton />}
+                    {!hideAppChrome && !isFullscreenSpecialPage && !isStudentKioskPage && <StaffAiHelpButton />}
                     {!hideAppChrome &&
                       !isFullscreenSpecialPage &&
                       // Prevent a "flash of animated background" before settings hydrate from storage.

@@ -1217,7 +1217,7 @@ function StudentDashboardInner({
       >
         {effectiveTheme?.fontFamily && <GoogleFontLoader fontFamily={effectiveTheme.fontFamily} />}
 
-        <div className="flex flex-1 flex-col min-h-0 min-w-0 w-full space-y-3 md:space-y-4">
+        <div className="flex flex-1 flex-col min-h-0 min-w-0 w-full space-y-3 md:space-y-4 overflow-hidden">
         <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
           {celebrationMessage || (flyPointsValue !== null ? `You earned ${flyPointsValue} points` : '')}
         </div>
@@ -1249,7 +1249,7 @@ function StudentDashboardInner({
         {/* Hero Welcome Section */}
         <Card
           className={cn(
-            "overflow-hidden shadow-xl border-t-8 border-chart-1",
+            "shrink-0 overflow-hidden shadow-xl border-t-8 border-chart-1",
             isGraphic && !effectiveTheme
               ? animBackdrop
                 ? "bg-card/90 backdrop-blur-md border-border/40"
@@ -1411,9 +1411,9 @@ function StudentDashboardInner({
           </DialogContent>
         </Dialog>
 
-        <div className="grid w-full min-w-0 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_min(320px,28vw)] gap-4 relative z-10 flex-1 min-h-0 items-stretch">
+        <div className="grid w-full min-w-0 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_min(320px,28vw)] gap-4 relative z-10 flex-1 min-h-0 items-stretch overflow-hidden">
           {/* Left Section: Content */}
-          <div className="min-w-0 flex flex-1 min-h-0 flex-col gap-3 overflow-y-auto pr-1">
+          <div className="min-w-0 flex flex-1 min-h-0 flex-col gap-3 overflow-y-auto overflow-x-hidden pr-1 min-h-0">
             <StudentGoalsCard
               schoolId={schoolId!}
               student={student}
@@ -1617,7 +1617,7 @@ function StudentDashboardInner({
                     : undefined
                 }
               >
-                          <Helper content="Rewards you can afford right now. Tap a box to redeem.">
+                          <Helper content="Rewards you can afford right now. Tap a box to redeem, or use “Click here for more prizes” below for the full rewards shop.">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={activeTheme ? { backgroundColor: 'var(--theme-bg)' } : undefined}>
                       <Award className="w-4 h-4" style={activeTheme ? { color: 'var(--theme-primary)' } : undefined} />
@@ -1721,6 +1721,32 @@ function StudentDashboardInner({
                 </div>
               </CardContent>
             </Card>
+
+            <Button
+              asChild
+              className={cn(
+                'w-full h-11 sm:h-12 text-xs sm:text-sm font-black rounded-xl shadow-lg transition-all active:scale-[0.99] uppercase tracking-wide shrink-0',
+                !activeTheme && 'bg-gradient-to-r from-primary to-primary/90',
+              )}
+              style={
+                activeTheme
+                  ? {
+                      backgroundColor: 'var(--theme-primary)',
+                      color: primaryForeground,
+                    }
+                  : undefined
+              }
+            >
+              <Link
+                href={`/${schoolId}/prize?student=${encodeURIComponent(student.id)}`}
+                onClick={() => playSound('click')}
+                className="flex items-center justify-center gap-2"
+              >
+                <Gift className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" aria-hidden />
+                Click here for more prizes
+                <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0 opacity-90" aria-hidden />
+              </Link>
+            </Button>
 
             <AlertDialog open={!!confirmingPrize} onOpenChange={(open) => {
               if (!open && !isRedeemingPrize) setConfirmingPrize(null);
@@ -1829,13 +1855,13 @@ function StudentDashboardInner({
             />
           </div>
 
-          {/* Right Section: Activity — stays on the right, no scroll, truncated to fit */}
+          {/* Right Section: Activity — fills column height on lg; list count fits visible rows (no page scroll). */}
+          <div className="min-w-0 flex min-h-0 flex-col lg:h-full lg:min-h-0">
           <Card
             ref={activityPanelRef}
             className={cn(
               'min-w-0 w-full max-w-sm mx-auto lg:mx-0 lg:max-w-none flex flex-col min-h-0 rounded-2xl border-2 shadow-md ring-1 ring-black/5 dark:ring-white/10 overflow-hidden',
-              // Keep Activity fully visible on-screen on wide layouts.
-              'lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100dvh-8.75rem)]',
+              'lg:flex-1 lg:h-full lg:min-h-0',
               !activeTheme && 'border-slate-200 bg-white dark:border-slate-600 dark:bg-slate-900',
             )}
             style={
@@ -1882,6 +1908,7 @@ function StudentDashboardInner({
               />
             </CardContent>
           </Card>
+          </div>
         </div>
 
         {welcomeBackdropActive && (
