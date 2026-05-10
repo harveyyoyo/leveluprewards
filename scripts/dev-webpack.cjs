@@ -60,7 +60,8 @@ if (cleanedNext && process.platform === 'win32') {
 
 const port = String(process.env.PORT || '3000').trim() || '3000';
 const nextCli = path.join(root, 'node_modules', 'next', 'dist', 'bin', 'next');
-console.log(`[dev:webpack] Listening on http://localhost:${port}\n`);
+console.log(`[dev:webpack] Listening on http://localhost:${port}`);
+console.log('[dev:webpack] If you see Cannot find module \'./NNNN.js\': stop dev, run `npm run dev:reset`, use one dev server only.\n');
 
 const child = spawn(process.execPath, [nextCli, 'dev', '-p', port], {
   cwd: root,

@@ -12,6 +12,7 @@
     "dev:stable": "node scripts/dev-webpack.cjs",
     "dev:webpack": "node scripts/dev-webpack.cjs",
     "dev:plain": "next dev -p 3000",
+    "dev:reset": "npm run clean:next && cross-env SKIP_CLEAN_NEXT=1 npm run dev",
     "clean:next": "node scripts/clean-next.cjs",
     "dev:turbo": "node scripts/dev-turbo.cjs",
     "prebuild": "node scripts/copy-face-models.mjs",

@@ -49,6 +49,14 @@ const nextConfig = {
   },
   /* config options here */
   webpack: (config, { dev, isServer }) => {
+    // Windows: native file watching misses rapid `.next` churn → corrupt graphs; polling is slower but safer.
+    if (dev && process.platform === 'win32') {
+      config.watchOptions = {
+        ...(config.watchOptions || {}),
+        poll: 1000,
+        aggregateTimeout: 400,
+      };
+    }
     // @vladmandic/face-api uses dynamic requires; webpack warns but the bundle works.
     config.ignoreWarnings = [
       ...(config.ignoreWarnings || []),
@@ -67,6 +75,10 @@ const nextConfig = {
       // page bundles that reference missing `.next/server/vendor-chunks/*` files.
       // Keep server dev output bundled per entry to avoid stale vendor chunk refs.
       config.optimization.splitChunks = false;
+      // Numeric chunk ids (`1682.js`) are harder to debug and easier to desync after HMR;
+      // named ids reduce “Cannot find module './NNNN.js'” crashes when paired with the plugin below.
+      config.optimization.chunkIds = 'named';
+      config.optimization.moduleIds = 'named';
       // The generated server webpack runtime loads async chunks via
       // `require("./" + chunkId + ".js")`, so dev chunks must live beside
       // `.next/server/webpack-runtime.js`, not under `.next/server/chunks`.
