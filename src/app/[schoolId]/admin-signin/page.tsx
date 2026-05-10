@@ -42,7 +42,7 @@ export default function AdminSignInPage() {
   const searchParams = useSearchParams();
   const playSound = useArcadeSound();
   const { toast } = useToast();
-  const { login, isInitialized, schoolId: activeSchoolId } = useAppContext();
+  const { login, isInitialized, schoolId: activeSchoolId, loginState } = useAppContext();
   const [passcode, setPasscode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -50,6 +50,13 @@ export default function AdminSignInPage() {
     () => (params.schoolId || activeSchoolId || '').trim().toLowerCase(),
     [activeSchoolId, params.schoolId],
   );
+
+  /** Kiosk (student) session should return to redeem — not the faculty hub (`/portal`). */
+  const backHref = useMemo(() => {
+    if (!schoolId) return '/login';
+    if (loginState === 'student') return `/${schoolId}/student`;
+    return `/${schoolId}/portal`;
+  }, [schoolId, loginState]);
 
   const handleSubmit = async () => {
     if (!schoolId || !passcode.trim()) {
@@ -143,7 +150,7 @@ export default function AdminSignInPage() {
           </form>
 
           <Button variant="outline" className="w-full h-12 rounded-xl font-bold" asChild>
-            <Link href={`/${schoolId}/portal`} onClick={() => playSound('click')}>
+            <Link href={backHref} onClick={() => playSound('click')}>
               <ArrowLeft className="mr-2 h-4 w-4" aria-hidden="true" />
               Back
             </Link>

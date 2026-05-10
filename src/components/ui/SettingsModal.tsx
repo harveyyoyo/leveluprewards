@@ -364,7 +364,8 @@ export function SettingsModal() {
             beginSettingsSession('hub');
         } else {
             setDraft(null);
-            setView('hub');
+            // Do not force view to hub here — avoids flashing the hub screen while the modal is
+            // closing from Interface / features / etc. Next open always resets via beginSettingsSession.
         }
         setOpen(next);
     };
@@ -415,19 +416,19 @@ export function SettingsModal() {
 
 
     const handleOk = () => {
+        committedRef.current = true;
         if (draft) {
-            committedRef.current = true;
             updateSettings({ ...draft });
         }
-        setDraft(null);
-        setView('hub');
-        setOpen(false);
+        // Use the same close path as Cancel / overlay (Radix onOpenChange) so focus stack stays consistent.
+        handleOpenChange(false);
     };
 
     // For short-link kiosk entry routes, keep the UI minimal (and avoid showing settings).
     if (isShortLinkKioskRoute) return null;
 
     return (
+        <>
         <Dialog open={open} onOpenChange={handleOpenChange}>
             {canOpenSettings ? (
                 <DialogTrigger asChild>
@@ -1856,27 +1857,36 @@ export function SettingsModal() {
 
                 </div>
 
-                <DialogFooter className="border-t border-border/40 bg-card/30 px-6 py-4 shrink-0 sm:justify-end gap-2">
+                <DialogFooter className="relative z-20 pointer-events-auto border-t border-border/40 bg-card/30 px-6 py-4 shrink-0 sm:justify-end gap-2">
                     <DialogClose asChild>
                         <Button type="button" variant="outline" className="rounded-xl min-w-[88px]">
                             Cancel
                         </Button>
                     </DialogClose>
-                    <Button type="button" className="rounded-xl min-w-[88px]" onClick={handleOk}>
+                    <Button
+                        type="button"
+                        className="rounded-xl min-w-[88px]"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleOk();
+                        }}
+                    >
                         OK
                     </Button>
                 </DialogFooter>
-
-                <Dialog open={vendingSettingsOpen} onOpenChange={setVendingSettingsOpen}>
-      <DialogContent size="lg" overlayClassName="z-[120]" className="z-[120]">
-                        <DialogHeader>
-                            <DialogTitle>Vending Machine Settings</DialogTitle>
-                        </DialogHeader>
-                        <VendingMotorPanel />
-                    </DialogContent>
-                </Dialog>
             </DialogContent>
         </Dialog>
+
+        <Dialog open={vendingSettingsOpen} onOpenChange={setVendingSettingsOpen}>
+            <DialogContent size="lg" overlayClassName="z-[120]" className="z-[120]">
+                <DialogHeader>
+                    <DialogTitle>Vending Machine Settings</DialogTitle>
+                </DialogHeader>
+                <VendingMotorPanel />
+            </DialogContent>
+        </Dialog>
+        </>
     );
 }
 

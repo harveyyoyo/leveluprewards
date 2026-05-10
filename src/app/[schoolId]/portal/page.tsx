@@ -45,9 +45,6 @@ function staffLoginKey(option: StaffPortalLoginOption) {
     return option.id;
 }
 
-/** In student (kiosk) login, idle on the hub → default to the badge / redeem flow. */
-const STUDENT_MODE_DEFAULT_TO_KIOSK_SEC = 10;
-
 export default function PortalPage() {
     const { loginState, isInitialized, schoolId, isAdmin, login } = useAppContext();
     const { settings } = useSettings();
@@ -65,29 +62,10 @@ export default function PortalPage() {
     const [teacherSubmitting, setTeacherSubmitting] = useState(false);
     const animBackdrop = globalAnimatedBackdropActive(settings);
 
+    // Student kiosk accounts use `/student` — not this faculty/staff hub (`/portal`).
     useEffect(() => {
         if (!isInitialized || loginState !== 'student' || !schoolId) return;
-        const ms = STUDENT_MODE_DEFAULT_TO_KIOSK_SEC * 1000;
-        let timer: ReturnType<typeof setTimeout> | null = null;
-        const arm = () => {
-            if (timer) clearTimeout(timer);
-            timer = setTimeout(() => {
-                router.push(`/${schoolId}/student`);
-            }, ms);
-        };
-        arm();
-        const onActivity = () => {
-            arm();
-        };
-        window.addEventListener('pointerdown', onActivity, { capture: true, passive: true });
-        window.addEventListener('keydown', onActivity, { capture: true });
-        window.addEventListener('scroll', onActivity, { capture: true, passive: true });
-        return () => {
-            if (timer) clearTimeout(timer);
-            window.removeEventListener('pointerdown', onActivity, { capture: true });
-            window.removeEventListener('keydown', onActivity, { capture: true });
-            window.removeEventListener('scroll', onActivity, { capture: true });
-        };
+        router.replace(`/${schoolId}/student`);
     }, [isInitialized, loginState, schoolId, router]);
     /** Default scheme: real brand hex — `hsl(var(--primary))` stays near-white in `.dark` by design. */
     const defaultPortalAccent =
