@@ -493,6 +493,29 @@ export function SettingsModal() {
                                 <span className="font-black text-sky-900 dark:text-sky-100">Interface &amp; display</span>
                                 <span className="text-xs leading-snug text-sky-800/90 dark:text-sky-200/80">Accent colors, dark mode, motion, sound, and Web vs App layout</span>
                             </button>
+                            {isAdmin && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setView('security');
+                                        if (local.soundEnabled) playSound('click');
+                                    }}
+                                    className={cn(
+                                        'flex flex-col items-start gap-2 rounded-2xl border-2 p-4 text-left transition-all',
+                                        'border-indigo-200 dark:border-indigo-900/50 bg-indigo-50/80 dark:bg-indigo-950/20',
+                                        'hover:bg-indigo-100/80 dark:hover:bg-indigo-950/35',
+                                    )}
+                                >
+                                    <div className="flex w-full items-start justify-between gap-2">
+                                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-500 text-white shadow-inner">
+                                            <Shield className="h-5 w-5" />
+                                        </span>
+                                        <ChevronRight className="h-5 w-5 shrink-0 text-indigo-700/50 dark:text-indigo-400/50" aria-hidden />
+                                    </div>
+                                    <span className="font-black text-indigo-900 dark:text-indigo-100">Basic settings</span>
+                                    <span className="text-xs leading-snug text-indigo-800/90 dark:text-indigo-200/80">Session timeouts, printing, and guidance</span>
+                                </button>
+                            )}
                             <button
                                 type="button"
                                 onClick={() => {
@@ -535,29 +558,6 @@ export function SettingsModal() {
                                     </div>
                                     <span className="font-black text-fuchsia-900 dark:text-fuchsia-100">Developer tools</span>
                                     <span className="text-xs leading-snug text-fuchsia-800/90 dark:text-fuchsia-200/80">Create, download, and restore snapshots for this school</span>
-                                </button>
-                            )}
-                            {isAdmin && (
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setView('security');
-                                        if (local.soundEnabled) playSound('click');
-                                    }}
-                                    className={cn(
-                                        'flex flex-col items-start gap-2 rounded-2xl border-2 p-4 text-left transition-all',
-                                        'border-indigo-200 dark:border-indigo-900/50 bg-indigo-50/80 dark:bg-indigo-950/20',
-                                        'hover:bg-indigo-100/80 dark:hover:bg-indigo-950/35',
-                                    )}
-                                >
-                                    <div className="flex w-full items-start justify-between gap-2">
-                                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-500 text-white shadow-inner">
-                                            <Shield className="h-5 w-5" />
-                                        </span>
-                                        <ChevronRight className="h-5 w-5 shrink-0 text-indigo-700/50 dark:text-indigo-400/50" aria-hidden />
-                                    </div>
-                                    <span className="font-black text-indigo-900 dark:text-indigo-100">Basic settings</span>
-                                    <span className="text-xs leading-snug text-indigo-800/90 dark:text-indigo-200/80">Session timeouts, printing, and guidance</span>
                                 </button>
                             )}
                             {isAdmin && (
