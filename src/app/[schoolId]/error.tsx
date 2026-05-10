@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
-import { usePathname } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
 import { AlertCircle, RefreshCw, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,9 +10,10 @@ import { getReadableErrorMessage } from '@/lib/errorMessage';
  * School-scoped error boundary. Keeps the user inside their school session by
  * linking back to `/{schoolId}/portal` instead of the login screen.
  *
- * Uses `usePathname()` instead of `useParams()`: in some Next.js error-recovery
- * paths, the params context is not available and `useParams` can break this
- * component—then the app shows "missing required error components, refreshing…".
+ * Do **not** call `usePathname()` / `useParams()` here: during some Next.js error
+ * recovery paths those contexts are missing → `Cannot read properties of null
+ * (reading 'useContext')` and "missing required error components, refreshing…".
+ * Derive the school segment from `window.location` after mount instead.
  */
 export default function SchoolRouteError({
   error,
@@ -22,15 +22,25 @@ export default function SchoolRouteError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  const pathname = usePathname() ?? '';
-  const firstSegment = pathname.split('/').filter(Boolean)[0];
-  const schoolId = typeof firstSegment === 'string' ? firstSegment : '';
+  const [schoolId, setSchoolId] = useState('');
+
+  useEffect(() => {
+    try {
+      const seg = window.location.pathname.split('/').filter(Boolean)[0];
+      setSchoolId(typeof seg === 'string' ? seg : '');
+    } catch {
+      setSchoolId('');
+    }
+  }, []);
 
   useEffect(() => {
     console.error(`School-route error (${schoolId || 'unknown'}):`, error);
   }, [error, schoolId]);
 
-  const portalHref = schoolId ? `/${schoolId}/portal` : '/';
+  const portalHref = useMemo(
+    () => (schoolId ? `/${schoolId}/portal` : '/'),
+    [schoolId],
+  );
 
   return (
     <div className="min-h-[60vh] w-full flex items-center justify-center p-4">
