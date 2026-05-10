@@ -368,12 +368,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 setIsPrizeClerk(false);
                 setIsReports(false);
             } else if (savedState) {
-                setLoginState(savedState);
-                setIsAdmin(false);
-                setIsTeacher(false);
-                setIsSecretary(false);
-                setIsPrizeClerk(false);
-                setIsReports(false);
+                // `loginState` can persist without `schoolId` (cleared storage, migration). Recover from the
+                // current path so kiosk routes like /{school}/student are not stuck with student + null schoolId.
+                let recoveredSchoolId = savedSchoolId || null;
+                if (!recoveredSchoolId && typeof window !== 'undefined') {
+                    const m = window.location.pathname.match(
+                        /^\/([^/]+)\/(?:student|student-home|teacher|admin|admin-signin|portal|prize|secretary|prize-clerk|reports)(?:\/|$)/i,
+                    );
+                    const seg = m?.[1]?.trim().toLowerCase();
+                    if (seg && !['login', 'developer', 's'].includes(seg)) {
+                        recoveredSchoolId = seg;
+                        localStorage.setItem('schoolId', recoveredSchoolId);
+                    }
+                }
+                const needsSchool = ['student', 'school', 'teacher', 'admin', 'secretary', 'prizeClerk', 'reports'].includes(
+                    savedState,
+                );
+                if (needsSchool && !recoveredSchoolId) {
+                    localStorage.removeItem('loginState');
+                    localStorage.removeItem('schoolId');
+                    localStorage.removeItem('userName');
+                    localStorage.removeItem('teacherDocId');
+                    setLoginState('loggedOut');
+                    setSchoolId(null);
+                    setUserName(null);
+                    setTeacherDocId(null);
+                    setIsAdmin(false);
+                    setIsTeacher(false);
+                    setIsSecretary(false);
+                    setIsPrizeClerk(false);
+                    setIsReports(false);
+                } else {
+                    if (recoveredSchoolId) {
+                        setSchoolId(recoveredSchoolId);
+                    }
+                    setLoginState(savedState);
+                    setIsAdmin(false);
+                    setIsTeacher(false);
+                    setIsSecretary(false);
+                    setIsPrizeClerk(false);
+                    setIsReports(false);
+                }
             }
             } catch (e) {
                 console.error('Auth session restore failed:', e);

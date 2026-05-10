@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useAppContext } from '@/components/AppProvider';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { collection } from 'firebase/firestore';
@@ -212,6 +212,18 @@ export function SettingsModal() {
     const isShortLinkKioskRoute = typeof pathname === 'string' && pathname.startsWith('/s/');
     const autoOpenedFromQueryRef = useRef(false);
 
+    /** Must run whenever the modal opens (trigger, ?settings=, or window event) so draft/original refs stay in sync. */
+    const beginSettingsSession = useCallback(
+        (initialView?: SettingsView) => {
+            committedRef.current = false;
+            originalSettingsRef.current = cloneSettings(settings);
+            setDraft(cloneSettings(settings));
+            setView(initialView ?? 'hub');
+            setPreviewMode(isAdmin ? 'draft' : 'live');
+        },
+        [settings, isAdmin],
+    );
+
     useLayoutEffect(() => {
         if (open) setInterfaceRole('global');
     }, [open]);
@@ -222,12 +234,12 @@ export function SettingsModal() {
         const handler = (e: Event) => {
             const detail = (e as CustomEvent<{ view?: SettingsView }>).detail;
             const requestedView = detail?.view ?? 'hub';
+            beginSettingsSession(requestedView);
             setOpen(true);
-            setView(requestedView);
         };
         window.addEventListener('open-settings-modal', handler as EventListener);
         return () => window.removeEventListener('open-settings-modal', handler as EventListener);
-    }, [canOpenSettings]);
+    }, [canOpenSettings, beginSettingsSession]);
 
     const canLivePreviewInterfaceRole = useMemo(() => {
         if (interfaceRole === 'global') return true;
@@ -349,11 +361,7 @@ export function SettingsModal() {
 
     const handleOpenChange = (next: boolean) => {
         if (next) {
-            committedRef.current = false;
-            originalSettingsRef.current = cloneSettings(settings);
-            setDraft(cloneSettings(settings));
-            setView('hub');
-            setPreviewMode(isAdmin ? 'draft' : 'live');
+            beginSettingsSession('hub');
         } else {
             setDraft(null);
             setView('hub');
@@ -382,8 +390,8 @@ export function SettingsModal() {
         if (!requestedView) return;
 
         autoOpenedFromQueryRef.current = true;
+        beginSettingsSession(requestedView);
         setOpen(true);
-        setView(requestedView);
 
         // Clean the URL so refresh/back doesn't reopen.
         requestAnimationFrame(() => {
@@ -393,7 +401,7 @@ export function SettingsModal() {
                 // ignore
             }
         });
-    }, [canOpenSettings, pathname, router, searchParams]);
+    }, [canOpenSettings, pathname, router, searchParams, beginSettingsSession]);
 
     // If the user closes/cancels, revert any live-previewed changes.
     useEffect(() => {
@@ -455,7 +463,12 @@ export function SettingsModal() {
                     <Settings className="w-5 h-5 text-muted-foreground group-hover:rotate-45 transition-transform duration-300" />
                 </Button>
             )}
-      <DialogContent size="lg" className="p-0 overflow-hidden border border-border bg-background flex flex-col shadow-2xl" data-settings-open="true">
+      <DialogContent
+                size="lg"
+                overlayClassName="z-[110]"
+                className="z-[110] p-0 overflow-hidden border border-border bg-background flex flex-col shadow-2xl"
+                data-settings-open="true"
+            >
                 {/* Header */}
                 <div className="px-6 pt-6 pb-4 border-b border-border/40 bg-card/30 backdrop-blur-md">
                     <DialogHeader>
@@ -1826,7 +1839,7 @@ export function SettingsModal() {
                 </DialogFooter>
 
                 <Dialog open={vendingSettingsOpen} onOpenChange={setVendingSettingsOpen}>
-      <DialogContent size="lg">
+      <DialogContent size="lg" overlayClassName="z-[120]" className="z-[120]">
                         <DialogHeader>
                             <DialogTitle>Vending Machine Settings</DialogTitle>
                         </DialogHeader>

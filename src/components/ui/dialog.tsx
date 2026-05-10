@@ -36,6 +36,8 @@ type DialogContentProps = React.ComponentPropsWithoutRef<typeof DialogPrimitive.
    */
   wide?: boolean;
   size?: "sm" | "md" | "lg" | "xl";
+  /** Merged into `DialogOverlay` (e.g. higher z-index than fixed UI like bottom nav). */
+  overlayClassName?: string;
 };
 
 const dialogSizeClasses: Record<NonNullable<DialogContentProps["size"]>, string> = {
@@ -49,9 +51,9 @@ const dialogSizeClasses: Record<NonNullable<DialogContentProps["size"]>, string>
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   DialogContentProps
->(({ className, children, wide, size = "md", ...props }, ref) => (
+>(({ className, children, wide, size = "md", overlayClassName, ...props }, ref) => (
   <DialogPortal>
-    <DialogOverlay />
+    <DialogOverlay className={overlayClassName} />
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
