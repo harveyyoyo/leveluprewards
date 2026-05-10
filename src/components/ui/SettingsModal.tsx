@@ -262,6 +262,11 @@ export function SettingsModal() {
             return next;
         });
 
+        // Session timeouts affect global idle timers immediately (draft-only would leave stale values until OK).
+        if (key === 'adminSessionTimeoutMs' || key === 'kioskSessionTimeoutSec') {
+            updateSettings({ [key]: value } as Partial<AppSettings>);
+        }
+
         if (previewMode === 'live' && isLivePreviewKey && canLivePreviewInterfaceRole) {
             updateSettings({ [key]: value } as Partial<AppSettings>);
         }

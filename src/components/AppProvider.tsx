@@ -186,6 +186,9 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
   const { settings } = useSettings();
   const { loginState, logout, studentKioskSessionEstablished } = authCtx;
 
+  const logoutRef = React.useRef(logout);
+  logoutRef.current = logout;
+
   // Kiosk entry: optional `?kioskEntry=` or `?entry=` on the student URL verifies with Cloud Functions
   // and grants `kioskMembers` when the school has configured `secrets/entry` (see verifySchoolEntryCode).
   React.useEffect(() => {
@@ -210,14 +213,34 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
       .catch(() => {});
   }, [loginState, schoolId, functions, auth?.currentUser]);
 
-  // Privileged sessions (admin, teacher): auto-logout after idle period.
+  // Privileged sessions (admin, teacher, developer, …): auto-logout after idle period.
   // Consumes configurable timeout from settings (default: 5 min).
+  // Uses logoutRef + narrow deps so a changing `logout` identity does not reset the timer every render.
+  // Throttles mousemove/scroll/wheel so pointer jitter does not keep extending the session forever.
   React.useEffect(() => {
-    if (loginState !== 'admin' && loginState !== 'teacher' && loginState !== 'secretary' && loginState !== 'prizeClerk' && loginState !== 'reports') return;
+    if (
+      loginState !== 'admin' &&
+      loginState !== 'developer' &&
+      loginState !== 'teacher' &&
+      loginState !== 'secretary' &&
+      loginState !== 'prizeClerk' &&
+      loginState !== 'reports'
+    ) {
+      return;
+    }
 
-    const idleMs = settings.adminSessionTimeoutMs ?? (5 * 60 * 1000);
+    const DEFAULT_IDLE_MS = 5 * 60 * 1000;
+    const raw = settings.adminSessionTimeoutMs;
+    const idleMs =
+      typeof raw === 'number' && Number.isFinite(raw) && raw > 0
+        ? Math.min(raw, 24 * 60 * 60 * 1000)
+        : DEFAULT_IDLE_MS;
+
     let timer: ReturnType<typeof setTimeout> | null = null;
     let sessionEndAt = 0;
+    const lastNoisyActivityAtRef = { current: 0 };
+    const NOISE_THROTTLE_MS = 750;
+    const noisyTypes = new Set(['mousemove', 'scroll', 'wheel']);
 
     const arm = () => {
       sessionEndAt = Date.now() + idleMs;
@@ -228,7 +251,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
           arm();
           return;
         }
-        logout();
+        logoutRef.current();
       }, idleMs);
     };
 
@@ -237,15 +260,19 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
         if (typeof document !== 'undefined' && document.querySelector('[data-settings-open="true"]')) {
           arm();
         } else {
-          logout();
+          logoutRef.current();
         }
       }
     };
 
-    const onActivity = () => {
-      if (document.visibilityState === 'visible') {
-        arm();
+    const onActivity = (ev: Event) => {
+      if (document.visibilityState !== 'visible') return;
+      if (noisyTypes.has(ev.type)) {
+        const now = Date.now();
+        if (now - lastNoisyActivityAtRef.current < NOISE_THROTTLE_MS) return;
+        lastNoisyActivityAtRef.current = now;
       }
+      arm();
     };
 
     const onVisibility = () => {
@@ -277,7 +304,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
       }
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [loginState, logout, settings.adminSessionTimeoutMs]);
+  }, [loginState, settings.adminSessionTimeoutMs]);
 
   // Background refresh: download coupon snapshot for offline validation.
   React.useEffect(() => {

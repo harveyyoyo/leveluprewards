@@ -140,7 +140,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.removeItem('userName');
         localStorage.removeItem('teacherDocId');
 
-        if (loginState === 'admin' || loginState === 'teacher' || loginState === 'secretary' || loginState === 'prizeClerk' || loginState === 'reports') {
+        if (
+            loginState === 'admin' ||
+            loginState === 'developer' ||
+            loginState === 'teacher' ||
+            loginState === 'secretary' ||
+            loginState === 'prizeClerk' ||
+            loginState === 'reports'
+        ) {
             // When leaving a privileged staff session, return to the school chooser (Portal),
             // not directly into student kiosk mode.
             localStorage.setItem('loginState', 'school');
