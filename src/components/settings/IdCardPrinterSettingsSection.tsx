@@ -31,7 +31,7 @@ export function IdCardPrinterSettingsSection({
 }) {
   const { toast } = useToast();
   const [saveProfileName, setSaveProfileName] = useState('');
-  const profiles = local.idCardPrintProfiles ?? [];
+  const profiles = useMemo(() => local.idCardPrintProfiles ?? [], [local.idCardPrintProfiles]);
 
   const matchedProfile = useMemo(() => {
     const lastId = local.lastIdCardPrintProfileId;

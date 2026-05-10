@@ -84,12 +84,7 @@ export default function Header() {
 
   const logoLink = schoolId ? `/login?school=${encodeURIComponent(schoolId)}` : getLevelUpLogoHref();
   const centerLabel = schoolName;
-  /** Student kiosk: home is the redeem surface, not the faculty/staff hub (`/portal`). */
-  const centerHref = schoolId
-    ? loginState === 'student'
-      ? `/${schoolId}/student`
-      : `/${schoolId}/portal`
-    : '/portal';
+  const centerHref = schoolId ? `/${schoolId}/portal` : '/portal';
   const webHomeHref = schoolId ? centerHref : '/';
   const isStaff =
     loginState === 'teacher' ||

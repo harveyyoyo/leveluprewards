@@ -21,9 +21,10 @@ import { isPublicSampleSchoolId } from '@/lib/sample-schools';
 export type SyncStatus = 'synced' | 'syncing' | 'offline' | 'error';
 export type LoginState = 'loggedOut' | 'school' | 'developer' | 'student' | 'teacher' | 'admin' | 'secretary' | 'prizeClerk' | 'reports';
 
-/** Optional navigation after ending an admin or teacher session (default: school portal). */
+/** Optional navigation after ending a scoped session (default: staff -> portal, student -> kiosk). */
 export type LogoutOptions = {
     staffNavigateTo?: 'portal' | 'teacher';
+    studentNavigateTo?: 'portal' | 'student';
 };
 
 interface AuthContextType {
@@ -109,6 +110,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { isUserLoading, functions, firestore, auth } = useFirebase();
     const router = useRouter();
 
+    const returnToSchoolSession = useCallback((sid: string) => {
+        setSchoolId(sid);
+        setLoginState('school');
+        setIsAdmin(false);
+        setIsTeacher(false);
+        setIsSecretary(false);
+        setIsPrizeClerk(false);
+        setIsReports(false);
+        setUserName(null);
+        setTeacherDocId(null);
+        localStorage.setItem('loginState', 'school');
+        localStorage.setItem('schoolId', sid);
+        localStorage.removeItem('userName');
+        localStorage.removeItem('teacherDocId');
+    }, []);
+
     const getEntryCodeFromUrl = useCallback(() => {
         if (typeof window === 'undefined') return '';
         const params = new URLSearchParams(window.location.search);
@@ -158,6 +175,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             } else {
                 router.push('/portal');
             }
+        } else if (loginState === 'student' && schoolId) {
+            returnToSchoolSession(schoolId);
+            const dest = options?.studentNavigateTo === 'portal' ? 'portal' : 'student';
+            router.push(`/${schoolId}/${dest}`);
         } else {
             localStorage.removeItem('loginState');
             localStorage.removeItem('schoolId');
@@ -165,7 +186,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setSchoolId(null);
             router.push('/');
         }
-    }, [loginState, router, schoolId]);
+    }, [loginState, returnToSchoolSession, router, schoolId]);
 
     // Auto-logout logic moved to AppContextBridge in AppProvider.tsx to allow for configurable timeouts from SettingsProvider.
 
@@ -225,28 +246,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                                 setIsSecretary(false);
                                 setIsPrizeClerk(false);
                             } else {
-                                setIsAdmin(false);
-                                setIsTeacher(false);
-                                setIsSecretary(false);
-                                setIsPrizeClerk(false);
-                                setLoginState('student');
-                                localStorage.setItem('loginState', 'student');
+                                returnToSchoolSession(savedSchoolId);
                             }
                         } catch {
-                            setIsAdmin(false);
-                            setIsTeacher(false);
-                            setIsSecretary(false);
-                            setIsPrizeClerk(false);
-                            setLoginState('student');
-                            localStorage.setItem('loginState', 'student');
+                            returnToSchoolSession(savedSchoolId);
                         }
                     } else {
-                        setIsAdmin(false);
-                        setIsTeacher(false);
-                        setIsSecretary(false);
-                        setIsPrizeClerk(false);
-                        setLoginState('student');
-                        localStorage.setItem('loginState', 'student');
+                        returnToSchoolSession(savedSchoolId);
                     }
                 } else if (savedState === 'teacher') {
                     setLoginState('teacher');
@@ -265,28 +271,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                                     localStorage.setItem('teacherDocId', idFromDb);
                                 }
                             } else {
-                                setIsTeacher(false);
-                                setIsAdmin(false);
-                                setIsSecretary(false);
-                                setIsPrizeClerk(false);
-                                setLoginState('student');
-                                localStorage.setItem('loginState', 'student');
+                                returnToSchoolSession(savedSchoolId);
                             }
                         } catch {
-                            setIsTeacher(false);
-                            setIsAdmin(false);
-                            setIsSecretary(false);
-                            setIsPrizeClerk(false);
-                            setLoginState('student');
-                            localStorage.setItem('loginState', 'student');
+                            returnToSchoolSession(savedSchoolId);
                         }
                     } else {
-                        setIsTeacher(false);
-                        setIsAdmin(false);
-                        setIsSecretary(false);
-                        setIsPrizeClerk(false);
-                        setLoginState('student');
-                        localStorage.setItem('loginState', 'student');
+                        returnToSchoolSession(savedSchoolId);
                     }
                 } else if (savedState === 'secretary') {
                     setLoginState('secretary');
@@ -300,22 +291,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                                 setIsTeacher(false);
                                 setIsPrizeClerk(false);
                             } else {
-                                setIsSecretary(false);
-                                setIsPrizeClerk(false);
-                                setLoginState('student');
-                                localStorage.setItem('loginState', 'student');
+                                returnToSchoolSession(savedSchoolId);
                             }
                         } catch {
-                            setIsSecretary(false);
-                            setIsPrizeClerk(false);
-                            setLoginState('student');
-                            localStorage.setItem('loginState', 'student');
+                            returnToSchoolSession(savedSchoolId);
                         }
                     } else {
-                        setIsSecretary(false);
-                        setIsPrizeClerk(false);
-                        setLoginState('student');
-                        localStorage.setItem('loginState', 'student');
+                        returnToSchoolSession(savedSchoolId);
                     }
                 } else if (savedState === 'prizeClerk' || savedState === 'reports') {
                     setLoginState(savedState);
@@ -331,25 +313,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                                 setIsTeacher(false);
                                 setIsSecretary(false);
                             } else {
-                                setIsPrizeClerk(false);
-                                setIsReports(false);
-                                setIsSecretary(false);
-                                setLoginState('student');
-                                localStorage.setItem('loginState', 'student');
+                                returnToSchoolSession(savedSchoolId);
                             }
                         } catch {
-                            setIsPrizeClerk(false);
-                            setIsReports(false);
-                            setIsSecretary(false);
-                            setLoginState('student');
-                            localStorage.setItem('loginState', 'student');
+                            returnToSchoolSession(savedSchoolId);
                         }
                     } else {
-                        setIsPrizeClerk(false);
-                        setIsReports(false);
-                        setIsSecretary(false);
-                        setLoginState('student');
-                        localStorage.setItem('loginState', 'student');
+                        returnToSchoolSession(savedSchoolId);
                     }
                 } else {
                     setLoginState(savedState);
@@ -418,7 +388,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
 
         void restore();
-    }, [isMounted, isUserLoading, firestore, auth]);
+    }, [isMounted, isUserLoading, firestore, auth, returnToSchoolSession]);
 
     // Student kiosk: `login()` already calls `enterSchoolKioskSession`, but session restore from localStorage
     // (refresh, new tab, or fallback from expired staff role) skipped it — then badge lookup fails with
@@ -589,6 +559,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     console.error('Student login: could not create kiosk session', e);
                     return false;
                 }
+                const shouldStaySchoolUser =
+                    loginState === 'school' &&
+                    (schoolId?.trim().toLowerCase() || lowerSchoolId) === lowerSchoolId;
+                if (shouldStaySchoolUser) {
+                    returnToSchoolSession(lowerSchoolId);
+                    return true;
+                }
                 setSchoolId(lowerSchoolId);
                 setLoginState('student');
                 setIsAdmin(false);
@@ -748,7 +725,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
             return false;
         },
-        [functions, firestore, auth, establishStudentKioskSession]
+        [functions, firestore, auth, establishStudentKioskSession, loginState, returnToSchoolSession, schoolId]
     );
 
     const startDeveloperSupportSession = useCallback(async (rawSchoolId: string): Promise<boolean> => {

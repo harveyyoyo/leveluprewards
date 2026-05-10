@@ -4,7 +4,7 @@ import { useMemo, useState, useEffect, type ComponentType, type CSSProperties } 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
-import { GraduationCap, Printer, UserCog, Trophy, ChevronRight, Loader2, Megaphone } from 'lucide-react';
+import { GraduationCap, Printer, UserCog, ChevronRight, Loader2 } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useToast } from '@/hooks/use-toast';
@@ -43,6 +43,20 @@ type SchoolPublicStaffDirectory = {
 
 function staffLoginKey(option: StaffPortalLoginOption) {
     return option.id;
+}
+
+function roleLabel(type: StaffPortalLoginOption['type']) {
+    if (type === 'teacher') return 'Teacher';
+    if (type === 'secretary') return 'Coupon printing';
+    if (type === 'prizeClerk') return 'Prize desk';
+    return 'Reports';
+}
+
+function staffLandingPath(schoolId: string, type: StaffPortalLoginOption['type']) {
+    if (type === 'secretary') return `/${schoolId}/secretary`;
+    if (type === 'prizeClerk') return `/${schoolId}/prize-clerk`;
+    if (type === 'reports') return `/${schoolId}/reports`;
+    return `/${schoolId}/teacher`;
 }
 
 export default function PortalPage() {
@@ -96,10 +110,17 @@ export default function PortalPage() {
         [firestore, schoolId],
     );
     const { data: schoolPublic } = useDoc<SchoolPublicStaffDirectory>(schoolPublicRef);
-    const teacherOptions = useMemo(
+    const staffOptions = useMemo(
         () =>
             (schoolPublic?.staffDirectory || []).filter(
-                (option) => option?.id && option?.username && option?.label && option.type === 'teacher',
+                (option) =>
+                    option?.id &&
+                    option?.username &&
+                    option?.label &&
+                    (option.type === 'teacher' ||
+                        option.type === 'secretary' ||
+                        option.type === 'prizeClerk' ||
+                        option.type === 'reports'),
             ),
         [schoolPublic],
     );
@@ -117,47 +138,98 @@ export default function PortalPage() {
 
     const portals: PortalArea[] = [
         ...(isAdmin
-            ? [{ id: 'admin', href: `/${schoolId}/admin`, title: 'Admin Portal', description: 'Manage school data and settings.', icon: UserCog }]
+            ? [
+                  {
+                      id: 'admin',
+                      href: `/${schoolId}/admin`,
+                      title: 'Admin Portal',
+                      description: 'Manage school data and settings.',
+                      icon: UserCog,
+                  },
+              ]
             : isSchoolChooser
-                ? [{ id: 'admin', href: `/${schoolId}/admin-signin`, title: 'Admin Portal', description: 'Enter the admin passcode to continue.', icon: UserCog }]
+                ? [
+                      {
+                          id: 'admin',
+                          href: `/${schoolId}/admin-signin`,
+                          title: 'Admin Portal',
+                          description: 'Enter the admin passcode to continue.',
+                          icon: UserCog,
+                      },
+                  ]
                 : []),
         ...((loginState === 'teacher' || isAdmin || isSchoolChooser)
-            ? [{ id: 'print', href: `/${schoolId}/teacher`, title: 'Teacher & Faculty Portal', description: loginState === 'teacher' ? 'Open teacher tools, coupon printing, or the prize desk.' : 'Sign in as a teacher to continue.', icon: Printer }]
+            ? [
+                  {
+                      id: 'print',
+                      href: `/${schoolId}/teacher`,
+                      title: 'Teacher & Faculty Portal',
+                      description:
+                          loginState === 'teacher'
+                              ? 'Open teacher tools, coupon printing, or the prize desk.'
+                              : 'Sign in as faculty to continue.',
+                      icon: Printer,
+                  },
+              ]
             : []),
-        { id: 'redeem', href: `/${schoolId}/student`, title: 'Student Kiosk', description: 'Scan your card to redeem coupon codes, view points, and open the prize shop.', icon: GraduationCap },
+        {
+            id: 'redeem',
+            href: `/${schoolId}/student`,
+            title: 'Student Kiosk',
+            description: 'Scan your card to redeem coupon codes, view points, and open the prize shop.',
+            icon: GraduationCap,
+        },
     ];
 
     return (
-        <div className={cn(
-                "text-foreground relative font-sans flex flex-col items-center pt-2 sm:pt-6",
-                animBackdrop ? "bg-transparent" : "bg-background",
+        <div
+            className={cn(
+                'text-foreground relative font-sans flex flex-col items-center pt-2 sm:pt-6',
+                animBackdrop ? 'bg-transparent' : 'bg-background',
                 settings.displayMode === 'app' && 'pb-24',
-            )}>
-            {showPortalLocalDecor && (
-            <div className="pointer-events-none fixed inset-0 opacity-[0.03] z-0" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
             )}
+        >
+            {/* Backdrop: keep existing palette; only subtle grid + optional noise/animated orbs */}
+            <div className="pointer-events-none fixed inset-0 z-0">
+                {!animBackdrop && (
+                    <div
+                        className="absolute inset-0 opacity-[0.08]"
+                        style={{
+                            backgroundImage:
+                                'linear-gradient(to right, rgba(148,163,184,0.18) 1px, transparent 1px), linear-gradient(to bottom, rgba(148,163,184,0.14) 1px, transparent 1px)',
+                            backgroundSize: '48px 48px',
+                        }}
+                    />
+                )}
+                {showPortalLocalDecor && (
+                    <>
+                        <div
+                            className="absolute inset-0 opacity-[0.03]"
+                            style={{
+                                backgroundImage:
+                                    'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noiseFilter\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noiseFilter)\'/%3E%3C/svg%3E")',
+                            }}
+                        />
+                        <motion.div
+                            animate={{ x: [0, 28, 0], y: [0, -18, 0] }}
+                            transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
+                            className="absolute -top-24 -right-24 h-[520px] w-[520px] rounded-full bg-primary/10 blur-[130px]"
+                        />
+                        <motion.div
+                            animate={{ x: [0, -20, 0], y: [0, 26, 0] }}
+                            transition={{ duration: 25, repeat: Infinity, ease: 'linear' }}
+                            className="absolute bottom-14 left-16 h-[420px] w-[420px] rounded-full bg-chart-5/10 blur-[135px]"
+                        />
+                        <motion.div
+                            animate={{ x: [0, 18, 0], y: [0, -28, 0] }}
+                            transition={{ duration: 30, repeat: Infinity, ease: 'linear' }}
+                            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[620px] w-[620px] rounded-full bg-chart-2/10 blur-[160px]"
+                        />
+                    </>
+                )}
+            </div>
 
-            {showPortalLocalDecor && (
-                <>
-                    <motion.div
-                        animate={{ x: [0, 30, 0], y: [0, -20, 0] }}
-                        transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                        className="pointer-events-none fixed -top-20 -right-20 h-[500px] w-[500px] rounded-full bg-primary/10 blur-[120px] z-0"
-                    />
-                    <motion.div
-                        animate={{ x: [0, -20, 0], y: [0, 30, 0] }}
-                        transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-                        className="pointer-events-none fixed bottom-20 left-20 h-[400px] w-[400px] rounded-full bg-chart-5/10 blur-[120px] z-0"
-                    />
-                    <motion.div
-                        animate={{ x: [0, 20, 0], y: [0, -30, 0] }}
-                        transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
-                        className="pointer-events-none fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[600px] w-[600px] rounded-full bg-chart-2/5 blur-[150px] z-0"
-                    />
-                </>
-            )}
-
-            <div className="relative z-10 w-full max-w-2xl px-4 sm:px-6 flex flex-col justify-start">
+            <div className="relative z-10 w-full max-w-6xl px-4 sm:px-6 pt-10 sm:pt-14 pb-10">
                 <motion.div
                     initial={
                         prefersReducedMotion ? false : { opacity: 0, y: 48, scale: 0.92 }
@@ -168,10 +240,10 @@ export default function PortalPage() {
                             ? { duration: 0 }
                             : { duration: 0.34, ease: [0.22, 1, 0.36, 1] }
                     }
-                    className="mb-8 mt-2 text-center"
+                    className="mb-10 text-center"
                 >
                     <h2
-                        className="text-5xl font-black tracking-tighter font-headline drop-shadow-md px-6 py-2 inline-block"
+                        className="text-6xl sm:text-7xl font-black tracking-tighter font-headline drop-shadow-md px-2 py-2 inline-block"
                         style={{
                             color: defaultPortalAccent ?? rainbowByIndex(0, settings.colorScheme),
                             textShadow:
@@ -184,7 +256,7 @@ export default function PortalPage() {
                     </h2>
                 </motion.div>
 
-                <div className="flex flex-col gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5">
                     {portals.map((area, index) => {
                         const Icon = area.icon;
                         const rainbowColor =
@@ -198,65 +270,90 @@ export default function PortalPage() {
                                         prefersReducedMotion ? false : { opacity: 0, x: -50 }
                                     }
                                     animate={{ opacity: 1, x: 0 }}
+                                    whileHover={
+                                        prefersReducedMotion
+                                            ? undefined
+                                            : { y: -6, scale: 1.015 }
+                                    }
+                                    whileTap={prefersReducedMotion ? undefined : { scale: 0.99 }}
                                     transition={
                                         prefersReducedMotion
                                             ? { duration: 0 }
                                             : {
-                                                  duration: 0.22,
+                                                  type: 'spring',
+                                                  stiffness: 420,
+                                                  damping: 28,
                                                   delay: Math.min(0.06 + index * 0.035, 0.28),
-                                                  ease: [0.22, 1, 0.36, 1],
                                               }
                                     }
                                     onMouseEnter={() => setHoveredIndex(area.id)}
                                     onMouseLeave={() => setHoveredIndex(null)}
                                     className={cn(
-                                        'relative flex w-full items-center justify-between rounded-2xl border-2 px-6 py-4 md:px-8 md:py-5 text-left transition-all duration-200',
-                                        "hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1",
-                                        animBackdrop
-                                            ? "border-border/50 bg-card/90 backdrop-blur-md shadow-sm hover:bg-card hover:border-border"
-                                            : "border-transparent bg-card/40 backdrop-blur-sm hover:bg-card",
+                                        'relative overflow-hidden rounded-3xl border border-border bg-card px-6 py-6 text-left shadow-sm transition-colors duration-200',
+                                        'min-h-[196px] sm:min-h-[210px]',
+                                        'hover:shadow-2xl hover:bg-muted/50',
+                                        animBackdrop ? 'backdrop-blur-md' : 'backdrop-blur-xl',
                                     )}
                                 >
-                                    {/* Fixed Vertical Color Bar - Increased visibility when inactive */}
+                                    {/* Themed wash: primary + muted from CSS variables */}
                                     <div
-                                      className={cn(
-                                        'absolute left-0 top-0 bottom-0 w-1.5 rounded-l-2xl transition-all duration-200 shadow-sm',
-                                        hoveredIndex === area.id ? "opacity-100" : "opacity-70"
-                                      )}
-                                      style={{ backgroundColor: rainbowColor }}
+                                        className={cn(
+                                            'absolute inset-0 pointer-events-none bg-gradient-to-br from-primary/[0.08] via-transparent to-muted/90 opacity-70 transition-opacity duration-200',
+                                            hoveredIndex === area.id ? 'opacity-90' : 'opacity-70',
+                                        )}
+                                    />
+                                    {/* Portal accent tint (rainbow) — kept subtle so card stays theme-driven */}
+                                    <div
+                                        className="pointer-events-none absolute inset-0 opacity-70"
+                                        style={{
+                                            background: `radial-gradient(900px circle at 15% 10%, ${rainbowColor}12, transparent 55%), radial-gradient(900px circle at 80% 90%, ${rainbowColor}08, transparent 55%)`,
+                                        }}
                                     />
 
-                                    {/* Left content */}
-                                    <div className="flex items-center gap-4">
-                                        <div className={cn(
-                                            'w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center transition-all duration-200 border-2 border-border/50 shadow-md',
-                                            animBackdrop ? "bg-card/90" : "bg-card/70",
-                                            "group-hover:scale-105 group-hover:border-primary/20 group-hover:shadow-lg"
-                                        )}>
-                                            <Icon className="w-6 h-6 md:w-7 md:h-7" style={{ color: rainbowColor }} />
+                                    {/* Subtle sheen sweep on hover */}
+                                    <motion.div
+                                        aria-hidden="true"
+                                        className="absolute inset-y-0 -left-1/2 w-1/2 rotate-12 bg-gradient-to-r from-transparent via-primary/15 to-transparent opacity-0"
+                                        animate={hoveredIndex === area.id && !prefersReducedMotion ? { x: ['-60%', '220%'], opacity: [0, 0.55, 0] } : { opacity: 0 }}
+                                        transition={{ duration: 0.75, ease: [0.22, 1, 0.36, 1] }}
+                                    />
+
+                                    <div className="relative z-10 flex h-full flex-col">
+                                        <div className="flex items-start gap-4">
+                                            <div
+                                                className={cn(
+                                                    'shrink-0 rounded-2xl bg-muted p-3 shadow-lg ring-1 ring-border',
+                                                )}
+                                                style={{
+                                                    boxShadow: `0 12px 30px ${rainbowColor}26`,
+                                                }}
+                                            >
+                                                <Icon className="h-7 w-7" style={{ color: rainbowColor }} />
+                                            </div>
+                                            <div className="min-w-0 pt-0.5">
+                                                <h3 className="text-xl font-black tracking-tight leading-tight text-foreground">
+                                                    <span style={{ color: rainbowColor }}>{area.title}</span>
+                                                </h3>
+                                                <p className="mt-2 text-sm font-semibold leading-normal text-muted-foreground/80">
+                                                    {area.description}
+                                                </p>
+                                            </div>
                                         </div>
-                                        <div className="min-w-0">
-                                            <h3 className="text-lg md:text-xl font-black tracking-tight leading-tight" style={{ color: rainbowColor }}>
-                                                {area.title}
-                                            </h3>
-                                            <p className="text-sm text-muted-foreground mt-1 font-medium leading-normal">{area.description}</p>
+
+                                        <div className="mt-auto pt-6 flex items-center gap-2 text-sm font-black tracking-tight text-foreground/90">
+                                            <span>Continue</span>
+                                            <ChevronRight className="h-5 w-5 text-foreground/70" aria-hidden="true" />
                                         </div>
                                     </div>
-
-                                    {/* Right arrow — always visible, darker on hover (touch-friendly) */}
-                                    <motion.div animate={{ x: hoveredIndex === area.id ? 0 : -4, opacity: hoveredIndex === area.id ? 1 : 0.4 }} transition={{ duration: 0.2 }}>
-                                        <ChevronRight className="h-7 w-7 text-muted-foreground" aria-hidden="true" />
-                                    </motion.div>
 
                                     {/* Background Glow - Increased opacity on hover */}
                                     <AnimatePresence>
                                         {hoveredIndex === area.id && (
                                             <motion.div
                                               initial={{ opacity: 0 }}
-                                              animate={{ opacity: 0.08 }}
+                                              animate={{ opacity: 1 }}
                                               exit={{ opacity: 0 }}
-                                              className="absolute inset-0 rounded-2xl pointer-events-none"
-                                              style={{ backgroundColor: rainbowColor }}
+                                              className="pointer-events-none absolute inset-0 rounded-3xl bg-primary/10"
                                             />
                                         )}
                                     </AnimatePresence>
@@ -303,7 +400,7 @@ export default function PortalPage() {
                                         }
                                     })();
                                 }}
-                                className="block group no-underline rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                                className="block group no-underline rounded-3xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                             >
                                 {portalCard}
                             </Link>
@@ -441,9 +538,9 @@ export default function PortalPage() {
                 }}>
                     <DialogContent className="sm:max-w-md">
                         <DialogHeader>
-                            <DialogTitle className="font-headline font-black tracking-tight">Teacher sign-in</DialogTitle>
+                            <DialogTitle className="font-headline font-black tracking-tight">Teacher & faculty sign-in</DialogTitle>
                             <DialogDescription>
-                                Enter your teacher username and passcode to open teacher tools.
+                                Select your name and enter your passcode to open faculty tools.
                             </DialogDescription>
                         </DialogHeader>
 
@@ -478,17 +575,17 @@ export default function PortalPage() {
                                 </Label>
                                 <Select value={selectedTeacherKey} onValueChange={setSelectedTeacherKey}>
                                     <SelectTrigger className="h-12 rounded-xl font-semibold" autoFocus={!isAdmin}>
-                                        <SelectValue placeholder={teacherOptions.length ? 'Choose your name' : 'No teacher list yet'} />
+                                        <SelectValue placeholder={staffOptions.length ? 'Choose your name' : 'No faculty list yet'} />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {teacherOptions.map((opt) => (
+                                        {staffOptions.map((opt) => (
                                             <SelectItem key={opt.id} value={staffLoginKey(opt)}>
-                                                {opt.label}
+                                                {opt.label}{opt.type === 'teacher' ? '' : ` - ${roleLabel(opt.type)}`}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
-                                {!teacherOptions.length && (
+                                {!staffOptions.length && (
                                     <p className="text-xs text-muted-foreground">
                                         Ask an admin to open <span className="font-semibold">Admin → Staff</span> once to publish the teacher directory.
                                     </p>
@@ -521,22 +618,23 @@ export default function PortalPage() {
                                                 });
                                                 return;
                                             }
-                                            const selected = teacherOptions.find((o) => staffLoginKey(o) === selectedTeacherKey);
+                                            const selected = staffOptions.find((o) => staffLoginKey(o) === selectedTeacherKey);
                                             if (!selected) {
                                                 playSound('error');
                                                 toast({
                                                     variant: 'destructive',
-                                                    title: 'Choose a teacher from the list',
+                                                    title: 'Choose a faculty account from the list',
                                                     description: 'Please select your name again.',
                                                 });
                                                 return;
                                             }
                                             setTeacherSubmitting(true);
-                                            const ok = await login('teacher', {
+                                            const ok = await login(selected.type, {
                                                 schoolId,
                                                 username: selected.username,
                                                 passcode,
                                                 teacherName: selected.label,
+                                                teacherDocId: selected.type === 'teacher' ? selected.sourceId || selected.id.replace(/^teacher:/, '') : undefined,
                                             });
                                             if (!ok) {
                                                 setTeacherSubmitting(false);
@@ -551,7 +649,7 @@ export default function PortalPage() {
                                             }
                                             playSound('login');
                                             setTeacherDialogOpen(false);
-                                            router.push(`/${schoolId}/teacher`);
+                                            router.push(staffLandingPath(schoolId, selected.type));
                                         })();
                                     }}
                                 />
@@ -586,22 +684,23 @@ export default function PortalPage() {
                                             });
                                             return;
                                         }
-                                        const selected = teacherOptions.find((o) => staffLoginKey(o) === selectedTeacherKey);
+                                        const selected = staffOptions.find((o) => staffLoginKey(o) === selectedTeacherKey);
                                         if (!selected) {
                                             playSound('error');
                                             toast({
                                                 variant: 'destructive',
-                                                title: 'Choose a teacher from the list',
+                                                title: 'Choose a faculty account from the list',
                                                 description: 'Please select your name again.',
                                             });
                                             return;
                                         }
                                         setTeacherSubmitting(true);
-                                        const ok = await login('teacher', {
+                                        const ok = await login(selected.type, {
                                             schoolId,
                                             username: selected.username,
                                             passcode,
                                             teacherName: selected.label,
+                                            teacherDocId: selected.type === 'teacher' ? selected.sourceId || selected.id.replace(/^teacher:/, '') : undefined,
                                         });
                                         if (!ok) {
                                             setTeacherSubmitting(false);
@@ -616,7 +715,7 @@ export default function PortalPage() {
                                         }
                                         playSound('login');
                                         setTeacherDialogOpen(false);
-                                        router.push(`/${schoolId}/teacher`);
+                                        router.push(staffLandingPath(schoolId, selected.type));
                                     })();
                                 }}
                             >
@@ -634,7 +733,7 @@ export default function PortalPage() {
                 </Dialog>
 
                 {loginState === 'student' && schoolId && (
-                    <div className="mt-10 text-center rounded-2xl border border-border/60 bg-muted/30 px-4 py-5">
+                    <div className="mt-10 text-center rounded-2xl border border-border/60 bg-background/15 backdrop-blur px-4 py-5">
                         <p className="text-sm text-muted-foreground mb-3">Need faculty access?</p>
                         <div className="flex flex-wrap justify-center gap-2">
                             <Button variant="outline" size="sm" asChild className="font-bold">

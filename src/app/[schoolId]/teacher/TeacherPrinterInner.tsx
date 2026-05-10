@@ -2529,7 +2529,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
 
     return (
         <TooltipProvider>
-            <div className="min-h-screen bg-background transition-colors duration-500 relative overflow-hidden font-sans"
+            <div className="min-h-screen bg-background transition-colors duration-500 relative overflow-x-hidden font-sans"
             style={{
               // Make existing chart/primary-based styling match the Teacher button color.
               ['--primary' as any]: teacherAccentTriplet,

@@ -1986,7 +1986,7 @@
 }
 
 /* Legacy Mode Overrides - Strips performance-heavy effects */
-.legacy * {
+.legacy *:not([data-legacy-motion-root]):not([data-legacy-motion-root] *) {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   animation-duration: 0.01ms !important;
@@ -1997,36 +1997,29 @@
   box-shadow: none !important;
 }
 
-/* Force-kill all animations and fixed backgrounds */
-.legacy [class*="animate-"],
-.legacy .animate-pulse,
-.legacy .animate-bounce,
-.legacy .animate-spin,
-.legacy .animate-float,
-.legacy .animate-pulse-glow,
-.legacy .animate-fly-up {
+/* Force-kill all animations and fixed backgrounds outside modal layers. */
+.legacy [class*="animate-"]:not([data-legacy-motion-root]):not([data-legacy-motion-root] *),
+.legacy .animate-pulse:not([data-legacy-motion-root]):not([data-legacy-motion-root] *),
+.legacy .animate-bounce:not([data-legacy-motion-root]):not([data-legacy-motion-root] *),
+.legacy .animate-spin:not([data-legacy-motion-root]):not([data-legacy-motion-root] *),
+.legacy .animate-float:not([data-legacy-motion-root]):not([data-legacy-motion-root] *),
+.legacy .animate-pulse-glow:not([data-legacy-motion-root]):not([data-legacy-motion-root] *),
+.legacy .animate-fly-up:not([data-legacy-motion-root]):not([data-legacy-motion-root] *) {
   animation: none !important;
   transition: none !important;
 }
 
 /*
- * Radix Dialog / AlertDialog use tailwind `animate-in` + transitions. The legacy rules above strip
- * motion app-wide (including `animation: none` on `[class*="animate-"]`), which breaks modal
- * Presence/focus — Settings OK / Cancel stop working after Legacy mode is enabled. Restore motion
- * only on layers tagged from `dialog.tsx` / `alert-dialog.tsx` (must come after the kills above).
+ * Radix Dialog / AlertDialog use Tailwind `animate-in` + transitions. Modal layers tagged from
+ * `dialog.tsx` / `alert-dialog.tsx` are excluded above so Radix Presence and focus cleanup keep
+ * working when Legacy mode is toggled from inside Settings.
  */
-html.legacy [data-legacy-motion-root='dialog'],
-html.legacy [data-legacy-motion-root='dialog'] *,
-html.legacy [data-legacy-motion-root='dialog'] [class*="animate-"] {
-  animation: revert !important;
-  transition: revert !important;
-  animation-duration: revert !important;
-  animation-iteration-count: revert !important;
-  transition-duration: revert !important;
-}
 
 /* Disable heavy background decorations */
-.legacy [style*="background-image"],
+.legacy [style*="background-image"] {
+  background-image: none !important;
+}
+
 .legacy .pointer-events-none.fixed.inset-0.opacity-\[0\.03\] {
   background-image: none !important;
   display: none !important;

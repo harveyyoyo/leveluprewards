@@ -108,7 +108,7 @@ function ConfirmRedemptionDialog({
     const prizePoints = prize && typeof prize.points === 'number' ? prize.points : 0;
     const aiPrize = isAiFunPrize(prize);
     const pickerSurprise = prize?.aiFunReward === 'picker';
-    /** Free (0 pt) prizes are not limited by balance — cap + optional stock count. */
+    /** Free (0 pt) prizes are not limited by balance; cap + optional stock count. */
     const maxByPoints =
         !prize ? 1 :
         prizePoints > 0 ? Math.max(0, Math.floor(studentPoints / prizePoints)) :
@@ -579,7 +579,7 @@ export function PrizeDashboard({
 
             // Fire the physical vending motor once per unit, in sequence, if the
             // prize has it enabled and a serial port is connected on this kiosk.
-            // Failures are surfaced but do not roll back the redemption â€” the
+            // Failures are surfaced but do not roll back the redemption; the
             // points are already spent and the student already saw the success
             // toast; a motor jam is a human-operator problem.
             if (settings.enableVendingMachine && prize.vendingMotor?.enabled) {
@@ -916,7 +916,7 @@ export function PrizeDashboard({
         <TooltipProvider>
             <div
                 className={cn(
-                    "min-h-screen relative overflow-hidden font-sans flex flex-col items-center",
+                    "min-h-screen relative overflow-x-hidden font-sans flex flex-col items-center",
                     settings.enableThemeAnimations && !!activeTheme && "theme-theme-elements-animated theme-motion-override",
                     settings.displayMode === 'app' && 'pb-24',
                     (!student || !activeTheme) && (animBackdrop ? "bg-transparent text-foreground" : "bg-background text-foreground"),
@@ -936,10 +936,10 @@ export function PrizeDashboard({
                     </div>
                 )}
 
-                <div className="relative z-10 w-full max-w-full px-8">
+                <div className="relative z-10 w-full max-w-full px-4 sm:px-6 lg:px-8">
                     <Card
                         className={cn(
-                            "border-t-8 shadow-2xl mt-12 mb-24 backdrop-blur-md",
+                            "border-t-8 shadow-2xl mt-6 mb-8 backdrop-blur-md",
                             !activeTheme
                                 ? animBackdrop
                                     ? "border-chart-3 bg-card/92 border-border/30"
@@ -948,9 +948,9 @@ export function PrizeDashboard({
                         )}
                         style={activeTheme ? { backgroundColor: 'var(--theme-card)', color: 'var(--theme-text)', borderColor: 'var(--theme-primary)' } : undefined}
                     >
-                        <CardContent className="p-6 md:p-8">
+                        <CardContent className="p-5 md:p-6">
                             {/* Header */}
-                            <div className="flex flex-col md:flex-row justify-between items-center gap-8 mb-16">
+                            <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-8">
                                 <div className="text-center md:text-left">
                                     <h2 className="text-5xl font-black tracking-tighter font-headline drop-shadow-sm mb-4 flex items-center justify-center md:justify-start gap-4">
                                         {(student?.customEmojiUrl || activeTheme?.emoji) ? (
@@ -992,7 +992,7 @@ export function PrizeDashboard({
                                             aria-live={logoutTimer <= 5 ? 'assertive' : 'off'}
                                             aria-label={isKioskLocked ? 'Kiosk locked' : `Auto logout in ${logoutTimer} seconds`}
                                         >
-                                            <span>{isKioskLocked ? 'Kiosk Locked â€¢ ' : ''}Auto-logout in {logoutTimer}s</span>
+                                            <span>{isKioskLocked ? 'Kiosk Locked - ' : ''}Auto-logout in {logoutTimer}s</span>
                                         </div>
                                         <div className="relative">
                                             {!isKioskLocked && (
@@ -1074,7 +1074,7 @@ export function PrizeDashboard({
                                 className="mb-6"
                             />
 
-                            <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-10">
+                            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_360px] gap-6 lg:gap-8">
                                 <div className="flex flex-col gap-4 min-w-0">
                                 {/* Filter & sort controls */}
                                 {baseVisiblePrizes.length > 0 && (
@@ -1084,7 +1084,7 @@ export function PrizeDashboard({
                                             <Input
                                                 id="prize-search"
                                                 type="search"
-                                                placeholder="Search prizesâ€¦"
+                                                placeholder="Search prizes..."
                                                 value={searchTerm}
                                                 onChange={(e) => setSearchTerm(e.target.value)}
                                                 className="h-11 rounded-xl bg-card/60"
@@ -1094,12 +1094,12 @@ export function PrizeDashboard({
                                             <label htmlFor="prize-sort" className="sr-only">Sort prizes</label>
                                             <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
                                                 <SelectTrigger id="prize-sort" className="h-11 rounded-xl bg-card/60 font-semibold">
-                                                    <SelectValue placeholder="Sort byâ€¦" />
+                                                    <SelectValue placeholder="Sort by..." />
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     <SelectItem value="price-asc">Price: low to high</SelectItem>
                                                     <SelectItem value="price-desc">Price: high to low</SelectItem>
-                                                    <SelectItem value="name">Name (Aâ€“Z)</SelectItem>
+                                                    <SelectItem value="name">Name (A-Z)</SelectItem>
                                                     <SelectItem value="affordable">What you can afford first</SelectItem>
                                                 </SelectContent>
                                             </Select>
@@ -1128,7 +1128,7 @@ export function PrizeDashboard({
                                                 <EmptyState
                                                     icon={ShoppingBasket}
                                                     title="No prizes are available for your class right now"
-                                                    description="Your teacher hasn't made any prizes visible to your class yet. Keep earning points â€” they'll show up here as soon as they're listed!"
+                                                    description="Your teacher hasn't made any prizes visible to your class yet. Keep earning points - they'll show up here as soon as they're listed!"
                                                 />
                                             ) : cheapestUnaffordablePrize && !cheapestVisiblePrize ? (
                                                 <EmptyState
@@ -1164,7 +1164,7 @@ export function PrizeDashboard({
                                                 <div
                                                     key={prize.id}
                                                     className={cn(
-                                                        "group relative flex min-w-0 w-full flex-col items-center justify-between text-center p-8 rounded-3xl border-2 border-transparent transition-all duration-300 backdrop-blur-sm hover:border-[var(--prize-card-hover-border)]",
+                                                        "group relative flex min-w-0 w-full flex-col items-center justify-between text-center p-5 sm:p-6 rounded-3xl border-2 border-transparent transition-all duration-300 backdrop-blur-sm hover:border-[var(--prize-card-hover-border)]",
                                                         canAfford ? "hover:shadow-2xl hover:shadow-primary/5 hover:-translate-y-1" : "opacity-75 cursor-not-allowed"
                                                     )}
                                                     style={activeTheme ? {
@@ -1286,9 +1286,9 @@ export function PrizeDashboard({
                                 </div>
 
                                 {/* Sidebar */}
-                                <div className="space-y-6">
+                                <div className="space-y-5 min-w-0">
                                     <Card
-                                        className="backdrop-blur-sm border-2 rounded-3xl overflow-hidden shadow-xl flex flex-col min-h-0 max-h-[min(88dvh,960px)]"
+                                        className="backdrop-blur-sm border-2 rounded-3xl overflow-hidden shadow-xl flex flex-col min-h-0 max-h-[min(70dvh,760px)] lg:sticky lg:top-6"
                                         style={activeTheme ? { backgroundColor: 'var(--theme-card)', borderColor: 'var(--theme-bg)', color: 'var(--theme-text)' } : { backgroundColor: 'hsl(var(--card) / 0.4)', borderColor: 'hsl(var(--border) / 0.5)' }}
                                     >
                                         <CardHeader className="border-b py-6 px-8 shrink-0" style={activeTheme ? { backgroundColor: 'var(--theme-bg)', borderColor: 'var(--theme-bg)' } : { backgroundColor: 'hsl(var(--primary) / 0.05)', borderColor: 'hsl(var(--border) / 0.5)' }}>

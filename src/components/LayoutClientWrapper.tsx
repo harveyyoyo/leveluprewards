@@ -62,11 +62,15 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
     const isAdminDashboardPage =
       typeof pathname === 'string' &&
       /\/admin\/?$/.test(pathname);
+    const isTeacherPortalPage =
+      typeof pathname === 'string' &&
+      /\/teacher\/?$/.test(pathname);
     const hideAppChrome =
       isLoginPage || isSignInPage || isMarketingLandingPath(pathname);
     const appShellNoPageScroll =
       typeof pathname === 'string' &&
       !isAdminDashboardPage &&
+      !isTeacherPortalPage &&
       /\/(?:admin|teacher|prize-clerk|secretary|reports)(?:\/|$)/.test(pathname);
 
     const fullscreen = searchParams?.get('fullscreen') === '1';

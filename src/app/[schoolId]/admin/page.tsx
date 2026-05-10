@@ -236,7 +236,7 @@ const scrollingAdminTabClassName = fittedAdminTabClassName;
 
 function AdminDashboardSkeleton() {
   return (
-    <div className="space-y-6 animate-pulse p-4 md:p-8">
+    <div className="mx-auto w-full max-w-7xl space-y-6 animate-pulse p-4 md:p-8">
       <Card className="bg-card p-6 shadow-lg flex justify-between items-center">
         <div>
           <Skeleton className="h-8 w-64 mb-2" />

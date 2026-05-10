@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { doc } from 'firebase/firestore';
@@ -12,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { useAppContext } from '@/components/AppProvider';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { LogIn, LogOut, UserCheck, Loader2 } from 'lucide-react';
+import { LogIn, LogOut, UserCheck, Loader2, ShieldCheck } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -58,7 +59,7 @@ function staffLandingPath(schoolId: string, type: StaffPortalLoginOption['type']
     if (type === 'secretary') return `/${schoolId}/secretary`;
     if (type === 'prizeClerk') return `/${schoolId}/prize-clerk`;
     if (type === 'reports') return `/${schoolId}/reports`;
-    return `/${schoolId}/portal`;
+    return `/${schoolId}/teacher`;
 }
 
 function TeacherPrinterSkeleton() {
@@ -67,7 +68,7 @@ function TeacherPrinterSkeleton() {
     return (
         <div
             className={cn(
-                'min-h-screen w-full bg-background font-sans relative overflow-hidden',
+                'min-h-screen w-full bg-background font-sans relative overflow-x-hidden',
                 isGraphic && 'bg-gradient-to-br from-indigo-950/15 to-slate-900/15',
             )}
         >
@@ -354,6 +355,13 @@ export default function TeacherPage() {
                                         <LogIn className="mr-3 w-6 h-6" aria-hidden /> Login
                                     </>
                                 )}
+                            </Button>
+
+                            <Button type="button" variant="outline" className="w-full h-12 rounded-xl font-bold" asChild>
+                                <Link href={`/${schoolId}/admin-signin`}>
+                                    <ShieldCheck className="mr-2 h-4 w-4" aria-hidden />
+                                    Sign in as admin
+                                </Link>
                             </Button>
                         </form>
                     </CardContent>

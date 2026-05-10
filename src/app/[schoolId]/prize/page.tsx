@@ -3,7 +3,7 @@
 import type { CSSProperties } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -33,7 +33,8 @@ const StudentScanner = dynamic(
 );
 
 export default function PrizePage() {
-    const { loginState, isInitialized } = useAppContext();
+    const { loginState, isInitialized, schoolId } = useAppContext();
+    const router = useRouter();
     const searchParams = useSearchParams();
     const { toast } = useToast();
     const { settings } = useSettings();
@@ -71,8 +72,11 @@ export default function PrizePage() {
     const handlePrizeSessionExit = useCallback(() => {
         playSound('swoosh');
         handleDone();
-        toast({ title: 'Logged Out', description: 'Returning to prize portal home.' });
-    }, [handleDone, playSound, toast]);
+        if (schoolId) {
+            router.replace(`/${schoolId}/student`);
+        }
+        toast({ title: 'Logged Out', description: 'Returning to kiosk home.' });
+    }, [handleDone, playSound, router, schoolId, toast]);
 
     const onScannerStudent = useCallback(
         (id: string, meta?: StudentFoundMeta) => {
@@ -104,7 +108,7 @@ export default function PrizePage() {
                 )}
                 <PrizeDashboard
                     studentId={activeStudentId}
-                    onDone={handleDone}
+                    onDone={handlePrizeSessionExit}
                     onRequestExit={handlePrizeSessionExit}
                 />
             </>
