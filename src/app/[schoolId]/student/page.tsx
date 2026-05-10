@@ -1534,15 +1534,19 @@ function StudentDashboardInner({
                     <div className="space-y-3 w-full min-w-0">
                       <div
                         className={cn(
-                          'flex flex-wrap items-center justify-center gap-2 sm:gap-3 rounded-xl border-2 border-dashed px-3 py-2.5 text-center motion-safe:animate-[pulse_1.35s_ease-in-out_infinite] motion-reduce:animate-none',
+                          'relative flex flex-wrap items-center justify-center gap-2 sm:gap-3 rounded-xl border-2 border-dashed px-3 py-4 min-h-[3.5rem] text-center motion-safe:animate-[pulse_1.35s_ease-in-out_infinite] motion-reduce:animate-none',
                           !activeTheme &&
-                            'border-amber-400/80 bg-gradient-to-r from-amber-50/95 via-amber-100/80 to-amber-50/95 dark:from-amber-950/60 dark:via-amber-900/40 dark:to-amber-950/60 dark:border-amber-500/60',
+                            'border-amber-500/40 bg-slate-950 text-amber-50 shadow-[0_10px_44px_-10px_rgba(251,191,36,0.5)] dark:border-amber-400/35 dark:bg-slate-950 dark:shadow-[0_10px_44px_-10px_rgba(251,191,36,0.42)]',
                         )}
                         style={
                           activeTheme
                             ? {
-                                borderColor: 'color-mix(in srgb, var(--theme-primary) 50%, transparent)',
-                                background: `linear-gradient(90deg, color-mix(in srgb, var(--theme-primary) 14%, var(--theme-card)), color-mix(in srgb, var(--theme-primary) 22%, var(--theme-card)), color-mix(in srgb, var(--theme-primary) 14%, var(--theme-card)))`,
+                                borderColor: 'color-mix(in srgb, var(--theme-primary) 55%, transparent)',
+                                background:
+                                  'linear-gradient(165deg, color-mix(in srgb, var(--theme-primary) 24%, #050508) 0%, #08090d 48%, #050508 100%)',
+                                boxShadow:
+                                  '0 12px 44px -10px color-mix(in srgb, var(--theme-primary) 48%, transparent)',
+                                color: 'rgba(248, 250, 252, 0.97)',
                               }
                             : undefined
                         }
@@ -1550,16 +1554,25 @@ function StudentDashboardInner({
                         aria-live="polite"
                       >
                         <ScanBarcode
-                          className="h-7 w-7 shrink-0 sm:h-8 sm:w-8"
-                          style={activeTheme ? { color: 'var(--theme-primary)' } : undefined}
+                          className={cn(
+                            'h-7 w-7 shrink-0 sm:h-8 sm:w-8',
+                            !activeTheme && 'text-amber-300',
+                          )}
+                          style={
+                            activeTheme
+                              ? {
+                                  color: 'color-mix(in srgb, var(--theme-primary) 72%, white)',
+                                }
+                              : undefined
+                          }
                           aria-hidden
                         />
                         <span
                           className={cn(
                             'max-w-full text-base sm:text-lg md:text-xl font-black uppercase tracking-[0.12em] sm:tracking-[0.18em] leading-snug',
-                            !activeTheme && 'text-amber-900 dark:text-amber-100',
+                            !activeTheme && 'text-amber-50',
                           )}
-                          style={activeTheme ? { color: 'var(--theme-primary)' } : undefined}
+                          style={activeTheme ? { color: 'rgba(248, 250, 252, 0.97)' } : undefined}
                         >
                           Scan coupon
                         </span>
@@ -1611,15 +1624,19 @@ function StudentDashboardInner({
                     <div className="space-y-3 w-full min-w-0">
                       <div
                         className={cn(
-                          'flex flex-wrap items-center justify-center gap-2 sm:gap-3 rounded-xl border-2 border-dashed px-3 py-2.5 text-center motion-safe:animate-[pulse_1.35s_ease-in-out_infinite] motion-reduce:animate-none',
+                          'relative flex flex-wrap items-center justify-center gap-2 sm:gap-3 rounded-xl border-2 border-dashed px-3 py-4 min-h-[3.5rem] text-center motion-safe:animate-[pulse_1.35s_ease-in-out_infinite] motion-reduce:animate-none',
                           !activeTheme &&
-                            'border-amber-400/80 bg-gradient-to-r from-amber-50/95 via-amber-100/80 to-amber-50/95 dark:from-amber-950/60 dark:via-amber-900/40 dark:to-amber-950/60 dark:border-amber-500/60',
+                            'border-amber-500/40 bg-slate-950 text-amber-50 shadow-[0_10px_44px_-10px_rgba(251,191,36,0.5)] dark:border-amber-400/35 dark:bg-slate-950 dark:shadow-[0_10px_44px_-10px_rgba(251,191,36,0.42)]',
                         )}
                         style={
                           activeTheme
                             ? {
-                                borderColor: 'color-mix(in srgb, var(--theme-primary) 50%, transparent)',
-                                background: `linear-gradient(90deg, color-mix(in srgb, var(--theme-primary) 14%, var(--theme-card)), color-mix(in srgb, var(--theme-primary) 22%, var(--theme-card)), color-mix(in srgb, var(--theme-primary) 14%, var(--theme-card)))`,
+                                borderColor: 'color-mix(in srgb, var(--theme-primary) 55%, transparent)',
+                                background:
+                                  'linear-gradient(165deg, color-mix(in srgb, var(--theme-primary) 24%, #050508) 0%, #08090d 48%, #050508 100%)',
+                                boxShadow:
+                                  '0 12px 44px -10px color-mix(in srgb, var(--theme-primary) 48%, transparent)',
+                                color: 'rgba(248, 250, 252, 0.97)',
                               }
                             : undefined
                         }
@@ -1627,16 +1644,25 @@ function StudentDashboardInner({
                         aria-live="polite"
                       >
                         <ScanBarcode
-                          className="h-7 w-7 shrink-0 sm:h-8 sm:w-8"
-                          style={activeTheme ? { color: 'var(--theme-primary)' } : undefined}
+                          className={cn(
+                            'h-7 w-7 shrink-0 sm:h-8 sm:w-8',
+                            !activeTheme && 'text-amber-300',
+                          )}
+                          style={
+                            activeTheme
+                              ? {
+                                  color: 'color-mix(in srgb, var(--theme-primary) 72%, white)',
+                                }
+                              : undefined
+                          }
                           aria-hidden
                         />
                         <span
                           className={cn(
                             'max-w-full text-base sm:text-lg md:text-xl font-black uppercase tracking-[0.12em] sm:tracking-[0.18em] leading-snug',
-                            !activeTheme && 'text-amber-900 dark:text-amber-100',
+                            !activeTheme && 'text-amber-50',
                           )}
-                          style={activeTheme ? { color: 'var(--theme-primary)' } : undefined}
+                          style={activeTheme ? { color: 'rgba(248, 250, 252, 0.97)' } : undefined}
                         >
                           Scan coupon
                         </span>

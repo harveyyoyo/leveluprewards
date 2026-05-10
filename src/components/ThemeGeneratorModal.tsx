@@ -160,14 +160,21 @@ function StudentPortalThemePreview({
                             <p className="text-xs font-black">Redeem Coupon Code</p>
                         </div>
                         <div
-                            className="mb-2 flex items-center justify-center gap-2 rounded-lg border-2 border-dashed px-2 py-2"
+                            className="mb-2 flex min-h-[2.75rem] items-center justify-center gap-2 rounded-lg border-2 border-dashed px-2 py-3"
                             style={{
-                                background: 'color-mix(in srgb, var(--theme-primary) 16%, var(--theme-card))',
-                                borderColor: 'color-mix(in srgb, var(--theme-primary) 50%, transparent)',
+                                borderColor: 'color-mix(in srgb, var(--theme-primary) 55%, transparent)',
+                                background:
+                                    'linear-gradient(165deg, color-mix(in srgb, var(--theme-primary) 24%, #050508) 0%, #08090d 48%, #050508 100%)',
+                                boxShadow:
+                                    '0 12px 44px -10px color-mix(in srgb, var(--theme-primary) 48%, transparent)',
+                                color: 'rgba(248, 250, 252, 0.97)',
                             }}
                         >
-                            <ScanBarcode className="h-5 w-5" style={{ color: 'var(--theme-primary)' }} />
-                            <span className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--theme-primary)' }}>
+                            <ScanBarcode
+                                className="h-5 w-5"
+                                style={{ color: 'color-mix(in srgb, var(--theme-primary) 72%, white)' }}
+                            />
+                            <span className="text-xs font-black uppercase tracking-widest text-[rgba(248,250,252,0.97)]">
                                 Scan coupon
                             </span>
                         </div>
