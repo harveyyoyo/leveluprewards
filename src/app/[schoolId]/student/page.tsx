@@ -1391,9 +1391,9 @@ function StudentDashboardInner({
           </CardContent>
         </Card>
 
-        <div className="grid w-full min-w-0 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_min(320px,28vw)] gap-4 relative z-10 flex-1 min-h-0 items-stretch overflow-hidden">
+        <div className="grid w-full min-w-0 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_min(320px,28vw)] gap-4 relative z-10 flex-1 min-h-0 items-stretch overflow-hidden pb-[max(1rem,env(safe-area-inset-bottom))]">
           {/* Left Section: Content */}
-          <div className="min-w-0 flex flex-1 min-h-0 flex-col gap-3 overflow-y-auto overflow-x-hidden pr-1 min-h-0">
+          <div className="min-w-0 flex flex-1 min-h-0 flex-col gap-3 overflow-y-auto overflow-x-hidden pr-1 pb-8 scroll-pb-8 min-h-0">
             <StudentGoalsCard
               schoolId={schoolId!}
               student={student}
@@ -1965,7 +1965,7 @@ function StudentDashboardInner({
           </div>
 
           {/* Right Section: Activity — fills column height on lg; list count fits visible rows (no page scroll). */}
-          <div className="min-w-0 flex min-h-0 flex-col lg:h-full lg:min-h-0">
+          <div className="min-w-0 flex min-h-0 flex-col pb-8 scroll-pb-8 lg:h-full lg:min-h-0 lg:pb-0">
           <Card
             ref={activityPanelRef}
             className={cn(
@@ -2263,31 +2263,34 @@ export default function StudentLoginPage() {
 
   return (
     <ErrorBoundary name="StudentLoginPage">
-      <TooltipProvider>
-        <div
-          className={cn(
-            'flex flex-1 min-h-0 w-full flex-col items-center justify-center px-4 py-4 font-sans',
-            isGraphic
-              ? 'animate-in fade-in zoom-in-95 duration-200 motion-reduce:animate-none motion-reduce:duration-0'
-              : '',
-          )}
-          style={{
-            ['--primary' as any]: rainbowTripletForNavId('redeem', settings.colorScheme),
-            ['--chart-1' as any]: rainbowTripletForNavId('redeem', settings.colorScheme),
-            ['--chart-2' as any]: complementTripletForNavId('redeem', settings.colorScheme),
-            ['--chart-3' as any]: rainbowTripletForNavId('redeem', settings.colorScheme),
-            ['--chart-4' as any]: complementTripletForNavId('redeem', settings.colorScheme),
-            ['--chart-5' as any]: rainbowTripletForNavId('redeem', settings.colorScheme),
-            ['--ring' as any]: complementTripletForNavId('redeem', settings.colorScheme),
-          } as any}
-        >
-          <StudentScanner
-            onStudentFound={onScannerStudent}
-            icon={<LevelUpKioskLogo className="" />}
-          />
-        </div>
-      </TooltipProvider>
-      <KioskSponsorBanner />
+      {/* Single column fills #screen-view so the scanner stays vertically centered in the viewport (not clustered top). */}
+      <div className="flex w-full flex-1 flex-col min-h-dvh">
+        <TooltipProvider>
+          <div
+            className={cn(
+              'flex min-h-0 w-full flex-1 flex-col items-center justify-center px-4 py-4 font-sans',
+              isGraphic
+                ? 'animate-in fade-in zoom-in-95 duration-200 motion-reduce:animate-none motion-reduce:duration-0'
+                : '',
+            )}
+            style={{
+              ['--primary' as any]: rainbowTripletForNavId('redeem', settings.colorScheme),
+              ['--chart-1' as any]: rainbowTripletForNavId('redeem', settings.colorScheme),
+              ['--chart-2' as any]: complementTripletForNavId('redeem', settings.colorScheme),
+              ['--chart-3' as any]: rainbowTripletForNavId('redeem', settings.colorScheme),
+              ['--chart-4' as any]: complementTripletForNavId('redeem', settings.colorScheme),
+              ['--chart-5' as any]: rainbowTripletForNavId('redeem', settings.colorScheme),
+              ['--ring' as any]: complementTripletForNavId('redeem', settings.colorScheme),
+            } as any}
+          >
+            <StudentScanner
+              onStudentFound={onScannerStudent}
+              icon={<LevelUpKioskLogo className="" />}
+            />
+          </div>
+        </TooltipProvider>
+        <KioskSponsorBanner />
+      </div>
     </ErrorBoundary>
   );
 }
