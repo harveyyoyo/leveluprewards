@@ -52,16 +52,14 @@ export function PrizeRedeemTicketPrintSheet({
   useEffect(() => {
     const style = document.createElement('style');
     style.setAttribute('data-prize-ticket-print', 'true');
-    const page =
+    const printSheetCss =
       paperFormat === 'thermal_80mm'
-        ? /* auto height shrinks preview / cut length to content (Chrome + most thermal drivers) */
-          '@page{size:80mm auto;margin:2mm;}'
-        : '@page{size:50mm 70mm;margin:1mm;}';
-    style.textContent =
-      '@media print{' +
-      page +
-      'html,body{margin:0 !important;padding:0 !important;background:#fff !important;}' +
-      '}';
+        ? /* Shrink-wrap page + root — POS drivers often use ~210mm roll height; avoid stretching the slip */
+          '@page{size:80mm auto;margin:2mm;}' +
+          'html,body{margin:0!important;padding:0!important;background:#fff!important;height:auto!important;min-height:0!important;overflow:visible!important;}'
+        : '@page{size:50mm 70mm;margin:1mm;}' +
+          'html,body{margin:0!important;padding:0!important;background:#fff!important;}';
+    style.textContent = '@media print{' + printSheetCss + '}';
     document.head.appendChild(style);
 
     document.body.classList.add('prize-ticket-printing');

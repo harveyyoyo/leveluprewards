@@ -63,7 +63,7 @@
   }
 
   body {
-    @apply bg-background text-foreground transition-colors duration-500 min-h-screen;
+    @apply bg-background text-foreground transition-colors duration-200 min-h-screen motion-reduce:transition-none;
   }
 
   /* Backdrop performance hardening:
@@ -698,6 +698,14 @@
     height: auto !important;
   }
 
+  /* 80 mm thermal voucher: don't keep Letter-sized html/body — kills huge blank under bordered slip */
+  html:has(body[data-prize-voucher-print='thermal_80mm'].prize-ticket-printing),
+  body[data-prize-voucher-print='thermal_80mm'].prize-ticket-printing {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
   /* Scorched Earth: Hide EVERYTHING on body */
   body.coupon-printing *,
   body.prize-ticket-printing *,
@@ -801,30 +809,33 @@
     align-items: center !important;
   }
 
-  /* 80 mm thermal: page + wrapper height must follow content, not Letter/tall @page (was huge blank under slip). */
+  /* 80 mm thermal: shrink-wrap like coupons — absolute + height:100% parent makes the slip stretch */
   body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='thermal_80mm'],
   body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='thermal_80mm'] {
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    right: auto !important;
-    bottom: auto !important;
+    display: block !important;
+    position: static !important;
     inset: auto !important;
     width: 100% !important;
+    max-width: 80mm !important;
+    margin: 0 auto !important;
     height: auto !important;
     min-height: 0 !important;
     overflow: visible !important;
-    align-items: flex-start !important;
+    transform: none !important;
+    flex-direction: unset !important;
   }
 
   body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='thermal_80mm'] .prize-ticket,
   body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='thermal_80mm'] .prize-ticket {
     height: auto !important;
+    min-height: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
     display: flex !important;
     flex-direction: column !important;
     justify-content: flex-start !important;
+    align-self: flex-start !important;
+    flex-grow: 0 !important;
     grid-template-rows: unset !important;
   }
 
@@ -858,8 +869,13 @@
 
     body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='thermal_80mm'],
     body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='thermal_80mm'] {
+      display: block !important;
+      position: static !important;
       height: auto !important;
-      align-items: flex-start !important;
+      min-height: 0 !important;
+      max-width: 80mm !important;
+      margin: 0 auto !important;
+      overflow: visible !important;
     }
 
     body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket,
@@ -1620,9 +1636,9 @@
     align-items: stretch;
   }
   
-  /* If on a narrow label, don't force 250mm height */
+  /* Label stock minimum slip height — not for 80 mm thermal (different min-height rules) */
   @media (max-width: 100mm) {
-    .prize-ticket {
+    body:not([data-prize-voucher-print='thermal_80mm']) .prize-ticket {
       min-height: 66mm !important;
     }
   }
