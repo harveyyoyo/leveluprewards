@@ -12,6 +12,7 @@ import { useSearchParams } from 'next/navigation';
 import { useSettings } from './providers/SettingsProvider';
 import { cn } from '@/lib/utils';
 import { ConfirmProvider } from '@/components/providers/ConfirmProvider';
+import { isMarketingLandingPath } from '@/lib/marketingLandings';
 
 // Lazy-load heavy, non-critical UI components to reduce initial JS bundle.
 // AnimatedSiteBackground: 68 KB (30+ theme layer components)
@@ -61,7 +62,8 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
     const isAdminDashboardPage =
       typeof pathname === 'string' &&
       /\/admin\/?$/.test(pathname);
-    const hideAppChrome = isLoginPage || isSignInPage;
+    const hideAppChrome =
+      isLoginPage || isSignInPage || isMarketingLandingPath(pathname);
     const appShellNoPageScroll =
       typeof pathname === 'string' &&
       !isAdminDashboardPage &&

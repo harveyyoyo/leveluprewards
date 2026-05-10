@@ -1,20 +1,20 @@
 import Link from 'next/link';
 import { HomeLandingLogo } from '@/components/HomeLandingLogo';
-
-/** Approved marketing landing routes — add entries here as new variants ship. */
-const LANDING_PAGES: ReadonlyArray<{ href: string; label: string }> = [
-  { href: '/leveluparcade', label: 'LevelUp Arcade' },
-];
+import { Button } from '@/components/ui/button';
+import { MARKETING_LANDING_PAGES } from '@/lib/marketingLandings';
 
 export default function RootPage() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-10 bg-slate-950 p-6 text-slate-100">
+    <div className="flex min-h-screen flex-col items-center justify-center gap-8 bg-slate-950 p-6 text-slate-100">
       <HomeLandingLogo />
+      <Button asChild className="h-12 w-full max-w-xs rounded-xl font-bold">
+        <Link href="/login">School Login</Link>
+      </Button>
       <nav
         className="flex max-w-md flex-wrap items-center justify-center gap-x-1 gap-y-2 text-sm text-slate-400"
         aria-label="Marketing landing pages"
       >
-        {LANDING_PAGES.map(({ href, label }, i) => (
+        {MARKETING_LANDING_PAGES.map(({ href, label }, i) => (
           <span key={href} className="inline-flex items-center gap-x-1">
             {i > 0 ? (
               <span className="select-none text-slate-600" aria-hidden>
