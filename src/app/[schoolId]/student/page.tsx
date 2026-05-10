@@ -11,12 +11,10 @@ import { useSettings } from '@/components/providers/SettingsProvider';
 import { PrinterReminderCallout } from '@/components/PrinterReminderCallout';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirestore, useFirebase, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { useSchoolMetadataDocRef } from '@/hooks/useSchoolMetadataDocRef';
 import { collection, query, orderBy, limit, doc, where, getDocs, updateDoc, addDoc } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { SchoolGate } from '@/components/SchoolGate';
 import dynamic from 'next/dynamic';
-import { StudentIdCard } from '@/components/StudentIdCard';
 import type { StudentFoundMeta } from '@/components/StudentScanner';
 import { LevelUpKioskLogo } from '@/components/LevelUpKioskLogo';
 import { KioskSponsorBanner } from '@/components/KioskSponsorBanner';
@@ -460,18 +458,6 @@ function StudentDashboardInner({
 
   const birthdayToday = !!student?.birthday && student.birthday.substring(5) === todayInSchoolTz.md;
 
-  const appConfigRef = useMemoFirebase(() => (firestore ? doc(firestore, 'appConfig', 'global') : null), [firestore]);
-  const { data: appConfig } = useDoc<{ appLogoUrl?: string; appName?: string; appTagline?: string }>(appConfigRef);
-
-  const schoolDocRef = useSchoolMetadataDocRef();
-  const { data: schoolData } = useDoc<{ name?: string; logoUrl?: string }>(schoolDocRef);
-
-  const previewSchoolName = schoolData?.name?.trim() || 'School';
-  const previewSchoolLogoUrl = schoolData?.logoUrl ?? null;
-  const previewAppLogoUrl = appConfig?.appLogoUrl ?? null;
-  const previewAppName = appConfig?.appName?.trim() || undefined;
-  const previewAppTagline = appConfig?.appTagline?.trim() || undefined;
-
   const prizesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'prizes') : null, [firestore, schoolId]);
   const { data: prizes, isLoading: prizesLoading } = useCollection<Prize>(prizesQuery);
 
@@ -512,7 +498,6 @@ function StudentDashboardInner({
   }, []);
 
   const [showRedeem, setShowRedeem] = useState(true);
-  const [isIdPreviewOpen, setIsIdPreviewOpen] = useState(false);
   const [confirmingPrize, setConfirmingPrize] = useState<Prize | null>(null);
   const [confirmingFunKind, setConfirmingFunKind] = useState<PrizeAiFunReward>('joke');
   const [isRedeemingPrize, setIsRedeemingPrize] = useState(false);
@@ -1197,11 +1182,13 @@ function StudentDashboardInner({
 
   return (
     <TooltipProvider>
+      <>
       <div
         className={cn(
           // Lock the dashboard to the viewport so inner panes scroll
           // (prevents Activity + CTA from falling below the fold).
-          "w-full max-w-none flex-1 min-h-0 pt-3 md:pt-8 relative px-3 md:px-6 overflow-x-hidden overflow-y-hidden flex flex-col",
+          "w-full max-w-none flex-1 min-h-0 relative px-3 md:px-6 overflow-x-hidden overflow-y-hidden flex flex-col",
+          birthdayToday ? "pt-14 md:pt-16" : "pt-3 md:pt-8",
           settings.enableThemeAnimations && !!effectiveTheme && "theme-theme-elements-animated theme-motion-override",
           // Avoid large bottom padding that leaves a visible gap.
           settings.displayMode === 'app' && 'pb-6'
@@ -1233,44 +1220,22 @@ function StudentDashboardInner({
           ['--ring' as any]: complementTripletForNavId('redeem', settings.colorScheme),
         } as any)}
       >
-        {birthdayToday ? (
-          <div
-            className="pointer-events-none absolute inset-0 z-0 overflow-hidden"
-            aria-hidden
-          >
-            <Confetti />
-            <Balloons />
-          </div>
-        ) : null}
-
         {effectiveTheme?.fontFamily && <GoogleFontLoader fontFamily={effectiveTheme.fontFamily} />}
 
         <div
           className={cn(
-            "relative z-[1] isolate flex flex-1 flex-col min-h-0 min-w-0 w-full space-y-3 md:space-y-4 overflow-hidden",
+            "relative flex flex-1 flex-col min-h-0 min-w-0 w-full space-y-3 md:space-y-4 overflow-hidden",
             isGraphic
               ? "animate-in fade-in duration-200 motion-reduce:animate-none motion-reduce:duration-0"
               : "",
           )}
         >
-        {birthdayToday ? (
-          <div
-            className="pointer-events-none shrink-0 -mx-3 md:-mx-6 flex justify-center items-center bg-gradient-to-r from-pink-600/95 via-fuchsia-600/95 to-amber-500/95 py-2.5 md:py-3 shadow-lg shadow-fuchsia-950/25 border-y border-white/25"
-            role="status"
-            aria-live="polite"
-          >
-            <span className="text-base sm:text-xl md:text-3xl font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] md:tracking-[0.4em] text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.35)]">
-              Happy Birthday
-            </span>
-          </div>
-        ) : null}
-
         <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
           {celebrationMessage || (flyPointsValue !== null ? `You earned ${flyPointsValue} points` : '')}
         </div>
 
         {celebrationMessage && (
-          <div className="pointer-events-none fixed inset-0 z-40 flex items-center justify-center">
+          <div className="pointer-events-none fixed inset-0 z-[60] flex items-center justify-center">
             <div className="pointer-events-auto bg-black/70 text-white px-8 py-5 rounded-3xl shadow-2xl border border-white/20 flex flex-col items-center gap-2 animate-in fade-in zoom-in duration-300">
               <span className="text-3xl font-black tracking-widest uppercase">Yay!</span>
               <span className="text-sm font-medium text-center max-w-xs">{celebrationMessage}</span>
@@ -1279,7 +1244,7 @@ function StudentDashboardInner({
         )}
 
         {flyPointsValue !== null && (
-          <div key={animationKey.current} className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center" aria-hidden="true">
+          <div key={animationKey.current} className="pointer-events-none fixed inset-0 z-[70] flex items-center justify-center" aria-hidden="true">
             <div className="animate-fly-up text-4xl md:text-6xl font-black tracking-widest text-emerald-400 drop-shadow-[0_0_14px_rgba(52,211,153,0.75)]">
               +{flyPointsValue} PTS
             </div>
@@ -1390,24 +1355,6 @@ function StudentDashboardInner({
                 <span className="text-lg md:text-xl font-bold uppercase tracking-widest" style={{ color: effectiveTheme ? 'var(--theme-primary)' : 'hsl(var(--primary) / 0.6)', opacity: 0.6 }}>pts</span>
               </div>
               <div className="mt-3 flex flex-wrap items-center justify-center gap-2 md:justify-end">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-9 px-4 rounded-full text-[11px] font-bold uppercase tracking-widest"
-                  style={
-                    activeTheme
-                      ? {
-                          borderColor: 'var(--theme-primary)',
-                          backgroundColor: 'transparent',
-                          color: 'var(--theme-primary)',
-                        }
-                      : undefined
-                  }
-                  onClick={() => setIsIdPreviewOpen(true)}
-                >
-                  Preview ID
-                </Button>
                 {studentSeesWelcomePage(settings, student) && schoolId && (
                   <Button
                     type="button"
@@ -1435,31 +1382,6 @@ function StudentDashboardInner({
             </div>
           </CardContent>
         </Card>
-
-        <Dialog open={isIdPreviewOpen} onOpenChange={setIsIdPreviewOpen}>
-          <DialogContent size="xl" className="!flex flex-col gap-2 overflow-x-hidden pt-12 sm:pt-14">
-            <DialogHeader className="shrink-0 space-y-1 pr-8">
-              <DialogTitle className="text-lg">ID Card Preview</DialogTitle>
-              <DialogDescription className="text-xs leading-snug">
-                Same layout as print; click outside or ✕ to close.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="flex shrink-0 flex-col items-center justify-center overflow-visible px-2 pb-6 pt-2 sm:pb-10 sm:pt-4">
-              <div className="student-id-card-screen-preview flex justify-center origin-center scale-[1.1] sm:scale-[1.18]">
-                <StudentIdCard
-                  student={student}
-                  schoolName={previewSchoolName}
-                  schoolLogoUrl={previewSchoolLogoUrl}
-                  className={student.classId && classes ? (classes.find((c) => c.id === student.classId)?.name || 'Unassigned') : 'Unassigned'}
-                  isColorEnabled={settings.enableColorPrinting}
-                  appLogoUrl={previewAppLogoUrl}
-                  appName={previewAppName}
-                  appTagline={previewAppTagline}
-                />
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
 
         <div className="grid w-full min-w-0 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_min(320px,28vw)] gap-4 relative z-10 flex-1 min-h-0 items-stretch overflow-hidden">
           {/* Left Section: Content */}
@@ -2121,6 +2043,27 @@ function StudentDashboardInner({
         )}
         </div>
       </div>
+      {birthdayToday ? (
+        <>
+          <div
+            className="fixed inset-0 z-[40] pointer-events-none overflow-hidden"
+            aria-hidden
+          >
+            <Confetti />
+            <Balloons />
+          </div>
+          <div
+            className="fixed top-0 left-0 right-0 z-[45] pointer-events-none flex justify-center items-center bg-gradient-to-r from-pink-600/95 via-fuchsia-600/95 to-amber-500/95 py-2.5 md:py-3 shadow-lg shadow-fuchsia-950/25 border-b border-white/25"
+            role="status"
+            aria-live="polite"
+          >
+            <span className="text-base sm:text-xl md:text-3xl font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] md:tracking-[0.4em] text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.35)]">
+              Happy Birthday
+            </span>
+          </div>
+        </>
+      ) : null}
+      </>
     </TooltipProvider>
   );
 }
