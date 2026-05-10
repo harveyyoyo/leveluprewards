@@ -40,7 +40,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import type { Student, Prize, HistoryItem, Class, LibraryItem } from '@/lib/types';
+import type { Student, Prize, HistoryItem, Class, LibraryItem, PrizeAiFunReward } from '@/lib/types';
 import { performKioskAttendanceSignIn, describeAttendanceKioskOutcome } from '@/lib/attendance/kioskSignIn';
 import DynamicIcon from '@/components/DynamicIcon';
 import { Progress } from '@/components/ui/progress';
@@ -107,6 +107,8 @@ import { rainbowTripletForNavId, complementTripletForNavId } from '@/lib/rainbow
 import { STUDENT_KIOSK_REQUEST_EXIT_EVENT } from '@/lib/student-kiosk';
 import { studentSeesWelcomeBackOverlay, studentSeesWelcomePage } from '@/lib/studentWelcome';
 import { prizeIsListed, studentSeesPrizeByTeachers } from '@/lib/prize-utils';
+import { prizeAppearsInRewardsShop, resolveAiFunApiMode } from '@/lib/aiJokePrize';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuthFetch } from '@/lib/authFetch';
 import { WelcomeOverlay } from '@/components/WelcomeOverlay';
 import { StudentKioskTransitionFlash } from '@/components/StudentKioskTransitionFlash';
@@ -151,7 +153,15 @@ function fallbackPrizeSurprise(
   prizeName: string,
   previousText?: string,
 ): PrizeSurprise {
-  const kind = mode === 'riddle' || mode === 'fortune' ? mode : 'joke';
+  const roll =
+    mode === 'random'
+      ? (['joke', 'riddle', 'fortune'] as const)[Math.floor(Math.random() * 3)]
+      : mode === 'picker'
+        ? 'joke'
+        : mode === 'riddle' || mode === 'fortune'
+          ? mode
+          : 'joke';
+  const kind = roll;
   const options = FALLBACK_PRIZE_SURPRISES[kind];
   const freshOptions = previousText ? options.filter((item) => item.text !== previousText) : options;
   const selected = (freshOptions.length ? freshOptions : options)[Math.floor(Math.random() * (freshOptions.length || options.length))];
@@ -492,6 +502,7 @@ function StudentDashboardInner({
   const [showRedeem, setShowRedeem] = useState(true);
   const [isIdPreviewOpen, setIsIdPreviewOpen] = useState(false);
   const [confirmingPrize, setConfirmingPrize] = useState<Prize | null>(null);
+  const [confirmingFunKind, setConfirmingFunKind] = useState<PrizeAiFunReward>('joke');
   const [isRedeemingPrize, setIsRedeemingPrize] = useState(false);
   const [prizeTicketData, setPrizeTicketData] = useState<{
     activityId: string;
@@ -929,10 +940,10 @@ function StudentDashboardInner({
         } else {
           lastAiSurpriseCallRef.current = Date.now();
           pendingPrizeTicketAfterAiRef.current = ticketPayload;
-          const aiMode = prize.aiFunReward;
+          const apiMode = resolveAiFunApiMode(prize, prize.aiFunReward === 'picker' ? confirmingFunKind : undefined);
           const requestId = aiSurpriseRequestIdRef.current + 1;
           aiSurpriseRequestIdRef.current = requestId;
-          const instantSurprise = fallbackPrizeSurprise(aiMode, prize.name, lastAiSurpriseTextRef.current);
+          const instantSurprise = fallbackPrizeSurprise(apiMode, prize.name, lastAiSurpriseTextRef.current);
           lastAiSurpriseTextRef.current = instantSurprise.text;
           setAiSurpriseBody(instantSurprise);
           setAiSurpriseLoading(false);
@@ -946,7 +957,7 @@ function StudentDashboardInner({
                 signal: controller.signal,
                 body: JSON.stringify({
                   schoolId,
-                  mode: aiMode,
+                  mode: apiMode,
                 }),
               });
               const j = (await res.json()) as { error?: string; kind?: string; text?: string; answer?: string };
@@ -983,7 +994,7 @@ function StudentDashboardInner({
     } finally {
       setIsRedeemingPrize(false);
     }
-  }, [authFetch, confirmingPrize, playSound, redeemPrize, resetTimer, schoolId, settings.defaultStudentTheme, settings.enableStudentThemes, settings.enablePrizeAiSurprise, settings.enableStudentEmojiOnPrizeTickets, settings.enableGoals, student, toast, firestore, isFeatureAllowed]);
+  }, [authFetch, confirmingFunKind, confirmingPrize, playSound, redeemPrize, resetTimer, schoolId, settings.defaultStudentTheme, settings.enableStudentThemes, settings.enablePrizeAiSurprise, settings.enableStudentEmojiOnPrizeTickets, settings.enableGoals, student, toast, firestore, isFeatureAllowed]);
 
   const handlePrintPrizeTicket = useCallback(() => {
     if (!prizeTicketData) return;
@@ -1613,7 +1624,12 @@ function StudentDashboardInner({
                   {prizesLoading ? (
                     [...Array(8)].map((_, i) => <Skeleton key={i} className="min-h-[9rem] sm:min-h-[9.5rem] w-full rounded-xl" />)
                   ) : (prizes || [])
-                    .filter(p => prizeIsListed(p) && p.points <= student.points && studentSeesPrizeByTeachers(student, p) && (!p.classId || student.classId === p.classId))
+                    .filter(p =>
+                      prizeAppearsInRewardsShop(p, { enablePrizeAiSurprise: settings.enablePrizeAiSurprise }) &&
+                      prizeIsListed(p) &&
+                      p.points <= student.points &&
+                      studentSeesPrizeByTeachers(student, p) &&
+                      (!p.classId || student.classId === p.classId))
                     .sort((a, b) => b.points - a.points)
                     .map((reward) => (
                       <button
@@ -1675,7 +1691,10 @@ function StudentDashboardInner({
                         </div>
                       </button>
                     ))}
-                  {!prizesLoading && (prizes || []).filter(p => prizeIsListed(p) && p.points <= student.points).length === 0 && (
+                  {!prizesLoading && (prizes || []).filter(p =>
+                      prizeAppearsInRewardsShop(p, { enablePrizeAiSurprise: settings.enablePrizeAiSurprise }) &&
+                      prizeIsListed(p) &&
+                      p.points <= student.points).length === 0 && (
                     <div
                       className={cn(
                         "col-span-full py-8 flex flex-col items-center justify-center text-center space-y-3 rounded-xl border border-dashed mx-2 mb-2",
@@ -1737,6 +1756,22 @@ function StudentDashboardInner({
                     {confirmingPrize ? ` for ${(confirmingPrize.points || 0).toLocaleString()} points` : ''}?
                   </AlertDialogDescription>
                 </AlertDialogHeader>
+                {confirmingPrize?.aiFunReward === 'picker' ? (
+                  <div className="py-2 space-y-2">
+                    <Label htmlFor="student-fun-kind">What do you want?</Label>
+                    <Select value={confirmingFunKind} onValueChange={(v) => setConfirmingFunKind(v as PrizeAiFunReward)}>
+                      <SelectTrigger id="student-fun-kind">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="joke">Joke</SelectItem>
+                        <SelectItem value="riddle">Riddle</SelectItem>
+                        <SelectItem value="fortune">Fortune</SelectItem>
+                        <SelectItem value="random">Surprise me</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : null}
                 <AlertDialogFooter>
                   <AlertDialogCancel disabled={isRedeemingPrize}>Cancel</AlertDialogCancel>
                   <Button type="button" onClick={handleRedeemPrize} disabled={isRedeemingPrize}>

@@ -32,7 +32,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import type { Student, Prize, HistoryItem } from '@/lib/types';
+import type { Student, Prize, HistoryItem, PrizeAiFunReward } from '@/lib/types';
 import { format } from 'date-fns';
 import {
     Gift,
@@ -73,7 +73,7 @@ import { prizeIsListed, stripLeadingEmojiFromPrizeName, studentSeesPrizeByTeache
 import { runMotor as runVendingMotor, isConnected as motorIsConnected } from '@/lib/vendingMotor';
 import { useAuthFetch } from '@/lib/authFetch';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { isAiFunPrize } from '@/lib/aiJokePrize';
+import { isAiFunPrize, prizeAppearsInRewardsShop, resolveAiFunApiMode } from '@/lib/aiJokePrize';
 
 /** Max units per redemption for 0-point prizes when stock is unlimited (balance does not limit). */
 const FREE_PRIZE_MAX_QTY = 99;
@@ -97,15 +97,17 @@ function ConfirmRedemptionDialog({
     prize: Prize | null,
     isOpen: boolean,
     onOpenChange: (open: boolean) => void,
-    onConfirm: (quantity: number) => void,
+    onConfirm: (quantity: number, aiFunUserPick?: PrizeAiFunReward) => void,
     isRedeeming?: boolean,
 }) {
     const [quantity, setQuantity] = useState(1);
+    const [pickerKind, setPickerKind] = useState<PrizeAiFunReward>('joke');
     const playSound = useArcadeSound();
 
     const studentPoints = student && typeof student.points === 'number' ? student.points : 0;
     const prizePoints = prize && typeof prize.points === 'number' ? prize.points : 0;
     const aiPrize = isAiFunPrize(prize);
+    const pickerSurprise = prize?.aiFunReward === 'picker';
     /** Free (0 pt) prizes are not limited by balance — cap + optional stock count. */
     const maxByPoints =
         !prize ? 1 :
@@ -116,7 +118,10 @@ function ConfirmRedemptionDialog({
     const maxQuantity = prize ? Math.max(1, Math.min(maxByPoints, maxByStock)) : 1;
 
     useEffect(() => {
-        if (isOpen) setQuantity(1);
+        if (isOpen) {
+            setQuantity(1);
+            setPickerKind('joke');
+        }
     }, [isOpen, prize?.id]);
 
     useEffect(() => {
@@ -203,6 +208,24 @@ function ConfirmRedemptionDialog({
                                 </p>
                             )}
                         </>
+                    ) : pickerSurprise ? (
+                        <div className="space-y-2">
+                            <Label htmlFor="fun-ai-kind" className="text-xs font-semibold">
+                                What do you want?
+                            </Label>
+                            <Select value={pickerKind} onValueChange={(v) => setPickerKind(v as PrizeAiFunReward)}>
+                                <SelectTrigger id="fun-ai-kind" className="h-11">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="joke">Joke</SelectItem>
+                                    <SelectItem value="riddle">Riddle</SelectItem>
+                                    <SelectItem value="fortune">Fortune</SelectItem>
+                                    <SelectItem value="random">Surprise me</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <p className="text-xs text-center text-muted-foreground font-semibold">One per redeem.</p>
+                        </div>
                     ) : (
                         <p className="text-xs text-center text-muted-foreground font-semibold">
                             One per redeem.
@@ -222,7 +245,13 @@ function ConfirmRedemptionDialog({
                 </div>
                 <AlertDialogFooter>
                     <AlertDialogCancel onClick={() => onOpenChange(false)} disabled={isRedeeming}>Cancel</AlertDialogCancel>
-                    <Button type="button" disabled={!canAfford || isRedeeming} onClick={() => onConfirm(effectiveQty)}>
+                    <Button
+                        type="button"
+                        disabled={!canAfford || isRedeeming}
+                        onClick={() =>
+                            onConfirm(effectiveQty, pickerSurprise ? pickerKind : undefined)
+                        }
+                    >
                         {isRedeeming ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />Processing…</> : 'Confirm'}
                     </Button>
                 </AlertDialogFooter>
@@ -451,6 +480,7 @@ export function PrizeDashboard({
         const redeemId = searchParams.get('redeem');
         if (!redeemId || studentLoading || prizesLoading || !schoolId || !student) return;
         const visible = (prizes || []).filter((p) => {
+            if (!prizeAppearsInRewardsShop(p, { enablePrizeAiSurprise: settings.enablePrizeAiSurprise })) return false;
             if (!prizeIsListed(p)) return false;
             const teacherMatch = studentSeesPrizeByTeachers(student, p);
             const classMatch = !p.classId || student.classId === p.classId;
@@ -470,6 +500,7 @@ export function PrizeDashboard({
         student,
         prizes,
         router,
+        settings.enablePrizeAiSurprise,
     ]);
 
     const [logoutTimer, setLogoutTimer] = useState(settings.kioskSessionTimeoutSec ?? 15);
@@ -516,7 +547,7 @@ export function PrizeDashboard({
         };
     }, [resetTimer, isKioskLocked]);
 
-    const handleRedeemReward = async (prize: Prize, quantity: number) => {
+    const handleRedeemReward = async (prize: Prize, quantity: number, aiFunUserPick?: PrizeAiFunReward) => {
         if (!student || isRedeeming) return;
         setIsRedeeming(true);
         resetTimer();
@@ -617,11 +648,12 @@ export function PrizeDashboard({
                 setAiSurpriseBody(null);
                 setAiSurpriseLoading(true);
                 try {
+                    const apiMode = resolveAiFunApiMode(prize, aiFunUserPick);
                     const res = await authFetch('/api/prize-ai-fun', {
                         method: 'POST',
                         body: JSON.stringify({
                             schoolId,
-                            mode: prize.aiFunReward,
+                            mode: apiMode,
                         }),
                     });
                     const j = (await res.json()) as { error?: string; kind?: string; text?: string; answer?: string };
@@ -791,6 +823,7 @@ export function PrizeDashboard({
 
     const baseVisiblePrizes = (prizes || [])
         .filter(p => {
+            if (!prizeAppearsInRewardsShop(p, { enablePrizeAiSurprise: settings.enablePrizeAiSurprise })) return false;
             if (!prizeIsListed(p)) return false;
             const teacherMatch = studentSeesPrizeByTeachers(student, p);
             const classMatch = !p.classId || student.classId === p.classId;
@@ -1298,9 +1331,9 @@ export function PrizeDashboard({
                     student={student}
                     prize={confirmingPrize}
                     isRedeeming={isRedeeming}
-                    onConfirm={(quantity: number) => {
+                    onConfirm={(quantity: number, aiPick?: PrizeAiFunReward) => {
                         const p = confirmingPrize;
-                        if (p) void handleRedeemReward(p, quantity);
+                        if (p) void handleRedeemReward(p, quantity, aiPick);
                     }}
                 />
                 <AlertDialog open={!!ticketData} onOpenChange={(open) => { if (!open) setTicketData(null); }}>

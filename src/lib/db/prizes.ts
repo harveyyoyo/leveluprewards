@@ -1,6 +1,7 @@
 import {
   doc,
   setDoc,
+  getDoc,
   updateDoc,
   deleteDoc,
   deleteField,
@@ -13,6 +14,33 @@ import type { Student, Prize, HistoryItem } from '../types';
 import { reportFirestorePermissionError } from '@/firebase/error-emitter';
 import { removeUndefined } from './helpers';
 import { prizeRestrictionTeacherIds } from '@/lib/prize-utils';
+import { AI_FUN_UNIFIED_PRIZE_ID } from '@/lib/aiJokePrize';
+
+/** Creates the single Fun (AI) prize doc if missing — students choose joke/riddle/fortune at redeem. */
+export async function ensureUnifiedAiFunPrize(
+  firestore: Firestore,
+  schoolId: string,
+  defaults: { points: number },
+): Promise<void> {
+  const prizeDocRef = doc(firestore, 'schools', schoolId, 'prizes', AI_FUN_UNIFIED_PRIZE_ID);
+  try {
+    const snap = await getDoc(prizeDocRef);
+    if (snap.exists()) return;
+    const payload = removeUndefined({
+      name: 'Fun',
+      points: Math.max(0, defaults.points),
+      icon: 'Sparkles',
+      inStock: true,
+      offerPrintTicketOnRedeem: true,
+      aiFunReward: 'picker' as const,
+      addedBy: 'System',
+    } as unknown as Record<string, unknown>);
+    await setDoc(prizeDocRef, payload);
+  } catch (error) {
+    reportFirestorePermissionError(error, { path: prizeDocRef.path, operation: 'create', requestResourceData: { id: AI_FUN_UNIFIED_PRIZE_ID } });
+    throw error;
+  }
+}
 
 export const addPrize = async (firestore: Firestore, schoolId: string, prizeData: Omit<Prize, 'id'>): Promise<string> => {
   const newId = `p_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;

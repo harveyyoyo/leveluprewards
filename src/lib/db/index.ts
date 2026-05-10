@@ -38,7 +38,7 @@ export { addStaffAccount, updateStaffAccount, deleteStaffAccount, staffAccountsC
 export { addCategory, updateCategory, deleteCategory } from './categories';
 
 // Prizes
-export { addPrize, updatePrize, deletePrize, redeemPrize, togglePrizeFulfillment } from './prizes';
+export { addPrize, ensureUnifiedAiFunPrize, updatePrize, deletePrize, redeemPrize, togglePrizeFulfillment } from './prizes';
 
 // Coupons
 export { addCoupons, deleteCoupon, deleteCoupons, redeemCoupon } from './coupons';

@@ -1496,7 +1496,7 @@ export function SettingsModal() {
                                 <FeatureRow
                                     id="enablePrizeAiSurprise"
                                     label="AI reward surprises"
-                                    desc="Lets staff add dedicated AI surprise prizes (school-safe short text after redemption). Requires API keys on the server; staff choose point cost per prize and can remove a prize anytime."
+                                    desc="Adds a single Fun reward in the shop; students pick joke, riddle, fortune, or random when redeeming (school-safe short text). Requires API keys on the server; admins set cost and visibility in Admin → Prizes."
                                     icon={<Sparkles className="w-5 h-5" />}
                                     settings={local}
                                     onToggle={handleToggle}
@@ -1508,10 +1508,10 @@ export function SettingsModal() {
                                 {local.enablePrizeAiSurprise && isFeatureAllowed('enablePrizeAiSurprise') ? (
                                     <div className="px-3 pb-4 pt-0 border-t border-slate-100 dark:border-slate-800/50 mt-1">
                                         <Label htmlFor="prizeAiSurpriseDefaultPoints" className="text-xs font-bold text-foreground">
-                                            Default point cost for new AI surprise prizes
+                                            Default point cost for Fun (AI surprise)
                                         </Label>
                                         <p className="mt-1 text-xs text-muted-foreground">
-                                            Shown when you click &quot;Add AI surprise prize&quot; in Admin → Prizes. You can still change the cost on each prize afterward.
+                                            Used when the Fun prize is first created. You can change the cost anytime under Fun (AI surprise) in Admin → Prizes.
                                         </p>
                                         <Input
                                             id="prizeAiSurpriseDefaultPoints"

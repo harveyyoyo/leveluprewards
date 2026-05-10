@@ -16,6 +16,7 @@ function resolveKind(mode: PrizeAiFunReward): 'joke' | 'riddle' | 'fortune' {
     const roll = Math.floor(Math.random() * 3);
     return ['joke', 'riddle', 'fortune'][roll] as 'joke' | 'riddle' | 'fortune';
   }
+  if (mode === 'picker') return 'joke';
   return mode;
 }
 

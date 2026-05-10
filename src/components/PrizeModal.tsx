@@ -141,7 +141,7 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses, cre
       offerPrintTicketOnRedeem,
       teacherId: teacherId || undefined,
       classId: classId || undefined,
-      ...(prize?.aiFunReward ? { aiFunReward: aiFunRewardKind } : {}),
+      ...(prize?.aiFunReward && prize.aiFunReward !== 'picker' ? { aiFunReward: aiFunRewardKind } : {}),
     };
 
     setUploading(true);
@@ -203,7 +203,11 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses, cre
               <Label htmlFor="prize-points">Point cost</Label>
               <Input id="prize-points" type="number" min={0} value={points} onChange={e => setPoints(e.target.value)} />
             </div>
-            {prize?.aiFunReward ? (
+            {prize?.aiFunReward === 'picker' ? (
+              <p className="text-xs text-muted-foreground">
+                Students choose joke, riddle, fortune, or a random surprise when they redeem this reward.
+              </p>
+            ) : prize?.aiFunReward ? (
               <div className="space-y-1">
                 <Label htmlFor="prize-ai-kind">AI experience type</Label>
                 <Select value={aiFunRewardKind} onValueChange={(v) => setAiFunRewardKind(v as PrizeAiFunReward)}>
