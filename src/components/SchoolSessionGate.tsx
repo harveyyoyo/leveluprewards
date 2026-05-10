@@ -1,11 +1,21 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
 import { useAppContext } from '@/components/AppProvider';
 import { canAccessHallOfFameRoute } from '@/lib/hallOfFameAccess';
 
 const ALLOWED = new Set(['school', 'student', 'teacher', 'admin', 'developer', 'secretary', 'prizeClerk', 'reports']);
+
+function SessionGateLoading({ label }: { label?: string }) {
+  return (
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-3 p-6 text-muted-foreground">
+      <Loader2 className="h-8 w-8 animate-spin shrink-0" aria-hidden />
+      <span className="text-sm font-medium text-center">{label ?? 'Loading school session…'}</span>
+    </div>
+  );
+}
 
 function canUseRoute(pathname: string, routeSchoolId: string, loginState: string) {
   if (loginState === 'developer') return true;
@@ -47,6 +57,8 @@ export function SchoolSessionGate({
   const searchParams = useSearchParams();
   const route = routeSchoolId.trim().toLowerCase();
   const isStaffSignInLink = pathname === `/${route}/teacher` && !!searchParams.get('account');
+  /** Avoid hammering `login()` while waiting for Firestore/auth during kiosk recovery. */
+  const kioskRecoverAttemptRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!isInitialized || isUserLoading) return;
@@ -62,11 +74,28 @@ export function SchoolSessionGate({
 
     if (loginState === 'developer') return;
 
-    const sessionSchool = schoolId?.trim().toLowerCase();
+    const sessionSchool = schoolId?.trim().toLowerCase() ?? '';
     if (!sessionSchool || sessionSchool !== route) {
+      // Student / school-chooser kiosk often loses `schoolId` while `loginState` survives (storage quirks).
+      // Re-establish the kiosk session for this URL instead of blocking the whole layout with `null`.
+      if (loginState === 'student' || loginState === 'school') {
+        const attemptKey = `${route}:${loginState}:${sessionSchool || 'none'}`;
+        if (kioskRecoverAttemptRef.current !== attemptKey) {
+          kioskRecoverAttemptRef.current = attemptKey;
+          void (async () => {
+            const ok = await login('student', { schoolId: route });
+            if (!ok) {
+              router.replace(`/login?school=${encodeURIComponent(route)}`);
+            }
+          })();
+        }
+        return;
+      }
       router.replace(`/login?school=${encodeURIComponent(route)}`);
       return;
     }
+
+    kioskRecoverAttemptRef.current = null;
 
     if (!canUseRoute(pathname, route, loginState)) {
       router.replace(`/login?school=${encodeURIComponent(route)}`);
@@ -89,17 +118,25 @@ export function SchoolSessionGate({
         </div>
       );
     }
-    return null;
+    return <SessionGateLoading label="Redirecting to sign-in…" />;
   }
 
   if (loginState !== 'developer') {
     const sessionSchool = schoolId?.trim().toLowerCase();
     if (!sessionSchool || sessionSchool !== route) {
-      return null;
+      return (
+        <SessionGateLoading
+          label={
+            loginState === 'student' || loginState === 'school'
+              ? 'Connecting to school…'
+              : 'Loading school session…'
+          }
+        />
+      );
     }
 
     if (!canUseRoute(pathname, route, loginState)) {
-      return null;
+      return <SessionGateLoading label="Redirecting…" />;
     }
   }
 
