@@ -293,6 +293,7 @@ export default function PortalPage() {
                                     playSound('click');
                                     if (needsAdminPasscode) {
                                         e.preventDefault();
+                                        if (schoolId) router.prefetch(`/${schoolId}/admin`);
                                         setAdminDialogOpen(true);
                                         return;
                                     }
@@ -336,6 +337,8 @@ export default function PortalPage() {
                     if (!open) {
                         setAdminSubmitting(false);
                         setAdminPasscode('');
+                    } else if (schoolId) {
+                        router.prefetch(`/${schoolId}/admin`);
                     }
                     setAdminDialogOpen(open);
                 }}>
@@ -386,7 +389,7 @@ export default function PortalPage() {
                                         }
                                         playSound('login');
                                         setAdminDialogOpen(false);
-                                        router.push(`/${schoolId}/admin`);
+                                        router.replace(`/${schoolId}/admin`);
                                     })();
                                 }}
                             />
@@ -433,7 +436,7 @@ export default function PortalPage() {
                                         }
                                         playSound('login');
                                         setAdminDialogOpen(false);
-                                        router.push(`/${schoolId}/admin`);
+                                        router.replace(`/${schoolId}/admin`);
                                     })();
                                 }}
                             >
@@ -480,7 +483,7 @@ export default function PortalPage() {
                                         onClick={() => {
                                             if (!schoolId) return;
                                             setTeacherDialogOpen(false);
-                                            router.push(`/${schoolId}/admin`);
+                                            router.replace(`/${schoolId}/admin`);
                                         }}
                                         disabled={teacherSubmitting}
                                     >

@@ -13,7 +13,8 @@ function canUseRoute(pathname: string, routeSchoolId: string, loginState: string
   const prefix = `/${routeSchoolId}/`;
   const section = pathname.startsWith(prefix) ? pathname.slice(prefix.length).split('/')[0] : '';
 
-  if (section === 'admin') return loginState === 'admin';
+  // Allow school chooser through: Admin page shows the passcode gate until role is granted (same idea as /teacher).
+  if (section === 'admin') return loginState === 'admin' || loginState === 'school';
   if (section === 'teacher') {
     // Allow reaching the staff sign-in screen while in a student/public session.
     // The page itself will show a login form unless you already have a staff role.
