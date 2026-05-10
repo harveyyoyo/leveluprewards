@@ -503,11 +503,11 @@ export function PrizeDashboard({
         settings.enablePrizeAiSurprise,
     ]);
 
-    const [logoutTimer, setLogoutTimer] = useState(settings.kioskSessionTimeoutSec ?? 15);
+    const [logoutTimer, setLogoutTimer] = useState(settings.kioskSessionTimeoutSec ?? 10);
 
     const resetTimer = useCallback(() => {
         if (!isKioskLocked) {
-            setLogoutTimer(settings.kioskSessionTimeoutSec ?? 15);
+            setLogoutTimer(settings.kioskSessionTimeoutSec ?? 10);
         }
     }, [isKioskLocked, settings.kioskSessionTimeoutSec]);
 
@@ -1022,7 +1022,7 @@ export function PrizeDashboard({
                                                             2 *
                                                             Math.PI *
                                                             16 *
-                                                            (1 - Math.max(0, Math.min(1, logoutTimer / (settings.kioskSessionTimeoutSec || 15))))
+                                                            (1 - Math.max(0, Math.min(1, logoutTimer / (settings.kioskSessionTimeoutSec || 10))))
                                                         }
                                                         transform="rotate(-90 18 18)"
                                                         className={cn(

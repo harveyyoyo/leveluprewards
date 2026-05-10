@@ -1005,9 +1005,9 @@ export function SettingsModal() {
                                             <Input
                                                 type="number"
                                                 className="w-20 h-9 rounded-xl text-center font-bold bg-background/50 border-border/50"
-                                                value={local.kioskSessionTimeoutSec || 0}
-                                                onChange={(e) => handleToggle('kioskSessionTimeoutSec', Math.max(5, parseInt(e.target.value) || 5))}
-                                                min={5}
+                                                value={local.kioskSessionTimeoutSec ?? 10}
+                                                onChange={(e) => handleToggle('kioskSessionTimeoutSec', Math.max(1, parseInt(e.target.value) || 10))}
+                                                min={1}
                                                 max={300}
                                             />
                                         </div>

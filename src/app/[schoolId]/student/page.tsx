@@ -569,11 +569,11 @@ function StudentDashboardInner({
     toast({ title: 'Logged Out', description: 'Returning to kiosk home.' });
   }, [onDone, playSound, toast]);
 
-  const [logoutTimer, setLogoutTimer] = useState(settings.kioskSessionTimeoutSec ?? 15);
+  const [logoutTimer, setLogoutTimer] = useState(settings.kioskSessionTimeoutSec ?? 10);
 
   const resetLogoutTimer = useCallback(() => {
     if (isKioskLocked) return;
-    setLogoutTimer(settings.kioskSessionTimeoutSec ?? 15);
+    setLogoutTimer(settings.kioskSessionTimeoutSec ?? 10);
   }, [isKioskLocked, settings.kioskSessionTimeoutSec]);
 
   useEffect(() => {

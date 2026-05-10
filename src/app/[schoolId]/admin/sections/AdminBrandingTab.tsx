@@ -470,11 +470,11 @@ export function AdminBrandingTab({
                   <Input
                     id="kiosk-timeout"
                     type="number"
-                    min={5}
+                    min={1}
                     max={300}
-                    value={settings.kioskSessionTimeoutSec ?? 15}
+                    value={settings.kioskSessionTimeoutSec ?? 10}
                     onChange={(e) => {
-                      const secs = Math.max(5, parseInt(e.target.value) || 5);
+                      const secs = Math.max(1, parseInt(e.target.value) || 10);
                       updateSettings({ kioskSessionTimeoutSec: secs });
                     }}
                     className="w-24 font-bold"

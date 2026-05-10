@@ -343,7 +343,7 @@ const defaultSettings: Settings = {
         accent: '#64748b',
     },
     adminSessionTimeoutMs: 5 * 60 * 1000,
-    kioskSessionTimeoutSec: 15,
+    kioskSessionTimeoutSec: 10,
     kioskSponsorEnabled: false,
     kioskSponsorMessage: '',
     kioskSponsorLogoUrl: '',
