@@ -76,6 +76,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { GoogleFontLoader } from '@/components/GoogleFontLoader';
+import { Balloons, BirthdayHat, Confetti } from '@/components/BirthdayFX';
 
 import { Label } from '@/components/ui/label';
 import {
@@ -1235,9 +1236,16 @@ function StudentDashboardInner({
           ['--ring' as any]: complementTripletForNavId('redeem', settings.colorScheme),
         } as any)}
       >
+        {birthdayToday ? (
+          <>
+            <Confetti />
+            <Balloons />
+          </>
+        ) : null}
+
         {effectiveTheme?.fontFamily && <GoogleFontLoader fontFamily={effectiveTheme.fontFamily} />}
 
-        <div className="flex flex-1 flex-col min-h-0 min-w-0 w-full space-y-3 md:space-y-4 overflow-hidden">
+        <div className="relative z-10 flex flex-1 flex-col min-h-0 min-w-0 w-full space-y-3 md:space-y-4 overflow-hidden">
         <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
           {celebrationMessage || (flyPointsValue !== null ? `You earned ${flyPointsValue} points` : '')}
         </div>
@@ -1296,12 +1304,15 @@ function StudentDashboardInner({
                       {student.firstName} {student.lastName}
                     </h2>
                     {birthdayToday ? (
-                      <span
-                        className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20 px-2 py-1 text-[10px] font-black uppercase tracking-widest"
-                        title="Birthday today"
-                      >
-                        🎂 Birthday
-                      </span>
+                      <>
+                        <BirthdayHat size={52} className="hidden sm:block shrink-0 -mt-1" />
+                        <span
+                          className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20 px-2 py-1 text-[10px] font-black uppercase tracking-widest"
+                          title="Birthday today"
+                        >
+                          🎂 Birthday
+                        </span>
+                      </>
                     ) : null}
                     {(student.customEmojiUrl || effectiveTheme?.emoji) && (
                       student.customEmojiUrl ? (
@@ -2096,7 +2107,7 @@ function StudentDashboardInner({
 }
 
 export default function StudentLoginPage() {
-  const { loginState, isInitialized, schoolId, login } = useAppContext();
+  const { loginState, isInitialized, schoolId, login, logout } = useAppContext();
   const router = useRouter();
   const { toast } = useToast();
   const playSound = useArcadeSound();
@@ -2145,11 +2156,14 @@ export default function StudentLoginPage() {
     playSound('swoosh');
     if (activeStudentIdRef.current) {
       handleDone();
+      if (loginState === 'student' && schoolId) {
+        logout();
+      }
       toast({ title: 'Logged Out', description: 'Returning to kiosk home.' });
     } else {
       router.push(schoolId ? `/${schoolId}/portal` : '/login');
     }
-  }, [handleDone, playSound, router, schoolId, toast]);
+  }, [handleDone, loginState, logout, playSound, router, schoolId, toast]);
 
   useEffect(() => {
     window.addEventListener(STUDENT_KIOSK_REQUEST_EXIT_EVENT, handleStudentLogout);
@@ -2224,15 +2238,10 @@ export default function StudentLoginPage() {
       <TooltipProvider>
         <div
           className={cn(
-            // Fill the kiosk viewport below the header and center the scanner with equal visual top/bottom inset.
-            // App mode: subtract header + bottom tab reserve (pb-24 on main). Web: header only.
-            'flex flex-col items-center justify-center px-4 py-4 font-sans',
+            'flex flex-1 min-h-0 w-full flex-col items-center justify-center px-4 py-4 font-sans',
             isGraphic
               ? 'animate-in fade-in zoom-in-95 duration-200 motion-reduce:animate-none motion-reduce:duration-0'
               : '',
-            settings.displayMode === 'app'
-              ? 'min-h-[calc(100svh-11rem)]'
-              : 'min-h-[calc(100svh-5rem)]'
           )}
           style={{
             ['--primary' as any]: rainbowTripletForNavId('redeem', settings.colorScheme),
