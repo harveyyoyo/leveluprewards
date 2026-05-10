@@ -492,7 +492,8 @@ function AdminDashboardInner() {
         value: 'bulletinboard',
         label: 'Bulletin',
         icon: Megaphone,
-        isOn: (s) => !!s.bulletinEnabled,
+        /** Match default-on semantics (omit/false only disables). */
+        isOn: (s) => s.bulletinEnabled !== false,
         canEnable: () => isFeatureAllowed?.('bulletinEnabled') ?? true,
         enable: () => updateSettings({ bulletinEnabled: true, adminHiddenAddOnTabs: removeHidden('bulletinboard') }),
         disable: () => updateSettings({ bulletinEnabled: false, adminHiddenAddOnTabs: removeHidden('bulletinboard'), adminPinnedAddOnTabs: removePinned('bulletinboard') }),

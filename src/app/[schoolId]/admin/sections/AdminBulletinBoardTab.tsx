@@ -81,8 +81,8 @@ export function AdminBulletinBoardTab({
   const [category, setCategory] = useState('Attendance');
   const [active, setActive] = useState(true);
 
-  // Bulletin Board customizations
-  const bulletinEnabled = settings.bulletinEnabled ?? true;
+  // Bulletin Board customizations (default on when unset — same as staff board + Features tab)
+  const bulletinEnabled = settings.bulletinEnabled !== false;
   const bulletinTitle = settings.bulletinTitle || 'School Bulletin Board';
   const bulletinTheme = settings.bulletinTheme || 'default';
   const bulletinLogoSize = settings.bulletinLogoSize || 'md';
@@ -211,15 +211,45 @@ export function AdminBulletinBoardTab({
                 </Helper>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="md:col-span-2 flex items-center justify-between rounded-xl border bg-background px-4 py-3">
+                <div className="md:col-span-2 flex flex-col gap-3 rounded-xl border bg-background px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
                     <p className="text-sm font-bold">Enable bulletin board</p>
                     <p className="text-[11px] text-muted-foreground">Show the board on the staff display and in preview.</p>
                   </div>
-                  <Switch
-                    checked={bulletinEnabled}
-                    onCheckedChange={(checked) => updateSettings({ bulletinEnabled: checked })}
-                  />
+                  <div
+                    className="flex shrink-0 items-center gap-1 rounded-xl border bg-muted/40 p-1"
+                    role="group"
+                    aria-label="Bulletin board on or off"
+                  >
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className={cn(
+                        'h-9 min-w-[72px] rounded-lg px-4 text-xs font-black uppercase tracking-wide',
+                        bulletinEnabled
+                          ? 'bg-background text-foreground shadow-sm ring-1 ring-border'
+                          : 'text-muted-foreground hover:text-foreground',
+                      )}
+                      onClick={() => updateSettings({ bulletinEnabled: true })}
+                    >
+                      On
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className={cn(
+                        'h-9 min-w-[72px] rounded-lg px-4 text-xs font-black uppercase tracking-wide',
+                        !bulletinEnabled
+                          ? 'bg-background text-foreground shadow-sm ring-1 ring-border'
+                          : 'text-muted-foreground hover:text-foreground',
+                      )}
+                      onClick={() => updateSettings({ bulletinEnabled: false })}
+                    >
+                      Off
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="space-y-2">
