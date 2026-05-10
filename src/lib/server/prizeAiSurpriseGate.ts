@@ -21,7 +21,16 @@ export async function assertPrizeAiSurpriseAllowedForSchool(schoolId: string): P
     const mod = await import('firebase-admin');
     const admin = mod.default ?? mod;
     if (!admin.apps?.length) {
-      admin.initializeApp();
+      const projectId =
+        process.env.FIREBASE_ADMIN_PROJECT_ID ||
+        process.env.GOOGLE_CLOUD_PROJECT ||
+        process.env.GCLOUD_PROJECT ||
+        process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+      if (projectId) {
+        admin.initializeApp({ projectId });
+      } else {
+        admin.initializeApp();
+      }
     }
     const snap = await admin.firestore().collection('schools').doc(sid).get();
     if (!snap.exists) {
@@ -42,6 +51,12 @@ export async function assertPrizeAiSurpriseAllowedForSchool(schoolId: string): P
     return null;
   } catch (e) {
     console.error('assertPrizeAiSurpriseAllowedForSchool:', e);
+    if (process.env.NODE_ENV === 'development') {
+      console.warn(
+        '[prize AI gate] Skipping server plan check in development after Firebase Admin error. For full checks, set GOOGLE_APPLICATION_CREDENTIALS (or FIREBASE_ADMIN_PROJECT_ID + ADC), or set SKIP_PRIZE_AI_SERVER_PLAN_CHECK=1.',
+      );
+      return null;
+    }
     return NextResponse.json(
       { error: 'Could not verify school settings for this feature.' },
       { status: 503 },
