@@ -55,6 +55,7 @@ function LayoutClientWrapperInner({ children }: LayoutClientWrapperProps) {
     const { settings, isLoaded } = useSettings();
     const [studentChromeVisible, setStudentChromeVisible] = useState(false);
     const studentChromeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const devChunkReloadGuard = useRef(false);
     const isLoginPage =
       pathname === '/' ||
       pathname === '/login' ||
@@ -131,6 +132,78 @@ function LayoutClientWrapperInner({ children }: LayoutClientWrapperProps) {
                 }
             });
         }
+    }, []);
+
+    /**
+     * Dev-only: after HMR / `.next` clean, the document can reference old `/_next/static/*`
+     * chunk hashes → 404 script/CSS and a broken shell. One or two full reloads pick up
+     * the new manifest (matches StudentScanner chunk-recovery pattern).
+     */
+    useEffect(() => {
+        if (process.env.NODE_ENV !== 'development') return;
+
+        const STORAGE_KEY = 'lvlup-dev-chunk-reload-count';
+        const maxRetries = 2;
+
+        const bumpAndReload = () => {
+            if (devChunkReloadGuard.current) return;
+            devChunkReloadGuard.current = true;
+            try {
+                const n = Number(sessionStorage.getItem(STORAGE_KEY) || '0');
+                if (n >= maxRetries) return;
+                sessionStorage.setItem(STORAGE_KEY, String(n + 1));
+                window.location.reload();
+            } catch {
+                window.location.reload();
+            }
+        };
+
+        const chunkRelated = (msg: string, name?: string) =>
+            name === 'ChunkLoadError' ||
+            /chunk load/i.test(msg) ||
+            /loading chunk/i.test(msg) ||
+            /failed to fetch dynamically imported module/i.test(msg);
+
+        const onWindowError = (ev: ErrorEvent) => {
+            const msg = String(ev.message || ev.error?.message || '');
+            const name = ev.error?.name || '';
+            if (chunkRelated(msg, name)) bumpAndReload();
+        };
+
+        const onRejection = (ev: PromiseRejectionEvent) => {
+            const r = ev.reason;
+            const msg =
+                typeof r?.message === 'string'
+                    ? r.message
+                    : typeof r === 'string'
+                      ? r
+                      : '';
+            const name = r?.name || '';
+            if (chunkRelated(msg, name)) bumpAndReload();
+        };
+
+        /** Captures failed `<script>` / `<link>` loads (e.g. stale chunk hash → HTTP 404). */
+        const onResourceErrorCapture = (ev: Event) => {
+            const el = ev.target as HTMLElement | undefined;
+            if (!el) return;
+            if (el.tagName === 'SCRIPT') {
+                const src = (el as HTMLScriptElement).src || '';
+                if (src.includes('/_next/static/')) bumpAndReload();
+            }
+            if (el.tagName === 'LINK') {
+                const href = (el as HTMLLinkElement).href || '';
+                if (href.includes('/_next/static/')) bumpAndReload();
+            }
+        };
+
+        window.addEventListener('error', onWindowError);
+        window.addEventListener('unhandledrejection', onRejection);
+        document.addEventListener('error', onResourceErrorCapture, true);
+        return () => {
+            window.removeEventListener('error', onWindowError);
+            window.removeEventListener('unhandledrejection', onRejection);
+            document.removeEventListener('error', onResourceErrorCapture, true);
+        };
     }, []);
 
     return (
