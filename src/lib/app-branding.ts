@@ -6,10 +6,10 @@ export const APP_NAME = 'LevelUp';
 export const APP_TAGLINE = 'School Rewards System';
 
 /** Matches `LevelUpLogo` arrow fill: `oklch(0.28 0.06 252)`. */
-export const LEVELUP_BRAND_PRIMARY_HEX = '#003d42';
+export const LEVELUP_BRAND_PRIMARY_HEX = '#102a45';
 
-/** Readable brand-line teal on dark surfaces (Default scheme + dark mode); `--primary` is intentionally light in `.dark`. */
-export const LEVELUP_BRAND_PRIMARY_ON_DARK_HEX = '#2dd4bf';
+/** Readable brand accent on dark surfaces (Default scheme + dark mode); `--primary` is intentionally light in `.dark`. */
+export const LEVELUP_BRAND_PRIMARY_ON_DARK_HEX = '#7dd3fc';
 
 /**
  * URL for the LevelUp logo / wordmark across the app (default: preschool org sign-in chooser).
