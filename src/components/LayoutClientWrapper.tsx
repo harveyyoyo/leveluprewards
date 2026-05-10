@@ -2,7 +2,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Header from "@/components/Header";
 import { SiteFooter } from '@/components/SiteFooter';
@@ -35,7 +35,21 @@ interface LayoutClientWrapperProps {
     children: React.ReactNode;
 }
 
-export default function LayoutClientWrapper({ children }: LayoutClientWrapperProps) {
+/** Next.js requires `useSearchParams()` to sit under `<Suspense>` or dev SSR/recovery can loop with “missing required error components”. */
+function LayoutChromeSuspenseFallback() {
+    return (
+        <TooltipProvider>
+            <div className="min-h-screen min-h-dvh flex flex-col bg-background">
+                <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm font-medium animate-pulse">
+                    Loading…
+                </div>
+            </div>
+            <Toaster />
+        </TooltipProvider>
+    );
+}
+
+function LayoutClientWrapperInner({ children }: LayoutClientWrapperProps) {
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const { settings, isLoaded } = useSettings();
@@ -178,5 +192,13 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
             </ConfirmProvider>
             <Toaster />
         </TooltipProvider>
+    );
+}
+
+export default function LayoutClientWrapper({ children }: LayoutClientWrapperProps) {
+    return (
+        <Suspense fallback={<LayoutChromeSuspenseFallback />}>
+            <LayoutClientWrapperInner>{children}</LayoutClientWrapperInner>
+        </Suspense>
     );
 }

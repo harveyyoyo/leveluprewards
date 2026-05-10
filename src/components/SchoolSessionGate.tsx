@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { Suspense, useEffect, useRef } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { useAppContext } from '@/components/AppProvider';
@@ -44,7 +44,7 @@ function canUseRoute(pathname: string, routeSchoolId: string, loginState: string
  * Ensures `/{schoolId}/…` is only reachable with a matching session (or developer).
  * This is a client UX gate; Firestore rules still enforce real data access.
  */
-export function SchoolSessionGate({
+function SchoolSessionGateInner({
   routeSchoolId,
   children,
 }: {
@@ -141,4 +141,15 @@ export function SchoolSessionGate({
   }
 
   return <>{children}</>;
+}
+
+export function SchoolSessionGate(props: {
+  routeSchoolId: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Suspense fallback={<SessionGateLoading />}>
+      <SchoolSessionGateInner {...props} />
+    </Suspense>
+  );
 }
