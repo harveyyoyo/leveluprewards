@@ -880,9 +880,9 @@ export function SettingsModal() {
 
                                 <div className="grid grid-cols-2 gap-4 mb-4 mt-1">
                                     {/* Dark Mode */}
-                                    <div className="flex items-center justify-between">
+                                    <div className="flex items-start justify-between">
                                         <div className="flex items-center gap-2">
-                                            <Moon className="w-4 h-4 text-muted-foreground" />
+                                            <Moon className="w-4 h-4 text-muted-foreground shrink-0" />
                                              <span className="text-sm font-bold">Dark Mode</span>
                                         </div>
                                         <Switch
@@ -897,16 +897,21 @@ export function SettingsModal() {
                                             }}
                                         />
                                     </div>
-                                    {/* Legacy Mode */}
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <Cpu className="w-4 h-4 text-muted-foreground" />
-                                            <span className="text-sm font-bold">Legacy Mode</span>
+                                    {/* Legacy Mode — performance-oriented simple visuals (see `.legacy` in globals.css) */}
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div className="min-w-0 pr-1">
+                                            <div className="flex items-center gap-2">
+                                                <Cpu className="w-4 h-4 text-muted-foreground shrink-0" />
+                                                <span className="text-sm font-bold">Legacy Mode</span>
+                                            </div>
+                                            <p className="text-[10px] text-muted-foreground font-medium leading-snug mt-0.5 ml-6">
+                                                Turn on for a simpler, faster UI (less animation, blur, and glow). Leave off for the full arcade look.
+                                            </p>
                                         </div>
                                         <Switch
                                             checked={local.legacyMode}
                                             onCheckedChange={(checked) => handleToggle('legacyMode', checked)}
-                                            className="data-[state=checked]:bg-orange-600"
+                                            className="data-[state=checked]:bg-orange-600 shrink-0 mt-0.5"
                                         />
                                     </div>
                                     {/* Student themes (display only; does not delete saved themes) */}
