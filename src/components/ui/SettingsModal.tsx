@@ -363,6 +363,7 @@ export function SettingsModal() {
         if (autoOpenedFromQueryRef.current) return;
 
         const requestedView = ((): SettingsView | null => {
+            if (requested === 'hub') return 'hub';
             if (requested === 'features') return 'features';
             if (requested === 'interface') return 'interface';
             if (requested === 'security') return 'security';

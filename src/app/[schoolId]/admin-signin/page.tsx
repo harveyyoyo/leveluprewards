@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { ShieldCheck, ArrowLeft, Loader2 } from 'lucide-react';
 
@@ -13,9 +13,33 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
+/** Same-school path only; prevents open redirects. */
+function destinationAfterAdminLogin(redirectParam: string | null, schoolId: string): string | null {
+  if (!redirectParam || !schoolId) return null;
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(redirectParam);
+  } catch {
+    return null;
+  }
+  if (!decoded.startsWith('/') || decoded.startsWith('//') || decoded.includes('..') || decoded.includes(':')) {
+    return null;
+  }
+  const pathOnly = decoded.split('?')[0] ?? '';
+  const seg = pathOnly.split('/').filter(Boolean)[0]?.toLowerCase();
+  if (!seg || seg !== schoolId.trim().toLowerCase()) {
+    return null;
+  }
+  const existingQuery = decoded.includes('?') ? decoded.slice(decoded.indexOf('?') + 1) : '';
+  const params = new URLSearchParams(existingQuery);
+  params.set('settings', 'hub');
+  return `${pathOnly}?${params.toString()}`;
+}
+
 export default function AdminSignInPage() {
   const params = useParams<{ schoolId: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const playSound = useArcadeSound();
   const { toast } = useToast();
   const { login, isInitialized, schoolId: activeSchoolId } = useAppContext();
@@ -51,7 +75,8 @@ export default function AdminSignInPage() {
         return;
       }
       playSound('login');
-      router.replace(`/${schoolId}/admin`);
+      const next = destinationAfterAdminLogin(searchParams.get('redirect'), schoolId);
+      router.replace(next ?? `/${schoolId}/admin`);
     } finally {
       setIsSubmitting(false);
     }
