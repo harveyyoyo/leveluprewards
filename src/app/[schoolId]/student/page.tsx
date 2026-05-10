@@ -428,37 +428,13 @@ function StudentDashboardInner({
 
   const studentDocRef = useMemoFirebase(() => schoolId ? doc(firestore, 'schools', schoolId, 'students', studentId) : null, [firestore, schoolId, studentId]);
   const { data: student, isLoading: studentLoading } = useDoc<Student>(studentDocRef);
-  const attendanceConfigRef = useMemoFirebase(
-    () => (schoolId ? doc(firestore, 'schools', schoolId, 'attendance', 'config') : null),
-    [firestore, schoolId],
-  );
-  const { data: attendanceConfig } = useDoc<{ attendanceTimeZone?: string }>(attendanceConfigRef);
 
   const todayInSchoolTz = useMemo(() => {
-    const tz = typeof attendanceConfig?.attendanceTimeZone === 'string' ? attendanceConfig.attendanceTimeZone.trim() : '';
     const d = new Date();
-    if (!tz) {
-      const full = format(d, 'yyyy-MM-dd');
-      const md = format(d, 'MM-dd');
-      return { full, md };
-    }
-    try {
-      const parts = new Intl.DateTimeFormat('en-US', {
-        timeZone: tz,
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-      }).formatToParts(d);
-      const year = parts.find((p) => p.type === 'year')?.value || format(d, 'yyyy');
-      const month = parts.find((p) => p.type === 'month')?.value || format(d, 'MM');
-      const day = parts.find((p) => p.type === 'day')?.value || format(d, 'dd');
-      return { full: `${year}-${month}-${day}`, md: `${month}-${day}` };
-    } catch {
-      const full = format(d, 'yyyy-MM-dd');
-      const md = format(d, 'MM-dd');
-      return { full, md };
-    }
-  }, [attendanceConfig?.attendanceTimeZone]);
+    const full = format(d, 'yyyy-MM-dd');
+    const md = format(d, 'MM-dd');
+    return { full, md };
+  }, []);
 
   const birthdayToday = !!student?.birthday && student.birthday.substring(5) === todayInSchoolTz.md;
 
@@ -1184,7 +1160,9 @@ function StudentDashboardInner({
           // (prevents Activity + CTA from falling below the fold).
           "w-full max-w-none flex-1 min-h-0 pt-3 md:pt-8 space-y-3 md:space-y-4 relative px-3 md:px-6 overflow-x-hidden overflow-y-hidden flex flex-col",
           settings.enableThemeAnimations && !!effectiveTheme && "theme-theme-elements-animated theme-motion-override",
-          isGraphic ? 'animate-in fade-in duration-500' : '',
+          isGraphic
+            ? 'animate-in fade-in duration-200 motion-reduce:animate-none motion-reduce:duration-0'
+            : '',
           // Avoid large bottom padding that leaves a visible gap.
           settings.displayMode === 'app' && 'pb-6'
         )}
@@ -2078,7 +2056,9 @@ export default function StudentLoginPage() {
             // Fill the kiosk viewport below the header and center the scanner with equal visual top/bottom inset.
             // App mode: subtract header + bottom tab reserve (pb-24 on main). Web: header only.
             'flex flex-col items-center justify-center px-4 py-4 font-sans',
-            isGraphic ? 'animate-in fade-in zoom-in-95 duration-500' : '',
+            isGraphic
+              ? 'animate-in fade-in zoom-in-95 duration-200 motion-reduce:animate-none motion-reduce:duration-0'
+              : '',
             settings.displayMode === 'app'
               ? 'min-h-[calc(100svh-11rem)]'
               : 'min-h-[calc(100svh-5rem)]'

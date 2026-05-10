@@ -9,7 +9,7 @@ import { useSettings } from '@/components/providers/SettingsProvider';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -51,6 +51,7 @@ const STUDENT_MODE_DEFAULT_TO_KIOSK_SEC = 10;
 export default function PortalPage() {
     const { loginState, isInitialized, schoolId, isAdmin, login } = useAppContext();
     const { settings } = useSettings();
+    const prefersReducedMotion = useReducedMotion();
     const playSound = useArcadeSound();
     const { toast } = useToast();
     const router = useRouter();
@@ -180,9 +181,15 @@ export default function PortalPage() {
 
             <div className="relative z-10 w-full max-w-2xl px-4 sm:px-6 flex flex-col justify-start">
                 <motion.div
-                    initial={{ opacity: 0, y: 48, scale: 0.92 }}
+                    initial={
+                        prefersReducedMotion ? false : { opacity: 0, y: 48, scale: 0.92 }
+                    }
                     animate={{ opacity: 1, y: 0, scale: 1 }}
-                    transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+                    transition={
+                        prefersReducedMotion
+                            ? { duration: 0 }
+                            : { duration: 0.34, ease: [0.22, 1, 0.36, 1] }
+                    }
                     className="mb-8 mt-2 text-center"
                 >
                     <h2
@@ -209,13 +216,23 @@ export default function PortalPage() {
                         const needsTeacherLogin = area.id === 'print' && loginState !== 'teacher';
                         const portalCard = (
                                 <motion.div
-                                    initial={{ opacity: 0, x: -50 }}
+                                    initial={
+                                        prefersReducedMotion ? false : { opacity: 0, x: -50 }
+                                    }
                                     animate={{ opacity: 1, x: 0 }}
-                                    transition={{ duration: 0.5, delay: 0.15 + index * 0.1 }}
+                                    transition={
+                                        prefersReducedMotion
+                                            ? { duration: 0 }
+                                            : {
+                                                  duration: 0.22,
+                                                  delay: Math.min(0.06 + index * 0.035, 0.28),
+                                                  ease: [0.22, 1, 0.36, 1],
+                                              }
+                                    }
                                     onMouseEnter={() => setHoveredIndex(area.id)}
                                     onMouseLeave={() => setHoveredIndex(null)}
                                     className={cn(
-                                        "relative flex w-full items-center justify-between rounded-2xl border-2 px-6 py-4 md:px-8 md:py-5 text-left transition-all duration-300",
+                                        'relative flex w-full items-center justify-between rounded-2xl border-2 px-6 py-4 md:px-8 md:py-5 text-left transition-all duration-200',
                                         "hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1",
                                         animBackdrop
                                             ? "border-border/50 bg-card/90 backdrop-blur-md shadow-sm hover:bg-card hover:border-border"
@@ -225,7 +242,7 @@ export default function PortalPage() {
                                     {/* Fixed Vertical Color Bar - Increased visibility when inactive */}
                                     <div
                                       className={cn(
-                                        "absolute left-0 top-0 bottom-0 w-1.5 rounded-l-2xl transition-all duration-500 shadow-sm",
+                                        'absolute left-0 top-0 bottom-0 w-1.5 rounded-l-2xl transition-all duration-200 shadow-sm',
                                         hoveredIndex === area.id ? "opacity-100" : "opacity-70"
                                       )}
                                       style={{ backgroundColor: rainbowColor }}
@@ -234,7 +251,7 @@ export default function PortalPage() {
                                     {/* Left content */}
                                     <div className="flex items-center gap-4">
                                         <div className={cn(
-                                            "w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center transition-all duration-300 border-2 border-border/50 shadow-md",
+                                            'w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center transition-all duration-200 border-2 border-border/50 shadow-md',
                                             animBackdrop ? "bg-card/90" : "bg-card/70",
                                             "group-hover:scale-105 group-hover:border-primary/20 group-hover:shadow-lg"
                                         )}>

@@ -472,8 +472,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         // addDeveloperMe merges the current Firebase user's UID into that allow-list (needs DEV_PASSCODE on Functions).
                         let uid = auth.currentUser?.uid ?? null;
                         if (!uid) {
-                            for (let i = 0; i < 40; i++) {
-                                await new Promise((r) => setTimeout(r, 250));
+                            for (let i = 0; i < 50; i++) {
+                                await new Promise((r) => setTimeout(r, 80));
                                 uid = auth.currentUser?.uid ?? null;
                                 if (uid) break;
                             }
