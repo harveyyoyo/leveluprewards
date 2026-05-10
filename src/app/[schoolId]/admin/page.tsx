@@ -76,7 +76,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useSettings } from '@/components/providers/SettingsProvider';
+import { useSettings, type Settings as AppSettings } from '@/components/providers/SettingsProvider';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { rainbowTripletForNavId, rainbowForNavId, complementTripletForNavId } from '@/lib/rainbowNav';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
@@ -663,6 +663,135 @@ function AdminDashboardInner() {
     }
   };
 
+  /** Single merged write — looping `setAddOnEnabled` + `pinAddOnTab` overwrote `adminHiddenAddOnTabs` / pins (stale closures). */
+  const enableAllAddOnTabs = () => {
+    const toEnable = addOnTabDefs.filter((def) => (def.canEnable ? def.canEnable(settings) : true));
+    if (toEnable.length === 0) return;
+
+    const hiddenNow = settings.adminHiddenAddOnTabs || [];
+    const pinnedNow = settings.adminPinnedAddOnTabs || [];
+    const valueSet = new Set(toEnable.map((d) => d.value));
+    const nextHidden = hiddenNow.filter((v) => !valueSet.has(v));
+    const nextPinned = [...new Set([...pinnedNow, ...toEnable.map((d) => d.value)])];
+
+    const patch: Partial<AppSettings> = {
+      adminHiddenAddOnTabs: nextHidden,
+      adminPinnedAddOnTabs: nextPinned,
+    };
+
+    for (const def of toEnable) {
+      switch (def.value) {
+        case 'coupons':
+          patch.payRewards = true;
+          break;
+        case 'insights':
+          patch.enableAdminAnalytics = true;
+          break;
+        case 'attendance':
+          patch.enableAttendance = true;
+          patch.enableClassSignIn = true;
+          break;
+        case 'halloffame':
+          patch.enableClassLeaderboard = true;
+          break;
+        case 'bulletinboard':
+          patch.bulletinEnabled = true;
+          break;
+        case 'library':
+          patch.payLibrary = true;
+          break;
+        case 'bonuspoints':
+          patch.enableAchievements = true;
+          break;
+        case 'category-badges':
+          patch.enableBadges = true;
+          break;
+        case 'goals':
+          patch.enableGoals = true;
+          break;
+        case 'notifications':
+          patch.enableNotifications = true;
+          break;
+        case 'branding':
+          break;
+        default:
+          break;
+      }
+    }
+
+    updateSettings(patch);
+  };
+
+  /** Single merged write — same stale-closure issue as enable-all. */
+  const disableAllAddOnTabs = () => {
+    const toDisable = addOnTabDefs.filter((def) => def.isOn(settings));
+    if (toDisable.length === 0) return;
+
+    let nextHidden = [...(settings.adminHiddenAddOnTabs || [])];
+    const offIds = new Set(toDisable.map((d) => d.value));
+    const nextPinned = (settings.adminPinnedAddOnTabs || []).filter((v) => !offIds.has(v));
+
+    const patch: Partial<AppSettings> = {
+      adminPinnedAddOnTabs: nextPinned,
+    };
+
+    for (const def of toDisable) {
+      switch (def.value) {
+        case 'coupons':
+          patch.payRewards = false;
+          nextHidden = nextHidden.filter((x) => x !== 'coupons');
+          break;
+        case 'insights':
+          patch.enableAdminAnalytics = false;
+          nextHidden = nextHidden.filter((x) => x !== 'insights');
+          break;
+        case 'attendance':
+          patch.enableAttendance = false;
+          patch.enableClassSignIn = false;
+          nextHidden = nextHidden.filter((x) => x !== 'attendance');
+          break;
+        case 'halloffame':
+          patch.enableClassLeaderboard = false;
+          nextHidden = nextHidden.filter((x) => x !== 'halloffame');
+          break;
+        case 'bulletinboard':
+          patch.bulletinEnabled = false;
+          nextHidden = nextHidden.filter((x) => x !== 'bulletinboard');
+          break;
+        case 'library':
+          patch.payLibrary = false;
+          nextHidden = nextHidden.filter((x) => x !== 'library');
+          break;
+        case 'bonuspoints':
+          patch.enableAchievements = false;
+          nextHidden = nextHidden.filter((x) => x !== 'bonuspoints');
+          break;
+        case 'category-badges':
+          patch.enableBadges = false;
+          nextHidden = nextHidden.filter((x) => x !== 'category-badges');
+          break;
+        case 'goals':
+          patch.enableGoals = false;
+          nextHidden = nextHidden.filter((x) => x !== 'goals');
+          break;
+        case 'notifications':
+          patch.enableNotifications = false;
+          nextHidden = nextHidden.filter((x) => x !== 'notifications');
+          break;
+        case 'branding':
+          if (!nextHidden.includes('branding')) nextHidden = [...nextHidden, 'branding'];
+          break;
+        default:
+          break;
+      }
+    }
+
+    patch.adminHiddenAddOnTabs = nextHidden;
+    updateSettings(patch);
+
+    if (offIds.has(activeMainTab)) setActiveMainTab('students');
+  };
+
   useLayoutEffect(() => {
     const basicTabs = ['students', 'classes', 'teachers', 'prizes', 'categories'];
     if (loginState === 'developer') basicTabs.push('backups');
@@ -1172,12 +1301,7 @@ function AdminDashboardInner() {
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            for (const def of addOnTabDefs) {
-                              const canEnable = def.canEnable ? def.canEnable(settings) : true;
-                              if (!canEnable) continue;
-                              setAddOnEnabled(def.value, true);
-                              pinAddOnTab(def.value);
-                            }
+                            enableAllAddOnTabs();
                           }}
                           aria-label="Turn on all feature tabs"
                           title="Turn on all"
@@ -1190,11 +1314,7 @@ function AdminDashboardInner() {
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            for (const def of addOnTabDefs) {
-                              if (!def.isOn(settings)) continue;
-                              setAddOnEnabled(def.value, false);
-                              unpinAddOnTab(def.value);
-                            }
+                            disableAllAddOnTabs();
                           }}
                           aria-label="Turn off all feature tabs"
                           title="Turn off all"
