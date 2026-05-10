@@ -144,8 +144,8 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
                         id="screen-view"
                         className={cn(
                             'flex-1 min-w-0',
-                            /* Login / sign-in: full-width shell so pages can center their own content */
-                            hideAppChrome
+                            /* Login / sign-in / admin-signin: full-width shell so pages can center their own content */
+                            hideAppChrome || isAdminSignInPage
                                 ? 'relative z-10 flex w-full flex-col'
                                 : isStudentKioskPage
                                     ? 'relative z-10 flex w-full min-h-0 flex-col overflow-hidden'
