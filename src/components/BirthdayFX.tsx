@@ -12,7 +12,7 @@ const CONFETTI_COLORS = [
 export function Confetti({ count = 40 }: { count?: number }) {
   const pieces = Array.from({ length: count });
   return (
-    <div className="pointer-events-none fixed inset-0 z-[5] overflow-hidden">
+    <div className="pointer-events-none absolute inset-0 overflow-hidden">
       <style>{`
         @keyframes bday-fall {
           0%   { transform: translateY(-20px) rotate(0deg); }
@@ -61,7 +61,7 @@ const BALLOON_COLORS = [
 export function Balloons({ count = 9 }: { count?: number }) {
   const balloons = Array.from({ length: count });
   return (
-    <div className="pointer-events-none fixed inset-0 z-[5] overflow-hidden">
+    <div className="pointer-events-none absolute inset-0 overflow-hidden">
       <style>{`
         @keyframes bday-rise {
           0%   { transform: translate3d(0, 0, 0) rotate(-2deg); opacity: 0; }

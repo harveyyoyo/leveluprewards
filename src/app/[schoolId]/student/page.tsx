@@ -1237,15 +1237,18 @@ function StudentDashboardInner({
         } as any)}
       >
         {birthdayToday ? (
-          <>
+          <div
+            className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
+            aria-hidden
+          >
             <Confetti />
             <Balloons />
-          </>
+          </div>
         ) : null}
 
         {effectiveTheme?.fontFamily && <GoogleFontLoader fontFamily={effectiveTheme.fontFamily} />}
 
-        <div className="relative z-10 flex flex-1 flex-col min-h-0 min-w-0 w-full space-y-3 md:space-y-4 overflow-hidden">
+        <div className="relative z-[30] isolate flex flex-1 flex-col min-h-0 min-w-0 w-full space-y-3 md:space-y-4 overflow-hidden">
         {birthdayToday ? (
           <div
             className="pointer-events-none shrink-0 -mx-3 md:-mx-6 flex justify-center items-center bg-gradient-to-r from-pink-600/95 via-fuchsia-600/95 to-amber-500/95 py-2.5 md:py-3 shadow-lg shadow-fuchsia-950/25 border-y border-white/25"
