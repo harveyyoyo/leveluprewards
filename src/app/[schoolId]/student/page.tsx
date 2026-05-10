@@ -1201,11 +1201,8 @@ function StudentDashboardInner({
         className={cn(
           // Lock the dashboard to the viewport so inner panes scroll
           // (prevents Activity + CTA from falling below the fold).
-          "w-full max-w-none flex-1 min-h-0 pt-3 md:pt-8 space-y-3 md:space-y-4 relative px-3 md:px-6 overflow-x-hidden overflow-y-hidden flex flex-col",
+          "w-full max-w-none flex-1 min-h-0 pt-3 md:pt-8 relative px-3 md:px-6 overflow-x-hidden overflow-y-hidden flex flex-col",
           settings.enableThemeAnimations && !!effectiveTheme && "theme-theme-elements-animated theme-motion-override",
-          isGraphic
-            ? 'animate-in fade-in duration-200 motion-reduce:animate-none motion-reduce:duration-0'
-            : '',
           // Avoid large bottom padding that leaves a visible gap.
           settings.displayMode === 'app' && 'pb-6'
         )}
@@ -1238,7 +1235,7 @@ function StudentDashboardInner({
       >
         {birthdayToday ? (
           <div
-            className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
+            className="pointer-events-none absolute inset-0 z-0 overflow-hidden"
             aria-hidden
           >
             <Confetti />
@@ -1248,7 +1245,14 @@ function StudentDashboardInner({
 
         {effectiveTheme?.fontFamily && <GoogleFontLoader fontFamily={effectiveTheme.fontFamily} />}
 
-        <div className="relative z-[30] isolate flex flex-1 flex-col min-h-0 min-w-0 w-full space-y-3 md:space-y-4 overflow-hidden">
+        <div
+          className={cn(
+            "relative z-[1] isolate flex flex-1 flex-col min-h-0 min-w-0 w-full space-y-3 md:space-y-4 overflow-hidden",
+            isGraphic
+              ? "animate-in fade-in duration-200 motion-reduce:animate-none motion-reduce:duration-0"
+              : "",
+          )}
+        >
         {birthdayToday ? (
           <div
             className="pointer-events-none shrink-0 -mx-3 md:-mx-6 flex justify-center items-center bg-gradient-to-r from-pink-600/95 via-fuchsia-600/95 to-amber-500/95 py-2.5 md:py-3 shadow-lg shadow-fuchsia-950/25 border-y border-white/25"
