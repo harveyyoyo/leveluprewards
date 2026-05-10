@@ -1787,7 +1787,7 @@ function StudentDashboardInner({
                         )}
                         <p
                           className={cn(
-                            "text-sm sm:text-base font-black leading-tight line-clamp-2 break-words [overflow-wrap:anywhere] z-10 min-h-0 shrink",
+                            "text-base sm:text-lg md:text-xl font-black leading-tight line-clamp-2 break-words [overflow-wrap:anywhere] z-10 min-h-0 shrink",
                             !activeTheme && "text-slate-800 dark:text-white",
                           )}
                           style={activeTheme ? { color: 'var(--theme-text)' } : undefined}
@@ -1886,7 +1886,8 @@ function StudentDashboardInner({
                 <AlertDialogHeader>
                   <AlertDialogTitle>Redeem prize?</AlertDialogTitle>
                   <AlertDialogDescription className="break-words [overflow-wrap:anywhere]">
-                    Redeem <span className="font-bold">{confirmingPrize?.name}</span>
+                    Redeem{' '}
+                    <span className="text-xl font-black sm:text-2xl [overflow-wrap:anywhere]">{confirmingPrize?.name}</span>
                     {confirmingPrize ? ` for ${(confirmingPrize.points || 0).toLocaleString()} points` : ''}?
                   </AlertDialogDescription>
                 </AlertDialogHeader>
@@ -1929,7 +1930,8 @@ function StudentDashboardInner({
                 <AlertDialogHeader>
                   <AlertDialogTitle>Print redeem voucher?</AlertDialogTitle>
                   <AlertDialogDescription className="break-words [overflow-wrap:anywhere]">
-                    Print a voucher for <span className="font-bold">{prizeTicketData?.prizeName}</span>?
+                    Print a voucher for{' '}
+                    <span className="text-xl font-black sm:text-2xl">{prizeTicketData?.prizeName}</span>?
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <PrinterReminderCallout

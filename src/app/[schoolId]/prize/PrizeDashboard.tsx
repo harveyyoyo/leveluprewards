@@ -148,7 +148,8 @@ function ConfirmRedemptionDialog({
                 <AlertDialogHeader>
                     <AlertDialogTitle>Confirm Purchase</AlertDialogTitle>
                     <AlertDialogDescription className="break-words [overflow-wrap:anywhere]">
-                        You are redeeming <span className="font-bold">{prize.name}</span>.
+                        You are redeeming{' '}
+                        <span className="text-xl font-black sm:text-2xl">{prize.name}</span>.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <div className="py-4 space-y-4">
@@ -1218,7 +1219,7 @@ export function PrizeDashboard({
                                                             <TooltipTrigger asChild>
                                                                 <h3
                                                                     className={cn(
-                                                                        "font-black text-xl tracking-tight line-clamp-2 w-full max-w-full cursor-help break-words leading-snug [overflow-wrap:anywhere]",
+                                                                        "font-black text-2xl sm:text-3xl tracking-tight line-clamp-2 w-full max-w-full cursor-help break-words leading-snug [overflow-wrap:anywhere]",
                                                                         !activeTheme && "text-foreground"
                                                                     )}
                                                                     style={activeTheme ? { color: 'var(--theme-text)' } : undefined}
@@ -1227,7 +1228,7 @@ export function PrizeDashboard({
                                                                 </h3>
                                                             </TooltipTrigger>
                                                             <TooltipContent side="top" align="center" className="max-w-[min(20rem,calc(100vw-2rem))]">
-                                                                <p className="break-words text-sm font-semibold [overflow-wrap:anywhere]">
+                                                                <p className="break-words text-base font-black sm:text-lg [overflow-wrap:anywhere]">
                                                                     {displayName}
                                                                 </p>
                                                             </TooltipContent>
@@ -1341,7 +1342,9 @@ export function PrizeDashboard({
                         <AlertDialogHeader>
                             <AlertDialogTitle>Print redeem voucher?</AlertDialogTitle>
                             <AlertDialogDescription>
-                                Print a voucher for <span className="font-bold">{ticketData?.prizeName}</span>{ticketData && ticketData.quantity > 1 ? ` (x${ticketData.quantity})` : ''}.
+                                Print a voucher for{' '}
+                                <span className="text-xl font-black sm:text-2xl">{ticketData?.prizeName}</span>
+                                {ticketData && ticketData.quantity > 1 ? ` (x${ticketData.quantity})` : ''}.
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         <PrinterReminderCallout
