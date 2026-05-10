@@ -1246,6 +1246,18 @@ function StudentDashboardInner({
         {effectiveTheme?.fontFamily && <GoogleFontLoader fontFamily={effectiveTheme.fontFamily} />}
 
         <div className="relative z-10 flex flex-1 flex-col min-h-0 min-w-0 w-full space-y-3 md:space-y-4 overflow-hidden">
+        {birthdayToday ? (
+          <div
+            className="pointer-events-none shrink-0 -mx-3 md:-mx-6 flex justify-center items-center bg-gradient-to-r from-pink-600/95 via-fuchsia-600/95 to-amber-500/95 py-2.5 md:py-3 shadow-lg shadow-fuchsia-950/25 border-y border-white/25"
+            role="status"
+            aria-live="polite"
+          >
+            <span className="text-base sm:text-xl md:text-3xl font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] md:tracking-[0.4em] text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.35)]">
+              Happy Birthday
+            </span>
+          </div>
+        ) : null}
+
         <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
           {celebrationMessage || (flyPointsValue !== null ? `You earned ${flyPointsValue} points` : '')}
         </div>
