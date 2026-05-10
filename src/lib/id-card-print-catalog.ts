@@ -64,3 +64,40 @@ export function idCardJobPrinterOptions(family: IdCardPrinterFamilyId): { printe
 export function defaultPaperForFamily(family: IdCardPrinterFamilyId): string {
   return ID_CARD_PAPERS[family][0]?.id ?? '';
 }
+
+/** Settings subset used to resolve which ID card print pipeline to use (browser sheet vs DTC). */
+export type IdCardPrintSettingsInput = {
+  idCardPrintProfiles?: IdCardPrintProfile[];
+  lastIdCardPrintProfileId?: string;
+  idCardPrinterFamily?: IdCardPrinterFamilyId;
+  idCardPaperId?: string;
+};
+
+/**
+ * Resolves the active printer family from school settings (saved profile, explicit choice, or fallback).
+ * Matches the priority used when printing ID cards from Admin → Students.
+ */
+export function resolveIdCardPrinterFamily(settings: IdCardPrintSettingsInput): IdCardPrinterFamilyId {
+  const profiles = settings.idCardPrintProfiles ?? [];
+  const lastId = settings.lastIdCardPrintProfileId;
+  const match = lastId ? profiles.find((p) => p.id === lastId) : undefined;
+  if (match && isValidPaperForFamily(match.family, match.paperId)) {
+    return match.family;
+  }
+  const fam = settings.idCardPrinterFamily;
+  const paperId = settings.idCardPaperId;
+  if (fam && paperId && isValidPaperForFamily(fam, paperId)) {
+    return fam;
+  }
+  if (profiles.length > 0) {
+    const sorted = [...profiles].sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
+    const p = sorted.find((x) => isValidPaperForFamily(x.family, x.paperId));
+    if (p) return p.family;
+  }
+  return 'browser_sheet';
+}
+
+/** Options passed into the student ID print pipeline (`PrintProvider`). */
+export function resolveIdCardPrintJobOptions(settings: IdCardPrintSettingsInput): { printerType?: 'dtc4500e' } {
+  return idCardJobPrinterOptions(resolveIdCardPrinterFamily(settings));
+}

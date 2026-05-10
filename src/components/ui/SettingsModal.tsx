@@ -45,6 +45,7 @@ import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
 import { cn } from '@/lib/utils';
 import { WELCOME_GREETING_STYLES } from '@/components/WelcomeGreeting';
 import { AdminBackupsTab } from '@/app/[schoolId]/admin/sections/AdminBackupsTab';
+import { IdCardPrinterSettingsSection } from '@/components/settings/IdCardPrinterSettingsSection';
 
 type SettingsView = 'hub' | 'interface' | 'security' | 'features' | 'pillars' | 'developer';
 type RoleView = 'global' | 'student' | 'teacher';
@@ -1056,6 +1057,13 @@ export function SettingsModal() {
                                             One school, one choice: use <span className="font-semibold">small label</span> for portable label printers (e.g. Phomemo M110/M110S) and <span className="font-semibold">80 mm thermal</span> for desk receipt printers (POS-80, VCP-8370, etc.). Change this before printing if you switch devices.
                                         </p>
                                     </div>
+
+                                    <IdCardPrinterSettingsSection
+                                        local={local}
+                                        onPatch={(patch) =>
+                                            setDraft((prev) => (prev ? { ...prev, ...patch } : prev))
+                                        }
+                                    />
 
                                     {isAdmin && (
                                         <div className="space-y-4 border-t border-slate-200/60 dark:border-slate-700/50 pt-4">

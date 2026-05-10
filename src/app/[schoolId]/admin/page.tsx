@@ -12,7 +12,7 @@ import { useAdminAttendance } from './hooks/useAdminAttendance';
 import { useSchoolLogoUpload } from './hooks/useSchoolLogoUpload';
 import { useAuthFetch } from '@/lib/authFetch';
 import { collection, doc, updateDoc, setDoc, deleteDoc, getDocs, query, orderBy, limit } from 'firebase/firestore';
-import { idCardJobPrinterOptions, isValidPaperForFamily } from '@/lib/id-card-print-catalog';
+import { resolveIdCardPrintJobOptions } from '@/lib/id-card-print-catalog';
 
 import {
    Users, Gift, BookOpen, Trash2, Edit, UploadCloud, Printer, LayoutDashboard, Database,
@@ -804,13 +804,6 @@ function AdminDashboardInner() {
   const [bulkRosterOpen, setBulkRosterOpen] = useState(false);
   const [isPreviousLogosOpen, setIsPreviousLogosOpen] = useState(false);
   const [idCardPrintJob, setIdCardPrintJob] = useState<{ students: Student[]; classes: Class[] } | null>(null);
-  const getPreferredIdCardPrinterFamily = () => {
-    const profiles = settings.idCardPrintProfiles ?? [];
-    const lastId = settings.lastIdCardPrintProfileId;
-    const match = lastId ? profiles.find((p) => p.id === lastId) : null;
-    if (match && isValidPaperForFamily(match.family, match.paperId)) return match.family;
-    return 'browser_sheet' as const;
-  };
 
   const handleOpenIdCardPrintSetup = (args: { students: Student[]; classes: Class[] }) => {
     if (args.students.length === 0) {
@@ -2130,14 +2123,13 @@ function AdminDashboardInner() {
                   onClick={() => {
                     const s = idPreviewStudent;
                     if (!s) return;
-                    const family = getPreferredIdCardPrinterFamily();
                     // Close the preview first so it never ends up on the printout.
                     setIdPreviewStudent(null);
                     requestAnimationFrame(() => {
                       setStudentsToPrint({
                         students: [s],
                         classes: classes ?? [],
-                        ...idCardJobPrinterOptions(family),
+                        ...resolveIdCardPrintJobOptions(settings),
                       });
                     });
                   }}

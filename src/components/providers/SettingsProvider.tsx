@@ -21,7 +21,8 @@ import {
     type SchoolPlanConfig,
 } from '@/lib/plans';
 import type { StudentTheme } from '@/lib/types';
-import type { IdCardPrintProfile } from '@/lib/id-card-print-catalog';
+import type { IdCardPrinterFamilyId, IdCardPrintProfile } from '@/lib/id-card-print-catalog';
+import { defaultPaperForFamily } from '@/lib/id-card-print-catalog';
 import type { PrizeVoucherPaperFormat } from '@/lib/prize-voucher-print';
 import { STUDENT_WELCOME_STYLES_LIVE } from '@/lib/studentWelcome';
 import { LEVELUP_BRAND_PRIMARY_HEX } from '@/lib/app-branding';
@@ -93,6 +94,10 @@ interface Settings {
     idCardPrintProfiles?: IdCardPrintProfile[];
     /** Last selected saved profile id for ID card printing (optional). */
     lastIdCardPrintProfileId?: string;
+    /** Active ID card printer/output when not using a named saved profile only. */
+    idCardPrinterFamily?: IdCardPrinterFamilyId;
+    /** Paper/stock id paired with `idCardPrinterFamily`. */
+    idCardPaperId?: string;
     /** Optional staff reminder for prize redeem slips and printed coupon sheets. */
     printerReminderPrizeVouchers?: string;
     /** Browser print page size for prize redeem vouchers (thermal receipt vs small label). */
@@ -294,6 +299,8 @@ const defaultSettings: Settings = {
     printerReminderIdCards: '',
     idCardPrintProfiles: [],
     lastIdCardPrintProfileId: undefined,
+    idCardPrinterFamily: 'browser_sheet',
+    idCardPaperId: defaultPaperForFamily('browser_sheet'),
     printerReminderPrizeVouchers: '',
     prizeVoucherPaperFormat: 'label_50x70',
     enableBulkPoints: false,
