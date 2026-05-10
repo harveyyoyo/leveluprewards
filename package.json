@@ -8,9 +8,10 @@
   },
   "scripts": {
     "postinstall": "node scripts/copy-face-models.mjs",
-    "dev": "next dev -p 3000",
-    "dev:stable": "next dev -p 3000",
-    "dev:webpack": "next dev -p 3000",
+    "dev": "node scripts/dev-webpack.cjs",
+    "dev:stable": "node scripts/dev-webpack.cjs",
+    "dev:webpack": "node scripts/dev-webpack.cjs",
+    "dev:plain": "next dev -p 3000",
     "clean:next": "node scripts/clean-next.cjs",
     "dev:turbo": "node scripts/dev-turbo.cjs",
     "prebuild": "node scripts/copy-face-models.mjs",
