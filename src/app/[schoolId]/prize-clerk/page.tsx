@@ -1,7 +1,6 @@
 'use client';
 
-import { Suspense, useCallback, useEffect, useState, type CSSProperties } from 'react';
-import dynamic from 'next/dynamic';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,29 +10,13 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
-import { Loader2, LogIn, LogOut, Gift } from 'lucide-react';
+import { Loader2, LogIn, Gift } from 'lucide-react';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { TooltipProvider } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { rainbowTripletForNavId, complementTripletForNavId } from '@/lib/rainbowNav';
-import { PrizeDashboard } from '@/app/[schoolId]/prize/PrizeDashboard';
-import type { StudentFoundMeta } from '@/components/StudentScanner';
 
-const StudentScanner = dynamic(
-    () =>
-        import('@/components/StudentScanner')
-            .then((m) => m.StudentScanner)
-            .catch((err) => {
-                if (typeof window !== 'undefined' && (err.message?.includes('Loading chunk') || err.name === 'ChunkLoadError')) {
-                    window.location.reload();
-                }
-                throw err;
-            }),
-    { ssr: false },
-);
-
+/** Legacy URL: prize desk staff now use Admin (`/admin`) after sign-in — keep this page for bookmarks + login. */
 export default function PrizeClerkPage() {
-    const { loginState, isInitialized, schoolId, login, logout, userName, isPrizeClerk } = useAppContext();
+    const { loginState, isInitialized, schoolId, login, isPrizeClerk } = useAppContext();
     const router = useRouter();
     const { settings } = useSettings();
     const isGraphic = settings.graphicMode === 'graphics';
@@ -42,7 +25,6 @@ export default function PrizeClerkPage() {
     const [username, setUsername] = useState('');
     const [passcode, setPasscode] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [deskStudentId, setDeskStudentId] = useState<string | null>(null);
 
     useEffect(() => {
         if (!isInitialized || !schoolId) return;
@@ -54,22 +36,10 @@ export default function PrizeClerkPage() {
             router.replace(`/${schoolId}/teacher`);
         } else if (loginState === 'reports' && !isPrizeClerk) {
             router.replace(`/${schoolId}/reports`);
+        } else if (loginState === 'prizeClerk' && isPrizeClerk) {
+            router.replace(`/${schoolId}/admin`);
         }
     }, [isInitialized, isPrizeClerk, loginState, schoolId, router]);
-
-    const onScannerStudent = useCallback((id: string, _meta?: StudentFoundMeta) => {
-        setDeskStudentId(id);
-    }, []);
-
-    const handleDone = useCallback(() => {
-        setDeskStudentId(null);
-    }, []);
-
-    const handlePrizeSessionExit = useCallback(() => {
-        playSound('swoosh');
-        handleDone();
-        toast({ title: 'Session cleared', description: 'Scan the next student when ready.' });
-    }, [handleDone, playSound, toast]);
 
     const handleLogin = async () => {
         if (isSubmitting) return;
@@ -88,6 +58,7 @@ export default function PrizeClerkPage() {
             if (ok) {
                 playSound('login');
                 toast({ title: 'Signed in' });
+                router.replace(`/${schoolId}/admin`);
             } else {
                 playSound('error');
                 toast({
@@ -102,12 +73,6 @@ export default function PrizeClerkPage() {
         }
     };
 
-    const handleStaffLogout = () => {
-        playSound('swoosh');
-        handleDone();
-        logout({ staffNavigateTo: 'portal' });
-    };
-
     if (!isInitialized || !schoolId) {
         return (
             <div className={`min-h-screen flex items-center justify-center font-sans ${isGraphic ? 'bg-background text-primary' : 'bg-background text-muted-foreground'}`}>
@@ -120,59 +85,11 @@ export default function PrizeClerkPage() {
     }
 
     if (isPrizeClerk) {
-        if (deskStudentId) {
-            return (
-                <ErrorBoundary name="PrizeClerkDesk">
-                    <Suspense
-                        fallback={
-                            <div className="min-h-[40vh] flex items-center justify-center">
-                                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                            </div>
-                        }
-                    >
-                        <PrizeDashboard
-                            studentId={deskStudentId}
-                            onDone={handleDone}
-                            onRequestExit={handlePrizeSessionExit}
-                        />
-                    </Suspense>
-                </ErrorBoundary>
-            );
-        }
         return (
-            <ErrorBoundary name="PrizeClerkScanner">
-                <TooltipProvider>
-                    <div className="min-h-[80vh] flex flex-col items-center justify-center p-4 pb-24">
-                        <div className="w-full max-w-2xl flex justify-end mb-2">
-                            <Button variant="outline" size="sm" onClick={handleStaffLogout} className="gap-2">
-                                <LogOut className="w-4 h-4" />
-                                End desk shift
-                            </Button>
-                        </div>
-                        <div
-                            className="w-full max-w-2xl rounded-2xl border bg-card/80 p-4 shadow-sm"
-                            style={
-                                {
-                                    ['--primary' as string]: rainbowTripletForNavId('prize', settings.colorScheme),
-                                    ['--chart-1' as string]: rainbowTripletForNavId('prize', settings.colorScheme),
-                                    ['--chart-2' as string]: complementTripletForNavId('prize', settings.colorScheme),
-                                    ['--ring' as string]: complementTripletForNavId('prize', settings.colorScheme),
-                                } as CSSProperties
-                            }
-                        >
-                            <p className="text-center text-sm text-muted-foreground mb-2">
-                                Signed in as <span className="font-semibold text-foreground">{userName || 'Prize desk'}</span>
-                            </p>
-                            <StudentScanner
-                                onStudentFound={onScannerStudent}
-                                title="Prize desk"
-                                description="Identify the student, then redeem prizes on their behalf."
-                                icon={<Gift className="w-10 h-10" />}
-                            />
-                        </div>
-                    </div>
-                </TooltipProvider>
-            </ErrorBoundary>
+            <div className="min-h-screen flex flex-col items-center justify-center gap-3 text-muted-foreground p-6">
+                <Loader2 className="h-8 w-8 animate-spin" aria-hidden />
+                <p className="text-sm font-medium text-center">Opening Admin → Prizes…</p>
+            </div>
         );
     }
 
@@ -187,7 +104,7 @@ export default function PrizeClerkPage() {
                         <div>
                             <CardTitle className={`text-2xl font-black tracking-tight ${isGraphic ? 'text-foreground' : 'text-slate-800'}`}>Prize desk</CardTitle>
                             <CardDescription className={isGraphic ? 'text-muted-foreground' : ''}>
-                                Scan students and redeem prizes from the school catalog. An admin must create your desk account first.
+                                After sign-in you&apos;ll open Admin → Prizes (staff prize desk), not the student kiosk. An admin must create your desk account first.
                             </CardDescription>
                         </div>
                     </CardHeader>
@@ -237,7 +154,6 @@ export default function PrizeClerkPage() {
                         </form>
                         <div className="text-center text-xs text-muted-foreground border-t pt-4">
                             <Button variant="link" className="text-xs h-auto p-0" type="button" onClick={() => router.push(`/${schoolId}/portal`)}>
-                                <LogOut className="w-3 h-3 mr-1" />
                                 Back to portal
                             </Button>
                         </div>

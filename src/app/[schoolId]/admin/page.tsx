@@ -181,6 +181,7 @@ const AdminBackupsTab = dynamic(
 );
 import { getReadableErrorMessage } from '@/lib/errorMessage';
 import { BulkRosterSetupDialog } from '@/components/BulkRosterSetupDialog';
+import { AdminPrizeDeskDashboard } from './AdminPrizeDeskDashboard';
 
 function describeCsvImportReport(
   report: { success: number; failed: number; errors: string[] },
@@ -2856,11 +2857,16 @@ function AdminLogin({ onLogin }: { onLogin: (passcode: string) => Promise<boolea
 }
 
 export default function AdminPage() {
-  const { loginState, isInitialized, isAdmin, login, schoolId } = useAppContext();
+  const { loginState, isInitialized, isAdmin, isPrizeClerk, login, schoolId } = useAppContext();
   const router = useRouter();
 
+  const prizeDeskSession = loginState === 'prizeClerk' && isPrizeClerk;
+
   useEffect(() => {
-    if (isInitialized && !['student', 'teacher', 'admin', 'school', 'developer'].includes(loginState)) {
+    if (
+      isInitialized &&
+      !['student', 'teacher', 'admin', 'school', 'developer', 'prizeClerk'].includes(loginState)
+    ) {
       router.replace('/login');
     }
   }, [isInitialized, loginState, router]);
@@ -2870,12 +2876,20 @@ export default function AdminPage() {
     return login('admin', { schoolId, passcode });
   };
 
-  if (!isInitialized || !['student', 'teacher', 'admin', 'school', 'developer'].includes(loginState)) {
+  if (!isInitialized || !['student', 'teacher', 'admin', 'school', 'developer', 'prizeClerk'].includes(loginState)) {
     return <AdminDashboardSkeleton />;
   }
 
-  if (!isAdmin) {
+  if (!isAdmin && !prizeDeskSession) {
     return <AdminLogin onLogin={handleAdminLogin} />;
+  }
+
+  if (prizeDeskSession) {
+    return (
+      <ErrorBoundary name="AdminPrizeDesk">
+        <AdminPrizeDeskDashboard />
+      </ErrorBoundary>
+    );
   }
 
   return (

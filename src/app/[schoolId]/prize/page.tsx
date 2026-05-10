@@ -85,7 +85,23 @@ export default function PrizePage() {
         [],
     );
 
-    if (!isInitialized || !['student', 'teacher', 'admin', 'school', 'developer', 'prizeClerk'].includes(loginState)) {
+    useEffect(() => {
+        if (!isInitialized || !schoolId) return;
+        if (loginState === 'prizeClerk') {
+            router.replace(`/${schoolId}/admin`);
+        }
+    }, [isInitialized, loginState, schoolId, router]);
+
+    if (loginState === 'prizeClerk') {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center gap-3 text-muted-foreground p-6">
+                <Loader2 className="h-8 w-8 animate-spin" aria-hidden />
+                <p className="text-sm font-medium">Opening staff prize desk…</p>
+            </div>
+        );
+    }
+
+    if (!isInitialized || !['student', 'teacher', 'admin', 'school', 'developer'].includes(loginState)) {
         return (
             <div className="min-h-screen flex items-center justify-center">
                 <Button disabled variant="ghost" size="lg" className="text-muted-foreground">

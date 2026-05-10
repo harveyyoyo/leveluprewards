@@ -155,7 +155,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
   const backupCtx = useBackup();
   const { firestore, functions, auth } = useFirebase();
   const schoolId = authCtx.schoolId;
-  const canReadRewardMetadata = authCtx.isAdmin || authCtx.isTeacher;
+  const canReadRewardMetadata = authCtx.isAdmin || authCtx.isTeacher || authCtx.isPrizeClerk;
 
   // Some third-party bundles may (incorrectly) reference a global `react` identifier.
   // Defining it defensively prevents hard crashes like "react is not defined".

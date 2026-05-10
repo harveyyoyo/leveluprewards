@@ -57,7 +57,7 @@ function roleLabel(type: StaffPortalLoginOption['type']) {
 
 function staffLandingPath(schoolId: string, type: StaffPortalLoginOption['type']) {
     if (type === 'secretary') return `/${schoolId}/secretary`;
-    if (type === 'prizeClerk') return `/${schoolId}/prize-clerk`;
+    if (type === 'prizeClerk') return `/${schoolId}/admin`;
     if (type === 'reports') return `/${schoolId}/reports`;
     return `/${schoolId}/teacher`;
 }
@@ -169,7 +169,7 @@ export default function TeacherPage() {
         if (loginState === 'secretary') {
             router.replace(`/${schoolId}/secretary`);
         } else if (loginState === 'prizeClerk') {
-            router.replace(`/${schoolId}/prize-clerk`);
+            router.replace(`/${schoolId}/admin`);
         } else if (loginState === 'reports') {
             router.replace(`/${schoolId}/reports`);
         }

@@ -54,7 +54,7 @@ function roleLabel(type: StaffPortalLoginOption['type']) {
 
 function staffLandingPath(schoolId: string, type: StaffPortalLoginOption['type']) {
     if (type === 'secretary') return `/${schoolId}/secretary`;
-    if (type === 'prizeClerk') return `/${schoolId}/prize-clerk`;
+    if (type === 'prizeClerk') return `/${schoolId}/admin`;
     if (type === 'reports') return `/${schoolId}/reports`;
     return `/${schoolId}/teacher`;
 }

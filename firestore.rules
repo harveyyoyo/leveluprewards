@@ -165,7 +165,7 @@ service cloud.firestore {
       }
       
       match /teachers/{teacherId} {
-        allow read: if isAdmin(schoolId) || isTeacher(schoolId) || isReports(schoolId) || isDeveloper();
+        allow read: if isAdmin(schoolId) || isTeacher(schoolId) || isPrizeClerk(schoolId) || isReports(schoolId) || isDeveloper();
         allow create, delete: if isAdmin(schoolId);
         allow update: if isAdmin(schoolId)
           || (

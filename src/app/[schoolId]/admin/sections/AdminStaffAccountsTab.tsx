@@ -85,14 +85,15 @@ export function AdminStaffAccountsTab({
     <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden">
       <CardHeader className="flex flex-row justify-between items-center py-6">
         <div>
-          <Helper content="Limited accounts: coupon printing only, or prize redemption desk only. Share the URL and login separately from teacher accounts.">
+          <Helper content="Limited accounts: coupon printing only, or prize redemption at the admin Prizes desk. Share login separately from teacher accounts — desk staff open Admin (same school URL) after signing in.">
             <CardTitle className="flex items-center gap-2">
               <Printer className="w-5 h-5 text-primary" /> Desk staff
             </CardTitle>
           </Helper>
           <CardDescription>
-            Secretary: path <code className="text-xs bg-muted px-1 rounded">/secretary</code> · Prize desk:{' '}
-            <code className="text-xs bg-muted px-1 rounded">/prize-clerk</code>
+            Secretary: path <code className="text-xs bg-muted px-1 rounded">/secretary</code> · Prize desk: Admin →{' '}
+            <span className="font-medium text-foreground">Prizes</span> (URL{' '}
+            <code className="text-xs bg-muted px-1 rounded">/admin</code>)
           </CardDescription>
         </div>
         <Button onClick={openNew} className="rounded-xl">
@@ -155,7 +156,7 @@ export function AdminStaffAccountsTab({
             <EmptyState
               icon={Printer}
               title="No desk staff yet"
-              description="Add a secretary to print coupons, or a prize clerk to run the prize desk without full teacher access."
+              description="Add a secretary to print coupons, or prize desk staff to redeem prizes under Admin → Prizes (not the student kiosk)."
               action={{ label: 'Add first account', icon: Plus, onClick: openNew }}
             />
           )}
@@ -176,7 +177,7 @@ export function AdminStaffAccountsTab({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="secretary">Secretary — print coupons only</SelectItem>
-                    <SelectItem value="prizeClerk">Prize desk — redeem prizes for students</SelectItem>
+                    <SelectItem value="prizeClerk">Prize desk — redeem under Admin → Prizes (staff only)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

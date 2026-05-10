@@ -354,10 +354,12 @@ function StudentDashboardInner({
   studentId,
   onDone,
   onRequestExit,
+  onReady,
 }: {
   studentId: string;
   onDone: () => void;
   onRequestExit: () => void;
+  onReady?: (studentId: string) => void;
 }) {
   const router = useRouter();
   const { redeemCoupon, redeemPrize, printPrizeTickets, schoolId, isKioskLocked, badges } = useAppContext();
@@ -448,6 +450,12 @@ function StudentDashboardInner({
 
   const studentDocRef = useMemoFirebase(() => schoolId ? doc(firestore, 'schools', schoolId, 'students', studentId) : null, [firestore, schoolId, studentId]);
   const { data: student, isLoading: studentLoading } = useDoc<Student>(studentDocRef);
+
+  useEffect(() => {
+    if (!studentLoading && student && schoolId) {
+      onReady?.(studentId);
+    }
+  }, [onReady, schoolId, student, studentId, studentLoading]);
 
   const todayInSchoolTz = useMemo(() => {
     const d = new Date();
@@ -2085,39 +2093,69 @@ export default function StudentLoginPage() {
   const { data: appConfig } = useDoc<{ appLogoUrl?: string }>(appConfigDocRef);
 
   const { activeStudentId, setActiveStudentId, handleDone, loginMeta, setLoginMeta } = useStudentKioskSession();
-  const [pendingStudentLogin, setPendingStudentLogin] = useState<{
+  const [studentTransition, setStudentTransition] = useState<{
     id: string;
-    meta?: StudentFoundMeta;
+    startedAt: number;
+    phase: 'loading' | 'exiting';
   } | null>(null);
+  const dashboardReadyStudentRef = useRef<string | null>(null);
   const activeStudentIdRef = useRef<string | null>(null);
   activeStudentIdRef.current = activeStudentId;
 
+  const finishStudentSession = useCallback(() => {
+    dashboardReadyStudentRef.current = null;
+    setStudentTransition(null);
+    handleDone();
+  }, [handleDone]);
+
   const onScannerStudent = useCallback(
     (id: string, meta?: StudentFoundMeta) => {
-      setPendingStudentLogin({ id, meta });
-    },
-    [],
-  );
-
-  useEffect(() => {
-    if (!pendingStudentLogin) return;
-    const timerId = window.setTimeout(() => {
-      setActiveStudentId(pendingStudentLogin.id);
-      const meta = pendingStudentLogin.meta;
+      dashboardReadyStudentRef.current = null;
+      setStudentTransition({
+        id,
+        startedAt: typeof performance !== 'undefined' ? performance.now() : Date.now(),
+        phase: 'loading',
+      });
+      setActiveStudentId(id);
       if (meta?.source === 'face') {
         setLoginMeta({ source: 'face', confidence: meta.confidence });
       } else {
         setLoginMeta(null);
       }
-      setPendingStudentLogin(null);
-    }, 900);
-    return () => window.clearTimeout(timerId);
-  }, [pendingStudentLogin, setActiveStudentId, setLoginMeta]);
+    },
+    [setActiveStudentId, setLoginMeta],
+  );
+
+  const handleDashboardReady = useCallback((readyStudentId: string) => {
+    if (dashboardReadyStudentRef.current === readyStudentId) {
+      return;
+    }
+
+    setStudentTransition((current) => {
+      if (!current || current.id !== readyStudentId || current.phase === 'exiting') {
+        return current;
+      }
+
+      dashboardReadyStudentRef.current = readyStudentId;
+      const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+      const remaining = Math.max(0, 450 - (now - current.startedAt));
+      window.setTimeout(() => {
+        setStudentTransition((latest) => (
+          latest?.id === readyStudentId ? { ...latest, phase: 'exiting' } : latest
+        ));
+        window.setTimeout(() => {
+          setStudentTransition((latest) => (latest?.id === readyStudentId ? null : latest));
+        }, 260);
+      }, remaining);
+
+      return current;
+    });
+  }, []);
 
   const handleStudentLogout = useCallback(() => {
     playSound('swoosh');
     if (activeStudentIdRef.current) {
-      handleDone();
+      finishStudentSession();
       if (loginState === 'student' && schoolId) {
         logout();
       }
@@ -2125,7 +2163,7 @@ export default function StudentLoginPage() {
     } else {
       router.push(schoolId ? `/${schoolId}/portal` : '/login');
     }
-  }, [handleDone, loginState, logout, playSound, router, schoolId, toast]);
+  }, [finishStudentSession, loginState, logout, playSound, router, schoolId, toast]);
 
   useEffect(() => {
     window.addEventListener(STUDENT_KIOSK_REQUEST_EXIT_EVENT, handleStudentLogout);
@@ -2153,9 +2191,32 @@ export default function StudentLoginPage() {
     };
   }, [isInitialized, login, loginState, playSound, router, schoolId, toast]);
 
+  useEffect(() => {
+    if (!isInitialized || !schoolId) return;
+    if (loginState === 'prizeClerk') {
+      router.replace(`/${schoolId}/admin`);
+    }
+  }, [isInitialized, loginState, schoolId, router]);
+
+  if (loginState === 'prizeClerk') {
+    return (
+      <div
+        className={cn(
+          'min-h-screen flex items-center justify-center p-8',
+          animBackdrop ? 'bg-transparent' : 'bg-background',
+        )}
+      >
+        <div className="text-center space-y-4">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto text-muted-foreground" />
+          <p className="text-muted-foreground font-medium animate-pulse">Opening staff prize desk…</p>
+        </div>
+      </div>
+    );
+  }
+
   if (
     !isInitialized ||
-    !['student', 'teacher', 'admin', 'school', 'developer', 'secretary', 'prizeClerk', 'reports'].includes(loginState)
+    !['student', 'teacher', 'admin', 'school', 'developer', 'secretary', 'reports'].includes(loginState)
   ) {
     return <div className={cn(
       "min-h-screen flex items-center justify-center p-8",
@@ -2175,24 +2236,29 @@ export default function StudentLoginPage() {
           <FaceMismatchBanner
             studentId={activeStudentId}
             confidence={loginMeta.confidence}
-            onResolved={handleDone}
+            onResolved={finishStudentSession}
           />
         )}
         <ErrorBoundary name="StudentDashboard">
           <SchoolGate>
             <StudentDashboardInner
               studentId={activeStudentId}
-              onDone={handleDone}
+              onDone={finishStudentSession}
               onRequestExit={handleStudentLogout}
+              onReady={handleDashboardReady}
             />
           </SchoolGate>
         </ErrorBoundary>
+        {studentTransition?.id === activeStudentId && (
+          <StudentKioskTransitionFlash
+            className={cn(
+              'transition-opacity duration-300 ease-out',
+              studentTransition.phase === 'exiting' && 'opacity-0',
+            )}
+          />
+        )}
       </>
     );
-  }
-
-  if (pendingStudentLogin) {
-    return <StudentKioskTransitionFlash />;
   }
 
   return (

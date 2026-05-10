@@ -78,7 +78,7 @@ export default function ReportsPage() {
     if (loginState === 'secretary' && !isReports) {
       router.replace(`/${schoolId}/secretary`);
     } else if (loginState === 'prizeClerk' && !isReports) {
-      router.replace(`/${schoolId}/prize-clerk`);
+      router.replace(`/${schoolId}/admin`);
     } else if (loginState === 'teacher') {
       router.replace(`/${schoolId}/teacher`);
     } else if (loginState === 'admin' || loginState === 'developer') {

@@ -34,7 +34,7 @@ export default function SecretaryPage() {
     useEffect(() => {
         if (!isInitialized || !schoolId) return;
         if (loginState === 'prizeClerk' && !isSecretary) {
-            router.replace(`/${schoolId}/prize-clerk`);
+            router.replace(`/${schoolId}/admin`);
         } else if (loginState === 'reports' && !isSecretary) {
             router.replace(`/${schoolId}/reports`);
         } else if (loginState === 'admin' || loginState === 'developer') {
