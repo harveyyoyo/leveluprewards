@@ -101,6 +101,7 @@ export function StudentScanner({
     const [faceStatus, setFaceStatus] = useState<string | null>(null);
 
     const faceEnabled = !!settings.enableFaceLogin;
+    const qrEnabled = !!settings.enableQrLogin;
 
     const stopFaceCamera = useCallback(() => {
         const stream = faceStreamRef.current;
@@ -421,7 +422,7 @@ export function StudentScanner({
     ]);
 
     const { videoRef, hasCameraPermission: hookHasPermission } = useBarcodeScanner(
-        isActive && loginTab === 'camera',
+        isActive && loginTab === 'camera' && qrEnabled,
         (code) => handleLookup(code),
         (err) => {
             setHasCameraPermission(false);
@@ -433,9 +434,17 @@ export function StudentScanner({
     useEffect(() => { setHasCameraPermission(hookHasPermission); }, [hookHasPermission]);
 
     const tabsColsClass = useMemo(() => {
-        if (faceEnabled) return 'grid-cols-4';
-        return 'grid-cols-3';
-    }, [faceEnabled]);
+        const n = 2 + (qrEnabled ? 1 : 0) + (faceEnabled ? 1 : 0);
+        if (n >= 4) return 'grid-cols-4';
+        if (n === 3) return 'grid-cols-3';
+        return 'grid-cols-2';
+    }, [faceEnabled, qrEnabled]);
+
+    useEffect(() => {
+        if (!qrEnabled && loginTab === 'camera') {
+            setLoginTab('nfc');
+        }
+    }, [qrEnabled, loginTab]);
 
     useEffect(() => {
         if (isActive && loginTab === 'nfc') {
@@ -496,9 +505,11 @@ export function StudentScanner({
                         <TabsTrigger value="manual" className="flex-1 sm:flex-initial rounded-xl font-black text-[9px] sm:text-[10px] px-1 sm:px-3 py-1.5 uppercase tracking-wider sm:tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-md transition-all">
                             <Type className="mr-1 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" /> Type
                         </TabsTrigger>
+                        {qrEnabled && (
                         <TabsTrigger value="camera" className="flex-1 sm:flex-initial rounded-xl font-black text-[9px] sm:text-[10px] px-1 sm:px-3 py-1.5 uppercase tracking-wider sm:tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-md transition-all">
                             <Camera className="mr-1 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" /> Scan
                         </TabsTrigger>
+                        )}
                         {faceEnabled && (
                             <TabsTrigger value="face" className="flex-1 sm:flex-initial rounded-xl font-black text-[9px] sm:text-[10px] px-1 sm:px-3 py-1.5 uppercase tracking-wider sm:tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-md transition-all">
                                 <ScanFace className="mr-1 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" /> Face
@@ -569,6 +580,7 @@ export function StudentScanner({
                         </div>
                     </TabsContent>
 
+                    {qrEnabled && (
                     <TabsContent value="camera">
                         <div className="py-2 space-y-4">
                             <div className="relative border-2 border-border rounded-xl overflow-hidden shadow-xl bg-black">
@@ -587,6 +599,7 @@ export function StudentScanner({
                             <p className="text-center text-xs font-bold text-muted-foreground uppercase tracking-wider">Position barcode within the frame</p>
                         </div>
                     </TabsContent>
+                    )}
 
                     {faceEnabled && (
                         <TabsContent value="face">

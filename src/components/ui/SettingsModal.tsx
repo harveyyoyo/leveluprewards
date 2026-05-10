@@ -1707,15 +1707,44 @@ export function SettingsModal() {
                                 <FeatureRow
                                     id="enableQrLogin"
                                     label="QR Code Login"
-                                    desc="Students scan a QR code instead of typing their ID to log into kiosks."
+                                    desc="Shows the Scan tab on the student sign-in screen so IDs can be read from a barcode or QR with the webcam."
                                     icon={<LayoutDashboard className="w-5 h-5" />}
                                     settings={local}
                                     onToggle={handleToggle}
-                                    isImplemented={false}
+                                    isImplemented={true}
                                     isAdmin={isAdmin}
                                     isAllowed={isFeatureAllowed('enableQrLogin')}
                                     planLabel={planLabel}
                                 />
+                                {isAdmin ? (
+                                    <div className="px-3 pb-4 pt-1 space-y-2 border-t border-slate-100 dark:border-slate-800/80">
+                                        <Label htmlFor="kioskCouponRedemptionInput" className="text-xs font-bold text-foreground">
+                                            Coupon redemption (student kiosk)
+                                        </Label>
+                                        <p className="text-xs text-muted-foreground">
+                                            Choose how students enter coupon codes after sign-in. Manual + Webcam shows two tabs; single methods hide tabs.
+                                        </p>
+                                        <Select
+                                            value={local.kioskCouponRedemptionInput ?? 'both'}
+                                            onValueChange={(v) =>
+                                                handleToggle(
+                                                    'kioskCouponRedemptionInput',
+                                                    v as AppSettings['kioskCouponRedemptionInput'],
+                                                )
+                                            }
+                                        >
+                                            <SelectTrigger id="kioskCouponRedemptionInput" className="mt-1 max-w-md rounded-xl">
+                                                <SelectValue placeholder="Choose input mode" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="off">Hidden (no coupon card)</SelectItem>
+                                                <SelectItem value="manual">Manual / USB scanner only</SelectItem>
+                                                <SelectItem value="camera">Webcam scan only</SelectItem>
+                                                <SelectItem value="both">Manual + Webcam (two tabs)</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                ) : null}
 
                                   <FeatureRow
                                     id="enablePrizeImages"

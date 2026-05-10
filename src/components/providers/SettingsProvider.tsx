@@ -150,6 +150,11 @@ interface Settings {
     // Security & Session
     adminSessionTimeoutMs?: number;
     kioskSessionTimeoutSec?: number;
+    /**
+     * Student kiosk rewards shop: how coupon codes are entered.
+     * off = hide coupon redemption; manual/camera = single method (no student-facing tabs); both = Manual + Webcam tabs.
+     */
+    kioskCouponRedemptionInput?: 'off' | 'manual' | 'camera' | 'both';
     // Sponsor Banner (displayed at the bottom/top of student kiosk screens)
     kioskSponsorEnabled: boolean;
     kioskSponsorMessage: string;
@@ -308,7 +313,7 @@ const defaultSettings: Settings = {
     enableAuditLog: false,
     enablePdfExport: false,
     enableStudentProfiles: false,
-    enableQrLogin: false,
+    enableQrLogin: true,
     enableParentView: false,
     enableMultiAdmin: false,
     enableStudentPortal: false,
@@ -344,6 +349,7 @@ const defaultSettings: Settings = {
     },
     adminSessionTimeoutMs: 5 * 60 * 1000,
     kioskSessionTimeoutSec: 10,
+    kioskCouponRedemptionInput: 'both',
     kioskSponsorEnabled: false,
     kioskSponsorMessage: '',
     kioskSponsorLogoUrl: '',

@@ -366,6 +366,17 @@ function StudentDashboardInner({
   const { functions, auth } = useFirebase();
   const { toast } = useToast();
   const { settings, isFeatureAllowed } = useSettings();
+  const kioskCouponMode = settings.kioskCouponRedemptionInput ?? 'both';
+  const couponSectionEnabled = kioskCouponMode !== 'off';
+  const showManualCoupon = kioskCouponMode === 'manual' || kioskCouponMode === 'both';
+  const showCameraCoupon = kioskCouponMode === 'camera' || kioskCouponMode === 'both';
+  const showCouponMethodTabs = showManualCoupon && showCameraCoupon;
+  const couponHelperText =
+    kioskCouponMode === 'manual'
+      ? 'Type or USB-scan a coupon code to add points. Use the Logout button on this card to exit.'
+      : kioskCouponMode === 'camera'
+        ? 'Scan the coupon QR or barcode with the webcam. Use the Logout button on this card to exit.'
+        : 'Scan or type a coupon code to add points. Use the camera tab to scan a QR code. Use the Logout button on this card to exit.';
   const authFetch = useAuthFetch();
   const isGraphic = settings.graphicMode === 'graphics';
   const animBackdrop = globalAnimatedBackdropActive(settings);
@@ -601,15 +612,27 @@ function StudentDashboardInner({
     };
   }, [isKioskLocked, resetLogoutTimer]);
 
-  const [activeTab, setActiveTab] = useState('manual');
+  const [activeTab, setActiveTab] = useState<'manual' | 'camera'>(
+    kioskCouponMode === 'camera' ? 'camera' : 'manual',
+  );
   const [hasCameraPermission, setHasCameraPermission] = useState(true);
 
+  useEffect(() => {
+    if (kioskCouponMode === 'camera') setActiveTab('camera');
+    else if (kioskCouponMode === 'manual') setActiveTab('manual');
+  }, [kioskCouponMode]);
+
+  const couponCameraScannerOn =
+    showRedeem &&
+    showCameraCoupon &&
+    (showCouponMethodTabs ? activeTab === 'camera' : kioskCouponMode === 'camera');
+
   const { videoRef, hasCameraPermission: hookHasPermission } = useBarcodeScanner(
-    activeTab === 'camera' && showRedeem,
+    couponCameraScannerOn,
     (code) => handleRedeemCoupon(code),
     (err) => {
       setHasCameraPermission(false);
-      if (activeTab === 'camera') setActiveTab('manual');
+      if (showCouponMethodTabs && activeTab === 'camera') setActiveTab('manual');
       toast({ variant: 'destructive', title: 'Camera Error', description: err });
     }
   );
@@ -1419,6 +1442,7 @@ function StudentDashboardInner({
               themeForeground={effectiveTheme ? 'var(--theme-primary)' : undefined}
             />
 
+            {couponSectionEnabled && (
             <Card
               className={cn(
                 "relative z-20 w-full min-w-0 max-w-full origin-center overflow-hidden rounded-3xl border-2 shadow-[0_24px_60px_rgba(15,23,42,0.28)] ring-4 ring-offset-4 ring-offset-background transition-transform duration-300",
@@ -1435,7 +1459,7 @@ function StudentDashboardInner({
               } : undefined}
             >
               <CardHeader className="pb-3 border-b" style={effectiveTheme ? { borderColor: 'var(--theme-bg)' } : undefined}>
-                <Helper content="Scan or type a coupon code to add points. Use the camera tab to scan a QR code. Use the Logout button on this card to exit.">
+                <Helper content={couponHelperText}>
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <CardTitle className="text-sm font-black flex items-center gap-2">
                       <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", !effectiveTheme && "bg-slate-100 dark:bg-slate-800")} style={effectiveTheme ? { backgroundColor: 'var(--theme-bg)' } : undefined}>
@@ -1475,7 +1499,8 @@ function StudentDashboardInner({
                 </Helper>
               </CardHeader>
               <CardContent className="pt-4 min-w-0 overflow-x-hidden">
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full min-w-0">
+                {showCouponMethodTabs ? (
+                <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'manual' | 'camera')} className="w-full min-w-0">
                   <TabsList 
                     className={cn(
                       "grid w-full grid-cols-2 mb-4 p-1 rounded-xl h-12 overflow-hidden min-w-0",
@@ -1582,9 +1607,86 @@ function StudentDashboardInner({
                     </div>
                   )}
                 </Tabs>
+                ) : kioskCouponMode === 'manual' ? (
+                    <div className="space-y-3 w-full min-w-0">
+                      <div
+                        className={cn(
+                          'flex flex-wrap items-center justify-center gap-2 sm:gap-3 rounded-xl border-2 border-dashed px-3 py-2.5 text-center motion-safe:animate-[pulse_1.35s_ease-in-out_infinite] motion-reduce:animate-none',
+                          !activeTheme &&
+                            'border-amber-400/80 bg-gradient-to-r from-amber-50/95 via-amber-100/80 to-amber-50/95 dark:from-amber-950/60 dark:via-amber-900/40 dark:to-amber-950/60 dark:border-amber-500/60',
+                        )}
+                        style={
+                          activeTheme
+                            ? {
+                                borderColor: 'color-mix(in srgb, var(--theme-primary) 50%, transparent)',
+                                background: `linear-gradient(90deg, color-mix(in srgb, var(--theme-primary) 14%, var(--theme-card)), color-mix(in srgb, var(--theme-primary) 22%, var(--theme-card)), color-mix(in srgb, var(--theme-primary) 14%, var(--theme-card)))`,
+                              }
+                            : undefined
+                        }
+                        role="status"
+                        aria-live="polite"
+                      >
+                        <ScanBarcode
+                          className="h-7 w-7 shrink-0 sm:h-8 sm:w-8"
+                          style={activeTheme ? { color: 'var(--theme-primary)' } : undefined}
+                          aria-hidden
+                        />
+                        <span
+                          className={cn(
+                            'max-w-full text-base sm:text-lg md:text-xl font-black uppercase tracking-[0.12em] sm:tracking-[0.18em] leading-snug',
+                            !activeTheme && 'text-amber-900 dark:text-amber-100',
+                          )}
+                          style={activeTheme ? { color: 'var(--theme-primary)' } : undefined}
+                        >
+                          Scan coupon
+                        </span>
+                      </div>
+                      <form
+                        className="flex flex-col gap-2 min-w-0 w-full sm:flex-row sm:gap-2"
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          void handleRedeemCoupon();
+                        }}
+                      >
+                        <Input
+                          placeholder="Code appears here when scanned"
+                          value={couponCode}
+                          onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                          className="w-full min-w-0 font-mono text-left tracking-widest h-12 border-2 rounded-xl text-sm sm:flex-1"
+                          style={activeTheme ? { backgroundColor: 'var(--theme-bg)', borderColor: 'var(--theme-primary)', color: 'var(--theme-text)' } : undefined}
+                          autoFocus
+                          autoComplete="one-time-code"
+                        />
+                        <Button
+                          type="submit"
+                          className="h-12 w-full sm:w-auto px-6 font-black rounded-xl shadow-lg transition-all active:scale-95 uppercase tracking-widest text-xs shrink-0"
+                          style={activeTheme ? {
+                            backgroundColor: 'var(--theme-primary)',
+                            color: primaryForeground,
+                          } : { backgroundColor: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))' }}
+                        >
+                          Redeem
+                        </Button>
+                      </form>
+                      <p 
+                        className="text-[10px] text-center pt-1" 
+                        style={activeTheme ? { color: 'var(--theme-text)', opacity: 0.7 } : { color: 'hsl(var(--muted-foreground))' }}
+                      >
+                        Available coupon codes can be viewed in the Admin panel.
+                      </p>
+                    </div>
+                ) : (
+                    <div className="relative h-36 sm:h-40 rounded-xl overflow-hidden bg-black border-2 border-slate-100 dark:border-slate-800 shadow-inner">
+                      <video ref={videoRef as RefObject<HTMLVideoElement>} className="w-full h-full object-cover" playsInline muted />
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <div className="w-3/4 h-3/2 border-2 border-white/40 rounded-2xl border-dashed" />
+                      </div>
+                    </div>
+                )}
 
               </CardContent>
             </Card>
+            )}
 
             {/* Eligible Rewards */}
             <Card
