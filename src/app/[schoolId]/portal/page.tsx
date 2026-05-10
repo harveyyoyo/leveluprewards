@@ -46,7 +46,7 @@ function staffLoginKey(option: StaffPortalLoginOption) {
 }
 
 export default function PortalPage() {
-    const { loginState, isInitialized, schoolId, isAdmin, login } = useAppContext();
+    const { loginState, isInitialized, schoolId, isAdmin, login, logout } = useAppContext();
     const { settings } = useSettings();
     const prefersReducedMotion = useReducedMotion();
     const playSound = useArcadeSound();
@@ -62,11 +62,11 @@ export default function PortalPage() {
     const [teacherSubmitting, setTeacherSubmitting] = useState(false);
     const animBackdrop = globalAnimatedBackdropActive(settings);
 
-    // Student kiosk accounts use `/student` — not this faculty/staff hub (`/portal`).
+    // Returning to the hub from a student kiosk session should become the school chooser again.
     useEffect(() => {
         if (!isInitialized || loginState !== 'student' || !schoolId) return;
-        router.replace(`/${schoolId}/student`);
-    }, [isInitialized, loginState, schoolId, router]);
+        logout({ studentNavigateTo: 'portal' });
+    }, [isInitialized, loginState, logout, schoolId]);
     /** Default scheme: real brand hex — `hsl(var(--primary))` stays near-white in `.dark` by design. */
     const defaultPortalAccent =
         settings.colorScheme === 'default'
@@ -451,7 +451,7 @@ export default function PortalPage() {
                             <div className="rounded-xl border border-border/70 bg-muted/30 p-3">
                                 <p className="text-xs font-semibold text-muted-foreground">Already signed in as Admin</p>
                                 <p className="mt-1 text-xs text-muted-foreground/80">
-                                    You can continue as Admin instead of signing in as Teacher.
+                                    Open teacher tools using your admin session (no teacher passcode).
                                 </p>
                                 <div className="mt-3">
                                     <Button
@@ -461,7 +461,7 @@ export default function PortalPage() {
                                         onClick={() => {
                                             if (!schoolId) return;
                                             setTeacherDialogOpen(false);
-                                            router.replace(`/${schoolId}/admin`);
+                                            router.replace(`/${schoolId}/teacher`);
                                         }}
                                         disabled={teacherSubmitting}
                                     >
