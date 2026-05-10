@@ -281,11 +281,18 @@ export function applyAchievementsAndBadges(
     const achInfo = allAchievements.find(a => a.id === ach.achievementId);
     const hasWheelSpin = achInfo?.enableWheelSpin === true;
 
-    earnedAchievements.push({
+    const achievementEntry: {
+      achievementId: string;
+      earnedAt: number;
+      wheelSpun?: boolean;
+    } = {
       achievementId: ach.achievementId,
       earnedAt: ach.earnedAt,
-      wheelSpun: hasWheelSpin ? false : undefined
-    });
+    };
+    if (hasWheelSpin) {
+      achievementEntry.wheelSpun = false;
+    }
+    earnedAchievements.push(achievementEntry);
 
     if (hasWheelSpin) {
       const achActivityRef = doc(
