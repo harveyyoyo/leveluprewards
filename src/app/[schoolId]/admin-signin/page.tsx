@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { Suspense, useMemo, useState } from 'react';
 import { ShieldCheck, ArrowLeft, Loader2 } from 'lucide-react';
 
 import { useAppContext } from '@/components/AppProvider';
@@ -36,7 +36,18 @@ function destinationAfterAdminLogin(redirectParam: string | null, schoolId: stri
   return `${pathOnly}?${params.toString()}`;
 }
 
-export default function AdminSignInPage() {
+function AdminSignInLoading() {
+  return (
+    <div className="min-h-[calc(100vh-5rem)] flex items-center justify-center p-8">
+      <span className="text-muted-foreground text-sm font-medium flex items-center gap-2">
+        <Loader2 className="h-5 w-5 animate-spin shrink-0" aria-hidden />
+        Loading…
+      </span>
+    </div>
+  );
+}
+
+function AdminSignInContent() {
   const params = useParams<{ schoolId: string }>();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -160,5 +171,13 @@ export default function AdminSignInPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function AdminSignInPage() {
+  return (
+    <Suspense fallback={<AdminSignInLoading />}>
+      <AdminSignInContent />
+    </Suspense>
   );
 }
