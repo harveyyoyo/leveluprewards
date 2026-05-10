@@ -1536,14 +1536,13 @@ function StudentDashboardInner({
                         className={cn(
                           'relative flex flex-wrap items-center justify-center gap-2 sm:gap-3 rounded-xl border-2 border-dashed px-3 py-4 min-h-[3.5rem] text-center motion-safe:animate-[pulse_1.35s_ease-in-out_infinite] motion-reduce:animate-none',
                           !activeTheme &&
-                            'border-amber-500/40 bg-slate-950 text-amber-50 shadow-[0_10px_44px_-10px_rgba(251,191,36,0.5)] dark:border-amber-400/35 dark:bg-slate-950 dark:shadow-[0_10px_44px_-10px_rgba(251,191,36,0.42)]',
+                            'border-amber-400/80 bg-gradient-to-r from-amber-900/95 via-amber-950/92 to-amber-900/95 text-amber-50 shadow-[0_10px_44px_-10px_rgba(251,191,36,0.45)] dark:border-amber-500/55 dark:from-amber-900/95 dark:via-amber-950/92 dark:to-amber-900/95 dark:shadow-[0_10px_44px_-10px_rgba(251,191,36,0.38)]',
                         )}
                         style={
                           activeTheme
                             ? {
-                                borderColor: 'color-mix(in srgb, var(--theme-primary) 55%, transparent)',
-                                background:
-                                  'linear-gradient(165deg, color-mix(in srgb, var(--theme-primary) 24%, #050508) 0%, #08090d 48%, #050508 100%)',
+                                borderColor: 'color-mix(in srgb, var(--theme-primary) 50%, transparent)',
+                                background: `linear-gradient(165deg, color-mix(in srgb, var(--theme-primary) 54%, var(--theme-card)), color-mix(in srgb, var(--theme-primary) 64%, var(--theme-card)) 50%, color-mix(in srgb, var(--theme-primary) 54%, var(--theme-card)))`,
                                 boxShadow:
                                   '0 12px 44px -10px color-mix(in srgb, var(--theme-primary) 48%, transparent)',
                                 color: 'rgba(248, 250, 252, 0.97)',
@@ -1556,7 +1555,7 @@ function StudentDashboardInner({
                         <ScanBarcode
                           className={cn(
                             'h-7 w-7 shrink-0 sm:h-8 sm:w-8',
-                            !activeTheme && 'text-amber-300',
+                            !activeTheme && 'text-amber-200',
                           )}
                           style={
                             activeTheme
@@ -1626,14 +1625,13 @@ function StudentDashboardInner({
                         className={cn(
                           'relative flex flex-wrap items-center justify-center gap-2 sm:gap-3 rounded-xl border-2 border-dashed px-3 py-4 min-h-[3.5rem] text-center motion-safe:animate-[pulse_1.35s_ease-in-out_infinite] motion-reduce:animate-none',
                           !activeTheme &&
-                            'border-amber-500/40 bg-slate-950 text-amber-50 shadow-[0_10px_44px_-10px_rgba(251,191,36,0.5)] dark:border-amber-400/35 dark:bg-slate-950 dark:shadow-[0_10px_44px_-10px_rgba(251,191,36,0.42)]',
+                            'border-amber-400/80 bg-gradient-to-r from-amber-900/95 via-amber-950/92 to-amber-900/95 text-amber-50 shadow-[0_10px_44px_-10px_rgba(251,191,36,0.45)] dark:border-amber-500/55 dark:from-amber-900/95 dark:via-amber-950/92 dark:to-amber-900/95 dark:shadow-[0_10px_44px_-10px_rgba(251,191,36,0.38)]',
                         )}
                         style={
                           activeTheme
                             ? {
-                                borderColor: 'color-mix(in srgb, var(--theme-primary) 55%, transparent)',
-                                background:
-                                  'linear-gradient(165deg, color-mix(in srgb, var(--theme-primary) 24%, #050508) 0%, #08090d 48%, #050508 100%)',
+                                borderColor: 'color-mix(in srgb, var(--theme-primary) 50%, transparent)',
+                                background: `linear-gradient(165deg, color-mix(in srgb, var(--theme-primary) 54%, var(--theme-card)), color-mix(in srgb, var(--theme-primary) 64%, var(--theme-card)) 50%, color-mix(in srgb, var(--theme-primary) 54%, var(--theme-card)))`,
                                 boxShadow:
                                   '0 12px 44px -10px color-mix(in srgb, var(--theme-primary) 48%, transparent)',
                                 color: 'rgba(248, 250, 252, 0.97)',
@@ -1646,7 +1644,7 @@ function StudentDashboardInner({
                         <ScanBarcode
                           className={cn(
                             'h-7 w-7 shrink-0 sm:h-8 sm:w-8',
-                            !activeTheme && 'text-amber-300',
+                            !activeTheme && 'text-amber-200',
                           )}
                           style={
                             activeTheme

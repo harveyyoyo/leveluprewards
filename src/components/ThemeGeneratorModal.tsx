@@ -162,9 +162,8 @@ function StudentPortalThemePreview({
                         <div
                             className="mb-2 flex min-h-[2.75rem] items-center justify-center gap-2 rounded-lg border-2 border-dashed px-2 py-3"
                             style={{
-                                borderColor: 'color-mix(in srgb, var(--theme-primary) 55%, transparent)',
-                                background:
-                                    'linear-gradient(165deg, color-mix(in srgb, var(--theme-primary) 24%, #050508) 0%, #08090d 48%, #050508 100%)',
+                                borderColor: 'color-mix(in srgb, var(--theme-primary) 50%, transparent)',
+                                background: `linear-gradient(165deg, color-mix(in srgb, var(--theme-primary) 54%, var(--theme-card)), color-mix(in srgb, var(--theme-primary) 64%, var(--theme-card)) 50%, color-mix(in srgb, var(--theme-primary) 54%, var(--theme-card)))`,
                                 boxShadow:
                                     '0 12px 44px -10px color-mix(in srgb, var(--theme-primary) 48%, transparent)',
                                 color: 'rgba(248, 250, 252, 0.97)',
