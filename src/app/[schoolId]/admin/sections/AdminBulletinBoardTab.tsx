@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState, useMemo } from 'react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, doc, addDoc, updateDoc, deleteDoc, query } from 'firebase/firestore';
@@ -12,7 +13,7 @@ import {
   CheckCircle2,
   Tag,
   Palette,
-  Eye,
+  ArrowUpRight,
   Settings2,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -37,8 +38,6 @@ import {
   PRESET_BULLETIN_INCENTIVES,
   PRESET_BULLETIN_THEMES,
   type BulletinBoardIncentiveRecord,
-  bulletinLogoBoxClass,
-  getBulletinBoardCardClassName,
 } from '@/lib/bulletinBoard';
 import { cn } from '@/lib/utils';
 import { AdminRecordListHeader } from '@/components/admin/AdminRecordListHeader';
@@ -86,8 +85,6 @@ export function AdminBulletinBoardTab({
   const bulletinEnabled = settings.bulletinEnabled ?? true;
   const bulletinTitle = settings.bulletinTitle || 'School Bulletin Board';
   const bulletinTheme = settings.bulletinTheme || 'default';
-  const bulletinSubtitle = (settings.bulletinSubtitle ?? '').trim();
-  const displaySubtitle = bulletinSubtitle || DEFAULT_BULLETIN_SUBTITLE;
   const bulletinLogoSize = settings.bulletinLogoSize || 'md';
   const bulletinShowWowBadge = settings.bulletinShowWowBadge !== false;
   const bulletinColumns = settings.bulletinColumns || '2';
@@ -179,334 +176,327 @@ export function AdminBulletinBoardTab({
     }
   };
 
-  const incentiveGridClass =
-    bulletinColumns === '1' ? 'grid grid-cols-1 gap-3' : 'grid grid-cols-1 sm:grid-cols-2 gap-3';
+  const fullHref = useMemo(() => {
+    const params = new URLSearchParams();
+    params.set('fullscreen', '1');
+    return `/${schoolId}/bulletin-board?${params.toString()}`;
+  }, [schoolId]);
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      {/* Top: Full-width live preview */}
-      <Card className="border-t-4 border-emerald-500 shadow-xl">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Eye className="w-4 h-4 text-emerald-500" /> Interactive Live Preview
-          </CardTitle>
-          <CardDescription>
-            This matches the staff Board page (`/bulletin-board`); it is not shown on the student kiosk.
-          </CardDescription>
+    <>
+      <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden">
+        <CardHeader className="py-6 flex flex-row items-start justify-between gap-4">
+          <div className="min-w-0">
+            <CardTitle className="flex items-center gap-2">
+              <Megaphone className="w-5 h-5 text-primary" /> Bulletin Board
+            </CardTitle>
+            <CardDescription>
+              Configure the board here, then open the full-screen display (opens in a new tab). Staff-facing board;
+              not shown on the student kiosk.
+            </CardDescription>
+          </div>
+          <Button asChild variant="outline" className="rounded-xl gap-2 shrink-0">
+            <Link href={fullHref} target="_blank" rel="noopener noreferrer">
+              View full page <ArrowUpRight className="w-4 h-4" aria-hidden />
+            </Link>
+          </Button>
         </CardHeader>
         <CardContent>
-          {bulletinEnabled ? (
-            <LiveScreenPreview
-              href={`/${schoolId}/bulletin-board?fullscreen=1`}
-              title="Live preview (matches big screen)"
-              className="max-w-none"
-            />
-          ) : (
-            <div className="flex flex-col items-center justify-center py-16 text-center space-y-3 opacity-60 border-2 border-dashed rounded-3xl p-6">
-              <Megaphone className="w-10 h-10 text-muted-foreground animate-pulse" />
-              <div>
-                <p className="font-black text-sm uppercase tracking-wider">Bulletin Board Disabled</p>
-                <p className="text-xs text-muted-foreground">Turn on the feature to see the preview.</p>
+          <div className="space-y-4 mb-6">
+            <div className="w-full rounded-2xl border bg-muted/10 p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Settings2 className="w-4 h-4 text-muted-foreground" aria-hidden />
+                <Helper content="Manage options and incentives on the Bulletin Board. Enable the feature, change visual settings, and create custom incentives to earn points.">
+                  <p className="text-sm font-bold">Display settings</p>
+                </Helper>
               </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Below: Config & management */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <div className="space-y-6">
-        <Card className="border-t-4 border-indigo-500 shadow-md">
-          <CardHeader className="py-6 flex flex-row items-start justify-between gap-4">
-            <div className="min-w-0">
-              <CardTitle className="flex items-center gap-2">
-                <Megaphone className="w-5 h-5 text-indigo-500" /> Board Preview
-              </CardTitle>
-              <CardDescription>
-                Preview and open the full Bulletin Board page (no header). This is the staff-facing board; it is not shown on the student kiosk.
-              </CardDescription>
-            </div>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="font-semibold text-foreground/80">Active incentives:</span>
-              <span className="rounded-full border border-border/60 bg-muted/30 px-2.5 py-1 text-xs font-black">
-                {(sortedIncentives || []).filter((i) => i.active !== false).length}
-              </span>
-              <span className="text-xs">
-                Total incentives: {(sortedIncentives || []).length}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-t-4 border-primary shadow-lg backdrop-blur-md">
-          <CardHeader>
-            <Helper content="Manage options and incentives on the Bulletin Board. Enable the feature, change visual settings, and create custom incentives to earn points.">
-              <CardTitle className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Megaphone className="w-5 h-5 text-indigo-500" />
-                  Bulletin Board Settings & Design
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold">Enable Feature</span>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="md:col-span-2 flex items-center justify-between rounded-xl border bg-background px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold">Enable bulletin board</p>
+                    <p className="text-[11px] text-muted-foreground">Show the board on the staff display and in preview.</p>
+                  </div>
                   <Switch
                     checked={bulletinEnabled}
                     onCheckedChange={(checked) => updateSettings({ bulletinEnabled: checked })}
                   />
                 </div>
-              </CardTitle>
-            </Helper>
-            <CardDescription>
-              Configure the overall visual layout and title of the school-wide bulletin board.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="bulletinTitle">Bulletin Board Title</Label>
-                <Input
-                  id="bulletinTitle"
-                  value={bulletinTitle}
-                  onChange={(e) => updateSettings({ bulletinTitle: e.target.value })}
-                  placeholder="e.g., Monthly Challenges"
-                />
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="bulletinTheme">Board Theme / Visual Styling</Label>
-                <div className="flex flex-wrap gap-2 pt-1 max-h-[140px] overflow-y-auto pr-1">
-                  {PRESET_BULLETIN_THEMES.map((theme) => (
-                    <Button
-                      key={theme.id}
-                      type="button"
-                      variant={bulletinTheme === theme.id ? 'default' : 'outline'}
-                      className="text-xs h-8 px-3 rounded-full font-bold transition-all uppercase tracking-wide flex items-center gap-1 shrink-0"
-                      onClick={() => updateSettings({ bulletinTheme: theme.id })}
-                    >
-                      <Palette className="w-3 h-3" />
-                      {theme.name}
-                    </Button>
-                  ))}
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase text-muted-foreground" htmlFor="bulletinTitle">
+                    Bulletin board title
+                  </Label>
+                  <Input
+                    id="bulletinTitle"
+                    value={bulletinTitle}
+                    onChange={(e) => updateSettings({ bulletinTitle: e.target.value })}
+                    placeholder="e.g., Monthly Challenges"
+                    className="rounded-xl"
+                  />
                 </div>
-              </div>
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="bulletinSubtitle">Tagline (under the title)</Label>
-              <Textarea
-                id="bulletinSubtitle"
-                value={settings.bulletinSubtitle ?? ''}
-                onChange={(e) => updateSettings({ bulletinSubtitle: e.target.value })}
-                placeholder={DEFAULT_BULLETIN_SUBTITLE}
-                rows={2}
-                className="rounded-xl resize-y min-h-[72px] text-sm"
-              />
-              <p className="text-[10px] text-muted-foreground">
-                Shown on the Board page and this preview. Leave blank to use the default sentence.
-              </p>
-            </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase text-muted-foreground" htmlFor="bulletinTheme">
+                    Board theme
+                  </Label>
+                  <div className="flex flex-wrap gap-2 pt-1 max-h-[140px] overflow-y-auto pr-1">
+                    {PRESET_BULLETIN_THEMES.map((theme) => (
+                      <Button
+                        key={theme.id}
+                        type="button"
+                        variant={bulletinTheme === theme.id ? 'default' : 'outline'}
+                        className="text-xs h-8 px-3 rounded-full font-bold transition-all uppercase tracking-wide flex items-center gap-1 shrink-0"
+                        onClick={() => updateSettings({ bulletinTheme: theme.id })}
+                      >
+                        <Palette className="w-3 h-3" />
+                        {theme.name}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>School logo size in header</Label>
-                <div className="flex flex-wrap gap-2">
-                  {(['sm', 'md', 'lg'] as const).map((sz) => (
+                <div className="md:col-span-2 space-y-2">
+                  <Label className="text-xs font-bold uppercase text-muted-foreground" htmlFor="bulletinSubtitle">
+                    Tagline (under the title)
+                  </Label>
+                  <Textarea
+                    id="bulletinSubtitle"
+                    value={settings.bulletinSubtitle ?? ''}
+                    onChange={(e) => updateSettings({ bulletinSubtitle: e.target.value })}
+                    placeholder={DEFAULT_BULLETIN_SUBTITLE}
+                    rows={2}
+                    className="rounded-xl resize-y min-h-[72px] text-sm"
+                  />
+                  <p className="text-[10px] text-muted-foreground">
+                    Shown on the Board page and this preview. Leave blank to use the default sentence.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase text-muted-foreground">School logo size</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {(['sm', 'md', 'lg'] as const).map((sz) => (
+                      <Button
+                        key={sz}
+                        type="button"
+                        size="sm"
+                        variant={bulletinLogoSize === sz ? 'default' : 'outline'}
+                        className="rounded-xl capitalize font-bold text-xs"
+                        onClick={() => updateSettings({ bulletinLogoSize: sz })}
+                      >
+                        {sz === 'sm' ? 'Small' : sz === 'md' ? 'Medium' : 'Large'}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase text-muted-foreground">Incentive grid</Label>
+                  <div className="flex flex-wrap gap-2">
                     <Button
-                      key={sz}
                       type="button"
                       size="sm"
-                      variant={bulletinLogoSize === sz ? 'default' : 'outline'}
-                      className="rounded-xl capitalize font-bold text-xs"
-                      onClick={() => updateSettings({ bulletinLogoSize: sz })}
+                      variant={bulletinColumns === '2' ? 'default' : 'outline'}
+                      className="rounded-xl font-bold text-xs"
+                      onClick={() => updateSettings({ bulletinColumns: '2' })}
                     >
-                      {sz === 'sm' ? 'Small' : sz === 'md' ? 'Medium' : 'Large'}
+                      Two columns (wide screens)
                     </Button>
-                  ))}
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={bulletinColumns === '1' ? 'default' : 'outline'}
+                      className="rounded-xl font-bold text-xs"
+                      onClick={() => updateSettings({ bulletinColumns: '1' })}
+                    >
+                      Single column
+                    </Button>
+                  </div>
                 </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Incentive grid</Label>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={bulletinColumns === '2' ? 'default' : 'outline'}
-                    className="rounded-xl font-bold text-xs"
-                    onClick={() => updateSettings({ bulletinColumns: '2' })}
-                  >
-                    Two columns (wide screens)
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={bulletinColumns === '1' ? 'default' : 'outline'}
-                    className="rounded-xl font-bold text-xs"
-                    onClick={() => updateSettings({ bulletinColumns: '1' })}
-                  >
-                    Single column
-                  </Button>
+
+                <div className="md:col-span-2 flex items-center justify-between rounded-xl border bg-background px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold">“Wowed Design” flair in preview</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Decorative footer in this admin preview only (not on the live Board page).
+                    </p>
+                  </div>
+                  <Switch
+                    checked={bulletinShowWowBadge}
+                    onCheckedChange={(checked) => updateSettings({ bulletinShowWowBadge: checked })}
+                  />
                 </div>
-              </div>
-            </div>
 
-            <div className="flex items-center justify-between rounded-2xl border p-3 bg-muted/30">
-              <div>
-                <p className="text-sm font-bold">“Wowed Design” flair in preview</p>
-                <p className="text-[10px] text-muted-foreground leading-snug">
-                  Decorative footer in this admin preview only (not on the live Board page).
-                </p>
-              </div>
-              <Switch
-                checked={bulletinShowWowBadge}
-                onCheckedChange={(checked) => updateSettings({ bulletinShowWowBadge: checked })}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Incentives List & Quick Add */}
-        <Card className="border-t-4 border-primary shadow-lg backdrop-blur-sm">
-          <CardHeader className="flex flex-col md:flex-row justify-between md:items-center gap-4">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-amber-500" />
-                Incentive Management
-              </CardTitle>
-              <CardDescription>Create or remove options for points-earning incentives.</CardDescription>
-            </div>
-            <Button
-              type="button"
-              className="font-black h-10 gap-1 rounded-xl shadow-lg transition-all hover:scale-105 active:scale-95 uppercase tracking-widest text-xs"
-              onClick={() => openModal()}
-            >
-              <Plus className="w-4 h-4" /> Add Incentive
-            </Button>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Quick Add Presets Section */}
-            <div>
-              <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Quick Add Incentives
-              </h3>
-              <div className="pr-1">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {PRESET_BULLETIN_INCENTIVES.map((p, idx) => (
-                  <Button
-                    key={idx}
-                    variant="outline"
-                    className="p-3 h-auto flex flex-col items-start gap-1 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-900 border text-left whitespace-normal hover:shadow-md transition-all duration-300 active:scale-95 shrink-0"
-                    onClick={() => handleQuickAdd(p)}
-                  >
-                    <div className="flex justify-between items-center w-full">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xl" role="img" aria-label={p.title}>
-                          {p.icon}
-                        </span>
-                        <span className="font-black text-xs leading-tight">{p.title}</span>
-                      </div>
-                      <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 tracking-wider">
-                        +{p.points} PTS
-                      </span>
-                    </div>
-                    <span className="text-[10px] text-muted-foreground line-clamp-2 leading-relaxed">
-                      {p.description}
-                    </span>
-                  </Button>
-                ))}
+                <div className="md:col-span-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground pt-1">
+                  <span className="font-semibold text-foreground/80">Active incentives:</span>
+                  <span className="rounded-full border border-border/60 bg-muted/30 px-2.5 py-1 text-xs font-black">
+                    {(sortedIncentives || []).filter((i) => i.active !== false).length}
+                  </span>
+                  <span className="text-xs">Total incentives: {(sortedIncentives || []).length}</span>
                 </div>
               </div>
             </div>
 
-            {/* Existing Incentives Listing */}
-            <div>
-              <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-1.5">
-                <Tag className="w-3.5 h-3.5 text-indigo-500" /> Posted Incentives
-              </h3>
-              <div className="border rounded-2xl bg-slate-50/40 dark:bg-slate-900/40">
-                {isLoading ? (
-                  <p className="text-center text-sm text-muted-foreground p-8 animate-pulse">
-                    Loading posted incentives...
-                  </p>
-                ) : sortedIncentives.length > 0 ? (
-                  <ul className="p-2 space-y-1">
-                    <AdminRecordListHeader
-                      gridClassName="grid-cols-[76px_minmax(180px,1fr)_44px]"
-                      columns={[
-                        { label: 'Edit' },
-                        { label: 'Incentive Name, Category, Points & Status' },
-                        { label: 'Delete', className: 'text-right' },
-                      ]}
-                    />
-                    {sortedIncentives.map((inc) => (
-                      <li
-                        key={inc.id}
-                        className={cn(
-                          'grid grid-cols-[76px_minmax(180px,1fr)_44px] items-center gap-3 rounded-xl border px-3 py-2 transition-colors',
-                          inc.active === false ? 'bg-muted/30 opacity-75' : 'bg-white dark:bg-slate-950 hover:border-primary/20 hover:shadow-sm'
-                        )}
-                      >
-                        <div className="flex items-center">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="h-8 gap-1.5 rounded-lg border-primary/20 bg-background hover:bg-primary/5 text-primary font-semibold"
-                            onClick={() => openModal(inc)}
-                          >
-                            <Edit className="h-3.5 w-3.5" />
-                            Edit
-                          </Button>
-                        </div>
-                        <div className="flex min-w-0 items-center gap-3">
-                          <span className="text-xl shrink-0" role="img" aria-label="incentive icon">
-                            {inc.icon || '🎉'}
-                          </span>
-                          <div className="flex flex-wrap items-center gap-2 min-w-0">
-                            <span className="font-bold text-sm truncate">{inc.title}</span>
-                            <span className="text-[11px] font-medium text-muted-foreground truncate border px-2 py-0.5 rounded-lg bg-background">
-                              {inc.category}
-                            </span>
-                            <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50 px-2 py-0.5 rounded-lg">
-                              +{inc.points} PTS
-                            </span>
-                            <span
-                              className={`text-[10px] px-2 py-0.5 font-bold uppercase tracking-widest rounded-lg ${
-                                inc.active
-                                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
-                                  : 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400'
-                              }`}
-                            >
-                              {inc.active ? 'Active' : 'Inactive'}
+            <div className="w-full rounded-2xl border bg-muted/10 p-4">
+              {bulletinEnabled ? (
+                <LiveScreenPreview
+                  href={fullHref}
+                  title="Live preview (matches big screen)"
+                  viewport="fullscreen"
+                  className="max-w-none"
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center py-16 text-center space-y-3 opacity-60 border-2 border-dashed rounded-3xl p-6">
+                  <Megaphone className="w-10 h-10 text-muted-foreground animate-pulse" />
+                  <div>
+                    <p className="font-black text-sm uppercase tracking-wider">Bulletin Board Disabled</p>
+                    <p className="text-xs text-muted-foreground">Turn on the feature to see the preview.</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="w-full rounded-2xl border bg-muted/10 p-4">
+              <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6">
+                <div className="flex items-start gap-2 min-w-0">
+                  <Sparkles className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" aria-hidden />
+                  <div>
+                    <p className="text-sm font-bold">Incentive management</p>
+                    <p className="text-xs text-muted-foreground">Create or remove options for points-earning incentives.</p>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  className="font-black h-10 gap-1 rounded-xl shadow-lg transition-all hover:scale-105 active:scale-95 uppercase tracking-widest text-xs shrink-0"
+                  onClick={() => openModal()}
+                >
+                  <Plus className="w-4 h-4" /> Add Incentive
+                </Button>
+              </div>
+
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Quick Add Incentives
+                  </h3>
+                  <div className="pr-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {PRESET_BULLETIN_INCENTIVES.map((p, idx) => (
+                        <Button
+                          key={idx}
+                          variant="outline"
+                          className="p-3 h-auto flex flex-col items-start gap-1 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-900 border text-left whitespace-normal hover:shadow-md transition-all duration-300 active:scale-95 shrink-0"
+                          onClick={() => handleQuickAdd(p)}
+                        >
+                          <div className="flex justify-between items-center w-full">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xl" role="img" aria-label={p.title}>
+                                {p.icon}
+                              </span>
+                              <span className="font-black text-xs leading-tight">{p.title}</span>
+                            </div>
+                            <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 tracking-wider">
+                              +{p.points} PTS
                             </span>
                           </div>
-                        </div>
-                        <div className="flex items-center justify-end">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-rose-600 dark:text-rose-400 rounded-lg"
-                            onClick={() => handleDeleteIncentive(inc.id)}
+                          <span className="text-[10px] text-muted-foreground line-clamp-2 leading-relaxed">
+                            {p.description}
+                          </span>
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-1.5">
+                    <Tag className="w-3.5 h-3.5 text-indigo-500" /> Posted Incentives
+                  </h3>
+                  <div className="border rounded-2xl bg-slate-50/40 dark:bg-slate-900/40">
+                    {isLoading ? (
+                      <p className="text-center text-sm text-muted-foreground p-8 animate-pulse">
+                        Loading posted incentives...
+                      </p>
+                    ) : sortedIncentives.length > 0 ? (
+                      <ul className="p-2 space-y-1">
+                        <AdminRecordListHeader
+                          gridClassName="grid-cols-[76px_minmax(180px,1fr)_44px]"
+                          columns={[
+                            { label: 'Edit' },
+                            { label: 'Incentive Name, Category, Points & Status' },
+                            { label: 'Delete', className: 'text-right' },
+                          ]}
+                        />
+                        {sortedIncentives.map((inc) => (
+                          <li
+                            key={inc.id}
+                            className={cn(
+                              'grid grid-cols-[76px_minmax(180px,1fr)_44px] items-center gap-3 rounded-xl border px-3 py-2 transition-colors',
+                              inc.active === false
+                                ? 'bg-muted/30 opacity-75'
+                                : 'bg-white dark:bg-slate-950 hover:border-primary/20 hover:shadow-sm'
+                            )}
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-center text-sm text-muted-foreground p-12">
-                    No custom incentives created yet. Add presets or create custom options above.
-                  </p>
-                )}
+                            <div className="flex items-center">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-8 gap-1.5 rounded-lg border-primary/20 bg-background hover:bg-primary/5 text-primary font-semibold"
+                                onClick={() => openModal(inc)}
+                              >
+                                <Edit className="h-3.5 w-3.5" />
+                                Edit
+                              </Button>
+                            </div>
+                            <div className="flex min-w-0 items-center gap-3">
+                              <span className="text-xl shrink-0" role="img" aria-label="incentive icon">
+                                {inc.icon || '🎉'}
+                              </span>
+                              <div className="flex flex-wrap items-center gap-2 min-w-0">
+                                <span className="font-bold text-sm truncate">{inc.title}</span>
+                                <span className="text-[11px] font-medium text-muted-foreground truncate border px-2 py-0.5 rounded-lg bg-background">
+                                  {inc.category}
+                                </span>
+                                <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50 px-2 py-0.5 rounded-lg">
+                                  +{inc.points} PTS
+                                </span>
+                                <span
+                                  className={`text-[10px] px-2 py-0.5 font-bold uppercase tracking-widest rounded-lg ${
+                                    inc.active
+                                      ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
+                                      : 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400'
+                                  }`}
+                                >
+                                  {inc.active ? 'Active' : 'Inactive'}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-end">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-rose-600 dark:text-rose-400 rounded-lg"
+                                onClick={() => handleDeleteIncentive(inc.id)}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-center text-sm text-muted-foreground p-12">
+                        No custom incentives created yet. Add presets or create custom options above.
+                      </p>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
-        </div>
-        <div className="hidden xl:block" />
-      </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Creation / Editing Incentive Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
@@ -646,6 +636,6 @@ export function AdminBulletinBoardTab({
           </form>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }
