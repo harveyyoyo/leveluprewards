@@ -207,6 +207,79 @@
   --chart-5: 280 70% 60%;
 }
 
+/* Dual-tone appearance presets (see Settings → Colors; complements in `rainbowNav.ts`) */
+[data-color-scheme="ocean"] {
+  --primary: 197 71% 34%;
+  --primary-foreground: 210 40% 98%;
+  --background: 200 78% 98%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --accent: 197 55% 94%;
+  --accent-foreground: 197 40% 28%;
+  --border: 197 50% 84%;
+  --muted: 197 38% 96%;
+  --muted-foreground: 197 28% 34%;
+  --chart-1: 197 71% 45%;
+  --chart-2: 38 92% 54%;
+  --chart-3: 160 84% 39%;
+  --chart-4: 199 89% 48%;
+  --chart-5: 280 70% 60%;
+}
+
+[data-color-scheme="sunset"] {
+  --primary: 14 88% 54%;
+  --primary-foreground: 222 47% 11%;
+  --background: 24 85% 98%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --accent: 24 90% 95%;
+  --accent-foreground: 14 50% 32%;
+  --border: 24 72% 86%;
+  --muted: 24 45% 96%;
+  --muted-foreground: 24 32% 36%;
+  --chart-1: 14 90% 58%;
+  --chart-2: 235 62% 52%;
+  --chart-3: 199 89% 48%;
+  --chart-4: 160 84% 39%;
+  --chart-5: 280 70% 60%;
+}
+
+[data-color-scheme="sapphire"] {
+  --primary: 220 75% 48%;
+  --primary-foreground: 210 40% 98%;
+  --background: 220 78% 98%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --accent: 220 70% 95%;
+  --accent-foreground: 220 45% 32%;
+  --border: 220 58% 86%;
+  --muted: 220 42% 96%;
+  --muted-foreground: 220 32% 38%;
+  --chart-1: 220 75% 48%;
+  --chart-2: 40 90% 52%;
+  --chart-3: 160 84% 39%;
+  --chart-4: 347 77% 50%;
+  --chart-5: 199 89% 48%;
+}
+
+[data-color-scheme="coral"] {
+  --primary: 16 85% 56%;
+  --primary-foreground: 222 47% 11%;
+  --background: 20 85% 98%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --accent: 16 88% 95%;
+  --accent-foreground: 16 48% 30%;
+  --border: 16 72% 86%;
+  --muted: 16 45% 96%;
+  --muted-foreground: 16 32% 34%;
+  --chart-1: 16 85% 60%;
+  --chart-2: 196 70% 48%;
+  --chart-3: 199 89% 48%;
+  --chart-4: 160 84% 39%;
+  --chart-5: 280 70% 60%;
+}
+
 /* Dark mode variations for themes */
 .dark[data-color-scheme="sky"] {
   --background: 199 80% 5%;
@@ -251,6 +324,42 @@
   --border: 25 60% 25%;
   --muted: 25 40% 15%;
   --muted-foreground: 25 30% 72%;
+}
+
+.dark[data-color-scheme="ocean"] {
+  --background: 200 75% 5%;
+  --card: 222 47% 11%;
+  --card-foreground: 210 40% 98%;
+  --border: 197 45% 22%;
+  --muted: 197 38% 14%;
+  --muted-foreground: 197 28% 72%;
+}
+
+.dark[data-color-scheme="sunset"] {
+  --background: 24 70% 5%;
+  --card: 222 47% 11%;
+  --card-foreground: 210 40% 98%;
+  --border: 24 55% 24%;
+  --muted: 24 40% 14%;
+  --muted-foreground: 24 30% 72%;
+}
+
+.dark[data-color-scheme="sapphire"] {
+  --background: 220 72% 5%;
+  --card: 222 47% 11%;
+  --card-foreground: 210 40% 98%;
+  --border: 220 50% 24%;
+  --muted: 220 40% 14%;
+  --muted-foreground: 220 30% 72%;
+}
+
+.dark[data-color-scheme="coral"] {
+  --background: 20 75% 5%;
+  --card: 222 47% 11%;
+  --card-foreground: 210 40% 98%;
+  --border: 16 55% 24%;
+  --muted: 16 40% 14%;
+  --muted-foreground: 16 30% 72%;
 }
 
 /* Student ID Card (screen preview)

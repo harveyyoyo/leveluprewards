@@ -27,7 +27,18 @@ import type { PrizeVoucherPaperFormat } from '@/lib/prize-voucher-print';
 import { STUDENT_WELCOME_STYLES_LIVE } from '@/lib/studentWelcome';
 import { LEVELUP_BRAND_PRIMARY_HEX } from '@/lib/app-branding';
 
-type ColorScheme = 'default' | 'sky' | 'rose' | 'mint' | 'lavender' | 'peach';
+type ColorScheme =
+    | 'default'
+    | 'sky'
+    | 'rose'
+    | 'mint'
+    | 'lavender'
+    | 'peach'
+    /** Dual-tone presets (primary + complement accents in nav, charts, rings). */
+    | 'ocean'
+    | 'sunset'
+    | 'sapphire'
+    | 'coral';
 
 interface Settings {
     graphicMode: 'classic' | 'graphics';
@@ -258,6 +269,38 @@ const colorSchemes: Record<ColorScheme, { bg: string; card: string; accent: stri
     mint: { bg: 'bg-emerald-50', card: 'bg-white', accent: 'text-emerald-700', border: 'border-emerald-200', label: 'Mint', swatch: 'bg-emerald-300' },
     lavender: { bg: 'bg-violet-50', card: 'bg-white', accent: 'text-violet-700', border: 'border-violet-200', label: 'Lavender', swatch: 'bg-violet-300' },
     peach: { bg: 'bg-orange-50', card: 'bg-white', accent: 'text-orange-700', border: 'border-orange-200', label: 'Peach', swatch: 'bg-orange-300' },
+    ocean: {
+        bg: 'bg-sky-50',
+        card: 'bg-white',
+        accent: 'text-sky-800',
+        border: 'border-sky-200',
+        label: 'Ocean + sand',
+        swatch: 'bg-[linear-gradient(135deg,#2389a8,#f0b429)]',
+    },
+    sunset: {
+        bg: 'bg-orange-50',
+        card: 'bg-white',
+        accent: 'text-orange-800',
+        border: 'border-orange-200',
+        label: 'Sunset + indigo',
+        swatch: 'bg-[linear-gradient(135deg,#f97316,#6366f1)]',
+    },
+    sapphire: {
+        bg: 'bg-blue-50',
+        card: 'bg-white',
+        accent: 'text-blue-800',
+        border: 'border-blue-200',
+        label: 'Sapphire + amber',
+        swatch: 'bg-[linear-gradient(135deg,#2563eb,#f59e0b)]',
+    },
+    coral: {
+        bg: 'bg-orange-50',
+        card: 'bg-white',
+        accent: 'text-orange-800',
+        border: 'border-orange-200',
+        label: 'Coral + teal',
+        swatch: 'bg-[linear-gradient(135deg,#fb7185,#14b8a6)]',
+    },
 };
 
 const defaultSettings: Settings = {

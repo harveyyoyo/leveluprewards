@@ -272,6 +272,26 @@ export function rainbowTripletForNavId(id: string, scheme?: NavColorScheme) {
 // Each array is parallel to the primary palette (7 entries).
 // Schemes not listed here fall back to their primary palette.
 const COMPLEMENT_PALETTES: Partial<Record<NavColorScheme, readonly string[]>> = {
+  ocean: [
+    // Warm amber/sand complements for ocean blues (dual-tone nav / rings)
+    '38 92% 54%',
+    '32 88% 52%',
+    '42 90% 56%',
+    '28 86% 50%',
+    '45 94% 58%',
+    '35 84% 48%',
+    '40 90% 56%',
+  ],
+  sunset: [
+    // Cool indigo complements for sunset warm hues
+    '235 62% 52%',
+    '228 58% 48%',
+    '242 56% 54%',
+    '220 64% 46%',
+    '248 54% 50%',
+    '232 60% 44%',
+    '238 58% 56%',
+  ],
   coral: [
     // Teal complements for coral primary
     '196 70% 48%',
