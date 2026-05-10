@@ -487,6 +487,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             next.enableClassSignIn = false;
             next.enableAttendance = false;
         }
+        if (!(next.payAttendance ?? true)) {
+            next.enableClassSignIn = false;
+            next.enableAttendance = false;
+        }
         if (!(next.payHomework ?? true)) {
             next.enableHomework = false;
         }

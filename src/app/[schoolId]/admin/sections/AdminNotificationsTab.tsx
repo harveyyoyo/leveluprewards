@@ -126,7 +126,7 @@ export function AdminNotificationsTab() {
   const { schoolId, loginState } = useAuth();
   const { functions, firestore } = useFirebase();
   const notificationsPlanOk = isFeatureAllowed('enableNotifications');
-  const attendancePillarOn = !!settings.enableAttendance || !!settings.enableClassSignIn;
+  const attendancePillarOn = settings.payAttendance ?? true;
   const libraryPillarOn = settings.payLibrary ?? true;
 
   const [mailRows, setMailRows] = useState<MailQueueRow[] | null>(null);
@@ -408,9 +408,13 @@ export function AdminNotificationsTab() {
                       <SelectItem value="reward_redemption">Reward redemption</SelectItem>
                       <SelectItem value="points_award">Points award</SelectItem>
                       <SelectItem value="milestone">Milestone</SelectItem>
-                      <SelectItem value="attendance">Attendance</SelectItem>
-                      <SelectItem value="library_checkout">Library checkout</SelectItem>
-                      <SelectItem value="library_return">Library return</SelectItem>
+                      {attendancePillarOn ? <SelectItem value="attendance">Attendance</SelectItem> : null}
+                      {libraryPillarOn ? (
+                        <>
+                          <SelectItem value="library_checkout">Library checkout</SelectItem>
+                          <SelectItem value="library_return">Library return</SelectItem>
+                        </>
+                      ) : null}
                     </SelectContent>
                   </Select>
                 </div>

@@ -474,10 +474,25 @@ function AdminDashboardInner() {
         value: 'attendance',
         label: 'Attendance',
         icon: Clock,
-        isOn: (s) => !!s.enableAttendance || !!s.enableClassSignIn,
-        canEnable: () => (isFeatureAllowed?.('enableAttendance') ?? true) || (isFeatureAllowed?.('enableClassSignIn') ?? true),
-        enable: () => updateSettings({ enableAttendance: true, enableClassSignIn: true, adminHiddenAddOnTabs: removeHidden('attendance') }),
-        disable: () => updateSettings({ enableAttendance: false, enableClassSignIn: false, adminHiddenAddOnTabs: removeHidden('attendance'), adminPinnedAddOnTabs: removePinned('attendance') }),
+        isOn: (s) =>
+          (s.payAttendance ?? true) && (!!s.enableAttendance || !!s.enableClassSignIn),
+        canEnable: (s) =>
+          (s?.payAttendance ?? true) &&
+          ((isFeatureAllowed?.('enableAttendance') ?? true) || (isFeatureAllowed?.('enableClassSignIn') ?? true)),
+        enable: () =>
+          updateSettings({
+            payAttendance: true,
+            enableAttendance: true,
+            enableClassSignIn: true,
+            adminHiddenAddOnTabs: removeHidden('attendance'),
+          }),
+        disable: () =>
+          updateSettings({
+            enableAttendance: false,
+            enableClassSignIn: false,
+            adminHiddenAddOnTabs: removeHidden('attendance'),
+            adminPinnedAddOnTabs: removePinned('attendance'),
+          }),
       },
       {
         value: 'halloffame',
@@ -689,6 +704,7 @@ function AdminDashboardInner() {
           patch.enableAdminAnalytics = true;
           break;
         case 'attendance':
+          patch.payAttendance = true;
           patch.enableAttendance = true;
           patch.enableClassSignIn = true;
           break;
@@ -747,6 +763,7 @@ function AdminDashboardInner() {
           nextHidden = nextHidden.filter((x) => x !== 'insights');
           break;
         case 'attendance':
+          patch.payAttendance = false;
           patch.enableAttendance = false;
           patch.enableClassSignIn = false;
           nextHidden = nextHidden.filter((x) => x !== 'attendance');
@@ -838,7 +855,7 @@ function AdminDashboardInner() {
     saveTeacherRewardRule, deleteTeacherRewardRule,
     studentActivityLog, studentActivityLogLoading, loadStudentActivityLog,
   } = useAdminAttendance({
-    enabled: !!settings.enableClassSignIn,
+    enabled: (settings.payAttendance ?? true) && !!settings.enableClassSignIn,
     schoolId,
     firestore,
     teachers,

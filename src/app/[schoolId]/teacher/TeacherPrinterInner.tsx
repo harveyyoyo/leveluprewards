@@ -3198,7 +3198,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                 />
                             </TabsContent>
 
-                            {settings.enableAttendance && (
+                            {(settings.payAttendance ?? true) && settings.enableAttendance && (
                             <TabsContent value="attendance" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-muted/30 px-4 py-3 mb-6">
                                     <p className="text-sm text-muted-foreground max-w-prose">

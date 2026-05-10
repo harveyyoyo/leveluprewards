@@ -259,6 +259,9 @@ export function SettingsModal() {
             if (key === 'payHomework' && value === false) {
                 next = { ...next, enableHomework: false };
             }
+            if (key === 'payAttendance' && value === false) {
+                next = { ...next, enableClassSignIn: false, enableAttendance: false };
+            }
             return next;
         });
 

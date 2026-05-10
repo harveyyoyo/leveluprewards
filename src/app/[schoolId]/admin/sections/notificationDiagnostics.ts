@@ -90,6 +90,13 @@ export function buildNotificationDiagnostics(args: {
     text: 'Some point flows use the description "Achievement Unlocked:" — the Cloud Function treats those like ordinary point activities, so they follow the Reward Redemptions toggle, not the milestone toggle.',
   });
 
+  if (settings.payAttendance === false) {
+    lines.push({
+      level: 'info',
+      text: 'Attendance pillar is off — class sign-in attendance is disabled for this school.',
+    });
+  }
+
   if (!settings.notificationAttendanceEnabled) {
     lines.push({
       level: 'warn',
@@ -161,7 +168,8 @@ export function buildNotificationDiagnostics(args: {
   const attendanceOpen =
     notificationsPlanOk &&
     settings.enableNotifications &&
-    settings.notificationAttendanceEnabled;
+    settings.notificationAttendanceEnabled &&
+    settings.payAttendance !== false;
   const libraryOpen =
     notificationsPlanOk &&
     settings.enableNotifications &&
@@ -209,8 +217,8 @@ export function buildNotificationDiagnostics(args: {
       studentQueue: attendanceOpen && settings.notificationStudentsEnabled,
       staffQueue: false,
       gateNote: attendanceOpen
-        ? 'Uses Attendance Sign-ins toggle. Staff path not implemented for attendance.'
-        : 'Blocked by plan, master switch, or Attendance Sign-ins toggle.',
+        ? 'Uses Attendance Sign-ins toggle + Attendance product pillar. Staff path not implemented for attendance.'
+        : 'Blocked by plan, master switch, Attendance product pillar, or Attendance Sign-ins toggle.',
     },
     {
       id: 'library',

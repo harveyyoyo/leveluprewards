@@ -619,7 +619,15 @@ function StudentDashboardInner({
   }, [hookHasPermission]);
 
   useEffect(() => {
-    if (!settings.enableClassSignIn || !student || !schoolId || !functions || signInRecordedRef.current) return;
+    if (
+      !(settings.payAttendance ?? true) ||
+      !settings.enableClassSignIn ||
+      !student ||
+      !schoolId ||
+      !functions ||
+      signInRecordedRef.current
+    )
+      return;
     signInRecordedRef.current = true;
 
     void (async () => {
@@ -671,7 +679,7 @@ function StudentDashboardInner({
         });
       }
     })();
-  }, [settings.enableClassSignIn, student, schoolId, functions, toast, playSound]);
+  }, [settings.payAttendance, settings.enableClassSignIn, student, schoolId, functions, toast, playSound]);
  
   // --- Special Occasions (Birthday & School Special Day) ---
   useEffect(() => {
