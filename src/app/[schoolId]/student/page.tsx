@@ -106,7 +106,13 @@ import { appearanceVarsForSurface } from '@/lib/appearance';
 import { STUDENT_KIOSK_REQUEST_EXIT_EVENT } from '@/lib/student-kiosk';
 import { studentSeesWelcomeBackOverlay, studentSeesWelcomePage } from '@/lib/studentWelcome';
 import { prizeIsListed, studentSeesPrizeByTeachers } from '@/lib/prize-utils';
-import { prizeAppearsInRewardsShop, resolveAiFunApiMode } from '@/lib/aiJokePrize';
+import { prizeAppearsInRewardsShop, resolveAiFunApiMode, withUnifiedAiFunPrize } from '@/lib/aiJokePrize';
+import {
+  buildPrizeAiFunAvoidTexts,
+  canonicalAiSurpriseText,
+  isAiSurpriseTextRecentlySeen,
+  rememberAiSurprise,
+} from '@/lib/prizeAiFunClientStorage';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuthFetch } from '@/lib/authFetch';
 import { WelcomeOverlay } from '@/components/WelcomeOverlay';
@@ -165,7 +171,10 @@ function fallbackPrizeSurprise(
           : 'joke';
   const kind = roll;
   const options = FALLBACK_PRIZE_SURPRISES[kind];
-  const freshOptions = previousText ? options.filter((item) => item.text !== previousText) : options;
+  const prevCanon = previousText ? canonicalAiSurpriseText(previousText) : '';
+  const freshOptions = prevCanon
+    ? options.filter((item) => canonicalAiSurpriseText(item.text) !== prevCanon)
+    : options;
   const selected = (freshOptions.length ? freshOptions : options)[Math.floor(Math.random() * (freshOptions.length || options.length))];
   if (kind === 'fortune' && prizeName) {
     return {
@@ -470,6 +479,13 @@ function StudentDashboardInner({
 
   const prizesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'prizes') : null, [firestore, schoolId]);
   const { data: prizes, isLoading: prizesLoading } = useCollection<Prize>(prizesQuery);
+  const rewardPrizes = useMemo(
+    () => withUnifiedAiFunPrize(prizes, {
+      enablePrizeAiSurprise: settings.enablePrizeAiSurprise,
+      defaultPoints: settings.prizeAiSurpriseDefaultPoints,
+    }),
+    [prizes, settings.enablePrizeAiSurprise, settings.prizeAiSurpriseDefaultPoints],
+  );
 
   const classesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'classes') : null, [firestore, schoolId]);
   const { data: classes } = useCollection<Class>(classesQuery);
@@ -981,8 +997,13 @@ function StudentDashboardInner({
           const requestId = aiSurpriseRequestIdRef.current + 1;
           aiSurpriseRequestIdRef.current = requestId;
           const instantSurprise = fallbackPrizeSurprise(apiMode, prize.name, lastAiSurpriseTextRef.current);
+          const sessionExtraAvoid = lastAiSurpriseTextRef.current?.trim()
+            ? [lastAiSurpriseTextRef.current.trim()]
+            : [];
+          const avoidTexts = buildPrizeAiFunAvoidTexts(schoolId, apiMode, [...sessionExtraAvoid, instantSurprise.text]);
           lastAiSurpriseTextRef.current = instantSurprise.text;
           setAiSurpriseBody(instantSurprise);
+          rememberAiSurprise(schoolId, instantSurprise);
           setAiSurpriseLoading(false);
           setAiSurpriseOpen(true);
           void (async () => {
@@ -995,6 +1016,7 @@ function StudentDashboardInner({
                 body: JSON.stringify({
                   schoolId,
                   mode: apiMode,
+                  avoidTexts,
                 }),
               });
               const j = (await res.json()) as { error?: string; kind?: string; text?: string; answer?: string };
@@ -1002,12 +1024,17 @@ function StudentDashboardInner({
               const kind = j.kind === 'riddle' || j.kind === 'fortune' ? j.kind : 'joke';
               const text = typeof j.text === 'string' ? j.text.trim() : '';
               if (!text || aiSurpriseRequestIdRef.current !== requestId) return;
+              const canonInstant = canonicalAiSurpriseText(instantSurprise.text);
+              if (canonicalAiSurpriseText(text) === canonInstant) return;
+              if (isAiSurpriseTextRecentlySeen(schoolId, kind, text)) return;
               lastAiSurpriseTextRef.current = text;
-              setAiSurpriseBody({
+              const nextBody = {
                 kind,
                 text,
                 answer: kind === 'riddle' && typeof j.answer === 'string' ? j.answer : undefined,
-              });
+              };
+              setAiSurpriseBody(nextBody);
+              rememberAiSurprise(schoolId, nextBody);
             } catch (e: unknown) {
               if ((e as { name?: string })?.name !== 'AbortError') {
                 console.warn('Prize AI surprise unavailable:', e);
@@ -1072,7 +1099,7 @@ function StudentDashboardInner({
       quantity = parseInt(match[1], 10);
       prizeName = prizeName.replace(/\s*\(x(\d+)\)$/, '');
     }
-    const foundPrize = prizes?.find(p => p.name === prizeName);
+    const foundPrize = rewardPrizes.find(p => p.name === prizeName);
     const prizeIcon = foundPrize?.icon || 'Gift';
 
     const ticketNo = String(item.date).replace(/\D/g, '').slice(-6) || String(item.date).slice(-6);
@@ -1100,7 +1127,7 @@ function StudentDashboardInner({
       quantity,
       totalCost: -item.amount,
     });
-  }, [student, prizes, settings]);
+  }, [student, rewardPrizes, settings]);
 
 
   // Celebrate on login if new badges were earned since last time this student opened the kiosk.
@@ -1738,7 +1765,7 @@ function StudentDashboardInner({
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-2 sm:gap-2.5">
                   {prizesLoading ? (
                     [...Array(8)].map((_, i) => <Skeleton key={i} className="min-h-[7.5rem] sm:min-h-[8rem] w-full rounded-xl" />)
-                  ) : (prizes || [])
+                  ) : rewardPrizes
                     .filter(p =>
                       prizeAppearsInRewardsShop(p, { enablePrizeAiSurprise: settings.enablePrizeAiSurprise }) &&
                       prizeIsListed(p) &&
@@ -1806,7 +1833,7 @@ function StudentDashboardInner({
                         </div>
                       </button>
                     ))}
-                  {!prizesLoading && (prizes || []).filter(p =>
+                  {!prizesLoading && rewardPrizes.filter(p =>
                       prizeAppearsInRewardsShop(p, { enablePrizeAiSurprise: settings.enablePrizeAiSurprise }) &&
                       prizeIsListed(p) &&
                       p.points <= student.points).length === 0 && (

@@ -37,16 +37,33 @@ function sanitizeText(s: unknown, maxLen: number): string {
   return s.replace(/\s+/g, ' ').trim().slice(0, maxLen);
 }
 
+function clampAvoidTexts(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const x of raw) {
+    if (typeof x !== 'string') continue;
+    const t = sanitizeText(x, 280);
+    if (t.length < 6) continue;
+    const key = t.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(t);
+    if (out.length >= 20) break;
+  }
+  return out;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const guarded = await guardAiRoute(req, {
       requireSchoolStaff: false,
       maxRequests: 10,
-      maxBodyBytes: 4096,
+      maxBodyBytes: 12_288,
     });
     if (!guarded.ok) return guarded.response;
 
-    const { schoolId: rawSchoolId, mode: rawMode, model = 'gpt-4o-mini' } = guarded.value.body;
+    const { schoolId: rawSchoolId, mode: rawMode, model = 'gpt-4o-mini', avoidTexts: rawAvoid } = guarded.value.body;
 
     if (typeof rawSchoolId !== 'string' || !rawSchoolId.trim()) {
       return NextResponse.json({ error: 'schoolId is required.' }, { status: 400 });
@@ -62,6 +79,11 @@ export async function POST(req: NextRequest) {
     const mode = rawMode as PrizeAiFunReward;
     const selectedModel = typeof model === 'string' ? model : 'gpt-4o-mini';
     const kind = resolveKind(mode);
+    const avoidLines = clampAvoidTexts(rawAvoid);
+    const avoidBlock =
+      avoidLines.length > 0
+        ? `\n\nHard rule: Your "text" (and for riddles, the "answer" too) must be clearly different from ALL of the following lines this student has already seen recently. Do not repeat them, do not swap only a couple of words, and do not deliver the same punchline with different wording:\n${avoidLines.map((line, i) => `${i + 1}. ${line}`).join('\n')}`
+        : '';
 
     const systemInstruction = `You write short, wholesome content for elementary and middle school students (ages roughly 5–14).
 Rules:
@@ -82,7 +104,7 @@ Kind-specific:
 - riddle: "text" is the riddle only; "answer" is the solution (few words).
 - fortune: "text" is one short fortune-cookie style line (inspiring or gently humorous). Omit "answer".
 
-School context id (opaque): ${schoolId}`;
+School context id (opaque): ${schoolId}${avoidBlock}`;
 
     const userPrompt = `Generate one fresh ${kind} now. Make it original — avoid clichéd riddles like "what has keys but can't open locks".`;
 

@@ -1,6 +1,6 @@
 
 'use client';
-import { useState, useEffect, useRef, useCallback, type CSSProperties } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, type CSSProperties } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
@@ -73,7 +73,20 @@ import { prizeIsListed, stripLeadingEmojiFromPrizeName, studentSeesPrizeByTeache
 import { runMotor as runVendingMotor, isConnected as motorIsConnected } from '@/lib/vendingMotor';
 import { useAuthFetch } from '@/lib/authFetch';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { isAiFunPrize, prizeAppearsInRewardsShop, resolveAiFunApiMode } from '@/lib/aiJokePrize';
+import { isAiFunPrize, prizeAppearsInRewardsShop, resolveAiFunApiMode, withUnifiedAiFunPrize } from '@/lib/aiJokePrize';
+import {
+    type AiSurpriseBody,
+    type AiSurpriseKind,
+    AI_SURPRISE_STOCK_REFILL_AT,
+    AI_SURPRISE_STOCK_TARGET,
+    buildPrizeAiFunAvoidTexts,
+    canonicalAiSurpriseText,
+    normalizeAiSurpriseBody,
+    readAiSurpriseStock,
+    rememberAiSurprise,
+    recentAiSurpriseCanonSet,
+    writeAiSurpriseStock,
+} from '@/lib/prizeAiFunClientStorage';
 
 /** Max units per redemption for 0-point prizes when stock is unlimited (balance does not limit). */
 const FREE_PRIZE_MAX_QTY = 99;
@@ -84,14 +97,6 @@ const AI_SURPRISE_KIND_LABEL: Record<string, string> = {
     fortune: 'Your fortune',
 };
 
-type AiSurpriseKind = 'joke' | 'riddle' | 'fortune';
-type AiSurpriseBody = { kind: AiSurpriseKind; text: string; answer?: string };
-
-const AI_SURPRISE_STOCK_PREFIX = 'levelup:ai-fun-stock:v1';
-const AI_SURPRISE_RECENT_PREFIX = 'levelup:ai-fun-recent:v1';
-const AI_SURPRISE_STOCK_TARGET = 3;
-const AI_SURPRISE_STOCK_REFILL_AT = 1;
-const AI_SURPRISE_RECENT_LIMIT = 30;
 const aiSurpriseStockFetches = new Set<string>();
 
 const FALLBACK_AI_SURPRISES: Record<AiSurpriseKind, AiSurpriseBody[]> = {
@@ -112,65 +117,6 @@ const FALLBACK_AI_SURPRISES: Record<AiSurpriseKind, AiSurpriseBody[]> = {
     ],
 };
 
-function aiSurpriseStockKey(schoolId: string, kind: AiSurpriseKind) {
-    return `${AI_SURPRISE_STOCK_PREFIX}:${schoolId}:${kind}`;
-}
-
-function aiSurpriseRecentKey(schoolId: string, kind: AiSurpriseKind) {
-    return `${AI_SURPRISE_RECENT_PREFIX}:${schoolId}:${kind}`;
-}
-
-function normalizeAiSurpriseBody(value: unknown, expectedKind: AiSurpriseKind): AiSurpriseBody | null {
-    if (!value || typeof value !== 'object') return null;
-    const raw = value as Record<string, unknown>;
-    const kind = raw.kind === 'riddle' || raw.kind === 'fortune' || raw.kind === 'joke' ? raw.kind : expectedKind;
-    const text = typeof raw.text === 'string' ? raw.text.trim() : '';
-    if (!text) return null;
-    const answer = typeof raw.answer === 'string' && raw.answer.trim() ? raw.answer.trim() : undefined;
-    return answer ? { kind, text, answer } : { kind, text };
-}
-
-function readAiSurpriseStock(schoolId: string, kind: AiSurpriseKind): AiSurpriseBody[] {
-    if (typeof window === 'undefined') return [];
-    try {
-        const parsed = JSON.parse(window.localStorage.getItem(aiSurpriseStockKey(schoolId, kind)) || '[]');
-        return Array.isArray(parsed)
-            ? parsed
-                .map((item) => normalizeAiSurpriseBody(item, kind))
-                .filter((item): item is AiSurpriseBody => !!item)
-            : [];
-    } catch {
-        return [];
-    }
-}
-
-function writeAiSurpriseStock(schoolId: string, kind: AiSurpriseKind, stock: AiSurpriseBody[]) {
-    if (typeof window === 'undefined') return;
-    window.localStorage.setItem(aiSurpriseStockKey(schoolId, kind), JSON.stringify(stock.slice(0, AI_SURPRISE_STOCK_TARGET)));
-}
-
-function readRecentAiSurpriseText(schoolId: string, kind: AiSurpriseKind): string[] {
-    if (typeof window === 'undefined') return [];
-    try {
-        const parsed = JSON.parse(window.localStorage.getItem(aiSurpriseRecentKey(schoolId, kind)) || '[]');
-        return Array.isArray(parsed)
-            ? parsed.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
-            : [];
-    } catch {
-        return [];
-    }
-}
-
-function rememberAiSurprise(schoolId: string, item: AiSurpriseBody) {
-    if (typeof window === 'undefined') return;
-    const recent = readRecentAiSurpriseText(schoolId, item.kind).filter((text) => text !== item.text);
-    recent.unshift(item.text);
-    window.localStorage.setItem(
-        aiSurpriseRecentKey(schoolId, item.kind),
-        JSON.stringify(recent.slice(0, AI_SURPRISE_RECENT_LIMIT)),
-    );
-}
-
 function pickAiSurpriseKind(mode: PrizeAiFunReward | undefined): AiSurpriseKind {
     if (mode === 'riddle' || mode === 'fortune' || mode === 'joke') return mode;
     const roll = Math.floor(Math.random() * 3);
@@ -178,8 +124,10 @@ function pickAiSurpriseKind(mode: PrizeAiFunReward | undefined): AiSurpriseKind 
 }
 
 function takeAiSurpriseFromStock(schoolId: string, kind: AiSurpriseKind): AiSurpriseBody {
-    const recent = new Set(readRecentAiSurpriseText(schoolId, kind));
-    const stock = readAiSurpriseStock(schoolId, kind).filter((item) => !recent.has(item.text));
+    const recentCanon = recentAiSurpriseCanonSet(schoolId, kind);
+    const stock = readAiSurpriseStock(schoolId, kind).filter(
+        (item) => !recentCanon.has(canonicalAiSurpriseText(item.text)),
+    );
     const next = stock.shift();
     writeAiSurpriseStock(schoolId, kind, stock);
     if (next) {
@@ -187,7 +135,9 @@ function takeAiSurpriseFromStock(schoolId: string, kind: AiSurpriseKind): AiSurp
         return next;
     }
     const fallback = FALLBACK_AI_SURPRISES[kind];
-    const freshFallback = fallback.find((item) => !recent.has(item.text)) ?? fallback[Math.floor(Math.random() * fallback.length)];
+    const freshFallback =
+        fallback.find((item) => !recentCanon.has(canonicalAiSurpriseText(item.text))) ??
+        fallback[Math.floor(Math.random() * fallback.length)];
     rememberAiSurprise(schoolId, freshFallback);
     return freshFallback;
 }
@@ -206,22 +156,24 @@ async function refillAiSurpriseStock(
     aiSurpriseStockFetches.add(key);
     try {
         const stock = current.slice();
-        const recent = new Set(readRecentAiSurpriseText(schoolId, kind));
-        while (stock.length < AI_SURPRISE_STOCK_TARGET) {
+        let attempts = 0;
+        const maxAttempts = 18;
+        while (stock.length < AI_SURPRISE_STOCK_TARGET && attempts < maxAttempts) {
+            attempts += 1;
+            const avoidTexts = buildPrizeAiFunAvoidTexts(schoolId, kind);
             const res = await authFetch('/api/prize-ai-fun', {
                 method: 'POST',
-                body: JSON.stringify({ schoolId, mode: kind }),
+                body: JSON.stringify({ schoolId, mode: kind, avoidTexts }),
             });
             const j = (await res.json()) as { error?: string; kind?: string; text?: string; answer?: string };
             if (!res.ok) throw new Error(j.error || 'Could not load surprise.');
             const body = normalizeAiSurpriseBody(j, kind);
-            if (body && !stock.some((item) => item.kind === body.kind && item.text === body.text)) {
-                if (recent.has(body.text)) break;
-                stock.push(body);
-                writeAiSurpriseStock(schoolId, kind, stock);
-            } else {
-                break;
-            }
+            if (!body) break;
+            const canon = canonicalAiSurpriseText(body.text);
+            if (stock.some((item) => canonicalAiSurpriseText(item.text) === canon)) continue;
+            if (recentAiSurpriseCanonSet(schoolId, kind).has(canon)) continue;
+            stock.push(body);
+            writeAiSurpriseStock(schoolId, kind, stock);
         }
     } catch (e) {
         console.warn('Prize AI surprise stock refill unavailable:', e);
@@ -626,12 +578,19 @@ export function PrizeDashboard({
 
     const prizesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'prizes') : null, [firestore, schoolId]);
     const { data: prizes, isLoading: prizesLoading, error: prizesError } = useCollection<Prize>(prizesQuery);
+    const rewardPrizes = useMemo(
+        () => withUnifiedAiFunPrize(prizes, {
+            enablePrizeAiSurprise: settings.enablePrizeAiSurprise,
+            defaultPoints: settings.prizeAiSurpriseDefaultPoints,
+        }),
+        [prizes, settings.enablePrizeAiSurprise, settings.prizeAiSurpriseDefaultPoints],
+    );
 
     /** Open confirm dialog when linked from student dashboard (?redeem=prizeId). */
     useEffect(() => {
         const redeemId = searchParams.get('redeem');
         if (!redeemId || studentLoading || prizesLoading || !schoolId || !student) return;
-        const visible = (prizes || []).filter((p) => {
+        const visible = rewardPrizes.filter((p) => {
             if (!prizeAppearsInRewardsShop(p, { enablePrizeAiSurprise: settings.enablePrizeAiSurprise })) return false;
             if (!prizeIsListed(p)) return false;
             const teacherMatch = studentSeesPrizeByTeachers(student, p);
@@ -650,7 +609,7 @@ export function PrizeDashboard({
         prizesLoading,
         schoolId,
         student,
-        prizes,
+        rewardPrizes,
         router,
         settings.enablePrizeAiSurprise,
     ]);
@@ -865,7 +824,7 @@ export function PrizeDashboard({
             quantity = parseInt(match[1], 10);
             prizeName = prizeName.replace(/\s*\(x(\d+)\)$/, '');
         }
-        const foundPrize = prizes?.find(p => p.name === prizeName);
+        const foundPrize = rewardPrizes.find(p => p.name === prizeName);
         const prizeIcon = foundPrize?.icon || 'Gift';
 
         const ticketNo = String(item.date).slice(-6);
@@ -893,7 +852,7 @@ export function PrizeDashboard({
             quantity,
             totalCost: -item.amount,
         });
-    }, [student, prizes, settings]);
+    }, [student, rewardPrizes, settings]);
 
 
     if (studentLoading || prizesLoading) {
@@ -952,7 +911,7 @@ export function PrizeDashboard({
         );
     }
 
-    const baseVisiblePrizes = (prizes || [])
+    const baseVisiblePrizes = rewardPrizes
         .filter(p => {
             if (!prizeAppearsInRewardsShop(p, { enablePrizeAiSurprise: settings.enablePrizeAiSurprise })) return false;
             if (!prizeIsListed(p)) return false;
