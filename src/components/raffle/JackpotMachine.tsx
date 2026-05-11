@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Sparkles, Volume2, VolumeX } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -166,7 +166,6 @@ export function JackpotMachine({
       await nextFrame();
       await nextFrame();
 
-      const strip0 = reelStrips[0];
       const extraLoops = 2 + Math.floor(Math.random() * 3);
 
       setReelSnap(false);
@@ -204,8 +203,16 @@ export function JackpotMachine({
     ? 'relative overflow-hidden rounded-[1.75rem] border border-border bg-gradient-to-b from-muted/50 to-background text-foreground shadow-sm'
     : 'min-h-screen relative overflow-hidden bg-background text-foreground';
 
+  /** Inline colors avoid globals.css `.font-black { color: hsl(var(--primary)) }` overriding `text-foreground` on light cards. */
+  const reelNameStyle = (fontSize: number): CSSProperties => ({
+    height: ROW_H,
+    fontSize,
+    fontWeight: 800,
+    color: 'hsl(var(--card-foreground))',
+  });
+
   return (
-    <div className={shell}>
+    <div className={cn(shell, 'jackpot-machine')} data-jackpot-machine>
       <style>{`
         @keyframes jp-pulse { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.05); opacity: 0.88; } }
         @keyframes jp-bulb { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
@@ -233,12 +240,18 @@ export function JackpotMachine({
               className="h-6 w-6 shrink-0 text-primary md:h-7 md:w-7"
               style={{ animation: 'jp-glow 2s ease-in-out infinite' }}
             />
-            <h2 className="truncate text-xl font-black tracking-tight text-foreground md:text-3xl">{title}</h2>
+            <h2
+              className="truncate text-xl tracking-tight md:text-3xl"
+              style={{ color: 'hsl(var(--foreground))', fontWeight: 900 }}
+            >
+              {title}
+            </h2>
           </div>
           <button
             type="button"
             onClick={() => setMuted((m) => !m)}
-            className="shrink-0 rounded-full border border-border bg-muted/80 p-2 text-foreground transition hover:bg-muted"
+            className="shrink-0 rounded-full border border-border bg-muted/80 p-2 transition hover:bg-muted"
+            style={{ color: 'hsl(var(--foreground))' }}
             aria-label={muted ? 'Unmute' : 'Mute'}
           >
             {muted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
@@ -266,8 +279,9 @@ export function JackpotMachine({
             <div
               className={cn(
                 'relative mb-4 overflow-hidden rounded-xl border border-primary/35 py-2.5 text-center md:mb-6 md:py-3',
-                'bg-gradient-to-b from-muted to-muted/70 text-lg font-black tracking-widest text-foreground md:text-3xl',
+                'bg-gradient-to-b from-muted to-muted/70 text-lg tracking-widest md:text-3xl',
               )}
+              style={{ color: 'hsl(var(--foreground))', fontWeight: 800 }}
             >
               {winner ? `🎉 ${winner.toUpperCase()} 🎉` : pool.length === 0 ? '★ NO ENTRIES ★' : "★ WHO'S NEXT? ★"}
               <div
@@ -289,14 +303,7 @@ export function JackpotMachine({
                   style={{ height: ROW_H * 3 }}
                 >
                   <div
-                    className="pointer-events-none absolute inset-x-0 top-0 z-10 h-6 bg-gradient-to-b from-card to-transparent"
-                    aria-hidden
-                  />
-                  <div
-                    className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-6 bg-gradient-to-t from-card to-transparent"
-                    aria-hidden
-                  />
-                  <div
+                    className="relative z-[1]"
                     style={{
                       transform: `translateY(-${offsets[ri] - ROW_H}px)`,
                       transition:
@@ -308,8 +315,8 @@ export function JackpotMachine({
                     {strip.map((name, ni) => (
                       <div
                         key={`${ri}-${ni}-${name}`}
-                        className="flex items-center justify-center px-1 font-black text-foreground"
-                        style={{ height: ROW_H, fontSize: name.length > 8 ? 16 : embedded ? 18 : 24 }}
+                        className="flex items-center justify-center px-1"
+                        style={reelNameStyle(name.length > 8 ? 16 : embedded ? 18 : 24)}
                       >
                         <span className="max-w-full truncate">{name}</span>
                       </div>
@@ -333,12 +340,14 @@ export function JackpotMachine({
                 onClick={spin}
                 disabled={spinning || pool.length === 0}
                 className={cn(
-                  'relative w-full max-w-sm rounded-full px-8 py-4 font-black tracking-wider md:px-12 md:py-5 md:text-2xl',
-                  'bg-primary text-primary-foreground shadow-md transition hover:bg-primary/90',
+                  'relative w-full max-w-sm rounded-full px-8 py-4 tracking-wider md:px-12 md:py-5 md:text-2xl',
+                  'bg-primary shadow-md transition hover:bg-primary/90',
                   'disabled:cursor-not-allowed disabled:opacity-50',
                   'text-lg',
                 )}
                 style={{
+                  color: 'hsl(var(--primary-foreground))',
+                  fontWeight: 900,
                   boxShadow:
                     '0 6px 0 hsl(var(--primary) / 0.55), 0 12px 24px hsl(var(--foreground) / 0.12), inset 0 1px 0 hsl(var(--primary-foreground) / 0.2)',
                   animation: spinning ? 'none' : 'jp-pulse 1.6s ease-in-out infinite',
