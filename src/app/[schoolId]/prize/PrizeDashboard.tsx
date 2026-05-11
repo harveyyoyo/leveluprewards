@@ -81,13 +81,13 @@ import {
     type AiSurpriseKind,
     AI_SURPRISE_STOCK_REFILL_AT,
     AI_SURPRISE_STOCK_TARGET,
+    aiSurpriseDedupeKey,
     aiSurpriseStockKey,
     buildPrizeAiFunAvoidTexts,
-    canonicalAiSurpriseText,
     normalizeAiSurpriseBody,
     readAiSurpriseStock,
     rememberAiSurprise,
-    recentAiSurpriseCanonSet,
+    recentAiSurpriseDedupeSet,
     writeAiSurpriseStock,
 } from '@/lib/prizeAiFunClientStorage';
 
@@ -127,9 +127,9 @@ function pickAiSurpriseKind(mode: PrizeAiFunReward | undefined): AiSurpriseKind 
 }
 
 function takeAiSurpriseFromStock(schoolId: string, kind: AiSurpriseKind, ageBand = '0'): AiSurpriseBody {
-    const recentCanon = recentAiSurpriseCanonSet(schoolId, kind, ageBand);
+    const recentKeys = recentAiSurpriseDedupeSet(schoolId, kind, ageBand);
     const stock = readAiSurpriseStock(schoolId, kind, ageBand).filter(
-        (item) => !recentCanon.has(canonicalAiSurpriseText(item.text)),
+        (item) => !recentKeys.has(aiSurpriseDedupeKey(kind, item.text)),
     );
     const next = stock.shift();
     writeAiSurpriseStock(schoolId, kind, stock, ageBand);
@@ -139,7 +139,7 @@ function takeAiSurpriseFromStock(schoolId: string, kind: AiSurpriseKind, ageBand
     }
     const fallback = FALLBACK_AI_SURPRISES[kind];
     const freshFallback =
-        fallback.find((item) => !recentCanon.has(canonicalAiSurpriseText(item.text))) ??
+        fallback.find((item) => !recentKeys.has(aiSurpriseDedupeKey(kind, item.text))) ??
         fallback[Math.floor(Math.random() * fallback.length)];
     rememberAiSurprise(schoolId, freshFallback, ageBand);
     return freshFallback;
@@ -179,9 +179,9 @@ async function refillAiSurpriseStock(
             if (!res.ok) throw new Error(j.error || 'Could not load surprise.');
             const body = normalizeAiSurpriseBody(j, kind);
             if (!body) break;
-            const canon = canonicalAiSurpriseText(body.text);
-            if (stock.some((item) => canonicalAiSurpriseText(item.text) === canon)) continue;
-            if (recentAiSurpriseCanonSet(schoolId, kind, ageBand).has(canon)) continue;
+            const dedupe = aiSurpriseDedupeKey(kind, body.text);
+            if (stock.some((item) => aiSurpriseDedupeKey(kind, item.text) === dedupe)) continue;
+            if (recentAiSurpriseDedupeSet(schoolId, kind, ageBand).has(dedupe)) continue;
             stock.push(body);
             writeAiSurpriseStock(schoolId, kind, stock, ageBand);
         }
