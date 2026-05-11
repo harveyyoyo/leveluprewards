@@ -73,6 +73,39 @@ export function createAiJokePrize(): Prize {
   return createAiFunPrize('joke', { legacyId: AI_JOKE_PRIZE_ID });
 }
 
+/** Point cost for the unified Fun prize; unset or invalid values default to 1 (explicit 0 is allowed). */
+function resolvedUnifiedAiFunPoints(defaultPoints: unknown): number {
+  if (defaultPoints == null) return 1;
+  const n = Number(defaultPoints);
+  if (!Number.isFinite(n)) return 1;
+  return Math.max(0, Math.floor(n));
+}
+
+export function createUnifiedAiFunPrize(defaultPoints = 1): Prize {
+  return {
+    id: AI_FUN_UNIFIED_PRIZE_ID,
+    name: 'Fun',
+    points: resolvedUnifiedAiFunPoints(defaultPoints),
+    icon: 'Sparkles',
+    inStock: true,
+    aiFunReward: 'picker',
+    offerPrintTicketOnRedeem: true,
+    addedBy: 'System',
+  };
+}
+
+export function withUnifiedAiFunPrize(
+  prizes: Prize[] | null | undefined,
+  opts: { enablePrizeAiSurprise?: boolean; defaultPoints?: number },
+): Prize[] {
+  const list = prizes || [];
+  if (opts.enablePrizeAiSurprise !== true) return list;
+  return [
+    ...list.filter((p) => p.id !== AI_FUN_UNIFIED_PRIZE_ID),
+    createUnifiedAiFunPrize(opts.defaultPoints),
+  ];
+}
+
 export function createAiFunPrize(
   aiFunReward: PrizeAiFunReward,
   opts?: { legacyId?: string },
@@ -97,4 +130,3 @@ export function createAiFunPrize(
     addedBy: 'System',
   };
 }
-

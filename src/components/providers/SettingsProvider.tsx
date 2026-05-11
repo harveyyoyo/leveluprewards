@@ -736,6 +736,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                 } else {
                     parsed.studentWelcomeBackDurationSec = Math.min(60, Math.max(1, Math.round(parsed.studentWelcomeBackDurationSec)));
                 }
+                const psp = parsed.prizeAiSurpriseDefaultPoints;
+                if (typeof psp !== 'number' || !Number.isFinite(psp) || psp < 0) {
+                    delete (parsed as Partial<Settings>).prizeAiSurpriseDefaultPoints;
+                }
                 // Demo school: production defaults are applied only on first-run (see no-saved-settings branch below).
                 const nextSettings = applyEntitlements({ 
                     ...defaultSettings, 
