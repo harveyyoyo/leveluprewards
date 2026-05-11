@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Dices, Gift, Loader2, Ticket } from 'lucide-react';
+import { useCallback, useMemo, useState } from 'react';
+import { Gift, Loader2, Ticket } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -13,9 +13,7 @@ import type { Student } from '@/lib/types';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useFirebase } from '@/firebase';
 import { collection, doc, runTransaction } from 'firebase/firestore';
-
-const REEL_ROW_PX = 52;
-const REEL_SLOT_COUNT = 38;
+import { JackpotMachine } from '@/components/raffle/JackpotMachine';
 
 type EntryRow = {
    id: string;
@@ -39,20 +37,7 @@ type EntryRow = {
    const [isGenerating, setIsGenerating] = useState(false);
    const [lastGeneratedAt, setLastGeneratedAt] = useState<number | null>(null);
    const [winner, setWinner] = useState<{ id: string; name: string } | null>(null);
-   const [isSpinning, setIsSpinning] = useState(false);
-   const [reelStrip, setReelStrip] = useState<string[]>([]);
-   const [reelTranslateY, setReelTranslateY] = useState(0);
-   const [reelTransition, setReelTransition] = useState<string>('none');
-   const spinEndTimeoutRef = useRef<number | null>(null);
-
-   useEffect(() => {
-     return () => {
-       if (spinEndTimeoutRef.current != null) {
-         window.clearTimeout(spinEndTimeoutRef.current);
-         spinEndTimeoutRef.current = null;
-       }
-     };
-   }, []);
+   const [jackpotResetKey, setJackpotResetKey] = useState(0);
 
    const pointsPerTicket = Math.max(1, Math.floor(Number(settings.rafflePointsPerTicket || 25)));
    const deductOnGenerate = !!settings.raffleDeductPoints;
@@ -88,67 +73,28 @@ type EntryRow = {
      return entries[entries.length - 1] ?? null;
    }, [entries, totalTickets]);
 
-   const pickWeightedDisplayName = useCallback((): string => {
-     const row = pickWeightedWinner();
-     return row?.name ?? '???';
-   }, [pickWeightedWinner]);
+   const jackpotPool = useMemo(
+     () => entries.map((e) => ({ id: e.id, name: e.name })),
+     [entries],
+   );
 
-   const spin = () => {
-     if (isSpinning) return;
+   const handleJackpotPickWinner = useCallback((): { id: string; name: string } | null => {
      if (totalTickets <= 0) {
-       toast({ variant: 'destructive', title: 'No entries', description: `No students have at least ${pointsPerTicket} points.` });
-       return;
-     }
-
-     const w = pickWeightedWinner();
-     if (!w) return;
-
-     if (spinEndTimeoutRef.current != null) {
-       window.clearTimeout(spinEndTimeoutRef.current);
-       spinEndTimeoutRef.current = null;
-     }
-
-     const reduceMotion =
-       typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
-
-     if (reduceMotion) {
-       setWinner({ id: w.id, name: w.name });
-       return;
-     }
-
-     const strip: string[] = [];
-     for (let i = 0; i < REEL_SLOT_COUNT - 1; i++) {
-       strip.push(pickWeightedDisplayName());
-     }
-     strip.push(w.name);
-
-     setWinner(null);
-     setReelStrip(strip);
-     setIsSpinning(true);
-
-     // Start at top of strip (shows early filler), then ease into the final row.
-     const startY = 0;
-     const finalY = -(strip.length - 1) * REEL_ROW_PX;
-
-     requestAnimationFrame(() => {
-       setReelTransition('none');
-       setReelTranslateY(startY);
-       requestAnimationFrame(() => {
-         requestAnimationFrame(() => {
-           setReelTransition('transform 3.4s cubic-bezier(0.12, 0.72, 0.12, 1)');
-           setReelTranslateY(finalY);
-         });
+       toast({
+         variant: 'destructive',
+         title: 'No entries',
+         description: `No students have at least ${pointsPerTicket} points.`,
        });
-     });
+       return null;
+     }
+     const row = pickWeightedWinner();
+     return row ? { id: row.id, name: row.name } : null;
+   }, [pickWeightedWinner, pointsPerTicket, toast, totalTickets]);
 
-     spinEndTimeoutRef.current = window.setTimeout(() => {
-       spinEndTimeoutRef.current = null;
-       setWinner({ id: w.id, name: w.name });
-       setIsSpinning(false);
-       setReelTransition('none');
-     }, 3600) as unknown as number;
-   };
- 
+   const handleJackpotSpinFinished = useCallback((w: { id: string; name: string }) => {
+     setWinner({ id: w.id, name: w.name });
+   }, []);
+
    const generateEntriesAndMaybeDeduct = async () => {
      if (!firestore) {
        toast({ variant: 'destructive', title: 'Firestore not ready', description: 'Try again in a moment.' });
@@ -161,14 +107,7 @@ type EntryRow = {
  
      setIsGenerating(true);
      setWinner(null);
-     if (spinEndTimeoutRef.current != null) {
-       window.clearTimeout(spinEndTimeoutRef.current);
-       spinEndTimeoutRef.current = null;
-     }
-     setIsSpinning(false);
-     setReelStrip([]);
-     setReelTranslateY(0);
-     setReelTransition('none');
+     setJackpotResetKey((k) => k + 1);
      try {
        if (deductOnGenerate) {
          // Variable deductions require per-student amounts; do it in one transaction.
@@ -260,101 +199,33 @@ type EntryRow = {
              </div>
            </div>
  
-           <div className="flex flex-col sm:flex-row gap-2">
-             <Button
-               onClick={() => void generateEntriesAndMaybeDeduct()}
-               className="h-11 rounded-xl font-black"
-               disabled={isGenerating}
-             >
-               {isGenerating ? (
-                 <>
-                   <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
-                   Generating…
-                 </>
-               ) : (
-                 <>
-                   <Gift className="mr-2 h-4 w-4" aria-hidden />
-                   Generate tickets
-                 </>
-               )}
-             </Button>
- 
-             <Button
-               variant="outline"
-               onClick={spin}
-               className="h-11 rounded-xl font-black"
-               disabled={entries.length === 0 || isSpinning}
-               title={entries.length === 0 ? 'No eligible students yet' : 'Spin the jackpot reel'}
-             >
-               <Dices className="mr-2 h-4 w-4" aria-hidden />
-               {isSpinning ? 'Spinning…' : 'Spin'}
-             </Button>
-           </div>
-
-           {/* Jackpot-style single reel */}
-           <div
-             className={cn(
-               'relative overflow-hidden rounded-2xl border-4 border-amber-400/90',
-               'bg-gradient-to-b from-amber-950 via-amber-900 to-zinc-950',
-               'shadow-[inset_0_2px_0_rgba(255,255,255,0.12),0_18px_40px_rgba(0,0,0,0.45)]',
-             )}
-             aria-live="polite"
+           <Button
+             onClick={() => void generateEntriesAndMaybeDeduct()}
+             className="h-11 rounded-xl font-black w-full sm:w-auto"
+             disabled={isGenerating}
            >
-             <div className="absolute inset-x-0 top-2 flex justify-center gap-1.5 z-20 pointer-events-none">
-               {Array.from({ length: 7 }).map((_, i) => (
-                 <span
-                   key={i}
-                   className="h-1.5 w-1.5 rounded-full bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.9)] animate-pulse"
-                   style={{ animationDelay: `${i * 120}ms` }}
-                 />
-               ))}
-             </div>
-             <div className="px-4 pt-7 pb-3 text-center">
-               <p className="text-[10px] font-black tracking-[0.35em] text-amber-200/90 uppercase">Jackpot</p>
-               <p className="text-xs text-amber-100/70">Weighted by raffle tickets</p>
-             </div>
+             {isGenerating ? (
+               <>
+                 <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+                 Generating…
+               </>
+             ) : (
+               <>
+                 <Gift className="mr-2 h-4 w-4" aria-hidden />
+                 Generate tickets
+               </>
+             )}
+           </Button>
 
-             <div className="relative mx-3 mb-4 rounded-xl border border-black/40 bg-black/35">
-               {/* Payline */}
-               <div className="pointer-events-none absolute inset-x-0 top-1/2 z-10 -translate-y-1/2 h-[52px] border-y-2 border-amber-300/80 shadow-[0_0_0_1px_rgba(0,0,0,0.35)] bg-amber-400/10" />
-               <div className="pointer-events-none absolute left-0 top-1/2 -translate-y-1/2 z-10 h-0 w-0 border-y-[10px] border-y-transparent border-l-[12px] border-l-amber-300" />
-               <div className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 z-10 h-0 w-0 border-y-[10px] border-y-transparent border-r-[12px] border-r-amber-300" />
+           <JackpotMachine
+             embedded
+             title="Weekly jackpot"
+             pool={jackpotPool}
+             pickWinner={handleJackpotPickWinner}
+             onSpinFinished={handleJackpotSpinFinished}
+             resetKey={jackpotResetKey}
+           />
 
-               <div className="h-[52px] overflow-hidden relative">
-                 {reelStrip.length > 0 ? (
-                   <div
-                     className="will-change-transform"
-                     style={{
-                       transform: `translateY(${reelTranslateY}px)`,
-                       transition: reelTransition,
-                     }}
-                   >
-                     {reelStrip.map((label, idx) => (
-                       <div
-                         key={`${idx}-${label}`}
-                         className="flex h-[52px] items-center justify-center px-4"
-                       >
-                         <span
-                           className={cn(
-                             'truncate text-center text-lg sm:text-xl font-black tracking-tight',
-                             'bg-gradient-to-b from-amber-100 to-amber-300 bg-clip-text text-transparent',
-                             'drop-shadow-[0_2px_0_rgba(0,0,0,0.65)]',
-                           )}
-                         >
-                           {label}
-                         </span>
-                       </div>
-                     ))}
-                   </div>
-                 ) : (
-                   <div className="flex h-[52px] items-center justify-center px-4 text-sm font-semibold text-amber-100/60">
-                     Press Spin for a student jackpot roll…
-                   </div>
-                 )}
-               </div>
-             </div>
-           </div>
- 
            <div className="rounded-2xl border bg-muted/20 p-4 flex flex-col gap-2">
              <div className="flex flex-wrap items-center gap-2 text-sm">
                <span className="font-black">{entries.length}</span>
@@ -378,7 +249,8 @@ type EntryRow = {
                </div>
              ) : (
                <p className="text-xs text-muted-foreground">
-                 Tip: click <span className="font-semibold">Generate tickets</span> first if you want to deduct points.
+                 Tip: use <span className="font-semibold">Generate tickets</span> first if you want to deduct points, then{' '}
+                 <span className="font-semibold">PULL!</span> on the machine.
                </p>
              )}
            </div>
