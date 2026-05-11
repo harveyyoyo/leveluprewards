@@ -18,6 +18,7 @@ export type PlanTier = 'free' | 'basic' | 'pro' | 'enterprise';
 /** Feature keys that are gated by plan. Must match keys on `Settings`. */
 export type PlanFeatureKey =
   | 'enableAdminAnalytics'
+  | 'enableWeeklyRaffle'
   | 'enableTeacherCharts'
   | 'enableAttendance'
   | 'enableClassSignIn'
@@ -51,6 +52,7 @@ export type PlanFeatureKey =
 /** Ordered list of all gated features (used for UI iteration). */
 export const PLAN_FEATURE_KEYS: PlanFeatureKey[] = [
   'enableAdminAnalytics',
+  'enableWeeklyRaffle',
   'enableTeacherCharts',
   'enableAttendance',
   'enableClassSignIn',
@@ -100,7 +102,7 @@ export const PLANS: Record<PlanTier, PlanInfo> = {
     label: 'Free',
     description:
       'Core classroom essentials: students, classes, teachers, categories, the rewards shop, and coupons.',
-    features: [],
+    features: ['enableWeeklyRaffle'],
   },
   basic: {
     id: 'basic',
@@ -109,6 +111,7 @@ export const PLANS: Record<PlanTier, PlanInfo> = {
       'Everything in Free, plus attendance, admin analytics and the at-home student portal.',
     features: [
       'enableAdminAnalytics',
+      'enableWeeklyRaffle',
       'enableAttendance',
       'enableClassSignIn',
       'enableStudentPortal',
@@ -122,6 +125,7 @@ export const PLANS: Record<PlanTier, PlanInfo> = {
       'Everything in Basic, plus engagement features (bonus points, badges, face login) and reporting.',
     features: [
       'enableAdminAnalytics',
+      'enableWeeklyRaffle',
       'enableTeacherCharts',
       'enableAttendance',
       'enableClassSignIn',
@@ -157,6 +161,7 @@ export const PLAN_TIERS: PlanTier[] = ['free', 'basic', 'pro', 'enterprise'];
 /** Human-friendly labels for each gated feature (shown in the developer UI). */
 export const PLAN_FEATURE_LABELS: Record<PlanFeatureKey, string> = {
   enableAdminAnalytics: 'Admin Analytics',
+  enableWeeklyRaffle: 'Weekly Raffle Wheel',
   enableTeacherCharts: 'Teacher Analytics',
   enableAttendance: 'Attendance',
   enableClassSignIn: 'Class Sign-In',

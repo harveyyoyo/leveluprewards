@@ -32,7 +32,7 @@ import {
     BarChart3, MessageSquare, ShoppingBag, ShieldCheck, Star,
     Users, Database, Printer, LayoutDashboard, History, HelpCircle,
     Cpu, Award, Clock, Cog, Lock, Sparkles, ArrowRightLeft, Trash2, RotateCcw, Smile, BookOpen, Target, Megaphone, Tv,
-    Layers, UsersRound
+    Layers, UsersRound, Ticket
 } from 'lucide-react';
 import { useSettings, colorSchemes, type ColorScheme, type Settings as AppSettings } from '../providers/SettingsProvider';
 import type { BackupInfo, StudentTheme } from '@/lib/types';
@@ -1584,6 +1584,18 @@ export function SettingsModal() {
                                     planLabel={planLabel}
                                 />
                                 <FeatureRow
+                                    id="enableWeeklyRaffle"
+                                    label="Weekly Raffle Wheel"
+                                    desc="Turn on the Admin → Raffle tab. Convert points into weekly raffle tickets and spin a weighted wheel."
+                                    icon={<Ticket className="w-5 h-5" />}
+                                    settings={local}
+                                    onToggle={handleToggle}
+                                    isImplemented={true}
+                                    isAdmin={isAdmin}
+                                    isAllowed={isFeatureAllowed('enableWeeklyRaffle')}
+                                    planLabel={planLabel}
+                                />
+                                <FeatureRow
                                     id="enableNotifications"
                                     label="Notifications"
                                     desc="Master switch for the notification system. When off, no alert mail/SMS/WhatsApp documents are created; use Admin → Notifications for per-event channels when this is on."
@@ -1719,7 +1731,7 @@ export function SettingsModal() {
                                 <FeatureRow
                                     id="enablePrizeAiSurprise"
                                     label="AI reward surprises"
-                                    desc="Adds a single Fun reward in the shop; students pick joke, riddle, fortune, or random when redeeming (school-safe short text). Requires API keys on the server; admins set cost and visibility in Admin → Prizes."
+                                    desc="Adds a single built-in Fun reward in the shop; students pick joke, riddle, fortune, or random when redeeming. Requires API keys on the server."
                                     icon={<Sparkles className="w-5 h-5" />}
                                     settings={local}
                                     onToggle={handleToggle}
@@ -1734,7 +1746,7 @@ export function SettingsModal() {
                                             Default point cost for Fun (AI surprise)
                                         </Label>
                                         <p className="mt-1 text-xs text-muted-foreground">
-                                            Used when the Fun prize is first created. You can change the cost anytime under Fun (AI surprise) in Admin → Prizes.
+                                            Controls the point cost for the built-in Fun reward shown to students.
                                         </p>
                                         <Input
                                             id="prizeAiSurpriseDefaultPoints"

@@ -16,7 +16,7 @@ import {
    Users, Gift, BookOpen, Trash2, Edit, UploadCloud, Printer, LayoutDashboard, Database,
    Settings, History, Award, CheckCircle, Tag, Trophy, ArrowRight, Loader2, Play, ShieldCheck,
    User, Ticket, Upload, Download, Activity, Zap, Clock, Palette, Wand2, TableProperties,
-   FileText, Bell, Target, Megaphone, ChevronDown, X,
+   FileText, Bell, Target, Megaphone, ChevronDown, X, Dices,
  } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -138,6 +138,10 @@ const AdminPrizesTab = dynamic(
 );
 const AdminCouponsTab = dynamic(
   () => import('./sections/AdminCouponsTab').then((m) => m.AdminCouponsTab),
+  { loading: tabLoader, ssr: false },
+);
+const AdminRaffleTab = dynamic(
+  () => import('./sections/AdminRaffleTab').then((m) => m.AdminRaffleTab),
   { loading: tabLoader, ssr: false },
 );
 const AdminLibraryTab = dynamic(
@@ -467,6 +471,20 @@ function AdminDashboardInner() {
         canEnable: () => isFeatureAllowed?.('enableAdminAnalytics') ?? true,
         enable: () => updateSettings({ enableAdminAnalytics: true, adminHiddenAddOnTabs: removeHidden('insights') }),
         disable: () => updateSettings({ enableAdminAnalytics: false, adminHiddenAddOnTabs: removeHidden('insights'), adminPinnedAddOnTabs: removePinned('insights') }),
+      },
+      {
+        value: 'raffle',
+        label: 'Raffle',
+        icon: Dices,
+        isOn: (s) => !!s.enableWeeklyRaffle,
+        canEnable: () => isFeatureAllowed?.('enableWeeklyRaffle') ?? true,
+        enable: () => updateSettings({ enableWeeklyRaffle: true, adminHiddenAddOnTabs: removeHidden('raffle') }),
+        disable: () =>
+          updateSettings({
+            enableWeeklyRaffle: false,
+            adminHiddenAddOnTabs: removeHidden('raffle'),
+            adminPinnedAddOnTabs: removePinned('raffle'),
+          }),
       },
       {
         value: 'attendance',
@@ -1600,6 +1618,10 @@ function AdminDashboardInner() {
                 }
               }}
             />
+          </TabsContent>
+
+          <TabsContent value="raffle" className={scrollingAdminTabClassName}>
+            <AdminRaffleTab schoolId={schoolId!} students={students || []} />
           </TabsContent>
 
           <TabsContent value="insights" className={`${scrollingAdminTabClassName} space-y-6`}>

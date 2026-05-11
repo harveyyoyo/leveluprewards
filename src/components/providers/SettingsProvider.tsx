@@ -69,6 +69,8 @@ interface Settings {
     // Analytics
     enableTeacherCharts: boolean;
     enableAdminAnalytics: boolean;
+    /** Admin weekly raffle wheel: convert points into raffle entries. */
+    enableWeeklyRaffle: boolean;
     // Social & Communication
     enableNotifications: boolean;
     notificationRewardsEnabled: boolean;
@@ -98,7 +100,7 @@ interface Settings {
     // Prize/Rewards shop
     enablePrizeImages: boolean;
     enablePrizeAiSurprise: boolean;
-    /** Default point cost shown when staff adds a new AI surprise prize (each prize can be edited afterward). */
+    /** Point cost for the built-in Fun AI reward shown when AI surprise is enabled. */
     prizeAiSurpriseDefaultPoints: number;
     enablePrizeCategories: boolean;
     enableWishlist: boolean;
@@ -128,6 +130,10 @@ interface Settings {
     enablePointApproval: boolean;
     enableAuditLog: boolean;
     enablePdfExport: boolean;
+    /** Weekly raffle: points required per ticket (e.g. 25). */
+    rafflePointsPerTicket: number;
+    /** Weekly raffle: when on, generating entries deducts points from students. */
+    raffleDeductPoints: boolean;
     // Student & Access
     enableStudentProfiles: boolean;
     enableQrLogin: boolean;
@@ -342,6 +348,7 @@ const defaultSettings: Settings = {
     enableChallenges: false,
     enableTeacherCharts: false,
     enableAdminAnalytics: false,
+    enableWeeklyRaffle: false,
     enableNotifications: true,
     notificationRewardsEnabled: true,
     notificationAttendanceEnabled: true,
@@ -378,6 +385,8 @@ const defaultSettings: Settings = {
     enablePointApproval: false,
     enableAuditLog: false,
     enablePdfExport: false,
+    rafflePointsPerTicket: 25,
+    raffleDeductPoints: false,
     enableStudentProfiles: false,
     enableQrLogin: true,
     enableParentView: false,
