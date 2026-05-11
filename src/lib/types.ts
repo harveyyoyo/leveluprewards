@@ -212,7 +212,7 @@ export interface Coupon {
  * `M84` is also sent after each move to disable steppers while idle.
  */
 /** After redemption, the kiosk may show one AI-generated surprise (school-appropriate). */
-/** `picker` = one shop item; student chooses joke/riddle/fortune/random at redeem. */
+/** `picker` = one shop item; student chooses joke/riddle/fortune teller/random at redeem (`fortune` in data). */
 export type PrizeAiFunReward = 'picker' | 'random' | 'joke' | 'riddle' | 'fortune';
 
 export interface VendingMotorConfig {
@@ -246,7 +246,7 @@ export interface Prize {
   vendingMotor?: VendingMotorConfig;
   /**
    * When set, after a successful redemption the Prize/Rewards shop shows one AI-generated
-   * clean joke, riddle (with answer), or fortune-cookie line. `random` picks one kind per redemption.
+   * clean joke, riddle (with answer), or fortune-teller line. `random` picks one kind per redemption.
    */
   aiFunReward?: PrizeAiFunReward;
   addedBy?: string;

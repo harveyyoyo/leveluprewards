@@ -63,7 +63,7 @@ export function readRecentAiSurpriseText(schoolId: string, kind: AiSurpriseKind)
   }
 }
 
-/** When API mode is `random`, avoid repeating any recent joke, riddle, or fortune text. */
+/** When API mode is `random`, avoid repeating any recent joke, riddle, or fortune-teller text. */
 export function readAllRecentAiSurpriseTexts(schoolId: string): string[] {
   const merged = [
     ...readRecentAiSurpriseText(schoolId, 'joke'),

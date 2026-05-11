@@ -125,7 +125,7 @@ const STUDENT_TRANSITION_EXIT_MS = 320;
 const AI_SURPRISE_KIND_LABEL: Record<string, string> = {
   joke: 'Your joke',
   riddle: 'Your riddle',
-  fortune: 'Your fortune',
+  fortune: 'Fortune teller',
 };
 
 type PrizeSurprise = { kind: 'joke' | 'riddle' | 'fortune'; text: string; answer?: string };
@@ -1924,7 +1924,7 @@ function StudentDashboardInner({
                       <SelectContent>
                         <SelectItem value="joke">Joke</SelectItem>
                         <SelectItem value="riddle">Riddle</SelectItem>
-                        <SelectItem value="fortune">Fortune</SelectItem>
+                        <SelectItem value="fortune">Fortune teller</SelectItem>
                         <SelectItem value="random">Surprise me</SelectItem>
                       </SelectContent>
                     </Select>
@@ -1987,7 +1987,7 @@ function StudentDashboardInner({
                       : (AI_SURPRISE_KIND_LABEL[aiSurpriseBody?.kind ?? ''] ?? 'Your surprise')}
                   </DialogTitle>
                   <DialogDescription className="sr-only">
-                    Joke, riddle, or fortune shown after redeeming a prize.
+                    Joke, riddle, or fortune teller line shown after redeeming a prize.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="min-h-[100px] py-1">

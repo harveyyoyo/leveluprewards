@@ -102,11 +102,12 @@ Schema:
 Kind-specific:
 - joke: "text" is one clean punchline-friendly joke (one or two sentences max). Omit "answer".
 - riddle: "text" is the riddle only; "answer" is the solution (few words).
-- fortune: "text" is one short fortune-cookie style line (inspiring or gently humorous). Omit "answer".
+- fortune: "text" is one short fortune-teller style line (inspiring or gently humorous). Omit "answer".
 
 School context id (opaque): ${schoolId}${avoidBlock}`;
 
-    const userPrompt = `Generate one fresh ${kind} now. Make it original — avoid clichéd riddles like "what has keys but can't open locks".`;
+    const kindLabel = kind === 'fortune' ? 'fortune teller line' : kind;
+    const userPrompt = `Generate one fresh ${kindLabel} now. Make it original — avoid clichéd riddles like "what has keys but can't open locks".`;
 
     let responseText = '';
 

@@ -96,7 +96,7 @@ const FREE_PRIZE_MAX_QTY = 99;
 const AI_SURPRISE_KIND_LABEL: Record<string, string> = {
     joke: 'Your joke',
     riddle: 'Your riddle',
-    fortune: 'Your fortune',
+    fortune: 'Fortune teller',
 };
 
 const aiSurpriseStockFetches = new Set<string>();
@@ -321,7 +321,7 @@ function ConfirmRedemptionDialog({
                                 <SelectContent>
                                     <SelectItem value="joke">Joke</SelectItem>
                                     <SelectItem value="riddle">Riddle</SelectItem>
-                                    <SelectItem value="fortune">Fortune</SelectItem>
+                                    <SelectItem value="fortune">Fortune teller</SelectItem>
                                     <SelectItem value="random">Surprise me</SelectItem>
                                 </SelectContent>
                             </Select>

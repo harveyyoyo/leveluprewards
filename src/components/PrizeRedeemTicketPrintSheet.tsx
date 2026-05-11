@@ -98,7 +98,7 @@ export function PrizeRedeemTicketPrintSheet({
         const surpriseAnswer =
           surpriseKind === 'riddle' && (t.aiSurpriseAnswer || '').trim() ? (t.aiSurpriseAnswer || '').trim() : '';
 
-        /** AI joke/riddle/fortune text belongs in the hero headline (where the prize name usually is), not under metadata. */
+        /** AI joke/riddle/fortune-teller text belongs in the hero headline (where the prize name usually is), not under metadata. */
         const heroHeadline = hasSurprise ? surpriseText : titleText || rawPrizeName;
         const showHeroHeadline = hasSurprise ? Boolean(surpriseText) : showTitle;
 

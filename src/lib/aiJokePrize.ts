@@ -117,7 +117,7 @@ export function createAiFunPrize(
       : aiFunReward === 'riddle'
         ? 'AI Riddle'
         : aiFunReward === 'fortune'
-          ? 'AI Fortune'
+          ? 'AI Fortune Teller'
           : 'AI Surprise';
   return {
     id,

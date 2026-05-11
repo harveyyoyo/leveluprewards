@@ -1760,7 +1760,7 @@ export function SettingsModal() {
                                 <FeatureRow
                                     id="enablePrizeAiSurprise"
                                     label="AI reward surprises"
-                                    desc="Adds a single built-in Fun reward in the shop; students pick joke, riddle, fortune, or random when redeeming. Requires API keys on the server."
+                                    desc="Adds a single built-in Fun reward in the shop; students pick joke, riddle, fortune teller, or random when redeeming. Requires API keys on the server."
                                     icon={<Sparkles className="w-5 h-5" />}
                                     settings={local}
                                     onToggle={handleToggle}
