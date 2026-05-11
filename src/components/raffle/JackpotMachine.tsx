@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Sparkles, Volume2, VolumeX } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const REEL_COUNT = 3;
 const ROW_H = 88;
@@ -160,15 +161,12 @@ export function JackpotMachine({
       const baseDur = 2400;
       const stagger = 600;
 
-      // Snap reels to top with no CSS transition, then animate a long path (full-strip loops).
-      // Otherwise the 2nd+ spin often reuses the same transform and the browser animates almost nothing.
       setReelSnap(true);
       setOffsets(Array(REEL_COUNT).fill(0));
       await nextFrame();
       await nextFrame();
 
       const strip0 = reelStrips[0];
-      const stripPeriodPx = strip0.length * ROW_H;
       const extraLoops = 2 + Math.floor(Math.random() * 3);
 
       setReelSnap(false);
@@ -203,45 +201,44 @@ export function JackpotMachine({
   };
 
   const shell = embedded
-    ? 'relative overflow-hidden rounded-[1.75rem] text-white'
-    : 'min-h-screen relative overflow-hidden bg-[oklch(0.18_0.04_280)] text-white';
+    ? 'relative overflow-hidden rounded-[1.75rem] border border-border bg-gradient-to-b from-muted/50 to-background text-foreground shadow-sm'
+    : 'min-h-screen relative overflow-hidden bg-background text-foreground';
 
   return (
     <div className={shell}>
       <style>{`
-        @keyframes jp-pulse { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.05); opacity: 0.85; } }
-        @keyframes jp-bulb { 0%,100% { opacity: 1; box-shadow: 0 0 18px oklch(0.85 0.18 90); } 50% { opacity: 0.4; box-shadow: 0 0 6px oklch(0.85 0.18 90); } }
+        @keyframes jp-pulse { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.05); opacity: 0.88; } }
+        @keyframes jp-bulb { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
         @keyframes jp-shine { from { transform: translateX(-120%); } to { transform: translateX(220%); } }
         @keyframes jp-fall { to { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
-        @keyframes jp-glow { 0%,100% { filter: drop-shadow(0 0 24px oklch(0.85 0.2 80)); } 50% { filter: drop-shadow(0 0 48px oklch(0.85 0.2 80)); } }
-        .jp-reel-mask { mask-image: linear-gradient(to bottom, transparent, black 18%, black 82%, transparent); -webkit-mask-image: linear-gradient(to bottom, transparent, black 18%, black 82%, transparent); }
+        @keyframes jp-glow { 0%,100% { filter: drop-shadow(0 0 10px hsl(var(--primary) / 0.45)); } 50% { filter: drop-shadow(0 0 18px hsl(var(--primary) / 0.65)); } }
       `}</style>
 
       {!embedded ? (
         <>
-          <div className="pointer-events-none absolute -top-32 -left-32 h-96 w-96 rounded-full bg-[oklch(0.6_0.25_30)] blur-3xl opacity-40" />
-          <div className="pointer-events-none absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-[oklch(0.6_0.25_300)] blur-3xl opacity-40" />
+          <div className="pointer-events-none absolute -top-32 -left-32 h-96 w-96 rounded-full bg-primary/25 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-primary/20 blur-3xl" />
         </>
       ) : (
         <>
-          <div className="pointer-events-none absolute -top-24 -left-16 h-64 w-64 rounded-full bg-[oklch(0.6_0.25_30)] blur-3xl opacity-30" />
-          <div className="pointer-events-none absolute -bottom-24 -right-16 h-64 w-64 rounded-full bg-[oklch(0.6_0.25_300)] blur-3xl opacity-30" />
+          <div className="pointer-events-none absolute -top-24 -left-16 h-64 w-64 rounded-full bg-primary/15 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-24 -right-16 h-64 w-64 rounded-full bg-primary/15 blur-3xl" />
         </>
       )}
 
-      <div className={embedded ? 'relative px-1 py-2 md:px-2' : 'relative max-w-6xl mx-auto px-6 py-10'}>
-        <header className="flex items-center justify-between mb-4 md:mb-6">
-          <div className="flex items-center gap-3 min-w-0">
+      <div className={embedded ? 'relative px-1 py-2 md:px-2' : 'relative mx-auto max-w-6xl px-6 py-10'}>
+        <header className="mb-4 flex items-center justify-between md:mb-6">
+          <div className="flex min-w-0 items-center gap-3">
             <Sparkles
-              className="h-6 w-6 md:h-7 md:w-7 shrink-0 text-[oklch(0.9_0.18_90)]"
+              className="h-6 w-6 shrink-0 text-primary md:h-7 md:w-7"
               style={{ animation: 'jp-glow 2s ease-in-out infinite' }}
             />
-            <h2 className="text-xl md:text-3xl font-black tracking-tight truncate">{title}</h2>
+            <h2 className="truncate text-xl font-black tracking-tight text-foreground md:text-3xl">{title}</h2>
           </div>
           <button
             type="button"
             onClick={() => setMuted((m) => !m)}
-            className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition shrink-0"
+            className="shrink-0 rounded-full border border-border bg-muted/80 p-2 text-foreground transition hover:bg-muted"
             aria-label={muted ? 'Unmute' : 'Mute'}
           >
             {muted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
@@ -250,57 +247,55 @@ export function JackpotMachine({
 
         <div className="relative">
           <div
-            className="relative rounded-[1.5rem] md:rounded-[2rem] p-4 md:p-8"
-            style={{
-              background: 'linear-gradient(180deg, oklch(0.55 0.18 30), oklch(0.4 0.2 25))',
-              boxShadow:
-                'inset 0 4px 12px oklch(0.95 0.05 80 / 0.4), inset 0 -8px 24px oklch(0.2 0.1 25), 0 30px 60px -20px oklch(0.1 0.05 280)',
-              border: '4px solid oklch(0.85 0.15 85)',
-            }}
+            className={cn(
+              'relative rounded-[1.5rem] border-2 border-primary/45 p-4 md:rounded-[2rem] md:p-8',
+              'bg-gradient-to-b from-primary/25 via-card to-card',
+              'shadow-[inset_0_1px_0_hsl(var(--primary-foreground)/0.12),0_20px_40px_-12px_hsl(var(--foreground)/0.12)]',
+            )}
           >
             <div className="absolute -top-2 left-0 right-0 flex justify-around px-4 md:px-6">
               {Array.from({ length: 12 }).map((_, i) => (
                 <div
                   key={i}
-                  className="h-2.5 w-2.5 md:h-3 md:w-3 rounded-full bg-[oklch(0.9_0.2_90)]"
+                  className="h-2.5 w-2.5 rounded-full bg-primary shadow-[0_0_10px_hsl(var(--primary)/0.55)] md:h-3 md:w-3"
                   style={{ animation: `jp-bulb 0.9s ease-in-out ${i * 0.07}s infinite` }}
                 />
               ))}
             </div>
 
             <div
-              className="relative overflow-hidden rounded-xl mb-4 md:mb-6 py-2.5 md:py-3 text-center text-lg md:text-3xl font-black tracking-widest"
-              style={{
-                background: 'linear-gradient(180deg, oklch(0.25 0.08 280), oklch(0.15 0.05 280))',
-                border: '2px solid oklch(0.85 0.15 85)',
-                color: 'oklch(0.95 0.18 85)',
-                textShadow: '0 0 16px oklch(0.85 0.2 80)',
-              }}
+              className={cn(
+                'relative mb-4 overflow-hidden rounded-xl border border-primary/35 py-2.5 text-center md:mb-6 md:py-3',
+                'bg-gradient-to-b from-muted to-muted/70 text-lg font-black tracking-widest text-foreground md:text-3xl',
+              )}
             >
               {winner ? `🎉 ${winner.toUpperCase()} 🎉` : pool.length === 0 ? '★ NO ENTRIES ★' : "★ WHO'S NEXT? ★"}
               <div
-                className="absolute inset-y-0 w-1/3 pointer-events-none"
-                style={{
-                  background: 'linear-gradient(90deg, transparent, oklch(1 0 0 / 0.25), transparent)',
-                  animation: 'jp-shine 2.4s ease-in-out infinite',
-                }}
+                className="pointer-events-none absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-primary/10 to-transparent"
+                style={{ animation: 'jp-shine 2.4s ease-in-out infinite' }}
               />
             </div>
 
             <div
-              className="relative grid grid-cols-3 gap-2 md:gap-3 p-3 md:p-4 rounded-2xl"
-              style={{
-                background: 'linear-gradient(180deg, oklch(0.12 0.03 280), oklch(0.2 0.04 280))',
-                boxShadow: 'inset 0 4px 16px oklch(0 0 0 / 0.6)',
-                border: '3px solid oklch(0.75 0.15 80)',
-              }}
+              className={cn(
+                'relative grid grid-cols-3 gap-2 rounded-2xl border border-border bg-muted/40 p-3 md:gap-3 md:p-4',
+                'shadow-[inset_0_2px_12px_hsl(var(--foreground)/0.06)]',
+              )}
             >
               {reelStrips.map((strip, ri) => (
                 <div
                   key={ri}
-                  className="jp-reel-mask relative overflow-hidden rounded-xl bg-white"
+                  className="relative overflow-hidden rounded-xl border border-border bg-card shadow-inner"
                   style={{ height: ROW_H * 3 }}
                 >
+                  <div
+                    className="pointer-events-none absolute inset-x-0 top-0 z-10 h-6 bg-gradient-to-b from-card to-transparent"
+                    aria-hidden
+                  />
+                  <div
+                    className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-6 bg-gradient-to-t from-card to-transparent"
+                    aria-hidden
+                  />
                   <div
                     style={{
                       transform: `translateY(-${offsets[ri] - ROW_H}px)`,
@@ -312,39 +307,40 @@ export function JackpotMachine({
                   >
                     {strip.map((name, ni) => (
                       <div
-                        key={ni}
-                        className="flex items-center justify-center font-black text-[oklch(0.25_0.1_280)] px-1"
+                        key={`${ri}-${ni}-${name}`}
+                        className="flex items-center justify-center px-1 font-black text-foreground"
                         style={{ height: ROW_H, fontSize: name.length > 8 ? 16 : embedded ? 18 : 24 }}
                       >
-                        <span className="truncate max-w-full">{name}</span>
+                        <span className="max-w-full truncate">{name}</span>
                       </div>
                     ))}
                   </div>
                   <div
-                    className="pointer-events-none absolute left-0 right-0"
+                    className="pointer-events-none absolute left-0 right-0 z-20 rounded-lg border-2 border-primary ring-2 ring-primary/25"
                     style={{
                       top: ROW_H,
                       height: ROW_H,
-                      border: '3px solid oklch(0.75 0.2 30)',
-                      borderRadius: 8,
-                      boxShadow: '0 0 20px oklch(0.75 0.2 30 / 0.6)',
+                      boxShadow: '0 0 16px hsl(var(--primary) / 0.25)',
                     }}
                   />
                 </div>
               ))}
             </div>
 
-            <div className="mt-6 md:mt-8 flex justify-center">
+            <div className="mt-6 flex justify-center md:mt-8">
               <button
                 type="button"
                 onClick={spin}
                 disabled={spinning || pool.length === 0}
-                className="relative px-8 md:px-12 py-4 md:py-5 rounded-full font-black text-lg md:text-2xl tracking-wider disabled:opacity-50 disabled:cursor-not-allowed w-full max-w-sm"
+                className={cn(
+                  'relative w-full max-w-sm rounded-full px-8 py-4 font-black tracking-wider md:px-12 md:py-5 md:text-2xl',
+                  'bg-primary text-primary-foreground shadow-md transition hover:bg-primary/90',
+                  'disabled:cursor-not-allowed disabled:opacity-50',
+                  'text-lg',
+                )}
                 style={{
-                  background: 'linear-gradient(180deg, oklch(0.9 0.2 85), oklch(0.7 0.22 50))',
-                  color: 'oklch(0.2 0.1 30)',
                   boxShadow:
-                    '0 8px 0 oklch(0.45 0.18 30), 0 16px 32px oklch(0 0 0 / 0.4), inset 0 2px 4px oklch(1 0 0 / 0.5)',
+                    '0 6px 0 hsl(var(--primary) / 0.55), 0 12px 24px hsl(var(--foreground) / 0.12), inset 0 1px 0 hsl(var(--primary-foreground) / 0.2)',
                   animation: spinning ? 'none' : 'jp-pulse 1.6s ease-in-out infinite',
                 }}
               >
@@ -353,7 +349,7 @@ export function JackpotMachine({
             </div>
 
             {embedded && pool.length > 0 ? (
-              <p className="mt-4 text-center text-xs text-white/70 px-2">
+              <p className="mt-4 px-2 text-center text-xs text-muted-foreground">
                 Winner is chosen by raffle tickets (same odds as before). Three reels land on the same student.
               </p>
             ) : null}
@@ -362,7 +358,7 @@ export function JackpotMachine({
       </div>
 
       {confetti ? (
-        <div className="pointer-events-none fixed inset-0 overflow-hidden z-50">
+        <div className="pointer-events-none fixed inset-0 z-50 overflow-hidden">
           {Array.from({ length: 80 }).map((_, i) => {
             const left = Math.random() * 100;
             const delay = Math.random() * 0.6;
@@ -377,7 +373,7 @@ export function JackpotMachine({
                   left: `${left}%`,
                   width: size,
                   height: size * 1.6,
-                  background: `oklch(0.7 0.2 ${hue})`,
+                  background: `hsl(${hue} 65% 55%)`,
                   borderRadius: 2,
                   animation: `jp-fall ${dur}s linear ${delay}s forwards`,
                 }}
