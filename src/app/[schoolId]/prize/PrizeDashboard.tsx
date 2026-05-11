@@ -59,6 +59,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useKioskAiFunAndVoucherIdleActive } from '@/hooks/useKioskAiFunAndVoucherIdle';
+import { usePrizeAiFunAudienceCacheReset } from '@/hooks/usePrizeAiFunAudienceCacheReset';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { PrinterReminderCallout } from '@/components/PrinterReminderCallout';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -599,6 +600,8 @@ export function PrizeDashboard({
         [student?.birthday],
     );
     const prizeAiFunAgeBand = useMemo(() => prizeAiFunAgeBandKey(prizeAiFunAgeYears), [prizeAiFunAgeYears]);
+
+    usePrizeAiFunAudienceCacheReset(schoolId, studentId, student);
 
     useEffect(() => {
         if (!schoolId || settings.enablePrizeAiSurprise !== true || !kioskAiFunAndVoucherActive) return;

@@ -215,3 +215,17 @@ export function isAiSurpriseTextRecentlySeen(
 ): boolean {
   return recentAiSurpriseDedupeSet(schoolId, kind, ageBand).has(aiSurpriseDedupeKey(kind, text));
 }
+
+const AI_SURPRISE_ALL_KINDS: AiSurpriseKind[] = ['joke', 'riddle', 'fortune'];
+const AI_SURPRISE_ALL_AGE_BANDS = ['0', '1', '2', '3', '4'] as const;
+
+/** Wipe prefetch + recent lines for this school (all age bands). Call after birthday / age signal changes. */
+export function clearPrizeAiFunSchoolClientCache(schoolId: string) {
+  if (typeof window === 'undefined' || !schoolId) return;
+  for (const kind of AI_SURPRISE_ALL_KINDS) {
+    for (const band of AI_SURPRISE_ALL_AGE_BANDS) {
+      window.localStorage.removeItem(aiSurpriseStockKey(schoolId, kind, band));
+      window.localStorage.removeItem(aiSurpriseRecentKey(schoolId, kind, band));
+    }
+  }
+}

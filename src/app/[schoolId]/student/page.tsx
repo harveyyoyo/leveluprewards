@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { format } from 'date-fns';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useKioskAiFunAndVoucherIdleActive } from '@/hooks/useKioskAiFunAndVoucherIdle';
+import { usePrizeAiFunAudienceCacheReset } from '@/hooks/usePrizeAiFunAudienceCacheReset';
 import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { PrinterReminderCallout } from '@/components/PrinterReminderCallout';
@@ -468,6 +469,8 @@ function StudentDashboardInner({
 
   const studentDocRef = useMemoFirebase(() => schoolId ? doc(firestore, 'schools', schoolId, 'students', studentId) : null, [firestore, schoolId, studentId]);
   const { data: student, isLoading: studentLoading } = useDoc<Student>(studentDocRef);
+
+  usePrizeAiFunAudienceCacheReset(schoolId, studentId, student);
 
   useEffect(() => {
     if (!studentLoading && student && schoolId) {
