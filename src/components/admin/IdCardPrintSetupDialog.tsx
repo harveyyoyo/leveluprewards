@@ -14,7 +14,6 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import type { Class, Student } from '@/lib/types';
-import { resolveIdCardPrintJobOptions, resolveIdCardPrinterFamily } from '@/lib/id-card-print-catalog';
 import { Printer } from 'lucide-react';
 
 export function IdCardPrintSetupDialog({
@@ -44,27 +43,15 @@ export function IdCardPrintSetupDialog({
     return `${n} students`;
   }, [students]);
 
-  const resolvedFamily = resolveIdCardPrinterFamily(settings);
-  const dtcBlocked = resolvedFamily === 'dtc4500e' && students.length > 1;
-
   const handlePrint = () => {
     if (students.length === 0) {
       toast({ variant: 'destructive', title: 'Nothing to print', description: 'There are no students in this run.' });
-      return;
-    }
-    if (dtcBlocked) {
-      toast({
-        variant: 'destructive',
-        title: 'DTC prints one card at a time',
-        description: 'Select a single student (selection mode) or narrow filters to one student, then print again.',
-      });
       return;
     }
 
     onConfirm({
       students,
       classes,
-      ...resolveIdCardPrintJobOptions(settings),
     });
   };
 
@@ -91,22 +78,13 @@ export function IdCardPrintSetupDialog({
             </Alert>
           ) : null}
 
-          {dtcBlocked ? (
-            <Alert variant="destructive">
-              <AlertTitle>One student at a time</AlertTitle>
-              <AlertDescription>
-                Direct-to-card is selected in Settings, but this queue has {students.length} students. Use selection mode to pick one
-                student, or filter the list to a single student before printing.
-              </AlertDescription>
-            </Alert>
-          ) : null}
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0">
           <Button type="button" variant="outline" className="rounded-xl" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button type="button" className="rounded-xl" onClick={handlePrint} disabled={students.length === 0 || dtcBlocked}>
+          <Button type="button" className="rounded-xl" onClick={handlePrint} disabled={students.length === 0}>
             Continue to print
           </Button>
         </DialogFooter>

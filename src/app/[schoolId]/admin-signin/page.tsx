@@ -120,7 +120,7 @@ function AdminSignInContent() {
           </div>
           <div className="space-y-1">
             <CardTitle className="text-2xl font-black tracking-tight">Admin sign-in</CardTitle>
-            <CardDescription>Enter the admin passcode for this school.</CardDescription>
+            <CardDescription>Manage students, classes, prizes, and system settings.</CardDescription>
           </div>
         </CardHeader>
         <CardContent className="space-y-5">

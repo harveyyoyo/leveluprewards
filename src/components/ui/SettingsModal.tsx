@@ -250,8 +250,11 @@ export function SettingsModal() {
 
     const handleToggle = (key: string, value: any) => {
         const isLivePreviewKey =
+            key === 'colorScheme' ||
+            key === 'studentColorScheme' ||
+            key === 'teacherColorScheme' ||
+            key === 'customAppearanceColors' ||
             key === 'enableAnimatedBackground' ||
-            key === 'calmMode' ||
             key === 'legacyMode' ||
             key === 'animatedBackgroundStyle' ||
             key === 'studentEnableAnimatedBackground' ||
@@ -288,6 +291,23 @@ export function SettingsModal() {
         if (local.soundEnabled || key === 'soundEnabled') {
             playSound('click');
         }
+    };
+
+    const handleAppearanceColorChange = (scheme: ColorScheme, slot: 'primary' | 'secondary', value: string) => {
+        const nextColors = {
+            ...(local.customAppearanceColors || {}),
+            [scheme]: {
+                ...(local.customAppearanceColors?.[scheme] || {}),
+                [slot]: value,
+            },
+        };
+        handleToggle('customAppearanceColors', nextColors);
+    };
+
+    const handleResetAppearanceColors = (scheme: ColorScheme) => {
+        const nextColors = { ...(local.customAppearanceColors || {}) };
+        delete nextColors[scheme];
+        handleToggle('customAppearanceColors', nextColors);
     };
 
     const handleTeacherFeatureToggle = (key: string, value: boolean) => {
@@ -343,7 +363,7 @@ export function SettingsModal() {
     const currentStyleIndex = visibleStyles.findIndex(s => s.id === currentStyle.id);
     const backdropActive = globalAnimatedBackdropActive(local);
     const backdropBlockedReason =
-        local.legacyMode ? 'Legacy mode is on' : local.calmMode ? 'Calm mode is on' : !local.enableAnimatedBackground ? 'Animated background is off' : null;
+        local.legacyMode ? 'Legacy mode is on' : !local.enableAnimatedBackground ? 'Animated background is off' : null;
 
     const cycleBackground = () => {
         if (visibleStyles.length === 0) return;
@@ -666,52 +686,7 @@ export function SettingsModal() {
                                 ) : null}
                             </div>
 
-                            {isAdmin && (
-                                <div className="mb-4 rounded-2xl border border-border/40 bg-muted/30 p-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                                    <div className="min-w-0">
-                                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
-                                            Preview mode
-                                        </p>
-                                        <p className="text-xs text-muted-foreground leading-snug mt-1">
-                                            {previewMode === 'live'
-                                                ? 'Changes apply immediately so you can verify motion/background instantly.'
-                                                : 'Changes stay in this dialog until you press OK.'}
-                                        </p>
-                                    </div>
-                                    <div className="flex items-center gap-1.5 rounded-2xl border border-border/50 bg-background/60 p-1 shrink-0">
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setPreviewMode('draft');
-                                                if (local.soundEnabled) playSound('click');
-                                            }}
-                                            className={cn(
-                                                'px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all',
-                                                previewMode === 'draft'
-                                                    ? 'bg-background text-foreground shadow-sm border border-border/50'
-                                                    : 'text-muted-foreground hover:text-foreground',
-                                            )}
-                                        >
-                                            Apply on OK
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setPreviewMode('live');
-                                                if (local.soundEnabled) playSound('click');
-                                            }}
-                                            className={cn(
-                                                'px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all',
-                                                previewMode === 'live'
-                                                    ? 'bg-background text-foreground shadow-sm border border-border/50'
-                                                    : 'text-muted-foreground hover:text-foreground',
-                                            )}
-                                        >
-                                            Live preview
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
+                            {isAdmin ? null : null}
 
                             {/* APPEARANCE */}
                             <div className="grid gap-4 md:grid-cols-[220px_1fr]">
@@ -751,6 +726,12 @@ export function SettingsModal() {
                                             {(Object.keys(colorSchemes) as ColorScheme[]).map((key) => {
                                                 const roleKey = interfaceRole === 'student' ? 'studentColorScheme' : interfaceRole === 'teacher' ? 'teacherColorScheme' : 'colorScheme';
                                                 const isSelected = local[roleKey] === key;
+                                                const swatchColors = colorSchemes[key].swatchColors;
+                                                const customSwatch = local.customAppearanceColors?.[key];
+                                                const effectiveSwatchColors = [
+                                                    customSwatch?.primary || swatchColors[0],
+                                                    customSwatch?.secondary || swatchColors[1],
+                                                ];
                                                 return (
                                                     <button
                                                         key={key}
@@ -762,12 +743,74 @@ export function SettingsModal() {
                                                                 : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-muted'
                                                         )}
                                                     >
-                                                        <span className={`w-4 h-4 rounded-full ${colorSchemes[key].swatch} shrink-0`} />
+                                                        <span className="flex w-5 h-4 overflow-hidden rounded-full border border-black/10 shrink-0 shadow-sm">
+                                                            {effectiveSwatchColors.map((color) => (
+                                                                <span key={color} className="flex-1" style={{ backgroundColor: /^#[0-9A-Fa-f]{6}$/.test(color) ? color : '#94a3b8' }} />
+                                                            ))}
+                                                        </span>
                                                         {colorSchemes[key].label}
                                                     </button>
                                                 );
                                             })}
                                         </div>
+
+                                        {(() => {
+                                            const roleKey = interfaceRole === 'student' ? 'studentColorScheme' : interfaceRole === 'teacher' ? 'teacherColorScheme' : 'colorScheme';
+                                            const selectedScheme = (local[roleKey] || 'default') as ColorScheme;
+                                            const presetColors = colorSchemes[selectedScheme].swatchColors;
+                                            const customColors = local.customAppearanceColors?.[selectedScheme] || {};
+                                            const primaryColor = customColors.primary || presetColors[0];
+                                            const secondaryColor = customColors.secondary || presetColors[1];
+                                            const hasCustom = !!customColors.primary || !!customColors.secondary;
+                                            return (
+                                                <div className="mt-4 rounded-xl border border-border/60 bg-background/70 p-3">
+                                                    <div className="mb-3 flex items-center justify-between gap-3">
+                                                        <div>
+                                                            <h4 className="text-sm font-black text-foreground">{colorSchemes[selectedScheme].label} colors</h4>
+                                                            <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">Primary is used for main actions. Secondary is used for focus, hover, charts, and support accents.</p>
+                                                        </div>
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="h-9 shrink-0 rounded-xl px-2 text-[11px]"
+                                                            onClick={() => handleResetAppearanceColors(selectedScheme)}
+                                                            disabled={!hasCustom}
+                                                        >
+                                                            <RotateCcw className="h-3.5 w-3.5" />
+                                                            Reset
+                                                        </Button>
+                                                    </div>
+                                                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                                        {([
+                                                            ['primary', 'Primary'],
+                                                            ['secondary', 'Secondary'],
+                                                        ] as const).map(([slot, label]) => {
+                                                            const value = slot === 'primary' ? primaryColor : secondaryColor;
+                                                            const colorInputValue = /^#[0-9A-Fa-f]{6}$/.test(value) ? value : presetColors[slot === 'primary' ? 0 : 1];
+                                                            return (
+                                                                <label key={slot} className="flex items-center gap-3 rounded-xl border border-border/50 bg-card px-3 py-2">
+                                                                    <span className="text-xs font-bold text-muted-foreground">{label}</span>
+                                                                    <Input
+                                                                        type="color"
+                                                                        value={colorInputValue}
+                                                                        onChange={(e) => handleAppearanceColorChange(selectedScheme, slot, e.target.value)}
+                                                                        className="ml-auto h-9 w-12 cursor-pointer rounded-md border-border p-1"
+                                                                        aria-label={`${label} color`}
+                                                                    />
+                                                                    <Input
+                                                                        value={value}
+                                                                        onChange={(e) => handleAppearanceColorChange(selectedScheme, slot, e.target.value)}
+                                                                        className="h-9 w-24 font-mono text-xs"
+                                                                        aria-label={`${label} hex`}
+                                                                    />
+                                                                </label>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })()}
                                     </div>
 
                             {/* MOTION & SOUND */}
@@ -779,26 +822,8 @@ export function SettingsModal() {
                                     <Zap className="w-3.5 h-3.5" /> Motion & Sound
                                 </p>
 
-                                {/* Calm Mode */}
-                                <div className="flex items-center justify-between mb-4 mt-1">
-                                    <div className="flex items-center gap-3">
-                                        <div className={`p-2 rounded-xl bg-muted text-muted-foreground`}>
-                                            <Moon className="w-5 h-5" />
-                                        </div>
-                                        <div>
-                                            <h4 className="font-bold text-sm text-foreground">Calm mode</h4>
-                                            <p className="text-[11px] text-muted-foreground mt-0.5">Quiets decorative motion and glows</p>
-                                        </div>
-                                    </div>
-                                    <Switch
-                                        checked={local.calmMode}
-                                        onCheckedChange={(checked) => handleToggle('calmMode', checked)}
-                                        className="scale-110"
-                                    />
-                                </div>
-
                                 {/* Sound Effects */}
-                                <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center justify-between mb-4 mt-1">
                                     <div className="flex items-center gap-3">
                                         <div className={`p-2 rounded-xl bg-muted text-muted-foreground`}>
                                             <Volume2 className="w-5 h-5" />
@@ -817,7 +842,7 @@ export function SettingsModal() {
 
                                 <div className="flex items-center justify-between mb-4">
                                     <div className="flex items-center gap-3">
-                                        <div className={`p-2 rounded-xl transition-colors ${local.enableAnimatedBackground && !local.calmMode ? 'bg-primary/20 text-primary shadow-sm' : 'bg-muted text-muted-foreground'}`}>
+                                        <div className={`p-2 rounded-xl transition-colors ${local.enableAnimatedBackground && !local.legacyMode ? 'bg-primary/20 text-primary shadow-sm' : 'bg-muted text-muted-foreground'}`}>
                                             <Sparkles className="w-5 h-5" />
                                         </div>
                                          <div>
@@ -1034,6 +1059,157 @@ export function SettingsModal() {
                                             />
                                         </div>
                                     </div>
+
+                                    <div className="space-y-2 border-t border-slate-200/60 dark:border-slate-700/50 pt-4">
+                                        <p className="text-sm font-bold">Student kiosk sign-in tabs</p>
+                                        <p className="text-[11px] text-muted-foreground">
+                                            Choose which login methods appear on the student kiosk sign-in screen.
+                                        </p>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                                            <div className="flex items-center justify-between gap-3">
+                                                <span className="text-xs font-bold">Card</span>
+                                                <Switch
+                                                    checked={local.kioskLoginTabCardEnabled !== false}
+                                                    onCheckedChange={(checked) => {
+                                                        handleToggle('kioskLoginTabCardEnabled', checked);
+                                                        // Safety: never allow all login tabs to be disabled.
+                                                        const nextCard = checked;
+                                                        const nextType = local.kioskLoginTabTypeEnabled !== false;
+                                                        const nextScan = local.kioskLoginTabScanEnabled !== false;
+                                                        const nextFace = local.kioskLoginTabFaceEnabled === true;
+                                                        if (!nextCard && !nextType && !nextScan && !nextFace) {
+                                                            handleToggle('kioskLoginTabCardEnabled', true);
+                                                        }
+                                                    }}
+                                                    disabled={!isAdmin}
+                                                />
+                                            </div>
+                                            <div className="flex items-center justify-between gap-3">
+                                                <span className="text-xs font-bold">Type</span>
+                                                <Switch
+                                                    checked={local.kioskLoginTabTypeEnabled !== false}
+                                                    onCheckedChange={(checked) => {
+                                                        handleToggle('kioskLoginTabTypeEnabled', checked);
+                                                        const nextCard = local.kioskLoginTabCardEnabled !== false;
+                                                        const nextType = checked;
+                                                        const nextScan = local.kioskLoginTabScanEnabled !== false;
+                                                        const nextFace = local.kioskLoginTabFaceEnabled === true;
+                                                        if (!nextCard && !nextType && !nextScan && !nextFace) {
+                                                            handleToggle('kioskLoginTabCardEnabled', true);
+                                                        }
+                                                    }}
+                                                    disabled={!isAdmin}
+                                                />
+                                            </div>
+                                            <div className="flex items-center justify-between gap-3">
+                                                <span className="text-xs font-bold">Scan (webcam)</span>
+                                                <Switch
+                                                    checked={local.kioskLoginTabScanEnabled !== false}
+                                                    onCheckedChange={(checked) => {
+                                                        handleToggle('kioskLoginTabScanEnabled', checked);
+                                                        // Keep legacy flag aligned for any older reads.
+                                                        handleToggle('enableQrLogin', checked);
+                                                        const nextCard = local.kioskLoginTabCardEnabled !== false;
+                                                        const nextType = local.kioskLoginTabTypeEnabled !== false;
+                                                        const nextScan = checked;
+                                                        const nextFace = local.kioskLoginTabFaceEnabled === true;
+                                                        if (!nextCard && !nextType && !nextScan && !nextFace) {
+                                                            handleToggle('kioskLoginTabCardEnabled', true);
+                                                        }
+                                                    }}
+                                                    disabled={!isAdmin}
+                                                />
+                                            </div>
+                                            <div className="flex items-center justify-between gap-3">
+                                                <span className="text-xs font-bold">Face</span>
+                                                <Switch
+                                                    checked={local.kioskLoginTabFaceEnabled === true}
+                                                    onCheckedChange={(checked) => {
+                                                        handleToggle('kioskLoginTabFaceEnabled', checked);
+                                                        handleToggle('enableFaceLogin', checked);
+                                                        const nextCard = local.kioskLoginTabCardEnabled !== false;
+                                                        const nextType = local.kioskLoginTabTypeEnabled !== false;
+                                                        const nextScan = local.kioskLoginTabScanEnabled !== false;
+                                                        const nextFace = checked;
+                                                        if (!nextCard && !nextType && !nextScan && !nextFace) {
+                                                            handleToggle('kioskLoginTabCardEnabled', true);
+                                                        }
+                                                    }}
+                                                    disabled={!isAdmin}
+                                                />
+                                            </div>
+                                        </div>
+                                        {!isAdmin ? (
+                                            <p className="text-[11px] text-muted-foreground">Admin only.</p>
+                                        ) : null}
+                                    </div>
+
+                                    <div className="space-y-2 border-t border-slate-200/60 dark:border-slate-700/50 pt-4">
+                                        <p className="text-sm font-bold">Coupon redemption methods</p>
+                                        <p className="text-[11px] text-muted-foreground">
+                                            Choose how students can enter coupon codes after sign-in.
+                                        </p>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                                            <div className="flex items-center justify-between gap-3">
+                                                <span className="text-xs font-bold">Manual / USB</span>
+                                                <Switch
+                                                    checked={local.kioskCouponRedemptionManualEnabled !== false}
+                                                    onCheckedChange={(checked) => {
+                                                        handleToggle('kioskCouponRedemptionManualEnabled', checked);
+                                                        const nextManual = checked;
+                                                        const nextCamera = local.kioskCouponRedemptionCameraEnabled !== false;
+                                                        const mode = !nextManual && !nextCamera ? 'off' : nextManual && nextCamera ? 'both' : nextManual ? 'manual' : 'camera';
+                                                        handleToggle('kioskCouponRedemptionInput', mode);
+                                                    }}
+                                                    disabled={!isAdmin}
+                                                />
+                                            </div>
+                                            <div className="flex items-center justify-between gap-3">
+                                                <span className="text-xs font-bold">Webcam scan</span>
+                                                <Switch
+                                                    checked={local.kioskCouponRedemptionCameraEnabled !== false}
+                                                    onCheckedChange={(checked) => {
+                                                        handleToggle('kioskCouponRedemptionCameraEnabled', checked);
+                                                        const nextManual = local.kioskCouponRedemptionManualEnabled !== false;
+                                                        const nextCamera = checked;
+                                                        const mode = !nextManual && !nextCamera ? 'off' : nextManual && nextCamera ? 'both' : nextManual ? 'manual' : 'camera';
+                                                        handleToggle('kioskCouponRedemptionInput', mode);
+                                                    }}
+                                                    disabled={!isAdmin}
+                                                />
+                                            </div>
+                                        </div>
+                                        {!isAdmin ? (
+                                            <p className="text-[11px] text-muted-foreground">Admin only.</p>
+                                        ) : null}
+                                    </div>
+
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-bold">Welcome splash duration</span>
+                                            <p className="text-[11px] text-muted-foreground">Auto-dismiss time (seconds)</p>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Input
+                                                id="studentWelcomeBackDurationSec"
+                                                type="number"
+                                                className="w-20 h-9 rounded-xl text-center font-bold bg-background/50 border-border/50"
+                                                value={local.studentWelcomeBackDurationSec ?? 2}
+                                                onChange={(e) => {
+                                                    const n = parseInt(e.target.value, 10);
+                                                    handleToggle('studentWelcomeBackDurationSec', Number.isFinite(n) ? Math.min(60, Math.max(1, n)) : 2);
+                                                }}
+                                                min={1}
+                                                max={60}
+                                                disabled={!local.enableStudentWelcomeBackScreen}
+                                            />
+                                        </div>
+                                    </div>
+                                    {!local.enableStudentWelcomeBackScreen ? (
+                                        <p className="text-[11px] text-muted-foreground">
+                                            Turn on <span className="font-semibold">Welcome back splash</span> in Extra features to use this.
+                                        </p>
+                                    ) : null}
                                 </div>
                             </div>
 
@@ -1087,6 +1263,22 @@ export function SettingsModal() {
                                             setDraft((prev) => (prev ? { ...prev, ...patch } : prev))
                                         }
                                     />
+
+                                    <div className="flex items-center justify-between gap-3 border-t border-slate-200/60 dark:border-slate-700/50 pt-4">
+                                        <div className="min-w-0">
+                                            <div className="flex items-center gap-2">
+                                                <Printer className="w-4 h-4 text-muted-foreground" />
+                                                <span className="text-sm font-bold">Single-student card machine button</span>
+                                            </div>
+                                            <p className="mt-1 text-[11px] text-muted-foreground leading-snug">
+                                                Show a direct card-machine print action when exactly one student is selected in Admin &rarr; Students.
+                                            </p>
+                                        </div>
+                                        <Switch
+                                            checked={local.showSingleStudentCardMachinePrintButton}
+                                            onCheckedChange={(checked) => handleToggle('showSingleStudentCardMachinePrintButton', checked)}
+                                        />
+                                    </div>
 
                                     {isAdmin && (
                                         <div className="space-y-4 border-t border-slate-200/60 dark:border-slate-700/50 pt-4">
@@ -1549,10 +1741,10 @@ export function SettingsModal() {
                                             type="number"
                                             min={0}
                                             className="mt-3 max-w-[8rem] rounded-xl"
-                                            value={local.prizeAiSurpriseDefaultPoints ?? 25}
+                          value={local.prizeAiSurpriseDefaultPoints ?? 1}
                                             onChange={(e) => {
                                                 const n = parseInt(e.target.value, 10);
-                                                handleToggle('prizeAiSurpriseDefaultPoints', Number.isFinite(n) ? Math.max(0, n) : 25);
+                            handleToggle('prizeAiSurpriseDefaultPoints', Number.isFinite(n) ? Math.max(0, n) : 1);
                                             }}
                                         />
                                     </div>
@@ -1602,7 +1794,7 @@ export function SettingsModal() {
                                 <FeatureRow
                                     id="enableStudentWelcomeBackScreen"
                                     label="Welcome back splash"
-                                    desc="Shows a short full-screen greeting when a student opens the kiosk. Default 3 seconds; duration is adjustable below. Can be turned off per student in Admin → Students."
+                                    desc="Shows a short full-screen greeting when a student opens the kiosk. Default 2 seconds (adjustable in Basic settings). Can be turned off per student in Admin → Students."
                                     icon={<Tv className="w-5 h-5" />}
                                     settings={local}
                                     onToggle={handleToggle}
@@ -1611,28 +1803,6 @@ export function SettingsModal() {
                                     isAllowed={isFeatureAllowed('enableStudentWelcomeBackScreen')}
                                     planLabel={planLabel}
                                 />
-                                {isAdmin && local.enableStudentWelcomeBackScreen && isFeatureAllowed('enableStudentWelcomeBackScreen') ? (
-                                    <div className="px-3 pb-4 pt-0">
-                                        <Label htmlFor="studentWelcomeBackDurationSec" className="text-xs font-bold text-foreground">
-                                            Splash duration (seconds)
-                                        </Label>
-                                        <p className="mt-1 text-xs text-muted-foreground">
-                                            How long the welcome back screen stays up before it dismisses itself (1–60). Students can still tap the skip button to leave sooner.
-                                        </p>
-                                        <Input
-                                            id="studentWelcomeBackDurationSec"
-                                            type="number"
-                                            min={1}
-                                            max={60}
-                                            className="mt-3 max-w-[8rem] rounded-xl"
-                                            value={local.studentWelcomeBackDurationSec ?? 3}
-                                            onChange={(e) => {
-                                                const n = parseInt(e.target.value, 10);
-                                                handleToggle('studentWelcomeBackDurationSec', Number.isFinite(n) ? Math.min(60, Math.max(1, n)) : 3);
-                                            }}
-                                        />
-                                    </div>
-                                ) : null}
                                 <FeatureRow
                                     id="enableThemeAnimations"
                                     label="Theme Animations"
@@ -1693,59 +1863,7 @@ export function SettingsModal() {
                                         </div>
                                     </div>
                                 ) : null}
-                                <FeatureRow
-                                    id="enableFaceLogin"
-                                    label="Face Login"
-                                    desc="Allow students to sign in using the kiosk webcam. Requires camera permission and deployed Cloud Functions."
-                                    icon={<Shield className="w-5 h-5" />}
-                                    settings={local}
-                                    onToggle={handleToggle}
-                                    isImplemented={true}
-                                    isAdmin={isAdmin}
-                                    isAllowed={isFeatureAllowed('enableFaceLogin')}
-                                    planLabel={planLabel}
-                                />
-                                <FeatureRow
-                                    id="enableQrLogin"
-                                    label="QR Code Login"
-                                    desc="Shows the Scan tab on the student sign-in screen so IDs can be read from a barcode or QR with the webcam."
-                                    icon={<LayoutDashboard className="w-5 h-5" />}
-                                    settings={local}
-                                    onToggle={handleToggle}
-                                    isImplemented={true}
-                                    isAdmin={isAdmin}
-                                    isAllowed={isFeatureAllowed('enableQrLogin')}
-                                    planLabel={planLabel}
-                                />
-                                {isAdmin ? (
-                                    <div className="px-3 pb-4 pt-1 space-y-2 border-t border-slate-100 dark:border-slate-800/80">
-                                        <Label htmlFor="kioskCouponRedemptionInput" className="text-xs font-bold text-foreground">
-                                            Coupon redemption (student kiosk)
-                                        </Label>
-                                        <p className="text-xs text-muted-foreground">
-                                            Choose how students enter coupon codes after sign-in. Manual + Webcam shows two tabs; single methods hide tabs.
-                                        </p>
-                                        <Select
-                                            value={local.kioskCouponRedemptionInput ?? 'both'}
-                                            onValueChange={(v) =>
-                                                handleToggle(
-                                                    'kioskCouponRedemptionInput',
-                                                    v as AppSettings['kioskCouponRedemptionInput'],
-                                                )
-                                            }
-                                        >
-                                            <SelectTrigger id="kioskCouponRedemptionInput" className="mt-1 max-w-md rounded-xl">
-                                                <SelectValue placeholder="Choose input mode" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="off">Hidden (no coupon card)</SelectItem>
-                                                <SelectItem value="manual">Manual / USB scanner only</SelectItem>
-                                                <SelectItem value="camera">Webcam scan only</SelectItem>
-                                                <SelectItem value="both">Manual + Webcam (two tabs)</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                ) : null}
+                                {/* Student kiosk login/coupon method controls moved to Security → Basic settings. */}
 
                                   <FeatureRow
                                     id="enablePrizeImages"
@@ -1889,4 +2007,3 @@ export function SettingsModal() {
         </>
     );
 }
-

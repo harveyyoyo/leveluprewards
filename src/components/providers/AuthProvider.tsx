@@ -59,6 +59,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const DEVELOPER_SUPPORT_SESSION_KEY = 'developerSupportSession';
 
 async function waitForReadableRole(
     roleRef: DocumentReference,
@@ -157,9 +158,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.removeItem('userName');
         localStorage.removeItem('teacherDocId');
 
-        if (
+        if (loginState === 'developer') {
+            const supportSessionActive =
+                typeof window !== 'undefined' &&
+                localStorage.getItem(DEVELOPER_SUPPORT_SESSION_KEY) === 'true' &&
+                !!schoolId;
+
+            setSchoolId(null);
+            localStorage.removeItem('schoolId');
+            localStorage.removeItem('userName');
+            localStorage.removeItem('teacherDocId');
+            localStorage.removeItem(DEVELOPER_SUPPORT_SESSION_KEY);
+
+            if (supportSessionActive) {
+                setLoginState('developer');
+                setIsAdmin(true);
+                setUserName('Developer');
+                router.push('/developer');
+                return;
+            }
+
+            localStorage.removeItem('loginState');
+            setLoginState('loggedOut');
+            setIsAdmin(false);
+            router.push('/');
+        } else if (
             loginState === 'admin' ||
-            loginState === 'developer' ||
             loginState === 'teacher' ||
             loginState === 'secretary' ||
             loginState === 'prizeClerk' ||
@@ -168,6 +192,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // When leaving a privileged staff session, return to the school chooser (Portal),
             // not directly into student kiosk mode.
             localStorage.setItem('loginState', 'school');
+            localStorage.removeItem(DEVELOPER_SUPPORT_SESSION_KEY);
             setLoginState('school');
             if (schoolId) {
                 const dest = options?.staffNavigateTo === 'teacher' ? 'teacher' : 'portal';
@@ -182,6 +207,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else {
             localStorage.removeItem('loginState');
             localStorage.removeItem('schoolId');
+            localStorage.removeItem(DEVELOPER_SUPPORT_SESSION_KEY);
             setLoginState('loggedOut');
             setSchoolId(null);
             router.push('/');
@@ -205,6 +231,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const savedSchoolId = localStorage.getItem('schoolId');
             const savedName = localStorage.getItem('userName');
             const savedTeacherDocId = localStorage.getItem('teacherDocId');
+            const savedDeveloperSupportSession = localStorage.getItem(DEVELOPER_SUPPORT_SESSION_KEY) === 'true';
 
             if (savedState && savedSchoolId) {
                 setSchoolId(savedSchoolId);
@@ -221,7 +248,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     setIsSecretary(false);
                     setIsPrizeClerk(false);
                     setIsReports(false);
-                    setUserName(savedName || 'Developer support');
+                    setUserName(savedName || (savedDeveloperSupportSession ? 'Developer support' : 'Developer'));
                     if (auth.currentUser) {
                         setUserId(auth.currentUser.uid);
                     }
@@ -332,6 +359,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             } else if (savedState === 'developer') {
                 localStorage.removeItem('loginState');
                 localStorage.removeItem('userName');
+                localStorage.removeItem(DEVELOPER_SUPPORT_SESSION_KEY);
                 setLoginState('loggedOut');
                 setIsAdmin(false);
                 setIsSecretary(false);
@@ -359,6 +387,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     localStorage.removeItem('schoolId');
                     localStorage.removeItem('userName');
                     localStorage.removeItem('teacherDocId');
+                    localStorage.removeItem(DEVELOPER_SUPPORT_SESSION_KEY);
                     setLoginState('loggedOut');
                     setSchoolId(null);
                     setUserName(null);
@@ -748,6 +777,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             localStorage.setItem('loginState', 'developer');
             localStorage.setItem('schoolId', lowerSchoolId);
             localStorage.setItem('userName', 'Developer support');
+            localStorage.setItem(DEVELOPER_SUPPORT_SESSION_KEY, 'true');
             localStorage.removeItem('teacherDocId');
             return true;
         } catch (e) {

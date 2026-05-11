@@ -8,6 +8,7 @@ export async function GET(request: NextRequest) {
   const startUrl = schoolId ? `/${schoolId}/portal` : '/';
   const scope = schoolId ? `/${schoolId}` : '/';
   const id = schoolId ? `/${schoolId}` : '/';
+  const schoolPath = schoolId ? `/${schoolId}` : '';
 
   const manifest = {
     "name": "Student Reward System",
@@ -24,6 +25,47 @@ export async function GET(request: NextRequest) {
     ],
     "background_color": "#ffffff",
     "theme_color": "#13a58d",
+    "shortcuts": [
+      {
+        "name": "Main Portal",
+        "short_name": "Portal",
+        "description": "Open the school hub to choose student, teacher, or admin tools.",
+        "url": `${schoolPath}/portal`,
+        "icons": [
+          {
+            "src": "/logo.png",
+            "sizes": "192x192",
+            "type": "image/png"
+          }
+        ]
+      },
+      {
+        "name": "Admin Portal",
+        "short_name": "Admin",
+        "description": "Manage students, classes, prizes, and system settings.",
+        "url": `${schoolPath}/admin-signin`,
+        "icons": [
+          {
+            "src": "/logo.png",
+            "sizes": "192x192",
+            "type": "image/png"
+          }
+        ]
+      },
+      {
+        "name": "Teacher Portal",
+        "short_name": "Teacher",
+        "description": "Generate coupons add prizes and generate reports.",
+        "url": `${schoolPath}/teacher`,
+        "icons": [
+          {
+            "src": "/logo.png",
+            "sizes": "192x192",
+            "type": "image/png"
+          }
+        ]
+      }
+    ],
     "icons": [
       {
         "src": "/logo.png",

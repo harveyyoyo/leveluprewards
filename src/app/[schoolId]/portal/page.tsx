@@ -4,7 +4,7 @@ import { useMemo, useState, useEffect, type ComponentType, type CSSProperties } 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
-import { GraduationCap, Printer, UserCog, ChevronRight, Loader2 } from 'lucide-react';
+import { GraduationCap, Printer, UserCog, ChevronRight, Loader2, ShieldCheck } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useToast } from '@/hooks/use-toast';
@@ -93,7 +93,6 @@ export default function PortalPage() {
         settings.graphicMode === 'graphics' &&
         !animBackdrop &&
         !!settings.enableAnimatedBackground &&
-        !settings.calmMode &&
         !settings.legacyMode;
     const isSchoolChooser = loginState === 'school';
     const isStaff =
@@ -143,7 +142,7 @@ export default function PortalPage() {
                       id: 'admin',
                       href: `/${schoolId}/admin`,
                       title: 'Admin Portal',
-                      description: 'Manage school data and settings.',
+                      description: 'Manage students, classes, prizes, and system settings.',
                       icon: UserCog,
                   },
               ]
@@ -153,7 +152,7 @@ export default function PortalPage() {
                           id: 'admin',
                           href: `/${schoolId}/admin-signin`,
                           title: 'Admin Portal',
-                          description: 'Enter the admin passcode to continue.',
+                          description: 'Manage students, classes, prizes, and system settings.',
                           icon: UserCog,
                       },
                   ]
@@ -164,10 +163,7 @@ export default function PortalPage() {
                       id: 'print',
                       href: `/${schoolId}/teacher`,
                       title: 'Teacher & Faculty Portal',
-                      description:
-                          loginState === 'teacher'
-                              ? 'Open teacher tools, coupon printing, or the prize desk.'
-                              : 'Sign in as faculty to continue.',
+                      description: 'Generate coupons add prizes and generate reports.',
                       icon: Printer,
                   },
               ]
@@ -185,6 +181,7 @@ export default function PortalPage() {
         <div
             className={cn(
                 'text-foreground relative font-sans flex flex-col items-center pt-2 sm:pt-6',
+                settings.displayMode === 'app' && 'min-h-[100dvh]',
                 animBackdrop ? 'bg-transparent' : 'bg-background',
                 settings.displayMode === 'app' && 'pb-24',
             )}
@@ -229,7 +226,10 @@ export default function PortalPage() {
                 )}
             </div>
 
-            <div className="relative z-10 w-full max-w-6xl px-4 sm:px-6 pt-10 sm:pt-14 pb-10">
+            <div className={cn(
+                "relative z-10 w-full max-w-6xl px-4 sm:px-6",
+                settings.displayMode === 'app' ? "pt-4 sm:pt-14 pb-6 sm:pb-10 flex-1 flex flex-col" : "pt-10 sm:pt-14 pb-10"
+            )}>
                 <motion.div
                     initial={
                         prefersReducedMotion ? false : { opacity: 0, y: 48, scale: 0.92 }
@@ -240,10 +240,10 @@ export default function PortalPage() {
                             ? { duration: 0 }
                             : { duration: 0.34, ease: [0.22, 1, 0.36, 1] }
                     }
-                    className="mb-10 text-center"
+                    className={cn("text-center", settings.displayMode === 'app' ? "mb-6 sm:mb-10" : "mb-10")}
                 >
                     <h2
-                        className="text-6xl sm:text-7xl font-black tracking-tighter font-headline drop-shadow-md px-2 py-2 inline-block"
+                        className={cn("font-black tracking-tighter font-headline drop-shadow-md inline-block", settings.displayMode === 'app' ? "text-4xl sm:text-7xl px-2 py-1 sm:py-2" : "text-6xl sm:text-7xl px-2 py-2")}
                         style={{
                             color: defaultPortalAccent ?? rainbowByIndex(0, settings.colorScheme),
                             textShadow:
@@ -256,7 +256,7 @@ export default function PortalPage() {
                     </h2>
                 </motion.div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5">
+                <div className={cn("grid gap-3 sm:gap-5", settings.displayMode === 'app' ? "grid-cols-1 sm:grid-cols-3 mt-auto" : "grid-cols-1 md:grid-cols-3")}>
                     {portals.map((area, index) => {
                         const Icon = area.icon;
                         const rainbowColor =
@@ -289,8 +289,8 @@ export default function PortalPage() {
                                     onMouseEnter={() => setHoveredIndex(area.id)}
                                     onMouseLeave={() => setHoveredIndex(null)}
                                     className={cn(
-                                        'relative overflow-hidden rounded-3xl border border-border bg-card px-6 py-6 text-left shadow-sm transition-colors duration-200',
-                                        'min-h-[196px] sm:min-h-[210px]',
+                                        'relative overflow-hidden rounded-3xl border border-border bg-card text-left shadow-sm transition-colors duration-200',
+                                        settings.displayMode === 'app' ? 'px-5 py-5 sm:px-6 sm:py-6 min-h-0 sm:min-h-[210px] h-full flex flex-col' : 'px-6 py-6 min-h-[196px] sm:min-h-[210px]',
                                         'hover:shadow-2xl hover:bg-muted/50',
                                         animBackdrop ? 'backdrop-blur-md' : 'backdrop-blur-xl',
                                     )}
@@ -340,7 +340,7 @@ export default function PortalPage() {
                                             </div>
                                         </div>
 
-                                        <div className="mt-auto pt-6 flex items-center gap-2 text-sm font-black tracking-tight text-foreground/90">
+                                        <div className={cn("mt-auto flex items-center gap-2 text-sm font-black tracking-tight text-foreground/90", settings.displayMode === 'app' ? "pt-4 sm:pt-6" : "pt-6")}>
                                             <span>Continue</span>
                                             <ChevronRight className="h-5 w-5 text-foreground/70" aria-hidden="true" />
                                         </div>
@@ -400,7 +400,7 @@ export default function PortalPage() {
                                         }
                                     })();
                                 }}
-                                className="block group no-underline rounded-3xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                                className={cn("block group no-underline rounded-3xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background", settings.displayMode === 'app' && "h-full flex flex-col")}
                             >
                                 {portalCard}
                             </Link>
@@ -566,6 +566,26 @@ export default function PortalPage() {
                                     </Button>
                                 </div>
                             </div>
+                        )}
+
+                        {!isAdmin && schoolId && (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="w-full rounded-xl font-bold"
+                                asChild
+                            >
+                                <Link
+                                    href={`/${schoolId}/admin-signin`}
+                                    onClick={() => {
+                                        playSound('click');
+                                        setTeacherDialogOpen(false);
+                                    }}
+                                >
+                                    <ShieldCheck className="mr-2 h-4 w-4" aria-hidden />
+                                    Sign in as admin
+                                </Link>
+                            </Button>
                         )}
 
                         <div className="space-y-4">

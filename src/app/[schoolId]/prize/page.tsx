@@ -12,7 +12,7 @@ import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useActiveStudentSession } from '@/hooks/useActiveStudentSession';
 import type { StudentFoundMeta } from '@/components/StudentScanner';
-import { rainbowTripletForNavId, complementTripletForNavId } from '@/lib/rainbowNav';
+import { appearanceVarsForSurface } from '@/lib/appearance';
 import { cn } from '@/lib/utils';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { FaceMismatchBanner } from '@/components/FaceMismatchBanner';
@@ -139,15 +139,7 @@ export default function PrizePage() {
         <TooltipProvider>
             <div
               className={cn("min-h-[80vh] flex flex-col items-center justify-center", settings.displayMode === 'app' && 'pb-24')}
-              style={{
-                ['--primary' as string]: rainbowTripletForNavId('prize', settings.colorScheme),
-                ['--chart-1' as string]: rainbowTripletForNavId('prize', settings.colorScheme),
-                ['--chart-2' as string]: complementTripletForNavId('prize', settings.colorScheme),
-                ['--chart-3' as string]: rainbowTripletForNavId('prize', settings.colorScheme),
-                ['--chart-4' as string]: complementTripletForNavId('prize', settings.colorScheme),
-                ['--chart-5' as string]: rainbowTripletForNavId('prize', settings.colorScheme),
-                ['--ring' as string]: complementTripletForNavId('prize', settings.colorScheme),
-              } as CSSProperties}
+              style={appearanceVarsForSurface(settings, 'prize') as CSSProperties}
             >
                 <StudentScanner
                     onStudentFound={onScannerStudent}

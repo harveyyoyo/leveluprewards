@@ -18,10 +18,10 @@ export function AdminRecordListHeader({
   style?: CSSProperties;
 }) {
   return (
-    <li className="sticky top-0 z-10 rounded-xl border bg-background/95 px-3 py-2 shadow-sm backdrop-blur">
+    <li className="sticky top-0 z-10 rounded-xl border border-ring/30 bg-secondary px-3 py-2 shadow-sm backdrop-blur">
       <div
         className={cn(
-          'grid items-center gap-3 text-[10px] font-black uppercase tracking-[0.1em] text-muted-foreground',
+          'grid items-center gap-3 text-[10px] font-black uppercase tracking-[0.1em] text-secondary-foreground/80',
           gridClassName,
         )}
         style={style}

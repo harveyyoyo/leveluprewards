@@ -284,7 +284,7 @@ export default function TeacherPage() {
                         </div>
                         <div>
                             <CardTitle className={`text-2xl font-black tracking-tight ${isGraphic ? 'text-foreground' : 'text-slate-800'}`}>Teacher & Faculty Portal</CardTitle>
-                            <CardDescription className={isGraphic ? 'text-muted-foreground' : ''}>Login to use your school faculty tools.</CardDescription>
+                            <CardDescription className={isGraphic ? 'text-muted-foreground' : ''}>Generate coupons add prizes and generate reports.</CardDescription>
                         </div>
                     </CardHeader>
                     <CardContent className="space-y-6">

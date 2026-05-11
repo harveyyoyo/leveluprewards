@@ -22,14 +22,14 @@ export type NavColorScheme =
 
 const PALETTES: Record<NavColorScheme, readonly string[]> = {
   default: [
-    // Muted/default palette (less colorful)
-    '220 35% 52%',
-    '210 30% 50%',
-    '200 32% 48%',
-    '190 28% 46%',
-    '230 30% 50%',
-    '240 28% 52%',
-    '250 26% 54%',
+    // LevelUp logo navy (matches LEVELUP_BRAND_PRIMARY_HEX / --primary).
+    '211 62% 17%',
+    '211 62% 17%',
+    '211 62% 17%',
+    '211 62% 17%',
+    '211 62% 17%',
+    '211 62% 17%',
+    '211 62% 17%',
   ],
   rainbow: [
     '0 84% 60%', // red
@@ -122,22 +122,22 @@ const PALETTES: Record<NavColorScheme, readonly string[]> = {
     '182 30% 20%',
   ],
   ocean: [
-    '197 71% 45%',
-    '203 68% 42%',
-    '208 64% 40%',
-    '213 60% 38%',
-    '218 56% 36%',
-    '223 52% 34%',
-    '228 48% 32%',
+    '192 70% 30%',
+    '194 58% 34%',
+    '196 50% 38%',
+    '190 46% 36%',
+    '198 44% 40%',
+    '187 42% 34%',
+    '201 38% 42%',
   ],
   sunset: [
-    '14 90% 58%',
-    '24 92% 56%',
-    '32 93% 54%',
-    '40 94% 52%',
-    '48 95% 50%',
-    '18 88% 54%',
-    '28 90% 52%',
+    '12 66% 55%',
+    '18 58% 56%',
+    '24 54% 54%',
+    '8 56% 52%',
+    '28 50% 58%',
+    '14 52% 50%',
+    '22 48% 56%',
   ],
   berry: [
     '330 65% 50%',
@@ -150,13 +150,13 @@ const PALETTES: Record<NavColorScheme, readonly string[]> = {
   ],
   coral: [
     // Warm coral family — teal complement lives in CSS accents/charts
-    '16 85% 60%',  // coral
-    '12 80% 58%',  // warm coral
-    '20 82% 62%',  // salmon coral
-    '8 78% 56%',   // deep coral
-    '24 84% 64%',  // peach coral
-    '4 76% 54%',   // brick coral
-    '16 80% 66%',  // soft coral
+    '4 63% 59%',
+    '8 56% 58%',
+    '12 52% 56%',
+    '2 54% 54%',
+    '16 48% 60%',
+    '6 50% 52%',
+    '10 46% 62%',
   ],
   golden: [
     // Analogous warm golds
@@ -180,13 +180,13 @@ const PALETTES: Record<NavColorScheme, readonly string[]> = {
   ],
   sapphire: [
     // Blue sapphire family — amber complement lives in CSS accents/charts
-    '220 75% 48%', // sapphire
-    '215 72% 52%', // light sapphire
-    '225 78% 44%', // deep sapphire
-    '210 70% 56%', // sky sapphire
-    '218 74% 50%', // true sapphire
-    '228 76% 46%', // navy sapphire
-    '212 68% 58%', // soft sapphire
+    '217 64% 40%',
+    '214 56% 44%',
+    '221 58% 36%',
+    '210 52% 46%',
+    '218 54% 42%',
+    '224 56% 38%',
+    '212 48% 48%',
   ],
   plum: [
     // Plum/purple family — sage complement lives in CSS accents/charts
@@ -274,43 +274,43 @@ export function rainbowTripletForNavId(id: string, scheme?: NavColorScheme) {
 const COMPLEMENT_PALETTES: Partial<Record<NavColorScheme, readonly string[]>> = {
   ocean: [
     // Warm amber/sand complements for ocean blues (dual-tone nav / rings)
-    '38 92% 54%',
-    '32 88% 52%',
-    '42 90% 56%',
-    '28 86% 50%',
-    '45 94% 58%',
-    '35 84% 48%',
-    '40 90% 56%',
+    '40 63% 56%',
+    '36 54% 54%',
+    '43 56% 58%',
+    '32 50% 52%',
+    '46 58% 60%',
+    '38 48% 50%',
+    '41 52% 57%',
   ],
   sunset: [
     // Cool indigo complements for sunset warm hues
-    '235 62% 52%',
-    '228 58% 48%',
-    '242 56% 54%',
-    '220 64% 46%',
-    '248 54% 50%',
-    '232 60% 44%',
-    '238 58% 56%',
+    '229 30% 50%',
+    '225 28% 46%',
+    '234 30% 54%',
+    '220 32% 48%',
+    '238 28% 52%',
+    '226 26% 44%',
+    '232 30% 56%',
   ],
   coral: [
     // Teal complements for coral primary
-    '196 70% 48%',
-    '192 68% 46%',
-    '200 72% 50%',
-    '188 66% 44%',
-    '204 74% 52%',
-    '184 64% 42%',
-    '196 68% 54%',
+    '177 53% 37%',
+    '174 46% 39%',
+    '181 44% 41%',
+    '170 42% 36%',
+    '185 46% 43%',
+    '172 40% 34%',
+    '178 42% 45%',
   ],
   sapphire: [
     // Amber complements for sapphire primary
-    '40 90% 52%',
-    '36 88% 50%',
-    '44 92% 54%',
-    '32 86% 48%',
-    '48 94% 56%',
-    '28 84% 46%',
-    '40 88% 58%',
+    '40 62% 50%',
+    '36 54% 48%',
+    '44 56% 52%',
+    '32 50% 46%',
+    '48 58% 54%',
+    '34 48% 44%',
+    '40 52% 56%',
   ],
   plum: [
     // Sage/green complements for plum primary

@@ -42,7 +42,7 @@ import { Switch } from '@/components/ui/switch';
 
 import DynamicIcon from '@/components/DynamicIcon';
 import { getStudentNickname } from '@/lib/utils';
-import { rainbowForNavId, rainbowTripletForNavId } from '@/lib/rainbowNav';
+import { appearanceVarsForSurface } from '@/lib/appearance';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
 import {
     remainingTeacherBudgetPoints,
@@ -70,6 +70,9 @@ import { studentsInTeacherScope } from '@/lib/reportsScope';
 
 /** Max sheets per run. Bounded for sensible printer jobs and UI. */
 const MAX_COUPON_PRINT_SHEETS = 100;
+const teacherPortalTabContentClassName =
+    'animate-in fade-in slide-in-from-bottom-2 duration-300 h-[calc(100vh-16rem)] min-h-[640px] max-h-[900px] w-full overflow-y-auto overflow-x-hidden pr-1';
+const teacherPortalPanelClassName = 'w-full max-w-6xl mx-auto';
 
 
 function TeacherHomeworkTab({ schoolId, teacherId, students, classes }: { schoolId: string; teacherId: string; students: Student[]; classes: Class[] }) {
@@ -834,7 +837,7 @@ function RecentRedemptions({ schoolId, students, classes, teacherId }: { schoolI
                                                 {item.desc.replace('Redeemed: ', '')}
                                             </p>
                                             <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                                                {item.studentName} <span className="opacity-40">â€¢</span> {item.studentClass}
+                                                {item.studentName} <span className="opacity-40">|</span> {item.studentClass}
                                             </p>
                                         </div>
                                     </div>
@@ -1252,7 +1255,7 @@ function TeacherAttendancePanel({
                     <DialogContent>
                         <DialogHeader>
                             <DialogTitle className="text-2xl font-black">Create Class</DialogTitle>
-                            <DialogDescription>Add a class for your roster (e.g. â€œPeriod 1 â€“ Scienceâ€).</DialogDescription>
+                            <DialogDescription>Add a class for your roster (e.g. "Period 1 - Science").</DialogDescription>
                         </DialogHeader>
                         <div className="space-y-2 py-2">
                             <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">Class name</Label>
@@ -1341,7 +1344,7 @@ function TeacherAttendancePanel({
                 <div className="space-y-3">
                     <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">Assign periods to classes</Label>
                     <p className="text-sm text-muted-foreground">
-                        Pick which period time applies to each class for the selected day. This controls â€œon timeâ€ for that class.
+                        Pick which period time applies to each class for the selected day. This controls "on time" for that class.
                     </p>
 
                     <div className="flex flex-wrap items-end gap-3 pt-1">
@@ -1394,7 +1397,7 @@ function TeacherAttendancePanel({
                                             <SelectItem value="__none__">No period assigned</SelectItem>
                                             {(periods || []).map((slot) => (
                                                 <SelectItem key={slot.id} value={slot.id}>
-                                                    {slot.label} ({formatHHmmToAmPm(slot.startTime)}â€“{formatHHmmToAmPm(slot.endTime)})
+                                                    {slot.label} ({formatHHmmToAmPm(slot.startTime)}-{formatHHmmToAmPm(slot.endTime)})
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
@@ -1444,7 +1447,7 @@ function TeacherAttendancePanel({
                 <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">Universal periods</Label>
                 {(periods || []).length === 0 ? (
                     <p className="text-sm text-muted-foreground">
-                        No periods have been created yet. Ask an admin to create periods in Admin â†’ Attendance.
+                        No periods have been created yet. Ask an admin to create periods in Admin, then Attendance.
                     </p>
                 ) : (
                     <p className="text-sm text-muted-foreground">
@@ -1688,9 +1691,9 @@ function TeacherAttendanceRewardsPanel({
   };
 
   const describePeriod = (r: AttendanceRewardRule) => {
-    if (r.customPeriod) return `${r.customPeriod.label} (${r.customPeriod.startTime}â€“${r.customPeriod.endTime})`;
+    if (r.customPeriod) return `${r.customPeriod.label} (${r.customPeriod.startTime}-${r.customPeriod.endTime})`;
     const p = (periods || []).find((x) => x.id === r.periodId);
-    return p ? `${p.label} (${p.startTime}â€“${p.endTime})` : 'Unknown period';
+    return p ? `${p.label} (${p.startTime}-${p.endTime})` : 'Unknown period';
   };
 
   return (
@@ -1730,7 +1733,7 @@ function TeacherAttendanceRewardsPanel({
                 </SelectTrigger>
                 <SelectContent>
                   {(periods || []).map((p) => (
-                    <SelectItem key={p.id} value={p.id}>{p.label} ({p.startTime}â€“{p.endTime})</SelectItem>
+                    <SelectItem key={p.id} value={p.id}>{p.label} ({p.startTime}-{p.endTime})</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -1785,7 +1788,7 @@ function TeacherAttendanceRewardsPanel({
             <DialogContent>
                 <DialogHeader>
                   <DialogTitle className="text-2xl font-black">New Attendance Category</DialogTitle>
-                  <DialogDescription>Create a category (defaults to â€œPunctualityâ€).</DialogDescription>
+                  <DialogDescription>Create a category (defaults to "Punctuality").</DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-2">
                   <div className="space-y-2">
@@ -1806,7 +1809,7 @@ function TeacherAttendanceRewardsPanel({
             </Dialog>
           </div>
           {!punctualityCategory && (
-            <p className="text-[11px] text-muted-foreground mt-1">Create a category named â€œPunctualityâ€ to make it the default.</p>
+            <p className="text-[11px] text-muted-foreground mt-1">Create a category named "Punctuality" to make it the default.</p>
           )}
         </div>
         <div className="flex items-end">
@@ -1830,7 +1833,7 @@ function TeacherAttendanceRewardsPanel({
               <div key={r.id} className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl border bg-background/30">
                 <div className="min-w-[240px]">
                   <p className="font-bold">{r.className || availableClasses.find(c => c.id === r.classId)?.name || r.classId}</p>
-                  <p className="text-xs text-muted-foreground">{describePeriod(r)} â€¢ +{r.pointsForSignIn} (+{r.pointsForOnTime} on time)</p>
+                  <p className="text-xs text-muted-foreground">{describePeriod(r)} | +{r.pointsForSignIn} (+{r.pointsForOnTime} on time)</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="flex items-center gap-2">
@@ -1929,7 +1932,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
     // State for coupon printing
     const [printCategoryId, setPrintCategoryId] = useState('');
     const [printValue, setPrintValue] = useState('10');
-    const [printStartsOn, setPrintStartsOn] = useState(''); // yyyy-mm-dd, optional â€” coupon valid from start of this day
+    const [printStartsOn, setPrintStartsOn] = useState(''); // yyyy-mm-dd, optional - coupon valid from start of this day
     const [printExpiresOn, setPrintExpiresOn] = useState(''); // yyyy-mm-dd
     const [printSheetCount, setPrintSheetCount] = useState('1');
     const [printCouponsPerPage, setPrintCouponsPerPage] = useState<CouponPrintPageSize>(COUPONS_PER_PRINT_PAGE);
@@ -2473,8 +2476,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
     const isLoading = secretaryMode
         ? categoriesLoading
         : categoriesLoading || studentsLoading || classesLoading || periodsLoading;
-    const teacherAccent = rainbowForNavId('print', settings.colorScheme);
-    const teacherAccentTriplet = rainbowTripletForNavId('print', settings.colorScheme);
+    const teacherAccent = 'hsl(var(--primary))';
 
     const { teacherDocId, userId } = useAppContext();
 
@@ -2530,16 +2532,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
     return (
         <TooltipProvider>
             <div className="min-h-screen bg-background transition-colors duration-500 relative overflow-x-hidden font-sans"
-            style={{
-              // Make existing chart/primary-based styling match the Teacher button color.
-              ['--primary' as any]: teacherAccentTriplet,
-              ['--chart-1' as any]: teacherAccentTriplet,
-              ['--chart-2' as any]: teacherAccentTriplet,
-              ['--chart-3' as any]: teacherAccentTriplet,
-              ['--chart-4' as any]: teacherAccentTriplet,
-              ['--chart-5' as any]: teacherAccentTriplet,
-              ['--ring' as any]: teacherAccentTriplet,
-            } as React.CSSProperties}
+            style={appearanceVarsForSurface(settings, 'print') as React.CSSProperties}
             >
                 {/* Local orbs/noise only when global animated backdrop is off */}
                 {isGraphic && !animBackdrop && (
@@ -2559,27 +2552,29 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                 >
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                         <Helper content={secretaryMode ? 'Generate coupon sheets for teachers to hand out. You cannot award points or edit prizes from here.' : 'Print coupons, award points, manage prizes, and take attendance from one place.'}>
-                            <h2 className="text-2xl font-bold tracking-tight" style={{ color: teacherAccent }}>
-                                {secretaryMode ? 'Secretary - coupon printing' : 'Teacher & Faculty Portal'}
-                            </h2>
-                            <p className="text-muted-foreground">
-                                {secretaryMode
-                                    ? 'Create printable coupon batches using the school\'s incentive categories.'
-                                    : 'Generate coupon sheets or award points directly to your students.'}
-                            </p>
-                            {teacherName ? (
-                                <p className="text-sm text-muted-foreground mt-1">
-                                    <span className="font-medium text-foreground/80">{teacherName}</span>
-                                    {settings.enableTeacherBudgets && currentTeacher?.monthlyBudget !== undefined ? (
-                                        <>
-                                            {' '}
-                                            Â·{' '}
-                                            {(remainingTeacherBudgetPoints(currentTeacher) ?? 0).toLocaleString()} pts remaining{' '}
-                                            {teacherBudgetRemainingPhrase(resolveTeacherBudgetPeriod(currentTeacher))}
-                                        </>
-                                    ) : null}
+                            <div>
+                                <h2 className="text-2xl font-bold tracking-tight" style={{ color: teacherAccent }}>
+                                    {secretaryMode ? 'Secretary - coupon printing' : 'Teacher & Faculty Portal'}
+                                </h2>
+                                <p className="text-muted-foreground">
+                                    {secretaryMode
+                                        ? 'Create printable coupon batches using the school\'s incentive categories.'
+                                        : 'Generate coupons add prizes and generate reports.'}
                                 </p>
-                            ) : null}
+                                {teacherName ? (
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                        <span className="font-medium text-foreground/80">{teacherName}</span>
+                                        {settings.enableTeacherBudgets && currentTeacher?.monthlyBudget !== undefined ? (
+                                            <>
+                                                {' '}
+                                                |{' '}
+                                                {(remainingTeacherBudgetPoints(currentTeacher) ?? 0).toLocaleString()} pts remaining{' '}
+                                                {teacherBudgetRemainingPhrase(resolveTeacherBudgetPeriod(currentTeacher))}
+                                            </>
+                                        ) : null}
+                                    </p>
+                                ) : null}
+                            </div>
                         </Helper>
                         <div className="flex flex-wrap gap-2 shrink-0 sm:self-start justify-end items-center">
                             {secretaryMode && (
@@ -2603,12 +2598,12 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                         <div className="flex overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 justify-center">
                             <TabsList
                                 className="bg-muted/50 p-1.5 rounded-2xl inline-flex w-max border shadow-sm sm:mx-auto flex-nowrap"
-                                style={{ ['--teacher-accent' as any]: teacherAccent }}
+                                style={{ ['--teacher-accent' as any]: teacherAccent, ['--teacher-tab-selected' as any]: 'hsl(var(--chart-2))' }}
                                 aria-label="Teacher portal sections"
                             >
                                 <TabsTrigger
                                     value="coupons"
-                                    className="rounded-xl px-3 py-2 font-bold text-sm flex items-center gap-1.5 text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--teacher-accent)]"
+                                    className="rounded-xl px-3 py-2 font-bold text-sm flex items-center gap-1.5 text-foreground data-[state=active]:bg-[color:var(--teacher-tab-selected)] data-[state=active]:shadow-sm data-[state=active]:text-white"
                                 >
                                     <Ticket className="w-4 h-4 shrink-0 opacity-80" />
                                     Coupons
@@ -2616,7 +2611,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                 <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground/45 pointer-events-none" aria-hidden />
                                 <TabsTrigger
                                     value="award"
-                                    className="rounded-xl px-3 py-2 font-bold text-sm flex items-center gap-1.5 text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--teacher-accent)]"
+                                    className="rounded-xl px-3 py-2 font-bold text-sm flex items-center gap-1.5 text-foreground data-[state=active]:bg-[color:var(--teacher-tab-selected)] data-[state=active]:shadow-sm data-[state=active]:text-white"
                                 >
                                     <Award className="w-4 h-4 shrink-0 opacity-80" />
                                     Points
@@ -2624,7 +2619,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                 <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground/45 pointer-events-none" aria-hidden />
                                 <TabsTrigger
                                     value="roster"
-                                    className="rounded-xl px-3 py-2 font-bold text-sm flex items-center gap-1.5 text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--teacher-accent)]"
+                                    className="rounded-xl px-3 py-2 font-bold text-sm flex items-center gap-1.5 text-foreground data-[state=active]:bg-[color:var(--teacher-tab-selected)] data-[state=active]:shadow-sm data-[state=active]:text-white"
                                 >
                                     <Users className="w-4 h-4 shrink-0 opacity-80" />
                                     Students
@@ -2632,7 +2627,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                 <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground/45 pointer-events-none" aria-hidden />
                                 <TabsTrigger
                                     value="prizes"
-                                    className="rounded-xl px-3 py-2 font-bold text-sm flex items-center gap-1.5 text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--teacher-accent)]"
+                                    className="rounded-xl px-3 py-2 font-bold text-sm flex items-center gap-1.5 text-foreground data-[state=active]:bg-[color:var(--teacher-tab-selected)] data-[state=active]:shadow-sm data-[state=active]:text-white"
                                 >
                                     <Gift className="w-4 h-4 shrink-0 opacity-80" />
                                     Prizes
@@ -2640,7 +2635,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                 <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground/45 pointer-events-none" aria-hidden />
                                 <TabsTrigger
                                     value="redemptions"
-                                    className="rounded-xl px-3 py-2 font-bold text-sm flex items-center gap-1.5 text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--teacher-accent)]"
+                                    className="rounded-xl px-3 py-2 font-bold text-sm flex items-center gap-1.5 text-foreground data-[state=active]:bg-[color:var(--teacher-tab-selected)] data-[state=active]:shadow-sm data-[state=active]:text-white"
                                 >
                                     <History className="w-4 h-4 shrink-0 opacity-80" />
                                     Redemptions
@@ -2648,7 +2643,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                 <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground/45 pointer-events-none" aria-hidden />
                                 <TabsTrigger
                                     value="reports"
-                                    className="rounded-xl px-3 py-2 font-bold text-sm flex items-center gap-1.5 text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--teacher-accent)]"
+                                    className="rounded-xl px-3 py-2 font-bold text-sm flex items-center gap-1.5 text-foreground data-[state=active]:bg-[color:var(--teacher-tab-selected)] data-[state=active]:shadow-sm data-[state=active]:text-white"
                                 >
                                     <FileText className="w-4 h-4 shrink-0 opacity-80" />
                                     Reports
@@ -2658,8 +2653,8 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                         </div>
                         )}
 
-                            <TabsContent value="coupons" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                                <div className="flex justify-center">
+                            <TabsContent value="coupons" className={teacherPortalTabContentClassName}>
+                                <div className={teacherPortalPanelClassName}>
 
                         <Card className={cn(
                             "w-full max-w-6xl border-t-8 transition-all duration-500 hover:shadow-2xl hover:-translate-y-1",
@@ -2767,7 +2762,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                                     <p className="text-[11px] text-muted-foreground px-0.5">
                                                         Total: {(parseInt(printSheetCount, 10) || 0) * printCouponsPerPage} coupons
                                                         {settings.enableTeacherBudgets && currentTeacher?.monthlyBudget !== undefined && parseInt(printValue, 10) > 0
-                                                            ? ` Â· ${((parseInt(printSheetCount, 10) || 0) * printCouponsPerPage * (parseInt(printValue, 10) || 0)).toLocaleString()} pts from budget`
+                                                            ? ` | ${((parseInt(printSheetCount, 10) || 0) * printCouponsPerPage * (parseInt(printValue, 10) || 0)).toLocaleString()} pts from budget`
                                                             : null}
                                                     </p>
                                                 </div>
@@ -2992,8 +2987,8 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                 </div>
                             </TabsContent>
 
-                            <TabsContent value="award" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                                <div className="flex justify-center">
+                            <TabsContent value="award" className={teacherPortalTabContentClassName}>
+                                <div className={teacherPortalPanelClassName}>
                                   <Card className={cn(
                                     "w-full max-w-6xl border-t-8 transition-all duration-500 hover:shadow-2xl hover:-translate-y-1",
                                     isGraphic ? 'bg-card/60 backdrop-blur-2xl border-chart-2 shadow-[0_20px_50px_rgba(0,0,0,0.1)]' : 'bg-white border-chart-2 shadow-lg'
@@ -3188,18 +3183,21 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                 </div>
                             </TabsContent>
 
-                            <TabsContent value="roster" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                                <TeacherRosterTab
-                                    teacherId={teacherId}
-                                    allStudents={students || []}
-                                    rosterStudents={studentsForTeacherActions}
-                                    classes={classes || []}
-                                    isGraphic={isGraphic}
-                                />
+                            <TabsContent value="roster" className={teacherPortalTabContentClassName}>
+                                <div className={teacherPortalPanelClassName}>
+                                    <TeacherRosterTab
+                                        teacherId={teacherId}
+                                        allStudents={students || []}
+                                        rosterStudents={studentsForTeacherActions}
+                                        classes={classes || []}
+                                        isGraphic={isGraphic}
+                                    />
+                                </div>
                             </TabsContent>
 
                             {(settings.payAttendance ?? true) && settings.enableAttendance && (
-                            <TabsContent value="attendance" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                            <TabsContent value="attendance" className={teacherPortalTabContentClassName}>
+                                <div className={teacherPortalPanelClassName}>
                                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-muted/30 px-4 py-3 mb-6">
                                     <p className="text-sm text-muted-foreground max-w-prose">
                                         New setup takes one rule: class, period, points. Use the walkthrough for a quick test.
@@ -3236,26 +3234,31 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                         </CardContent>
                                     </Card>
                                 </div>
+                                </div>
                             </TabsContent>
                             )}
 
-                            <TabsContent value="prizes" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                            <TabsContent value="prizes" className={teacherPortalTabContentClassName}>
+                                <div className={teacherPortalPanelClassName}>
                                 <div className="grid grid-cols-1 gap-8">
                                     <div className="w-full">
                                         <TeacherPrizeManager schoolId={schoolId!} teacherId={teacherId} teachers={teachers} />
                                     </div>
                                 </div>
-                            </TabsContent>
-
-                            <TabsContent value="redemptions" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <RecentRedemptions schoolId={schoolId!} students={studentsForTeacherActions} classes={classes || []} teacherId={teacherId} />
                                 </div>
                             </TabsContent>
 
-                            <TabsContent value="reports" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                                <div className="flex justify-center w-full">
-                                    <div className="w-full max-w-4xl">
+                            <TabsContent value="redemptions" className={teacherPortalTabContentClassName}>
+                                <div className={teacherPortalPanelClassName}>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <RecentRedemptions schoolId={schoolId!} students={studentsForTeacherActions} classes={classes || []} teacherId={teacherId} />
+                                </div>
+                                </div>
+                            </TabsContent>
+
+                            <TabsContent value="reports" className={teacherPortalTabContentClassName}>
+                                <div className={teacherPortalPanelClassName}>
+                                    <div className="w-full">
                                         <SchoolReportsPanel
                                             scope="teacher"
                                             schoolName={schoolDocData?.name?.trim() || 'School'}
@@ -3273,8 +3276,8 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                 </TabsContent>
 
                                 {settings.enableGoals && isFeatureAllowed('enableGoals') && (
-                                    <TabsContent value="goals" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                                        <div className="max-w-6xl mx-auto">
+                                    <TabsContent value="goals" className={teacherPortalTabContentClassName}>
+                                        <div className={teacherPortalPanelClassName}>
                                             <GoalsManager
                                                 schoolId={schoolId!}
                                                 variant="teacher"
@@ -3291,8 +3294,8 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                 )}
 
                             {settings.enableHomework && (
-                                <TabsContent value="homework" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                                <div className="max-w-6xl mx-auto">
+                                <TabsContent value="homework" className={teacherPortalTabContentClassName}>
+                                <div className={teacherPortalPanelClassName}>
                                     <TeacherHomeworkTab schoolId={schoolId!} teacherId={teacherId} students={studentsForTeacherActions} classes={classesForTeacherUi} />
                                 </div>
                             </TabsContent>

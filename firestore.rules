@@ -138,6 +138,12 @@ service cloud.firestore {
       allow create, update: if isAdmin(schoolId) || isDeveloper();
       allow delete: if isDeveloper();
     }
+
+    // Collection-group query used by the developer console to find active
+    // remote screen-share sessions across schools.
+    match /{path=**}/supportSessions/{sessionId} {
+      allow read: if isDeveloper();
+    }
     
     match /schools/{schoolId} {
       allow read: if isDeveloper() || isAdmin(schoolId) || isTeacher(schoolId) || isSecretary(schoolId) || isPrizeClerk(schoolId) || isReports(schoolId);
@@ -320,8 +326,30 @@ service cloud.firestore {
       }
 
       match /supportSessions/{sessionId} {
-        allow read: if isAdmin(schoolId) || isDeveloper();
-        allow write: if false;
+        allow read: if isDeveloper()
+          || isAdmin(schoolId)
+          || (isAuth() && resource.data.requesterUid == request.auth.uid);
+        allow create: if isAuth()
+          && request.resource.data.schoolId == schoolId
+          && request.resource.data.requesterUid == request.auth.uid
+          && request.resource.data.kind == 'screen-share'
+          && request.resource.data.status in ['waiting', 'sharing'];
+        allow update: if isDeveloper()
+          || (
+            isAuth()
+            && resource.data.requesterUid == request.auth.uid
+            && request.resource.data.requesterUid == resource.data.requesterUid
+            && request.resource.data.schoolId == resource.data.schoolId
+          );
+        allow delete: if isDeveloper();
+
+        match /{candidateCollection}/{candidateId} {
+          allow read, write: if isDeveloper()
+            || (
+              isAuth()
+              && get(/databases/$(database)/documents/schools/$(schoolId)/supportSessions/$(sessionId)).data.requesterUid == request.auth.uid
+            );
+        }
       }
 
       match /attendance/{docId} {

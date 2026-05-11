@@ -1,12 +1,10 @@
 import { cn } from '@/lib/utils';
 
-/** Matches `AnimatedSiteBackground` visibility (SettingsProvider + Legacy mode + Calm mode). */
+/** Matches `AnimatedSiteBackground` visibility (SettingsProvider + Legacy mode). */
 export function globalAnimatedBackdropActive(settings: {
   enableAnimatedBackground: boolean;
   legacyMode: boolean;
-  calmMode?: boolean;
 }): boolean {
-  if (settings.calmMode) return false;
   return Boolean(settings.enableAnimatedBackground && !settings.legacyMode);
 }
 

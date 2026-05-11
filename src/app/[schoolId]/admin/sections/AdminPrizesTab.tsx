@@ -33,6 +33,8 @@ import {
   isLegacyAiSurprisePrize,
 } from '@/lib/aiJokePrize';
 
+const aiFunPrizeEnsureKeys = new Set<string>();
+
 export function AdminPrizesTab({
   prizes,
   teachers,
@@ -64,7 +66,7 @@ export function AdminPrizesTab({
   const { firestore } = useFirebase();
   const vendingEnabled = settings.enableVendingMachine === true;
   const prizeAiSurpriseEnabled = settings.enablePrizeAiSurprise === true;
-  const aiDefaultPoints = Math.max(0, settings.prizeAiSurpriseDefaultPoints ?? 25);
+  const aiDefaultPoints = Math.max(0, settings.prizeAiSurpriseDefaultPoints ?? 1);
   const [helpOpen, setHelpOpen] = useState(false);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardStep, setWizardStep] = useState(0);
@@ -84,18 +86,22 @@ export function AdminPrizesTab({
   );
 
   useEffect(() => {
-    if (!prizeAiSurpriseEnabled || !firestore || !schoolId) return;
+    if (!prizeAiSurpriseEnabled || !firestore || !schoolId || prizes === undefined || unifiedFunPrize) return;
+    const ensureKey = `${schoolId}:${aiDefaultPoints}`;
+    if (aiFunPrizeEnsureKeys.has(ensureKey)) return;
     let cancelled = false;
+    aiFunPrizeEnsureKeys.add(ensureKey);
     setEnsuringFunPrize(true);
     void ensureUnifiedAiFunPrize(firestore, schoolId, { points: aiDefaultPoints })
       .catch(() => {})
       .finally(() => {
+        aiFunPrizeEnsureKeys.delete(ensureKey);
         if (!cancelled) setEnsuringFunPrize(false);
       });
     return () => {
       cancelled = true;
     };
-  }, [prizeAiSurpriseEnabled, firestore, schoolId, aiDefaultPoints]);
+  }, [prizeAiSurpriseEnabled, firestore, schoolId, aiDefaultPoints, prizes, unifiedFunPrize]);
 
   // --- REAL prize creation wizard state ---
   const [wName, setWName] = useState('');
@@ -199,8 +205,8 @@ export function AdminPrizesTab({
                   One shop item named &quot;Fun&quot;. Students pick joke, riddle, fortune, or random when they redeem. It does not appear in the table below — adjust cost, stock, and visibility here.
                 </p>
               </div>
-              {ensuringFunPrize || !unifiedFunPrize ? (
-                <span className="text-xs text-muted-foreground">Setting up…</span>
+              {ensuringFunPrize && !unifiedFunPrize ? (
+                <span className="text-xs text-muted-foreground">Preparing Fun item…</span>
               ) : null}
             </div>
             {unifiedFunPrize ? (

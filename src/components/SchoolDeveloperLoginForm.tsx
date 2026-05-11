@@ -167,13 +167,17 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
       provider.setCustomParameters({ prompt: 'select_account' });
       // If the app started an anonymous session (normal for this app),
       // link it to Google so the UID stays stable for role provisioning.
-      if (auth.currentUser?.isAnonymous) {
-        await linkWithPopup(auth.currentUser, provider);
-      } else {
-        await signInWithPopup(auth, provider);
-      }
+      const result = auth.currentUser?.isAnonymous
+        ? await linkWithPopup(auth.currentUser, provider).catch((linkErr) => {
+            const code = String((linkErr as { code?: string })?.code ?? '');
+            if (code === 'auth/credential-already-in-use') {
+              return signInWithPopup(auth, provider);
+            }
+            throw linkErr;
+          })
+        : await signInWithPopup(auth, provider);
       playSound('success');
-      const email = (auth.currentUser?.email ?? '').trim().toLowerCase();
+      const email = (result.user.email ?? '').trim().toLowerCase();
       const allowed =
         allowedDeveloperEmails.length > 0 ? allowedDeveloperEmails.includes(email) : true;
       toast({
@@ -272,6 +276,18 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
 
   const handleDeveloperLogin = async () => {
     if (isSubmitting) return;
+    if (allowDeveloperLogin && !isAllowedGoogleEmail) {
+      playSound('error');
+      triggerShake();
+      toast({
+        variant: 'destructive',
+        title: 'Developer login locked',
+        description: hasGoogleUser
+          ? 'This Google account is not on the developer allowlist.'
+          : 'Sign in with Google before entering the developer passcode.',
+      });
+      return;
+    }
     if (!schoolPasscode) {
       playSound('error');
       triggerShake();
@@ -456,7 +472,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
                 {isSubmitting ? 'Signing in...' : isDeveloperOnly || isDeveloper ? 'Dev Login' : 'Continue'}
               </button>
 
-              {!isDeveloperOnly && allowDeveloperLogin && !hasGoogleUser && (
+              {allowDeveloperLogin && !hasGoogleUser && (
                 <div className="rounded-xl border border-border/70 bg-background/60 p-3">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -487,7 +503,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
                 </div>
               )}
 
-              {!isDeveloperOnly && allowDeveloperLogin && hasGoogleUser && !isAllowedGoogleEmail && (
+              {allowDeveloperLogin && hasGoogleUser && !isAllowedGoogleEmail && (
                 <div className="rounded-xl border border-border/70 bg-background/60 p-3">
                   <p className="text-xs font-semibold text-muted-foreground">Developer mode locked</p>
                   <p className="mt-1 text-xs text-muted-foreground/80 leading-relaxed">

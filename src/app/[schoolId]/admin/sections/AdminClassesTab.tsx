@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { BookOpen, Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { BookOpen, Plus, Trash2, ChevronDown, ChevronUp, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Helper } from '@/components/ui/helper';
@@ -19,6 +19,7 @@ export function AdminClassesTab({
   onAddClass,
   onDeleteClass,
   onUpdateClass,
+  onUpdateStudent,
 }: {
   classes: Class[] | null | undefined;
   teachers: Teacher[] | null | undefined;
@@ -26,8 +27,10 @@ export function AdminClassesTab({
   onAddClass: () => void;
   onDeleteClass: (classId: string, students: Student[]) => void;
   onUpdateClass: (next: Class) => void;
+  onUpdateStudent: (next: Student) => Promise<void> | void;
 }) {
   const [expandedClassIds, setExpandedClassIds] = useState<Set<string>>(new Set());
+  const [studentIdByClassId, setStudentIdByClassId] = useState<Record<string, string>>({});
 
   const toggleExpand = (classId: string) => {
     const next = new Set(expandedClassIds);
@@ -40,12 +43,12 @@ export function AdminClassesTab({
   };
 
   return (
-    <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden">
-      <CardHeader className="flex flex-row justify-between items-center py-6">
+    <Card className="w-full border-t-4 border-ring shadow-md overflow-hidden">
+      <CardHeader className="flex flex-row justify-between items-center py-6 bg-secondary">
         <div>
           <Helper content="Manage class groups for your school.">
             <CardTitle className="flex items-center gap-2">
-              <BookOpen className="w-5 h-5 text-destructive" /> Classes
+              <BookOpen className="w-5 h-5 text-ring" /> Classes
             </CardTitle>
           </Helper>
           <CardDescription>Manage class groups for your school.</CardDescription>
@@ -69,12 +72,19 @@ export function AdminClassesTab({
           ) : null}
           {classes?.map((c) => {
             const classStudents = students?.filter((s) => s.classId === c.id) || [];
+            const availableStudents = (students || [])
+              .filter((s) => s.classId !== c.id)
+              .sort((a, b) => {
+                const byLast = a.lastName.localeCompare(b.lastName);
+                return byLast || a.firstName.localeCompare(b.firstName);
+              });
+            const selectedStudentId = studentIdByClassId[c.id] || '';
             const isExpanded = expandedClassIds.has(c.id);
 
             return (
               <li
                 key={c.id}
-                className="flex flex-col bg-secondary/20 rounded-2xl border hover:border-primary/20 transition-all overflow-hidden"
+                className="flex flex-col bg-secondary/45 rounded-2xl border border-ring/20 hover:border-ring/45 transition-all overflow-hidden"
               >
                 <div className="grid grid-cols-[minmax(180px,1fr)_minmax(160px,220px)_110px_44px] items-center gap-3 p-3">
                   <div className="truncate text-sm font-bold">{c.name}</div>
@@ -103,7 +113,7 @@ export function AdminClassesTab({
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-8 w-full gap-1.5 rounded-lg border-primary/20 bg-background hover:bg-primary/5 text-primary font-semibold"
+                      className="h-8 w-full gap-1.5 rounded-lg border-ring/35 bg-background hover:bg-secondary text-primary font-semibold"
                       onClick={() => toggleExpand(c.id)}
                     >
                       {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
@@ -123,7 +133,45 @@ export function AdminClassesTab({
                 </div>
 
                 {isExpanded && (
-                  <div className="px-4 pb-4 pt-2 border-t border-primary/10 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="px-4 pb-4 pt-2 border-t border-ring/15 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="mb-3 flex flex-col gap-2 rounded-2xl border border-ring/15 bg-background/50 p-2 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+                        <UserPlus className="h-4 w-4" />
+                        <span>Add existing student</span>
+                      </div>
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <Select
+                          value={selectedStudentId}
+                          onValueChange={(value) => setStudentIdByClassId((prev) => ({ ...prev, [c.id]: value }))}
+                          disabled={availableStudents.length === 0}
+                        >
+                          <SelectTrigger className="h-9 w-full rounded-lg bg-background text-xs sm:w-[260px]">
+                            <SelectValue placeholder={availableStudents.length === 0 ? 'No students available' : 'Choose a student...'} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableStudents.map((s) => (
+                              <SelectItem key={s.id} value={s.id}>
+                                {s.lastName}, {s.firstName}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="h-9 rounded-lg px-3 font-semibold"
+                          disabled={!selectedStudentId}
+                          onClick={async () => {
+                            const student = (students || []).find((s) => s.id === selectedStudentId);
+                            if (!student) return;
+                            await onUpdateStudent({ ...student, classId: c.id });
+                            setStudentIdByClassId((prev) => ({ ...prev, [c.id]: '' }));
+                          }}
+                        >
+                          Add to Class
+                        </Button>
+                      </div>
+                    </div>
                     {classStudents.length > 0 ? (
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                         {classStudents.sort((a, b) => a.lastName.localeCompare(b.lastName)).map((s) => (

@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useCallback, useState, type CSSProperties } from 'react';
+import { Suspense, useCallback, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useAppContext } from '@/components/AppProvider';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,7 @@ import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { Gift, Loader2, LogOut } from 'lucide-react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { rainbowTripletForNavId, complementTripletForNavId } from '@/lib/rainbowNav';
+import { appearanceVarsForSurface } from '@/lib/appearance';
 import { PrizeDashboard } from '@/app/[schoolId]/prize/PrizeDashboard';
 import type { StudentFoundMeta } from '@/components/StudentScanner';
 
@@ -89,14 +89,7 @@ export function AdminPrizeDeskPanel({ className }: { className?: string }) {
             'w-full rounded-2xl border bg-card/80 p-4 shadow-sm',
             isGraphic ? 'backdrop-blur-xl' : '',
           )}
-          style={
-            {
-              ['--primary' as string]: rainbowTripletForNavId('prize', settings.colorScheme),
-              ['--chart-1' as string]: rainbowTripletForNavId('prize', settings.colorScheme),
-              ['--chart-2' as string]: complementTripletForNavId('prize', settings.colorScheme),
-              ['--ring' as string]: complementTripletForNavId('prize', settings.colorScheme),
-            } as CSSProperties
-          }
+          style={appearanceVarsForSurface(settings, 'prize')}
         >
           <StudentScanner
             onStudentFound={onScannerStudent}

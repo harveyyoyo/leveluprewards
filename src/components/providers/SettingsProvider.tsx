@@ -4,7 +4,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useAuth, type LoginState } from './AuthProvider';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useIsMobile, useIsTabletOrMobile } from '@/hooks/use-mobile';
 import { useDoc, useFirebase, useMemoFirebase } from '@/firebase';
 import { doc, setDoc, type DocumentData } from 'firebase/firestore';
 import { removeUndefinedDeep } from '@/lib/db/helpers';
@@ -40,10 +40,18 @@ type ColorScheme =
     | 'sapphire'
     | 'coral';
 
+type AppearanceColorPair = {
+    primary?: string;
+    secondary?: string;
+};
+
+type AppearanceColorOverrides = Partial<Record<ColorScheme, AppearanceColorPair>>;
+
 interface Settings {
     graphicMode: 'classic' | 'graphics';
     displayMode: 'web' | 'app';
     colorScheme: ColorScheme;
+    customAppearanceColors?: AppearanceColorOverrides;
     soundEnabled: boolean;
     language: string;
     darkMode: boolean;
@@ -101,6 +109,8 @@ interface Settings {
     enableColorPrinting: boolean;
     /** Optional staff reminder shown near student ID / bulk card print (browser cannot pick a printer). */
     printerReminderIdCards?: string;
+    /** When on, Admin -> Students shows a one-click DTC card-machine print button for exactly one selected student. */
+    showSingleStudentCardMachinePrintButton: boolean;
     /** Saved ID card print setups (printer family + paper) for Admin → Students. */
     idCardPrintProfiles?: IdCardPrintProfile[];
     /** Last selected saved profile id for ID card printing (optional). */
@@ -144,7 +154,6 @@ interface Settings {
     enableHomework: boolean;
     legacyMode: boolean;
     enableAnimatedBackground: boolean;
-    calmMode?: boolean;
     // Image display: how logos and photos are fitted in their boxes
     logoDisplayMode: 'contain' | 'cover';
     photoDisplayMode: 'contain' | 'cover';
@@ -161,6 +170,14 @@ interface Settings {
     // Security & Session
     adminSessionTimeoutMs?: number;
     kioskSessionTimeoutSec?: number;
+    /** Student kiosk login: show/hide each login method tab (Card / Type / Scan / Face). */
+    kioskLoginTabCardEnabled?: boolean;
+    kioskLoginTabTypeEnabled?: boolean;
+    kioskLoginTabScanEnabled?: boolean;
+    kioskLoginTabFaceEnabled?: boolean;
+    /** Student kiosk coupon redemption: show/hide entry methods. If both are off, coupon redemption is hidden. */
+    kioskCouponRedemptionManualEnabled?: boolean;
+    kioskCouponRedemptionCameraEnabled?: boolean;
     /**
      * Student kiosk rewards shop: how coupon codes are entered.
      * off = hide coupon redemption; manual/camera = single method (no student-facing tabs); both = Manual + Webcam tabs.
@@ -261,21 +278,22 @@ interface SettingsContextType {
     isLoaded: boolean;
 }
 
-const colorSchemes: Record<ColorScheme, { bg: string; card: string; accent: string; border: string; label: string; swatch: string }> = {
+const colorSchemes: Record<ColorScheme, { bg: string; card: string; accent: string; border: string; label: string; swatch: string; swatchColors: readonly [string, string] }> = {
     /* Swatch must stay a literal `bg-[…]` so Tailwind JIT includes it (matches LEVELUP_BRAND_PRIMARY_HEX). */
-    default: { bg: 'bg-slate-50', card: 'bg-white', accent: 'text-slate-800', border: 'border-slate-200', label: 'Default', swatch: 'bg-[#102a45]' },
-    sky: { bg: 'bg-sky-50', card: 'bg-white', accent: 'text-sky-700', border: 'border-sky-200', label: 'Sky', swatch: 'bg-sky-300' },
-    rose: { bg: 'bg-rose-50', card: 'bg-white', accent: 'text-rose-700', border: 'border-rose-200', label: 'Rose', swatch: 'bg-rose-300' },
-    mint: { bg: 'bg-emerald-50', card: 'bg-white', accent: 'text-emerald-700', border: 'border-emerald-200', label: 'Mint', swatch: 'bg-emerald-300' },
-    lavender: { bg: 'bg-violet-50', card: 'bg-white', accent: 'text-violet-700', border: 'border-violet-200', label: 'Lavender', swatch: 'bg-violet-300' },
-    peach: { bg: 'bg-orange-50', card: 'bg-white', accent: 'text-orange-700', border: 'border-orange-200', label: 'Peach', swatch: 'bg-orange-300' },
+    default: { bg: 'bg-slate-50', card: 'bg-white', accent: 'text-slate-800', border: 'border-slate-200', label: 'Default', swatch: 'bg-[#102a45]', swatchColors: ['#102a45', '#64748b'] },
+    sky: { bg: 'bg-sky-50', card: 'bg-white', accent: 'text-sky-700', border: 'border-sky-200', label: 'Sky', swatch: 'bg-sky-300', swatchColors: ['#0ea5e9', '#10b981'] },
+    rose: { bg: 'bg-rose-50', card: 'bg-white', accent: 'text-rose-700', border: 'border-rose-200', label: 'Rose', swatch: 'bg-rose-300', swatchColors: ['#e11d48', '#f97316'] },
+    mint: { bg: 'bg-emerald-50', card: 'bg-white', accent: 'text-emerald-700', border: 'border-emerald-200', label: 'Mint', swatch: 'bg-emerald-300', swatchColors: ['#10b981', '#0ea5e9'] },
+    lavender: { bg: 'bg-violet-50', card: 'bg-white', accent: 'text-violet-700', border: 'border-violet-200', label: 'Lavender', swatch: 'bg-violet-300', swatchColors: ['#8b5cf6', '#0ea5e9'] },
+    peach: { bg: 'bg-orange-50', card: 'bg-white', accent: 'text-orange-700', border: 'border-orange-200', label: 'Peach', swatch: 'bg-orange-300', swatchColors: ['#f97316', '#e11d48'] },
     ocean: {
         bg: 'bg-sky-50',
         card: 'bg-white',
         accent: 'text-sky-800',
         border: 'border-sky-200',
         label: 'Ocean + sand',
-        swatch: 'bg-[linear-gradient(135deg,#2389a8,#f0b429)]',
+        swatch: 'bg-[linear-gradient(135deg,#176b80,#d6a74a)]',
+        swatchColors: ['#176b80', '#d6a74a'],
     },
     sunset: {
         bg: 'bg-orange-50',
@@ -283,7 +301,8 @@ const colorSchemes: Record<ColorScheme, { bg: string; card: string; accent: stri
         accent: 'text-orange-800',
         border: 'border-orange-200',
         label: 'Sunset + indigo',
-        swatch: 'bg-[linear-gradient(135deg,#f97316,#6366f1)]',
+        swatch: 'bg-[linear-gradient(135deg,#d86143,#5967a6)]',
+        swatchColors: ['#d86143', '#5967a6'],
     },
     sapphire: {
         bg: 'bg-blue-50',
@@ -291,7 +310,8 @@ const colorSchemes: Record<ColorScheme, { bg: string; card: string; accent: stri
         accent: 'text-blue-800',
         border: 'border-blue-200',
         label: 'Sapphire + amber',
-        swatch: 'bg-[linear-gradient(135deg,#2563eb,#f59e0b)]',
+        swatch: 'bg-[linear-gradient(135deg,#2557a7,#cf9b32)]',
+        swatchColors: ['#2557a7', '#cf9b32'],
     },
     coral: {
         bg: 'bg-orange-50',
@@ -299,7 +319,8 @@ const colorSchemes: Record<ColorScheme, { bg: string; card: string; accent: stri
         accent: 'text-orange-800',
         border: 'border-orange-200',
         label: 'Coral + teal',
-        swatch: 'bg-[linear-gradient(135deg,#fb7185,#14b8a6)]',
+        swatch: 'bg-[linear-gradient(135deg,#d95f56,#2c8f8a)]',
+        swatchColors: ['#d95f56', '#2c8f8a'],
     },
 };
 
@@ -307,6 +328,7 @@ const defaultSettings: Settings = {
     graphicMode: 'classic',
     displayMode: 'web',
     colorScheme: 'default',
+    customAppearanceColors: {},
     soundEnabled: true,
     language: 'English',
     darkMode: false,
@@ -337,7 +359,7 @@ const defaultSettings: Settings = {
     enableShoutouts: false,
     enablePrizeImages: false,
     enablePrizeAiSurprise: false,
-    prizeAiSurpriseDefaultPoints: 25,
+    prizeAiSurpriseDefaultPoints: 1,
     enablePrizeCategories: false,
     enableWishlist: false,
     enableSeasonalPrizes: false,
@@ -345,6 +367,7 @@ const defaultSettings: Settings = {
     enableStudentEmojiOnPrizeTickets: false,
     enableColorPrinting: true,
     printerReminderIdCards: '',
+    showSingleStudentCardMachinePrintButton: false,
     idCardPrintProfiles: [],
     lastIdCardPrintProfileId: undefined,
     idCardPrinterFamily: 'browser_sheet',
@@ -364,7 +387,7 @@ const defaultSettings: Settings = {
     enableFaceLogin: false,
     enableStudentWelcome: false,
     enableStudentWelcomeBackScreen: false,
-    studentWelcomeBackDurationSec: 3,
+    studentWelcomeBackDurationSec: 2,
     defaultWelcomeGreetingStyleId: '',
     enableAttendance: false,
     enableHelperMode: true,
@@ -373,7 +396,6 @@ const defaultSettings: Settings = {
     enableHomework: false,
     legacyMode: false,
     enableAnimatedBackground: true,
-    calmMode: false,
     logoDisplayMode: 'contain',
     photoDisplayMode: 'cover',
     logoBorderRadius: 'md',
@@ -392,6 +414,12 @@ const defaultSettings: Settings = {
     },
     adminSessionTimeoutMs: 5 * 60 * 1000,
     kioskSessionTimeoutSec: 10,
+    kioskLoginTabCardEnabled: true,
+    kioskLoginTabTypeEnabled: true,
+    kioskLoginTabScanEnabled: true,
+    kioskLoginTabFaceEnabled: false,
+    kioskCouponRedemptionManualEnabled: true,
+    kioskCouponRedemptionCameraEnabled: true,
     kioskCouponRedemptionInput: 'both',
     kioskSponsorEnabled: false,
     kioskSponsorMessage: '',
@@ -451,8 +479,65 @@ const publicLoginSettings: Partial<Settings> = {
     // Keep feature toggles as-is; this only enforces a neutral look/feel.
 };
 
+const HEX_COLOR_RE = /^#[0-9A-Fa-f]{6}$/;
+const THEMED_ROOT_PROPS = [
+    '--primary',
+    '--primary-foreground',
+    '--accent',
+    '--accent-foreground',
+    '--secondary',
+    '--secondary-foreground',
+    '--ring',
+    '--chart-1',
+    '--chart-2',
+    '--chart-3',
+    '--chart-4',
+    '--chart-5',
+];
+
+function hexToHslTriplet(hex: string): { h: number; s: number; l: number } | null {
+    if (!HEX_COLOR_RE.test(hex)) return null;
+    const r = parseInt(hex.slice(1, 3), 16) / 255;
+    const g = parseInt(hex.slice(3, 5), 16) / 255;
+    const b = parseInt(hex.slice(5, 7), 16) / 255;
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    let h = 0;
+    let s = 0;
+    const l = (max + min) / 2;
+    if (max !== min) {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+            case r:
+                h = (g - b) / d + (g < b ? 6 : 0);
+                break;
+            case g:
+                h = (b - r) / d + 2;
+                break;
+            default:
+                h = (r - g) / d + 4;
+        }
+        h /= 6;
+    }
+    return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
+}
+
+function toTriplet(hsl: { h: number; s: number; l: number }) {
+    return `${hsl.h} ${hsl.s}% ${hsl.l}%`;
+}
+
+function contrastForegroundTriplet(hex: string) {
+    if (!HEX_COLOR_RE.test(hex)) return '0 0% 100%';
+    const r = parseInt(hex.slice(1, 3), 16) / 255;
+    const g = parseInt(hex.slice(3, 5), 16) / 255;
+    const b = parseInt(hex.slice(5, 7), 16) / 255;
+    const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    return luminance > 0.62 ? '222 47% 11%' : '0 0% 100%';
+}
+
 export { colorSchemes };
-export type { ColorScheme, Settings };
+export type { AppearanceColorOverrides, ColorScheme, Settings };
 
 const SettingsContext = createContext<SettingsContextType | null>(null);
 
@@ -599,6 +684,41 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                 if (typeof parsed.enableStudentWelcomeBackScreen !== 'boolean') {
                     parsed.enableStudentWelcomeBackScreen = !!parsed.enableStudentWelcome;
                 }
+                // Back-compat: kiosk login tabs & coupon methods used to be controlled by `enableQrLogin`,
+                // `enableFaceLogin`, and `kioskCouponRedemptionInput`. Prefer the new per-tab booleans.
+                if (typeof parsed.kioskLoginTabScanEnabled !== 'boolean' && typeof parsed.enableQrLogin === 'boolean') {
+                    parsed.kioskLoginTabScanEnabled = parsed.enableQrLogin;
+                }
+                if (typeof parsed.kioskLoginTabFaceEnabled !== 'boolean' && typeof parsed.enableFaceLogin === 'boolean') {
+                    parsed.kioskLoginTabFaceEnabled = parsed.enableFaceLogin;
+                }
+                if (typeof parsed.kioskLoginTabCardEnabled !== 'boolean') parsed.kioskLoginTabCardEnabled = true;
+                if (typeof parsed.kioskLoginTabTypeEnabled !== 'boolean') parsed.kioskLoginTabTypeEnabled = true;
+                // Keep legacy flags aligned so older components still work.
+                if (typeof parsed.kioskLoginTabScanEnabled === 'boolean') parsed.enableQrLogin = parsed.kioskLoginTabScanEnabled;
+                if (typeof parsed.kioskLoginTabFaceEnabled === 'boolean') parsed.enableFaceLogin = parsed.kioskLoginTabFaceEnabled;
+
+                if (
+                    typeof parsed.kioskCouponRedemptionManualEnabled !== 'boolean' &&
+                    typeof parsed.kioskCouponRedemptionCameraEnabled !== 'boolean' &&
+                    typeof parsed.kioskCouponRedemptionInput === 'string'
+                ) {
+                    const mode = parsed.kioskCouponRedemptionInput;
+                    parsed.kioskCouponRedemptionManualEnabled = mode === 'manual' || mode === 'both';
+                    parsed.kioskCouponRedemptionCameraEnabled = mode === 'camera' || mode === 'both';
+                }
+                if (typeof parsed.kioskCouponRedemptionManualEnabled !== 'boolean') parsed.kioskCouponRedemptionManualEnabled = true;
+                if (typeof parsed.kioskCouponRedemptionCameraEnabled !== 'boolean') parsed.kioskCouponRedemptionCameraEnabled = true;
+                // Keep legacy mode aligned for any old reads.
+                if (!parsed.kioskCouponRedemptionManualEnabled && !parsed.kioskCouponRedemptionCameraEnabled) {
+                    parsed.kioskCouponRedemptionInput = 'off';
+                } else if (parsed.kioskCouponRedemptionManualEnabled && parsed.kioskCouponRedemptionCameraEnabled) {
+                    parsed.kioskCouponRedemptionInput = 'both';
+                } else if (parsed.kioskCouponRedemptionManualEnabled) {
+                    parsed.kioskCouponRedemptionInput = 'manual';
+                } else {
+                    parsed.kioskCouponRedemptionInput = 'camera';
+                }
                 if (!STUDENT_WELCOME_STYLES_LIVE) {
                     parsed.enableStudentWelcome = false;
                 }
@@ -739,7 +859,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         }
     }, [settings.darkMode, isLoaded]);
 
-    // Apply color scheme data attribute — must match student/teacher overrides so CSS `--primary` matches UI (e.g. portal).
+    // Apply color scheme data attribute and any saved color overrides.
     useEffect(() => {
         if (!isLoaded) return;
         let scheme = settings.colorScheme ?? 'default';
@@ -748,11 +868,44 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         } else if (loginState === 'teacher' && settings.teacherColorScheme) {
             scheme = settings.teacherColorScheme;
         }
-        document.documentElement.setAttribute('data-color-scheme', scheme);
+        const root = document.documentElement;
+        root.setAttribute('data-color-scheme', scheme);
+
+        const custom = settings.customAppearanceColors?.[scheme];
+        const primaryHex = custom?.primary;
+        const secondaryHex = custom?.secondary;
+        const primaryHsl = primaryHex ? hexToHslTriplet(primaryHex) : null;
+        const secondaryHsl = secondaryHex ? hexToHslTriplet(secondaryHex) : null;
+        THEMED_ROOT_PROPS.forEach((prop) => root.style.removeProperty(prop));
+        if (primaryHsl && primaryHex) {
+            const primaryTriplet = toTriplet(primaryHsl);
+            root.style.setProperty('--primary', primaryTriplet);
+            root.style.setProperty('--primary-foreground', contrastForegroundTriplet(primaryHex));
+            root.style.setProperty('--chart-1', primaryTriplet);
+            root.style.setProperty('--chart-3', primaryTriplet);
+            root.style.setProperty('--chart-5', primaryTriplet);
+        }
+        if (secondaryHsl) {
+            const secondaryTriplet = toTriplet(secondaryHsl);
+            const accentLightness = settings.darkMode ? 18 : 94;
+            const accentForegroundLightness = settings.darkMode ? 84 : 30;
+            const secondaryLightness = settings.darkMode ? 18 : 86;
+            const secondaryForegroundLightness = settings.darkMode ? 88 : 26;
+            root.style.setProperty('--ring', secondaryTriplet);
+            root.style.setProperty('--chart-2', secondaryTriplet);
+            root.style.setProperty('--chart-4', secondaryTriplet);
+            const secondarySurfaceSat = Math.min(62, Math.max(30, secondaryHsl.s));
+            root.style.setProperty('--accent', `${secondaryHsl.h} ${secondarySurfaceSat}% ${accentLightness}%`);
+            root.style.setProperty('--accent-foreground', `${secondaryHsl.h} ${Math.max(35, secondarySurfaceSat)}% ${accentForegroundLightness}%`);
+            root.style.setProperty('--secondary', `${secondaryHsl.h} ${secondarySurfaceSat}% ${secondaryLightness}%`);
+            root.style.setProperty('--secondary-foreground', `${secondaryHsl.h} ${Math.max(35, secondarySurfaceSat)}% ${secondaryForegroundLightness}%`);
+        }
     }, [
         isLoaded,
         loginState,
         settings.colorScheme,
+        settings.customAppearanceColors,
+        settings.darkMode,
         settings.studentColorScheme,
         settings.teacherColorScheme,
     ]);
@@ -781,8 +934,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
         root.classList.toggle('legacy', !!next.legacyMode);
         root.setAttribute('data-color-scheme', next.colorScheme ?? 'default');
+        THEMED_ROOT_PROPS.forEach((prop) => root.style.removeProperty(prop));
     }, [isLoaded, isPublicLoginRoute, settings]);
 
+    const isTabletOrMobile = useIsTabletOrMobile();
+    
     const effectiveSettings = useMemo(() => {
         const s = { ...settings };
         
@@ -799,8 +955,14 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             if (typeof s.teacherEnableAnimatedBackground === 'boolean') s.enableAnimatedBackground = s.teacherEnableAnimatedBackground;
             if (s.teacherAnimatedBackgroundStyle) s.animatedBackgroundStyle = s.teacherAnimatedBackgroundStyle;
         }
+
+        // Tablet and mobile automatically switch to app mode overrides EVERYTHING else
+        if (isTabletOrMobile) {
+            s.displayMode = 'app';
+        }
+
         return s;
-    }, [settings, loginState]);
+    }, [settings, loginState, isTabletOrMobile]);
 
     const isTeacherAllowed = useCallback((key: string) => {
         if (!isAllowed(key)) return false;

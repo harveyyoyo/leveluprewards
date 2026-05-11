@@ -100,8 +100,21 @@ export function StudentScanner({
     const faceLoopCancelRef = useRef(false);
     const [faceStatus, setFaceStatus] = useState<string | null>(null);
 
-    const faceEnabled = !!settings.enableFaceLogin;
-    const qrEnabled = !!settings.enableQrLogin;
+    const cardEnabled = settings.kioskLoginTabCardEnabled !== false;
+    const typeEnabled = settings.kioskLoginTabTypeEnabled !== false;
+    const qrEnabled = settings.kioskLoginTabScanEnabled !== false;
+    const faceEnabled = settings.kioskLoginTabFaceEnabled === true;
+
+    const availableLoginTabs = useMemo(() => {
+        const tabs: string[] = [];
+        if (cardEnabled) tabs.push('nfc');
+        if (typeEnabled) tabs.push('manual');
+        if (qrEnabled) tabs.push('camera');
+        if (faceEnabled) tabs.push('face');
+        // Safety: never allow "no tabs" UX.
+        if (!tabs.length) tabs.push('nfc');
+        return tabs;
+    }, [cardEnabled, typeEnabled, qrEnabled, faceEnabled]);
 
     const stopFaceCamera = useCallback(() => {
         const stream = faceStreamRef.current;
@@ -434,17 +447,23 @@ export function StudentScanner({
     useEffect(() => { setHasCameraPermission(hookHasPermission); }, [hookHasPermission]);
 
     const tabsColsClass = useMemo(() => {
-        const n = 2 + (qrEnabled ? 1 : 0) + (faceEnabled ? 1 : 0);
+        const n = availableLoginTabs.length;
         if (n >= 4) return 'grid-cols-4';
         if (n === 3) return 'grid-cols-3';
         return 'grid-cols-2';
-    }, [faceEnabled, qrEnabled]);
+    }, [availableLoginTabs.length]);
+
+    useEffect(() => {
+        if (!availableLoginTabs.includes(loginTab)) {
+            setLoginTab(availableLoginTabs[0] || 'nfc');
+        }
+    }, [availableLoginTabs, loginTab]);
 
     useEffect(() => {
         if (!qrEnabled && loginTab === 'camera') {
-            setLoginTab('nfc');
+            setLoginTab(cardEnabled ? 'nfc' : typeEnabled ? 'manual' : 'nfc');
         }
-    }, [qrEnabled, loginTab]);
+    }, [qrEnabled, loginTab, cardEnabled, typeEnabled]);
 
     useEffect(() => {
         if (isActive && loginTab === 'nfc') {
@@ -499,12 +518,16 @@ export function StudentScanner({
             <div className="p-3">
                 <Tabs defaultValue="nfc" className="w-full" value={loginTab} onValueChange={setLoginTab}>
                     <TabsList className={cn("grid w-full p-1 rounded-xl mb-4", tabsColsClass, isGraphic ? 'bg-muted/50' : 'bg-muted/50')}>
-                        <TabsTrigger value="nfc" onClick={() => nfcInputRef.current?.focus()} className="flex-1 sm:flex-initial rounded-xl font-black text-[9px] sm:text-[10px] px-1 sm:px-3 py-1.5 uppercase tracking-wider sm:tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-md transition-all">
-                            <Nfc className="mr-1 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" /> Card
-                        </TabsTrigger>
-                        <TabsTrigger value="manual" className="flex-1 sm:flex-initial rounded-xl font-black text-[9px] sm:text-[10px] px-1 sm:px-3 py-1.5 uppercase tracking-wider sm:tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-md transition-all">
-                            <Type className="mr-1 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" /> Type
-                        </TabsTrigger>
+                        {cardEnabled && (
+                            <TabsTrigger value="nfc" onClick={() => nfcInputRef.current?.focus()} className="flex-1 sm:flex-initial rounded-xl font-black text-[9px] sm:text-[10px] px-1 sm:px-3 py-1.5 uppercase tracking-wider sm:tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-md transition-all">
+                                <Nfc className="mr-1 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" /> Card
+                            </TabsTrigger>
+                        )}
+                        {typeEnabled && (
+                            <TabsTrigger value="manual" className="flex-1 sm:flex-initial rounded-xl font-black text-[9px] sm:text-[10px] px-1 sm:px-3 py-1.5 uppercase tracking-wider sm:tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-md transition-all">
+                                <Type className="mr-1 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" /> Type
+                            </TabsTrigger>
+                        )}
                         {qrEnabled && (
                         <TabsTrigger value="camera" className="flex-1 sm:flex-initial rounded-xl font-black text-[9px] sm:text-[10px] px-1 sm:px-3 py-1.5 uppercase tracking-wider sm:tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-md transition-all">
                             <Camera className="mr-1 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" /> Scan

@@ -92,6 +92,7 @@ export default function Header() {
     loginState === 'secretary' ||
     loginState === 'prizeClerk' ||
     loginState === 'reports';
+  const isDeveloperSupportSession = loginState === 'developer' && !!schoolId;
   const canLogout = loginState !== 'loggedOut' && loginState !== 'student';
 
   const paidProducts: string[] = [];
@@ -154,11 +155,11 @@ export default function Header() {
                 variant="ghost"
                 size="icon"
                 className="h-9 w-9 rounded-xl text-slate-500 hover:bg-primary/10 hover:text-primary"
-                aria-label="Sign out"
-                title="Sign out"
+                aria-label={isDeveloperSupportSession ? 'End support session' : 'Sign out'}
+                title={isDeveloperSupportSession ? 'End support session' : 'Sign out'}
                 onClick={handleLogout}
               >
-                <LogOut className="h-5 w-5" />
+                {isDeveloperSupportSession ? <ArrowRightLeft className="h-5 w-5" /> : <LogOut className="h-5 w-5" />}
               </Button>
             )}
             <SettingsModal />
@@ -302,8 +303,8 @@ export default function Header() {
                     <DropdownMenuLabel>Account</DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem className="gap-2 font-semibold" onClick={handleLogout}>
-                      <LogOut className="h-4 w-4" />
-                      Sign out
+                      {isDeveloperSupportSession ? <ArrowRightLeft className="h-4 w-4" /> : <LogOut className="h-4 w-4" />}
+                      {isDeveloperSupportSession ? 'End support session' : 'Sign out'}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils';
 
-/** Soft drift variant: arrow floats upward slowly with ghost trails (student kiosk). */
+/** Soft drift variant: arrow floats upward slowly with steady ghost trails (student kiosk). */
 export function LevelUpLogoDrift({ className }: { className?: string }) {
   const arrowPath =
     'M 400 80 L 740 420 L 560 420 L 560 660 L 240 660 L 240 420 L 60 420 Z';
@@ -27,7 +27,12 @@ export function LevelUpLogoDrift({ className }: { className?: string }) {
           viewBox="0 0 800 720"
           className="h-full w-full overflow-visible"
           aria-label="Level Up drifting logo"
-          style={{ animation: 'lud-drift 5.5s ease-in-out infinite' }}
+          style={{
+            animation: 'lud-drift 5.5s ease-in-out infinite',
+            backfaceVisibility: 'hidden',
+            transform: 'translate3d(0, 0, 0)',
+            willChange: 'transform',
+          }}
         >
           <defs>
             <linearGradient id="lud-drift-fill" x1="0" y1="1" x2="0" y2="0">
@@ -46,8 +51,7 @@ export function LevelUpLogoDrift({ className }: { className?: string }) {
               strokeLinejoin="round"
               strokeLinecap="round"
               style={{
-                opacity: 0,
-                animation: `lud-drift-trail 5.5s ease-in-out ${i * 0.5}s infinite`,
+                opacity: 0.12 - i * 0.03,
               }}
             />
           ))}

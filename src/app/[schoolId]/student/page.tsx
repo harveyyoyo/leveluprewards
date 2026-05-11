@@ -102,7 +102,7 @@ import { StudentGoalsCard } from '@/components/goals/StudentGoalsCard';
 import { EarnedBadgesShowcase } from '@/components/EarnedBadgesShowcase';
 import { useStudentKioskSession } from '@/components/providers/StudentKioskSessionProvider';
 import { FaceMismatchBanner } from '@/components/FaceMismatchBanner';
-import { rainbowTripletForNavId, complementTripletForNavId } from '@/lib/rainbowNav';
+import { appearanceVarsForSurface } from '@/lib/appearance';
 import { STUDENT_KIOSK_REQUEST_EXIT_EVENT } from '@/lib/student-kiosk';
 import { studentSeesWelcomeBackOverlay, studentSeesWelcomePage } from '@/lib/studentWelcome';
 import { prizeIsListed, studentSeesPrizeByTeachers } from '@/lib/prize-utils';
@@ -111,6 +111,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuthFetch } from '@/lib/authFetch';
 import { WelcomeOverlay } from '@/components/WelcomeOverlay';
 import { StudentKioskTransitionFlash } from '@/components/StudentKioskTransitionFlash';
+
+const STUDENT_TRANSITION_MIN_VISIBLE_MS = 650;
+const STUDENT_TRANSITION_EXIT_MS = 320;
 
 const AI_SURPRISE_KIND_LABEL: Record<string, string> = {
   joke: 'Your joke',
@@ -367,15 +370,14 @@ function StudentDashboardInner({
   const { functions, auth } = useFirebase();
   const { toast } = useToast();
   const { settings, isFeatureAllowed } = useSettings();
-  const kioskCouponMode = settings.kioskCouponRedemptionInput ?? 'both';
-  const couponSectionEnabled = kioskCouponMode !== 'off';
-  const showManualCoupon = kioskCouponMode === 'manual' || kioskCouponMode === 'both';
-  const showCameraCoupon = kioskCouponMode === 'camera' || kioskCouponMode === 'both';
+  const showManualCoupon = settings.kioskCouponRedemptionManualEnabled !== false;
+  const showCameraCoupon = settings.kioskCouponRedemptionCameraEnabled !== false;
+  const couponSectionEnabled = showManualCoupon || showCameraCoupon;
   const showCouponMethodTabs = showManualCoupon && showCameraCoupon;
   const couponHelperText =
-    kioskCouponMode === 'manual'
+    showManualCoupon && !showCameraCoupon
       ? 'Type or USB-scan a coupon code to add points. Use the Logout button on this card to exit.'
-      : kioskCouponMode === 'camera'
+      : showCameraCoupon && !showManualCoupon
         ? 'Scan the coupon QR or barcode with the webcam. Use the Logout button on this card to exit.'
         : 'Scan or type a coupon code to add points. Use the camera tab to scan a QR code. Use the Logout button on this card to exit.';
   const authFetch = useAuthFetch();
@@ -606,20 +608,24 @@ function StudentDashboardInner({
     };
   }, [isKioskLocked, resetLogoutTimer]);
 
-  const [activeTab, setActiveTab] = useState<'manual' | 'camera'>(
-    kioskCouponMode === 'camera' ? 'camera' : 'manual',
-  );
+  const [activeTab, setActiveTab] = useState<'manual' | 'camera'>(() => (showManualCoupon ? 'manual' : 'camera'));
   const [hasCameraPermission, setHasCameraPermission] = useState(true);
 
   useEffect(() => {
-    if (kioskCouponMode === 'camera') setActiveTab('camera');
-    else if (kioskCouponMode === 'manual') setActiveTab('manual');
-  }, [kioskCouponMode]);
+    if (!showManualCoupon && showCameraCoupon) setActiveTab('camera');
+    else if (showManualCoupon && !showCameraCoupon) setActiveTab('manual');
+    else if (showManualCoupon && showCameraCoupon) {
+      // keep existing choice
+    } else {
+      // both disabled: no coupon section, default harmless
+      setActiveTab('manual');
+    }
+  }, [showManualCoupon, showCameraCoupon]);
 
   const couponCameraScannerOn =
     showRedeem &&
     showCameraCoupon &&
-    (showCouponMethodTabs ? activeTab === 'camera' : kioskCouponMode === 'camera');
+    (!showCouponMethodTabs || activeTab === 'camera');
 
   const { videoRef, hasCameraPermission: hookHasPermission } = useBarcodeScanner(
     couponCameraScannerOn,
@@ -770,6 +776,7 @@ function StudentDashboardInner({
   const resetTimer = useCallback(() => {}, []);
 
   const [activityMaxItems, setActivityMaxItems] = useState(7);
+  const [activityPanelHeight, setActivityPanelHeight] = useState<number | null>(null);
   const activityPanelRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -779,7 +786,12 @@ function StudentDashboardInner({
     const computeFromPanel = () => {
       const el = activityPanelRef.current;
       if (!el) return;
-      const h = el.getBoundingClientRect().height || 0;
+      const rect = el.getBoundingClientRect();
+      const isDesktopLayout = window.matchMedia('(min-width: 1024px)').matches;
+      const heightToBottom = Math.floor(window.innerHeight - rect.top - 16);
+      const panelHeight = isDesktopLayout ? Math.max(240, heightToBottom) : null;
+      setActivityPanelHeight(panelHeight);
+      const h = panelHeight || rect.height || 0;
       const available = Math.max(0, h - headerAndPadding);
       const rows = Math.floor(available / rowPx);
       setActivityMaxItems(Math.max(3, Math.min(20, rows || 3)));
@@ -1195,7 +1207,7 @@ function StudentDashboardInner({
         className={cn(
           // Lock the dashboard to the viewport so inner panes scroll
           // (prevents Activity + CTA from falling below the fold).
-          "w-full max-w-none flex-1 min-h-0 relative px-3 md:px-6 overflow-x-hidden overflow-y-hidden flex flex-col",
+          "w-full max-w-none h-dvh min-h-dvh relative px-3 md:px-6 overflow-x-hidden overflow-y-hidden flex flex-col",
           birthdayToday ? "pt-14 md:pt-16" : "pt-3 md:pt-8",
           settings.enableThemeAnimations && !!effectiveTheme && "theme-theme-elements-animated theme-motion-override",
           // Avoid large bottom padding that leaves a visible gap.
@@ -1219,13 +1231,7 @@ function StudentDashboardInner({
           fontSize: fontScale !== 1 ? `${fontScale}em` : undefined,
         } as unknown as React.CSSProperties) : ({
           fontSize: '1.15em',
-          ['--primary' as any]: rainbowTripletForNavId('redeem', settings.colorScheme),
-          ['--chart-1' as any]: rainbowTripletForNavId('redeem', settings.colorScheme),
-          ['--chart-2' as any]: complementTripletForNavId('redeem', settings.colorScheme),
-          ['--chart-3' as any]: rainbowTripletForNavId('redeem', settings.colorScheme),
-          ['--chart-4' as any]: complementTripletForNavId('redeem', settings.colorScheme),
-          ['--chart-5' as any]: rainbowTripletForNavId('redeem', settings.colorScheme),
-          ['--ring' as any]: complementTripletForNavId('redeem', settings.colorScheme),
+          ...appearanceVarsForSurface(settings, 'redeem'),
         } as any)}
       >
         {effectiveTheme?.fontFamily && <GoogleFontLoader fontFamily={effectiveTheme.fontFamily} />}
@@ -1391,9 +1397,10 @@ function StudentDashboardInner({
           </CardContent>
         </Card>
 
-        <div className="grid w-full min-w-0 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_min(320px,28vw)] gap-4 relative z-10 flex-1 min-h-0 items-stretch overflow-hidden pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <div className="grid w-full min-w-0 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_min(320px,28vw)] gap-4 relative z-10 flex-1 min-h-0 items-stretch overflow-hidden pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           {/* Left Section: Content */}
-          <div className="min-w-0 flex flex-1 min-h-0 flex-col gap-3 overflow-y-auto overflow-x-hidden pr-1 pb-8 scroll-pb-8 min-h-0">
+          <div className="min-w-0 flex flex-1 min-h-0 flex-col gap-3 overflow-hidden pr-1">
+            <div className="min-w-0 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overflow-x-hidden pb-3 scroll-pb-3">
             <StudentGoalsCard
               schoolId={schoolId!}
               student={student}
@@ -1576,10 +1583,17 @@ function StudentDashboardInner({
                       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                         <div className="w-3/4 h-3/2 border-2 border-white/40 rounded-2xl border-dashed" />
                       </div>
+                      {!hasCameraPermission && (
+                        <div className="absolute inset-0 bg-background/90 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
+                          <Camera className="w-12 h-12 text-destructive mb-4" />
+                          <p className="text-foreground font-bold">Camera access required</p>
+                          <p className="text-muted-foreground text-xs mt-2">Please enable camera in settings</p>
+                        </div>
+                      )}
                     </div>
                   )}
                 </Tabs>
-                ) : kioskCouponMode === 'manual' ? (
+                ) : showManualCoupon ? (
                     <div className="space-y-3 w-full min-w-0">
                       <div
                         className={cn(
@@ -1659,14 +1673,21 @@ function StudentDashboardInner({
                         Available coupon codes can be viewed in the Admin panel.
                       </p>
                     </div>
-                ) : (
+                ) : showCameraCoupon ? (
                     <div className="relative h-36 sm:h-40 rounded-xl overflow-hidden bg-black border-2 border-slate-100 dark:border-slate-800 shadow-inner">
                       <video ref={videoRef as RefObject<HTMLVideoElement>} className="w-full h-full object-cover" playsInline muted />
                       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                         <div className="w-3/4 h-3/2 border-2 border-white/40 rounded-2xl border-dashed" />
                       </div>
+                      {!hasCameraPermission && (
+                        <div className="absolute inset-0 bg-background/90 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
+                          <Camera className="w-12 h-12 text-destructive mb-4" />
+                          <p className="text-foreground font-bold">Camera access required</p>
+                          <p className="text-muted-foreground text-xs mt-2">Please enable camera in settings</p>
+                        </div>
+                      )}
                     </div>
-                )}
+                ) : null}
 
               </CardContent>
             </Card>
@@ -1714,9 +1735,9 @@ function StudentDashboardInner({
               </CardHeader>
               <CardContent className="px-3 pb-3 pt-2 sm:px-4">
                 <div className="w-full pr-0.5">
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-2.5">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-2 sm:gap-2.5">
                   {prizesLoading ? (
-                    [...Array(8)].map((_, i) => <Skeleton key={i} className="min-h-[9rem] sm:min-h-[9.5rem] w-full rounded-xl" />)
+                    [...Array(8)].map((_, i) => <Skeleton key={i} className="min-h-[7.5rem] sm:min-h-[8rem] w-full rounded-xl" />)
                   ) : (prizes || [])
                     .filter(p =>
                       prizeAppearsInRewardsShop(p, { enablePrizeAiSurprise: settings.enablePrizeAiSurprise }) &&
@@ -1735,7 +1756,7 @@ function StudentDashboardInner({
                         }}
                         aria-label={`Redeem ${reward.name || 'prize'}`}
                         className={cn(
-                          "min-h-[9rem] sm:min-h-[9.5rem] min-w-0 p-2.5 sm:p-3 rounded-2xl transition-all flex flex-col items-stretch justify-between text-center gap-1 shadow-sm hover:shadow-md hover:-translate-y-0.5 transform duration-300 group relative overflow-visible cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+                          "min-h-[7.5rem] sm:min-h-[8rem] min-w-0 p-2 sm:p-2.5 rounded-2xl transition-all flex flex-col items-stretch justify-between text-center gap-1 shadow-sm hover:shadow-md hover:-translate-y-0.5 transform duration-300 group relative overflow-visible cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
                           !activeTheme && "border border-slate-100 dark:border-slate-800 bg-white/40 dark:bg-slate-800/40",
                         )}
                         style={activeTheme ? { backgroundColor: 'var(--theme-bg)', color: 'var(--theme-text)', borderColor: 'var(--theme-primary)', borderWidth: 1, borderStyle: 'solid' } : undefined}
@@ -1747,7 +1768,7 @@ function StudentDashboardInner({
                         )}
                         <p
                           className={cn(
-                            "text-base sm:text-lg md:text-xl font-black leading-tight line-clamp-2 break-words [overflow-wrap:anywhere] z-10 min-h-0 shrink",
+                            "text-sm sm:text-base md:text-lg font-black leading-tight line-clamp-2 break-words [overflow-wrap:anywhere] z-10 min-h-0 shrink",
                             !activeTheme && "text-slate-800 dark:text-white",
                           )}
                           style={activeTheme ? { color: 'var(--theme-text)' } : undefined}
@@ -1812,6 +1833,14 @@ function StudentDashboardInner({
                 </div>
               </CardContent>
             </Card>
+
+            <EarnedBadgesShowcase
+              student={student}
+              badges={badges || []}
+              enableBadges={settings.enableBadges}
+              theme={activeTheme}
+            />
+            </div>
 
             <Button
               asChild
@@ -1955,17 +1984,10 @@ function StudentDashboardInner({
                 </Button>
               </DialogContent>
             </Dialog>
-
-            <EarnedBadgesShowcase
-              student={student}
-              badges={badges || []}
-              enableBadges={settings.enableBadges}
-              theme={activeTheme}
-            />
           </div>
 
           {/* Right Section: Activity — fills column height on lg; list count fits visible rows (no page scroll). */}
-          <div className="min-w-0 flex min-h-0 flex-col pb-8 scroll-pb-8 lg:h-full lg:min-h-0 lg:pb-0">
+          <div className="min-w-0 flex min-h-0 flex-col pb-8 scroll-pb-8 lg:h-full lg:min-h-0 lg:overflow-hidden lg:pb-0">
           <Card
             ref={activityPanelRef}
             className={cn(
@@ -1973,16 +1995,22 @@ function StudentDashboardInner({
               'lg:flex-1 lg:h-full lg:min-h-0',
               !activeTheme && 'border-slate-200 bg-white dark:border-slate-600 dark:bg-slate-900',
             )}
-            style={
-              activeTheme
+            style={{
+              ...(activityPanelHeight
+                ? {
+                    height: activityPanelHeight,
+                    maxHeight: activityPanelHeight,
+                  }
+                : null),
+              ...(activeTheme
                 ? {
                     backgroundColor: 'var(--theme-card)',
                     color: 'var(--theme-text)',
                     borderColor: 'color-mix(in srgb, var(--theme-primary) 42%, transparent)',
                     boxShadow: 'inset 0 1px 0 0 color-mix(in srgb, var(--theme-text) 8%, transparent)',
                   }
-                : undefined
-            }
+                : null),
+            }}
           >
             <CardHeader
               className="py-2.5 pb-2 border-b shrink-0 rounded-t-2xl bg-muted/30 dark:bg-slate-800/40"
@@ -2098,18 +2126,28 @@ export default function StudentLoginPage() {
     startedAt: number;
     phase: 'loading' | 'exiting';
   } | null>(null);
+  const studentTransitionTimersRef = useRef<number[]>([]);
   const dashboardReadyStudentRef = useRef<string | null>(null);
   const activeStudentIdRef = useRef<string | null>(null);
   activeStudentIdRef.current = activeStudentId;
 
+  const clearStudentTransitionTimers = useCallback(() => {
+    studentTransitionTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
+    studentTransitionTimersRef.current = [];
+  }, []);
+
+  useEffect(() => clearStudentTransitionTimers, [clearStudentTransitionTimers]);
+
   const finishStudentSession = useCallback(() => {
+    clearStudentTransitionTimers();
     dashboardReadyStudentRef.current = null;
     setStudentTransition(null);
     handleDone();
-  }, [handleDone]);
+  }, [clearStudentTransitionTimers, handleDone]);
 
   const onScannerStudent = useCallback(
     (id: string, meta?: StudentFoundMeta) => {
+      clearStudentTransitionTimers();
       dashboardReadyStudentRef.current = null;
       setStudentTransition({
         id,
@@ -2123,7 +2161,7 @@ export default function StudentLoginPage() {
         setLoginMeta(null);
       }
     },
-    [setActiveStudentId, setLoginMeta],
+    [clearStudentTransitionTimers, setActiveStudentId, setLoginMeta],
   );
 
   const handleDashboardReady = useCallback((readyStudentId: string) => {
@@ -2138,15 +2176,21 @@ export default function StudentLoginPage() {
 
       dashboardReadyStudentRef.current = readyStudentId;
       const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
-      const remaining = Math.max(0, 450 - (now - current.startedAt));
-      window.setTimeout(() => {
-        setStudentTransition((latest) => (
-          latest?.id === readyStudentId ? { ...latest, phase: 'exiting' } : latest
-        ));
-        window.setTimeout(() => {
-          setStudentTransition((latest) => (latest?.id === readyStudentId ? null : latest));
-        }, 260);
+      const remaining = Math.max(0, STUDENT_TRANSITION_MIN_VISIBLE_MS - (now - current.startedAt));
+      const revealTimer = window.setTimeout(() => {
+        window.requestAnimationFrame(() => {
+          window.requestAnimationFrame(() => {
+            setStudentTransition((latest) => (
+              latest?.id === readyStudentId ? { ...latest, phase: 'exiting' } : latest
+            ));
+            const removeTimer = window.setTimeout(() => {
+              setStudentTransition((latest) => (latest?.id === readyStudentId ? null : latest));
+            }, STUDENT_TRANSITION_EXIT_MS);
+            studentTransitionTimersRef.current.push(removeTimer);
+          });
+        });
       }, remaining);
+      studentTransitionTimersRef.current.push(revealTimer);
 
       return current;
     });
@@ -2274,13 +2318,7 @@ export default function StudentLoginPage() {
                 : '',
             )}
             style={{
-              ['--primary' as any]: rainbowTripletForNavId('redeem', settings.colorScheme),
-              ['--chart-1' as any]: rainbowTripletForNavId('redeem', settings.colorScheme),
-              ['--chart-2' as any]: complementTripletForNavId('redeem', settings.colorScheme),
-              ['--chart-3' as any]: rainbowTripletForNavId('redeem', settings.colorScheme),
-              ['--chart-4' as any]: complementTripletForNavId('redeem', settings.colorScheme),
-              ['--chart-5' as any]: rainbowTripletForNavId('redeem', settings.colorScheme),
-              ['--ring' as any]: complementTripletForNavId('redeem', settings.colorScheme),
+              ...appearanceVarsForSurface(settings, 'redeem'),
             } as any}
           >
             <StudentScanner

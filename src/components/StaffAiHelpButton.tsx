@@ -12,6 +12,7 @@ import { useSettings } from '@/components/providers/SettingsProvider';
 import { useAuthFetch } from '@/lib/authFetch';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { RemoteSupportSharePanel } from '@/components/RemoteSupportSharePanel';
 import {
   Sheet,
   SheetContent,
@@ -367,6 +368,7 @@ export function StaffAiHelpButton() {
             >
               <ScrollArea className="flex-1 min-h-0 px-4">
                 <div className="py-4 space-y-3 text-sm text-muted-foreground pr-2">
+                  <RemoteSupportSharePanel pathname={pathname} />
                   <p>
                     Describe the issue or question. Your school ID and current page are included automatically.
                     The platform operator receives this on{' '}

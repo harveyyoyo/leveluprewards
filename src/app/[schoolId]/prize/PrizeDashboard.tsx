@@ -84,6 +84,152 @@ const AI_SURPRISE_KIND_LABEL: Record<string, string> = {
     fortune: 'Your fortune',
 };
 
+type AiSurpriseKind = 'joke' | 'riddle' | 'fortune';
+type AiSurpriseBody = { kind: AiSurpriseKind; text: string; answer?: string };
+
+const AI_SURPRISE_STOCK_PREFIX = 'levelup:ai-fun-stock:v1';
+const AI_SURPRISE_RECENT_PREFIX = 'levelup:ai-fun-recent:v1';
+const AI_SURPRISE_STOCK_TARGET = 3;
+const AI_SURPRISE_STOCK_REFILL_AT = 1;
+const AI_SURPRISE_RECENT_LIMIT = 30;
+const aiSurpriseStockFetches = new Set<string>();
+
+const FALLBACK_AI_SURPRISES: Record<AiSurpriseKind, AiSurpriseBody[]> = {
+    joke: [
+        { kind: 'joke', text: 'Why did the pencil get invited to class? Because it always had a good point.' },
+        { kind: 'joke', text: 'Why was the math book smiling? It finally solved one of its problems.' },
+        { kind: 'joke', text: 'Why did the calendar do well in school? It had all its dates organized.' },
+    ],
+    riddle: [
+        { kind: 'riddle', text: 'I get bigger the more you take away from me. What am I?', answer: 'A hole' },
+        { kind: 'riddle', text: 'What has many pages but no voice, and can still tell a story?', answer: 'A book' },
+        { kind: 'riddle', text: 'What can you catch but not throw?', answer: 'A cold' },
+    ],
+    fortune: [
+        { kind: 'fortune', text: 'Your next brave try may be the one that makes everything click.' },
+        { kind: 'fortune', text: 'A small kind choice today can become someone else\'s best memory.' },
+        { kind: 'fortune', text: 'You are closer to figuring it out than it feels right now.' },
+    ],
+};
+
+function aiSurpriseStockKey(schoolId: string, kind: AiSurpriseKind) {
+    return `${AI_SURPRISE_STOCK_PREFIX}:${schoolId}:${kind}`;
+}
+
+function aiSurpriseRecentKey(schoolId: string, kind: AiSurpriseKind) {
+    return `${AI_SURPRISE_RECENT_PREFIX}:${schoolId}:${kind}`;
+}
+
+function normalizeAiSurpriseBody(value: unknown, expectedKind: AiSurpriseKind): AiSurpriseBody | null {
+    if (!value || typeof value !== 'object') return null;
+    const raw = value as Record<string, unknown>;
+    const kind = raw.kind === 'riddle' || raw.kind === 'fortune' || raw.kind === 'joke' ? raw.kind : expectedKind;
+    const text = typeof raw.text === 'string' ? raw.text.trim() : '';
+    if (!text) return null;
+    const answer = typeof raw.answer === 'string' && raw.answer.trim() ? raw.answer.trim() : undefined;
+    return answer ? { kind, text, answer } : { kind, text };
+}
+
+function readAiSurpriseStock(schoolId: string, kind: AiSurpriseKind): AiSurpriseBody[] {
+    if (typeof window === 'undefined') return [];
+    try {
+        const parsed = JSON.parse(window.localStorage.getItem(aiSurpriseStockKey(schoolId, kind)) || '[]');
+        return Array.isArray(parsed)
+            ? parsed
+                .map((item) => normalizeAiSurpriseBody(item, kind))
+                .filter((item): item is AiSurpriseBody => !!item)
+            : [];
+    } catch {
+        return [];
+    }
+}
+
+function writeAiSurpriseStock(schoolId: string, kind: AiSurpriseKind, stock: AiSurpriseBody[]) {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(aiSurpriseStockKey(schoolId, kind), JSON.stringify(stock.slice(0, AI_SURPRISE_STOCK_TARGET)));
+}
+
+function readRecentAiSurpriseText(schoolId: string, kind: AiSurpriseKind): string[] {
+    if (typeof window === 'undefined') return [];
+    try {
+        const parsed = JSON.parse(window.localStorage.getItem(aiSurpriseRecentKey(schoolId, kind)) || '[]');
+        return Array.isArray(parsed)
+            ? parsed.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+            : [];
+    } catch {
+        return [];
+    }
+}
+
+function rememberAiSurprise(schoolId: string, item: AiSurpriseBody) {
+    if (typeof window === 'undefined') return;
+    const recent = readRecentAiSurpriseText(schoolId, item.kind).filter((text) => text !== item.text);
+    recent.unshift(item.text);
+    window.localStorage.setItem(
+        aiSurpriseRecentKey(schoolId, item.kind),
+        JSON.stringify(recent.slice(0, AI_SURPRISE_RECENT_LIMIT)),
+    );
+}
+
+function pickAiSurpriseKind(mode: PrizeAiFunReward | undefined): AiSurpriseKind {
+    if (mode === 'riddle' || mode === 'fortune' || mode === 'joke') return mode;
+    const roll = Math.floor(Math.random() * 3);
+    return (['joke', 'riddle', 'fortune'] as const)[roll];
+}
+
+function takeAiSurpriseFromStock(schoolId: string, kind: AiSurpriseKind): AiSurpriseBody {
+    const recent = new Set(readRecentAiSurpriseText(schoolId, kind));
+    const stock = readAiSurpriseStock(schoolId, kind).filter((item) => !recent.has(item.text));
+    const next = stock.shift();
+    writeAiSurpriseStock(schoolId, kind, stock);
+    if (next) {
+        rememberAiSurprise(schoolId, next);
+        return next;
+    }
+    const fallback = FALLBACK_AI_SURPRISES[kind];
+    const freshFallback = fallback.find((item) => !recent.has(item.text)) ?? fallback[Math.floor(Math.random() * fallback.length)];
+    rememberAiSurprise(schoolId, freshFallback);
+    return freshFallback;
+}
+
+async function refillAiSurpriseStock(
+    authFetch: ReturnType<typeof useAuthFetch>,
+    schoolId: string,
+    kind: AiSurpriseKind,
+    force = false,
+) {
+    if (typeof window === 'undefined') return;
+    const key = aiSurpriseStockKey(schoolId, kind);
+    const current = readAiSurpriseStock(schoolId, kind);
+    if (!force && current.length > AI_SURPRISE_STOCK_REFILL_AT) return;
+    if (aiSurpriseStockFetches.has(key)) return;
+    aiSurpriseStockFetches.add(key);
+    try {
+        const stock = current.slice();
+        const recent = new Set(readRecentAiSurpriseText(schoolId, kind));
+        while (stock.length < AI_SURPRISE_STOCK_TARGET) {
+            const res = await authFetch('/api/prize-ai-fun', {
+                method: 'POST',
+                body: JSON.stringify({ schoolId, mode: kind }),
+            });
+            const j = (await res.json()) as { error?: string; kind?: string; text?: string; answer?: string };
+            if (!res.ok) throw new Error(j.error || 'Could not load surprise.');
+            const body = normalizeAiSurpriseBody(j, kind);
+            if (body && !stock.some((item) => item.kind === body.kind && item.text === body.text)) {
+                if (recent.has(body.text)) break;
+                stock.push(body);
+                writeAiSurpriseStock(schoolId, kind, stock);
+            } else {
+                break;
+            }
+        }
+    } catch (e) {
+        console.warn('Prize AI surprise stock refill unavailable:', e);
+    } finally {
+        aiSurpriseStockFetches.delete(key);
+    }
+}
+
 
 function ConfirmRedemptionDialog({
     student,
@@ -432,14 +578,12 @@ export function PrizeDashboard({
     const [aiSurpriseOpen, setAiSurpriseOpen] = useState(false);
     /** Guards against double-click: disables confirm button while a redemption Cloud Function call is in flight. */
     const [isRedeeming, setIsRedeeming] = useState(false);
-    /** Client-side cooldown for AI surprise calls to prevent rapid-fire abuse. */
-    const lastAiSurpriseCallRef = useRef(0);
     const lastActivityResetRef = useRef(0);
 
     const pendingTicketRef = useRef<any>(null);
     const [aiSurpriseLoading, setAiSurpriseLoading] = useState(false);
     const [aiSurpriseErr, setAiSurpriseErr] = useState<string | null>(null);
-    const [aiSurpriseBody, setAiSurpriseBody] = useState<{ kind: string; text: string; answer?: string } | null>(null);
+    const [aiSurpriseBody, setAiSurpriseBody] = useState<AiSurpriseBody | null>(null);
     const aiSurpriseBodyRef = useRef<typeof aiSurpriseBody>(null);
     useEffect(() => {
         aiSurpriseBodyRef.current = aiSurpriseBody;
@@ -447,6 +591,13 @@ export function PrizeDashboard({
     const pendingTicketAfterAiRef = useRef<typeof ticketData>(null);
 
     const authFetch = useAuthFetch();
+
+    useEffect(() => {
+        if (!schoolId || settings.enablePrizeAiSurprise !== true) return;
+        void refillAiSurpriseStock(authFetch, schoolId, 'joke');
+        void refillAiSurpriseStock(authFetch, schoolId, 'riddle');
+        void refillAiSurpriseStock(authFetch, schoolId, 'fortune');
+    }, [authFetch, schoolId, settings.enablePrizeAiSurprise]);
 
     const flushPendingTicketAfterAi = useCallback(() => {
         const p = pendingTicketAfterAiRef.current;
@@ -640,37 +791,16 @@ export function PrizeDashboard({
                 };
             }
 
-
-            const aiCooldownOk = Date.now() - lastAiSurpriseCallRef.current > 10_000;
-            if (prize.aiFunReward && schoolId && settings.enablePrizeAiSurprise === true && aiCooldownOk) {
-                lastAiSurpriseCallRef.current = Date.now();
+            if (prize.aiFunReward && schoolId && settings.enablePrizeAiSurprise === true) {
                 pendingTicketAfterAiRef.current = ticketPayload;
                 setAiSurpriseErr(null);
-                setAiSurpriseBody(null);
-                setAiSurpriseLoading(true);
-                try {
-                    const apiMode = resolveAiFunApiMode(prize, aiFunUserPick);
-                    const res = await authFetch('/api/prize-ai-fun', {
-                        method: 'POST',
-                        body: JSON.stringify({
-                            schoolId,
-                            mode: apiMode,
-                        }),
-                    });
-                    const j = (await res.json()) as { error?: string; kind?: string; text?: string; answer?: string };
-                    if (!res.ok) throw new Error(j.error || 'Could not load surprise.');
-                    setAiSurpriseBody({
-                        kind: typeof j.kind === 'string' ? j.kind : 'fortune',
-                        text: typeof j.text === 'string' ? j.text : '',
-                        answer: typeof j.answer === 'string' ? j.answer : undefined,
-                    });
-                    setAiSurpriseOpen(true);
-                } catch (e: unknown) {
-                    console.warn('Prize AI surprise unavailable:', e);
-                    flushPendingTicketAfterAi();
-                } finally {
-                    setAiSurpriseLoading(false);
-                }
+                setAiSurpriseLoading(false);
+                const apiMode = resolveAiFunApiMode(prize, aiFunUserPick);
+                const stockKind = pickAiSurpriseKind(apiMode);
+                const surprise = takeAiSurpriseFromStock(schoolId, stockKind);
+                setAiSurpriseBody(surprise);
+                setAiSurpriseOpen(true);
+                void refillAiSurpriseStock(authFetch, schoolId, stockKind, true);
             } else if (ticketPayload) {
                 setTicketData(ticketPayload);
             }

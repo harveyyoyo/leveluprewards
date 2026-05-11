@@ -58,6 +58,7 @@ import {
   subscribeHomeLogoMode,
   type HomeLogoMode,
 } from '@/lib/homeLogoMode';
+import { DeveloperRemoteSupportViewer } from '@/components/DeveloperRemoteSupportViewer';
 
 interface SchoolInfo {
   id: string;
@@ -188,13 +189,6 @@ export default function DeveloperPage() {
   const { settings, updateSettings } = useSettings();
 
   const allowedDeveloper = isAllowedDeveloperGoogleUser(auth?.currentUser);
-
-  useEffect(() => {
-    if (!isInitialized || isUserLoading) return;
-    if (allowedDeveloper) return;
-    // Don’t reveal a developer surface to unauthorized users.
-    window.location.replace('/');
-  }, [allowedDeveloper, isInitialized, isUserLoading]);
 
   const [isCreateSchoolDialogOpen, setIsCreateSchoolDialogOpen] = useState(false);
   const [newSchoolId, setNewSchoolId] = useState('');
@@ -649,14 +643,14 @@ export default function DeveloperPage() {
       playSound('error');
       toast({
         variant: 'destructive',
-        title: 'Could not start support session',
+        title: 'Could not open school admin',
         description: 'Confirm your developer access and try again.',
       });
       return;
     }
     playSound('login');
     toast({
-      title: `Support session started for ${school.id}`,
+      title: `Opening admin for ${school.id}`,
       description: 'Opening the school admin dashboard.',
     });
     window.location.assign(`/${school.id}/admin`);
@@ -673,11 +667,7 @@ export default function DeveloperPage() {
     );
   }
 
-  if (!allowedDeveloper) {
-    return null;
-  }
-
-  if (loginState !== 'developer') {
+  if (!allowedDeveloper || loginState !== 'developer') {
     return <SchoolDeveloperLoginForm mode="developer-only" />;
   }
 
@@ -787,7 +777,7 @@ export default function DeveloperPage() {
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Start audited support session.</p>
+                          <p>Open school admin as developer.</p>
                         </TooltipContent>
                       </Tooltip>
                       <AlertDialog>
@@ -885,6 +875,21 @@ export default function DeveloperPage() {
           </section>
 
           <aside className="space-y-6 lg:col-span-5" aria-label="Developer utilities">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Headset className="h-5 w-5 text-muted-foreground" aria-hidden />
+                  Live remote support
+                </CardTitle>
+                <CardDescription>
+                  Staff can share their browser screen from Help and support. Open an active session here.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <DeveloperRemoteSupportViewer schoolIds={(allSchools || []).map((school) => school.id)} />
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader className="pb-3">
                 <Helper content="Stored in this browser only (localStorage). Visit the home page / to see the result.">

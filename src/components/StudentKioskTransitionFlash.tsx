@@ -17,15 +17,16 @@ export function StudentKioskTransitionFlash({
   return (
     <div
       className={cn(
-        'fixed inset-0 z-[250] flex items-center justify-center bg-background text-foreground',
+        'student-kiosk-transition-flash fixed inset-0 z-[250] flex items-center justify-center bg-background text-foreground',
         className,
       )}
       role="status"
       aria-live="polite"
     >
-      <div className="flex flex-col items-center gap-5 text-center">
-        <div className="relative flex h-24 w-24 items-center justify-center rounded-full bg-primary/10 text-primary">
-          <span className="absolute inset-0 rounded-full bg-primary/20 motion-safe:animate-ping" aria-hidden />
+      <div className="student-kiosk-transition-card flex flex-col items-center gap-5 text-center">
+        <div className="student-kiosk-transition-mark relative flex h-24 w-24 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <span className="student-kiosk-transition-ring" aria-hidden />
+          <span className="student-kiosk-transition-ring student-kiosk-transition-ring-delay" aria-hidden />
           <CheckCircle2 className="relative h-12 w-12" aria-hidden />
         </div>
         <div className="space-y-2">
