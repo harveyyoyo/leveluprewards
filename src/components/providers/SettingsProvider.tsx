@@ -176,6 +176,8 @@ interface Settings {
     // Security & Session
     adminSessionTimeoutMs?: number;
     kioskSessionTimeoutSec?: number;
+    /** Minutes of kiosk inactivity before AI Fun and redeem print vouchers are hidden until the next interaction. */
+    kioskAiFunAndVoucherIdleOffMin?: number;
     /** Student kiosk login: show/hide each login method tab (Card / Type / Scan / Face). */
     kioskLoginTabCardEnabled?: boolean;
     kioskLoginTabTypeEnabled?: boolean;
@@ -423,6 +425,7 @@ const defaultSettings: Settings = {
     },
     adminSessionTimeoutMs: 5 * 60 * 1000,
     kioskSessionTimeoutSec: 10,
+    kioskAiFunAndVoucherIdleOffMin: 6,
     kioskLoginTabCardEnabled: true,
     kioskLoginTabTypeEnabled: true,
     kioskLoginTabScanEnabled: true,
@@ -739,6 +742,15 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                 const psp = parsed.prizeAiSurpriseDefaultPoints;
                 if (typeof psp !== 'number' || !Number.isFinite(psp) || psp < 0) {
                     delete (parsed as Partial<Settings>).prizeAiSurpriseDefaultPoints;
+                }
+                const kioskIdle = parsed.kioskAiFunAndVoucherIdleOffMin;
+                if (
+                    typeof kioskIdle !== 'number' ||
+                    !Number.isFinite(kioskIdle) ||
+                    kioskIdle < 1 ||
+                    kioskIdle > 240
+                ) {
+                    delete (parsed as Partial<Settings>).kioskAiFunAndVoucherIdleOffMin;
                 }
                 // Demo school: production defaults are applied only on first-run (see no-saved-settings branch below).
                 const nextSettings = applyEntitlements({ 

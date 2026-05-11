@@ -58,6 +58,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
+import { useKioskAiFunAndVoucherIdleActive } from '@/hooks/useKioskAiFunAndVoucherIdle';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { PrinterReminderCallout } from '@/components/PrinterReminderCallout';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -79,6 +80,7 @@ import {
     type AiSurpriseKind,
     AI_SURPRISE_STOCK_REFILL_AT,
     AI_SURPRISE_STOCK_TARGET,
+    aiSurpriseStockKey,
     buildPrizeAiFunAvoidTexts,
     canonicalAiSurpriseText,
     normalizeAiSurpriseBody,
@@ -506,6 +508,11 @@ export function PrizeDashboard({
     const { toast } = useToast();
     const playSound = useArcadeSound();
     const { settings } = useSettings();
+    const { kioskAiFunAndVoucherActive, markKioskRewardsActivity } = useKioskAiFunAndVoucherIdleActive(
+        settings.kioskAiFunAndVoucherIdleOffMin,
+        isKioskLocked,
+    );
+    const kioskAiFunInShop = settings.enablePrizeAiSurprise === true && kioskAiFunAndVoucherActive;
     const animBackdrop = globalAnimatedBackdropActive(settings);
     const [confirmingPrize, setConfirmingPrize] = useState<Prize | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -545,11 +552,11 @@ export function PrizeDashboard({
     const authFetch = useAuthFetch();
 
     useEffect(() => {
-        if (!schoolId || settings.enablePrizeAiSurprise !== true) return;
+        if (!schoolId || settings.enablePrizeAiSurprise !== true || !kioskAiFunAndVoucherActive) return;
         void refillAiSurpriseStock(authFetch, schoolId, 'joke');
         void refillAiSurpriseStock(authFetch, schoolId, 'riddle');
         void refillAiSurpriseStock(authFetch, schoolId, 'fortune');
-    }, [authFetch, schoolId, settings.enablePrizeAiSurprise]);
+    }, [authFetch, schoolId, settings.enablePrizeAiSurprise, kioskAiFunAndVoucherActive]);
 
     const flushPendingTicketAfterAi = useCallback(() => {
         const p = pendingTicketAfterAiRef.current;
@@ -580,10 +587,10 @@ export function PrizeDashboard({
     const { data: prizes, isLoading: prizesLoading, error: prizesError } = useCollection<Prize>(prizesQuery);
     const rewardPrizes = useMemo(
         () => withUnifiedAiFunPrize(prizes, {
-            enablePrizeAiSurprise: settings.enablePrizeAiSurprise,
+            enablePrizeAiSurprise: kioskAiFunInShop,
             defaultPoints: settings.prizeAiSurpriseDefaultPoints,
         }),
-        [prizes, settings.enablePrizeAiSurprise, settings.prizeAiSurpriseDefaultPoints],
+        [prizes, kioskAiFunInShop, settings.prizeAiSurpriseDefaultPoints],
     );
 
     /** Open confirm dialog when linked from student dashboard (?redeem=prizeId). */
@@ -591,7 +598,7 @@ export function PrizeDashboard({
         const redeemId = searchParams.get('redeem');
         if (!redeemId || studentLoading || prizesLoading || !schoolId || !student) return;
         const visible = rewardPrizes.filter((p) => {
-            if (!prizeAppearsInRewardsShop(p, { enablePrizeAiSurprise: settings.enablePrizeAiSurprise })) return false;
+            if (!prizeAppearsInRewardsShop(p, { enablePrizeAiSurprise: kioskAiFunInShop })) return false;
             if (!prizeIsListed(p)) return false;
             const teacherMatch = studentSeesPrizeByTeachers(student, p);
             const classMatch = !p.classId || student.classId === p.classId;
@@ -611,16 +618,17 @@ export function PrizeDashboard({
         student,
         rewardPrizes,
         router,
-        settings.enablePrizeAiSurprise,
+        kioskAiFunInShop,
     ]);
 
     const [logoutTimer, setLogoutTimer] = useState(settings.kioskSessionTimeoutSec ?? 10);
 
     const resetTimer = useCallback(() => {
         if (!isKioskLocked) {
+            markKioskRewardsActivity();
             setLogoutTimer(settings.kioskSessionTimeoutSec ?? 10);
         }
-    }, [isKioskLocked, settings.kioskSessionTimeoutSec]);
+    }, [isKioskLocked, settings.kioskSessionTimeoutSec, markKioskRewardsActivity]);
 
     const closeAiSurprise = useCallback(() => {
         flushPendingTicketAfterAi();
@@ -719,7 +727,13 @@ export function PrizeDashboard({
                 }
             }
             let ticketPayload: NonNullable<typeof ticketData> | null = null;
-            if (prize.offerPrintTicketOnRedeem === true && activityId && redeemedAt && typeof totalCost === 'number') {
+            if (
+                prize.offerPrintTicketOnRedeem === true &&
+                kioskAiFunAndVoucherActive &&
+                activityId &&
+                redeemedAt &&
+                typeof totalCost === 'number'
+            ) {
                 const ticketNo = String(redeemedAt).slice(-6);
                 const displayFirst = getStudentNickname(student);
                 const legalFirst = (student.firstName || '').trim();
@@ -750,7 +764,7 @@ export function PrizeDashboard({
                 };
             }
 
-            if (prize.aiFunReward && schoolId && settings.enablePrizeAiSurprise === true) {
+            if (prize.aiFunReward && schoolId && settings.enablePrizeAiSurprise === true && kioskAiFunAndVoucherActive) {
                 pendingTicketAfterAiRef.current = ticketPayload;
                 setAiSurpriseErr(null);
                 setAiSurpriseLoading(false);
@@ -913,7 +927,7 @@ export function PrizeDashboard({
 
     const baseVisiblePrizes = rewardPrizes
         .filter(p => {
-            if (!prizeAppearsInRewardsShop(p, { enablePrizeAiSurprise: settings.enablePrizeAiSurprise })) return false;
+            if (!prizeAppearsInRewardsShop(p, { enablePrizeAiSurprise: kioskAiFunInShop })) return false;
             if (!prizeIsListed(p)) return false;
             const teacherMatch = studentSeesPrizeByTeachers(student, p);
             const classMatch = !p.classId || student.classId === p.classId;

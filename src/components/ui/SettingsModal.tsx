@@ -281,7 +281,11 @@ export function SettingsModal() {
         });
 
         // Session timeouts affect global idle timers immediately (draft-only would leave stale values until OK).
-        if (key === 'adminSessionTimeoutMs' || key === 'kioskSessionTimeoutSec') {
+        if (
+            key === 'adminSessionTimeoutMs' ||
+            key === 'kioskSessionTimeoutSec' ||
+            key === 'kioskAiFunAndVoucherIdleOffMin'
+        ) {
             updateSettings({ [key]: value } as Partial<AppSettings>);
         }
 
@@ -1057,6 +1061,31 @@ export function SettingsModal() {
                                                 min={1}
                                                 max={300}
                                             />
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex flex-col max-w-[min(100%,18rem)]">
+                                            <span className="text-sm font-bold">AI Fun + print vouchers</span>
+                                            <p className="text-[11px] text-muted-foreground">
+                                                Turn off after this many idle minutes (no taps or keys) on the student kiosk or rewards shop. Next touch turns them back on.
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            <Input
+                                                type="number"
+                                                className="w-20 h-9 rounded-xl text-center font-bold bg-background/50 border-border/50"
+                                                value={local.kioskAiFunAndVoucherIdleOffMin ?? 6}
+                                                onChange={(e) =>
+                                                    handleToggle(
+                                                        'kioskAiFunAndVoucherIdleOffMin',
+                                                        Math.max(1, Math.min(240, parseInt(e.target.value, 10) || 6)),
+                                                    )
+                                                }
+                                                min={1}
+                                                max={240}
+                                            />
+                                            <span className="text-[10px] font-bold text-muted-foreground uppercase">min</span>
                                         </div>
                                     </div>
 

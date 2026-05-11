@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
+import { useKioskAiFunAndVoucherIdleActive } from '@/hooks/useKioskAiFunAndVoucherIdle';
 import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { PrinterReminderCallout } from '@/components/PrinterReminderCallout';
@@ -379,6 +380,11 @@ function StudentDashboardInner({
   const { functions, auth } = useFirebase();
   const { toast } = useToast();
   const { settings, isFeatureAllowed } = useSettings();
+  const { kioskAiFunAndVoucherActive, markKioskRewardsActivity } = useKioskAiFunAndVoucherIdleActive(
+    settings.kioskAiFunAndVoucherIdleOffMin,
+    isKioskLocked,
+  );
+  const kioskAiFunInShop = settings.enablePrizeAiSurprise === true && kioskAiFunAndVoucherActive;
   const showManualCoupon = settings.kioskCouponRedemptionManualEnabled !== false;
   const showCameraCoupon = settings.kioskCouponRedemptionCameraEnabled !== false;
   const couponSectionEnabled = showManualCoupon || showCameraCoupon;
@@ -481,10 +487,10 @@ function StudentDashboardInner({
   const { data: prizes, isLoading: prizesLoading } = useCollection<Prize>(prizesQuery);
   const rewardPrizes = useMemo(
     () => withUnifiedAiFunPrize(prizes, {
-      enablePrizeAiSurprise: settings.enablePrizeAiSurprise,
+      enablePrizeAiSurprise: kioskAiFunInShop,
       defaultPoints: settings.prizeAiSurpriseDefaultPoints,
     }),
-    [prizes, settings.enablePrizeAiSurprise, settings.prizeAiSurpriseDefaultPoints],
+    [prizes, kioskAiFunInShop, settings.prizeAiSurpriseDefaultPoints],
   );
 
   const classesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'classes') : null, [firestore, schoolId]);
@@ -596,8 +602,9 @@ function StudentDashboardInner({
 
   const resetLogoutTimer = useCallback(() => {
     if (isKioskLocked) return;
+    markKioskRewardsActivity();
     setLogoutTimer(settings.kioskSessionTimeoutSec ?? 10);
-  }, [isKioskLocked, settings.kioskSessionTimeoutSec]);
+  }, [isKioskLocked, settings.kioskSessionTimeoutSec, markKioskRewardsActivity]);
 
   useEffect(() => {
     if (isKioskLocked) return;
@@ -789,8 +796,6 @@ function StudentDashboardInner({
     queueCelebration,
   ]);
 
-  const resetTimer = useCallback(() => {}, []);
-
   const [activityMaxItems, setActivityMaxItems] = useState(7);
   const [activityPanelHeight, setActivityPanelHeight] = useState<number | null>(null);
   const activityPanelRef = useRef<HTMLDivElement | null>(null);
@@ -838,7 +843,7 @@ function StudentDashboardInner({
     if (!student) return;
     const code = (codeToRedeem || couponCode).toUpperCase();
     if (!code) return;
-    resetTimer();
+    resetLogoutTimer();
 
     // 1. Check Library Item first (if enabled)
     if (settings.payLibrary !== false && firestore && schoolId) {
@@ -919,11 +924,11 @@ function StudentDashboardInner({
     } finally {
       if (activeTab === 'manual') setCouponCode('');
     }
-  }, [couponCode, resetTimer, redeemCoupon, student, toast, playSound, activeTab, settings.payLibrary, settings.enableGoals, firestore, schoolId, isFeatureAllowed]);
+  }, [couponCode, resetLogoutTimer, redeemCoupon, student, toast, playSound, activeTab, settings.payLibrary, settings.enableGoals, firestore, schoolId, isFeatureAllowed]);
 
   const handleRedeemPrize = useCallback(async () => {
     if (!student || !confirmingPrize) return;
-    resetTimer();
+    resetLogoutTimer();
     if (typeof navigator !== 'undefined' && navigator.onLine === false) {
       playSound('error');
       toast({
@@ -957,6 +962,7 @@ function StudentDashboardInner({
       let ticketPayload: typeof prizeTicketData = null;
       if (
         prize.offerPrintTicketOnRedeem === true &&
+        kioskAiFunAndVoucherActive &&
         activityId &&
         redeemedAt &&
         typeof totalCost === 'number'
@@ -986,10 +992,10 @@ function StudentDashboardInner({
         };
       }
 
-      if (prize.aiFunReward && schoolId && settings.enablePrizeAiSurprise === true) {
+      if (prize.aiFunReward && schoolId && settings.enablePrizeAiSurprise === true && kioskAiFunAndVoucherActive) {
         const aiCooldownOk = Date.now() - lastAiSurpriseCallRef.current > 10_000;
         if (!aiCooldownOk) {
-          if (ticketPayload) setPrizeTicketData(ticketPayload);
+          if (ticketPayload && kioskAiFunAndVoucherActive) setPrizeTicketData(ticketPayload);
         } else {
           lastAiSurpriseCallRef.current = Date.now();
           pendingPrizeTicketAfterAiRef.current = ticketPayload;
@@ -1021,14 +1027,15 @@ function StudentDashboardInner({
               });
               const j = (await res.json()) as { error?: string; kind?: string; text?: string; answer?: string };
               if (!res.ok) throw new Error(j.error || 'Could not load surprise.');
-              const kind = j.kind === 'riddle' || j.kind === 'fortune' ? j.kind : 'joke';
+              const kind: PrizeSurprise['kind'] =
+                j.kind === 'riddle' || j.kind === 'fortune' ? j.kind : 'joke';
               const text = typeof j.text === 'string' ? j.text.trim() : '';
               if (!text || aiSurpriseRequestIdRef.current !== requestId) return;
               const canonInstant = canonicalAiSurpriseText(instantSurprise.text);
               if (canonicalAiSurpriseText(text) === canonInstant) return;
               if (isAiSurpriseTextRecentlySeen(schoolId, kind, text)) return;
               lastAiSurpriseTextRef.current = text;
-              const nextBody = {
+              const nextBody: PrizeSurprise = {
                 kind,
                 text,
                 answer: kind === 'riddle' && typeof j.answer === 'string' ? j.answer : undefined,
@@ -1044,7 +1051,7 @@ function StudentDashboardInner({
             }
           })();
         }
-      } else if (ticketPayload) {
+      } else if (ticketPayload && kioskAiFunAndVoucherActive) {
         setPrizeTicketData(ticketPayload);
       }
       setConfirmingPrize(null);
@@ -1058,7 +1065,7 @@ function StudentDashboardInner({
     } finally {
       setIsRedeemingPrize(false);
     }
-  }, [authFetch, confirmingFunKind, confirmingPrize, playSound, redeemPrize, resetTimer, schoolId, settings.defaultStudentTheme, settings.enableStudentThemes, settings.enablePrizeAiSurprise, settings.enableStudentEmojiOnPrizeTickets, settings.enableGoals, student, toast, firestore, isFeatureAllowed]);
+  }, [authFetch, confirmingFunKind, confirmingPrize, playSound, redeemPrize, resetLogoutTimer, schoolId, settings.defaultStudentTheme, settings.enableStudentThemes, settings.enablePrizeAiSurprise, settings.enableStudentEmojiOnPrizeTickets, settings.enableGoals, student, toast, firestore, isFeatureAllowed, kioskAiFunAndVoucherActive]);
 
   const handlePrintPrizeTicket = useCallback(() => {
     if (!prizeTicketData) return;
@@ -1767,7 +1774,7 @@ function StudentDashboardInner({
                     [...Array(8)].map((_, i) => <Skeleton key={i} className="min-h-[7.5rem] sm:min-h-[8rem] w-full rounded-xl" />)
                   ) : rewardPrizes
                     .filter(p =>
-                      prizeAppearsInRewardsShop(p, { enablePrizeAiSurprise: settings.enablePrizeAiSurprise }) &&
+                      prizeAppearsInRewardsShop(p, { enablePrizeAiSurprise: kioskAiFunInShop }) &&
                       prizeIsListed(p) &&
                       p.points <= student.points &&
                       studentSeesPrizeByTeachers(student, p) &&
@@ -1834,7 +1841,7 @@ function StudentDashboardInner({
                       </button>
                     ))}
                   {!prizesLoading && rewardPrizes.filter(p =>
-                      prizeAppearsInRewardsShop(p, { enablePrizeAiSurprise: settings.enablePrizeAiSurprise }) &&
+                      prizeAppearsInRewardsShop(p, { enablePrizeAiSurprise: kioskAiFunInShop }) &&
                       prizeIsListed(p) &&
                       p.points <= student.points).length === 0 && (
                     <div

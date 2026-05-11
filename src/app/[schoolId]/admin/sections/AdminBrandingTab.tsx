@@ -487,6 +487,31 @@ export function AdminBrandingTab({
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="kiosk-ai-print-idle" className="text-sm font-bold flex items-center gap-2">
+                  <Clock className="w-4 h-4" /> AI Fun + print vouchers idle timeout
+                </Label>
+                <div className="flex items-center gap-3">
+                  <Input
+                    id="kiosk-ai-print-idle"
+                    type="number"
+                    min={1}
+                    max={240}
+                    value={settings.kioskAiFunAndVoucherIdleOffMin ?? 6}
+                    onChange={(e) => {
+                      const n = parseInt(e.target.value, 10);
+                      const mins = Number.isFinite(n) ? Math.min(240, Math.max(1, n)) : 6;
+                      updateSettings({ kioskAiFunAndVoucherIdleOffMin: mins });
+                    }}
+                    className="w-24 font-bold"
+                  />
+                  <span className="text-sm font-medium text-muted-foreground">minutes</span>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  After this long without taps or keys on the kiosk, AI Fun and redeem print vouchers pause until someone uses the screen again.
+                </p>
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="welcome-back-duration" className="text-sm font-bold flex items-center gap-2">
                   <Tv className="w-4 h-4" /> Welcome back splash duration
                 </Label>
