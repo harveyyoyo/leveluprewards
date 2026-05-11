@@ -32,6 +32,8 @@ export function JackpotMachine({
   const [winner, setWinner] = useState<string | null>(null);
   const [muted, setMuted] = useState(false);
   const [offsets, setOffsets] = useState<number[]>(() => Array(REEL_COUNT).fill(0));
+  /** When true, reel transform has no transition (instant snap before each spin). */
+  const [reelSnap, setReelSnap] = useState(false);
   const [confetti, setConfetti] = useState(false);
 
   const audioRef = useRef<AudioContext | null>(null);
@@ -48,6 +50,7 @@ export function JackpotMachine({
     setWinner(null);
     setConfetti(false);
     setOffsets(Array(REEL_COUNT).fill(0));
+    setReelSnap(false);
   }, [resetKey]);
 
   useEffect(() => {
@@ -144,6 +147,8 @@ export function JackpotMachine({
     }
 
     void (async () => {
+      const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
       setSpinning(true);
       setWinner(null);
       setConfetti(false);
@@ -155,11 +160,24 @@ export function JackpotMachine({
       const baseDur = 2400;
       const stagger = 600;
 
-      setOffsets(() =>
+      // Snap reels to top with no CSS transition, then animate a long path (full-strip loops).
+      // Otherwise the 2nd+ spin often reuses the same transform and the browser animates almost nothing.
+      setReelSnap(true);
+      setOffsets(Array(REEL_COUNT).fill(0));
+      await nextFrame();
+      await nextFrame();
+
+      const strip0 = reelStrips[0];
+      const stripPeriodPx = strip0.length * ROW_H;
+      const extraLoops = 2 + Math.floor(Math.random() * 3);
+
+      setReelSnap(false);
+      setOffsets(
         reelStrips.map((strip) => {
           const segStart = strip.length - L * 2;
           const targetIdx = segStart + winnerIdx;
-          return targetIdx * ROW_H;
+          const basePx = targetIdx * ROW_H;
+          return basePx + extraLoops * strip.length * ROW_H;
         }),
       );
 
@@ -286,9 +304,10 @@ export function JackpotMachine({
                   <div
                     style={{
                       transform: `translateY(-${offsets[ri] - ROW_H}px)`,
-                      transition: spinning
-                        ? `transform ${2400 + ri * 600}ms cubic-bezier(0.16, 1, 0.3, 1)`
-                        : 'none',
+                      transition:
+                        spinning && !reelSnap
+                          ? `transform ${2400 + ri * 600}ms cubic-bezier(0.16, 1, 0.3, 1)`
+                          : 'none',
                     }}
                   >
                     {strip.map((name, ni) => (

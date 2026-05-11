@@ -158,7 +158,8 @@ type EntryRow = {
              Weekly raffle
            </CardTitle>
            <CardDescription>
-             Convert points into raffle tickets, then spin a weighted wheel to pick a winner.
+             Eligible students are listed from current points. Use <span className="font-semibold">Generate tickets</span> only
+             if you want to deduct those points and record a raffle activity; the wheel uses the same ticket weights either way.
            </CardDescription>
          </CardHeader>
          <CardContent className="pt-6 space-y-5">
@@ -216,6 +217,13 @@ type EntryRow = {
                </>
              )}
            </Button>
+           <p className="text-xs text-muted-foreground leading-relaxed max-w-2xl">
+             <span className="font-semibold text-foreground">Generate tickets</span> does not create a separate ticket list—it
+             optionally <span className="font-semibold">subtracts points</span> from each eligible student (tickets × points per
+             ticket) and writes a matching negative line to their activity log, so the ledger matches a live raffle draw. If
+             &quot;Deduct points when generating tickets&quot; is off, the button only shows a summary toast (no Firestore changes);
+             spins still use ticket counts from current points.
+           </p>
 
            <JackpotMachine
              embedded
