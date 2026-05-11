@@ -3,8 +3,8 @@ import type { PrizeAiFunReward } from '@/lib/types';
 export type AiSurpriseKind = 'joke' | 'riddle' | 'fortune';
 export type AiSurpriseBody = { kind: AiSurpriseKind; text: string; answer?: string };
 
-const AI_SURPRISE_STOCK_PREFIX = 'levelup:ai-fun-stock:v1';
-const AI_SURPRISE_RECENT_PREFIX = 'levelup:ai-fun-recent:v1';
+const AI_SURPRISE_STOCK_PREFIX = 'levelup:ai-fun-stock:v2';
+const AI_SURPRISE_RECENT_PREFIX = 'levelup:ai-fun-recent:v2';
 export const AI_SURPRISE_STOCK_TARGET = 3;
 export const AI_SURPRISE_STOCK_REFILL_AT = 1;
 export const AI_SURPRISE_RECENT_LIMIT = 30;
@@ -14,12 +14,12 @@ export function canonicalAiSurpriseText(s: string): string {
   return s.toLowerCase().replace(/\s+/g, ' ').trim();
 }
 
-export function aiSurpriseStockKey(schoolId: string, kind: AiSurpriseKind) {
-  return `${AI_SURPRISE_STOCK_PREFIX}:${schoolId}:${kind}`;
+export function aiSurpriseStockKey(schoolId: string, kind: AiSurpriseKind, ageBand = '0') {
+  return `${AI_SURPRISE_STOCK_PREFIX}:${schoolId}:${kind}:${ageBand}`;
 }
 
-export function aiSurpriseRecentKey(schoolId: string, kind: AiSurpriseKind) {
-  return `${AI_SURPRISE_RECENT_PREFIX}:${schoolId}:${kind}`;
+export function aiSurpriseRecentKey(schoolId: string, kind: AiSurpriseKind, ageBand = '0') {
+  return `${AI_SURPRISE_RECENT_PREFIX}:${schoolId}:${kind}:${ageBand}`;
 }
 
 export function normalizeAiSurpriseBody(value: unknown, expectedKind: AiSurpriseKind): AiSurpriseBody | null {
@@ -32,10 +32,10 @@ export function normalizeAiSurpriseBody(value: unknown, expectedKind: AiSurprise
   return answer ? { kind, text, answer } : { kind, text };
 }
 
-export function readAiSurpriseStock(schoolId: string, kind: AiSurpriseKind): AiSurpriseBody[] {
+export function readAiSurpriseStock(schoolId: string, kind: AiSurpriseKind, ageBand = '0'): AiSurpriseBody[] {
   if (typeof window === 'undefined') return [];
   try {
-    const parsed = JSON.parse(window.localStorage.getItem(aiSurpriseStockKey(schoolId, kind)) || '[]');
+    const parsed = JSON.parse(window.localStorage.getItem(aiSurpriseStockKey(schoolId, kind, ageBand)) || '[]');
     return Array.isArray(parsed)
       ? parsed
           .map((item) => normalizeAiSurpriseBody(item, kind))
@@ -46,15 +46,18 @@ export function readAiSurpriseStock(schoolId: string, kind: AiSurpriseKind): AiS
   }
 }
 
-export function writeAiSurpriseStock(schoolId: string, kind: AiSurpriseKind, stock: AiSurpriseBody[]) {
+export function writeAiSurpriseStock(schoolId: string, kind: AiSurpriseKind, stock: AiSurpriseBody[], ageBand = '0') {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem(aiSurpriseStockKey(schoolId, kind), JSON.stringify(stock.slice(0, AI_SURPRISE_STOCK_TARGET)));
+  window.localStorage.setItem(
+    aiSurpriseStockKey(schoolId, kind, ageBand),
+    JSON.stringify(stock.slice(0, AI_SURPRISE_STOCK_TARGET)),
+  );
 }
 
-export function readRecentAiSurpriseText(schoolId: string, kind: AiSurpriseKind): string[] {
+export function readRecentAiSurpriseText(schoolId: string, kind: AiSurpriseKind, ageBand = '0'): string[] {
   if (typeof window === 'undefined') return [];
   try {
-    const parsed = JSON.parse(window.localStorage.getItem(aiSurpriseRecentKey(schoolId, kind)) || '[]');
+    const parsed = JSON.parse(window.localStorage.getItem(aiSurpriseRecentKey(schoolId, kind, ageBand)) || '[]');
     return Array.isArray(parsed)
       ? parsed.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
       : [];
@@ -64,11 +67,11 @@ export function readRecentAiSurpriseText(schoolId: string, kind: AiSurpriseKind)
 }
 
 /** When API mode is `random`, avoid repeating any recent joke, riddle, or fortune-teller text. */
-export function readAllRecentAiSurpriseTexts(schoolId: string): string[] {
+export function readAllRecentAiSurpriseTexts(schoolId: string, ageBand = '0'): string[] {
   const merged = [
-    ...readRecentAiSurpriseText(schoolId, 'joke'),
-    ...readRecentAiSurpriseText(schoolId, 'riddle'),
-    ...readRecentAiSurpriseText(schoolId, 'fortune'),
+    ...readRecentAiSurpriseText(schoolId, 'joke', ageBand),
+    ...readRecentAiSurpriseText(schoolId, 'riddle', ageBand),
+    ...readRecentAiSurpriseText(schoolId, 'fortune', ageBand),
   ];
   const seen = new Set<string>();
   const out: string[] = [];
@@ -81,18 +84,18 @@ export function readAllRecentAiSurpriseTexts(schoolId: string): string[] {
   return out;
 }
 
-export function rememberAiSurprise(schoolId: string, item: AiSurpriseBody) {
+export function rememberAiSurprise(schoolId: string, item: AiSurpriseBody, ageBand = '0') {
   if (typeof window === 'undefined') return;
-  const recent = readRecentAiSurpriseText(schoolId, item.kind).filter((text) => text !== item.text);
+  const recent = readRecentAiSurpriseText(schoolId, item.kind, ageBand).filter((text) => text !== item.text);
   recent.unshift(item.text);
   window.localStorage.setItem(
-      aiSurpriseRecentKey(schoolId, item.kind),
-      JSON.stringify(recent.slice(0, AI_SURPRISE_RECENT_LIMIT)),
+    aiSurpriseRecentKey(schoolId, item.kind, ageBand),
+    JSON.stringify(recent.slice(0, AI_SURPRISE_RECENT_LIMIT)),
   );
 }
 
-export function recentAiSurpriseCanonSet(schoolId: string, kind: AiSurpriseKind): Set<string> {
-  return new Set(readRecentAiSurpriseText(schoolId, kind).map(canonicalAiSurpriseText));
+export function recentAiSurpriseCanonSet(schoolId: string, kind: AiSurpriseKind, ageBand = '0'): Set<string> {
+  return new Set(readRecentAiSurpriseText(schoolId, kind, ageBand).map(canonicalAiSurpriseText));
 }
 
 /** Lines the model must not repeat (trimmed, deduped, capped for JSON body size). */
@@ -101,13 +104,14 @@ export function buildPrizeAiFunAvoidTexts(
   apiMode: PrizeAiFunReward,
   extras?: readonly string[],
   cap = 18,
+  ageBand = '0',
 ): string[] {
   const base =
     apiMode === 'random'
-      ? readAllRecentAiSurpriseTexts(schoolId)
+      ? readAllRecentAiSurpriseTexts(schoolId, ageBand)
       : apiMode === 'joke' || apiMode === 'riddle' || apiMode === 'fortune'
-        ? readRecentAiSurpriseText(schoolId, apiMode)
-        : readRecentAiSurpriseText(schoolId, 'joke');
+        ? readRecentAiSurpriseText(schoolId, apiMode, ageBand)
+        : readRecentAiSurpriseText(schoolId, 'joke', ageBand);
   const seen = new Set<string>();
   const out: string[] = [];
   const push = (raw: string | undefined) => {
@@ -127,8 +131,9 @@ export function isAiSurpriseTextRecentlySeen(
   schoolId: string,
   kind: AiSurpriseKind,
   text: string,
+  ageBand = '0',
 ): boolean {
   const c = canonicalAiSurpriseText(text);
   if (!c) return false;
-  return recentAiSurpriseCanonSet(schoolId, kind).has(c);
+  return recentAiSurpriseCanonSet(schoolId, kind, ageBand).has(c);
 }

@@ -5,6 +5,7 @@ import OpenAI from 'openai';
 import { guardAiRoute } from '@/lib/apiAuth';
 import { assertPrizeAiSurpriseAllowedForSchool } from '@/lib/server/prizeAiSurpriseGate';
 import type { PrizeAiFunReward } from '@/lib/types';
+import { clampStudentAgeYearsForAiRequest, prizeAiFunAudiencePromptBlock } from '@/lib/studentAiFunAge';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 const defaultOpenAI = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || '' });
@@ -63,7 +64,13 @@ export async function POST(req: NextRequest) {
     });
     if (!guarded.ok) return guarded.response;
 
-    const { schoolId: rawSchoolId, mode: rawMode, model = 'gpt-4o-mini', avoidTexts: rawAvoid } = guarded.value.body;
+    const {
+      schoolId: rawSchoolId,
+      mode: rawMode,
+      model = 'gpt-4o-mini',
+      avoidTexts: rawAvoid,
+      ageYears: rawAgeYears,
+    } = guarded.value.body;
 
     if (typeof rawSchoolId !== 'string' || !rawSchoolId.trim()) {
       return NextResponse.json({ error: 'schoolId is required.' }, { status: 400 });
@@ -79,17 +86,24 @@ export async function POST(req: NextRequest) {
     const mode = rawMode as PrizeAiFunReward;
     const selectedModel = typeof model === 'string' ? model : 'gpt-4o-mini';
     const kind = resolveKind(mode);
+    const ageYears = clampStudentAgeYearsForAiRequest(rawAgeYears);
+    const audienceBlock = prizeAiFunAudiencePromptBlock(ageYears);
     const avoidLines = clampAvoidTexts(rawAvoid);
     const avoidBlock =
       avoidLines.length > 0
         ? `\n\nHard rule: Your "text" (and for riddles, the "answer" too) must be clearly different from ALL of the following lines this student has already seen recently. Do not repeat them, do not swap only a couple of words, and do not deliver the same punchline with different wording:\n${avoidLines.map((line, i) => `${i + 1}. ${line}`).join('\n')}`
         : '';
 
-    const systemInstruction = `You write short, wholesome content for elementary and middle school students (ages roughly 5–14).
-Rules:
-- Language must be English only.
-- Content must be strictly safe for children and classrooms: no violence, weapons, injury, death, fear, horror, romance, dating, politics, religion debates, insults, stereotypes, scary themes, crude humor, bathroom humor, brands, or references to alcohol, drugs, or gambling.
-- Jokes and riddles must be gentle and inclusive—never mean-spirited or embarrassing toward anyone.
+    const systemInstruction = `You write short, wholesome content for a public school rewards kiosk (AI Fun: joke, riddle, or fortune-teller line).
+
+${audienceBlock}
+
+Non-negotiable safety (all ages — never relax these):
+- English only.
+- Strictly safe for children and classrooms: no violence, weapons, injury, death, fear, horror, romance, dating, politics, religion or religious debates, insults, stereotypes, scary themes, crude humor, bathroom humor, brands, or references to alcohol, drugs, smoking, vaping, or gambling.
+- Nothing embarrassing toward the student, staff, family, or any group; nothing that could exclude or shame classmates.
+- Jokes and riddles must be gentle and inclusive.
+- No personal data, real names of public figures used as punchlines, or instructions to contact anyone online.
 - Output MUST be a single JSON object only (no markdown fences, no commentary).
 
 Schema:

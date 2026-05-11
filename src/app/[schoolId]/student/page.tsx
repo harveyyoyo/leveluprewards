@@ -114,6 +114,7 @@ import {
   isAiSurpriseTextRecentlySeen,
   rememberAiSurprise,
 } from '@/lib/prizeAiFunClientStorage';
+import { prizeAiFunAgeBandKey, studentAgeYearsFromBirthday } from '@/lib/studentAiFunAge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuthFetch } from '@/lib/authFetch';
 import { WelcomeOverlay } from '@/components/WelcomeOverlay';
@@ -1006,10 +1007,18 @@ function StudentDashboardInner({
           const sessionExtraAvoid = lastAiSurpriseTextRef.current?.trim()
             ? [lastAiSurpriseTextRef.current.trim()]
             : [];
-          const avoidTexts = buildPrizeAiFunAvoidTexts(schoolId, apiMode, [...sessionExtraAvoid, instantSurprise.text]);
+          const ageYears = studentAgeYearsFromBirthday(student?.birthday);
+          const ageBand = prizeAiFunAgeBandKey(ageYears);
+          const avoidTexts = buildPrizeAiFunAvoidTexts(
+            schoolId,
+            apiMode,
+            [...sessionExtraAvoid, instantSurprise.text],
+            18,
+            ageBand,
+          );
           lastAiSurpriseTextRef.current = instantSurprise.text;
           setAiSurpriseBody(instantSurprise);
-          rememberAiSurprise(schoolId, instantSurprise);
+          rememberAiSurprise(schoolId, instantSurprise, ageBand);
           setAiSurpriseLoading(false);
           setAiSurpriseOpen(true);
           void (async () => {
@@ -1023,6 +1032,7 @@ function StudentDashboardInner({
                   schoolId,
                   mode: apiMode,
                   avoidTexts,
+                  ...(ageYears != null ? { ageYears } : {}),
                 }),
               });
               const j = (await res.json()) as { error?: string; kind?: string; text?: string; answer?: string };
@@ -1033,7 +1043,7 @@ function StudentDashboardInner({
               if (!text || aiSurpriseRequestIdRef.current !== requestId) return;
               const canonInstant = canonicalAiSurpriseText(instantSurprise.text);
               if (canonicalAiSurpriseText(text) === canonInstant) return;
-              if (isAiSurpriseTextRecentlySeen(schoolId, kind, text)) return;
+              if (isAiSurpriseTextRecentlySeen(schoolId, kind, text, ageBand)) return;
               lastAiSurpriseTextRef.current = text;
               const nextBody: PrizeSurprise = {
                 kind,
@@ -1041,7 +1051,7 @@ function StudentDashboardInner({
                 answer: kind === 'riddle' && typeof j.answer === 'string' ? j.answer : undefined,
               };
               setAiSurpriseBody(nextBody);
-              rememberAiSurprise(schoolId, nextBody);
+              rememberAiSurprise(schoolId, nextBody, ageBand);
             } catch (e: unknown) {
               if ((e as { name?: string })?.name !== 'AbortError') {
                 console.warn('Prize AI surprise unavailable:', e);

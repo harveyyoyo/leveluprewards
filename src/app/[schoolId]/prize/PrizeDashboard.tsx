@@ -75,6 +75,7 @@ import { runMotor as runVendingMotor, isConnected as motorIsConnected } from '@/
 import { useAuthFetch } from '@/lib/authFetch';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { isAiFunPrize, prizeAppearsInRewardsShop, resolveAiFunApiMode, withUnifiedAiFunPrize } from '@/lib/aiJokePrize';
+import { prizeAiFunAgeBandKey, studentAgeYearsFromBirthday } from '@/lib/studentAiFunAge';
 import {
     type AiSurpriseBody,
     type AiSurpriseKind,
@@ -125,22 +126,22 @@ function pickAiSurpriseKind(mode: PrizeAiFunReward | undefined): AiSurpriseKind 
     return (['joke', 'riddle', 'fortune'] as const)[roll];
 }
 
-function takeAiSurpriseFromStock(schoolId: string, kind: AiSurpriseKind): AiSurpriseBody {
-    const recentCanon = recentAiSurpriseCanonSet(schoolId, kind);
-    const stock = readAiSurpriseStock(schoolId, kind).filter(
+function takeAiSurpriseFromStock(schoolId: string, kind: AiSurpriseKind, ageBand = '0'): AiSurpriseBody {
+    const recentCanon = recentAiSurpriseCanonSet(schoolId, kind, ageBand);
+    const stock = readAiSurpriseStock(schoolId, kind, ageBand).filter(
         (item) => !recentCanon.has(canonicalAiSurpriseText(item.text)),
     );
     const next = stock.shift();
-    writeAiSurpriseStock(schoolId, kind, stock);
+    writeAiSurpriseStock(schoolId, kind, stock, ageBand);
     if (next) {
-        rememberAiSurprise(schoolId, next);
+        rememberAiSurprise(schoolId, next, ageBand);
         return next;
     }
     const fallback = FALLBACK_AI_SURPRISES[kind];
     const freshFallback =
         fallback.find((item) => !recentCanon.has(canonicalAiSurpriseText(item.text))) ??
         fallback[Math.floor(Math.random() * fallback.length)];
-    rememberAiSurprise(schoolId, freshFallback);
+    rememberAiSurprise(schoolId, freshFallback, ageBand);
     return freshFallback;
 }
 
@@ -149,10 +150,12 @@ async function refillAiSurpriseStock(
     schoolId: string,
     kind: AiSurpriseKind,
     force = false,
+    ageBand = '0',
+    ageYears?: number,
 ) {
     if (typeof window === 'undefined') return;
-    const key = aiSurpriseStockKey(schoolId, kind);
-    const current = readAiSurpriseStock(schoolId, kind);
+    const key = aiSurpriseStockKey(schoolId, kind, ageBand);
+    const current = readAiSurpriseStock(schoolId, kind, ageBand);
     if (!force && current.length > AI_SURPRISE_STOCK_REFILL_AT) return;
     if (aiSurpriseStockFetches.has(key)) return;
     aiSurpriseStockFetches.add(key);
@@ -162,10 +165,15 @@ async function refillAiSurpriseStock(
         const maxAttempts = 18;
         while (stock.length < AI_SURPRISE_STOCK_TARGET && attempts < maxAttempts) {
             attempts += 1;
-            const avoidTexts = buildPrizeAiFunAvoidTexts(schoolId, kind);
+            const avoidTexts = buildPrizeAiFunAvoidTexts(schoolId, kind, undefined, 18, ageBand);
             const res = await authFetch('/api/prize-ai-fun', {
                 method: 'POST',
-                body: JSON.stringify({ schoolId, mode: kind, avoidTexts }),
+                body: JSON.stringify({
+                    schoolId,
+                    mode: kind,
+                    avoidTexts,
+                    ...(ageYears != null ? { ageYears } : {}),
+                }),
             });
             const j = (await res.json()) as { error?: string; kind?: string; text?: string; answer?: string };
             if (!res.ok) throw new Error(j.error || 'Could not load surprise.');
@@ -173,9 +181,9 @@ async function refillAiSurpriseStock(
             if (!body) break;
             const canon = canonicalAiSurpriseText(body.text);
             if (stock.some((item) => canonicalAiSurpriseText(item.text) === canon)) continue;
-            if (recentAiSurpriseCanonSet(schoolId, kind).has(canon)) continue;
+            if (recentAiSurpriseCanonSet(schoolId, kind, ageBand).has(canon)) continue;
             stock.push(body);
-            writeAiSurpriseStock(schoolId, kind, stock);
+            writeAiSurpriseStock(schoolId, kind, stock, ageBand);
         }
     } catch (e) {
         console.warn('Prize AI surprise stock refill unavailable:', e);
@@ -551,13 +559,6 @@ export function PrizeDashboard({
 
     const authFetch = useAuthFetch();
 
-    useEffect(() => {
-        if (!schoolId || settings.enablePrizeAiSurprise !== true || !kioskAiFunAndVoucherActive) return;
-        void refillAiSurpriseStock(authFetch, schoolId, 'joke');
-        void refillAiSurpriseStock(authFetch, schoolId, 'riddle');
-        void refillAiSurpriseStock(authFetch, schoolId, 'fortune');
-    }, [authFetch, schoolId, settings.enablePrizeAiSurprise, kioskAiFunAndVoucherActive]);
-
     const flushPendingTicketAfterAi = useCallback(() => {
         const p = pendingTicketAfterAiRef.current;
         pendingTicketAfterAiRef.current = null;
@@ -592,6 +593,26 @@ export function PrizeDashboard({
         }),
         [prizes, kioskAiFunInShop, settings.prizeAiSurpriseDefaultPoints],
     );
+
+    const prizeAiFunAgeYears = useMemo(
+        () => studentAgeYearsFromBirthday(student?.birthday),
+        [student?.birthday],
+    );
+    const prizeAiFunAgeBand = useMemo(() => prizeAiFunAgeBandKey(prizeAiFunAgeYears), [prizeAiFunAgeYears]);
+
+    useEffect(() => {
+        if (!schoolId || settings.enablePrizeAiSurprise !== true || !kioskAiFunAndVoucherActive) return;
+        void refillAiSurpriseStock(authFetch, schoolId, 'joke', false, prizeAiFunAgeBand, prizeAiFunAgeYears);
+        void refillAiSurpriseStock(authFetch, schoolId, 'riddle', false, prizeAiFunAgeBand, prizeAiFunAgeYears);
+        void refillAiSurpriseStock(authFetch, schoolId, 'fortune', false, prizeAiFunAgeBand, prizeAiFunAgeYears);
+    }, [
+        authFetch,
+        schoolId,
+        settings.enablePrizeAiSurprise,
+        kioskAiFunAndVoucherActive,
+        prizeAiFunAgeBand,
+        prizeAiFunAgeYears,
+    ]);
 
     /** Open confirm dialog when linked from student dashboard (?redeem=prizeId). */
     useEffect(() => {
@@ -770,10 +791,17 @@ export function PrizeDashboard({
                 setAiSurpriseLoading(false);
                 const apiMode = resolveAiFunApiMode(prize, aiFunUserPick);
                 const stockKind = pickAiSurpriseKind(apiMode);
-                const surprise = takeAiSurpriseFromStock(schoolId, stockKind);
+                const surprise = takeAiSurpriseFromStock(schoolId, stockKind, prizeAiFunAgeBand);
                 setAiSurpriseBody(surprise);
                 setAiSurpriseOpen(true);
-                void refillAiSurpriseStock(authFetch, schoolId, stockKind, true);
+                void refillAiSurpriseStock(
+                    authFetch,
+                    schoolId,
+                    stockKind,
+                    true,
+                    prizeAiFunAgeBand,
+                    prizeAiFunAgeYears,
+                );
             } else if (ticketPayload) {
                 setTicketData(ticketPayload);
             }
