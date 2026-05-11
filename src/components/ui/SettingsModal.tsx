@@ -70,6 +70,58 @@ const INTERFACE_SECTION_NAV = [
     { id: 'settings-interface-layout', label: 'Layout' },
 ] as const;
 
+/** Settings keys that correspond to Admin main-row add-on tabs (see admin/page.tsx addOnTabDefs). */
+const ADD_ON_TAB_FOR_SETTINGS_KEY: Record<string, string> = {
+    payRewards: 'coupons',
+    enableAdminAnalytics: 'insights',
+    enableWeeklyRaffle: 'raffle',
+    enableClassLeaderboard: 'halloffame',
+    payLibrary: 'library',
+    enableAchievements: 'bonuspoints',
+    enableBadges: 'category-badges',
+    enableGoals: 'goals',
+    enableNotifications: 'notifications',
+    bulletinEnabled: 'bulletinboard',
+};
+
+/** Keep pinned add-on tabs in sync when feature switches change in Settings (otherwise the tab stays off the bar until pinned manually). */
+function applyAdminAddOnTabPinSync(next: AppSettings, key: string, value: unknown): AppSettings {
+    if (key === 'enableAttendance' || key === 'enableClassSignIn' || key === 'payAttendance') {
+        const tab = 'attendance';
+        const hidden = next.adminHiddenAddOnTabs || [];
+        const pinned = next.adminPinnedAddOnTabs || [];
+        const on = (next.payAttendance ?? true) && (!!next.enableAttendance || !!next.enableClassSignIn);
+        if (on) {
+            return {
+                ...next,
+                adminHiddenAddOnTabs: hidden.filter((x) => x !== tab),
+                adminPinnedAddOnTabs: Array.from(new Set([...pinned, tab])),
+            };
+        }
+        return {
+            ...next,
+            adminPinnedAddOnTabs: pinned.filter((x) => x !== tab),
+        };
+    }
+
+    const tab = ADD_ON_TAB_FOR_SETTINGS_KEY[key];
+    if (!tab || typeof value !== 'boolean') return next;
+
+    const hidden = next.adminHiddenAddOnTabs || [];
+    const pinned = next.adminPinnedAddOnTabs || [];
+    if (value) {
+        return {
+            ...next,
+            adminHiddenAddOnTabs: hidden.filter((x) => x !== tab),
+            adminPinnedAddOnTabs: Array.from(new Set([...pinned, tab])),
+        };
+    }
+    return {
+        ...next,
+        adminPinnedAddOnTabs: pinned.filter((x) => x !== tab),
+    };
+}
+
 function SettingsSectionJumpNav({
     sections,
     onJump,
@@ -277,6 +329,7 @@ export function SettingsModal() {
             if (key === 'payAttendance' && value === false) {
                 next = { ...next, enableClassSignIn: false, enableAttendance: false };
             }
+            next = applyAdminAddOnTabPinSync(next, key, value);
             return next;
         });
 

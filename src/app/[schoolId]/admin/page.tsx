@@ -719,6 +719,9 @@ function AdminDashboardInner() {
         case 'insights':
           patch.enableAdminAnalytics = true;
           break;
+        case 'raffle':
+          patch.enableWeeklyRaffle = true;
+          break;
         case 'attendance':
           patch.payAttendance = true;
           patch.enableAttendance = true;
@@ -777,6 +780,10 @@ function AdminDashboardInner() {
         case 'insights':
           patch.enableAdminAnalytics = false;
           nextHidden = nextHidden.filter((x) => x !== 'insights');
+          break;
+        case 'raffle':
+          patch.enableWeeklyRaffle = false;
+          nextHidden = nextHidden.filter((x) => x !== 'raffle');
           break;
         case 'attendance':
           patch.payAttendance = false;
