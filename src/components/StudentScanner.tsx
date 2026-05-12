@@ -17,65 +17,12 @@ import { useFunctions, useUser } from '@/firebase';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { useFaceDescriptor } from '@/hooks/useFaceDescriptor';
 import { getReadableErrorMessage } from '@/lib/errorMessage';
+import {
+    getStudentSignInThrottleStatus,
+    recordStudentSignIn,
+} from '@/lib/studentSignInThrottle';
 
 export type StudentFoundMeta = { source: 'face'; confidence?: number };
-
-/** localStorage key for per-school last-sign-in timestamps used by the freeze. */
-function signInFreezeKey(schoolId: string) {
-    return `arcade_signin_freeze_${String(schoolId).trim().toLowerCase()}`;
-}
-
-type FreezeMap = Record<string, number>;
-
-function readFreezeMap(schoolId: string): FreezeMap {
-    if (typeof window === 'undefined' || !schoolId) return {};
-    try {
-        const raw = window.localStorage.getItem(signInFreezeKey(schoolId));
-        if (!raw) return {};
-        const parsed = JSON.parse(raw) as unknown;
-        if (!parsed || typeof parsed !== 'object') return {};
-        const out: FreezeMap = {};
-        for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
-            if (typeof v === 'number' && Number.isFinite(v)) out[k] = v;
-        }
-        return out;
-    } catch {
-        return {};
-    }
-}
-
-function writeFreezeMap(schoolId: string, map: FreezeMap, freezeMs: number) {
-    if (typeof window === 'undefined' || !schoolId) return;
-    try {
-        // Drop entries that are already past the freeze window so storage stays small.
-        const now = Date.now();
-        const cleaned: FreezeMap = {};
-        for (const [k, v] of Object.entries(map)) {
-            if (v + freezeMs > now) cleaned[k] = v;
-        }
-        window.localStorage.setItem(signInFreezeKey(schoolId), JSON.stringify(cleaned));
-    } catch {
-        // ignore storage errors (private mode, full disk, etc.)
-    }
-}
-
-/** Returns remaining freeze seconds for this student, or 0 if not frozen. */
-function getRemainingFreezeSec(schoolId: string, studentId: string, freezeSec: number): number {
-    if (!freezeSec || freezeSec <= 0 || !schoolId || !studentId) return 0;
-    const map = readFreezeMap(schoolId);
-    const last = map[studentId];
-    if (typeof last !== 'number') return 0;
-    const elapsedMs = Date.now() - last;
-    const remainingMs = freezeSec * 1000 - elapsedMs;
-    return remainingMs > 0 ? Math.ceil(remainingMs / 1000) : 0;
-}
-
-function recordSignIn(schoolId: string, studentId: string, freezeSec: number) {
-    if (!freezeSec || freezeSec <= 0 || !schoolId || !studentId) return;
-    const map = readFreezeMap(schoolId);
-    map[studentId] = Date.now();
-    writeFreezeMap(schoolId, map, freezeSec * 1000);
-}
 
 interface StudentScannerProps {
     /** Optional second arg when the student was identified by face (for kiosk banners / session UX). */
@@ -147,8 +94,16 @@ export function StudentScanner({
 
     const [nfcId, setNfcId] = useState('');
     const nfcInputRef = useRef<HTMLInputElement>(null);
-    const freezeSecRef = useRef<number>(0);
-    freezeSecRef.current = Math.max(0, Math.round(settings.studentSignInFreezeSec ?? 0));
+    const throttleConfigRef = useRef({
+        enabled: !!settings.studentSignInThrottleEnabled,
+        maxAttempts: settings.studentSignInThrottleMaxAttempts ?? 10,
+        windowMin: settings.studentSignInThrottleWindowMin ?? 2,
+    });
+    throttleConfigRef.current = {
+        enabled: !!settings.studentSignInThrottleEnabled,
+        maxAttempts: settings.studentSignInThrottleMaxAttempts ?? 10,
+        windowMin: settings.studentSignInThrottleWindowMin ?? 2,
+    };
     const [loginTab, setLoginTab] = useState('nfc');
     const [hasCameraPermission, setHasCameraPermission] = useState(true);
 
@@ -340,16 +295,20 @@ export function StudentScanner({
                         const ambiguous = data?.ambiguous === true;
 
                         if (studentId && typeof confidence === 'number' && confidence >= FACE_MATCH_MIN_CONFIDENCE) {
-                            const freezeSec = freezeSecRef.current;
-                            const remaining = getRemainingFreezeSec(schoolId, studentId, freezeSec);
-                            if (remaining > 0) {
+                            const throttle = getStudentSignInThrottleStatus(
+                                schoolId,
+                                studentId,
+                                throttleConfigRef.current,
+                            );
+                            if (throttle.frozen && throttle.secondsRemaining > 0) {
+                                const remaining = throttle.secondsRemaining;
                                 playSound('error');
                                 setFaceStatus(`Please wait ${remaining}s — you just signed in`);
                                 await sleep(1600);
                                 if (!faceLoopCancelRef.current) setFaceStatus('Look at the camera');
                                 continue;
                             }
-                            recordSignIn(schoolId, studentId, freezeSec);
+                            recordStudentSignIn(schoolId, studentId);
                             playSound('login');
                             onStudentFound(studentId, { source: 'face', confidence: confidence ?? undefined });
                             setFaceStatus(null);
@@ -442,13 +401,16 @@ export function StudentScanner({
             return lookup({ schoolId, badgeId });
         };
 
-        const freezeSec = freezeSecRef.current;
-
         const onSuccess = (data: { studentId?: unknown }) => {
             const finalStudentId = typeof data.studentId === 'string' ? data.studentId : null;
             if (finalStudentId) {
-                const remaining = getRemainingFreezeSec(schoolId, finalStudentId, freezeSec);
-                if (remaining > 0) {
+                const throttle = getStudentSignInThrottleStatus(
+                    schoolId,
+                    finalStudentId,
+                    throttleConfigRef.current,
+                );
+                if (throttle.frozen && throttle.secondsRemaining > 0) {
+                    const remaining = throttle.secondsRemaining;
                     playSound('error');
                     toast({
                         variant: 'destructive',
@@ -457,7 +419,7 @@ export function StudentScanner({
                     });
                     return;
                 }
-                recordSignIn(schoolId, finalStudentId, freezeSec);
+                recordStudentSignIn(schoolId, finalStudentId);
                 playSound('login');
                 onStudentFound(finalStudentId);
             } else {
