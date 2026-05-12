@@ -489,6 +489,41 @@
   --muted-foreground: 16 30% 72%;
 }
 
+/*
+ * Colorized dark mode (optional): `data-dark-colorize="on"` on `html` from Settings.
+ * Default scheme uses near-grayscale dark tokens; this restores saturated primaries + chart reads.
+ */
+html.dark[data-dark-colorize="on"] body {
+  background-color: hsl(var(--background));
+  background-image:
+    radial-gradient(ellipse 125% 90% at 12% -8%, hsl(var(--primary) / 0.2) 0%, transparent 46%),
+    radial-gradient(ellipse 110% 80% at 92% 4%, hsl(var(--chart-2) / 0.14) 0%, transparent 44%),
+    radial-gradient(ellipse 100% 70% at 50% 108%, hsl(var(--chart-5) / 0.12) 0%, transparent 52%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.dark[data-dark-colorize="on"] body {
+    background-attachment: scroll;
+  }
+}
+
+html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
+  --primary: 211 58% 38%;
+  --primary-foreground: 210 40% 98%;
+  --ring: 211 58% 38%;
+  --secondary: 217 38% 20%;
+  --secondary-foreground: 210 40% 98%;
+  --accent: 217 42% 24%;
+  --accent-foreground: 210 40% 98%;
+  --chart-1: 211 58% 52%;
+  --chart-2: 330 65% 55%;
+  --chart-3: 38 85% 52%;
+  --chart-4: 160 65% 46%;
+  --chart-5: 280 62% 58%;
+}
+
 /* Student ID Card (screen preview)
    Single physical size: ISO/IEC 7810 ID-1 (85.6mm × 53.98mm) — matches DTC/card printer output and Avery print below. */
 .print-id-card {

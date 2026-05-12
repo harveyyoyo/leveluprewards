@@ -311,7 +311,13 @@ export function SettingsModal() {
             key === 'studentEnableAnimatedBackground' ||
             key === 'teacherEnableAnimatedBackground' ||
             key === 'studentAnimatedBackgroundStyle' ||
-            key === 'teacherAnimatedBackgroundStyle';
+            key === 'teacherAnimatedBackgroundStyle' ||
+            key === 'darkMode' ||
+            key === 'studentDarkMode' ||
+            key === 'teacherDarkMode' ||
+            key === 'darkModeColorized' ||
+            key === 'studentDarkModeColorized' ||
+            key === 'teacherDarkModeColorized';
 
         setDraft((prev) => {
             if (!prev) return prev;
@@ -1002,8 +1008,46 @@ export function SettingsModal() {
                                             }}
                                         />
                                     </div>
+                                    {/* Colorized dark — richer accents + ambient wash (see `html[data-dark-colorize]` in globals.css) */}
+                                    <div
+                                        className={cn(
+                                            'flex items-start justify-between gap-2',
+                                            !(() => {
+                                                if (interfaceRole === 'student') return local.studentDarkMode ?? local.darkMode;
+                                                if (interfaceRole === 'teacher') return local.teacherDarkMode ?? local.darkMode;
+                                                return local.darkMode;
+                                            })() && 'opacity-45 pointer-events-none',
+                                        )}
+                                    >
+                                        <div className="min-w-0 pr-1">
+                                            <div className="flex items-center gap-2">
+                                                <Sparkles className="w-4 h-4 text-muted-foreground shrink-0" />
+                                                <span className="text-sm font-bold">Colorize dark</span>
+                                            </div>
+                                            <p className="text-[10px] text-muted-foreground font-medium leading-snug mt-0.5 ml-6">
+                                                Saturated buttons and a soft color wash behind the app (dark mode only).
+                                            </p>
+                                        </div>
+                                        <Switch
+                                            checked={(() => {
+                                                if (interfaceRole === 'student') return local.studentDarkModeColorized ?? local.darkModeColorized ?? false;
+                                                if (interfaceRole === 'teacher') return local.teacherDarkModeColorized ?? local.darkModeColorized ?? false;
+                                                return local.darkModeColorized ?? false;
+                                            })()}
+                                            onCheckedChange={(checked) => {
+                                                const roleKey =
+                                                    interfaceRole === 'student'
+                                                        ? 'studentDarkModeColorized'
+                                                        : interfaceRole === 'teacher'
+                                                          ? 'teacherDarkModeColorized'
+                                                          : 'darkModeColorized';
+                                                handleToggle(roleKey, checked);
+                                            }}
+                                            className="shrink-0 mt-0.5"
+                                        />
+                                    </div>
                                     {/* Legacy Mode — performance-oriented simple visuals (see `.legacy` in globals.css) */}
-                                    <div className="flex items-start justify-between gap-2">
+                                    <div className="flex items-start justify-between gap-2 col-span-2">
                                         <div className="min-w-0 pr-1">
                                             <div className="flex items-center gap-2">
                                                 <Cpu className="w-4 h-4 text-muted-foreground shrink-0" />

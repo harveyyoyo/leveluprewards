@@ -55,6 +55,8 @@ interface Settings {
     soundEnabled: boolean;
     language: string;
     darkMode: boolean;
+    /** When dark mode is on, adds richer accents and a subtle color wash on the page background. */
+    darkModeColorized?: boolean;
     // Theme visuals
     enableThemeAnimations: boolean;
     /** When false, kiosk, rewards shop, and ID cards ignore per-student and school default themes (data is kept). */
@@ -257,6 +259,7 @@ interface Settings {
     studentDisplayMode?: 'web' | 'app';
     studentColorScheme?: ColorScheme;
     studentDarkMode?: boolean;
+    studentDarkModeColorized?: boolean;
     studentEnableAnimatedBackground?: boolean;
     studentAnimatedBackgroundStyle?: string;
 
@@ -264,6 +267,7 @@ interface Settings {
     teacherDisplayMode?: 'web' | 'app';
     teacherColorScheme?: ColorScheme;
     teacherDarkMode?: boolean;
+    teacherDarkModeColorized?: boolean;
     teacherEnableAnimatedBackground?: boolean;
     teacherAnimatedBackgroundStyle?: string;
 
@@ -356,6 +360,7 @@ const defaultSettings: Settings = {
     soundEnabled: true,
     language: 'English',
     darkMode: false,
+    darkModeColorized: false,
     enableThemeAnimations: false,
     enableStudentThemes: true,
     enableAchievements: false,
@@ -508,6 +513,7 @@ const publicLoginSettings: Partial<Settings> = {
     colorScheme: 'default',
     soundEnabled: false,
     darkMode: false,
+    darkModeColorized: false,
     enableAnimatedBackground: false,
     // Keep feature toggles as-is; this only enforces a neutral look/feel.
 };
@@ -922,16 +928,47 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         });
     };
 
-    // Apply dark class to document root
+    /** Dark mode as seen on `html` for the active login surface (student/teacher overrides). */
+    const effectiveDomDarkMode = useMemo(() => {
+        if (loginState === 'student' && typeof settings.studentDarkMode === 'boolean') {
+            return settings.studentDarkMode;
+        }
+        if (loginState === 'teacher' && typeof settings.teacherDarkMode === 'boolean') {
+            return settings.teacherDarkMode;
+        }
+        return settings.darkMode;
+    }, [loginState, settings.darkMode, settings.studentDarkMode, settings.teacherDarkMode]);
+
+    const effectiveDomDarkColorized = useMemo(() => {
+        let c = settings.darkModeColorized ?? false;
+        if (loginState === 'student' && typeof settings.studentDarkModeColorized === 'boolean') {
+            c = settings.studentDarkModeColorized;
+        } else if (loginState === 'teacher' && typeof settings.teacherDarkModeColorized === 'boolean') {
+            c = settings.teacherDarkModeColorized;
+        }
+        return c;
+    }, [
+        loginState,
+        settings.darkModeColorized,
+        settings.studentDarkModeColorized,
+        settings.teacherDarkModeColorized,
+    ]);
+
+    // Apply dark class and optional colorized-dark marker on the document root.
     useEffect(() => {
         if (!isLoaded) return;
         const root = document.documentElement;
-        if (settings.darkMode) {
+        if (effectiveDomDarkMode) {
             root.classList.add('dark');
         } else {
             root.classList.remove('dark');
         }
-    }, [settings.darkMode, isLoaded]);
+        if (effectiveDomDarkMode && effectiveDomDarkColorized) {
+            root.setAttribute('data-dark-colorize', 'on');
+        } else {
+            root.removeAttribute('data-dark-colorize');
+        }
+    }, [effectiveDomDarkMode, effectiveDomDarkColorized, isLoaded]);
 
     // Apply color scheme data attribute and any saved color overrides.
     useEffect(() => {
@@ -961,10 +998,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         }
         if (secondaryHsl) {
             const secondaryTriplet = toTriplet(secondaryHsl);
-            const accentLightness = settings.darkMode ? 18 : 94;
-            const accentForegroundLightness = settings.darkMode ? 84 : 30;
-            const secondaryLightness = settings.darkMode ? 18 : 86;
-            const secondaryForegroundLightness = settings.darkMode ? 88 : 26;
+            const accentLightness = effectiveDomDarkMode ? 18 : 94;
+            const accentForegroundLightness = effectiveDomDarkMode ? 84 : 30;
+            const secondaryLightness = effectiveDomDarkMode ? 18 : 86;
+            const secondaryForegroundLightness = effectiveDomDarkMode ? 88 : 26;
             root.style.setProperty('--ring', secondaryTriplet);
             root.style.setProperty('--chart-2', secondaryTriplet);
             root.style.setProperty('--chart-4', secondaryTriplet);
@@ -979,7 +1016,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         loginState,
         settings.colorScheme,
         settings.customAppearanceColors,
-        settings.darkMode,
+        effectiveDomDarkMode,
         settings.studentColorScheme,
         settings.teacherColorScheme,
     ]);
@@ -1008,6 +1045,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
         root.classList.toggle('legacy', !!next.legacyMode);
         root.setAttribute('data-color-scheme', next.colorScheme ?? 'default');
+        root.removeAttribute('data-dark-colorize');
         THEMED_ROOT_PROPS.forEach((prop) => root.style.removeProperty(prop));
     }, [isLoaded, isPublicLoginRoute, settings]);
 
@@ -1020,12 +1058,14 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             if (s.studentDisplayMode) s.displayMode = s.studentDisplayMode;
             if (s.studentColorScheme) s.colorScheme = s.studentColorScheme;
             if (typeof s.studentDarkMode === 'boolean') s.darkMode = s.studentDarkMode;
+            if (typeof s.studentDarkModeColorized === 'boolean') s.darkModeColorized = s.studentDarkModeColorized;
             if (typeof s.studentEnableAnimatedBackground === 'boolean') s.enableAnimatedBackground = s.studentEnableAnimatedBackground;
             if (s.studentAnimatedBackgroundStyle) s.animatedBackgroundStyle = s.studentAnimatedBackgroundStyle;
         } else if (loginState === 'teacher') {
             if (s.teacherDisplayMode) s.displayMode = s.teacherDisplayMode;
             if (s.teacherColorScheme) s.colorScheme = s.teacherColorScheme;
             if (typeof s.teacherDarkMode === 'boolean') s.darkMode = s.teacherDarkMode;
+            if (typeof s.teacherDarkModeColorized === 'boolean') s.darkModeColorized = s.teacherDarkModeColorized;
             if (typeof s.teacherEnableAnimatedBackground === 'boolean') s.enableAnimatedBackground = s.teacherEnableAnimatedBackground;
             if (s.teacherAnimatedBackgroundStyle) s.animatedBackgroundStyle = s.teacherAnimatedBackgroundStyle;
         }
