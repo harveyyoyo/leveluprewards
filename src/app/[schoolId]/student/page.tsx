@@ -1296,11 +1296,9 @@ function StudentDashboardInner({
         </div>
 
         {syncStatus === 'offline' && (
-          <Alert variant="destructive" className="no-print shrink-0 border-red-600/80 bg-red-950/25 text-left">
-            <AlertTitle className="text-sm font-bold">Offline — not syncing</AlertTitle>
-            <AlertDescription className="text-xs sm:text-sm">
-              This kiosk is not connected to the internet, so nothing will sync with the school until you are back
-              online. Scanning a student ID usually needs a connection.
+          <Alert variant="destructive" className="no-print shrink-0 border-red-600/70 py-2 px-3">
+            <AlertDescription className="text-xs font-semibold leading-snug">
+              Offline — nothing syncs until you reconnect.
             </AlertDescription>
           </Alert>
         )}
@@ -2342,11 +2340,9 @@ export default function StudentLoginPage() {
         )}
         {syncStatus === 'offline' && (
           <div className="no-print fixed left-0 right-0 top-0 z-[80] flex justify-center px-3 pt-2 sm:px-4 pointer-events-none">
-            <Alert variant="destructive" className="pointer-events-auto max-w-lg border-red-600/80 bg-red-950/90 shadow-lg">
-              <AlertTitle className="text-sm font-bold">Offline — not syncing</AlertTitle>
-              <AlertDescription className="text-xs sm:text-sm">
-                Nothing will sync with the school until the internet connection returns. Some actions may not work
-                while offline.
+            <Alert variant="destructive" className="pointer-events-auto max-w-md border-red-600/80 bg-red-950/90 py-2 px-3 shadow-lg">
+              <AlertDescription className="text-[11px] font-semibold leading-snug sm:text-xs">
+                Offline — nothing syncs until you reconnect.
               </AlertDescription>
             </Alert>
           </div>
@@ -2390,11 +2386,9 @@ export default function StudentLoginPage() {
             } as any}
           >
             {syncStatus === 'offline' && (
-              <Alert variant="destructive" className="no-print mb-4 w-full max-w-lg border-red-600/80 bg-red-950/25">
-                <AlertTitle className="text-sm font-bold">Offline — not syncing</AlertTitle>
-                <AlertDescription className="text-xs sm:text-sm">
-                  You can stay on this screen, but nothing will sync with the school until you are back online.
-                  Scanning or typing a student ID usually needs a connection.
+              <Alert variant="destructive" className="no-print mb-3 w-full max-w-lg border-red-600/70 py-2 px-3">
+                <AlertDescription className="text-xs font-semibold leading-snug">
+                  Offline — nothing syncs until you reconnect.
                 </AlertDescription>
               </Alert>
             )}

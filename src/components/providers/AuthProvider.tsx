@@ -13,7 +13,7 @@ import React, {
 import { useRouter } from 'next/navigation';
 import { useFirebase } from '@/firebase';
 import { httpsCallable } from 'firebase/functions';
-import { doc, getDocFromServer, onSnapshot, type DocumentReference } from 'firebase/firestore';
+import { doc, getDoc, getDocFromServer, onSnapshot, type DocumentReference, type DocumentData, type DocumentSnapshot } from 'firebase/firestore';
 import { schoolPublicDocRef } from '@/lib/schoolPublic';
 import { getReadableErrorMessage } from '@/lib/errorMessage';
 import { loginErr, loginOk, messageFromVerifySchoolAccessError, type LoginResult } from '@/lib/loginResult';
@@ -21,6 +21,20 @@ import { isPublicSampleSchoolId } from '@/lib/sample-schools';
 
 export type SyncStatus = 'synced' | 'syncing' | 'offline' | 'error';
 export type LoginState = 'loggedOut' | 'school' | 'developer' | 'student' | 'teacher' | 'admin' | 'secretary' | 'prizeClerk' | 'reports';
+
+/** Prefer server read on restore; offline or transient errors fall back to persistent local cache. */
+async function getRoleDocForSessionRestore(
+    roleRef: DocumentReference<DocumentData>,
+): Promise<DocumentSnapshot<DocumentData>> {
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        return getDoc(roleRef);
+    }
+    try {
+        return await getDocFromServer(roleRef);
+    } catch {
+        return getDoc(roleRef);
+    }
+}
 
 /** Optional navigation after ending a scoped session (default: staff -> portal, student -> kiosk). */
 export type LogoutOptions = {
@@ -275,7 +289,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     if (auth.currentUser) {
                         try {
                             const adminRoleRef = doc(firestore, 'schools', savedSchoolId, 'roles_admin', auth.currentUser.uid);
-                            const adminDoc = await getDocFromServer(adminRoleRef);
+                            const adminDoc = await getRoleDocForSessionRestore(adminRoleRef);
                             if (adminDoc.exists() && adminDoc.data().role === 'admin') {
                                 setIsAdmin(true);
                                 setIsTeacher(false);
@@ -295,7 +309,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     if (auth.currentUser) {
                         try {
                             const teacherRoleRef = doc(firestore, 'schools', savedSchoolId, 'roles_teacher', auth.currentUser.uid);
-                            const roleDoc = await getDocFromServer(teacherRoleRef);
+                            const roleDoc = await getRoleDocForSessionRestore(teacherRoleRef);
                             if (roleDoc.exists() && roleDoc.data().role === 'teacher') {
                                 setIsTeacher(true);
                                 setIsAdmin(false);
@@ -320,7 +334,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     if (auth.currentUser) {
                         try {
                             const ref = doc(firestore, 'schools', savedSchoolId, 'roles_secretary', auth.currentUser.uid);
-                            const roleDoc = await getDocFromServer(ref);
+                            const roleDoc = await getRoleDocForSessionRestore(ref);
                             if (roleDoc.exists() && roleDoc.data().role === 'secretary') {
                                 setIsSecretary(true);
                                 setIsAdmin(false);
@@ -341,7 +355,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         try {
                             const roleCollection = savedState === 'prizeClerk' ? 'roles_prizeClerk' : 'roles_reports';
                             const ref = doc(firestore, 'schools', savedSchoolId, roleCollection, auth.currentUser.uid);
-                            const roleDoc = await getDocFromServer(ref);
+                            const roleDoc = await getRoleDocForSessionRestore(ref);
                             if (roleDoc.exists() && roleDoc.data().role === savedState) {
                                 setIsPrizeClerk(savedState === 'prizeClerk');
                                 setIsReports(savedState === 'reports');
