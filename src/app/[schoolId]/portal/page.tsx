@@ -66,7 +66,6 @@ export default function PortalPage() {
     const playSound = useArcadeSound();
     const { toast } = useToast();
     const router = useRouter();
-    const [hoveredIndex, setHoveredIndex] = useState<string | null>(null);
     const [adminDialogOpen, setAdminDialogOpen] = useState(false);
     const [adminPasscode, setAdminPasscode] = useState('');
     const [adminSubmitting, setAdminSubmitting] = useState(false);
@@ -239,16 +238,17 @@ export default function PortalPage() {
                 )}
             </div>
 
-            <motion.div
-                initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.94 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={
-                    prefersReducedMotion ? { duration: 0 } : { duration: 0.34, ease: [0.22, 1, 0.36, 1] }
-                }
+            {/* Positioning on a plain div so Framer does not override translate-based centering */}
+            <div
                 className="pointer-events-none fixed left-1/2 z-[11] w-full max-w-6xl -translate-x-1/2 -translate-y-1/2 px-4 text-center sm:px-6"
-                style={{ top: 'calc((var(--wt-header-bottom) + 50vh) / 2)' }}
+                style={{ top: 'calc((var(--wt-header-bottom) + 50dvh) / 2)' }}
             >
-                <h2
+                <motion.h2
+                    initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.94 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={
+                        prefersReducedMotion ? { duration: 0 } : { duration: 0.34, ease: [0.22, 1, 0.36, 1] }
+                    }
                     className={cn(
                         'font-headline inline-block font-black tracking-tighter drop-shadow-md',
                         settings.displayMode === 'app'
@@ -264,10 +264,10 @@ export default function PortalPage() {
                     }}
                 >
                     Where to?
-                </h2>
-            </motion.div>
+                </motion.h2>
+            </div>
 
-            <div className="pointer-events-none fixed inset-0 z-[10] flex items-center justify-center px-4 sm:px-6">
+            <div className="pointer-events-none fixed inset-x-0 top-0 z-[10] flex h-[100dvh] min-h-0 items-center justify-center px-4 sm:px-6">
                 <div
                     className={cn(
                         'pointer-events-auto grid w-full max-w-6xl gap-3 sm:gap-5',
@@ -288,10 +288,6 @@ export default function PortalPage() {
                                         prefersReducedMotion ? false : { opacity: 0, x: -50 }
                                     }
                                     animate={{ opacity: 1, x: 0 }}
-                                    whileHover={
-                                        prefersReducedMotion ? undefined : { scale: 1.008 }
-                                    }
-                                    whileTap={prefersReducedMotion ? undefined : { scale: 0.99 }}
                                     transition={
                                         prefersReducedMotion
                                             ? { duration: 0 }
@@ -302,10 +298,8 @@ export default function PortalPage() {
                                                   delay: Math.min(0.06 + index * 0.035, 0.28),
                                               }
                                     }
-                                    onMouseEnter={() => setHoveredIndex(area.id)}
-                                    onMouseLeave={() => setHoveredIndex(null)}
                                     className={cn(
-                                        'relative overflow-hidden rounded-3xl border border-border bg-card text-left shadow-sm transition-shadow duration-200 hover:shadow-md',
+                                        'relative overflow-hidden rounded-3xl border border-border bg-card text-left shadow-sm',
                                         settings.displayMode === 'app' ? 'px-5 py-5 sm:px-6 sm:py-6 min-h-0 sm:min-h-[210px] h-full flex flex-col' : 'px-6 py-6 min-h-[196px] sm:min-h-[210px]',
                                     )}
                                 >
@@ -333,9 +327,7 @@ export default function PortalPage() {
                                                 vectorEffect="nonScalingStroke"
                                                 style={{
                                                     strokeDasharray: 100,
-                                                    strokeDashoffset: hoveredIndex === area.id ? 0 : 100,
-                                                    transition:
-                                                        'stroke-dashoffset 0.72s cubic-bezier(0.33, 1, 0.68, 1)',
+                                                    strokeDashoffset: 100,
                                                 }}
                                             />
                                         </svg>
