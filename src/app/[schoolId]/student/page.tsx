@@ -377,7 +377,7 @@ function StudentDashboardInner({
   onReady?: (studentId: string) => void;
 }) {
   const router = useRouter();
-  const { redeemCoupon, redeemPrize, printPrizeTickets, schoolId, isKioskLocked, badges } = useAppContext();
+  const { redeemCoupon, redeemPrize, printPrizeTickets, schoolId, isKioskLocked, badges, syncStatus } = useAppContext();
   const firestore = useFirestore();
   const { functions, auth } = useFirebase();
   const { toast } = useToast();
@@ -1295,6 +1295,16 @@ function StudentDashboardInner({
           {celebrationMessage || (flyPointsValue !== null ? `You earned ${flyPointsValue} points` : '')}
         </div>
 
+        {syncStatus === 'offline' && (
+          <Alert variant="destructive" className="no-print shrink-0 border-red-600/80 bg-red-950/25 text-left">
+            <AlertTitle className="text-sm font-bold">Offline — not syncing</AlertTitle>
+            <AlertDescription className="text-xs sm:text-sm">
+              This kiosk is not connected to the internet, so nothing will sync with the school until you are back
+              online. Scanning a student ID usually needs a connection.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {celebrationMessage && (
           <div className="pointer-events-none fixed inset-0 z-[60] flex items-center justify-center">
             <div className="pointer-events-auto bg-black/70 text-white px-8 py-5 rounded-3xl shadow-2xl border border-white/20 flex flex-col items-center gap-2 animate-in fade-in zoom-in duration-300">
@@ -2152,7 +2162,7 @@ function StudentDashboardInner({
 }
 
 export default function StudentLoginPage() {
-  const { loginState, isInitialized, schoolId, login, logout } = useAppContext();
+  const { loginState, isInitialized, schoolId, login, logout, syncStatus } = useAppContext();
   const router = useRouter();
   const { toast } = useToast();
   const playSound = useArcadeSound();
@@ -2330,6 +2340,17 @@ export default function StudentLoginPage() {
             onResolved={finishStudentSession}
           />
         )}
+        {syncStatus === 'offline' && (
+          <div className="no-print fixed left-0 right-0 top-0 z-[80] flex justify-center px-3 pt-2 sm:px-4 pointer-events-none">
+            <Alert variant="destructive" className="pointer-events-auto max-w-lg border-red-600/80 bg-red-950/90 shadow-lg">
+              <AlertTitle className="text-sm font-bold">Offline — not syncing</AlertTitle>
+              <AlertDescription className="text-xs sm:text-sm">
+                Nothing will sync with the school until the internet connection returns. Some actions may not work
+                while offline.
+              </AlertDescription>
+            </Alert>
+          </div>
+        )}
         <ErrorBoundary name="StudentDashboard">
           <SchoolGate>
             <StudentDashboardInner
@@ -2368,6 +2389,15 @@ export default function StudentLoginPage() {
               ...appearanceVarsForSurface(settings, 'redeem'),
             } as any}
           >
+            {syncStatus === 'offline' && (
+              <Alert variant="destructive" className="no-print mb-4 w-full max-w-lg border-red-600/80 bg-red-950/25">
+                <AlertTitle className="text-sm font-bold">Offline — not syncing</AlertTitle>
+                <AlertDescription className="text-xs sm:text-sm">
+                  You can stay on this screen, but nothing will sync with the school until you are back online.
+                  Scanning or typing a student ID usually needs a connection.
+                </AlertDescription>
+              </Alert>
+            )}
             <StudentScanner
               onStudentFound={onScannerStudent}
               icon={<LevelUpKioskLogo className="" />}

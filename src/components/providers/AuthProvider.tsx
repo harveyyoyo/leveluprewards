@@ -135,11 +135,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     const establishStudentKioskSession = useCallback(async (sid: string) => {
+        // Without a network path, Cloud Functions cannot register this device for badge lookup.
+        // Still allow the student session so the kiosk UI works offline (lookups will fail until online).
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            return;
+        }
         try {
             const enter = httpsCallable(functions, 'enterSchoolKioskSession');
             await enter({ schoolId: sid });
             return;
         } catch (err) {
+            if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+                return;
+            }
             const code = getEntryCodeFromUrl();
             if (!code) throw err;
             const verify = httpsCallable(functions, 'verifySchoolEntryCode');

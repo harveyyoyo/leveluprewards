@@ -144,7 +144,18 @@ export default function Header() {
               <div className="flex h-8 w-6 items-center justify-center sm:h-9 sm:w-9">
                 <span className="relative flex h-2.5 w-2.5">
                   {syncStatus === 'synced' && <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75" />}
-                  <span className={cn("relative inline-flex h-full w-full rounded-full", syncStatus === 'synced' ? "bg-emerald-500" : syncStatus === 'syncing' ? "bg-amber-400 animate-pulse" : "bg-slate-400")} />
+                  <span
+                    className={cn(
+                      'relative inline-flex h-full w-full rounded-full',
+                      syncStatus === 'synced'
+                        ? 'bg-emerald-500'
+                        : syncStatus === 'syncing'
+                          ? 'bg-amber-400 animate-pulse'
+                          : syncStatus === 'offline'
+                            ? 'bg-red-500'
+                            : 'bg-slate-400',
+                    )}
+                  />
                 </span>
               </div>
             )}
@@ -279,10 +290,32 @@ export default function Header() {
         <div className="flex items-center justify-end gap-1 sm:gap-2 min-w-0 justify-self-end">
           {isInitialized && (
             <>
-                <div className="flex items-center gap-1 bg-emerald-500 px-1.5 sm:px-2.5 py-1 rounded-full shadow-sm shrink-0">
+                <div
+                  className={cn(
+                    'flex items-center gap-1 px-1.5 sm:px-2.5 py-1 rounded-full shadow-sm shrink-0',
+                    syncStatus === 'synced' && 'bg-emerald-500',
+                    syncStatus === 'syncing' && 'bg-amber-500',
+                    syncStatus === 'offline' && 'bg-red-600',
+                    syncStatus === 'error' && 'bg-slate-600',
+                  )}
+                >
                   <span className="relative flex h-1.5 w-1.5">
-                    {syncStatus === 'synced' && <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />}
-                    <span className={cn("relative inline-flex h-1.5 w-1.5 rounded-full", syncStatus === 'synced' ? "bg-white" : syncStatus === 'syncing' ? "bg-amber-300 animate-pulse" : "bg-slate-300")} />
+                    {syncStatus === 'synced' && (
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
+                    )}
+                    {syncStatus === 'syncing' && (
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-60" />
+                    )}
+                    <span
+                      className={cn(
+                        'relative inline-flex h-1.5 w-1.5 rounded-full',
+                        syncStatus === 'synced' || syncStatus === 'offline'
+                          ? 'bg-white'
+                          : syncStatus === 'syncing'
+                            ? 'bg-white animate-pulse'
+                            : 'bg-slate-200',
+                      )}
+                    />
                   </span>
                   <span className="text-[10px] font-black uppercase tracking-widest text-white leading-none">
                     {syncStatus === 'synced' ? 'LIVE' : syncStatus}
