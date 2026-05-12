@@ -94,6 +94,8 @@ export default function PortalPage() {
         !animBackdrop &&
         !!settings.enableAnimatedBackground &&
         !settings.legacyMode;
+    /** SVG stroke-dash “line draws around the card” on hover (skipped in legacy / reduced motion). */
+    const portalHoverTraceBorder = !prefersReducedMotion && !settings.legacyMode;
     const isSchoolChooser = loginState === 'school';
     const isStaff =
         loginState === 'teacher' ||
@@ -289,12 +291,45 @@ export default function PortalPage() {
                                     onMouseEnter={() => setHoveredIndex(area.id)}
                                     onMouseLeave={() => setHoveredIndex(null)}
                                     className={cn(
-                                        'relative overflow-hidden rounded-3xl border border-border bg-card text-left shadow-sm transition-colors duration-200',
+                                        'relative overflow-hidden rounded-3xl border bg-card text-left shadow-sm transition-colors duration-200',
+                                        portalHoverTraceBorder
+                                            ? 'border-border/55 hover:border-border'
+                                            : 'border-border hover:border-primary/45',
                                         settings.displayMode === 'app' ? 'px-5 py-5 sm:px-6 sm:py-6 min-h-0 sm:min-h-[210px] h-full flex flex-col' : 'px-6 py-6 min-h-[196px] sm:min-h-[210px]',
                                         'hover:shadow-2xl hover:bg-muted/50',
                                         animBackdrop ? 'backdrop-blur-md' : 'backdrop-blur-xl',
                                     )}
                                 >
+                                    {portalHoverTraceBorder && (
+                                        <svg
+                                            className="pointer-events-none absolute inset-0 z-[1] h-full w-full"
+                                            viewBox="0 0 200 140"
+                                            preserveAspectRatio="none"
+                                            aria-hidden
+                                        >
+                                            <rect
+                                                x="2.5"
+                                                y="2.5"
+                                                width="195"
+                                                height="135"
+                                                rx="22"
+                                                ry="22"
+                                                fill="none"
+                                                stroke={rainbowColor}
+                                                strokeWidth="2.5"
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                pathLength={100}
+                                                vectorEffect="nonScalingStroke"
+                                                style={{
+                                                    strokeDasharray: 100,
+                                                    strokeDashoffset: hoveredIndex === area.id ? 0 : 100,
+                                                    transition:
+                                                        'stroke-dashoffset 0.58s cubic-bezier(0.22, 1, 0.36, 1)',
+                                                }}
+                                            />
+                                        </svg>
+                                    )}
                                     {/* Themed wash: primary + muted from CSS variables */}
                                     <div
                                         className={cn(
