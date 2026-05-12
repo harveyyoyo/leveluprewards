@@ -15,7 +15,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import type { Coupon, Category, Teacher, Student, Class, HistoryItem, Prize, AttendanceSettings, AttendanceLogEntry, AttendanceScheduleSlot, AttendanceRewardRule, CouponRedemptionScope, HomeworkAssignment } from '@/lib/types';
 import type { LucideIcon } from 'lucide-react';
-import { ArrowLeft, Printer, Plus, LogIn, LogOut, UserCheck, Award, User, Search, Users, Minus, Gift, Loader2, Trash2, Edit, Filter, Ticket, Clock, ChevronRight, History, FileText, BookOpen, Target, X, Dices } from 'lucide-react';
+import { ArrowLeft, Printer, Plus, LogIn, LogOut, UserCheck, Award, User, Search, Users, Minus, Gift, Loader2, Trash2, Edit, Filter, Ticket, Clock, History, FileText, BookOpen, Target, X, Dices, Settings as SettingsGear, ChevronDown } from 'lucide-react';
 import { useSettings, type Settings } from '@/components/providers/SettingsProvider';
 import { PrinterReminderCallout } from '@/components/PrinterReminderCallout';
 import {
@@ -38,6 +38,13 @@ import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Switch } from '@/components/ui/switch';
 
 import DynamicIcon from '@/components/DynamicIcon';
@@ -74,6 +81,9 @@ const MAX_COUPON_PRINT_SHEETS = 100;
 const teacherPortalTabContentClassName =
     'animate-in fade-in slide-in-from-bottom-2 duration-300 h-[calc(100vh-16rem)] min-h-[640px] max-h-[900px] w-full overflow-y-auto overflow-x-hidden pr-1';
 const teacherPortalPanelClassName = 'w-full max-w-6xl mx-auto';
+/** Matches admin portal main `TabsTrigger` styling for visual parity. */
+const teacherPortalMainTabTriggerClassName =
+    'rounded-xl px-4 py-2 font-bold flex items-center gap-2 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)] transition-all whitespace-nowrap';
 
 
 function TeacherHomeworkTab({ schoolId, teacherId, students, classes }: { schoolId: string; teacherId: string; students: Student[]; classes: Class[] }) {
@@ -348,32 +358,25 @@ function TeacherHomeworkTab({ schoolId, teacherId, students, classes }: { school
     );
 }
 
-function TeacherRosterTab({
+function TeacherClassesTab({
     teacherId,
-    allStudents,
-    rosterStudents,
     classes,
     isGraphic,
 }: {
     teacherId: string;
-    allStudents: Student[];
-    rosterStudents: Student[];
     classes: Class[];
     isGraphic: boolean;
 }) {
-    const { updateStudent, addClass, updateClass } = useAppContext();
+    const { addClass, updateClass } = useAppContext();
     const { toast } = useToast();
     const confirm = useConfirm();
-    const [search, setSearch] = useState('');
-    const [busyStudentId, setBusyStudentId] = useState<string | null>(null);
-
     const [isCreateClassDialogOpen, setIsCreateClassDialogOpen] = useState(false);
     const [newClassName, setNewClassName] = useState('');
     const [isClaimDialogOpen, setIsClaimDialogOpen] = useState(false);
     const [isBusy, setIsBusy] = useState(false);
 
-    const myClasses = useMemo(() => classes.filter(c => c.primaryTeacherId === teacherId), [classes, teacherId]);
-    const unassignedClasses = useMemo(() => classes.filter(c => !c.primaryTeacherId), [classes]);
+    const myClasses = useMemo(() => classes.filter((c) => c.primaryTeacherId === teacherId), [classes, teacherId]);
+    const unassignedClasses = useMemo(() => classes.filter((c) => !c.primaryTeacherId), [classes]);
 
     const handleCreateClass = async () => {
         if (!newClassName.trim()) return;
@@ -391,7 +394,7 @@ function TeacherRosterTab({
     };
 
     const handleClaimClass = async (classId: string) => {
-        const cls = classes.find(c => c.id === classId);
+        const cls = classes.find((c) => c.id === classId);
         if (!cls) return;
         setIsBusy(true);
         try {
@@ -408,7 +411,8 @@ function TeacherRosterTab({
     const handleUnlinkClass = async (cls: Class) => {
         const ok = await confirm({
             title: `Unlink from ${cls.name}?`,
-            description: 'You will no longer be the primary teacher for this class. Students will remain in the class but won\'t show on your roster unless directly linked.',
+            description:
+                "You will no longer be the primary teacher for this class. Students will remain in the class but won't show on your roster unless directly linked.",
             confirmLabel: 'Unlink',
             destructive: true,
         });
@@ -423,6 +427,168 @@ function TeacherRosterTab({
             setIsBusy(false);
         }
     };
+
+    return (
+        <div className="flex flex-col gap-6 items-center">
+            <Card
+                className={cn(
+                    'w-full max-w-6xl border-t-8 transition-all duration-500 hover:shadow-2xl hover:-translate-y-1',
+                    isGraphic
+                        ? 'bg-card/60 backdrop-blur-2xl border-chart-1 shadow-[0_20px_50px_rgba(0,0,0,0.1)]'
+                        : 'bg-white border-chart-1 shadow-lg',
+                )}
+            >
+                <CardHeader className="p-4 md:p-6 pb-2">
+                    <div className="flex items-center justify-between">
+                        <CardTitle className="flex items-center gap-3">
+                            <div
+                                className={cn(
+                                    'p-2 rounded-xl',
+                                    isGraphic ? 'bg-chart-1/20 text-chart-1' : 'bg-primary/10 text-primary',
+                                )}
+                            >
+                                <BookOpen className="w-6 h-6" />
+                            </div>
+                            Classes
+                        </CardTitle>
+                        <Button variant="outline" className="rounded-xl gap-2 h-10 px-4" onClick={() => setIsCreateClassDialogOpen(true)}>
+                            <Plus className="w-4 h-4" />
+                            <span className="hidden sm:inline">New Class</span>
+                        </Button>
+                    </div>
+                    <CardDescription className={isGraphic ? 'text-muted-foreground/80' : ''}>
+                        Manage the classes you teach. Students in your classes are automatically added to your attendance and prize lists.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="p-4 md:p-6 pt-0">
+                    <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+                        {myClasses.map((c) => (
+                            <div
+                                key={c.id}
+                                className={cn(
+                                    'flex items-center justify-between p-3 rounded-2xl border group transition-all hover:border-chart-1/50',
+                                    isGraphic ? 'bg-background/40 border-white/10' : 'bg-muted/30',
+                                )}
+                            >
+                                <span className="font-bold truncate px-1">{c.name}</span>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                                    onClick={() => void handleUnlinkClass(c)}
+                                    disabled={isBusy}
+                                >
+                                    <LogOut className="w-4 h-4" />
+                                </Button>
+                            </div>
+                        ))}
+                        {unassignedClasses.length > 0 && (
+                            <Button
+                                variant="ghost"
+                                className={cn(
+                                    'h-auto p-3 border-2 border-dashed rounded-2xl flex flex-row items-center justify-center gap-2 text-muted-foreground hover:text-foreground hover:border-chart-1/50 transition-all',
+                                    isGraphic ? 'border-white/10' : 'border-muted',
+                                )}
+                                onClick={() => setIsClaimDialogOpen(true)}
+                            >
+                                <Users className="w-5 h-5" />
+                                <span className="text-xs font-bold uppercase tracking-wider">Claim Class</span>
+                            </Button>
+                        )}
+                        {myClasses.length === 0 && unassignedClasses.length === 0 && (
+                            <div className="col-span-full py-4 text-center text-sm text-muted-foreground italic">
+                                No classes assigned. Create a new class or ask an admin to assign one to you.
+                            </div>
+                        )}
+                    </div>
+                </CardContent>
+            </Card>
+
+            <Dialog open={isCreateClassDialogOpen} onOpenChange={setIsCreateClassDialogOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Create New Class</DialogTitle>
+                        <DialogDescription>Enter a name for the new class. You will be assigned as the primary teacher.</DialogDescription>
+                    </DialogHeader>
+                    <div className="flex items-center space-x-2 py-4">
+                        <div className="grid flex-1 gap-2">
+                            <Label htmlFor="className" className="sr-only">
+                                Class Name
+                            </Label>
+                            <Input
+                                id="className"
+                                placeholder="e.g. Grade 5B"
+                                value={newClassName}
+                                onChange={(e) => setNewClassName(e.target.value)}
+                                autoFocus
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter className="sm:justify-end">
+                        <Button type="button" variant="secondary" onClick={() => setIsCreateClassDialogOpen(false)} disabled={isBusy}>
+                            Cancel
+                        </Button>
+                        <Button
+                            type="button"
+                            className="bg-chart-1 hover:bg-chart-1/90"
+                            onClick={handleCreateClass}
+                            disabled={isBusy || !newClassName.trim()}
+                        >
+                            {isBusy ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
+                            Create Class
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={isClaimDialogOpen} onOpenChange={setIsClaimDialogOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Claim Unassigned Class</DialogTitle>
+                        <DialogDescription>Choose an existing class to claim as yours.</DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-3 py-4 max-h-[300px] overflow-y-auto">
+                        {unassignedClasses.map((c) => (
+                            <Button
+                                key={c.id}
+                                variant="outline"
+                                className="justify-between h-12 px-4 rounded-xl hover:border-chart-1/50 hover:bg-chart-1/5"
+                                onClick={() => handleClaimClass(c.id)}
+                                disabled={isBusy}
+                            >
+                                <span className="font-bold">{c.name}</span>
+                                <Plus className="w-4 h-4 text-muted-foreground" />
+                            </Button>
+                        ))}
+                    </div>
+                    <DialogFooter className="sm:justify-start">
+                        <Button type="button" variant="secondary" onClick={() => setIsClaimDialogOpen(false)}>
+                            Close
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </div>
+    );
+}
+
+function TeacherRosterTab({
+    teacherId,
+    allStudents,
+    rosterStudents,
+    classes,
+    isGraphic,
+}: {
+    teacherId: string;
+    allStudents: Student[];
+    rosterStudents: Student[];
+    classes: Class[];
+    isGraphic: boolean;
+}) {
+    const { updateStudent } = useAppContext();
+    const { toast } = useToast();
+    const [search, setSearch] = useState('');
+    const [busyStudentId, setBusyStudentId] = useState<string | null>(null);
 
     const classMap = useMemo(() => new Map(classes.map((c) => [c.id, c])), [classes]);
     const classIdsForTeacher = useMemo(
@@ -473,74 +639,6 @@ function TeacherRosterTab({
 
     return (
         <div className="flex flex-col gap-6 items-center">
-            {/* My Classes Management */}
-            <Card className={cn(
-                "w-full max-w-6xl border-t-8 transition-all duration-500 hover:shadow-2xl hover:-translate-y-1",
-                isGraphic ? 'bg-card/60 backdrop-blur-2xl border-chart-1 shadow-[0_20px_50px_rgba(0,0,0,0.1)]' : 'bg-white border-chart-1 shadow-lg'
-            )}>
-                <CardHeader className="p-4 md:p-6 pb-2">
-                    <div className="flex items-center justify-between">
-                        <CardTitle className="flex items-center gap-3">
-                            <div className={cn("p-2 rounded-xl", isGraphic ? 'bg-chart-1/20 text-chart-1' : 'bg-primary/10 text-primary')}>
-                                <Users className="w-6 h-6" />
-                            </div>
-                            My Classes
-                        </CardTitle>
-                        <Button
-                            variant="outline"
-                            className="rounded-xl gap-2 h-10 px-4"
-                            onClick={() => setIsCreateClassDialogOpen(true)}
-                        >
-                            <Plus className="w-4 h-4" />
-                            <span className="hidden sm:inline">New Class</span>
-                        </Button>
-                    </div>
-                    <CardDescription className={isGraphic ? 'text-muted-foreground/80' : ''}>
-                        Manage the classes you teach. Students in your classes are automatically added to your attendance and prize lists.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="p-4 md:p-6 pt-0">
-                    <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-                        {myClasses.map(c => (
-                            <div key={c.id} className={cn(
-                                "flex items-center justify-between p-3 rounded-2xl border group transition-all hover:border-chart-1/50",
-                                isGraphic ? 'bg-background/40 border-white/10' : 'bg-muted/30'
-                            )}>
-                                <span className="font-bold truncate px-1">{c.name}</span>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                                    onClick={() => void handleUnlinkClass(c)}
-                                    disabled={isBusy}
-                                >
-                                    <LogOut className="w-4 h-4" />
-                                </Button>
-                            </div>
-                        ))}
-                        {unassignedClasses.length > 0 && (
-                            <Button
-                                variant="ghost"
-                                className={cn(
-                                    "h-auto p-3 border-2 border-dashed rounded-2xl flex flex-row items-center justify-center gap-2 text-muted-foreground hover:text-foreground hover:border-chart-1/50 transition-all",
-                                    isGraphic ? 'border-white/10' : 'border-muted'
-                                )}
-                                onClick={() => setIsClaimDialogOpen(true)}
-                            >
-                                <Users className="w-5 h-5" />
-                                <span className="text-xs font-bold uppercase tracking-wider">Claim Class</span>
-                            </Button>
-                        )}
-                        {myClasses.length === 0 && unassignedClasses.length === 0 && (
-                            <div className="col-span-full py-4 text-center text-sm text-muted-foreground italic">
-                                No classes assigned. Create a new class or ask an admin to assign one to you.
-                            </div>
-                        )}
-                    </div>
-                </CardContent>
-            </Card>
-
-            {/* Students Section */}
             <Card className={cn(
                 "w-full max-w-6xl border-t-8 transition-all duration-500 hover:shadow-2xl hover:-translate-y-1",
                 isGraphic ? 'bg-card/60 backdrop-blur-2xl border-chart-4 shadow-[0_20px_50px_rgba(0,0,0,0.1)]' : 'bg-white border-chart-4 shadow-lg'
@@ -550,7 +648,7 @@ function TeacherRosterTab({
                         <div className={cn("p-2 rounded-xl", isGraphic ? 'bg-chart-4/20 text-chart-4' : 'bg-primary/10 text-primary')}>
                             <Users className="w-6 h-6" />
                         </div>
-                        My Students
+                        Students
                     </CardTitle>
                     <CardDescription className={isGraphic ? 'text-muted-foreground/80' : ''}>
                         Add or remove the direct student links for your teacher account. Students in classes you teach stay visible through that class.
@@ -635,82 +733,6 @@ function TeacherRosterTab({
                     </div>
                 </CardContent>
             </Card>
-
-            <Dialog open={isCreateClassDialogOpen} onOpenChange={setIsCreateClassDialogOpen}>
-                <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                        <DialogTitle>Create New Class</DialogTitle>
-                        <DialogDescription>
-                            Enter a name for the new class. You will be assigned as the primary teacher.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="flex items-center space-x-2 py-4">
-                        <div className="grid flex-1 gap-2">
-                            <Label htmlFor="className" className="sr-only">Class Name</Label>
-                            <Input
-                                id="className"
-                                placeholder="e.g. Grade 5B"
-                                value={newClassName}
-                                onChange={(e) => setNewClassName(e.target.value)}
-                                autoFocus
-                            />
-                        </div>
-                    </div>
-                    <DialogFooter className="sm:justify-end">
-                        <Button
-                            type="button"
-                            variant="secondary"
-                            onClick={() => setIsCreateClassDialogOpen(false)}
-                            disabled={isBusy}
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            type="button"
-                            className="bg-chart-1 hover:bg-chart-1/90"
-                            onClick={handleCreateClass}
-                            disabled={isBusy || !newClassName.trim()}
-                        >
-                            {isBusy ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
-                            Create Class
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
-            <Dialog open={isClaimDialogOpen} onOpenChange={setIsClaimDialogOpen}>
-                <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                        <DialogTitle>Claim Unassigned Class</DialogTitle>
-                        <DialogDescription>
-                            Choose an existing class to claim as yours.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-3 py-4 max-h-[300px] overflow-y-auto">
-                        {unassignedClasses.map(c => (
-                            <Button
-                                key={c.id}
-                                variant="outline"
-                                className="justify-between h-12 px-4 rounded-xl hover:border-chart-1/50 hover:bg-chart-1/5"
-                                onClick={() => handleClaimClass(c.id)}
-                                disabled={isBusy}
-                            >
-                                <span className="font-bold">{c.name}</span>
-                                <Plus className="w-4 h-4 text-muted-foreground" />
-                            </Button>
-                        ))}
-                    </div>
-                    <DialogFooter className="sm:justify-start">
-                        <Button
-                            type="button"
-                            variant="secondary"
-                            onClick={() => setIsClaimDialogOpen(false)}
-                        >
-                            Close
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
         </div>
     );
 }
@@ -1873,17 +1895,48 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
         [secretaryMode, settings.enableWeeklyRaffle, isFeatureAllowed],
     );
 
+    const teacherAttendanceTabEnabled = useMemo(
+        () => !secretaryMode && (settings.payAttendance ?? true) && !!settings.enableAttendance,
+        [secretaryMode, settings.payAttendance, settings.enableAttendance],
+    );
+    const teacherGoalsTabEnabled = useMemo(
+        () => !secretaryMode && !!settings.enableGoals && isFeatureAllowed('enableGoals'),
+        [secretaryMode, settings.enableGoals, isFeatureAllowed],
+    );
+    const teacherHomeworkTabEnabled = useMemo(
+        () => !secretaryMode && !!settings.enableHomework,
+        [secretaryMode, settings.enableHomework],
+    );
+
     const [activeTeacherTab, setActiveTeacherTab] = useState('coupons');
 
     useEffect(() => {
         if (secretaryMode) return;
-        const basicTabs = new Set<string>(['coupons', 'award', 'roster', 'prizes', 'redemptions', 'reports']);
+        const basicTabs = new Set<string>([
+            'roster',
+            'classes',
+            'coupons',
+            'award',
+            'prizes',
+            'redemptions',
+            'reports',
+        ]);
         if (raffleTabEnabled) basicTabs.add('raffle');
+        if (teacherAttendanceTabEnabled) basicTabs.add('attendance');
+        if (teacherGoalsTabEnabled) basicTabs.add('goals');
+        if (teacherHomeworkTabEnabled) basicTabs.add('homework');
         if (!basicTabs.has(activeTeacherTab)) {
             const timer = setTimeout(() => setActiveTeacherTab('coupons'), 100);
             return () => clearTimeout(timer);
         }
-    }, [secretaryMode, activeTeacherTab, raffleTabEnabled]);
+    }, [
+        secretaryMode,
+        activeTeacherTab,
+        raffleTabEnabled,
+        teacherAttendanceTabEnabled,
+        teacherGoalsTabEnabled,
+        teacherHomeworkTabEnabled,
+    ]);
 
     const categoriesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'categories') : null, [firestore, schoolId]);
     const { data: categories, isLoading: categoriesLoading } = useCollection<Category>(categoriesQuery);
@@ -2601,78 +2654,112 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                         onValueChange={(v) => {
                             if (!secretaryMode) setActiveTeacherTab(v);
                         }}
-                        className="space-y-6 w-full"
+                        className="flex min-h-0 w-full flex-col gap-6"
                     >
                         {!secretaryMode && (
-                        <div className="w-full flex flex-col gap-4">
-                        <div className="flex overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 justify-center">
-                            <TabsList
-                                className="bg-muted/50 p-1.5 rounded-2xl inline-flex w-max border shadow-sm sm:mx-auto flex-nowrap"
-                                style={{ ['--teacher-accent' as any]: teacherAccent, ['--teacher-tab-selected' as any]: 'hsl(var(--chart-2))' }}
-                                aria-label="Teacher portal sections"
-                            >
-                                <TabsTrigger
-                                    value="coupons"
-                                    className="rounded-xl px-3 py-2 font-bold text-sm flex items-center gap-1.5 text-foreground data-[state=active]:bg-[color:var(--teacher-tab-selected)] data-[state=active]:shadow-sm data-[state=active]:text-white"
+                            <div className="w-full flex flex-col gap-4">
+                                <div
+                                    className={cn(
+                                        settings.displayMode === 'app'
+                                            ? 'flex overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 justify-center'
+                                            : 'w-full',
+                                    )}
                                 >
-                                    <Ticket className="w-4 h-4 shrink-0 opacity-80" />
-                                    Coupons
-                                </TabsTrigger>
-                                <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground/45 pointer-events-none" aria-hidden />
-                                <TabsTrigger
-                                    value="award"
-                                    className="rounded-xl px-3 py-2 font-bold text-sm flex items-center gap-1.5 text-foreground data-[state=active]:bg-[color:var(--teacher-tab-selected)] data-[state=active]:shadow-sm data-[state=active]:text-white"
-                                >
-                                    <Award className="w-4 h-4 shrink-0 opacity-80" />
-                                    Points
-                                </TabsTrigger>
-                                <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground/45 pointer-events-none" aria-hidden />
-                                <TabsTrigger
-                                    value="roster"
-                                    className="rounded-xl px-3 py-2 font-bold text-sm flex items-center gap-1.5 text-foreground data-[state=active]:bg-[color:var(--teacher-tab-selected)] data-[state=active]:shadow-sm data-[state=active]:text-white"
-                                >
-                                    <Users className="w-4 h-4 shrink-0 opacity-80" />
-                                    Students
-                                </TabsTrigger>
-                                <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground/45 pointer-events-none" aria-hidden />
-                                <TabsTrigger
-                                    value="prizes"
-                                    className="rounded-xl px-3 py-2 font-bold text-sm flex items-center gap-1.5 text-foreground data-[state=active]:bg-[color:var(--teacher-tab-selected)] data-[state=active]:shadow-sm data-[state=active]:text-white"
-                                >
-                                    <Gift className="w-4 h-4 shrink-0 opacity-80" />
-                                    Prizes
-                                </TabsTrigger>
-                                <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground/45 pointer-events-none" aria-hidden />
-                                <TabsTrigger
-                                    value="redemptions"
-                                    className="rounded-xl px-3 py-2 font-bold text-sm flex items-center gap-1.5 text-foreground data-[state=active]:bg-[color:var(--teacher-tab-selected)] data-[state=active]:shadow-sm data-[state=active]:text-white"
-                                >
-                                    <History className="w-4 h-4 shrink-0 opacity-80" />
-                                    Redemptions
-                                </TabsTrigger>
-                                <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground/45 pointer-events-none" aria-hidden />
-                                <TabsTrigger
-                                    value="reports"
-                                    className="rounded-xl px-3 py-2 font-bold text-sm flex items-center gap-1.5 text-foreground data-[state=active]:bg-[color:var(--teacher-tab-selected)] data-[state=active]:shadow-sm data-[state=active]:text-white"
-                                >
-                                    <FileText className="w-4 h-4 shrink-0 opacity-80" />
-                                    Reports
-                                </TabsTrigger>
-                                {raffleTabEnabled && (
-                                    <>
-                                        <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground/45 pointer-events-none" aria-hidden />
-                                        <TabsTrigger
-                                            value="raffle"
-                                            className="rounded-xl px-3 py-2 font-bold text-sm flex items-center gap-1.5 text-foreground data-[state=active]:bg-[color:var(--teacher-tab-selected)] data-[state=active]:shadow-sm data-[state=active]:text-white"
-                                        >
-                                            <Dices className="w-4 h-4 shrink-0 opacity-80" />
-                                            Raffle
+                                    <TabsList
+                                        className={cn(
+                                            'bg-muted/50 p-1.5 rounded-2xl border shadow-sm h-auto',
+                                            settings.displayMode === 'app'
+                                                ? 'inline-flex w-max sm:mx-auto flex-nowrap gap-x-1'
+                                                : 'flex flex-wrap justify-center gap-x-1 gap-y-1 w-full',
+                                        )}
+                                        style={{ ['--admin-accent' as never]: 'hsl(var(--primary))' }}
+                                        aria-label="Teacher portal sections"
+                                    >
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <button
+                                                    type="button"
+                                                    className="rounded-xl px-3 py-2 font-bold inline-flex items-center gap-2 text-sm text-foreground border bg-muted/40 hover:bg-muted/60 transition-all shrink-0"
+                                                    title="Additional features"
+                                                    aria-label="Additional features"
+                                                >
+                                                    <SettingsGear className="w-4 h-4" aria-hidden />
+                                                    Features
+                                                    <ChevronDown className="w-4 h-4 opacity-70" aria-hidden />
+                                                </button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="start" className="min-w-[220px]">
+                                                <div className="px-2 py-2">
+                                                    <span className="text-[10px] font-black uppercase text-muted-foreground tracking-wider">
+                                                        Feature tabs
+                                                    </span>
+                                                </div>
+                                                <DropdownMenuSeparator />
+                                                {!teacherAttendanceTabEnabled &&
+                                                    !teacherGoalsTabEnabled &&
+                                                    !teacherHomeworkTabEnabled && (
+                                                        <DropdownMenuItem disabled className="text-xs text-muted-foreground">
+                                                            No optional features are enabled for your school.
+                                                        </DropdownMenuItem>
+                                                    )}
+                                                {teacherAttendanceTabEnabled && (
+                                                    <DropdownMenuItem
+                                                        className="gap-2 font-semibold"
+                                                        onSelect={() => setActiveTeacherTab('attendance')}
+                                                    >
+                                                        <Clock className="h-4 w-4 opacity-75" aria-hidden />
+                                                        Attendance
+                                                    </DropdownMenuItem>
+                                                )}
+                                                {teacherGoalsTabEnabled && (
+                                                    <DropdownMenuItem
+                                                        className="gap-2 font-semibold"
+                                                        onSelect={() => setActiveTeacherTab('goals')}
+                                                    >
+                                                        <Target className="h-4 w-4 opacity-75" aria-hidden />
+                                                        Goals
+                                                    </DropdownMenuItem>
+                                                )}
+                                                {teacherHomeworkTabEnabled && (
+                                                    <DropdownMenuItem
+                                                        className="gap-2 font-semibold"
+                                                        onSelect={() => setActiveTeacherTab('homework')}
+                                                    >
+                                                        <BookOpen className="h-4 w-4 opacity-75" aria-hidden />
+                                                        Homework
+                                                    </DropdownMenuItem>
+                                                )}
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                        <TabsTrigger value="roster" className={teacherPortalMainTabTriggerClassName} title="Students">
+                                            <Users className="w-4 h-4 shrink-0" /> Students
                                         </TabsTrigger>
-                                    </>
-                                )}
-                            </TabsList>
-                        </div>
-                        </div>
+                                        <TabsTrigger value="classes" className={teacherPortalMainTabTriggerClassName} title="Classes">
+                                            <BookOpen className="w-4 h-4 shrink-0" /> Classes
+                                        </TabsTrigger>
+                                        <TabsTrigger value="coupons" className={teacherPortalMainTabTriggerClassName} title="Coupons">
+                                            <Ticket className="w-4 h-4 shrink-0" /> Coupons
+                                        </TabsTrigger>
+                                        <TabsTrigger value="award" className={teacherPortalMainTabTriggerClassName} title="Points">
+                                            <Award className="w-4 h-4 shrink-0" /> Points
+                                        </TabsTrigger>
+                                        <TabsTrigger value="prizes" className={teacherPortalMainTabTriggerClassName} title="Prizes">
+                                            <Gift className="w-4 h-4 shrink-0" /> Prizes
+                                        </TabsTrigger>
+                                        <TabsTrigger value="redemptions" className={teacherPortalMainTabTriggerClassName} title="Redemptions">
+                                            <History className="w-4 h-4 shrink-0" /> Redemptions
+                                        </TabsTrigger>
+                                        <TabsTrigger value="reports" className={teacherPortalMainTabTriggerClassName} title="Reports">
+                                            <FileText className="w-4 h-4 shrink-0" /> Reports
+                                        </TabsTrigger>
+                                        {raffleTabEnabled && (
+                                            <TabsTrigger value="raffle" className={teacherPortalMainTabTriggerClassName} title="Raffle">
+                                                <Dices className="w-4 h-4 shrink-0" /> Raffle
+                                            </TabsTrigger>
+                                        )}
+                                    </TabsList>
+                                </div>
+                            </div>
                         )}
 
                             <TabsContent value="coupons" className={teacherPortalTabContentClassName}>
@@ -3211,6 +3298,16 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                         teacherId={teacherId}
                                         allStudents={students || []}
                                         rosterStudents={studentsForTeacherActions}
+                                        classes={classes || []}
+                                        isGraphic={isGraphic}
+                                    />
+                                </div>
+                            </TabsContent>
+
+                            <TabsContent value="classes" className={teacherPortalTabContentClassName}>
+                                <div className={teacherPortalPanelClassName}>
+                                    <TeacherClassesTab
+                                        teacherId={teacherId}
                                         classes={classes || []}
                                         isGraphic={isGraphic}
                                     />
