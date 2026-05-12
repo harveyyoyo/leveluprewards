@@ -476,24 +476,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const metadataRef = isStaff
             ? doc(firestore, 'schools', sid)
             : schoolPublicDocRef(firestore, sid);
+        const applySnapshot = (snapshot: { metadata: { fromCache: boolean } }) => {
+            // Firestore marks cache reads as `fromCache` while reconnecting *and* when the browser is offline.
+            // Only show "syncing" when we are online but still waiting for a fresh server read.
+            if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+                setSyncStatus('offline');
+                return;
+            }
+            const isFromCache = snapshot.metadata.fromCache;
+            if (isFromCache) {
+                setSyncStatus('syncing');
+            } else {
+                setSyncStatus('synced');
+            }
+        };
+
         const unsubscribe = onSnapshot(
             metadataRef,
             { includeMetadataChanges: true },
-            (snapshot) => {
-                const isFromCache = snapshot.metadata.fromCache;
-                if (isFromCache) {
-                    setSyncStatus('syncing');
-                } else {
-                    setSyncStatus('synced');
-                }
-            },
+            applySnapshot,
             (err) => {
                 console.error("Sync status listener failed:", err);
                 setSyncStatus('error');
             }
         );
 
-        return () => unsubscribe();
+        const onBrowserOffline = () => setSyncStatus('offline');
+        const onBrowserOnline = () => setSyncStatus('syncing');
+
+        if (typeof window !== 'undefined') {
+            if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+                setSyncStatus('offline');
+            }
+            window.addEventListener('offline', onBrowserOffline);
+            window.addEventListener('online', onBrowserOnline);
+        }
+
+        return () => {
+            unsubscribe();
+            if (typeof window !== 'undefined') {
+                window.removeEventListener('offline', onBrowserOffline);
+                window.removeEventListener('online', onBrowserOnline);
+            }
+        };
     }, [firestore, schoolId, loginState]);
 
     const login = useCallback(
