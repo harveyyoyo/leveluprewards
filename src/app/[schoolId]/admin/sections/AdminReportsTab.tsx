@@ -11,6 +11,7 @@ export function AdminReportsTab({
   coupons,
   prizes,
   categories,
+  rafflePointsPerTicket,
 }: {
   schoolName: string;
   students: Student[] | null | undefined;
@@ -19,6 +20,7 @@ export function AdminReportsTab({
   coupons: Coupon[] | null | undefined;
   prizes: Prize[] | null | undefined;
   categories: Category[] | null | undefined;
+  rafflePointsPerTicket?: number;
 }) {
   return (
     <SchoolReportsPanel
@@ -30,6 +32,7 @@ export function AdminReportsTab({
       coupons={coupons ?? []}
       prizes={prizes ?? []}
       categories={categories ?? []}
+      rafflePointsPerTicket={rafflePointsPerTicket}
     />
   );
 }

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { collection, doc } from 'firebase/firestore';
 import { FileText, Loader2, LogOut } from 'lucide-react';
 import { useAppContext } from '@/components/AppProvider';
+import { useSettings } from '@/components/providers/SettingsProvider';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -32,6 +33,7 @@ const SchoolReportsPanel = dynamic(
 
 export default function ReportsPage() {
   const { loginState, isInitialized, schoolId, logout, userName, isReports } = useAppContext();
+  const { settings } = useSettings();
   const firestore = useFirestore();
   const router = useRouter();
   const playSound = useArcadeSound();
@@ -165,6 +167,7 @@ export default function ReportsPage() {
               coupons={coupons.data ?? []}
               prizes={prizes.data ?? []}
               categories={categories.data ?? []}
+              rafflePointsPerTicket={settings.rafflePointsPerTicket}
             />
           )}
         </main>

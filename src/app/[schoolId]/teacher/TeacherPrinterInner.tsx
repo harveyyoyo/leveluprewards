@@ -3389,6 +3389,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                             coupons={coupons || []}
                                             prizes={prizes || []}
                                             categories={globalCategories || categories || []}
+                                            rafflePointsPerTicket={settings.rafflePointsPerTicket}
                                         />
                                     </div>
                                 </div>

@@ -1638,6 +1638,7 @@ function AdminDashboardInner() {
                   coupons={coupons}
                   prizes={prizes}
                   categories={categories}
+                  rafflePointsPerTicket={settings.rafflePointsPerTicket}
                 />
               </TabsContent>
             </Tabs>

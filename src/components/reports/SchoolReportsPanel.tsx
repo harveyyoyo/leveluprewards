@@ -24,6 +24,7 @@ import {
   studentsInTeacherScope,
 } from '@/lib/reportsScope';
 import { HOMEWORK_REWARD_CATEGORY_PREFIX, homeworkRewardCategoryKey } from '@/lib/homeworkRewards';
+import { floorRaffleFullTickets, parseRafflePointsPerTicket } from '@/lib/raffleTickets';
 
 export type ReportKind =
   | 'summary'
@@ -155,6 +156,8 @@ export function SchoolReportsPanel({
   coupons: allCoupons,
   prizes: allPrizes,
   categories,
+  /** School weekly raffle setting; defaults to 25 pts/ticket when omitted (matches app defaults). */
+  rafflePointsPerTicket: rafflePointsPerTicketProp,
 }: {
   scope: 'school' | 'teacher';
   schoolName: string;
@@ -166,7 +169,22 @@ export function SchoolReportsPanel({
   coupons: Coupon[];
   prizes: Prize[];
   categories: Category[];
+  rafflePointsPerTicket?: number;
 }) {
+  const { isGeneralRaffle, pointsPerTicket: rafflePtsPerTicket } = useMemo(
+    () => parseRafflePointsPerTicket(rafflePointsPerTicketProp ?? 25),
+    [rafflePointsPerTicketProp],
+  );
+
+  const raffleFullTicketsForStudent = useCallback(
+    (s: Student) =>
+      isGeneralRaffle ? 1 : floorRaffleFullTickets(safePoints(s.points), rafflePtsPerTicket),
+    [isGeneralRaffle, rafflePtsPerTicket],
+  );
+
+  const raffleRuleLabel = isGeneralRaffle
+    ? 'General raffle (1 entry per student in this list)'
+    : `${rafflePtsPerTicket} pts per full raffle ticket`;
   const [reportKind, setReportKind] = useState<ReportKind>('summary');
   const [classFilter, setClassFilter] = useState('all');
   const [rosterSort, setRosterSort] = useState<RosterSort>('class-name');
@@ -273,6 +291,11 @@ export function SchoolReportsPanel({
     [students],
   );
 
+  const totalRaffleFullTickets = useMemo(
+    () => students.reduce((sum, s) => sum + raffleFullTicketsForStudent(s), 0),
+    [students, raffleFullTicketsForStudent],
+  );
+
   const classesForScope = useMemo(() => {
     if (scope === 'school') return classes;
     if (!teacherId) return [];
@@ -309,8 +332,9 @@ export function SchoolReportsPanel({
       nfc: s.nfcId || DASH,
       createdAt: formatDate(s.createdAt),
       categoryPoints: s.categoryPoints ?? {},
+      raffleTickets: raffleFullTicketsForStudent(s),
     }));
-  }, [students, classes, rosterSort]);
+  }, [students, classes, rosterSort, raffleFullTicketsForStudent]);
 
   const couponAgg = useMemo(() => {
     const byCat = new Map<
@@ -394,8 +418,11 @@ export function SchoolReportsPanel({
         count: students.filter((s) => s.classId === cl.id).length,
         points: students.filter((s) => s.classId === cl.id).reduce((sum, s) => sum + safePoints(s.points), 0),
         lifetime: students.filter((s) => s.classId === cl.id).reduce((sum, s) => sum + safePoints(s.lifetimePoints ?? s.points), 0),
+        raffleTickets: students
+          .filter((s) => s.classId === cl.id)
+          .reduce((sum, s) => sum + raffleFullTicketsForStudent(s), 0),
       }));
-  }, [scope, classes, classesForScope, teachers, students]);
+  }, [scope, classes, classesForScope, teachers, students, raffleFullTicketsForStudent]);
 
   const categoryTotals = useMemo(
     () =>
@@ -488,6 +515,7 @@ export function SchoolReportsPanel({
       ['Scope', scopeLabel],
       ['Class filter', selectedClassLabel],
       ['Date range', dateRangeLabel],
+      ['Weekly raffle (for ticket counts)', raffleRuleLabel],
       ['Generated', new Date().toLocaleString()],
       [],
     ];
@@ -505,6 +533,7 @@ export function SchoolReportsPanel({
         ['Coupon point value redeemed', totalCouponValueRedeemed],
         ['Incentive categories', categoriesInScope.length],
         ['Reward items listed', prizesInScope.length],
+        ['Raffle tickets (from current balances)', totalRaffleFullTickets],
       ]);
       return;
     }
@@ -519,6 +548,7 @@ export function SchoolReportsPanel({
           ...(includeDates ? ['Student created'] : []),
           'Current points',
           'Lifetime points',
+          'Raffle tickets',
           ...(includeIds ? ['ID / NFC'] : []),
           ...categoryNames,
         ],
@@ -528,6 +558,7 @@ export function SchoolReportsPanel({
           ...(includeDates ? [row.createdAt] : []),
           row.points,
           row.lifetime,
+          row.raffleTickets,
           ...(includeIds ? [row.nfc] : []),
           ...categoryNames.map((name) => safePoints(row.categoryPoints[name])),
         ]),
@@ -618,8 +649,8 @@ export function SchoolReportsPanel({
 
     downloadCsv(`${baseName}-${generated}.csv`, [
       ...meta,
-      ['Class', 'Primary teacher', 'Students in scope', 'Current points', 'Lifetime points'],
-      ...classRows.map((row) => [row.name, row.primary, row.count, row.points, row.lifetime]),
+      ['Class', 'Primary teacher', 'Students in scope', 'Current points', 'Lifetime points', 'Raffle tickets'],
+      ...classRows.map((row) => [row.name, row.primary, row.count, row.points, row.lifetime, row.raffleTickets]),
     ]);
   }, [
     reportKind,
@@ -640,6 +671,8 @@ export function SchoolReportsPanel({
     includeDates,
     includeIds,
     dateRangeLabel,
+    raffleRuleLabel,
+    totalRaffleFullTickets,
     rosterRows,
     redemptionRows,
     couponAgg,
@@ -723,6 +756,15 @@ export function SchoolReportsPanel({
             <td className="border border-black p-2 font-semibold">Reward items listed</td>
             <td className="border border-black p-2 text-right">{prizesInScope.length}</td>
           </tr>
+          <tr>
+            <td className="border border-black p-2 font-semibold">Raffle tickets (current balances)</td>
+            <td className="border border-black p-2 text-right">{totalRaffleFullTickets.toLocaleString()}</td>
+          </tr>
+          <tr>
+            <td className="border border-black p-2 text-xs text-neutral-700" colSpan={2}>
+              {raffleRuleLabel}
+            </td>
+          </tr>
         </tbody>
       </table>
       {categoryTotals.length > 0 ? (
@@ -757,6 +799,7 @@ export function SchoolReportsPanel({
             {includeDates ? <th className="border border-black p-1.5 text-left">Created</th> : null}
             <th className="border border-black p-1.5 text-right">Points</th>
             <th className="border border-black p-1.5 text-right">Lifetime</th>
+            <th className="border border-black p-1.5 text-right">Raffle</th>
             {!balancesOnly && includeIds ? <th className="border border-black p-1.5 text-left">ID / NFC</th> : null}
             {includeCategoryColumns
               ? categoriesInScope.map((category) => (
@@ -775,6 +818,7 @@ export function SchoolReportsPanel({
               {includeDates ? <td className="border border-black p-1.5">{row.createdAt}</td> : null}
               <td className="border border-black p-1.5 text-right">{row.points.toLocaleString()}</td>
               <td className="border border-black p-1.5 text-right">{row.lifetime.toLocaleString()}</td>
+              <td className="border border-black p-1.5 text-right">{row.raffleTickets.toLocaleString()}</td>
               {!balancesOnly && includeIds ? <td className="border border-black p-1.5 font-mono text-[9pt]">{row.nfc}</td> : null}
               {includeCategoryColumns
                 ? categoriesInScope.map((category) => (
@@ -788,6 +832,10 @@ export function SchoolReportsPanel({
         </tbody>
       </table>
       {rosterRows.length === 0 ? <p className="text-sm italic">No students match this report.</p> : null}
+      <p className="text-[9pt] text-neutral-800 mt-2 max-w-[7in]">
+        Raffle column: {raffleRuleLabel}
+        {isGeneralRaffle ? '' : ' (full tickets from current point balances).'}
+      </p>
     </section>
   );
 
@@ -923,6 +971,7 @@ export function SchoolReportsPanel({
                       <th className="border border-black p-1.5 text-right">Students</th>
                       <th className="border border-black p-1.5 text-right">Current points</th>
                       <th className="border border-black p-1.5 text-right">Lifetime points</th>
+                      <th className="border border-black p-1.5 text-right">Raffle tickets</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -933,6 +982,7 @@ export function SchoolReportsPanel({
                         <td className="border border-black p-1.5 text-right">{row.count}</td>
                         <td className="border border-black p-1.5 text-right">{row.points.toLocaleString()}</td>
                         <td className="border border-black p-1.5 text-right">{row.lifetime.toLocaleString()}</td>
+                        <td className="border border-black p-1.5 text-right">{row.raffleTickets.toLocaleString()}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -1199,17 +1249,24 @@ export function SchoolReportsPanel({
                     <span>Coupon value redeemed</span>
                     <span className="font-bold">{totalCouponValueRedeemed.toLocaleString()} pts</span>
                   </li>
+                  <li className="flex justify-between border-b border-dashed pb-2">
+                    <span>Raffle tickets (balances)</span>
+                    <span className="font-bold">{totalRaffleFullTickets.toLocaleString()}</span>
+                  </li>
+                  <li className="text-xs text-muted-foreground col-span-2 -mt-1 pb-2">{raffleRuleLabel}</li>
                 </ul>
               )}
               {reportKind === 'roster' && (
                 <p className="text-sm text-muted-foreground">
-                  {rosterRows.length} student{rosterRows.length === 1 ? '' : 's'} - sorted by {rosterSort.replace('-', ' ')}.
+                  {rosterRows.length} student{rosterRows.length === 1 ? '' : 's'} - sorted by {rosterSort.replace('-', ' ')}. Includes raffle
+                  ticket counts ({raffleRuleLabel}).
                 </p>
               )}
               {reportKind === 'balances' && (
                 <p className="text-sm text-muted-foreground">
                   {rosterRows.length} student balance row{rosterRows.length === 1 ? '' : 's'}
-                  {includeCategoryColumns ? ` with ${categoriesInScope.length} category column${categoriesInScope.length === 1 ? '' : 's'}` : ''}.
+                  {includeCategoryColumns ? ` with ${categoriesInScope.length} category column${categoriesInScope.length === 1 ? '' : 's'}` : ''}. Includes raffle
+                  tickets ({raffleRuleLabel}).
                 </p>
               )}
               {reportKind === 'redemptions' && (
@@ -1229,7 +1286,7 @@ export function SchoolReportsPanel({
               )}
               {reportKind === 'classes' && (
                 <p className="text-sm text-muted-foreground">
-                  {classRows.length} class{classRows.length === 1 ? '' : 'es'} with student counts and point totals.
+                  {classRows.length} class{classRows.length === 1 ? '' : 'es'} with student counts, point totals, and summed raffle tickets.
                 </p>
               )}
               {reportKind === 'homework' && (
