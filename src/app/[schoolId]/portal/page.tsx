@@ -1,6 +1,6 @@
 
 'use client';
-import { useMemo, useState, useEffect, type ComponentType, type CSSProperties } from 'react';
+import { useMemo, useState, useEffect, useLayoutEffect, useRef, type ComponentType, type CSSProperties } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
@@ -73,6 +73,8 @@ export default function PortalPage() {
     const [selectedTeacherKey, setSelectedTeacherKey] = useState('');
     const [teacherPasscode, setTeacherPasscode] = useState('');
     const [teacherSubmitting, setTeacherSubmitting] = useState(false);
+    const gridRef = useRef<HTMLDivElement>(null);
+    const [whereToCenterY, setWhereToCenterY] = useState<number | null>(null);
     const animBackdrop = globalAnimatedBackdropActive(settings);
 
     // Returning to the hub from a student kiosk session should become the school chooser again.
@@ -80,6 +82,7 @@ export default function PortalPage() {
         if (!isInitialized || loginState !== 'student' || !schoolId) return;
         logout({ studentNavigateTo: 'portal' });
     }, [isInitialized, loginState, logout, schoolId]);
+
     /** Default scheme: real brand hex — `hsl(var(--primary))` stays near-white in `.dark` by design. */
     const defaultPortalAccent =
         settings.colorScheme === 'default'
@@ -124,6 +127,46 @@ export default function PortalPage() {
             ),
         [schoolPublic],
     );
+
+    /** Midpoint between global header bottom and top of the centered tile row (viewport px). */
+    useLayoutEffect(() => {
+        if (!isInitialized) return;
+
+        const measure = () => {
+            const grid = gridRef.current;
+            if (!grid) return;
+            const gridTop = grid.getBoundingClientRect().top;
+            const header =
+                (document.querySelector('header.no-print') as HTMLElement | null) ??
+                (document.querySelector('header') as HTMLElement | null);
+            const headerBottom = header?.getBoundingClientRect().bottom ?? 0;
+            setWhereToCenterY((headerBottom + gridTop) / 2);
+        };
+
+        let raf = 0;
+        const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
+
+        measure();
+        const el = gridRef.current;
+        if (el && ro) ro.observe(el);
+        raf = requestAnimationFrame(measure);
+        window.addEventListener('resize', measure);
+
+        return () => {
+            cancelAnimationFrame(raf);
+            window.removeEventListener('resize', measure);
+            ro?.disconnect();
+        };
+    }, [
+        isInitialized,
+        settings.displayMode,
+        loginState,
+        schoolId,
+        isAdmin,
+        isStaff,
+        isSchoolChooser,
+        staffOptions.length,
+    ]);
 
     if (!isInitialized) {
         return (
@@ -187,14 +230,6 @@ export default function PortalPage() {
                 'text-foreground relative w-full font-sans',
                 animBackdrop ? 'bg-transparent' : 'bg-background',
             )}
-            style={
-                {
-                    ['--wt-header-bottom' as string]:
-                        settings.displayMode === 'app'
-                            ? 'calc(env(safe-area-inset-top, 0px) + 5.75rem)'
-                            : '5rem',
-                } as React.CSSProperties
-            }
         >
             {/* Keeps main/footer flow height while hub layers are fixed to the viewport */}
             <div className="min-h-[100dvh] w-full shrink-0" aria-hidden />
@@ -241,7 +276,12 @@ export default function PortalPage() {
             {/* Positioning on a plain div so Framer does not override translate-based centering */}
             <div
                 className="pointer-events-none fixed left-1/2 z-[11] w-full max-w-6xl -translate-x-1/2 -translate-y-1/2 px-4 text-center sm:px-6"
-                style={{ top: 'calc((var(--wt-header-bottom) + 50dvh) / 2)' }}
+                style={{
+                    top:
+                        whereToCenterY != null
+                            ? `${whereToCenterY}px`
+                            : 'calc((5rem + 50dvh) / 2)',
+                }}
             >
                 <motion.h2
                     initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.94 }}
@@ -269,6 +309,7 @@ export default function PortalPage() {
 
             <div className="pointer-events-none fixed inset-x-0 top-0 z-[10] flex h-[100dvh] min-h-0 items-center justify-center px-4 sm:px-6">
                 <div
+                    ref={gridRef}
                     className={cn(
                         'pointer-events-auto grid w-full max-w-6xl gap-3 sm:gap-5',
                         settings.displayMode === 'app' ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-1 md:grid-cols-3',
@@ -333,17 +374,7 @@ export default function PortalPage() {
                                         </svg>
                                     )}
 
-                                    <div
-                                        className={cn(
-                                            'relative z-10 flex h-full flex-col',
-                                            !prefersReducedMotion && 'wt-tile',
-                                        )}
-                                        style={
-                                            prefersReducedMotion
-                                                ? undefined
-                                                : { animationDelay: `${index * 0.8}s` }
-                                        }
-                                    >
+                                    <div className="relative z-10 flex h-full flex-col">
                                         <div className="flex items-start gap-4">
                                             <div
                                                 className={cn(

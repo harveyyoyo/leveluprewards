@@ -6,27 +6,6 @@
   font-family: 'Libre Barcode 39', cursive;
 }
 
-/** Portal hub: gentle vertical float on destination tiles (stagger via inline `animation-delay`). */
-@keyframes wt-float {
-  0%,
-  100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-6px);
-  }
-}
-
-.wt-tile {
-  animation: wt-float 6s ease-in-out infinite;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .wt-tile {
-    animation: none;
-  }
-}
-
 @keyframes lovable-tab-in {
   from {
     opacity: 0;
