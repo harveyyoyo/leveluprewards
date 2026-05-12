@@ -130,7 +130,7 @@ interface Settings {
     enablePointApproval: boolean;
     enableAuditLog: boolean;
     enablePdfExport: boolean;
-    /** Weekly raffle: points required per ticket (e.g. 25). */
+    /** Weekly raffle: points per ticket (e.g. 25). Use 0 for a general raffle (one pool entry per student in scope; no point threshold). */
     rafflePointsPerTicket: number;
     /** Weekly raffle: when on, pulling the wheel deducts ticket points from all eligible students after the spin. */
     raffleDeductPoints: boolean;

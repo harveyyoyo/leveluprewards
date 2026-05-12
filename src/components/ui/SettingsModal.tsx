@@ -1688,16 +1688,23 @@ export function SettingsModal() {
                                             <Input
                                                 id="settingsRafflePointsPerTicket"
                                                 type="number"
-                                                min={1}
+                                                min={0}
                                                 className="h-10 max-w-[140px] rounded-lg font-mono"
-                                                value={String(Math.max(1, Math.floor(Number(local.rafflePointsPerTicket || 25))))}
+                                                value={String(
+                                                    Number.isFinite(Number(local.rafflePointsPerTicket))
+                                                        ? Math.max(0, Math.floor(Number(local.rafflePointsPerTicket)))
+                                                        : 25,
+                                                )}
                                                 onChange={(e) => {
-                                                    const v = Math.max(1, Math.floor(Number(e.target.value || 1)));
+                                                    const n = Number(e.target.value);
+                                                    const v = Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 25;
                                                     handleToggle('rafflePointsPerTicket', v);
                                                 }}
                                             />
                                             <p className="text-xs text-muted-foreground">
-                                                Example: 25 means one ticket per 25 points (floor division).
+                                                Use <span className="font-semibold">0</span> for a general raffle (one entry per
+                                                student in the list; no point threshold). Otherwise one ticket per N points (floor
+                                                division), e.g. 25.
                                             </p>
                                         </div>
                                         <div className="flex items-center justify-between gap-3 rounded-lg border bg-background p-3">
