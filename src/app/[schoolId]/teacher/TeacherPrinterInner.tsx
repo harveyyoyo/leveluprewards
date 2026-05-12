@@ -1898,7 +1898,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
     const { data: periods, isLoading: periodsLoading } = useCollection<AttendanceScheduleSlot>(periodsQuery);
 
     const teachersQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'teachers') : null, [firestore, schoolId]);
-    const { data: teachers } = useCollection<Teacher>(teachersQuery);
+    const { data: teachers, isLoading: teachersLoading } = useCollection<Teacher>(teachersQuery);
     const currentTeacher = teachers?.find(t => t.id === teacherId);
 
     const studentsForTeacherActions = useMemo(() => {
@@ -2482,7 +2482,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
 
     const isLoading = secretaryMode
         ? categoriesLoading
-        : categoriesLoading || studentsLoading || classesLoading || periodsLoading;
+        : categoriesLoading || studentsLoading || classesLoading || periodsLoading || teachersLoading;
     const teacherAccent = 'hsl(var(--primary))';
 
     const { teacherDocId, userId } = useAppContext();
@@ -2506,7 +2506,10 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
         });
     }, [studentsLoading, schoolId, teacherId, isAdmin, isTeacher, secretaryMode, schoolWideTeacherScope, students, classes, currentTeacher, studentsForTeacherActions, teacherDocId, userId]);
 
-    if (isTeacher && !isAdmin && !secretaryMode && !currentTeacher && !studentsLoading) {
+    // Wait until the teachers collection has emitted at least once (`teachers` becomes an array).
+    // Otherwise students can finish loading first and we briefly show this card while `currentTeacher` is still unresolved.
+    const teacherProfileReady = teachers !== null && !teachersLoading;
+    if (isTeacher && !isAdmin && !secretaryMode && !currentTeacher && teacherProfileReady && !studentsLoading) {
         return (
             <div className="flex items-center justify-center min-h-[400px] p-6">
                 <Card className="w-full max-w-md border-t-8 border-destructive shadow-2xl">
