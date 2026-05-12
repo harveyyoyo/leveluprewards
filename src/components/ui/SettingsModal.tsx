@@ -1668,7 +1668,7 @@ export function SettingsModal() {
                                 <FeatureRow
                                     id="enableWeeklyRaffle"
                                     label="Weekly Raffle Wheel"
-                                    desc="Turn on the Admin → Raffle tab. Convert points into weekly raffle tickets and spin a weighted wheel."
+                                    desc="Turn on the Admin → Raffle tab. Spin the jackpot from current points; optional deduction of all ticket values runs after each pull when enabled there."
                                     icon={<Ticket className="w-5 h-5" />}
                                     settings={local}
                                     onToggle={handleToggle}

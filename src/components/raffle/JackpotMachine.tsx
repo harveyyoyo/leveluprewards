@@ -1,11 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
-import { Sparkles, Volume2, VolumeX } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { Sparkles, Volume2, VolumeX, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const REEL_COUNT = 3;
 const ROW_H = 88;
+const REEL_BASE_DURATION_MS = 2400;
+const REEL_STAGGER_MS = 600;
 /** Copies of the name pool per reel — need headroom so base offset + spin travel stays inside strip height. */
 const REEL_POOL_COPIES = 48;
 /** Last segment starts this many "pools" from the end (room for extraLoops × L rows of travel). */
@@ -18,11 +20,14 @@ type JackpotMachineProps = {
   title?: string;
   /** Called at spin start; must return the real winner (e.g. ticket-weighted). */
   pickWinner: () => JackpotPoolEntry | null;
-  onSpinFinished?: (winner: JackpotPoolEntry) => void;
-  /** Increment or change to reset reels, banner, and timers (e.g. after generating tickets). */
+  /** Called when the spin completes (after reels land). May be async (e.g. Firestore deduct). */
+  onSpinFinished?: (winner: JackpotPoolEntry) => void | Promise<void>;
+  /** Increment or change to reset reels, banner, and timers (e.g. after points update). */
   resetKey?: number | string;
   /** Omit full-page chrome; sit inside admin card. */
   embedded?: boolean;
+  /** When true, PULL is disabled (e.g. while saving deductions after a spin). */
+  pullLocked?: boolean;
 };
 
 export function JackpotMachine({
@@ -32,6 +37,7 @@ export function JackpotMachine({
   onSpinFinished,
   resetKey = 0,
   embedded = false,
+  pullLocked = false,
 }: JackpotMachineProps) {
   const [spinning, setSpinning] = useState(false);
   const [winner, setWinner] = useState<string | null>(null);
@@ -43,14 +49,28 @@ export function JackpotMachine({
 
   const audioRef = useRef<AudioContext | null>(null);
   const tickTimers = useRef<number[]>([]);
+  const spinRunId = useRef(0);
+  /** Run id for the in-flight spin (for transitionend; must match `finishCurrentSpin` argument). */
+  const transitionRunIdRef = useRef(0);
+  const pendingWinner = useRef<JackpotPoolEntry | null>(null);
+  const spinFinished = useRef(false);
 
   const clearTickTimers = () => {
     tickTimers.current.forEach((t) => window.clearTimeout(t));
     tickTimers.current = [];
   };
 
+  const scheduleTimer = (fn: () => void, delay: number) => {
+    const id = window.setTimeout(fn, delay);
+    tickTimers.current.push(id);
+    return id;
+  };
+
   useEffect(() => {
     clearTickTimers();
+    spinRunId.current += 1;
+    pendingWinner.current = null;
+    spinFinished.current = false;
     setSpinning(false);
     setWinner(null);
     setConfetti(false);
@@ -103,8 +123,8 @@ export function JackpotMachine({
     const ctx = getCtx();
     if (!ctx) return;
     const notes = [523.25, 659.25, 783.99, 1046.5];
-    notes.forEach((f, i) => window.setTimeout(() => beep(f, 0.18, 0.2, 'triangle'), i * 90));
-    window.setTimeout(() => {
+    notes.forEach((f, i) => scheduleTimer(() => beep(f, 0.18, 0.2, 'triangle'), i * 90));
+    scheduleTimer(() => {
       [1046.5, 1318.5, 1568].forEach((f) => {
         const o = ctx.createOscillator();
         const g = ctx.createGain();
@@ -118,6 +138,27 @@ export function JackpotMachine({
       });
     }, 380);
   };
+
+  const finishCurrentSpin = useCallback(
+    async (runId: number) => {
+      if (spinFinished.current || spinRunId.current !== runId) return;
+      const picked = pendingWinner.current;
+      if (!picked) return;
+
+      spinFinished.current = true;
+      clearTickTimers();
+      setSpinning(false);
+      setWinner(picked.name);
+      setConfetti(true);
+      if (!muted) playWin();
+      try {
+        await Promise.resolve(onSpinFinished?.(picked));
+      } catch {
+        /* parent may toast; avoid unhandled rejection */
+      }
+    },
+    [muted, onSpinFinished],
+  );
 
   const labels = useMemo(() => (pool.length ? pool.map((p) => p.name) : ['—']), [pool]);
 
@@ -144,10 +185,15 @@ export function JackpotMachine({
     if (reduceMotion) {
       setWinner(picked.name);
       setConfetti(true);
-      void resumeAudioIfNeeded().then(() => {
+      void (async () => {
+        await resumeAudioIfNeeded();
         if (!muted) playWin();
-      });
-      onSpinFinished?.(picked);
+        try {
+          await Promise.resolve(onSpinFinished?.(picked));
+        } catch {
+          /* ignore */
+        }
+      })();
       return;
     }
 
@@ -157,13 +203,15 @@ export function JackpotMachine({
       setSpinning(true);
       setWinner(null);
       setConfetti(false);
+      pendingWinner.current = picked;
+      spinFinished.current = false;
+      const runId = spinRunId.current + 1;
+      spinRunId.current = runId;
+      transitionRunIdRef.current = runId;
       if (!muted) await resumeAudioIfNeeded();
 
       const L = pool.length;
       clearTickTimers();
-
-      const baseDur = 2400;
-      const stagger = 600;
 
       setReelSnap(true);
       setOffsets(Array(REEL_COUNT).fill(0));
@@ -176,34 +224,27 @@ export function JackpotMachine({
       const segStart = Math.max(0, reelStrips[0].length - REEL_SEG_FROM_END_POOLS * L);
 
       setReelSnap(false);
-      setOffsets(
-        reelStrips.map((strip) => {
-          const targetIdx = segStart + winnerIdx;
-          const basePx = targetIdx * ROW_H;
-          const maxExtraByLength = Math.max(0, Math.floor((strip.length - 1 - targetIdx) / L) - 1);
-          const loops = Math.min(extraLoops, maxExtraByLength);
-          return basePx + loops * L * ROW_H;
-        }),
-      );
+      const plannedOffsets = reelStrips.map((strip) => {
+        const targetIdx = segStart + winnerIdx;
+        const basePx = targetIdx * ROW_H;
+        const maxExtraByLength = Math.max(0, Math.floor((strip.length - 1 - targetIdx) / L) - 1);
+        const loops = Math.min(extraLoops, maxExtraByLength);
+        return basePx + loops * L * ROW_H;
+      });
+      setOffsets(plannedOffsets);
 
-      const totalDur = baseDur + stagger * (REEL_COUNT - 1) + 200;
+      const longestReelDuration = REEL_BASE_DURATION_MS + REEL_STAGGER_MS * (REEL_COUNT - 1);
       let t = 0;
-      while (t < totalDur) {
-        const p = t / totalDur;
-        const interval = 40 + p * 180;
-        const id = window.setTimeout(() => beep(700 + (1 - p) * 600, 0.03, 0.08, 'square'), t);
-        tickTimers.current.push(id);
+      while (t < longestReelDuration - 140) {
+        const p = t / longestReelDuration;
+        const interval = 34 + p * p * 170;
+        scheduleTimer(() => {
+          if (spinRunId.current === runId) beep(700 + (1 - p) * 650, 0.026, 0.07, 'square');
+        }, t);
         t += interval;
       }
 
-      const finishId = window.setTimeout(() => {
-        setSpinning(false);
-        setWinner(picked.name);
-        setConfetti(true);
-        if (!muted) playWin();
-        onSpinFinished?.(picked);
-      }, totalDur);
-      tickTimers.current.push(finishId as unknown as number);
+      scheduleTimer(() => void finishCurrentSpin(runId), longestReelDuration + 120);
     })();
   };
 
@@ -220,7 +261,7 @@ export function JackpotMachine({
   });
 
   return (
-    <div className={cn(shell, 'jackpot-machine')} data-jackpot-machine>
+    <div className={cn(shell, 'jackpot-machine')} data-jackpot-machine data-legacy-motion-root="jackpot">
       <style>{`
         @keyframes jp-pulse { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.05); opacity: 0.88; } }
         @keyframes jp-bulb { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
@@ -316,8 +357,14 @@ export function JackpotMachine({
                       transform: `translateY(-${offsets[ri] - ROW_H}px)`,
                       transition:
                         spinning && !reelSnap
-                          ? `transform ${2400 + ri * 600}ms cubic-bezier(0.16, 1, 0.3, 1)`
+                          ? `transform ${REEL_BASE_DURATION_MS + ri * REEL_STAGGER_MS}ms cubic-bezier(0.16, 1, 0.3, 1)`
                           : 'none',
+                    }}
+                    onTransitionEnd={(event) => {
+                      if (!spinning || reelSnap || event.propertyName !== 'transform') return;
+                      beep(180 + ri * 45, 0.08, 0.12, 'triangle');
+                      if (ri !== REEL_COUNT - 1) return;
+                      void finishCurrentSpin(transitionRunIdRef.current);
                     }}
                   >
                     {strip.map((name, ni) => (
@@ -346,9 +393,9 @@ export function JackpotMachine({
               <button
                 type="button"
                 onClick={spin}
-                disabled={spinning || pool.length === 0}
+                disabled={spinning || pullLocked || pool.length === 0}
                 className={cn(
-                  'relative w-full max-w-sm rounded-full px-8 py-4 tracking-wider md:px-12 md:py-5 md:text-2xl',
+                  'relative inline-flex w-full max-w-sm items-center justify-center rounded-full px-8 py-4 tracking-wider md:px-12 md:py-5 md:text-2xl',
                   'bg-primary shadow-md transition hover:bg-primary/90',
                   'disabled:cursor-not-allowed disabled:opacity-50',
                   'text-lg',
@@ -361,13 +408,22 @@ export function JackpotMachine({
                   animation: spinning ? 'none' : 'jp-pulse 1.6s ease-in-out infinite',
                 }}
               >
-                {spinning ? 'SPINNING…' : 'PULL!'}
+                {spinning ? 'SPINNING…' : pullLocked ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 shrink-0 animate-spin" aria-hidden />
+                    SAVING…
+                  </>
+                ) : (
+                  'PULL!'
+                )}
               </button>
             </div>
 
             {embedded && pool.length > 0 ? (
               <p className="mt-4 px-2 text-center text-xs text-muted-foreground">
-                Winner is chosen by raffle tickets (same odds as before). Three reels land on the same student.
+                Odds follow ticket counts from current points. If your school enables “Deduct points when you pull” above,
+                each eligible student loses points for <span className="font-semibold">all</span> of their tickets (tickets ×
+                points per ticket) after the spin finishes, and an activity line is added for each.
               </p>
             ) : null}
           </div>

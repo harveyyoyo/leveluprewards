@@ -132,7 +132,7 @@ interface Settings {
     enablePdfExport: boolean;
     /** Weekly raffle: points required per ticket (e.g. 25). */
     rafflePointsPerTicket: number;
-    /** Weekly raffle: when on, generating entries deducts points from students. */
+    /** Weekly raffle: when on, pulling the wheel deducts ticket points from all eligible students after the spin. */
     raffleDeductPoints: boolean;
     // Student & Access
     enableStudentProfiles: boolean;
