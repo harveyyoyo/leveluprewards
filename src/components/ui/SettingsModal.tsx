@@ -74,7 +74,6 @@ const INTERFACE_SECTION_NAV = [
 const ADD_ON_TAB_FOR_SETTINGS_KEY: Record<string, string> = {
     payRewards: 'coupons',
     enableAdminAnalytics: 'insights',
-    enableWeeklyRaffle: 'raffle',
     enableClassLeaderboard: 'halloffame',
     payLibrary: 'library',
     enableAchievements: 'bonuspoints',
@@ -1668,7 +1667,7 @@ export function SettingsModal() {
                                 <FeatureRow
                                     id="enableWeeklyRaffle"
                                     label="Weekly Raffle Wheel"
-                                    desc="Turn on the Admin → Raffle tab. Spin the jackpot from current points; optional deduction of all ticket values runs after each pull when enabled there."
+                                    desc="Turn on the Teacher portal Raffle tab. When enabled, configure ticket size, equal vs scaled odds, and deduct-on-pull below."
                                     icon={<Ticket className="w-5 h-5" />}
                                     settings={local}
                                     onToggle={handleToggle}
@@ -1677,6 +1676,56 @@ export function SettingsModal() {
                                     isAllowed={isFeatureAllowed('enableWeeklyRaffle')}
                                     planLabel={planLabel}
                                 />
+                                {local.enableWeeklyRaffle && isAdmin && isFeatureAllowed('enableWeeklyRaffle') && (
+                                    <div className="mx-1 mb-3 space-y-4 rounded-xl border border-border/60 bg-muted/15 px-4 py-4">
+                                        <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">
+                                            Raffle rules (Teacher portal)
+                                        </p>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="settingsRafflePointsPerTicket" className="text-xs font-semibold text-muted-foreground">
+                                                Points per ticket
+                                            </Label>
+                                            <Input
+                                                id="settingsRafflePointsPerTicket"
+                                                type="number"
+                                                min={1}
+                                                className="h-10 max-w-[140px] rounded-lg font-mono"
+                                                value={String(Math.max(1, Math.floor(Number(local.rafflePointsPerTicket || 25))))}
+                                                onChange={(e) => {
+                                                    const v = Math.max(1, Math.floor(Number(e.target.value || 1)));
+                                                    handleToggle('rafflePointsPerTicket', v);
+                                                }}
+                                            />
+                                            <p className="text-xs text-muted-foreground">
+                                                Example: 25 means one ticket per 25 points (floor division).
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center justify-between gap-3 rounded-lg border bg-background p-3">
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-semibold">One entry per student (equal odds)</p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    Qualifying students each get one pool entry; extra points do not add entries.
+                                                </p>
+                                            </div>
+                                            <Switch
+                                                checked={!!local.raffleOneEntryPerStudent}
+                                                onCheckedChange={(c) => handleToggle('raffleOneEntryPerStudent', !!c)}
+                                            />
+                                        </div>
+                                        <div className="flex items-center justify-between gap-3 rounded-lg border bg-background p-3">
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-semibold">Deduct points on pull</p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    After each spin, subtract each eligible student&apos;s ticket value (see raffle help text on the teacher tab).
+                                                </p>
+                                            </div>
+                                            <Switch
+                                                checked={!!local.raffleDeductPoints}
+                                                onCheckedChange={(c) => handleToggle('raffleDeductPoints', !!c)}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
                                 <FeatureRow
                                     id="enableNotifications"
                                     label="Notifications"

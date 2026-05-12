@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, Fragment } from 'react';
 import { useConfirm } from '@/components/providers/ConfirmProvider';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useAppContext } from '@/components/AppProvider';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -15,7 +16,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import type { Coupon, Category, Teacher, Student, Class, HistoryItem, Prize, AttendanceSettings, AttendanceLogEntry, AttendanceScheduleSlot, AttendanceRewardRule, CouponRedemptionScope, HomeworkAssignment } from '@/lib/types';
 import type { LucideIcon } from 'lucide-react';
-import { ArrowLeft, Printer, Plus, LogIn, LogOut, UserCheck, Award, User, Search, Users, Minus, Gift, Loader2, Trash2, Edit, Filter, Ticket, Clock, ChevronRight, History, FileText, BookOpen, Target, X } from 'lucide-react';
+import { ArrowLeft, Printer, Plus, LogIn, LogOut, UserCheck, Award, User, Search, Users, Minus, Gift, Loader2, Trash2, Edit, Filter, Ticket, Clock, ChevronRight, History, FileText, BookOpen, Target, X, Dices } from 'lucide-react';
 import { useSettings, type Settings } from '@/components/providers/SettingsProvider';
 import { PrinterReminderCallout } from '@/components/PrinterReminderCallout';
 import {
@@ -67,6 +68,18 @@ import { SchoolReportsPanel } from '@/components/reports/SchoolReportsPanel';
 import { GoalsManager } from '@/components/goals/GoalsManager';
 import { homeworkRewardCategoryKey } from '@/lib/homeworkRewards';
 import { studentsInTeacherScope } from '@/lib/reportsScope';
+
+const TeacherWeeklyRaffleTab = dynamic(
+    () => import('@/app/[schoolId]/admin/sections/AdminRaffleTab').then((m) => m.AdminRaffleTab),
+    {
+        ssr: false,
+        loading: () => (
+            <div className="flex min-h-[320px] items-center justify-center p-8 text-sm font-medium text-muted-foreground">
+                Loading raffle…
+            </div>
+        ),
+    },
+);
 
 /** Max sheets per run. Bounded for sensible printer jobs and UI. */
 const MAX_COUPON_PRINT_SHEETS = 100;
@@ -1867,16 +1880,22 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
     const animBackdrop = globalAnimatedBackdropActive(settings);
     const playSound = useArcadeSound();
 
+    const raffleTabEnabled = useMemo(
+        () => !secretaryMode && !!settings.enableWeeklyRaffle && isFeatureAllowed('enableWeeklyRaffle'),
+        [secretaryMode, settings.enableWeeklyRaffle, isFeatureAllowed],
+    );
+
     const [activeTeacherTab, setActiveTeacherTab] = useState('coupons');
 
     useEffect(() => {
         if (secretaryMode) return;
         const basicTabs = new Set<string>(['coupons', 'award', 'roster', 'prizes', 'redemptions', 'reports']);
+        if (raffleTabEnabled) basicTabs.add('raffle');
         if (!basicTabs.has(activeTeacherTab)) {
             const timer = setTimeout(() => setActiveTeacherTab('coupons'), 100);
             return () => clearTimeout(timer);
         }
-    }, [secretaryMode, activeTeacherTab]);
+    }, [secretaryMode, activeTeacherTab, raffleTabEnabled]);
 
     const categoriesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'categories') : null, [firestore, schoolId]);
     const { data: categories, isLoading: categoriesLoading } = useCollection<Category>(categoriesQuery);
@@ -2648,6 +2667,18 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                     <FileText className="w-4 h-4 shrink-0 opacity-80" />
                                     Reports
                                 </TabsTrigger>
+                                {raffleTabEnabled && (
+                                    <>
+                                        <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground/45 pointer-events-none" aria-hidden />
+                                        <TabsTrigger
+                                            value="raffle"
+                                            className="rounded-xl px-3 py-2 font-bold text-sm flex items-center gap-1.5 text-foreground data-[state=active]:bg-[color:var(--teacher-tab-selected)] data-[state=active]:shadow-sm data-[state=active]:text-white"
+                                        >
+                                            <Dices className="w-4 h-4 shrink-0 opacity-80" />
+                                            Raffle
+                                        </TabsTrigger>
+                                    </>
+                                )}
                             </TabsList>
                         </div>
                         </div>
@@ -3274,6 +3305,18 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                     </div>
                                 </div>
                                 </TabsContent>
+
+                            {raffleTabEnabled && (
+                                <TabsContent value="raffle" className={teacherPortalTabContentClassName}>
+                                    <div className={teacherPortalPanelClassName}>
+                                        <TeacherWeeklyRaffleTab
+                                            schoolId={schoolId!}
+                                            students={studentsForTeacherActions}
+                                            canEditSettings={isAdmin && !secretaryMode}
+                                        />
+                                    </div>
+                                </TabsContent>
+                            )}
 
                                 {settings.enableGoals && isFeatureAllowed('enableGoals') && (
                                     <TabsContent value="goals" className={teacherPortalTabContentClassName}>

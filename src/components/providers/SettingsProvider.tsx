@@ -69,7 +69,7 @@ interface Settings {
     // Analytics
     enableTeacherCharts: boolean;
     enableAdminAnalytics: boolean;
-    /** Admin weekly raffle wheel: convert points into raffle entries. */
+    /** Weekly raffle wheel (Teacher portal): convert points into raffle entries. */
     enableWeeklyRaffle: boolean;
     // Social & Communication
     enableNotifications: boolean;
@@ -180,6 +180,15 @@ interface Settings {
     kioskSessionTimeoutSec?: number;
     /** Minutes of kiosk inactivity before AI Fun and redeem print vouchers are hidden until the next interaction. */
     kioskAiFunAndVoucherIdleOffMin?: number;
+    /**
+     * When on, the kiosk freezes a student that has signed in too many times in a row.
+     * Useful to stop the same card being tapped repeatedly (e.g. abuse, accidental loops).
+     */
+    studentSignInThrottleEnabled?: boolean;
+    /** Max successful sign-ins by the same student within the rolling window before they are frozen. */
+    studentSignInThrottleMaxAttempts?: number;
+    /** Rolling window (in minutes) used to count repeated sign-ins for the throttle. */
+    studentSignInThrottleWindowMin?: number;
     /**
      * When > 0, a student who just signed in at the kiosk cannot sign in again
      * for this many seconds (anti-spam / anti-double-scan). 0 disables the freeze.
@@ -434,6 +443,9 @@ const defaultSettings: Settings = {
     adminSessionTimeoutMs: 5 * 60 * 1000,
     kioskSessionTimeoutSec: 10,
     kioskAiFunAndVoucherIdleOffMin: 6,
+    studentSignInThrottleEnabled: false,
+    studentSignInThrottleMaxAttempts: 10,
+    studentSignInThrottleWindowMin: 2,
     studentSignInFreezeSec: 0,
     kioskLoginTabCardEnabled: true,
     kioskLoginTabTypeEnabled: true,
@@ -761,6 +773,28 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                 ) {
                     delete (parsed as Partial<Settings>).kioskAiFunAndVoucherIdleOffMin;
                 }
+                const throttleMax = parsed.studentSignInThrottleMaxAttempts;
+                if (
+                    typeof throttleMax !== 'number' ||
+                    !Number.isFinite(throttleMax) ||
+                    throttleMax < 1 ||
+                    throttleMax > 1000
+                ) {
+                    delete (parsed as Partial<Settings>).studentSignInThrottleMaxAttempts;
+                } else {
+                    parsed.studentSignInThrottleMaxAttempts = Math.round(throttleMax);
+                }
+                const throttleWindow = parsed.studentSignInThrottleWindowMin;
+                if (
+                    typeof throttleWindow !== 'number' ||
+                    !Number.isFinite(throttleWindow) ||
+                    throttleWindow < 1 ||
+                    throttleWindow > 1440
+                ) {
+                    delete (parsed as Partial<Settings>).studentSignInThrottleWindowMin;
+                } else {
+                    parsed.studentSignInThrottleWindowMin = Math.round(throttleWindow);
+                }
                 const freezeSec = parsed.studentSignInFreezeSec;
                 if (typeof freezeSec !== 'number' || !Number.isFinite(freezeSec) || freezeSec < 0) {
                     delete (parsed as Partial<Settings>).studentSignInFreezeSec;
@@ -1007,9 +1041,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     const isTeacherAllowed = useCallback((key: string) => {
         if (!isAllowed(key)) return false;
         if (loginState !== 'teacher') return true;
+        if (key === 'enableWeeklyRaffle') return !!settings.enableWeeklyRaffle;
         // Teachers only see features enabled for them by the admin
         return settings.teacherFeatures?.[key] ?? false;
-    }, [isAllowed, loginState, settings.teacherFeatures]);
+    }, [isAllowed, loginState, settings.teacherFeatures, settings.enableWeeklyRaffle]);
 
     return (
         <SettingsContext.Provider value={{ 

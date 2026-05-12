@@ -28,9 +28,12 @@ type EntryRow = {
 export function AdminRaffleTab({
   schoolId,
   students,
+  /** When false, raffle rules are read-only (configure under Admin → Settings → Features). */
+  canEditSettings = true,
 }: {
   schoolId: string;
   students: Student[];
+  canEditSettings?: boolean;
 }) {
   const { toast } = useToast();
   const { settings, updateSettings } = useSettings();
@@ -188,74 +191,100 @@ export function AdminRaffleTab({
             Weekly raffle
           </CardTitle>
           <CardDescription>
-            Use <span className="font-semibold">PULL!</span> to spin. Choose <span className="font-semibold">equal odds</span>{' '}
-            (one entry per qualifying student) or <span className="font-semibold">scaled odds</span> (more points → more tickets
-            in the pool). If <span className="font-semibold">Deduct points when you pull</span> is on, points are taken after the
-            spin: <span className="font-semibold">one ticket’s worth each</span> in equal-odds mode, or{' '}
-            <span className="font-semibold">all ticket slots</span> in scaled mode.
+            {canEditSettings ? (
+              <>
+                Use <span className="font-semibold">PULL!</span> to spin. Choose <span className="font-semibold">equal odds</span>{' '}
+                (one entry per qualifying student) or <span className="font-semibold">scaled odds</span> (more points → more tickets
+                in the pool). If <span className="font-semibold">Deduct points when you pull</span> is on, points are taken after the
+                spin: <span className="font-semibold">one ticket’s worth each</span> in equal-odds mode, or{' '}
+                <span className="font-semibold">all ticket slots</span> in scaled mode.
+              </>
+            ) : (
+              <>
+                Use <span className="font-semibold">PULL!</span> to spin for students shown below (your portal scope). Raffle rules
+                are configured under <span className="font-semibold">Admin → Settings → Features</span> (Weekly Raffle Wheel).
+              </>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5 pt-6">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="rafflePointsPerTicket" className="text-xs font-semibold text-muted-foreground">
-                Points per ticket
-              </Label>
-              <Input
-                id="rafflePointsPerTicket"
-                type="number"
-                min={1}
-                value={String(pointsPerTicket)}
-                onChange={(e) => {
-                  const v = Math.max(1, Math.floor(Number(e.target.value || 1)));
-                  updateSettings({ rafflePointsPerTicket: v });
-                }}
-                className="h-11 rounded-xl font-mono"
-              />
-              <p className="text-xs text-muted-foreground">
-                Example: 25 points = 1 ticket. Tickets are \( \lfloor points / {pointsPerTicket} \rfloor \).
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between gap-3 rounded-xl border bg-background p-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold">One entry per student (equal odds)</p>
+          {canEditSettings ? (
+            <>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="rafflePointsPerTicket" className="text-xs font-semibold text-muted-foreground">
+                    Points per ticket
+                  </Label>
+                  <Input
+                    id="rafflePointsPerTicket"
+                    type="number"
+                    min={1}
+                    value={String(pointsPerTicket)}
+                    onChange={(e) => {
+                      const v = Math.max(1, Math.floor(Number(e.target.value || 1)));
+                      updateSettings({ rafflePointsPerTicket: v });
+                    }}
+                    className="h-11 rounded-xl font-mono"
+                  />
                   <p className="text-xs text-muted-foreground">
-                    Everyone with at least {pointsPerTicket} pts gets <span className="font-semibold">one</span> chance, even if
-                    they could “buy” more tickets from points. Turn off to use ticket counts from points (more tickets → better
-                    odds).
+                    Example: 25 points = 1 ticket. Tickets are \( \lfloor points / {pointsPerTicket} \rfloor \).
                   </p>
                 </div>
-                <Switch
-                  checked={oneEntryPerStudent}
-                  onCheckedChange={(checked) => updateSettings({ raffleOneEntryPerStudent: !!checked })}
-                />
-              </div>
-            </div>
-          </div>
 
-          <div className="rounded-xl border bg-background p-3">
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-sm font-semibold">Deduct points when you pull</p>
-                <p className="text-xs text-muted-foreground">
-                  {oneEntryPerStudent ? (
-                    <>
-                      After each spin, subtract <span className="font-semibold">{pointsPerTicket} pts</span> (one ticket) from
-                      each eligible student and record it. Scaled mode instead subtracts each student&apos;s full ticket value.
-                    </>
-                  ) : (
-                    <>
-                      After each spin, subtract each student&apos;s full ticket value (their ticket slots × {pointsPerTicket} pts)
-                      and record it. PULL never changes points when this is off.
-                    </>
-                  )}
-                </p>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-3 rounded-xl border bg-background p-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold">One entry per student (equal odds)</p>
+                      <p className="text-xs text-muted-foreground">
+                        Everyone with at least {pointsPerTicket} pts gets <span className="font-semibold">one</span> chance, even if
+                        they could “buy” more tickets from points. Turn off to use ticket counts from points (more tickets → better
+                        odds).
+                      </p>
+                    </div>
+                    <Switch
+                      checked={oneEntryPerStudent}
+                      onCheckedChange={(checked) => updateSettings({ raffleOneEntryPerStudent: !!checked })}
+                    />
+                  </div>
+                </div>
               </div>
-              <Switch checked={deductOnPull} onCheckedChange={(checked) => updateSettings({ raffleDeductPoints: !!checked })} />
+
+              <div className="rounded-xl border bg-background p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold">Deduct points when you pull</p>
+                    <p className="text-xs text-muted-foreground">
+                      {oneEntryPerStudent ? (
+                        <>
+                          After each spin, subtract <span className="font-semibold">{pointsPerTicket} pts</span> (one ticket) from
+                          each eligible student and record it. Scaled mode instead subtracts each student&apos;s full ticket value.
+                        </>
+                      ) : (
+                        <>
+                          After each spin, subtract each student&apos;s full ticket value (their ticket slots × {pointsPerTicket}{' '}
+                          pts) and record it. PULL never changes points when this is off.
+                        </>
+                      )}
+                    </p>
+                  </div>
+                  <Switch checked={deductOnPull} onCheckedChange={(checked) => updateSettings({ raffleDeductPoints: !!checked })} />
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="rounded-xl border bg-muted/20 p-4 text-sm text-muted-foreground space-y-2">
+              <p>
+                <span className="font-semibold text-foreground">Points per ticket:</span> {pointsPerTicket}
+              </p>
+              <p>
+                <span className="font-semibold text-foreground">Odds:</span>{' '}
+                {oneEntryPerStudent ? 'One pool entry per qualifying student (equal odds).' : 'Scaled — ticket count from points.'}
+              </p>
+              <p>
+                <span className="font-semibold text-foreground">Deduct on pull:</span> {deductOnPull ? 'On' : 'Off'}
+              </p>
             </div>
-          </div>
+          )}
 
           <JackpotMachine
             embedded

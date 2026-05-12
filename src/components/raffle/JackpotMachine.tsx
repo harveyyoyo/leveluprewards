@@ -87,7 +87,7 @@ export function JackpotMachine({
     };
   }, []);
 
-  const getCtx = () => {
+  const getCtx = useCallback(() => {
     if (muted) return null;
     if (!audioRef.current) {
       const Ctx =
@@ -96,7 +96,7 @@ export function JackpotMachine({
       audioRef.current = new Ctx();
     }
     return audioRef.current;
-  };
+  }, [muted]);
 
   const resumeAudioIfNeeded = async () => {
     const ctx = getCtx();
@@ -108,21 +108,24 @@ export function JackpotMachine({
     }
   };
 
-  const beep = (freq: number, dur = 0.05, vol = 0.15, type: OscillatorType = 'square') => {
-    const ctx = getCtx();
-    if (!ctx) return;
-    const o = ctx.createOscillator();
-    const g = ctx.createGain();
-    o.type = type;
-    o.frequency.value = freq;
-    g.gain.value = vol;
-    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
-    o.connect(g).connect(ctx.destination);
-    o.start();
-    o.stop(ctx.currentTime + dur);
-  };
+  const beep = useCallback(
+    (freq: number, dur = 0.05, vol = 0.15, type: OscillatorType = 'square') => {
+      const ctx = getCtx();
+      if (!ctx) return;
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = type;
+      o.frequency.value = freq;
+      g.gain.value = vol;
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+      o.connect(g).connect(ctx.destination);
+      o.start();
+      o.stop(ctx.currentTime + dur);
+    },
+    [getCtx],
+  );
 
-  const playWin = () => {
+  const playWin = useCallback(() => {
     const ctx = getCtx();
     if (!ctx) return;
     const notes = [523.25, 659.25, 783.99, 1046.5];
@@ -140,7 +143,9 @@ export function JackpotMachine({
         o.stop(ctx.currentTime + 1.2);
       });
     }, 380);
-  };
+    // scheduleTimer closes over tickTimers ref only; stable for exhaustive-deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [getCtx, beep]);
 
   const finishCurrentSpin = useCallback(
     async (runId: number) => {
@@ -160,7 +165,7 @@ export function JackpotMachine({
         /* parent may toast; avoid unhandled rejection */
       }
     },
-    [muted, onSpinFinished],
+    [muted, onSpinFinished, playWin],
   );
 
   const labels = useMemo(() => (pool.length ? pool.map((p) => p.name) : ['—']), [pool]);

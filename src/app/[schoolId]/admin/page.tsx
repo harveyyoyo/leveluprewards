@@ -16,7 +16,7 @@ import {
    Users, Gift, BookOpen, Trash2, Edit, UploadCloud, Printer, LayoutDashboard, Database,
    Settings, History, Award, CheckCircle, Tag, Trophy, ArrowRight, Loader2, Play, ShieldCheck,
    User, Ticket, Upload, Download, Activity, Zap, Clock, Palette, Wand2, TableProperties,
-   FileText, Bell, Target, Megaphone, ChevronDown, X, Dices,
+   FileText, Bell, Target, Megaphone, ChevronDown, X,
  } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -138,10 +138,6 @@ const AdminPrizesTab = dynamic(
 );
 const AdminCouponsTab = dynamic(
   () => import('./sections/AdminCouponsTab').then((m) => m.AdminCouponsTab),
-  { loading: tabLoader, ssr: false },
-);
-const AdminRaffleTab = dynamic(
-  () => import('./sections/AdminRaffleTab').then((m) => m.AdminRaffleTab),
   { loading: tabLoader, ssr: false },
 );
 const AdminLibraryTab = dynamic(
@@ -473,20 +469,6 @@ function AdminDashboardInner() {
         disable: () => updateSettings({ enableAdminAnalytics: false, adminHiddenAddOnTabs: removeHidden('insights'), adminPinnedAddOnTabs: removePinned('insights') }),
       },
       {
-        value: 'raffle',
-        label: 'Raffle',
-        icon: Dices,
-        isOn: (s) => !!s.enableWeeklyRaffle,
-        canEnable: () => isFeatureAllowed?.('enableWeeklyRaffle') ?? true,
-        enable: () => updateSettings({ enableWeeklyRaffle: true, adminHiddenAddOnTabs: removeHidden('raffle') }),
-        disable: () =>
-          updateSettings({
-            enableWeeklyRaffle: false,
-            adminHiddenAddOnTabs: removeHidden('raffle'),
-            adminPinnedAddOnTabs: removePinned('raffle'),
-          }),
-      },
-      {
         value: 'attendance',
         label: 'Attendance',
         icon: Clock,
@@ -719,9 +701,6 @@ function AdminDashboardInner() {
         case 'insights':
           patch.enableAdminAnalytics = true;
           break;
-        case 'raffle':
-          patch.enableWeeklyRaffle = true;
-          break;
         case 'attendance':
           patch.payAttendance = true;
           patch.enableAttendance = true;
@@ -780,10 +759,6 @@ function AdminDashboardInner() {
         case 'insights':
           patch.enableAdminAnalytics = false;
           nextHidden = nextHidden.filter((x) => x !== 'insights');
-          break;
-        case 'raffle':
-          patch.enableWeeklyRaffle = false;
-          nextHidden = nextHidden.filter((x) => x !== 'raffle');
           break;
         case 'attendance':
           patch.payAttendance = false;
@@ -1625,10 +1600,6 @@ function AdminDashboardInner() {
                 }
               }}
             />
-          </TabsContent>
-
-          <TabsContent value="raffle" className={scrollingAdminTabClassName}>
-            <AdminRaffleTab schoolId={schoolId!} students={students || []} />
           </TabsContent>
 
           <TabsContent value="insights" className={`${scrollingAdminTabClassName} space-y-6`}>
