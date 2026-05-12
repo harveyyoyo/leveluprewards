@@ -185,10 +185,11 @@ export default function PortalPage() {
     return (
         <div
             className={cn(
-                'text-foreground relative font-sans flex flex-col items-center pt-2 sm:pt-6',
-                settings.displayMode === 'app' && 'min-h-[100dvh]',
+                'text-foreground relative font-sans flex w-full flex-col items-center',
+                settings.displayMode === 'app'
+                    ? 'min-h-[100dvh] pt-2 sm:pt-6 pb-24'
+                    : 'min-h-[100dvh] justify-center py-6 sm:py-10',
                 animBackdrop ? 'bg-transparent' : 'bg-background',
-                settings.displayMode === 'app' && 'pb-24',
             )}
         >
             {/* Backdrop: keep existing palette; only subtle grid + optional noise/animated orbs */}
@@ -232,9 +233,12 @@ export default function PortalPage() {
             </div>
 
             <div className={cn(
-                "relative z-10 w-full max-w-6xl px-4 sm:px-6",
-                settings.displayMode === 'app' ? "pt-4 sm:pt-14 pb-6 sm:pb-10 flex-1 flex flex-col" : "pt-10 sm:pt-14 pb-10"
-            )}>
+                'relative z-10 mx-auto w-full max-w-6xl px-4 sm:px-6',
+                settings.displayMode === 'app'
+                    ? 'flex flex-1 flex-col pb-6 pt-4 sm:pb-10 sm:pt-14'
+                    : 'pb-6 pt-2 sm:pb-8 sm:pt-4',
+            )}
+            >
                 <motion.div
                     initial={
                         prefersReducedMotion ? false : { opacity: 0, y: 48, scale: 0.92 }
