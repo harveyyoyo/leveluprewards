@@ -6,6 +6,10 @@ import { cn } from '@/lib/utils';
 
 const REEL_COUNT = 3;
 const ROW_H = 88;
+/** Copies of the name pool per reel — need headroom so base offset + spin travel stays inside strip height. */
+const REEL_POOL_COPIES = 48;
+/** Last segment starts this many "pools" from the end (room for extraLoops × L rows of travel). */
+const REEL_SEG_FROM_END_POOLS = 10;
 
 export type JackpotPoolEntry = { id: string; name: string };
 
@@ -120,7 +124,7 @@ export function JackpotMachine({
   const reelStrips = useMemo(() => {
     return Array.from({ length: REEL_COUNT }, () => {
       const arr: string[] = [];
-      for (let i = 0; i < 30; i++) arr.push(...labels);
+      for (let i = 0; i < REEL_POOL_COPIES; i++) arr.push(...labels);
       return arr;
     });
   }, [labels]);
@@ -166,15 +170,19 @@ export function JackpotMachine({
       await nextFrame();
       await nextFrame();
 
+      // Extra travel in whole "pool" cycles (L rows) — same names align every L rows. Never add
+      // extraLoops × full strip height: that pushes translateY past the reel DOM and shows blank.
       const extraLoops = 2 + Math.floor(Math.random() * 3);
+      const segStart = Math.max(0, reelStrips[0].length - REEL_SEG_FROM_END_POOLS * L);
 
       setReelSnap(false);
       setOffsets(
         reelStrips.map((strip) => {
-          const segStart = strip.length - L * 2;
           const targetIdx = segStart + winnerIdx;
           const basePx = targetIdx * ROW_H;
-          return basePx + extraLoops * strip.length * ROW_H;
+          const maxExtraByLength = Math.max(0, Math.floor((strip.length - 1 - targetIdx) / L) - 1);
+          const loops = Math.min(extraLoops, maxExtraByLength);
+          return basePx + loops * L * ROW_H;
         }),
       );
 
@@ -315,10 +323,10 @@ export function JackpotMachine({
                     {strip.map((name, ni) => (
                       <div
                         key={`${ri}-${ni}-${name}`}
-                        className="flex items-center justify-center px-1"
+                        className="flex w-full min-w-0 items-center justify-center px-1"
                         style={reelNameStyle(name.length > 8 ? 16 : embedded ? 18 : 24)}
                       >
-                        <span className="max-w-full truncate">{name}</span>
+                        <span className="min-w-0 max-w-full truncate">{name}</span>
                       </div>
                     ))}
                   </div>
