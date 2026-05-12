@@ -13,6 +13,7 @@ import { useSettings } from '@/components/providers/SettingsProvider';
 import { useFirebase } from '@/firebase';
 import { collection, doc, runTransaction, type DocumentSnapshot } from 'firebase/firestore';
 import { JackpotMachine } from '@/components/raffle/JackpotMachine';
+import { parseRafflePointsPerTicket } from '@/lib/raffleTickets';
 
 type EntryRow = {
   id: string;
@@ -43,10 +44,8 @@ export function AdminRaffleTab({
   const [winner, setWinner] = useState<{ id: string; name: string } | null>(null);
   const [jackpotResetKey, setJackpotResetKey] = useState(0);
 
-  const rawPointsPerTicket = Number(settings.rafflePointsPerTicket);
-  const isGeneralRaffle = Number.isFinite(rawPointsPerTicket) && Math.floor(rawPointsPerTicket) === 0;
-  /** Points per ticket for ticket math; 0 means general raffle (not used as a divisor). */
-  const pointsPerTicket = isGeneralRaffle ? 0 : Math.max(1, Math.floor(Number.isFinite(rawPointsPerTicket) ? rawPointsPerTicket : 25));
+  const storedPpt = Number(settings.rafflePointsPerTicket);
+  const { isGeneralRaffle, pointsPerTicket } = parseRafflePointsPerTicket(settings.rafflePointsPerTicket);
   const deductOnPull = !!settings.raffleDeductPoints;
   const oneEntryPerStudent = !!settings.raffleOneEntryPerStudent;
 
@@ -203,9 +202,7 @@ export function AdminRaffleTab({
     [deductOnPull, entries, firestore, isGeneralRaffle, oneEntryPerStudent, pointsPerTicket, schoolId, toast],
   );
 
-  const displayRafflePointsPerTicket = Number.isFinite(rawPointsPerTicket)
-    ? Math.max(0, Math.floor(rawPointsPerTicket))
-    : 25;
+  const displayRafflePointsPerTicket = Number.isFinite(storedPpt) ? Math.max(0, Math.floor(storedPpt)) : 25;
 
   const jackpotEmbeddedFooter = useMemo(() => {
     if (isGeneralRaffle) {

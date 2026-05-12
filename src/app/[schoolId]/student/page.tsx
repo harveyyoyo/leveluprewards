@@ -109,6 +109,7 @@ import { STUDENT_KIOSK_REQUEST_EXIT_EVENT } from '@/lib/student-kiosk';
 import { studentSeesWelcomeBackOverlay, studentSeesWelcomePage } from '@/lib/studentWelcome';
 import { prizeIsListed, studentSeesPrizeByTeachers } from '@/lib/prize-utils';
 import { prizeAppearsInRewardsShop, resolveAiFunApiMode, withUnifiedAiFunPrize } from '@/lib/aiJokePrize';
+import { floorRaffleFullTickets, parseRafflePointsPerTicket } from '@/lib/raffleTickets';
 import {
   buildPrizeAiFunAvoidTexts,
   canonicalAiSurpriseText,
@@ -1194,6 +1195,23 @@ function StudentDashboardInner({
     return ids.size;
   }, [student?.earnedBadges, badges]);
 
+  const portalRaffleTickets = useMemo(() => {
+    if (!settings.enableWeeklyRaffle || !isFeatureAllowed('enableWeeklyRaffle')) return null;
+    const { isGeneralRaffle, pointsPerTicket } = parseRafflePointsPerTicket(settings.rafflePointsPerTicket);
+    if (isGeneralRaffle || pointsPerTicket < 1) return null;
+    return {
+      count: floorRaffleFullTickets(student?.points ?? 0, pointsPerTicket),
+      pointsPerTicket,
+      equalOddsNote: !!settings.raffleOneEntryPerStudent,
+    };
+  }, [
+    settings.enableWeeklyRaffle,
+    settings.rafflePointsPerTicket,
+    settings.raffleOneEntryPerStudent,
+    isFeatureAllowed,
+    student?.points,
+  ]);
+
   if (studentLoading || !student || !schoolId) {
     return (
       <div
@@ -1417,11 +1435,40 @@ function StudentDashboardInner({
             </div>
             <div className="text-center md:text-right">
               <p className="text-xs font-bold uppercase tracking-widest mb-0.5" style={{ color: effectiveTheme ? 'var(--theme-text)' : undefined, opacity: effectiveTheme ? 0.7 : undefined }}>Current Balance</p>
-              <div className="flex items-baseline gap-1.5" style={{ color: effectiveTheme ? 'var(--theme-primary)' : undefined }}>
-                <span className="text-4xl md:text-5xl font-black leading-none" style={{ color: effectiveTheme ? 'var(--theme-primary)' : 'hsl(var(--primary))' }}>
-                  {(student.points || 0).toLocaleString()}
-                </span>
-                <span className="text-lg md:text-xl font-bold uppercase tracking-widest" style={{ color: effectiveTheme ? 'var(--theme-primary)' : 'hsl(var(--primary) / 0.6)', opacity: 0.6 }}>pts</span>
+              <div
+                className="flex flex-wrap items-baseline justify-center gap-x-2 gap-y-1 md:justify-end"
+                style={{ color: effectiveTheme ? 'var(--theme-primary)' : undefined }}
+              >
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-4xl md:text-5xl font-black leading-none" style={{ color: effectiveTheme ? 'var(--theme-primary)' : 'hsl(var(--primary))' }}>
+                    {(student.points || 0).toLocaleString()}
+                  </span>
+                  <span className="text-lg md:text-xl font-bold uppercase tracking-widest" style={{ color: effectiveTheme ? 'var(--theme-primary)' : 'hsl(var(--primary) / 0.6)', opacity: 0.6 }}>pts</span>
+                </div>
+                {portalRaffleTickets ? (
+                  <>
+                    <span className="text-lg font-black opacity-35 select-none" aria-hidden>
+                      ·
+                    </span>
+                    <div
+                      className="flex items-baseline gap-1"
+                      title={
+                        `Weekly raffle: ${portalRaffleTickets.count === 1 ? '1 ticket' : `${portalRaffleTickets.count} tickets`} from your balance at ${portalRaffleTickets.pointsPerTicket} points per ticket.` +
+                        (portalRaffleTickets.equalOddsNote
+                          ? ' Your school uses equal odds on the wheel (one pool entry per qualifying student, not one slice per ticket shown).'
+                          : '')
+                      }
+                    >
+                      <Ticket className="h-5 w-5 shrink-0 opacity-70" aria-hidden />
+                      <span className="text-2xl md:text-3xl font-black tabular-nums leading-none" style={{ color: effectiveTheme ? 'var(--theme-primary)' : 'hsl(var(--primary))' }}>
+                        {portalRaffleTickets.count.toLocaleString()}
+                      </span>
+                      <span className="text-xs md:text-sm font-bold uppercase tracking-widest opacity-60">
+                        raffle {portalRaffleTickets.count === 1 ? 'ticket' : 'tickets'}
+                      </span>
+                    </div>
+                  </>
+                ) : null}
               </div>
               <div className="mt-3 flex flex-wrap items-center justify-center gap-2 md:justify-end">
                 {studentSeesWelcomePage(settings, student) && schoolId && (
