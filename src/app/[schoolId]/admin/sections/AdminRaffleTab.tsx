@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 import type { Student } from '@/lib/types';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useFirebase } from '@/firebase';
-import { collection, doc, runTransaction } from 'firebase/firestore';
+import { collection, doc, runTransaction, type DocumentSnapshot } from 'firebase/firestore';
 import { JackpotMachine } from '@/components/raffle/JackpotMachine';
 
 type EntryRow = {
@@ -115,11 +115,22 @@ export function AdminRaffleTab({
       try {
         const now = Date.now();
         await runTransaction(firestore, async (tx) => {
+          // Firestore requires every read before any write in a transaction.
+          const readResults: {
+            r: EntryRow;
+            studentRef: ReturnType<typeof doc>;
+            snap: DocumentSnapshot;
+          }[] = [];
+
           for (const r of rows) {
             const studentRef = doc(firestore, 'schools', schoolId, 'students', r.id);
             const snap = await tx.get(studentRef);
+            readResults.push({ r, studentRef, snap });
+          }
+
+          for (const { r, studentRef, snap } of readResults) {
             if (!snap.exists()) continue;
-            const current = Number((snap.data() as any)?.points || 0);
+            const current = Number((snap.data() as Record<string, unknown>)?.points || 0);
             const next = Math.max(0, current - r.deductPoints);
             tx.update(studentRef, { points: next });
 
