@@ -323,8 +323,10 @@ export default function PortalPage() {
                             defaultPortalAccent ?? rainbowForPortalId(area.id, settings.colorScheme);
                         const needsStudentSession = area.id === 'redeem' && loginState !== 'student';
                         const needsAdminPasscode = area.id === 'admin' && !isAdmin;
-                        const needsTeacherLogin =
-                            area.id === 'print' && (loginState === 'school' || loginState === 'admin');
+                        // School chooser needs the faculty list + passcode. Admins already have a staff
+                        // session — send them straight to `/teacher` like an already-signed-in teacher.
+                        // Otherwise opening the dialog here often led to picking "Prize desk" and landing on `/admin`.
+                        const needsTeacherLogin = area.id === 'print' && loginState === 'school';
                         const portalCard = (
                                 <motion.div
                                     initial={
@@ -591,30 +593,6 @@ export default function PortalPage() {
                             </DialogDescription>
                         </DialogHeader>
 
-                        {isAdmin && (
-                            <div className="rounded-xl border border-border/70 bg-muted/30 p-3">
-                                <p className="text-xs font-semibold text-muted-foreground">Already signed in as Admin</p>
-                                <p className="mt-1 text-xs text-muted-foreground/80">
-                                    Open teacher tools using your admin session (no teacher passcode).
-                                </p>
-                                <div className="mt-3">
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        className="w-full rounded-xl font-bold"
-                                        onClick={() => {
-                                            if (!schoolId) return;
-                                            setTeacherDialogOpen(false);
-                                            router.replace(`/${schoolId}/teacher`);
-                                        }}
-                                        disabled={teacherSubmitting}
-                                    >
-                                        Continue as Admin
-                                    </Button>
-                                </div>
-                            </div>
-                        )}
-
                         {!isAdmin && schoolId && (
                             <Button
                                 type="button"
@@ -641,7 +619,7 @@ export default function PortalPage() {
                                     Select your name
                                 </Label>
                                 <Select value={selectedTeacherKey} onValueChange={setSelectedTeacherKey}>
-                                    <SelectTrigger className="h-12 rounded-xl font-semibold" autoFocus={!isAdmin}>
+                                    <SelectTrigger className="h-12 rounded-xl font-semibold" autoFocus>
                                         <SelectValue placeholder={staffOptions.length ? 'Choose your name' : 'No faculty list yet'} />
                                     </SelectTrigger>
                                     <SelectContent>

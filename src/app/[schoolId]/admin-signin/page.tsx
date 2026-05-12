@@ -36,8 +36,12 @@ function destinationAfterAdminLogin(redirectParam: string | null, schoolId: stri
   }
   const existingQuery = decoded.includes('?') ? decoded.slice(decoded.indexOf('?') + 1) : '';
   const params = new URLSearchParams(existingQuery);
-  params.set('settings', 'hub');
-  return `${pathOnly}?${params.toString()}`;
+  // Deep-link admin settings hub only when returning to the admin dashboard (not e.g. `/teacher`).
+  if (/\/admin\/?$/i.test(pathOnly)) {
+    params.set('settings', 'hub');
+  }
+  const qs = params.toString();
+  return qs ? `${pathOnly}?${qs}` : pathOnly;
 }
 
 function AdminSignInLoading() {
