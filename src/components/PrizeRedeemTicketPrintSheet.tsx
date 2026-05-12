@@ -6,6 +6,7 @@ import { format } from 'date-fns';
 import DynamicIcon from '@/components/DynamicIcon';
 import { leadingEmojiSequenceFromName, stripLeadingEmojiFromPrizeName } from '@/lib/prize-utils';
 import type { PrizeVoucherPaperFormat } from '@/lib/prize-voucher-print';
+import { clearThermalPrizePrintRootLocks } from '@/lib/prizeThermalPrintDom';
 
 export type { PrizeVoucherPaperFormat } from '@/lib/prize-voucher-print';
 
@@ -71,6 +72,9 @@ export function PrizeRedeemTicketPrintSheet({
     document.body.classList.add('prize-ticket-printing');
     document.body.dataset.prizeVoucherPrint = paperFormat;
     return () => {
+      if (paperFormat === 'thermal_80mm') {
+        clearThermalPrizePrintRootLocks();
+      }
       document.body.classList.remove('prize-ticket-printing');
       delete document.body.dataset.prizeVoucherPrint;
       style.remove();

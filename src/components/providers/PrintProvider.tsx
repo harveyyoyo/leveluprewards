@@ -21,6 +21,7 @@ import { useSchoolMetadataDocRef } from '@/hooks/useSchoolMetadataDocRef';
 import type { CouponPrintPageSize } from '@/lib/coupon-print';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import type { PrizeVoucherPaperFormat } from '@/lib/prize-voucher-print';
+import { applyThermalPrizePrintRootLocks, clearThermalPrizePrintRootLocks } from '@/lib/prizeThermalPrintDom';
 
 interface PrintContextType {
     setCouponsToPrint: (coupons: Coupon[], options?: { couponsPerPage?: CouponPrintPageSize }) => void;
@@ -98,6 +99,9 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
         if (prizeTicketsToPrint.length > 0 && !prizePrintTriggered.current) {
             prizePrintTriggered.current = true;
             const afterPrint = () => {
+                if (prizeVoucherPaperFormat === 'thermal_80mm') {
+                    clearThermalPrizePrintRootLocks();
+                }
                 setPrizeTicketsToPrint([]);
                 prizePrintTriggered.current = false;
                 if (prizeTicketAfterPrintRef.current) {
@@ -108,9 +112,18 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
             prizeTicketAfterPrintRef.current = afterPrint;
             window.addEventListener('afterprint', afterPrint);
             playSound('swoosh');
-            ensurePrizeTicketFontsLoaded().finally(() => window.print());
+            ensurePrizeTicketFontsLoaded().finally(() => {
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        if (prizeVoucherPaperFormat === 'thermal_80mm') {
+                            applyThermalPrizePrintRootLocks();
+                        }
+                        window.print();
+                    });
+                });
+            });
         }
-    }, [prizeTicketsToPrint, playSound]);
+    }, [prizeTicketsToPrint, playSound, prizeVoucherPaperFormat]);
 
     const value = useMemo(
         () => ({ 

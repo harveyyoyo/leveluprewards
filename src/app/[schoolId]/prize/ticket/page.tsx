@@ -8,6 +8,7 @@ import { doc } from 'firebase/firestore';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { schoolPublicDocRef } from '@/lib/schoolPublic';
+import { applyThermalPrizePrintRootLocks, clearThermalPrizePrintRootLocks } from '@/lib/prizeThermalPrintDom';
 
 type TicketParams = {
   activityId: string;
@@ -124,6 +125,9 @@ export default function PrizeRedeemTicketPage() {
     }, 10_000);
 
     const cleanup = () => {
+      if (prizeVoucherPaperFormat === 'thermal_80mm') {
+        clearThermalPrizePrintRootLocks();
+      }
       window.removeEventListener('afterprint', cleanup);
       window.clearTimeout(safety);
       if (ticket.returnPath) router.replace(ticket.returnPath);
@@ -131,13 +135,18 @@ export default function PrizeRedeemTicketPage() {
     };
     window.addEventListener('afterprint', cleanup);
 
-    const t = window.setTimeout(() => window.print(), 150);
+    const t = window.setTimeout(() => {
+      if (prizeVoucherPaperFormat === 'thermal_80mm') {
+        applyThermalPrizePrintRootLocks();
+      }
+      window.print();
+    }, 150);
     return () => {
       window.clearTimeout(t);
       window.clearTimeout(safety);
       window.removeEventListener('afterprint', cleanup);
     };
-  }, [printRequested, prizeTickets, ticket.returnPath, router]);
+  }, [printRequested, prizeTickets, ticket.returnPath, router, prizeVoucherPaperFormat]);
 
   if (!prizeTickets?.length) {
     return (
