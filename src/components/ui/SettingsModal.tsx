@@ -31,7 +31,7 @@ import {
     Bell, Shield, Moon, Sun, ArrowLeft, Palette, Zap, Trophy,
     BarChart3, MessageSquare, ShoppingBag, ShieldCheck, Star,
     Users, Database, Printer, LayoutDashboard, History, HelpCircle,
-    Cpu, Award, Clock, Cog, Lock, Sparkles, ArrowRightLeft, Trash2, RotateCcw, Smile, BookOpen, Target, Megaphone, Tv,
+    Cpu, Award, Clock, Cog, Lock, Sparkles, Trash2, RotateCcw, Smile, BookOpen, Target, Megaphone, Tv,
     Layers, UsersRound, Ticket
 } from 'lucide-react';
 import { useSettings, colorSchemes, type ColorScheme, type Settings as AppSettings } from '../providers/SettingsProvider';
@@ -421,18 +421,9 @@ export function SettingsModal() {
     };
 
     const visibleStyles = ANIMATED_BACKGROUND_STYLES.filter(s => !(local.hiddenAnimatedBackgroundIds || []).includes(s.id));
-    const currentStyle = visibleStyles.find(s => s.id === local.animatedBackgroundStyle) || visibleStyles[0] || ANIMATED_BACKGROUND_STYLES[0];
-    const currentStyleIndex = visibleStyles.findIndex(s => s.id === currentStyle.id);
     const backdropActive = globalAnimatedBackdropActive(local);
     const backdropBlockedReason =
         local.legacyMode ? 'Legacy mode is on' : !local.enableAnimatedBackground ? 'Animated background is off' : null;
-
-    const cycleBackground = () => {
-        if (visibleStyles.length === 0) return;
-        const nextIndex = (currentStyleIndex + 1) % visibleStyles.length;
-        setDraft((d) => (d ? { ...d, animatedBackgroundStyle: visibleStyles[nextIndex].id } : d));
-        if (local.soundEnabled) playSound('click');
-    };
 
     const jumpToSettingsSection = (id: string) => {
         if (local.soundEnabled) playSound('click');
@@ -934,47 +925,83 @@ export function SettingsModal() {
                                 </div>
 
                                 {/* Background Style */}
-                                <div className="flex items-center justify-between mb-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2 rounded-xl bg-muted text-muted-foreground">
-                                            <Palette className="w-5 h-5" />
+                                {(() => {
+                                    const roleKey =
+                                        interfaceRole === 'student'
+                                            ? 'studentAnimatedBackgroundStyle'
+                                            : interfaceRole === 'teacher'
+                                              ? 'teacherAnimatedBackgroundStyle'
+                                              : 'animatedBackgroundStyle';
+                                    const rawStyle =
+                                        (local[roleKey as keyof AppSettings] as AnimatedBackgroundStyle | undefined) ||
+                                        local.animatedBackgroundStyle;
+                                    const selectedId =
+                                        visibleStyles.find((s) => s.id === rawStyle)?.id ??
+                                        visibleStyles[0]?.id ??
+                                        ANIMATED_BACKGROUND_STYLES[0].id;
+
+                                    return (
+                                        <div className="mb-4 space-y-3">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2 rounded-xl bg-muted text-muted-foreground shrink-0">
+                                                    <Palette className="w-5 h-5" />
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <h4 className="font-bold text-sm text-foreground">Background style</h4>
+                                                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                                                        Choose the animated backdrop for this portal role.
+                                                        {!backdropActive && backdropBlockedReason ? (
+                                                            <span className="ml-2 text-amber-700 dark:text-amber-400 font-bold">
+                                                                (not visible: {backdropBlockedReason})
+                                                            </span>
+                                                        ) : null}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            {visibleStyles.length === 0 ? (
+                                                <p className="text-[11px] text-muted-foreground rounded-xl border border-dashed border-border/60 bg-muted/30 px-3 py-2">
+                                                    Every background style is hidden in Developer settings. Restore at least one to choose a backdrop here.
+                                                </p>
+                                            ) : (
+                                                <Select
+                                                    value={selectedId}
+                                                    onValueChange={(value) => {
+                                                        handleToggle(roleKey, value as AnimatedBackgroundStyle);
+                                                        if (local.soundEnabled) playSound('click');
+                                                    }}
+                                                    disabled={!backdropActive}
+                                                    title={
+                                                        !backdropActive && backdropBlockedReason
+                                                            ? `Background style is disabled: ${backdropBlockedReason}`
+                                                            : undefined
+                                                    }
+                                                >
+                                                    <SelectTrigger
+                                                        className="h-10 w-full rounded-xl font-semibold text-sm"
+                                                        aria-label="Background animation style"
+                                                    >
+                                                        <SelectValue placeholder="Select style" />
+                                                    </SelectTrigger>
+                                                    <SelectContent className="max-h-72">
+                                                        {visibleStyles.map((s) => (
+                                                            <SelectItem
+                                                                key={s.id}
+                                                                value={s.id}
+                                                                title={s.description}
+                                                                className="items-start py-2"
+                                                            >
+                                                                <span className="font-semibold leading-tight">{s.label}</span>
+                                                                <span className="mt-0.5 block text-[10px] font-normal leading-snug text-muted-foreground">
+                                                                    {s.description}
+                                                                </span>
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            )}
                                         </div>
-                                         <div>
-                                            <h4 className="font-bold text-sm text-foreground">Background style</h4>
-                                            <p className="text-[11px] text-muted-foreground mt-0.5">
-                                                Current: {(() => {
-                                                    const roleStyle = interfaceRole === 'student' ? local.studentAnimatedBackgroundStyle : interfaceRole === 'teacher' ? local.teacherAnimatedBackgroundStyle : local.animatedBackgroundStyle;
-                                                    const s = ANIMATED_BACKGROUND_STYLES.find(x => x.id === (roleStyle || local.animatedBackgroundStyle));
-                                                    return s?.label || currentStyle.label;
-                                                })()}
-                                                {!backdropActive && backdropBlockedReason ? (
-                                                    <span className="ml-2 text-amber-700 dark:text-amber-400 font-bold">
-                                                        (not visible: {backdropBlockedReason})
-                                                    </span>
-                                                ) : null}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <Button
-                                        variant="ghost"
-                                        className={cn(
-                                            "h-9 px-3 rounded-xl text-xs font-bold gap-2 transition-colors",
-                                            backdropActive && "hover:bg-primary/10 hover:text-primary",
-                                            !backdropActive && "opacity-50 cursor-not-allowed",
-                                        )}
-                                        onClick={() => {
-                                            const roleKey = interfaceRole === 'student' ? 'studentAnimatedBackgroundStyle' : interfaceRole === 'teacher' ? 'teacherAnimatedBackgroundStyle' : 'animatedBackgroundStyle';
-                                            const roleStyle = local[roleKey] || local.animatedBackgroundStyle;
-                                            const idx = visibleStyles.findIndex(s => s.id === roleStyle);
-                                            const nextIdx = (idx + 1) % visibleStyles.length;
-                                            handleToggle(roleKey, visibleStyles[nextIdx].id);
-                                        }}
-                                        disabled={!backdropActive || visibleStyles.length <= 1}
-                                        title={!backdropActive && backdropBlockedReason ? `Background style is disabled: ${backdropBlockedReason}` : undefined}
-                                    >
-                                        Cycle <ArrowRightLeft className="w-3 h-3" />
-                                    </Button>
-                                </div>
+                                    );
+                                })()}
 
 
 
@@ -1749,6 +1776,28 @@ export function SettingsModal() {
                                                 Use <span className="font-semibold">0</span> for a general raffle (one entry per
                                                 student in the list; no point threshold). Otherwise one ticket per N points (floor
                                                 division), e.g. 25.
+                                            </p>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="settingsRaffleDisplayMode" className="text-xs font-semibold text-muted-foreground">
+                                                Raffle display
+                                            </Label>
+                                            <select
+                                                id="settingsRaffleDisplayMode"
+                                                className="flex h-10 w-full max-w-xs rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                                value={local.raffleDisplayMode === 'wheel' ? 'wheel' : 'jackpot'}
+                                                onChange={(e) =>
+                                                    handleToggle(
+                                                        'raffleDisplayMode',
+                                                        e.target.value === 'wheel' ? 'wheel' : 'jackpot',
+                                                    )
+                                                }
+                                            >
+                                                <option value="jackpot">Jackpot (three reels)</option>
+                                                <option value="wheel">Spinning wheel</option>
+                                            </select>
+                                            <p className="text-xs text-muted-foreground">
+                                                Teachers see the same odds and deduct rules; only the draw animation changes.
                                             </p>
                                         </div>
                                         <div className="flex items-center justify-between gap-3 rounded-lg border bg-background p-3">

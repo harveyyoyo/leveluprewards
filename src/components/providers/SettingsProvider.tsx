@@ -138,6 +138,8 @@ interface Settings {
     raffleDeductPoints: boolean;
     /** When on, each qualifying student has exactly one entry in the pool; when off, entries scale with points (floor). */
     raffleOneEntryPerStudent: boolean;
+    /** Weekly raffle UI: three-reel jackpot vs weighted spinning wheel. */
+    raffleDisplayMode: 'jackpot' | 'wheel';
     // Student & Access
     enableStudentProfiles: boolean;
     enableQrLogin: boolean;
@@ -411,6 +413,7 @@ const defaultSettings: Settings = {
     rafflePointsPerTicket: 25,
     raffleDeductPoints: false,
     raffleOneEntryPerStudent: false,
+    raffleDisplayMode: 'jackpot',
     enableStudentProfiles: false,
     enableQrLogin: true,
     enableParentView: false,
@@ -766,6 +769,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                 } else {
                     parsed.studentWelcomeBackDurationSec = Math.min(60, Math.max(1, Math.round(parsed.studentWelcomeBackDurationSec)));
                 }
+                if (parsed.raffleDisplayMode !== 'jackpot' && parsed.raffleDisplayMode !== 'wheel') {
+                    delete (parsed as Partial<Settings>).raffleDisplayMode;
+                }
                 const psp = parsed.prizeAiSurpriseDefaultPoints;
                 if (typeof psp !== 'number' || !Number.isFinite(psp) || psp < 0) {
                     delete (parsed as Partial<Settings>).prizeAiSurpriseDefaultPoints;
@@ -1084,7 +1090,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         if (key === 'enableWeeklyRaffle') return !!settings.enableWeeklyRaffle;
         if (
             !!settings.enableWeeklyRaffle &&
-            (key === 'rafflePointsPerTicket' || key === 'raffleOneEntryPerStudent' || key === 'raffleDeductPoints')
+            (key === 'rafflePointsPerTicket' ||
+                key === 'raffleOneEntryPerStudent' ||
+                key === 'raffleDeductPoints' ||
+                key === 'raffleDisplayMode')
         ) {
             return true;
         }
