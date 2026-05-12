@@ -275,7 +275,9 @@ export default function PortalPage() {
                                     whileHover={
                                         prefersReducedMotion
                                             ? undefined
-                                            : { y: -6, scale: 1.015 }
+                                            : portalHoverTraceBorder
+                                              ? { y: -2, scale: 1.004 }
+                                              : { y: -6, scale: 1.015 }
                                     }
                                     whileTap={prefersReducedMotion ? undefined : { scale: 0.99 }}
                                     transition={
@@ -296,7 +298,9 @@ export default function PortalPage() {
                                             ? 'border-border/55 hover:border-border'
                                             : 'border-border hover:border-primary/45',
                                         settings.displayMode === 'app' ? 'px-5 py-5 sm:px-6 sm:py-6 min-h-0 sm:min-h-[210px] h-full flex flex-col' : 'px-6 py-6 min-h-[196px] sm:min-h-[210px]',
-                                        'hover:shadow-2xl hover:bg-muted/50',
+                                        portalHoverTraceBorder
+                                            ? 'hover:shadow-md hover:bg-muted/40'
+                                            : 'hover:shadow-2xl hover:bg-muted/50',
                                         animBackdrop ? 'backdrop-blur-md' : 'backdrop-blur-xl',
                                     )}
                                 >
@@ -316,7 +320,8 @@ export default function PortalPage() {
                                                 ry="22"
                                                 fill="none"
                                                 stroke={rainbowColor}
-                                                strokeWidth="2.5"
+                                                strokeOpacity={0.55}
+                                                strokeWidth="1.75"
                                                 strokeLinecap="round"
                                                 strokeLinejoin="round"
                                                 pathLength={100}
@@ -325,7 +330,7 @@ export default function PortalPage() {
                                                     strokeDasharray: 100,
                                                     strokeDashoffset: hoveredIndex === area.id ? 0 : 100,
                                                     transition:
-                                                        'stroke-dashoffset 0.58s cubic-bezier(0.22, 1, 0.36, 1)',
+                                                        'stroke-dashoffset 0.72s cubic-bezier(0.33, 1, 0.68, 1)',
                                                 }}
                                             />
                                         </svg>
@@ -334,7 +339,13 @@ export default function PortalPage() {
                                     <div
                                         className={cn(
                                             'absolute inset-0 pointer-events-none bg-gradient-to-br from-primary/[0.08] via-transparent to-muted/90 opacity-70 transition-opacity duration-200',
-                                            hoveredIndex === area.id ? 'opacity-90' : 'opacity-70',
+                                            portalHoverTraceBorder
+                                                ? hoveredIndex === area.id
+                                                    ? 'opacity-75'
+                                                    : 'opacity-70'
+                                                : hoveredIndex === area.id
+                                                  ? 'opacity-90'
+                                                  : 'opacity-70',
                                         )}
                                     />
                                     {/* Portal accent tint (rainbow) — kept subtle so card stays theme-driven */}
@@ -345,11 +356,17 @@ export default function PortalPage() {
                                         }}
                                     />
 
-                                    {/* Subtle sheen sweep on hover */}
+                                    {/* Sheen sweep — omitted when stroke-trace hover runs to avoid visual pile-up */}
                                     <motion.div
                                         aria-hidden="true"
                                         className="absolute inset-y-0 -left-1/2 w-1/2 rotate-12 bg-gradient-to-r from-transparent via-primary/15 to-transparent opacity-0"
-                                        animate={hoveredIndex === area.id && !prefersReducedMotion ? { x: ['-60%', '220%'], opacity: [0, 0.55, 0] } : { opacity: 0 }}
+                                        animate={
+                                            hoveredIndex === area.id &&
+                                            !prefersReducedMotion &&
+                                            !portalHoverTraceBorder
+                                                ? { x: ['-60%', '220%'], opacity: [0, 0.55, 0] }
+                                                : { opacity: 0 }
+                                        }
                                         transition={{ duration: 0.75, ease: [0.22, 1, 0.36, 1] }}
                                     />
 
@@ -381,9 +398,9 @@ export default function PortalPage() {
                                         </div>
                                     </div>
 
-                                    {/* Background Glow - Increased opacity on hover */}
+                                    {/* Background glow — skipped when stroke-trace is active */}
                                     <AnimatePresence>
-                                        {hoveredIndex === area.id && (
+                                        {hoveredIndex === area.id && !portalHoverTraceBorder && (
                                             <motion.div
                                               initial={{ opacity: 0 }}
                                               animate={{ opacity: 1 }}
