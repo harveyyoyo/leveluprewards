@@ -2614,7 +2614,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                     )}
                 >
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                        <Helper content={secretaryMode ? 'Generate coupon sheets for teachers to hand out. You cannot award points or edit prizes from here.' : 'Print coupons, award points, manage prizes, and take attendance from one place.'}>
+                        <Helper content={secretaryMode ? 'Generate coupon sheets for teachers to hand out. You cannot award points or edit prizes from here.' : 'Use Points to print coupon sheets from school categories. Use Manual to add or remove points without a printed coupon. Prizes, attendance, and reports are also here.'}>
                             <div>
                                 <h2 className="text-2xl font-bold tracking-tight" style={{ color: teacherAccent }}>
                                     {secretaryMode ? 'Secretary - coupon printing' : 'Teacher & Faculty Portal'}
@@ -2622,7 +2622,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                 <p className="text-muted-foreground">
                                     {secretaryMode
                                         ? 'Create printable coupon batches using the school\'s incentive categories.'
-                                        : 'Generate coupons add prizes and generate reports.'}
+                                        : 'Print point coupons from the Points tab, adjust points manually on Manual, and run reports—all from this portal.'}
                                 </p>
                                 {teacherName ? (
                                     <p className="text-sm text-muted-foreground mt-1">
@@ -2737,11 +2737,11 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                         <TabsTrigger value="classes" className={teacherPortalMainTabTriggerClassName} title="Classes">
                                             <BookOpen className="w-4 h-4 shrink-0" /> Classes
                                         </TabsTrigger>
-                                        <TabsTrigger value="coupons" className={teacherPortalMainTabTriggerClassName} title="Coupons">
-                                            <Ticket className="w-4 h-4 shrink-0" /> Coupons
+                                        <TabsTrigger value="coupons" className={teacherPortalMainTabTriggerClassName} title="Points">
+                                            <Ticket className="w-4 h-4 shrink-0" /> Points
                                         </TabsTrigger>
-                                        <TabsTrigger value="award" className={teacherPortalMainTabTriggerClassName} title="Points">
-                                            <Award className="w-4 h-4 shrink-0" /> Points
+                                        <TabsTrigger value="award" className={teacherPortalMainTabTriggerClassName} title="Manual">
+                                            <Award className="w-4 h-4 shrink-0" /> Manual
                                         </TabsTrigger>
                                         <TabsTrigger value="prizes" className={teacherPortalMainTabTriggerClassName} title="Prizes">
                                             <Gift className="w-4 h-4 shrink-0" /> Prizes
@@ -2776,10 +2776,10 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                     <div className={cn("p-2 rounded-xl", isGraphic ? 'bg-chart-1/20 text-chart-1' : 'bg-primary/10 text-primary')}>
                                         <Printer className="w-6 h-6" />
                                     </div>
-                                    Print Coupons
+                                    Print coupons
                                 </CardTitle>
                                 <CardDescription className={isGraphic ? 'text-muted-foreground/80' : ''}>
-                                    Choose 10 or 30 coupons per letter page. Set sheets to mass-print; each cell matches the selected layout.
+                                    Printable coupons for kiosk redemption are generated and printed here in the Teacher Portal (not in Admin). Choose 10 or 30 coupons per letter page, set how many sheets to print, and match each cell to the selected layout.
                                 </CardDescription>
                                 <PrinterReminderCallout
                                     title="Coupon / slip printer"

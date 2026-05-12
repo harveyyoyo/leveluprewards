@@ -27,12 +27,14 @@ export function AdminCategoriesTab({
     <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden">
       <CardHeader className="flex flex-row justify-between items-center py-6">
         <div>
-          <Helper content="Define categories and default point values for coupons.">
+          <Helper content="Categories set default point values. Physical coupons are printed in the Teacher & Faculty Portal (Points tab), not here—teachers must print so students have scannable codes.">
             <CardTitle className="flex items-center gap-2">
-              <Tag className="w-5 h-5 text-destructive" /> Reward Categories
+              <Tag className="w-5 h-5 text-destructive" /> Point categories
             </CardTitle>
           </Helper>
-          <CardDescription>Define categories and point values for coupons.</CardDescription>
+          <CardDescription>
+            Set incentive categories and default point values. Printable coupons are created and printed in the Teacher & Faculty Portal under Points, not in Admin.
+          </CardDescription>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" className="rounded-xl" onClick={() => void onRandomizeColors()}>
@@ -99,7 +101,7 @@ export function AdminCategoriesTab({
             <EmptyState
               icon={Tag}
               title="No categories yet"
-              description="Categories group your rewards (e.g. Kindness, Effort, Homework) and set default point values for coupons."
+              description="Categories group incentives (for example Kindness, Effort, Homework) and set default point values. Teachers print matching coupons from the Teacher Portal Points tab."
               action={{ label: 'Add your first category', icon: Plus, onClick: onAddCategory }}
             />
           )}

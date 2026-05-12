@@ -209,7 +209,7 @@ function describeSnapshotImport(result: SchoolSnapshotImportResult): {
     ['Teachers', 'teachers'],
     ['Students', 'students'],
     ['Periods', 'periods'],
-    ['Categories', 'categories'],
+    ['Point categories', 'categories'],
     ['Prizes', 'prizes'],
     ['Desk staff', 'staffAccounts'],
   ];
@@ -591,7 +591,7 @@ function AdminDashboardInner() {
       { value: 'classes', label: 'Classes', icon: BookOpen },
       { value: 'teachers', label: 'Faculty', icon: User },
       { value: 'prizes', label: 'Prizes', icon: Gift },
-      { value: 'categories', label: 'Rewards', icon: Tag },
+      { value: 'categories', label: 'Points', icon: Tag },
     ];
 
     const pinnedExtras: AdminMainTabDef[] = pinnedAddOnTabs.map((t) => ({
@@ -1275,7 +1275,7 @@ function AdminDashboardInner() {
                     : "flex flex-wrap justify-center gap-x-1 gap-y-1 w-full"
                 )}
                 style={{ ['--admin-accent' as any]: 'hsl(var(--primary))' }}
-                aria-label="Admin categories"
+                aria-label="Admin portal main tabs"
                 onDragOver={(e) => {
                   // Allow dropping add-on tabs here to "pin" them into the main row.
                   if (draggingAddOnTabValueRef.current || e.dataTransfer.types.includes('text/admin-addon-tab')) {

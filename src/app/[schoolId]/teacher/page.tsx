@@ -291,7 +291,7 @@ export default function TeacherPage() {
                         <div>
                             <CardTitle className={`text-2xl font-black tracking-tight ${isGraphic ? 'text-foreground' : 'text-slate-800'}`}>Teacher & Faculty Portal</CardTitle>
                             <CardDescription className={isGraphic ? 'text-muted-foreground' : ''}>
-                                Generate coupons, customize categories, print reports, and add prizes.
+                                Print point coupons from the Points tab, use Manual for direct point changes, and manage reports and prizes.
                             </CardDescription>
                         </div>
                     </CardHeader>

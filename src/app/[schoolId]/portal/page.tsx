@@ -212,7 +212,7 @@ export default function PortalPage() {
                       id: 'print',
                       href: `/${schoolId}/teacher`,
                       title: 'Teacher & Faculty Portal',
-                      description: 'Generate coupons, customize categories, print reports, and add prizes.',
+                      description: 'Print point coupons, adjust points manually, customize categories, print reports, and add prizes.',
                       icon: Printer,
                   },
               ]
