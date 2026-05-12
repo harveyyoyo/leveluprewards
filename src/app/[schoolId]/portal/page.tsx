@@ -9,7 +9,7 @@ import { useSettings } from '@/components/providers/SettingsProvider';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -273,11 +273,7 @@ export default function PortalPage() {
                                     }
                                     animate={{ opacity: 1, x: 0 }}
                                     whileHover={
-                                        prefersReducedMotion
-                                            ? undefined
-                                            : portalHoverTraceBorder
-                                              ? { y: -2, scale: 1.004 }
-                                              : { y: -6, scale: 1.015 }
+                                        prefersReducedMotion ? undefined : { y: -2, scale: 1.004 }
                                     }
                                     whileTap={prefersReducedMotion ? undefined : { scale: 0.99 }}
                                     transition={
@@ -293,15 +289,8 @@ export default function PortalPage() {
                                     onMouseEnter={() => setHoveredIndex(area.id)}
                                     onMouseLeave={() => setHoveredIndex(null)}
                                     className={cn(
-                                        'relative overflow-hidden rounded-3xl border bg-card text-left shadow-sm transition-colors duration-200',
-                                        portalHoverTraceBorder
-                                            ? 'border-border/55 hover:border-border'
-                                            : 'border-border hover:border-primary/45',
+                                        'relative overflow-hidden rounded-3xl border border-border bg-card text-left shadow-sm transition-shadow duration-200 hover:shadow-md',
                                         settings.displayMode === 'app' ? 'px-5 py-5 sm:px-6 sm:py-6 min-h-0 sm:min-h-[210px] h-full flex flex-col' : 'px-6 py-6 min-h-[196px] sm:min-h-[210px]',
-                                        portalHoverTraceBorder
-                                            ? 'hover:shadow-md hover:bg-muted/40'
-                                            : 'hover:shadow-2xl hover:bg-muted/50',
-                                        animBackdrop ? 'backdrop-blur-md' : 'backdrop-blur-xl',
                                     )}
                                 >
                                     {portalHoverTraceBorder && (
@@ -335,40 +324,6 @@ export default function PortalPage() {
                                             />
                                         </svg>
                                     )}
-                                    {/* Themed wash: primary + muted from CSS variables */}
-                                    <div
-                                        className={cn(
-                                            'absolute inset-0 pointer-events-none bg-gradient-to-br from-primary/[0.08] via-transparent to-muted/90 opacity-70 transition-opacity duration-200',
-                                            portalHoverTraceBorder
-                                                ? hoveredIndex === area.id
-                                                    ? 'opacity-75'
-                                                    : 'opacity-70'
-                                                : hoveredIndex === area.id
-                                                  ? 'opacity-90'
-                                                  : 'opacity-70',
-                                        )}
-                                    />
-                                    {/* Portal accent tint (rainbow) — kept subtle so card stays theme-driven */}
-                                    <div
-                                        className="pointer-events-none absolute inset-0 opacity-70"
-                                        style={{
-                                            background: `radial-gradient(900px circle at 15% 10%, ${rainbowColor}12, transparent 55%), radial-gradient(900px circle at 80% 90%, ${rainbowColor}08, transparent 55%)`,
-                                        }}
-                                    />
-
-                                    {/* Sheen sweep — omitted when stroke-trace hover runs to avoid visual pile-up */}
-                                    <motion.div
-                                        aria-hidden="true"
-                                        className="absolute inset-y-0 -left-1/2 w-1/2 rotate-12 bg-gradient-to-r from-transparent via-primary/15 to-transparent opacity-0"
-                                        animate={
-                                            hoveredIndex === area.id &&
-                                            !prefersReducedMotion &&
-                                            !portalHoverTraceBorder
-                                                ? { x: ['-60%', '220%'], opacity: [0, 0.55, 0] }
-                                                : { opacity: 0 }
-                                        }
-                                        transition={{ duration: 0.75, ease: [0.22, 1, 0.36, 1] }}
-                                    />
 
                                     <div className="relative z-10 flex h-full flex-col">
                                         <div className="flex items-start gap-4">
@@ -397,18 +352,6 @@ export default function PortalPage() {
                                             <ChevronRight className="h-5 w-5 text-foreground/70" aria-hidden="true" />
                                         </div>
                                     </div>
-
-                                    {/* Background glow — skipped when stroke-trace is active */}
-                                    <AnimatePresence>
-                                        {hoveredIndex === area.id && !portalHoverTraceBorder && (
-                                            <motion.div
-                                              initial={{ opacity: 0 }}
-                                              animate={{ opacity: 1 }}
-                                              exit={{ opacity: 0 }}
-                                              className="pointer-events-none absolute inset-0 rounded-3xl bg-primary/10"
-                                            />
-                                        )}
-                                    </AnimatePresence>
                                 </motion.div>
                         );
 
