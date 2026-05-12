@@ -256,13 +256,13 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
     setIsSubmitting(true);
     try {
       const result = await login('school', { schoolId: sid, passcode: schoolPasscode.trim() });
-      if (!result) {
+      if (!result.ok) {
         playSound('error');
         triggerShake();
         toast({
           variant: 'destructive',
           title: 'Login failed',
-          description: 'Invalid School ID or passcode.',
+          description: result.message,
         });
         return;
       }
@@ -301,7 +301,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
     setIsSubmitting(true);
     try {
       const result = await login('developer', { passcode: schoolPasscode });
-      if (result) {
+      if (result.ok) {
         playSound('login');
         if (pathname !== '/developer') {
           router.push('/developer');
@@ -312,8 +312,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
         toast({
           variant: 'destructive',
           title: 'Developer login failed',
-          description:
-            'Wrong passcode, no Firebase user session yet, or Cloud Functions could not add your UID to developerUids (check DEV_PASSCODE matches on Functions).',
+          description: result.message,
         });
         setSchoolPasscode('');
       }

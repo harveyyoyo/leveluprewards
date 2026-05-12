@@ -11,12 +11,13 @@ import type { Student, Class, Coupon, Teacher, Prize, Category, HistoryItem, Ach
 import type { CouponPrintPageSize } from '@/lib/coupon-print';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { reportFirestorePermissionError } from '@/firebase/error-emitter';
-import { collection } from 'firebase/firestore';
+import { collection, doc, runTransaction } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import {
   addCategory as dbAddCategory, deleteCategory as dbDeleteCategory, updateCategory as dbUpdateCategory,
   addCoupons as dbAddCoupons, deleteCoupon as dbDeleteCoupon, deleteCoupons as dbDeleteCoupons,
   addPrize as dbAddPrize,
+  redeemPrize as dbRedeemPrize,
   updatePrize as dbUpdatePrize, deletePrize as dbDeletePrize,
   addStudent as dbAddStudent, updateStudent as dbUpdateStudent,
   deleteStudent as dbDeleteStudent, addClass as dbAddClass, updateClass as dbUpdateClass,
@@ -46,6 +47,8 @@ import { BackupProvider, useBackup } from './providers/BackupProvider';
 import { SettingsProvider, useSettings } from './providers/SettingsProvider';
 import { addPendingCouponRedemption, listPendingCouponRedemptions, updatePendingCouponRedemptions } from '@/lib/pendingSync';
 import { couponIsKnownAndValidOffline, saveCouponSnapshot } from '@/lib/couponCache';
+import type { LoginResult } from '@/lib/loginResult';
+import { AI_FUN_UNIFIED_PRIZE_ID } from '@/lib/aiJokePrize';
 
 // Re-export types from AuthProvider for backward compatibility
 export type { SyncStatus, LoginState, LogoutOptions } from './providers/AuthProvider';
@@ -67,7 +70,7 @@ interface AppContextType {
   teacherDocId: string | null;
   schoolId: string | null;
   syncStatus: 'synced' | 'syncing' | 'offline' | 'error';
-  login: (type: 'school' | 'developer' | 'student' | 'teacher' | 'admin' | 'secretary' | 'prizeClerk' | 'reports', credentials: { schoolId?: string; passcode?: string; username?: string; teacherName?: string; teacherDocId?: string; staffRole?: 'secretary' | 'prizeClerk' | 'reports'; }) => Promise<boolean>;
+  login: (type: 'school' | 'developer' | 'student' | 'teacher' | 'admin' | 'secretary' | 'prizeClerk' | 'reports', credentials: { schoolId?: string; passcode?: string; username?: string; teacherName?: string; teacherDocId?: string; staffRole?: 'secretary' | 'prizeClerk' | 'reports'; }) => Promise<LoginResult>;
   startDeveloperSupportSession: (schoolId: string) => Promise<boolean>;
   logout: (options?: LogoutOptions) => void;
   setUserName: (name: string | null) => void;
@@ -491,12 +494,85 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
         message: typeof data?.message === 'string' ? data.message : undefined,
       };
     } catch (e: any) {
+      const canUseLocalFallback =
+        !!firestore &&
+        (authCtx.isAdmin || authCtx.isTeacher || authCtx.isPrizeClerk || loginState === 'developer') &&
+        typeof window !== 'undefined' &&
+        ['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname);
+      const code = String(e?.code || '');
+      const isCallableReachabilityFailure =
+        code.includes('unavailable') ||
+        code.includes('internal') ||
+        code.includes('not-found') ||
+        /network|failed to fetch|load failed|not found/i.test(String(e?.message || ''));
+
+      if (canUseLocalFallback && isCallableReachabilityFailure) {
+        try {
+          if (prize.id !== AI_FUN_UNIFIED_PRIZE_ID) {
+            const result = await dbRedeemPrize(firestore, schoolId, studentId, prize, quantity, pointsOverride);
+            return {
+              success: result.success,
+              activityId: result.activityId,
+              redeemedAt: result.redeemedAt,
+              totalCost: result.totalCost,
+              message: 'Redeemed locally.',
+            };
+          }
+
+          if (settings.enablePrizeAiSurprise !== true) {
+            throw new Error('AI reward surprises are turned off.');
+          }
+
+          const redeemedAt = Date.now();
+          const totalCost = (typeof pointsOverride === 'number' ? pointsOverride : Math.max(0, prize.points || 0)) * quantity;
+          const studentRef = doc(firestore, 'schools', schoolId, 'students', studentId);
+          const activityRef = doc(collection(firestore, 'schools', schoolId, 'students', studentId, 'activities'));
+
+          await runTransaction(firestore, async (transaction) => {
+            const studentDoc = await transaction.get(studentRef);
+            if (!studentDoc.exists()) throw new Error('Student not found.');
+            const studentData = studentDoc.data() as Student;
+            const studentPoints = Number(studentData.points || 0);
+            if (studentPoints < totalCost) throw new Error('Not enough points.');
+            transaction.update(studentRef, { points: studentPoints - totalCost });
+            transaction.set(activityRef, {
+              desc: `Redeemed: ${prize.name || 'Fun'}`,
+              amount: -totalCost,
+              date: redeemedAt,
+              fulfilled: false,
+            });
+          });
+
+          return {
+            success: true,
+            activityId: activityRef.id,
+            redeemedAt,
+            totalCost,
+            message: 'Redeemed locally.',
+          };
+        } catch (fallbackError: any) {
+          return {
+            success: false,
+            message: fallbackError?.message || e?.message || 'Could not redeem this reward.',
+          };
+        }
+      }
+
       return {
         success: false,
       message: e?.message || 'Could not redeem this reward.',
       };
     }
-  }, [functions, schoolId]);
+  }, [
+    authCtx.isAdmin,
+    authCtx.isTeacher,
+    authCtx.isPrizeClerk,
+    firestore,
+    functions,
+    loginState,
+    schoolId,
+    settings.enablePrizeAiSurprise,
+  ]);
 
   const addPrize_ = useCallback((p: Omit<Prize, 'id'>) => {
     if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");

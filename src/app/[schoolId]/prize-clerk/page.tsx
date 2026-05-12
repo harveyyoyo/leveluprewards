@@ -50,12 +50,12 @@ export default function PrizeClerkPage() {
         }
         setIsSubmitting(true);
         try {
-            const ok = await login('prizeClerk', {
+            const authResult = await login('prizeClerk', {
                 schoolId,
                 username: username.trim(),
                 passcode,
             });
-            if (ok) {
+            if (authResult.ok) {
                 playSound('login');
                 toast({ title: 'Signed in' });
                 router.replace(`/${schoolId}/admin`);
@@ -64,7 +64,7 @@ export default function PrizeClerkPage() {
                 toast({
                     variant: 'destructive',
                     title: 'Login failed',
-                    description: 'Check credentials or ask an admin to add this account under Desk staff.',
+                    description: authResult.message,
                 });
                 setPasscode('');
             }

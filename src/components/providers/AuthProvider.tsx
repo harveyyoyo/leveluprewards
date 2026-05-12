@@ -16,6 +16,7 @@ import { httpsCallable } from 'firebase/functions';
 import { doc, getDocFromServer, onSnapshot, type DocumentReference } from 'firebase/firestore';
 import { schoolPublicDocRef } from '@/lib/schoolPublic';
 import { getReadableErrorMessage } from '@/lib/errorMessage';
+import { loginErr, loginOk, messageFromVerifySchoolAccessError, type LoginResult } from '@/lib/loginResult';
 import { isPublicSampleSchoolId } from '@/lib/sample-schools';
 
 export type SyncStatus = 'synced' | 'syncing' | 'offline' | 'error';
@@ -44,7 +45,7 @@ interface AuthContextType {
     login: (
         type: LoginState,
         credentials: { schoolId?: string; passcode?: string; username?: string; teacherName?: string; teacherDocId?: string; staffRole?: 'secretary' | 'prizeClerk' | 'reports'; }
-    ) => Promise<boolean>;
+    ) => Promise<LoginResult>;
     startDeveloperSupportSession: (schoolId: string) => Promise<boolean>;
     logout: (options?: LogoutOptions) => void;
     setUserName: (name: string | null) => void;
@@ -499,7 +500,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         async (
             type: LoginState,
             credentials: { schoolId?: string; passcode?: string; username?: string; teacherName?: string; teacherDocId?: string; staffRole?: 'secretary' | 'prizeClerk' | 'reports'; }
-        ): Promise<boolean> => {
+        ): Promise<LoginResult> => {
             if (type === 'developer') {
                 try {
                     const res = await fetch('/api/auth/dev-login', {
@@ -521,14 +522,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         }
                         if (!uid) {
                             console.error('Developer login: no Firebase signed-in user (anonymous auth should run first).');
-                            return false;
+                            return loginErr(
+                                'No Firebase session yet. Check your internet connection and refresh the page, then try again.',
+                            );
                         }
                         try {
                             const addDeveloperMe = httpsCallable(functions, 'addDeveloperMe');
                             await addDeveloperMe({ passcode: credentials.passcode });
                         } catch (e) {
                             console.error('addDeveloperMe failed:', e);
-                            return false;
+                            return loginErr(
+                                getReadableErrorMessage(e, 'Could not finish developer sign-in. Check your connection and try again.'),
+                            );
                         }
                         setLoginState('developer');
                         setIsAdmin(true);
@@ -538,23 +543,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         setIsReports(false);
                         setUserName('Developer');
                         setUserId(uid);
-                        return true;
+                        return loginOk();
                     }
                 } catch (e) {
                     console.error("Developer login error", e);
+                    return loginErr(getReadableErrorMessage(e, 'Developer sign-in failed. Check your connection and try again.'));
                 }
+                return loginErr('Wrong developer passcode or sign-in was rejected.');
             } else if (type === 'school' && credentials.schoolId) {
                 const lowerSchoolId = credentials.schoolId.trim().toLowerCase();
                 if (!auth.currentUser) {
                     console.error('School access login: no Firebase signed-in user (anonymous auth should run first).');
-                    return false;
+                    return loginErr(
+                        'No Firebase session yet. Check your internet connection and refresh the page, then try again.',
+                    );
                 }
                 try {
                     const verifyAccess = httpsCallable(functions, 'verifySchoolAccessPasscode');
                     await verifyAccess({ schoolId: lowerSchoolId, passcode: credentials.passcode?.trim() || '' });
                 } catch (e) {
                     console.error('School access login failed', e);
-                    return false;
+                    return loginErr(
+                        messageFromVerifySchoolAccessError(e, 'Invalid School ID or passcode.'),
+                    );
                 }
                 setSchoolId(lowerSchoolId);
                 setLoginState('school');
@@ -569,31 +580,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 localStorage.setItem('schoolId', lowerSchoolId);
                 localStorage.removeItem('userName');
                 localStorage.removeItem('teacherDocId');
-                return true;
+                return loginOk();
             } else if (type === 'student' && credentials.schoolId) {
                 // Student/Public access can optionally require the school's access passcode
                 // (for the initial "school sign-in" screen).
                 const lowerSchoolId = credentials.schoolId.trim().toLowerCase();
                 if (!auth.currentUser) {
                     console.error('Student login: no Firebase signed-in user (anonymous auth should run first).');
-                    return false;
+                    return loginErr(
+                        'No Firebase session yet. Check your internet connection and refresh the page, then try again.',
+                    );
                 }
                 try {
                     if (credentials.passcode && credentials.passcode.trim()) {
-                        const verifyAccess = httpsCallable(functions, 'verifySchoolAccessPasscode');
-                        await verifyAccess({ schoolId: lowerSchoolId, passcode: credentials.passcode.trim() });
+                        try {
+                            const verifyAccess = httpsCallable(functions, 'verifySchoolAccessPasscode');
+                            await verifyAccess({ schoolId: lowerSchoolId, passcode: credentials.passcode.trim() });
+                        } catch (e) {
+                            return loginErr(
+                                messageFromVerifySchoolAccessError(e, 'Invalid school access passcode.'),
+                            );
+                        }
                     }
                     await establishStudentKioskSession(lowerSchoolId);
                 } catch (e) {
                     console.error('Student login: could not create kiosk session', e);
-                    return false;
+                    return loginErr(
+                        getReadableErrorMessage(e, 'Could not open student check-in. Check your connection and try again.'),
+                    );
                 }
                 const shouldStaySchoolUser =
                     loginState === 'school' &&
                     (schoolId?.trim().toLowerCase() || lowerSchoolId) === lowerSchoolId;
                 if (shouldStaySchoolUser) {
                     returnToSchoolSession(lowerSchoolId);
-                    return true;
+                    return loginOk();
                 }
                 setSchoolId(lowerSchoolId);
                 setLoginState('student');
@@ -606,7 +627,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 localStorage.setItem('loginState', 'student');
                 localStorage.setItem('schoolId', lowerSchoolId);
                 localStorage.removeItem('userName');
-                return true;
+                return loginOk();
             } else if ((type === 'school' || type === 'admin') && credentials.schoolId && auth.currentUser) {
                 const lowerSchoolId = credentials.schoolId.trim().toLowerCase();
                 try {
@@ -640,10 +661,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     localStorage.setItem('loginState', 'admin');
                     localStorage.setItem('schoolId', lowerSchoolId);
                     localStorage.setItem('userName', 'Admin');
-                    return true;
+                    return loginOk();
                 } catch (e) {
                     console.error("Admin login error", e);
-                    return false;
+                    return loginErr(
+                        getReadableErrorMessage(e, 'Invalid admin passcode or could not verify. Check your connection and try again.'),
+                    );
                 }
             } else if (type === 'teacher' && credentials.schoolId && auth.currentUser) {
                 const lowerSchoolId = credentials.schoolId.trim().toLowerCase();
@@ -685,10 +708,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     localStorage.setItem('loginState', 'teacher');
                     localStorage.setItem('schoolId', lowerSchoolId);
                     localStorage.setItem('userName', name);
-                    return true;
+                    return loginOk();
                 } catch (e) {
                     console.error("Teacher login error", e);
-                    return false;
+                    return loginErr(
+                        getReadableErrorMessage(e, 'Invalid teacher credentials or could not verify. Check your connection and try again.'),
+                    );
                 }
             } else if (
                 (type === 'secretary' || type === 'prizeClerk' || type === 'reports') &&
@@ -746,13 +771,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     localStorage.setItem('loginState', type);
                     localStorage.setItem('schoolId', lowerSchoolId);
                     localStorage.setItem('userName', displayName);
-                    return true;
+                    return loginOk();
                 } catch (e) {
                     console.error('Staff desk login error', e);
-                    return false;
+                    return loginErr(
+                        getReadableErrorMessage(
+                            e,
+                            'Invalid desk account or passcode, or could not verify. Check your connection and try again.',
+                        ),
+                    );
                 }
             }
-            return false;
+            return loginErr('Could not complete sign-in. Please try again.');
         },
         [functions, firestore, auth, establishStudentKioskSession, loginState, returnToSchoolSession, schoolId]
     );

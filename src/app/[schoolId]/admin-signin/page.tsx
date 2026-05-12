@@ -26,6 +26,10 @@ function destinationAfterAdminLogin(redirectParam: string | null, schoolId: stri
     return null;
   }
   const pathOnly = decoded.split('?')[0] ?? '';
+  // Never send a freshly signed-in admin back to the sign-in page (avoids redirect loops).
+  if (/\/admin-signin\/?$/i.test(pathOnly)) {
+    return null;
+  }
   const seg = pathOnly.split('/').filter(Boolean)[0]?.toLowerCase();
   if (!seg || seg !== schoolId.trim().toLowerCase()) {
     return null;
@@ -81,13 +85,13 @@ function AdminSignInContent() {
     }
     setIsSubmitting(true);
     try {
-      const ok = await login('admin', { schoolId, passcode: passcode.trim() });
-      if (!ok) {
+      const authResult = await login('admin', { schoolId, passcode: passcode.trim() });
+      if (!authResult.ok) {
         playSound('error');
         toast({
           variant: 'destructive',
           title: 'Login failed',
-          description: 'Incorrect passcode.',
+          description: authResult.message,
         });
         setPasscode('');
         return;

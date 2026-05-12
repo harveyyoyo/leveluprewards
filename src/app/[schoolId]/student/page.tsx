@@ -2267,13 +2267,13 @@ export default function StudentLoginPage() {
     if (loginState !== 'school') return;
     let cancelled = false;
     void (async () => {
-      const ok = await login('student', { schoolId });
-      if (cancelled || ok) return;
+      const authResult = await login('student', { schoolId });
+      if (cancelled || authResult.ok) return;
       playSound('error');
       toast({
         variant: 'destructive',
         title: 'Could not start kiosk',
-        description: 'Check your connection and try again from the portal.',
+        description: authResult.message,
       });
       router.replace(`/${schoolId}/portal`);
     })();

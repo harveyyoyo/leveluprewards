@@ -224,7 +224,7 @@ export default function TeacherPage() {
 
         setIsSubmitting(true);
         try {
-            const result = await login(selected.type, {
+            const authResult = await login(selected.type, {
                 schoolId: schoolId || undefined,
                 username: selected.username,
                 passcode,
@@ -232,13 +232,13 @@ export default function TeacherPage() {
                 teacherDocId: selected.type === 'teacher' ? selected.sourceId || selected.id.replace(/^teacher:/, '') : undefined,
             });
 
-            if (result) {
+            if (authResult.ok) {
                 playSound('login');
                 toast({ title: 'Logged in successfully.' });
                 router.replace(staffLandingPath(schoolId, selected.type));
             } else {
                 playSound('error');
-                toast({ variant: 'destructive', title: 'Login failed', description: 'Check your passcode and try again.' });
+                toast({ variant: 'destructive', title: 'Login failed', description: authResult.message });
                 setPasscode('');
             }
         } finally {

@@ -51,17 +51,17 @@ export default function SecretaryPage() {
         }
         setIsSubmitting(true);
         try {
-            const ok = await login('secretary', {
+            const authResult = await login('secretary', {
                 schoolId,
                 username: username.trim(),
                 passcode,
             });
-            if (ok) {
+            if (authResult.ok) {
                 playSound('login');
                 toast({ title: 'Signed in' });
             } else {
                 playSound('error');
-                toast({ variant: 'destructive', title: 'Login failed', description: 'Check credentials or ask an admin to add this account under Desk staff.' });
+                toast({ variant: 'destructive', title: 'Login failed', description: authResult.message });
                 setPasscode('');
             }
         } finally {

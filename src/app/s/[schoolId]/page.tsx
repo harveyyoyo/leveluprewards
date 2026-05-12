@@ -20,6 +20,7 @@ export default function PublicSchoolPage() {
 
     const [notFound, setNotFound] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [entryError, setEntryError] = useState<string | null>(null);
 
     useEffect(() => {
         if (!isInitialized || isUserLoading) return;
@@ -33,11 +34,14 @@ export default function PublicSchoolPage() {
                 if (cancelled) return;
 
                 if (snap.exists() && snap.data()?.active !== false) {
-                    // Automatically log them in as a student
-                    await login('student', { schoolId });
-                    if (!cancelled) {
-                        router.push(`/${schoolId}/student`);
+                    setEntryError(null);
+                    const authResult = await login('student', { schoolId });
+                    if (cancelled) return;
+                    if (!authResult.ok) {
+                        setEntryError(authResult.message);
+                        return;
                     }
+                    router.push(`/${schoolId}/student`);
                 } else {
                     setNotFound(true);
                 }
@@ -59,6 +63,35 @@ export default function PublicSchoolPage() {
             )}>
                 <Loader2 className="w-8 h-8 animate-spin" />
                 <p className="font-medium text-sm">Loading&hellip;</p>
+            </div>
+        );
+    }
+
+    if (entryError) {
+        return (
+            <div className={cn(
+                "min-h-screen flex flex-col items-center justify-center gap-6 px-6 font-sans",
+                isGraphic ? 'bg-background text-foreground' : 'bg-background text-foreground'
+            )}>
+                <div className={cn(
+                    "w-full max-w-sm rounded-2xl p-8 text-center border",
+                    isGraphic ? 'bg-card/10 backdrop-blur-xl border-border' : 'bg-card border-border shadow-lg'
+                )}>
+                    <AlertCircle className={cn("w-12 h-12 mx-auto mb-4", isGraphic ? 'text-destructive' : 'text-red-500')} />
+                    <h2 className="text-lg font-bold mb-2">Could not open this school</h2>
+                    <p className={cn("text-sm mb-6", isGraphic ? 'text-muted-foreground' : 'text-slate-500')}>
+                        {entryError}
+                    </p>
+                    <button
+                        onClick={() => router.push('/')}
+                        className={cn(
+                            "w-full h-12 font-bold rounded-xl transition-all",
+                            isGraphic ? 'bg-foreground/10 hover:bg-foreground/20 text-foreground' : 'bg-slate-800 hover:bg-slate-700 text-white'
+                        )}
+                    >
+                        Go to Login
+                    </button>
+                </div>
             </div>
         );
     }

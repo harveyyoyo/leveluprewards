@@ -2909,7 +2909,7 @@ export default function AdminPage() {
 
   const handleAdminLogin = async (passcode: string): Promise<boolean> => {
     if (!schoolId) return false;
-    return login('admin', { schoolId, passcode });
+    return login('admin', { schoolId, passcode }).then((r) => r.ok);
   };
 
   if (!isInitialized || !['student', 'teacher', 'admin', 'school', 'developer', 'prizeClerk'].includes(loginState)) {

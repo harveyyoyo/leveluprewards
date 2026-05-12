@@ -388,13 +388,13 @@ export default function PortalPage() {
                                     // Go straight to the kiosk route; establish student session in the background.
                                     router.replace(`/${schoolId}/student`);
                                     void (async () => {
-                                        const ok = await login('student', { schoolId });
-                                        if (!ok) {
+                                        const authResult = await login('student', { schoolId });
+                                        if (!authResult.ok) {
                                             playSound('error');
                                             toast({
                                                 variant: 'destructive',
                                                 title: 'Could not open student kiosk',
-                                                description: 'Check your connection and try again.',
+                                                description: authResult.message,
                                             });
                                             router.replace(`/${schoolId}/portal`);
                                         }
@@ -450,14 +450,14 @@ export default function PortalPage() {
                                             return;
                                         }
                                         setAdminSubmitting(true);
-                                        const ok = await login('admin', { schoolId, passcode: adminPasscode.trim() });
-                                        if (!ok) {
+                                        const authResult = await login('admin', { schoolId, passcode: adminPasscode.trim() });
+                                        if (!authResult.ok) {
                                             setAdminSubmitting(false);
                                             playSound('error');
                                             toast({
                                                 variant: 'destructive',
                                                 title: 'Login failed',
-                                                description: 'Incorrect passcode.',
+                                                description: authResult.message,
                                             });
                                             setAdminPasscode('');
                                             return;
@@ -497,14 +497,14 @@ export default function PortalPage() {
                                             return;
                                         }
                                         setAdminSubmitting(true);
-                                        const ok = await login('admin', { schoolId, passcode: adminPasscode.trim() });
-                                        if (!ok) {
+                                        const authResult = await login('admin', { schoolId, passcode: adminPasscode.trim() });
+                                        if (!authResult.ok) {
                                             setAdminSubmitting(false);
                                             playSound('error');
                                             toast({
                                                 variant: 'destructive',
                                                 title: 'Login failed',
-                                                description: 'Incorrect passcode.',
+                                                description: authResult.message,
                                             });
                                             setAdminPasscode('');
                                             return;
@@ -649,20 +649,20 @@ export default function PortalPage() {
                                                 return;
                                             }
                                             setTeacherSubmitting(true);
-                                            const ok = await login(selected.type, {
+                                            const authResult = await login(selected.type, {
                                                 schoolId,
                                                 username: selected.username,
                                                 passcode,
                                                 teacherName: selected.label,
                                                 teacherDocId: selected.type === 'teacher' ? selected.sourceId || selected.id.replace(/^teacher:/, '') : undefined,
                                             });
-                                            if (!ok) {
+                                            if (!authResult.ok) {
                                                 setTeacherSubmitting(false);
                                                 playSound('error');
                                                 toast({
                                                     variant: 'destructive',
                                                     title: 'Login failed',
-                                                    description: 'Incorrect username or passcode.',
+                                                    description: authResult.message,
                                                 });
                                                 setTeacherPasscode('');
                                                 return;
@@ -715,20 +715,20 @@ export default function PortalPage() {
                                             return;
                                         }
                                         setTeacherSubmitting(true);
-                                        const ok = await login(selected.type, {
+                                        const authResult = await login(selected.type, {
                                             schoolId,
                                             username: selected.username,
                                             passcode,
                                             teacherName: selected.label,
                                             teacherDocId: selected.type === 'teacher' ? selected.sourceId || selected.id.replace(/^teacher:/, '') : undefined,
                                         });
-                                        if (!ok) {
+                                        if (!authResult.ok) {
                                             setTeacherSubmitting(false);
                                             playSound('error');
                                             toast({
                                                 variant: 'destructive',
                                                 title: 'Login failed',
-                                                description: 'Incorrect username or passcode.',
+                                                description: authResult.message,
                                             });
                                             setTeacherPasscode('');
                                             return;

@@ -84,8 +84,8 @@ function SchoolSessionGateInner({
         if (kioskRecoverAttemptRef.current !== attemptKey) {
           kioskRecoverAttemptRef.current = attemptKey;
           void (async () => {
-            const ok = await login('student', { schoolId: route });
-            if (!ok) {
+            const authResult = await login('student', { schoolId: route });
+            if (!authResult.ok) {
               router.replace(`/login?school=${encodeURIComponent(route)}`);
             }
           })();
