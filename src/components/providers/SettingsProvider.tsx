@@ -134,6 +134,8 @@ interface Settings {
     rafflePointsPerTicket: number;
     /** Weekly raffle: when on, pulling the wheel deducts ticket points from all eligible students after the spin. */
     raffleDeductPoints: boolean;
+    /** When on, each qualifying student has exactly one entry in the pool; when off, entries scale with points (floor). */
+    raffleOneEntryPerStudent: boolean;
     // Student & Access
     enableStudentProfiles: boolean;
     enableQrLogin: boolean;
@@ -389,6 +391,7 @@ const defaultSettings: Settings = {
     enablePdfExport: false,
     rafflePointsPerTicket: 25,
     raffleDeductPoints: false,
+    raffleOneEntryPerStudent: false,
     enableStudentProfiles: false,
     enableQrLogin: true,
     enableParentView: false,

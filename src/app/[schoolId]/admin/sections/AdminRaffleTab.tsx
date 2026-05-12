@@ -18,7 +18,10 @@ type EntryRow = {
   id: string;
   name: string;
   points: number;
+  /** Weight in the raffle pool (1 in equal-odds mode, or full ticket count). */
   tickets: number;
+  /** floor(points / pointsPerTicket) — always the “full” tickets from points (for display / proportional deduct). */
+  fullTickets: number;
   deductPoints: number;
 };
 
@@ -39,29 +42,37 @@ export function AdminRaffleTab({
 
   const pointsPerTicket = Math.max(1, Math.floor(Number(settings.rafflePointsPerTicket || 25)));
   const deductOnPull = !!settings.raffleDeductPoints;
+  const oneEntryPerStudent = !!settings.raffleOneEntryPerStudent;
 
   const entries = useMemo<EntryRow[]>(() => {
     const rows: EntryRow[] = [];
     for (const s of students || []) {
       const pts = Number(s.points || 0);
-      const tickets = Math.max(0, Math.floor(pts / pointsPerTicket));
-      if (tickets <= 0) continue;
+      const fullTickets = Math.max(0, Math.floor(pts / pointsPerTicket));
+      if (fullTickets <= 0) continue;
+      const tickets = oneEntryPerStudent ? 1 : fullTickets;
+      const deductPoints = oneEntryPerStudent ? pointsPerTicket : fullTickets * pointsPerTicket;
       rows.push({
         id: s.id,
         name: `${s.firstName ?? ''}${s.lastName ? ` ${s.lastName}` : ''}`.trim() || s.id,
         points: pts,
         tickets,
-        deductPoints: tickets * pointsPerTicket,
+        fullTickets,
+        deductPoints,
       });
     }
-    rows.sort((a, b) => b.tickets - a.tickets || b.points - a.points || a.name.localeCompare(b.name));
+    rows.sort((a, b) =>
+      oneEntryPerStudent
+        ? b.fullTickets - a.fullTickets || b.points - a.points || a.name.localeCompare(b.name)
+        : b.tickets - a.tickets || b.points - a.points || a.name.localeCompare(b.name),
+    );
     return rows;
-  }, [pointsPerTicket, students]);
+  }, [oneEntryPerStudent, pointsPerTicket, students]);
 
   useEffect(() => {
     setWinner(null);
     setJackpotResetKey((k) => k + 1);
-  }, [pointsPerTicket]);
+  }, [oneEntryPerStudent, pointsPerTicket]);
 
   const totalTickets = useMemo(() => entries.reduce((sum, r) => sum + r.tickets, 0), [entries]);
 
@@ -114,17 +125,21 @@ export function AdminRaffleTab({
 
             const activityRef = doc(collection(studentRef, 'activities'));
             tx.set(activityRef, {
-              desc: `Weekly raffle tickets (${r.tickets} × ${pointsPerTicket})`,
+              desc: oneEntryPerStudent
+                ? `Weekly raffle (equal odds): 1 × ${pointsPerTicket} pts`
+                : `Weekly raffle tickets (${r.fullTickets} × ${pointsPerTicket})`,
               amount: -r.deductPoints,
               date: now,
             });
           }
         });
 
-        const ticketSum = rows.reduce((sum, r) => sum + r.tickets, 0);
+        const fullTicketSum = rows.reduce((sum, r) => sum + r.fullTickets, 0);
         toast({
           title: 'Points deducted',
-          description: `${ticketSum} ticket(s) across ${rows.length} student(s). Each student lost points for all of their tickets (tickets × ${pointsPerTicket}).`,
+          description: oneEntryPerStudent
+            ? `${rows.length} student(s): ${pointsPerTicket} pts each (one pool entry per person; equal odds).`
+            : `${rows.length} student(s): ${fullTicketSum} ticket slot(s) removed at ${pointsPerTicket} pts per slot.`,
         });
         setJackpotResetKey((k) => k + 1);
       } catch (e: any) {
@@ -137,8 +152,21 @@ export function AdminRaffleTab({
         setIsSavingDeduction(false);
       }
     },
-    [deductOnPull, entries, firestore, pointsPerTicket, schoolId, toast],
+    [deductOnPull, entries, firestore, oneEntryPerStudent, pointsPerTicket, schoolId, toast],
   );
+
+  const jackpotEmbeddedFooter = useMemo(() => {
+    if (deductOnPull && oneEntryPerStudent) {
+      return `Equal odds: one reel entry per qualifying student. After each pull, each student loses ${pointsPerTicket} pts (one ticket’s worth) and gets an activity line.`;
+    }
+    if (deductOnPull) {
+      return `Scaled odds: pool entries match ticket counts from points. After each pull, each student loses (their tickets × ${pointsPerTicket}) points and gets an activity line.`;
+    }
+    if (oneEntryPerStudent) {
+      return `Equal odds: one entry per qualifying student; extra points do not add extra chances. PULL does not change points while deduct is off.`;
+    }
+    return `Scaled odds: more points earn more tickets and better chances. PULL does not change points while deduct is off.`;
+  }, [deductOnPull, oneEntryPerStudent, pointsPerTicket]);
 
   return (
     <div className="space-y-6">
@@ -149,10 +177,11 @@ export function AdminRaffleTab({
             Weekly raffle
           </CardTitle>
           <CardDescription>
-            Use <span className="font-semibold">PULL!</span> to spin. Ticket odds come from current points (more points → more
-            tickets → better odds). If <span className="font-semibold">Deduct points when you pull</span> is on, everyone in the
-            pool loses points for <span className="font-semibold">all</span> of their tickets right after the spin finishes, and
-            each student gets a matching activity line.
+            Use <span className="font-semibold">PULL!</span> to spin. Choose <span className="font-semibold">equal odds</span>{' '}
+            (one entry per qualifying student) or <span className="font-semibold">scaled odds</span> (more points → more tickets
+            in the pool). If <span className="font-semibold">Deduct points when you pull</span> is on, points are taken after the
+            spin: <span className="font-semibold">one ticket’s worth each</span> in equal-odds mode, or{' '}
+            <span className="font-semibold">all ticket slots</span> in scaled mode.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5 pt-6">
@@ -180,17 +209,40 @@ export function AdminRaffleTab({
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-3 rounded-xl border bg-background p-3">
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold">Deduct points when you pull</p>
+                  <p className="text-sm font-semibold">One entry per student (equal odds)</p>
                   <p className="text-xs text-muted-foreground">
-                    After each spin, subtract each eligible student&apos;s full ticket value (all tickets × points per ticket)
-                    and record it on their activity. PULL alone never changes points when this is off.
+                    Everyone with at least {pointsPerTicket} pts gets <span className="font-semibold">one</span> chance, even if
+                    they could “buy” more tickets from points. Turn off to use ticket counts from points (more tickets → better
+                    odds).
                   </p>
                 </div>
                 <Switch
-                  checked={deductOnPull}
-                  onCheckedChange={(checked) => updateSettings({ raffleDeductPoints: !!checked })}
+                  checked={oneEntryPerStudent}
+                  onCheckedChange={(checked) => updateSettings({ raffleOneEntryPerStudent: !!checked })}
                 />
               </div>
+            </div>
+          </div>
+
+          <div className="rounded-xl border bg-background p-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold">Deduct points when you pull</p>
+                <p className="text-xs text-muted-foreground">
+                  {oneEntryPerStudent ? (
+                    <>
+                      After each spin, subtract <span className="font-semibold">{pointsPerTicket} pts</span> (one ticket) from
+                      each eligible student and record it. Scaled mode instead subtracts each student&apos;s full ticket value.
+                    </>
+                  ) : (
+                    <>
+                      After each spin, subtract each student&apos;s full ticket value (their ticket slots × {pointsPerTicket} pts)
+                      and record it. PULL never changes points when this is off.
+                    </>
+                  )}
+                </p>
+              </div>
+              <Switch checked={deductOnPull} onCheckedChange={(checked) => updateSettings({ raffleDeductPoints: !!checked })} />
             </div>
           </div>
 
@@ -202,6 +254,7 @@ export function AdminRaffleTab({
             onSpinFinished={handleJackpotSpinFinished}
             resetKey={jackpotResetKey}
             pullLocked={isSavingDeduction}
+            embeddedFooter={jackpotEmbeddedFooter}
           />
 
           <div className="flex flex-col gap-2 rounded-2xl border bg-muted/20 p-4">
@@ -210,7 +263,9 @@ export function AdminRaffleTab({
               <span className="text-muted-foreground">student(s) eligible</span>
               <span className="text-muted-foreground">•</span>
               <span className="font-black">{totalTickets}</span>
-              <span className="text-muted-foreground">total ticket(s)</span>
+              <span className="text-muted-foreground">
+                {oneEntryPerStudent ? 'pool entries (equal odds)' : 'ticket slots in pool'}
+              </span>
             </div>
             {winner ? (
               <div className="mt-2 rounded-xl border bg-background p-4">
@@ -219,8 +274,21 @@ export function AdminRaffleTab({
               </div>
             ) : (
               <p className="text-xs text-muted-foreground">
-                Turning on deduct will charge <span className="font-semibold">every ticket</span> each student had at spin time—not
-                one ticket each.
+                {deductOnPull ? (
+                  oneEntryPerStudent ? (
+                    <>
+                      With deduct on, each pull removes <span className="font-semibold">{pointsPerTicket} pts</span> from every
+                      eligible student (one ticket each).
+                    </>
+                  ) : (
+                    <>
+                      With deduct on, each pull removes <span className="font-semibold">all</span> of each student&apos;s ticket
+                      slots in points (slots × {pointsPerTicket}).
+                    </>
+                  )
+                ) : (
+                  <>Deduct is off: PULL never changes balances.</>
+                )}
               </p>
             )}
           </div>
@@ -228,7 +296,11 @@ export function AdminRaffleTab({
           <div className="overflow-hidden rounded-2xl border">
             <div className="border-b bg-background px-4 py-3">
               <p className="text-sm font-black">Entries preview</p>
-              <p className="text-xs text-muted-foreground">Each student is entered as many times as they have tickets.</p>
+              <p className="text-xs text-muted-foreground">
+                {oneEntryPerStudent
+                  ? 'Each qualifying student has one pool entry; full tickets from points are shown for reference.'
+                  : 'Each student is entered as many times as they have tickets from points.'}
+              </p>
             </div>
             <div className="divide-y bg-background">
               {entries.length === 0 ? (
@@ -241,7 +313,8 @@ export function AdminRaffleTab({
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-semibold">{r.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {r.points} pts → {r.tickets} ticket(s)
+                        {r.points} pts → {r.fullTickets} full ticket(s) from points
+                        {oneEntryPerStudent ? ` → ${r.tickets} pool entr${r.tickets === 1 ? 'y' : 'ies'}` : ''}
                         {deductOnPull ? ` (on pull: −${r.deductPoints} pts)` : ''}
                       </p>
                     </div>

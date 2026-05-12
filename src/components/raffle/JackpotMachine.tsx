@@ -28,6 +28,8 @@ type JackpotMachineProps = {
   embedded?: boolean;
   /** When true, PULL is disabled (e.g. while saving deductions after a spin). */
   pullLocked?: boolean;
+  /** When set, shown under PULL in embedded mode instead of the default raffle footer. */
+  embeddedFooter?: string | null;
 };
 
 export function JackpotMachine({
@@ -38,6 +40,7 @@ export function JackpotMachine({
   resetKey = 0,
   embedded = false,
   pullLocked = false,
+  embeddedFooter = null,
 }: JackpotMachineProps) {
   const [spinning, setSpinning] = useState(false);
   const [winner, setWinner] = useState<string | null>(null);
@@ -421,9 +424,8 @@ export function JackpotMachine({
 
             {embedded && pool.length > 0 ? (
               <p className="mt-4 px-2 text-center text-xs text-muted-foreground">
-                Odds follow ticket counts from current points. If your school enables “Deduct points when you pull” above,
-                each eligible student loses points for <span className="font-semibold">all</span> of their tickets (tickets ×
-                points per ticket) after the spin finishes, and an activity line is added for each.
+                {embeddedFooter ??
+                  'Odds follow ticket counts from current points. If “Deduct points when you pull” is on, each eligible student loses points for all of their ticket slots after the spin; an activity line is added for each.'}
               </p>
             ) : null}
           </div>
