@@ -185,13 +185,20 @@ export default function PortalPage() {
     return (
         <div
             className={cn(
-                'text-foreground relative font-sans flex w-full flex-col items-center',
-                settings.displayMode === 'app'
-                    ? 'min-h-[100dvh] pt-2 sm:pt-6 pb-24'
-                    : 'min-h-[100dvh] pt-4 pb-10 sm:pb-12',
+                'text-foreground relative w-full font-sans',
                 animBackdrop ? 'bg-transparent' : 'bg-background',
             )}
+            style={
+                {
+                    ['--wt-header-bottom' as string]:
+                        settings.displayMode === 'app'
+                            ? 'calc(env(safe-area-inset-top, 0px) + 5.75rem)'
+                            : '5rem',
+                } as React.CSSProperties
+            }
         >
+            {/* Keeps main/footer flow height while hub layers are fixed to the viewport */}
+            <div className="min-h-[100dvh] w-full shrink-0" aria-hidden />
             {/* Backdrop: keep existing palette; only subtle grid + optional noise/animated orbs */}
             <div className="pointer-events-none fixed inset-0 z-0">
                 {!animBackdrop && (
@@ -232,43 +239,41 @@ export default function PortalPage() {
                 )}
             </div>
 
-            <div className={cn(
-                'relative z-10 mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col px-4 sm:px-6',
-                settings.displayMode === 'app'
-                    ? 'pb-6 pt-4 sm:pb-10 sm:pt-14'
-                    : '',
-            )}
+            <motion.div
+                initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.94 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={
+                    prefersReducedMotion ? { duration: 0 } : { duration: 0.34, ease: [0.22, 1, 0.36, 1] }
+                }
+                className="pointer-events-none fixed left-1/2 z-[11] w-full max-w-6xl -translate-x-1/2 -translate-y-1/2 px-4 text-center sm:px-6"
+                style={{ top: 'calc((var(--wt-header-bottom) + 50vh) / 2)' }}
             >
-                <div className="min-h-0 flex-1" aria-hidden />
-                <motion.div
-                    initial={
-                        prefersReducedMotion ? false : { opacity: 0, y: 48, scale: 0.92 }
-                    }
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    transition={
-                        prefersReducedMotion
-                            ? { duration: 0 }
-                            : { duration: 0.34, ease: [0.22, 1, 0.36, 1] }
-                    }
-                    className="shrink-0 text-center"
+                <h2
+                    className={cn(
+                        'font-headline inline-block font-black tracking-tighter drop-shadow-md',
+                        settings.displayMode === 'app'
+                            ? 'px-2 py-1 text-4xl sm:py-2 sm:text-7xl'
+                            : 'px-2 py-2 text-6xl sm:text-7xl',
+                    )}
+                    style={{
+                        color: defaultPortalAccent ?? rainbowByIndex(0, settings.colorScheme),
+                        textShadow:
+                            defaultPortalAccent === null
+                                ? `0 0 14px ${rainbowByIndex(0, settings.colorScheme)}55, 0 0 28px ${rainbowByIndex(0, settings.colorScheme)}33`
+                                : undefined,
+                    }}
                 >
-                    <h2
-                        className={cn("font-black tracking-tighter font-headline drop-shadow-md inline-block", settings.displayMode === 'app' ? "text-4xl sm:text-7xl px-2 py-1 sm:py-2" : "text-6xl sm:text-7xl px-2 py-2")}
-                        style={{
-                            color: defaultPortalAccent ?? rainbowByIndex(0, settings.colorScheme),
-                            textShadow:
-                                defaultPortalAccent === null
-                                    ? `0 0 14px ${rainbowByIndex(0, settings.colorScheme)}55, 0 0 28px ${rainbowByIndex(0, settings.colorScheme)}33`
-                                    : undefined,
-                        }}
-                    >
-                        Where to?
-                    </h2>
-                </motion.div>
+                    Where to?
+                </h2>
+            </motion.div>
 
-                <div className="min-h-0 flex-1" aria-hidden />
-
-                <div className={cn("grid shrink-0 gap-3 sm:gap-5", settings.displayMode === 'app' ? "grid-cols-1 sm:grid-cols-3" : "grid-cols-1 md:grid-cols-3")}>
+            <div className="pointer-events-none fixed inset-0 z-[10] flex items-center justify-center px-4 sm:px-6">
+                <div
+                    className={cn(
+                        'pointer-events-auto grid w-full max-w-6xl gap-3 sm:gap-5',
+                        settings.displayMode === 'app' ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-1 md:grid-cols-3',
+                    )}
+                >
                     {portals.map((area, index) => {
                         const Icon = area.icon;
                         const rainbowColor =
@@ -284,7 +289,7 @@ export default function PortalPage() {
                                     }
                                     animate={{ opacity: 1, x: 0 }}
                                     whileHover={
-                                        prefersReducedMotion ? undefined : { y: -2, scale: 1.004 }
+                                        prefersReducedMotion ? undefined : { scale: 1.008 }
                                     }
                                     whileTap={prefersReducedMotion ? undefined : { scale: 0.99 }}
                                     transition={
@@ -336,7 +341,17 @@ export default function PortalPage() {
                                         </svg>
                                     )}
 
-                                    <div className="relative z-10 flex h-full flex-col">
+                                    <div
+                                        className={cn(
+                                            'relative z-10 flex h-full flex-col',
+                                            !prefersReducedMotion && 'wt-tile',
+                                        )}
+                                        style={
+                                            prefersReducedMotion
+                                                ? undefined
+                                                : { animationDelay: `${index * 0.8}s` }
+                                        }
+                                    >
                                         <div className="flex items-start gap-4">
                                             <div
                                                 className={cn(
@@ -413,6 +428,7 @@ export default function PortalPage() {
                         );
                     })}
                 </div>
+            </div>
 
                 <Dialog open={adminDialogOpen} onOpenChange={(open) => {
                     if (!open) {
@@ -759,7 +775,12 @@ export default function PortalPage() {
                 </Dialog>
 
                 {loginState === 'student' && schoolId && (
-                    <div className="mt-10 text-center rounded-2xl border border-border/60 bg-background/15 backdrop-blur px-4 py-5">
+                    <div
+                        className={cn(
+                            'pointer-events-auto fixed left-1/2 z-[12] w-full max-w-lg -translate-x-1/2 rounded-2xl border border-border/60 bg-background/15 px-4 py-5 text-center backdrop-blur',
+                            settings.displayMode === 'app' ? 'bottom-28' : 'bottom-8',
+                        )}
+                    >
                         <p className="text-sm text-muted-foreground mb-3">Need faculty access?</p>
                         <div className="flex flex-wrap justify-center gap-2">
                             <Button variant="outline" size="sm" asChild className="font-bold">
@@ -775,7 +796,6 @@ export default function PortalPage() {
                         </div>
                     </div>
                 )}
-            </div>
         </div>
     );
 }
