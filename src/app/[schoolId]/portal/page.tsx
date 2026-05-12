@@ -137,6 +137,9 @@ export default function PortalPage() {
         );
     }
 
+    const showAdminPortalCard = isAdmin || isSchoolChooser || (isStaff && !isAdmin);
+    const showTeacherPortalCard = isStaff || isSchoolChooser;
+
     const portals: PortalArea[] = [
         ...(isAdmin
             ? [
@@ -148,7 +151,7 @@ export default function PortalPage() {
                       icon: UserCog,
                   },
               ]
-            : isSchoolChooser
+            : showAdminPortalCard
                 ? [
                       {
                           id: 'admin',
@@ -159,7 +162,7 @@ export default function PortalPage() {
                       },
                   ]
                 : []),
-        ...((loginState === 'teacher' || isAdmin || isSchoolChooser)
+        ...(showTeacherPortalCard
             ? [
                   {
                       id: 'print',
@@ -264,8 +267,9 @@ export default function PortalPage() {
                         const rainbowColor =
                             defaultPortalAccent ?? rainbowForPortalId(area.id, settings.colorScheme);
                         const needsStudentSession = area.id === 'redeem' && loginState !== 'student';
-                        const needsAdminPasscode = area.id === 'admin' && isSchoolChooser;
-                        const needsTeacherLogin = area.id === 'print' && loginState !== 'teacher';
+                        const needsAdminPasscode = area.id === 'admin' && !isAdmin;
+                        const needsTeacherLogin =
+                            area.id === 'print' && (loginState === 'school' || loginState === 'admin');
                         const portalCard = (
                                 <motion.div
                                     initial={
