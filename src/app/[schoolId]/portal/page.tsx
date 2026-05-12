@@ -188,7 +188,8 @@ export default function PortalPage() {
                 'text-foreground relative font-sans flex w-full flex-col items-center',
                 settings.displayMode === 'app'
                     ? 'min-h-[100dvh] pt-2 sm:pt-6 pb-24'
-                    : 'min-h-[100dvh] justify-center py-6 sm:py-10',
+                    : // Optical vertical center: extra bottom padding nudges the cluster above true 50%.
+                      'min-h-[100dvh] justify-center pt-4 pb-[max(6rem,16svh)] sm:pb-[max(7rem,18svh)]',
                 animBackdrop ? 'bg-transparent' : 'bg-background',
             )}
         >
@@ -236,7 +237,7 @@ export default function PortalPage() {
                 'relative z-10 mx-auto w-full max-w-6xl px-4 sm:px-6',
                 settings.displayMode === 'app'
                     ? 'flex flex-1 flex-col pb-6 pt-4 sm:pb-10 sm:pt-14'
-                    : 'pb-6 pt-2 sm:pb-8 sm:pt-4',
+                    : 'py-4 sm:py-6',
             )}
             >
                 <motion.div
