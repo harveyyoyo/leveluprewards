@@ -493,12 +493,16 @@
  * Colorized dark mode (optional): `data-dark-colorize="on"` on `html` from Settings.
  * Default scheme uses near-grayscale dark tokens; this restores saturated primaries + chart reads.
  */
-html.dark[data-dark-colorize="on"] body {
-  background-color: hsl(var(--background));
-  background-image:
+html.dark[data-dark-colorize="on"] {
+  --gradient-bg:
     radial-gradient(ellipse 125% 90% at 12% -8%, hsl(var(--primary) / 0.2) 0%, transparent 46%),
     radial-gradient(ellipse 110% 80% at 92% 4%, hsl(var(--chart-2) / 0.14) 0%, transparent 44%),
     radial-gradient(ellipse 100% 70% at 50% 108%, hsl(var(--chart-5) / 0.12) 0%, transparent 52%);
+}
+
+html.dark[data-dark-colorize="on"] body {
+  background-color: hsl(var(--background));
+  background-image: var(--gradient-bg);
   background-attachment: fixed;
   background-repeat: no-repeat;
 }
