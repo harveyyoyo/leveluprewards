@@ -188,8 +188,7 @@ export default function PortalPage() {
                 'text-foreground relative font-sans flex w-full flex-col items-center',
                 settings.displayMode === 'app'
                     ? 'min-h-[100dvh] pt-2 sm:pt-6 pb-24'
-                    : // Optical vertical center: extra bottom padding nudges the cluster above true 50%.
-                      'min-h-[100dvh] justify-center pt-4 pb-[max(6rem,16svh)] sm:pb-[max(7rem,18svh)]',
+                    : 'min-h-[100dvh] pt-4 pb-10 sm:pb-12',
                 animBackdrop ? 'bg-transparent' : 'bg-background',
             )}
         >
@@ -234,12 +233,13 @@ export default function PortalPage() {
             </div>
 
             <div className={cn(
-                'relative z-10 mx-auto w-full max-w-6xl px-4 sm:px-6',
+                'relative z-10 mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col px-4 sm:px-6',
                 settings.displayMode === 'app'
-                    ? 'flex flex-1 flex-col pb-6 pt-4 sm:pb-10 sm:pt-14'
-                    : 'py-4 sm:py-6',
+                    ? 'pb-6 pt-4 sm:pb-10 sm:pt-14'
+                    : '',
             )}
             >
+                <div className="min-h-0 flex-1" aria-hidden />
                 <motion.div
                     initial={
                         prefersReducedMotion ? false : { opacity: 0, y: 48, scale: 0.92 }
@@ -250,10 +250,7 @@ export default function PortalPage() {
                             ? { duration: 0 }
                             : { duration: 0.34, ease: [0.22, 1, 0.36, 1] }
                     }
-                    className={cn(
-                        'text-center -mt-2 sm:-mt-3',
-                        settings.displayMode === 'app' ? 'mb-6 sm:mb-10' : 'mb-10',
-                    )}
+                    className="shrink-0 text-center"
                 >
                     <h2
                         className={cn("font-black tracking-tighter font-headline drop-shadow-md inline-block", settings.displayMode === 'app' ? "text-4xl sm:text-7xl px-2 py-1 sm:py-2" : "text-6xl sm:text-7xl px-2 py-2")}
@@ -269,7 +266,9 @@ export default function PortalPage() {
                     </h2>
                 </motion.div>
 
-                <div className={cn("grid gap-3 sm:gap-5", settings.displayMode === 'app' ? "grid-cols-1 sm:grid-cols-3 mt-auto" : "grid-cols-1 md:grid-cols-3")}>
+                <div className="min-h-0 flex-1" aria-hidden />
+
+                <div className={cn("grid shrink-0 gap-3 sm:gap-5", settings.displayMode === 'app' ? "grid-cols-1 sm:grid-cols-3" : "grid-cols-1 md:grid-cols-3")}>
                     {portals.map((area, index) => {
                         const Icon = area.icon;
                         const rainbowColor =
