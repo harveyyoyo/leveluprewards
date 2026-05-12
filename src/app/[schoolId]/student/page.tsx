@@ -47,7 +47,7 @@ import { Progress } from '@/components/ui/progress';
 import { cn, getStudentNickname, getContrastColor } from '@/lib/utils';
 import { resolveStudentThemeWithSchoolDefault, primaryForegroundFor } from '@/lib/themeContrast';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
-import { getReadableErrorMessage } from '@/lib/errorMessage';
+import { getReadableErrorMessage, OFFLINE_USER_MESSAGE } from '@/lib/errorMessage';
 import {
   ArrowLeft,
   Nfc,
@@ -937,8 +937,8 @@ function StudentDashboardInner({
       playSound('error');
       toast({
         variant: 'destructive',
-        title: 'No connection',
-        description: 'Connect to the internet, then try redeeming again.',
+        title: 'Offline',
+        description: OFFLINE_USER_MESSAGE,
       });
       return;
     }
@@ -1298,7 +1298,7 @@ function StudentDashboardInner({
         {syncStatus === 'offline' && (
           <Alert variant="destructive" className="no-print shrink-0 border-red-600/70 py-2 px-3">
             <AlertDescription className="text-xs font-semibold leading-snug">
-              Offline — nothing syncs until you reconnect.
+              {OFFLINE_USER_MESSAGE}
             </AlertDescription>
           </Alert>
         )}
@@ -2342,7 +2342,7 @@ export default function StudentLoginPage() {
           <div className="no-print fixed left-0 right-0 top-0 z-[80] flex justify-center px-3 pt-2 sm:px-4 pointer-events-none">
             <Alert variant="destructive" className="pointer-events-auto max-w-md border-red-600/80 bg-red-950/90 py-2 px-3 shadow-lg">
               <AlertDescription className="text-[11px] font-semibold leading-snug sm:text-xs">
-                Offline — nothing syncs until you reconnect.
+                {OFFLINE_USER_MESSAGE}
               </AlertDescription>
             </Alert>
           </div>
@@ -2388,7 +2388,7 @@ export default function StudentLoginPage() {
             {syncStatus === 'offline' && (
               <Alert variant="destructive" className="no-print mb-3 w-full max-w-lg border-red-600/70 py-2 px-3">
                 <AlertDescription className="text-xs font-semibold leading-snug">
-                  Offline — nothing syncs until you reconnect.
+                  {OFFLINE_USER_MESSAGE}
                 </AlertDescription>
               </Alert>
             )}

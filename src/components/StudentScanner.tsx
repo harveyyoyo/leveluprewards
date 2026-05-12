@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 import { useFunctions, useUser } from '@/firebase';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { useFaceDescriptor } from '@/hooks/useFaceDescriptor';
-import { getReadableErrorMessage } from '@/lib/errorMessage';
+import { getReadableErrorMessage, OFFLINE_USER_MESSAGE } from '@/lib/errorMessage';
 import {
     getStudentSignInThrottleStatus,
     recordStudentSignIn,
@@ -395,6 +395,17 @@ export function StudentScanner({
             }
         }
 
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            playSound('error');
+            toast({
+                variant: 'destructive',
+                title: 'Offline',
+                description: OFFLINE_USER_MESSAGE,
+            });
+            setNfcId('');
+            return;
+        }
+
         const badgeId = rawId.trim();
         const runLookup = () => {
             const lookup = httpsCallable(functions, 'lookupStudentByBadge');
@@ -439,8 +450,11 @@ export function StudentScanner({
             const failure = getStudentLookupFailure(error, user, isUserLoading);
             // Any signed-in role can hit this if `kioskMembers` was never written (e.g. admin testing `/student`
             // without a prior student session). `enterSchoolKioskSession` registers the current UID for lookups.
-            const isSchoolEntry = failure.title === 'School Entry Required' && !!user && !isUserLoading;
-            if (isSchoolEntry) {
+            const isSchoolEntry =
+                failure.title === 'School Entry Required' && !!user && !isUserLoading;
+            const canRetrySchoolEntry =
+                typeof navigator === 'undefined' || navigator.onLine !== false;
+            if (isSchoolEntry && canRetrySchoolEntry) {
                 try {
                     const enter = httpsCallable(functions, 'enterSchoolKioskSession');
                     await enter({ schoolId: schoolId.trim().toLowerCase() });

@@ -570,7 +570,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         if (!uid) {
                             console.error('Developer login: no Firebase signed-in user (anonymous auth should run first).');
                             return loginErr(
-                                'No Firebase session yet. Check your internet connection and refresh the page, then try again.',
+                                'No Firebase session yet. Refresh the page and try again.',
                             );
                         }
                         try {
@@ -602,7 +602,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 if (!auth.currentUser) {
                     console.error('School access login: no Firebase signed-in user (anonymous auth should run first).');
                     return loginErr(
-                        'No Firebase session yet. Check your internet connection and refresh the page, then try again.',
+                        'No Firebase session yet. Refresh the page and try again.',
                     );
                 }
                 try {
@@ -635,7 +635,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 if (!auth.currentUser) {
                     console.error('Student login: no Firebase signed-in user (anonymous auth should run first).');
                     return loginErr(
-                        'No Firebase session yet. Check your internet connection and refresh the page, then try again.',
+                        'No Firebase session yet. Refresh the page and try again.',
                     );
                 }
                 try {

@@ -4,7 +4,7 @@ type GenericError = {
 };
 
 const OFFLINE_HINT =
-  'Cannot reach the server. This can be caused by a flaky connection, a captive portal, VPN/proxy filtering, or a network rule blocking Firebase (try allowing `*.cloudfunctions.net` and `*.googleapis.com`).';
+  "Can't reach the server — check your connection and try again.";
 
 const PERMISSION_HINT =
   "You don't have permission to do this. If you're signed in, ask a teacher or admin for help.";
@@ -40,6 +40,12 @@ const CRYPTIC_SINGLE_TOKEN_MESSAGES = new Set([
 ]);
 
 /**
+ * Short, consistent copy for kiosks and toasts when the device has no network
+ * or the app cannot reach Firebase (matches student-route offline banner).
+ */
+export const OFFLINE_USER_MESSAGE = 'Offline — nothing syncs until you reconnect.';
+
+/**
  * Normalize Firebase/network errors so users see actionable messages.
  */
 export function getReadableErrorMessage(error: unknown, fallback: string): string {
@@ -49,8 +55,14 @@ export function getReadableErrorMessage(error: unknown, fallback: string): strin
   const rawMessage = String(err.message ?? '').trim();
   const message = rawMessage.toLowerCase();
 
+  const isLocalhost =
+    typeof window !== 'undefined' &&
+    (window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1' ||
+      window.location.hostname === '[::1]');
+
   if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-    return 'No internet connection. Check your network and try again.';
+    return OFFLINE_USER_MESSAGE;
   }
 
   if (code === 'permission-denied' || code === 'permissions-denied') {
@@ -70,6 +82,10 @@ export function getReadableErrorMessage(error: unknown, fallback: string): strin
     message.includes('network-request-failed') ||
     message.includes('internal assertion failed')
   ) {
+    // Callable failures in local dev are commonly emulator/deploy mismatch, not "corporate firewall".
+    if (isLocalhost && code.includes('functions/')) {
+      return getFirebaseCallableConnectivityHint();
+    }
     return OFFLINE_HINT;
   }
 
@@ -90,11 +106,14 @@ export function getReadableErrorMessage(error: unknown, fallback: string): strin
     message.includes('offline') ||
     message.includes('client is offline')
   ) {
+    if (isLocalhost && code.includes('functions/')) {
+      return getFirebaseCallableConnectivityHint();
+    }
     return OFFLINE_HINT;
   }
 
   if (code === 'failed-precondition' || codeTail === 'failed-precondition') {
-    return 'The app could not complete that request right now. Check your connection and try again.';
+    return OFFLINE_HINT;
   }
 
   if (code === 'not-found' || codeTail === 'not-found') {

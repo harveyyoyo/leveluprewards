@@ -53,7 +53,7 @@ import DynamicIcon from '@/components/DynamicIcon';
 import { cn, getStudentNickname, getContrastColor } from '@/lib/utils';
 import { LEVELUP_BRAND_PRIMARY_HEX } from '@/lib/app-branding';
 import { resolveStudentThemeWithSchoolDefault, primaryForegroundFor } from '@/lib/themeContrast';
-import { getReadableErrorMessage } from '@/lib/errorMessage';
+import { getReadableErrorMessage, OFFLINE_USER_MESSAGE } from '@/lib/errorMessage';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -699,8 +699,8 @@ export function PrizeDashboard({
             playSound('error');
             toast({
                 variant: 'destructive',
-                title: 'No connection',
-                description: 'Connect to the internet, then try redeeming again.',
+                title: 'Offline',
+                description: OFFLINE_USER_MESSAGE,
                 duration: 8000,
             });
             return;
