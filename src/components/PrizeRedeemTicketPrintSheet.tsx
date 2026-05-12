@@ -54,8 +54,7 @@ export function PrizeRedeemTicketPrintSheet({
     style.setAttribute('data-prize-ticket-print', 'true');
     const printSheetCss =
       paperFormat === 'thermal_80mm'
-        ? /* Shrink-wrap page + root — POS drivers often use ~210mm roll height; avoid stretching the slip */
-          '@page{size:80mm auto;margin:2mm;}' +
+        ? /* @page prizethermal80 lives in globals.css — here only root sizing so this tag wins after other print CSS. */
           'html,body{margin:0!important;padding:0!important;background:#fff!important;height:auto!important;min-height:0!important;overflow:visible!important;}'
         : '@page{size:50mm 70mm;margin:1mm;}' +
           'html,body{margin:0!important;padding:0!important;background:#fff!important;}';

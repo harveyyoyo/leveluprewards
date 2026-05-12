@@ -942,6 +942,13 @@
     overflow: visible !important;
   }
 
+  /* Kill min-h-screen on the app shell so a long driver page (e.g. 80×3276mm) doesn't stretch the slip. */
+  html:has(body[data-prize-voucher-print='thermal_80mm'].prize-ticket-printing) [data-app-view-root],
+  body[data-prize-voucher-print='thermal_80mm'].prize-ticket-printing [data-app-view-root] {
+    min-height: 0 !important;
+    height: auto !important;
+  }
+
   /* Scorched Earth: Hide EVERYTHING on body */
   body.coupon-printing *,
   body.prize-ticket-printing *,
@@ -1048,6 +1055,7 @@
   /* 80 mm thermal: shrink-wrap like coupons — absolute + height:100% parent makes the slip stretch */
   body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='thermal_80mm'],
   body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='thermal_80mm'] {
+    page: prizethermal80;
     display: block !important;
     position: static !important;
     inset: auto !important;
@@ -1337,6 +1345,12 @@
   @page {
     size: letter portrait;
     margin: 0;
+  }
+
+  /* Re-state after default Letter @page so thermal slip layout keeps content-height page box in Chrome. */
+  @page prizethermal80 {
+    size: 80mm auto;
+    margin: 2mm;
   }
 
   /* Letter coupons: minimal non-printable inset (~4mm) so edges are not clipped on most printers. */
