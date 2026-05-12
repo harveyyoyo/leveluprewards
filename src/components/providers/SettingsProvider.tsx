@@ -180,6 +180,11 @@ interface Settings {
     kioskSessionTimeoutSec?: number;
     /** Minutes of kiosk inactivity before AI Fun and redeem print vouchers are hidden until the next interaction. */
     kioskAiFunAndVoucherIdleOffMin?: number;
+    /**
+     * When > 0, a student who just signed in at the kiosk cannot sign in again
+     * for this many seconds (anti-spam / anti-double-scan). 0 disables the freeze.
+     */
+    studentSignInFreezeSec?: number;
     /** Student kiosk login: show/hide each login method tab (Card / Type / Scan / Face). */
     kioskLoginTabCardEnabled?: boolean;
     kioskLoginTabTypeEnabled?: boolean;
@@ -429,6 +434,7 @@ const defaultSettings: Settings = {
     adminSessionTimeoutMs: 5 * 60 * 1000,
     kioskSessionTimeoutSec: 10,
     kioskAiFunAndVoucherIdleOffMin: 6,
+    studentSignInFreezeSec: 0,
     kioskLoginTabCardEnabled: true,
     kioskLoginTabTypeEnabled: true,
     kioskLoginTabScanEnabled: true,
@@ -754,6 +760,12 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                     kioskIdle > 240
                 ) {
                     delete (parsed as Partial<Settings>).kioskAiFunAndVoucherIdleOffMin;
+                }
+                const freezeSec = parsed.studentSignInFreezeSec;
+                if (typeof freezeSec !== 'number' || !Number.isFinite(freezeSec) || freezeSec < 0) {
+                    delete (parsed as Partial<Settings>).studentSignInFreezeSec;
+                } else {
+                    parsed.studentSignInFreezeSec = Math.min(3600, Math.round(freezeSec));
                 }
                 // Demo school: production defaults are applied only on first-run (see no-saved-settings branch below).
                 const nextSettings = applyEntitlements({ 

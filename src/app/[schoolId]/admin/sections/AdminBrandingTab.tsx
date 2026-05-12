@@ -512,6 +512,31 @@ export function AdminBrandingTab({
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="signin-freeze" className="text-sm font-bold flex items-center gap-2">
+                  <Clock className="w-4 h-4" /> Student sign-in freeze
+                </Label>
+                <div className="flex items-center gap-3">
+                  <Input
+                    id="signin-freeze"
+                    type="number"
+                    min={0}
+                    max={3600}
+                    value={settings.studentSignInFreezeSec ?? 0}
+                    onChange={(e) => {
+                      const n = parseInt(e.target.value, 10);
+                      const secs = Number.isFinite(n) ? Math.min(3600, Math.max(0, n)) : 0;
+                      updateSettings({ studentSignInFreezeSec: secs });
+                    }}
+                    className="w-24 font-bold"
+                  />
+                  <span className="text-sm font-medium text-muted-foreground">seconds</span>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  If a student tries to sign in again right after they just signed in, the kiosk will block them for this many seconds. Set 0 to disable.
+                </p>
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="welcome-back-duration" className="text-sm font-bold flex items-center gap-2">
                   <Tv className="w-4 h-4" /> Welcome back splash duration
                 </Label>
