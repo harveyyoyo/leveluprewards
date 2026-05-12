@@ -135,7 +135,12 @@ service cloud.firestore {
     match /schoolPublic/{schoolId} {
       allow get: if isAuth();
       allow list: if false;
-      allow create, update: if isAdmin(schoolId) || isDeveloper();
+      allow create, update: if isAdmin(schoolId) || isDeveloper()
+        || (
+          isTeacher(schoolId)
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['appSettings', 'updatedAt', 'active'])
+        );
       allow delete: if isDeveloper();
     }
 
@@ -148,7 +153,13 @@ service cloud.firestore {
     match /schools/{schoolId} {
       allow read: if isDeveloper() || isAdmin(schoolId) || isTeacher(schoolId) || isSecretary(schoolId) || isPrizeClerk(schoolId) || isReports(schoolId);
       allow create: if isDeveloper();
-      allow update, delete: if isAdmin(schoolId) || isDeveloper();
+      allow delete: if isAdmin(schoolId) || isDeveloper();
+      // Teachers may adjust weekly raffle knobs (stored in appSettings) without full admin rights.
+      allow update: if isAdmin(schoolId) || isDeveloper()
+        || (
+          isTeacher(schoolId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['appSettings', 'updatedAt'])
+        );
 
       // Private school record: staff of this school or a platform developer.
       // Students and anonymous users use `schoolPublic/{schoolId}` instead.

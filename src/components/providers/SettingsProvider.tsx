@@ -840,7 +840,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     const flushAppSettingsToFirestore = useCallback((next: Settings, sid: string) => {
         const fs = firestoreRef.current;
         const ls = loginStateRef.current;
-        if (!sid || !fs || (ls !== 'admin' && ls !== 'developer')) return;
+        if (!sid || !fs || (ls !== 'admin' && ls !== 'developer' && ls !== 'teacher')) return;
         const schoolWritePayload = removeUndefinedDeep({
             appSettings: next,
             updatedAt: Date.now(),
@@ -872,7 +872,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                 pending &&
                 flushSid &&
                 flushSid === capturedSid &&
-                (ls === 'admin' || ls === 'developer')
+                (ls === 'admin' || ls === 'developer' || ls === 'teacher')
             ) {
                 flushAppSettingsToFirestore(pending, flushSid);
             }
@@ -899,7 +899,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             localStorage.setItem(settingsKey, JSON.stringify(next));
             latestForFirestoreRef.current = next;
 
-            if (schoolId && firestore && (loginState === 'admin' || loginState === 'developer')) {
+            if (schoolId && firestore && (loginState === 'admin' || loginState === 'developer' || loginState === 'teacher')) {
                 const flushSid = schoolId.trim().toLowerCase();
                 lastScheduledFlushSchoolIdRef.current = flushSid;
                 if (firestoreFlushTimerRef.current) {
@@ -1042,6 +1042,12 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         if (!isAllowed(key)) return false;
         if (loginState !== 'teacher') return true;
         if (key === 'enableWeeklyRaffle') return !!settings.enableWeeklyRaffle;
+        if (
+            !!settings.enableWeeklyRaffle &&
+            (key === 'rafflePointsPerTicket' || key === 'raffleOneEntryPerStudent' || key === 'raffleDeductPoints')
+        ) {
+            return true;
+        }
         // Teachers only see features enabled for them by the admin
         return settings.teacherFeatures?.[key] ?? false;
     }, [isAllowed, loginState, settings.teacherFeatures, settings.enableWeeklyRaffle]);

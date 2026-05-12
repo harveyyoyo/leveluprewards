@@ -28,7 +28,7 @@ type EntryRow = {
 export function AdminRaffleTab({
   schoolId,
   students,
-  /** When false, raffle rules are read-only (configure under Admin → Settings → Features). */
+  /** When false, raffle rules are read-only (e.g. secretary coupon-only mode). */
   canEditSettings = true,
 }: {
   schoolId: string;
@@ -202,7 +202,7 @@ export function AdminRaffleTab({
             ) : (
               <>
                 Use <span className="font-semibold">PULL!</span> to spin for students shown below (your portal scope). Raffle rules
-                are configured under <span className="font-semibold">Admin → Settings → Features</span> (Weekly Raffle Wheel).
+                are read-only in this mode; switch to a teacher or admin session to edit them.
               </>
             )}
           </CardDescription>
@@ -310,7 +310,9 @@ export function AdminRaffleTab({
             {winner ? (
               <div className="mt-2 rounded-xl border bg-background p-4">
                 <p className="text-xs font-semibold text-muted-foreground">Winner</p>
-                <p className="text-xl font-black tracking-tight">{winner.name}</p>
+                <p className="text-xl tracking-tight" style={{ fontWeight: 900, color: 'hsl(var(--foreground))' }}>
+                  {winner.name}
+                </p>
               </div>
             ) : (
               <p className="text-xs text-muted-foreground">

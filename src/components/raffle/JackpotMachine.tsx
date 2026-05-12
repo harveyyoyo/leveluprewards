@@ -362,7 +362,9 @@ export function JackpotMachine({
                   <div
                     className="relative z-[1]"
                     style={{
-                      transform: `translateY(-${offsets[ri] - ROW_H}px)`,
+                      // Use (ROW_H - offset), not -(offset - ROW_H): when offset < ROW_H the latter becomes
+                      // `translateY(--88px)` (invalid CSS) and reels render blank after reset.
+                      transform: `translateY(${ROW_H - offsets[ri]}px)`,
                       transition:
                         spinning && !reelSnap
                           ? `transform ${REEL_BASE_DURATION_MS + ri * REEL_STAGGER_MS}ms cubic-bezier(0.16, 1, 0.3, 1)`
@@ -381,7 +383,12 @@ export function JackpotMachine({
                         className="flex w-full min-w-0 items-center justify-center px-1"
                         style={reelNameStyle(name.length > 8 ? 16 : embedded ? 18 : 24)}
                       >
-                        <span className="min-w-0 max-w-full truncate">{name}</span>
+                        <span
+                          className="min-w-0 max-w-full truncate"
+                          style={{ color: 'hsl(var(--card-foreground))' }}
+                        >
+                          {name}
+                        </span>
                       </div>
                     ))}
                   </div>

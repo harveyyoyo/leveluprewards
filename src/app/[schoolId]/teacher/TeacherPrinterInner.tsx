@@ -3300,7 +3300,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                         <AdminRaffleTab
                                             schoolId={schoolId!}
                                             students={studentsForTeacherActions}
-                                            canEditSettings={isAdmin && !secretaryMode}
+                                            canEditSettings={!secretaryMode}
                                         />
                                     </div>
                                 </TabsContent>
