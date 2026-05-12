@@ -110,8 +110,14 @@ function TeacherPrinterSkeleton() {
 }
 
 function TeacherPrinter(props: { teacherName: string; teacherId: string; onLogout: () => void }) {
-    const { isAdmin, isTeacher } = useAppContext();
-    if (!isAdmin && !isTeacher) {
+    const { isAdmin, isTeacher, loginState } = useAppContext();
+    const canOpenTeacherPortal =
+        isAdmin ||
+        isTeacher ||
+        loginState === 'admin' ||
+        loginState === 'developer' ||
+        loginState === 'teacher';
+    if (!canOpenTeacherPortal) {
         return <TeacherPrinterSkeleton />;
     }
     return (

@@ -3,7 +3,6 @@
 import { useState, useEffect, useMemo, Fragment } from 'react';
 import { useConfirm } from '@/components/providers/ConfirmProvider';
 import { useRouter } from 'next/navigation';
-import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useAppContext } from '@/components/AppProvider';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -68,18 +67,7 @@ import { SchoolReportsPanel } from '@/components/reports/SchoolReportsPanel';
 import { GoalsManager } from '@/components/goals/GoalsManager';
 import { homeworkRewardCategoryKey } from '@/lib/homeworkRewards';
 import { studentsInTeacherScope } from '@/lib/reportsScope';
-
-const TeacherWeeklyRaffleTab = dynamic(
-    () => import('@/app/[schoolId]/admin/sections/AdminRaffleTab').then((m) => m.AdminRaffleTab),
-    {
-        ssr: false,
-        loading: () => (
-            <div className="flex min-h-[320px] items-center justify-center p-8 text-sm font-medium text-muted-foreground">
-                Loading raffle…
-            </div>
-        ),
-    },
-);
+import { AdminRaffleTab } from '@/app/[schoolId]/admin/sections/AdminRaffleTab';
 
 /** Max sheets per run. Bounded for sensible printer jobs and UI. */
 const MAX_COUPON_PRINT_SHEETS = 100;
@@ -3309,7 +3297,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                             {raffleTabEnabled && (
                                 <TabsContent value="raffle" className={teacherPortalTabContentClassName}>
                                     <div className={teacherPortalPanelClassName}>
-                                        <TeacherWeeklyRaffleTab
+                                        <AdminRaffleTab
                                             schoolId={schoolId!}
                                             students={studentsForTeacherActions}
                                             canEditSettings={isAdmin && !secretaryMode}
