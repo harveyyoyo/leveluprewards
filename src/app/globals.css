@@ -990,8 +990,13 @@
   /* 3. PATH-TO-VISIBLE ISOLATION:
      The definitive way to hide everything without phantom page space.
      We hide all children of the body, then white-list the app root and the active print wrapper. */
-  body.prize-ticket-printing > *:not([data-app-view-root]),
+  body.prize-ticket-printing > *:not([data-app-view-root]):not(#prize-ticket-print-wrapper):not(#prize-ticket-standalone),
   body.id-card-printing > *:not([data-app-view-root]) {
+    display: none !important;
+  }
+
+  /* 80 mm thermal: portaled slip is a direct body child — drop the min-h-screen app shell from print layout entirely. */
+  body[data-prize-voucher-print='thermal_80mm'].prize-ticket-printing [data-app-view-root] {
     display: none !important;
   }
 

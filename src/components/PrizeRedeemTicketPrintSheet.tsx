@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { format } from 'date-fns';
 import DynamicIcon from '@/components/DynamicIcon';
 import { leadingEmojiSequenceFromName, stripLeadingEmojiFromPrizeName } from '@/lib/prize-utils';
@@ -44,6 +45,12 @@ export function PrizeRedeemTicketPrintSheet({
   paperFormat?: PrizeVoucherPaperFormat;
 }) {
   const [logoError, setLogoError] = useState(false);
+  /** Avoid SSR/client DOM mismatch: first paint matches server (no portal), then portal thermal overlay to body. */
+  const [portalReady, setPortalReady] = useState(false);
+
+  useLayoutEffect(() => {
+    setPortalReady(true);
+  }, []);
 
   useEffect(() => {
     setLogoError(false);
@@ -76,7 +83,13 @@ export function PrizeRedeemTicketPrintSheet({
   const schoolLabel = (schoolName || '').trim() || null;
   const wrapperId = displayMode === 'page' ? 'prize-ticket-standalone' : 'prize-ticket-print-wrapper';
 
-  return (
+  const portalThermalOverlay =
+    portalReady &&
+    paperFormat === 'thermal_80mm' &&
+    displayMode === 'overlay' &&
+    typeof document !== 'undefined';
+
+  const sheet = (
     <div
       id={wrapperId}
       className="prize-ticket-root"
@@ -218,4 +231,6 @@ export function PrizeRedeemTicketPrintSheet({
       })}
     </div>
   );
+
+  return portalThermalOverlay ? createPortal(sheet, document.body) : sheet;
 }
