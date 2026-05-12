@@ -140,7 +140,9 @@ export default function PortalPage() {
                 (document.querySelector('header.no-print') as HTMLElement | null) ??
                 (document.querySelector('header') as HTMLElement | null);
             const headerBottom = header?.getBoundingClientRect().bottom ?? 0;
-            setWhereToCenterY((headerBottom + gridTop) / 2);
+            /** Bias above strict midpoint so the line sits higher in the gap (0.5 = centered). */
+            const fromHeader = 0.28;
+            setWhereToCenterY(headerBottom + (gridTop - headerBottom) * fromHeader);
         };
 
         let raf = 0;
@@ -280,7 +282,7 @@ export default function PortalPage() {
                     top:
                         whereToCenterY != null
                             ? `${whereToCenterY}px`
-                            : 'calc((5rem + 50dvh) / 2)',
+                            : 'calc((5rem + 50dvh) / 2 - 2.75rem)',
                 }}
             >
                 <motion.h2
