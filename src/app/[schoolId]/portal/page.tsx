@@ -250,7 +250,10 @@ export default function PortalPage() {
                             ? { duration: 0 }
                             : { duration: 0.34, ease: [0.22, 1, 0.36, 1] }
                     }
-                    className={cn("text-center", settings.displayMode === 'app' ? "mb-6 sm:mb-10" : "mb-10")}
+                    className={cn(
+                        'text-center -mt-2 sm:-mt-3',
+                        settings.displayMode === 'app' ? 'mb-6 sm:mb-10' : 'mb-10',
+                    )}
                 >
                     <h2
                         className={cn("font-black tracking-tighter font-headline drop-shadow-md inline-block", settings.displayMode === 'app' ? "text-4xl sm:text-7xl px-2 py-1 sm:py-2" : "text-6xl sm:text-7xl px-2 py-2")}
