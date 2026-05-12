@@ -6,6 +6,8 @@ import { cn } from '@/lib/utils';
 
 const REEL_COUNT = 3;
 const ROW_H = 88;
+/** Strip scroll position (px) where `translateY(ROW_H - offset)` = 0 so all three viewport rows show names; offset 0 leaves the top row blank. */
+const IDLE_REEL_OFFSET_PX = ROW_H;
 const REEL_BASE_DURATION_MS = 2400;
 const REEL_STAGGER_MS = 600;
 /** Copies of the name pool per reel — need headroom so base offset + spin travel stays inside strip height. */
@@ -45,7 +47,7 @@ export function JackpotMachine({
   const [spinning, setSpinning] = useState(false);
   const [winner, setWinner] = useState<string | null>(null);
   const [muted, setMuted] = useState(false);
-  const [offsets, setOffsets] = useState<number[]>(() => Array(REEL_COUNT).fill(0));
+  const [offsets, setOffsets] = useState<number[]>(() => Array(REEL_COUNT).fill(IDLE_REEL_OFFSET_PX));
   /** When true, reel transform has no transition (instant snap before each spin). */
   const [reelSnap, setReelSnap] = useState(false);
   const [confetti, setConfetti] = useState(false);
@@ -77,7 +79,7 @@ export function JackpotMachine({
     setSpinning(false);
     setWinner(null);
     setConfetti(false);
-    setOffsets(Array(REEL_COUNT).fill(0));
+    setOffsets(Array(REEL_COUNT).fill(IDLE_REEL_OFFSET_PX));
     setReelSnap(false);
   }, [resetKey]);
 
@@ -222,7 +224,7 @@ export function JackpotMachine({
       clearTickTimers();
 
       setReelSnap(true);
-      setOffsets(Array(REEL_COUNT).fill(0));
+      setOffsets(Array(REEL_COUNT).fill(IDLE_REEL_OFFSET_PX));
       await nextFrame();
       await nextFrame();
 
@@ -362,8 +364,8 @@ export function JackpotMachine({
                   <div
                     className="relative z-[1]"
                     style={{
-                      // Use (ROW_H - offset), not -(offset - ROW_H): when offset < ROW_H the latter becomes
-                      // `translateY(--88px)` (invalid CSS) and reels render blank after reset.
+                      // translateY(ROW_H - offset): offset must be ROW_H at idle so translateY(0) fills all three rows;
+                      // offset 0 yields translateY(ROW_H) and an empty top row.
                       transform: `translateY(${ROW_H - offsets[ri]}px)`,
                       transition:
                         spinning && !reelSnap
