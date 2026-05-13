@@ -259,16 +259,16 @@ export function AdminRaffleTab({
 
   return (
     <>
-      <div className="mx-auto max-w-3xl space-y-6">
+      <div className="mx-auto w-full max-w-[min(100%,96rem)] space-y-6 px-5 sm:px-10 md:px-14 lg:px-20 xl:px-24">
         <Card className="overflow-hidden border shadow-md">
-          <CardHeader className="border-b bg-gradient-to-br from-muted/60 via-background to-background px-5 py-6 sm:px-6">
+          <CardHeader className="border-b bg-gradient-to-br from-muted/60 via-background to-background px-6 py-6 sm:px-10 lg:px-14 xl:px-16">
             <CardTitle className="flex items-center gap-2.5 text-xl tracking-tight">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border bg-background shadow-sm">
                 <Ticket className="h-5 w-5 text-primary" aria-hidden />
               </span>
               Weekly raffle
             </CardTitle>
-            <CardDescription className="mt-3 max-w-prose text-pretty text-sm leading-relaxed">
+            <CardDescription className="mt-3 max-w-4xl text-pretty text-sm leading-relaxed lg:max-w-5xl">
               {canEditSettings ? (
                 <>
                   Configure the pool below, then open the <span className="font-medium text-foreground">jackpot</span> or{' '}
@@ -301,7 +301,7 @@ export function AdminRaffleTab({
             ) : null}
           </CardHeader>
 
-          <CardContent className="space-y-8 px-5 py-6 sm:px-6">
+          <CardContent className="space-y-8 px-6 py-6 sm:px-10 lg:px-14 xl:px-16">
             {canEditSettings ? (
               <section className="space-y-3">
                 <h2 className="text-[0.65rem] font-bold uppercase tracking-[0.14em] text-muted-foreground">Pool rules</h2>
@@ -504,7 +504,7 @@ export function AdminRaffleTab({
                     </div>
                   </div>
                 ) : (
-                  <div className="flex flex-1 items-center rounded-xl border border-dashed bg-background/50 px-3 py-2.5 sm:max-w-md">
+                  <div className="flex flex-1 items-center rounded-xl border border-dashed bg-background/50 px-3 py-2.5 sm:max-w-2xl">
                     <p className="text-xs leading-relaxed text-muted-foreground">{poolHint}</p>
                   </div>
                 )}
@@ -514,7 +514,7 @@ export function AdminRaffleTab({
             <section className="space-y-3">
               <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
                 <h2 className="text-[0.65rem] font-bold uppercase tracking-[0.14em] text-muted-foreground">Entries preview</h2>
-                <p className="text-xs text-muted-foreground sm:max-w-[55%] sm:text-right">
+                <p className="text-xs text-muted-foreground sm:max-w-[min(42rem,72%)] sm:text-right">
                   {isGeneralRaffle
                     ? 'One pool entry each; balances shown for reference.'
                     : oneEntryPerStudent
