@@ -44,7 +44,8 @@ export function useDoc<T = any>(
   type StateDataType = WithId<T> | null;
 
   const [data, setData] = useState<StateDataType>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  /** When a ref is present, start in a loading state so the first paint matches the in-flight snapshot (avoids a one-frame "loaded + null" flash and dependent logic firing too early). */
+  const [isLoading, setIsLoading] = useState<boolean>(() => !!memoizedDocRef);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
   useEffect(() => {

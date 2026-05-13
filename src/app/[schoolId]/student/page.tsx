@@ -125,6 +125,8 @@ import { StudentKioskTransitionFlash } from '@/components/StudentKioskTransition
 
 const STUDENT_TRANSITION_MIN_VISIBLE_MS = 650;
 const STUDENT_TRANSITION_EXIT_MS = 320;
+/** If the dashboard never signals ready (e.g. Firestore error), do not leave the full-screen transition layer up indefinitely. */
+const STUDENT_TRANSITION_FAILSAFE_MS = 30_000;
 
 const AI_SURPRISE_KIND_LABEL: Record<string, string> = {
   joke: 'Your joke',
@@ -476,10 +478,10 @@ function StudentDashboardInner({
   usePrizeAiFunAudienceCacheReset(schoolId, studentId, student);
 
   useEffect(() => {
-    if (!studentLoading && student && schoolId) {
-      onReady?.(studentId);
-    }
-  }, [onReady, schoolId, student, studentId, studentLoading]);
+    if (!schoolId || studentLoading) return;
+    // Dismiss kiosk transition once the student doc subscription has settled, even when the doc is missing or errored (otherwise the full-screen flash never clears).
+    onReady?.(studentId);
+  }, [onReady, schoolId, studentId, studentLoading]);
 
   const todayInSchoolTz = useMemo(() => {
     const d = new Date();
@@ -2255,6 +2257,14 @@ export default function StudentLoginPage() {
   }, []);
 
   useEffect(() => clearStudentTransitionTimers, [clearStudentTransitionTimers]);
+
+  useEffect(() => {
+    if (!studentTransition) return;
+    const t = window.setTimeout(() => {
+      setStudentTransition(null);
+    }, STUDENT_TRANSITION_FAILSAFE_MS);
+    return () => window.clearTimeout(t);
+  }, [studentTransition]);
 
   const finishStudentSession = useCallback(() => {
     clearStudentTransitionTimers();
