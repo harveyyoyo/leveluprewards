@@ -34,7 +34,7 @@ export const metadata: Metadata = {
   title: 'levelUp EDU',
   description: 'LevelUp rewards hub',
   manifest: '/manifest.json',
-  /** Tab / PWA icons: `src/app/icon.png` and `apple-icon.png` (same as public/logo.png). */
+  /** Tab / PWA icons: `src/app/icon.png` / `apple-icon.png` (do not add `public/icon.png` — same URL conflicts with the app route). */
   openGraph: {
     title: 'levelUp EDU',
     description: 'LevelUp rewards hub',
