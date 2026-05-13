@@ -258,6 +258,30 @@ export function AdminRaffleTab({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5 pt-6">
+          {raffleDisplayMode === 'wheel' ? (
+            <RaffleSpinWheel
+              embedded
+              title="Weekly wheel"
+              slices={wheelSlices}
+              pickWinner={handleJackpotPickWinner}
+              onSpinFinished={handleJackpotSpinFinished}
+              resetKey={jackpotResetKey}
+              pullLocked={isSavingDeduction}
+              embeddedFooter={jackpotEmbeddedFooter}
+            />
+          ) : (
+            <JackpotMachine
+              embedded
+              title="Weekly jackpot"
+              pool={jackpotPool}
+              pickWinner={handleJackpotPickWinner}
+              onSpinFinished={handleJackpotSpinFinished}
+              resetKey={jackpotResetKey}
+              pullLocked={isSavingDeduction}
+              embeddedFooter={jackpotEmbeddedFooter}
+            />
+          )}
+
           {canEditSettings ? (
             <>
               <div className="grid gap-4 md:grid-cols-2">
@@ -394,30 +418,6 @@ export function AdminRaffleTab({
                 {raffleDisplayMode === 'wheel' ? 'Spinning wheel' : 'Jackpot (reels)'}
               </p>
             </div>
-          )}
-
-          {raffleDisplayMode === 'wheel' ? (
-            <RaffleSpinWheel
-              embedded
-              title="Weekly wheel"
-              slices={wheelSlices}
-              pickWinner={handleJackpotPickWinner}
-              onSpinFinished={handleJackpotSpinFinished}
-              resetKey={jackpotResetKey}
-              pullLocked={isSavingDeduction}
-              embeddedFooter={jackpotEmbeddedFooter}
-            />
-          ) : (
-            <JackpotMachine
-              embedded
-              title="Weekly jackpot"
-              pool={jackpotPool}
-              pickWinner={handleJackpotPickWinner}
-              onSpinFinished={handleJackpotSpinFinished}
-              resetKey={jackpotResetKey}
-              pullLocked={isSavingDeduction}
-              embeddedFooter={jackpotEmbeddedFooter}
-            />
           )}
 
           <div className="flex flex-col gap-2 rounded-2xl border bg-muted/20 p-4">

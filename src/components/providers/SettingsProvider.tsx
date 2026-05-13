@@ -163,6 +163,8 @@ interface Settings {
     showIntroWizard?: boolean;
     // Workflow
     enableTeacherBudgets: boolean;
+    /** Teacher portal: show a "Coupons" feature tab listing coupons created by the teacher. */
+    enableTeacherGeneratedCouponsTab?: boolean;
     enableHomework: boolean;
     legacyMode: boolean;
     enableAnimatedBackground: boolean;
@@ -429,6 +431,7 @@ const defaultSettings: Settings = {
     enableHelperMode: true,
     showIntroWizard: false,
     enableTeacherBudgets: false,
+    enableTeacherGeneratedCouponsTab: false,
     enableHomework: false,
     legacyMode: false,
     enableAnimatedBackground: true,

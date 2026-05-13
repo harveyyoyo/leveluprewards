@@ -324,9 +324,9 @@ export function RaffleSpinWheel({
                     />
                   ))}
                   {segments.map((seg, i) => {
-                    const t = polarToCartesian(CX, CY, R * 0.62, seg.mid);
-                    const short =
-                      seg.name.length > 10 ? `${seg.name.slice(0, 9).trimEnd()}…` : seg.name;
+                    const t = polarToCartesian(CX, CY, R * 0.82, seg.mid);
+                    const short = seg.name.length > 14 ? `${seg.name.slice(0, 13).trimEnd()}…` : seg.name;
+                    const rot = seg.mid > 90 && seg.mid < 270 ? seg.mid + 180 : seg.mid;
                     return (
                       <text
                         key={`t-${seg.id}-${i}`}
@@ -340,6 +340,7 @@ export function RaffleSpinWheel({
                         paintOrder="stroke fill"
                         fontSize={labelFont}
                         fontWeight={800}
+                        style={{ transform: `rotate(${rot}deg)`, transformOrigin: `${t.x}px ${t.y}px` }}
                       >
                         {short}
                       </text>
