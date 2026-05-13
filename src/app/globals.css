@@ -979,6 +979,13 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
     height: auto !important;
   }
 
+  /* ID cards: multiple Avery pages — same as coupons; pinned 100% viewport + overflow:hidden clips page 2+. */
+  html:has(body.id-card-printing),
+  body.id-card-printing {
+    overflow: visible !important;
+    height: auto !important;
+  }
+
   /* 80 mm thermal voucher: don't keep Letter-sized html/body — kills huge blank under bordered slip */
   html:has(body[data-prize-voucher-print='thermal_80mm'].prize-ticket-printing),
   body[data-prize-voucher-print='thermal_80mm'].prize-ticket-printing {
@@ -1060,20 +1067,20 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
   body.prize-ticket-printing #prize-ticket-print-wrapper,
   body.prize-ticket-printing #prize-ticket-standalone,
   body.id-card-printing #student-id-print-wrapper {
-    display: flex !important;
-    flex-direction: column !important;
-    position: absolute !important; /* Absolute fill of the page */
-    inset: 0px !important;
+    display: block !important;
+    position: static !important;
+    inset: auto !important;
     width: 100% !important;
-    height: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
     z-index: 9999 !important;
     background: white !important;
     margin: 0 !important;
     padding: 0 !important;
-    box-sizing: border-box;
-    overflow: hidden !important;
-    transform: scale(var(--prize-print-scale, 1)) !important;
-    transform-origin: left top !important;
+    box-sizing: border-box !important;
+    overflow: visible !important;
+    transform: none !important;
+    flex-direction: unset !important;
   }
 
   /* Coupons: keep root flush; tiny safe area comes only from @page couponletter (avoid stacking padding + @page). */
