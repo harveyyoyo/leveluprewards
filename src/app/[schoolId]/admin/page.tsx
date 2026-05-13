@@ -2418,9 +2418,9 @@ function AdminDashboardInner() {
         </AlertDialog>
         </div>
         {showPurgeFlash && (
-          <div className="fixed inset-0 z-50 pointer-events-none flex items-center justify-center">
-            <div className="absolute inset-0 bg-white/90 animate-pulse" />
-            <div className="relative z-10 px-10 py-6 rounded-full border-4 border-amber-500 bg-white shadow-2xl text-amber-700 text-xl font-black tracking-[0.3em] uppercase">
+          <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+            <div className="pointer-events-none absolute inset-0 bg-white/90 animate-pulse" aria-hidden />
+            <div className="pointer-events-none relative z-10 px-10 py-6 rounded-full border-4 border-amber-500 bg-white shadow-2xl text-amber-700 text-xl font-black tracking-[0.3em] uppercase">
               Purged
             </div>
           </div>

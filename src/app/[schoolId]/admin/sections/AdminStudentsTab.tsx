@@ -356,7 +356,7 @@ export function AdminStudentsTab({
           <ul className="flex flex-col gap-1.5 pr-4">
             {filteredStudents.length > 0 ? (
               <AdminRecordListHeader
-                gridClassName={cn('grid-cols-1', styles.studentsListGrid)}
+                gridClassName={cn(styles.studentsListGrid, 'max-sm:grid-cols-1')}
                 style={studentsListGridStyle}
                 columns={[
                   { id: 'hdr-select', label: 'Select', className: 'hidden sm:block text-center' },
