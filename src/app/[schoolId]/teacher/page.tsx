@@ -73,7 +73,7 @@ function TeacherPrinterSkeleton() {
                 isGraphic && 'bg-gradient-to-br from-indigo-950/15 to-slate-900/15',
             )}
         >
-            <div className="max-w-full mx-auto p-4 md:p-8 space-y-6">
+            <div className="mx-auto w-full max-w-7xl p-4 md:p-8 space-y-6">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between animate-pulse">
                     <div className="space-y-3 min-w-0">
                         <div className="h-8 w-44 max-w-full bg-muted rounded-lg" />

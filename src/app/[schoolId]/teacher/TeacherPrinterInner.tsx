@@ -80,7 +80,7 @@ const MAX_COUPON_PRINT_SHEETS = 100;
 const teacherPortalTabContentClassName =
     // Match admin portal scroll/placement: tab content fills the available flex height and owns vertical scrolling.
     'animate-in fade-in slide-in-from-bottom-2 duration-300 transition-opacity h-full min-h-0 w-full overflow-y-auto overflow-x-hidden pb-6 pr-1';
-const teacherPortalPanelClassName = 'w-full max-w-6xl mx-auto';
+const teacherPortalPanelClassName = 'w-full max-w-7xl mx-auto';
 /** Matches admin portal main `TabsTrigger` styling for visual parity. */
 const teacherPortalMainTabTriggerClassName =
     'rounded-xl px-4 py-2 font-bold flex items-center gap-2 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)] transition-all whitespace-nowrap';
@@ -432,7 +432,7 @@ function TeacherClassesTab({
         <div className="flex flex-col gap-6 items-center">
             <Card
                 className={cn(
-                    'w-full max-w-6xl border-t-8 transition-all duration-500 hover:shadow-2xl hover:-translate-y-1',
+                    'w-full max-w-7xl border-t-8 transition-all duration-500 hover:shadow-2xl hover:-translate-y-1',
                     isGraphic
                         ? 'bg-card/60 backdrop-blur-2xl border-chart-1 shadow-[0_20px_50px_rgba(0,0,0,0.1)]'
                         : 'bg-white border-chart-1 shadow-lg',
@@ -640,7 +640,7 @@ function TeacherRosterTab({
     return (
         <div className="flex flex-col gap-6 items-center">
             <Card className={cn(
-                "w-full max-w-6xl border-t-8 transition-all duration-500 hover:shadow-2xl hover:-translate-y-1",
+                "w-full max-w-7xl border-t-8 transition-all duration-500 hover:shadow-2xl hover:-translate-y-1",
                 isGraphic ? 'bg-card/60 backdrop-blur-2xl border-chart-4 shadow-[0_20px_50px_rgba(0,0,0,0.1)]' : 'bg-white border-chart-4 shadow-lg'
             )}>
                 <CardHeader className="p-4 md:p-6">
@@ -2617,7 +2617,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
 
                 <div
                     className={cn(
-                        'mx-auto flex w-full max-w-6xl flex-1 min-h-0 flex-col gap-6 p-4 md:p-8 relative z-10',
+                        'mx-auto flex w-full max-w-7xl flex-1 min-h-0 flex-col gap-6 p-4 md:p-8 relative z-10',
                         settings.displayMode === 'app' && 'pb-24'
                     )}
                 >
@@ -2785,7 +2785,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                 <div className={teacherPortalPanelClassName}>
 
                         <Card className={cn(
-                            "w-full max-w-6xl border-t-8 transition-all duration-500 hover:shadow-2xl hover:-translate-y-1",
+                            "w-full max-w-7xl border-t-8 transition-all duration-500 hover:shadow-2xl hover:-translate-y-1",
                             isGraphic
                                 ? 'bg-card/60 backdrop-blur-2xl border-chart-1 shadow-[0_20px_50px_rgba(0,0,0,0.1)]'
                                 : 'bg-white border-chart-1 shadow-lg'
@@ -3125,7 +3125,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                             <TabsContent value="award" className={teacherPortalTabContentClassName}>
                                 <div className={teacherPortalPanelClassName}>
                                   <Card className={cn(
-                                    "w-full max-w-6xl border-t-8 transition-all duration-500 hover:shadow-2xl hover:-translate-y-1",
+                                    "w-full max-w-7xl border-t-8 transition-all duration-500 hover:shadow-2xl hover:-translate-y-1",
                                     isGraphic ? 'bg-card/60 backdrop-blur-2xl border-chart-2 shadow-[0_20px_50px_rgba(0,0,0,0.1)]' : 'bg-white border-chart-2 shadow-lg'
                                   )}>
                                     <CardHeader className="p-4 md:p-6">

@@ -74,18 +74,15 @@ function LayoutClientWrapperInner({ children }: LayoutClientWrapperProps) {
     const isStudentKioskPage =
       typeof pathname === 'string' &&
       /\/(?:student|student-home|prize)(?:\/|$)/.test(pathname);
-    const isAdminDashboardPage =
+    /** Staff portal “home” routes: same shell as admin (full-width `<main>`, inner pages use `max-w-7xl`). */
+    const isStaffPortalShellRoot =
       typeof pathname === 'string' &&
-      /\/admin\/?$/.test(pathname);
-    const isTeacherPortalPage =
-      typeof pathname === 'string' &&
-      /\/teacher\/?$/.test(pathname);
+      /\/(?:admin|teacher|secretary|reports)\/?$/.test(pathname);
     const hideAppChrome =
       isLoginPage || isSignInPage || isMarketingLandingPath(pathname);
     const appShellNoPageScroll =
       typeof pathname === 'string' &&
-      !isAdminDashboardPage &&
-      !isTeacherPortalPage &&
+      !isStaffPortalShellRoot &&
       /\/(?:admin|teacher|prize-clerk|secretary|reports)(?:\/|$)/.test(pathname);
 
     const fullscreen = searchParams?.get('fullscreen') === '1';
@@ -240,7 +237,7 @@ function LayoutClientWrapperInner({ children }: LayoutClientWrapperProps) {
                                 ? 'relative z-10 flex w-full flex-col'
                                 : isStudentKioskPage
                                     ? 'relative z-10 flex w-full min-h-0 flex-col overflow-hidden'
-                                    : isAdminDashboardPage
+                                    : isStaffPortalShellRoot
                                         ? 'relative z-10 w-full max-w-none'
                                         : 'relative z-10 mx-auto w-full max-w-7xl',
                             appShellNoPageScroll && 'overflow-hidden flex flex-col min-h-0',
