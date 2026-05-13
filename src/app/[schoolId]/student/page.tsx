@@ -1282,8 +1282,10 @@ function StudentDashboardInner({
         className={cn(
           // Lock the dashboard to the viewport so inner panes scroll
           // (prevents Activity + CTA from falling below the fold).
-          "w-full max-w-none h-dvh min-h-dvh relative px-3 md:px-6 overflow-x-hidden overflow-y-hidden flex flex-col",
-          birthdayToday ? "pt-14 md:pt-16" : "pt-3 md:pt-8",
+          "student-dashboard-shell w-full max-w-none h-dvh min-h-dvh relative px-3 md:px-6 overflow-x-hidden overflow-y-hidden flex flex-col [@media(max-height:760px)]:px-2 [@media(max-height:760px)]:md:px-4",
+          birthdayToday
+            ? "pt-14 md:pt-16 [@media(max-height:760px)]:pt-12 [@media(max-height:760px)]:md:pt-12"
+            : "pt-3 md:pt-8 [@media(max-height:760px)]:pt-2 [@media(max-height:760px)]:md:pt-3",
           settings.enableThemeAnimations && !!effectiveTheme && "theme-theme-elements-animated theme-motion-override",
           // Avoid large bottom padding that leaves a visible gap.
           settings.displayMode === 'app' && 'pb-6'
@@ -1303,9 +1305,9 @@ function StudentDashboardInner({
               }),
           color: 'var(--theme-text)',
           fontFamily: effectiveTheme.fontFamily || 'inherit',
-          fontSize: fontScale !== 1 ? `${fontScale}em` : undefined,
+          fontSize: fontScale !== 1 ? `calc(var(--student-dashboard-density, 1) * ${fontScale}em)` : undefined,
         } as unknown as React.CSSProperties) : ({
-          fontSize: '1.15em',
+          fontSize: 'calc(var(--student-dashboard-density, 1) * 1.15em)',
           ...appearanceVarsForSurface(settings, 'redeem'),
         } as any)}
       >
@@ -1313,7 +1315,7 @@ function StudentDashboardInner({
 
         <div
           className={cn(
-            "relative flex flex-1 flex-col min-h-0 min-w-0 w-full space-y-3 md:space-y-4 overflow-hidden",
+            "relative flex flex-1 flex-col min-h-0 min-w-0 w-full space-y-3 md:space-y-4 overflow-hidden [@media(max-height:760px)]:space-y-2",
             isGraphic
               ? "animate-in fade-in duration-200 motion-reduce:animate-none motion-reduce:duration-0"
               : "",
@@ -1367,11 +1369,11 @@ function StudentDashboardInner({
           )}
           style={effectiveTheme ? { backgroundColor: 'var(--theme-card)', color: 'var(--theme-text)', borderColor: 'var(--theme-primary)' } : undefined}
         >
-          <CardContent className="p-4 md:p-5 flex flex-col md:flex-row justify-between items-center gap-4">
+          <CardContent className="p-4 md:p-5 flex flex-col md:flex-row justify-between items-center gap-4 [@media(max-height:760px)]:p-3 [@media(max-height:760px)]:gap-3">
             <div className="space-y-1 text-center md:text-left">
               <p className="text-xs font-bold uppercase tracking-widest" style={{ color: effectiveTheme ? 'var(--theme-text)' : undefined, opacity: effectiveTheme ? 0.7 : undefined }}>Welcome back,</p>
               <div className="flex items-center gap-3 mt-1">
-                <div className="w-12 h-12 rounded-full overflow-hidden bg-primary/10 border border-border/60 flex items-center justify-center font-bold text-primary flex-shrink-0">
+                <div className="w-12 h-12 rounded-full overflow-hidden bg-primary/10 border border-border/60 flex items-center justify-center font-bold text-primary flex-shrink-0 [@media(max-height:760px)]:h-10 [@media(max-height:760px)]:w-10">
                   {student.photoUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={student.photoUrl} alt={`${student.firstName} ${student.lastName}`} className={settings.photoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />
@@ -1381,7 +1383,7 @@ function StudentDashboardInner({
                 </div>
                 <div className="flex flex-col items-start gap-1">
                   <div className="flex items-center gap-2">
-                    <h2 className="text-2xl md:text-4xl font-black leading-tight">
+                    <h2 className="text-2xl md:text-4xl font-black leading-tight [@media(max-height:760px)]:md:text-3xl">
                       {student.firstName} {student.lastName}
                     </h2>
                     {birthdayToday ? (
@@ -1450,7 +1452,7 @@ function StudentDashboardInner({
                 style={{ color: effectiveTheme ? 'var(--theme-primary)' : undefined }}
               >
                 <div className="flex items-baseline gap-1.5">
-                  <span className="text-4xl md:text-5xl font-black leading-none" style={{ color: effectiveTheme ? 'var(--theme-primary)' : 'hsl(var(--primary))' }}>
+                  <span className="text-4xl md:text-5xl font-black leading-none [@media(max-height:760px)]:md:text-4xl" style={{ color: effectiveTheme ? 'var(--theme-primary)' : 'hsl(var(--primary))' }}>
                     {(student.points || 0).toLocaleString()}
                   </span>
                   <span className="text-lg md:text-xl font-bold uppercase tracking-widest" style={{ color: effectiveTheme ? 'var(--theme-primary)' : 'hsl(var(--primary) / 0.6)', opacity: 0.6 }}>pts</span>
@@ -1509,10 +1511,10 @@ function StudentDashboardInner({
           </CardContent>
         </Card>
 
-        <div className="grid w-full min-w-0 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_min(320px,28vw)] gap-4 relative z-10 flex-1 min-h-0 items-stretch overflow-hidden pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        <div className="grid w-full min-w-0 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_min(320px,28vw)] gap-4 relative z-10 flex-1 min-h-0 items-stretch overflow-hidden pb-[max(0.75rem,env(safe-area-inset-bottom))] [@media(max-height:760px)]:gap-3 [@media(max-height:760px)]:pb-2">
           {/* Left Section: Content */}
-          <div className="min-w-0 flex flex-1 min-h-0 flex-col gap-3 overflow-hidden pr-1">
-            <div className="min-w-0 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overflow-x-hidden pb-3 scroll-pb-3">
+          <div className="min-w-0 flex flex-1 min-h-0 flex-col gap-3 overflow-hidden pr-1 [@media(max-height:760px)]:gap-2">
+            <div className="min-w-0 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overflow-x-hidden pb-3 scroll-pb-3 [@media(max-height:760px)]:gap-2 [@media(max-height:760px)]:pb-2">
             <StudentGoalsCard
               schoolId={schoolId!}
               student={student}
@@ -2437,7 +2439,7 @@ export default function StudentLoginPage() {
         <TooltipProvider>
           <div
             className={cn(
-              'flex min-h-0 w-full flex-1 flex-col items-center justify-center px-4 py-4 font-sans',
+              'flex min-h-0 w-full flex-1 flex-col items-center justify-center px-4 py-4 font-sans [@media(max-height:720px)]:py-2',
               isGraphic
                 ? 'animate-in fade-in zoom-in-95 duration-200 motion-reduce:animate-none motion-reduce:duration-0'
                 : '',

@@ -215,6 +215,12 @@
   }
 }
 
+@media (max-height: 760px) {
+  .student-dashboard-shell {
+    --student-dashboard-density: 0.93;
+  }
+}
+
 /* Color Schemes for both Light & Dark Mode */
 [data-color-scheme="sky"] {
   --primary: 199 89% 48%;

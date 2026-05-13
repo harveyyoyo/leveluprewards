@@ -1,28 +1,37 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Loader2, Sparkles, Volume2, VolumeX } from 'lucide-react';
+import { Loader2, Shuffle, Volume2, VolumeX, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export type RaffleWheelSlice = { id: string; name: string; weight: number };
 
-const CX = 110;
-const CY = 110;
-const R = 100;
-const SPIN_MS = 4800;
+const WHEEL_COLORS = [
+  'oklch(0.62 0.22 25)',
+  'oklch(0.55 0.2 260)',
+  'oklch(0.7 0.2 145)',
+  'oklch(0.85 0.18 90)',
+];
 
-function polarToCartesian(cx: number, cy: number, radius: number, angleDegCwFromTop: number) {
-  const rad = ((angleDegCwFromTop - 90) * Math.PI) / 180;
-  return { x: cx + radius * Math.cos(rad), y: cy + radius * Math.sin(rad) };
+const CX = 250;
+const CY = 250;
+const R = 240;
+const SPIN_MS = 4500;
+
+function polar(cx: number, cy: number, r: number, deg: number) {
+  const a = ((deg - 90) * Math.PI) / 180;
+  return [cx + r * Math.cos(a), cy + r * Math.sin(a)] as const;
 }
 
-/** Wedge from startDeg to endDeg (degrees clockwise from top, end > start). */
-function wedgePath(startDeg: number, endDeg: number): string {
-  const start = polarToCartesian(CX, CY, R, endDeg);
-  const end = polarToCartesian(CX, CY, R, startDeg);
-  const sweep = endDeg - startDeg;
-  const largeArc = sweep > 180 ? 1 : 0;
-  return `M ${CX} ${CY} L ${start.x} ${start.y} A ${R} ${R} 0 ${largeArc} 0 ${end.x} ${end.y} Z`;
+function arcPath(cx: number, cy: number, r: number, start: number, end: number) {
+  const [x1, y1] = polar(cx, cy, r, end);
+  const [x2, y2] = polar(cx, cy, r, start);
+  const large = end - start <= 180 ? 0 : 1;
+  return `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 0 ${x2} ${y2} Z`;
+}
+
+function normalizeDegrees(value: number) {
+  return ((value % 360) + 360) % 360;
 }
 
 type RaffleSpinWheelProps = {
@@ -36,13 +45,9 @@ type RaffleSpinWheelProps = {
   embeddedFooter?: string | null;
 };
 
-function sliceHue(index: number) {
-  return (210 + index * 47) % 360;
-}
-
 export function RaffleSpinWheel({
   slices,
-  title = 'Class wheel',
+  title = 'Wheel of names',
   pickWinner,
   onSpinFinished,
   resetKey = 0,
@@ -50,16 +55,17 @@ export function RaffleSpinWheel({
   pullLocked = false,
   embeddedFooter = null,
 }: RaffleSpinWheelProps) {
-  const [spinning, setSpinning] = useState(false);
-  const [winner, setWinner] = useState<string | null>(null);
-  const [muted, setMuted] = useState(false);
   const [rotation, setRotation] = useState(0);
+  const [spinning, setSpinning] = useState(false);
+  const [winner, setWinner] = useState<{ id: string; name: string } | null>(null);
+  const [showWin, setShowWin] = useState(false);
+  const [muted, setMuted] = useState(false);
   const [transitionOn, setTransitionOn] = useState(false);
 
-  const audioRef = useRef<AudioContext | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
   const spinRunId = useRef(0);
-  const pendingWinner = useRef<{ id: string; name: string } | null>(null);
   const spinFinished = useRef(false);
+  const pendingWinner = useRef<{ id: string; name: string } | null>(null);
   const tickTimers = useRef<number[]>([]);
 
   const clearTickTimers = () => {
@@ -67,21 +73,16 @@ export function RaffleSpinWheel({
     tickTimers.current = [];
   };
 
-  const scheduleTimer = (fn: () => void, delay: number) => {
-    const id = window.setTimeout(fn, delay);
-    tickTimers.current.push(id);
-    return id;
-  };
-
   useEffect(() => {
     clearTickTimers();
     spinRunId.current += 1;
-    pendingWinner.current = null;
     spinFinished.current = false;
+    pendingWinner.current = null;
+    setRotation(0);
     setSpinning(false);
     setWinner(null);
+    setShowWin(false);
     setTransitionOn(false);
-    setRotation(0);
   }, [resetKey]);
 
   useEffect(() => {
@@ -89,39 +90,34 @@ export function RaffleSpinWheel({
   }, []);
 
   const getCtx = useCallback(() => {
-    if (muted) return null;
-    if (!audioRef.current) {
-      const Ctx =
+    if (muted || typeof window === 'undefined') return null;
+    if (!audioCtxRef.current) {
+      const AC =
         window.AudioContext ||
         (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      audioRef.current = new Ctx();
+      if (!AC) return null;
+      audioCtxRef.current = new AC();
     }
-    return audioRef.current;
+    if (audioCtxRef.current.state === 'suspended') void audioCtxRef.current.resume();
+    return audioCtxRef.current;
   }, [muted]);
 
-  const resumeAudioIfNeeded = async () => {
-    const ctx = getCtx();
-    if (!ctx || ctx.state !== 'suspended') return;
-    try {
-      await ctx.resume();
-    } catch {
-      /* ignore */
-    }
-  };
-
-  const beep = useCallback(
-    (freq: number, dur = 0.06, vol = 0.14, type: OscillatorType = 'triangle') => {
+  const tick = useCallback(
+    (freq = 1200, dur = 0.05, vol = 0.14) => {
       const ctx = getCtx();
       if (!ctx) return;
+      const t0 = ctx.currentTime;
       const o = ctx.createOscillator();
       const g = ctx.createGain();
-      o.type = type;
-      o.frequency.value = freq;
-      g.gain.value = vol;
-      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+      o.type = 'triangle';
+      o.frequency.setValueAtTime(freq, t0);
+      o.frequency.exponentialRampToValueAtTime(freq * 0.5, t0 + dur);
+      g.gain.setValueAtTime(0, t0);
+      g.gain.linearRampToValueAtTime(vol, t0 + 0.003);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
       o.connect(g).connect(ctx.destination);
-      o.start();
-      o.stop(ctx.currentTime + dur);
+      o.start(t0);
+      o.stop(t0 + dur);
     },
     [getCtx],
   );
@@ -130,35 +126,100 @@ export function RaffleSpinWheel({
     const ctx = getCtx();
     if (!ctx) return;
     const notes = [523.25, 659.25, 783.99, 1046.5];
-    notes.forEach((f, i) => scheduleTimer(() => beep(f, 0.16, 0.18, 'triangle'), i * 85));
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- scheduleTimer uses tickTimers ref
-  }, [getCtx, beep]);
+    notes.forEach((f, i) => {
+      const t0 = ctx.currentTime + i * 0.09;
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = 'triangle';
+      o.frequency.value = f;
+      g.gain.setValueAtTime(0, t0);
+      g.gain.linearRampToValueAtTime(0.2, t0 + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.5);
+      o.connect(g).connect(ctx.destination);
+      o.start(t0);
+      o.stop(t0 + 0.55);
+    });
+  }, [getCtx]);
 
   const segments = useMemo(() => {
-    if (!slices.length) return [];
-    const total = slices.reduce((s, x) => s + Math.max(1, x.weight), 0);
+    const total = slices.reduce((sum, slice) => sum + Math.max(1, slice.weight), 0);
+    if (!slices.length || total <= 0) return [];
+
     let acc = 0;
-    return slices.map((sl, i) => {
-      const w = Math.max(1, sl.weight);
+    return slices.map((slice, i) => {
+      const weight = Math.max(1, slice.weight);
       const start = (acc / total) * 360;
-      acc += w;
+      acc += weight;
       const end = (acc / total) * 360;
-      const mid = (start + end) / 2;
-      return { ...sl, start, end, mid, hue: sliceHue(i) };
+      const mid = start + (end - start) / 2;
+      const color = WHEEL_COLORS[i % WHEEL_COLORS.length];
+      const safeColor =
+        slices.length % WHEEL_COLORS.length !== 0 && i === slices.length - 1 && color === WHEEL_COLORS[0]
+          ? WHEEL_COLORS[2]
+          : color;
+      return { ...slice, start, end, mid, color: safeColor };
     });
   }, [slices]);
+
+  const totalTickets = useMemo(
+    () => slices.reduce((total, slice) => total + Math.max(1, slice.weight), 0),
+    [slices],
+  );
+
+  const fontSize = useMemo(() => {
+    const n = Math.max(slices.length, 1);
+    if (n <= 6) return 28;
+    if (n <= 12) return 24;
+    if (n <= 20) return 20;
+    if (n <= 32) return 16;
+    if (n <= 50) return 13;
+    if (n <= 80) return 10;
+    if (n <= 120) return 8;
+    return 6;
+  }, [slices.length]);
+
+  const longest = useMemo(
+    () => slices.reduce((max, slice) => Math.max(max, slice.name.length), 0),
+    [slices],
+  );
+
+  const adjustedFont = Math.max(5, Math.min(fontSize, Math.floor(360 / Math.max(longest, 4))));
+
+  const scheduleTicks = useCallback(
+    (deltaDeg: number, durationMs: number, runId: number) => {
+      clearTickTimers();
+      const averageSegment = 360 / Math.max(slices.length, 1);
+      const crossings = Math.min(90, Math.floor(deltaDeg / averageSegment));
+      const invEase = (p: number) => 1 - Math.pow(1 - p, 1 / 3.2);
+
+      for (let k = 1; k <= crossings; k += 1) {
+        const p = (k * averageSegment) / deltaDeg;
+        const tMs = invEase(p) * durationMs;
+        const speed = 1 - p;
+        const freq = 700 + speed * 700;
+        const id = window.setTimeout(() => {
+          if (spinRunId.current === runId && !muted) tick(freq, 0.05, 0.13);
+        }, tMs);
+        tickTimers.current.push(id);
+      }
+    },
+    [muted, slices.length, tick],
+  );
 
   const finishSpin = useCallback(
     async (runId: number) => {
       if (spinFinished.current || spinRunId.current !== runId) return;
       const picked = pendingWinner.current;
       if (!picked) return;
+
       spinFinished.current = true;
       clearTickTimers();
       setSpinning(false);
+      setWinner(picked);
+      setShowWin(true);
       setTransitionOn(false);
-      setWinner(picked.name);
       if (!muted) playWin();
+
       try {
         await Promise.resolve(onSpinFinished?.(picked));
       } catch {
@@ -168,227 +229,279 @@ export function RaffleSpinWheel({
     [muted, onSpinFinished, playWin],
   );
 
-  const spin = () => {
-    if (spinning || slices.length === 0) return;
+  const spin = useCallback(() => {
+    if (spinning || pullLocked || slices.length < 2) return;
     const picked = pickWinner();
     if (!picked) return;
+
+    const segment = segments.find((s) => s.id === picked.id);
+    if (!segment) return;
 
     const reduceMotion =
       typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
 
+    spinRunId.current += 1;
+    const runId = spinRunId.current;
+    pendingWinner.current = picked;
+    spinFinished.current = false;
+    setShowWin(false);
+    setWinner(null);
+
     if (reduceMotion) {
-      setWinner(picked.name);
-      void (async () => {
-        await resumeAudioIfNeeded();
-        if (!muted) playWin();
-        try {
-          await Promise.resolve(onSpinFinished?.(picked));
-        } catch {
-          /* ignore */
-        }
-      })();
+      void finishSpin(runId);
       return;
     }
 
-    const segIdx = segments.findIndex((s) => s.id === picked.id);
-    if (segIdx < 0) return;
-
     void (async () => {
-      await resumeAudioIfNeeded();
-      const mid = segments[segIdx]!.mid;
-      spinRunId.current += 1;
-      const runId = spinRunId.current;
+      const base = Math.ceil(rotation / 360) * 360;
+      const turns = 5 + Math.floor(Math.random() * 3);
+      // Pointer is on the right side (3 o'clock = 90deg from top).
+      const targetMod = normalizeDegrees(90 - segment.mid);
+      const next = base + 360 * turns + targetMod;
+      const delta = next - rotation;
 
       setSpinning(true);
-      setWinner(null);
-      pendingWinner.current = picked;
-      spinFinished.current = false;
-
       setTransitionOn(false);
-      await new Promise<void>((resolve) => {
-        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
-      });
+      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
       setTransitionOn(true);
-      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-      setRotation((prev) => {
-        const rotMod = ((prev % 360) + 360) % 360;
-        let deltaMod = (360 - ((mid + rotMod) % 360)) % 360;
-        if (deltaMod < 24) deltaMod += 360;
-        const spins = 5 + Math.floor(Math.random() * 2);
-        return prev + spins * 360 + deltaMod;
-      });
+      setRotation(next);
 
-      if (!muted) beep(420, 0.05, 0.08);
-      scheduleTimer(() => void finishSpin(runId), SPIN_MS + 80);
+      if (!muted) {
+        getCtx();
+        scheduleTicks(delta, SPIN_MS, runId);
+      }
+      window.setTimeout(() => void finishSpin(runId), SPIN_MS + 80);
     })();
+  }, [
+    finishSpin,
+    getCtx,
+    muted,
+    pickWinner,
+    pullLocked,
+    rotation,
+    scheduleTicks,
+    segments,
+    slices.length,
+    spinning,
+  ]);
+
+  const closeWinner = () => setShowWin(false);
+
+  const shellStyle = {
+    background:
+      'linear-gradient(180deg, oklch(0.97 0.02 20), oklch(0.93 0.04 350) 50%, oklch(0.95 0.03 20))',
   };
 
-  const shell = embedded
-    ? 'relative overflow-hidden rounded-[1.75rem] border border-border bg-gradient-to-b from-muted/50 to-background text-foreground shadow-sm'
-    : 'min-h-screen relative overflow-hidden bg-background text-foreground';
-
-  const labelFont = Math.max(9, Math.min(13, Math.floor(220 / Math.max(6, segments.length))));
-
   return (
-    <div className={cn(shell, 'raffle-spin-wheel')} data-raffle-spin-wheel data-legacy-motion-root="jackpot">
-      {!embedded ? (
-        <>
-          <div className="pointer-events-none absolute -top-32 -left-32 h-96 w-96 rounded-full bg-primary/25 blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-primary/20 blur-3xl" />
-        </>
-      ) : (
-        <>
-          <div className="pointer-events-none absolute -top-24 -left-16 h-64 w-64 rounded-full bg-primary/15 blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-24 -right-16 h-64 w-64 rounded-full bg-primary/15 blur-3xl" />
-        </>
+    <div
+      className={cn(
+        'raffle-spin-wheel relative overflow-hidden text-slate-800',
+        embedded ? 'rounded-2xl border border-slate-200 shadow-sm' : 'min-h-screen',
       )}
+      style={shellStyle}
+      data-raffle-spin-wheel
+      data-legacy-motion-root="jackpot"
+    >
+      <style>{`
+        @keyframes wn-pop { 0%{transform:scale(0.5);opacity:0} 60%{transform:scale(1.08);opacity:1} 100%{transform:scale(1)} }
+        @keyframes wn-bounce { 0%,100%{transform:translateY(-50%) translateX(0)} 50%{transform:translateY(-50%) translateX(-6px)} }
+      `}</style>
 
-      <div className={embedded ? 'relative px-1 py-2 md:px-2' : 'relative mx-auto max-w-6xl px-6 py-10'}>
-        <header className="mb-4 flex items-center justify-between md:mb-6">
-          <div className="flex min-w-0 items-center gap-3">
-            <Sparkles
-              className="h-6 w-6 shrink-0 text-primary md:h-7 md:w-7"
-              style={{ animation: 'jp-wheel-glow 2s ease-in-out infinite' }}
-            />
-            <h2
-              className="truncate text-xl tracking-tight md:text-3xl"
-              style={{ color: 'hsl(var(--foreground))', fontWeight: 900 }}
-            >
-              {title}
-            </h2>
-          </div>
-          <button
-            type="button"
-            onClick={() => setMuted((m) => !m)}
-            className="shrink-0 rounded-full border border-border bg-muted/80 p-2 transition hover:bg-muted"
-            style={{ color: 'hsl(var(--foreground))' }}
-            aria-label={muted ? 'Unmute' : 'Mute'}
-          >
-            {muted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
-          </button>
-        </header>
-
-        <style>{`
-          @keyframes jp-wheel-glow { 0%,100% { filter: drop-shadow(0 0 8px hsl(var(--primary) / 0.4)); } 50% { filter: drop-shadow(0 0 16px hsl(var(--primary) / 0.55)); } }
-        `}</style>
-
-        <div className="relative">
+      <header className={cn('relative z-10 flex items-center justify-between', embedded ? 'px-4 py-3' : 'px-6 py-4')}>
+        <div className="flex min-w-0 items-center gap-2">
           <div
-            className={cn(
-              'relative rounded-[1.5rem] border-2 border-primary/45 p-4 md:rounded-[2rem] md:p-8',
-              'bg-gradient-to-b from-primary/25 via-card to-card',
-              'shadow-[inset_0_1px_0_hsl(var(--primary-foreground)/0.12),0_20px_40px_-12px_hsl(var(--foreground)/0.12)]',
-            )}
-          >
+            className="h-8 w-8 shrink-0 rounded-full"
+            style={{
+              background: `conic-gradient(${WHEEL_COLORS[0]} 0 25%, ${WHEEL_COLORS[3]} 0 50%, ${WHEEL_COLORS[1]} 0 75%, ${WHEEL_COLORS[2]} 0 100%)`,
+            }}
+          />
+          <span className="truncate text-xl font-bold tracking-tight" style={{ color: 'oklch(0.3 0.02 280)' }}>
+            {title}
+          </span>
+        </div>
+        <button
+          onClick={() => setMuted((m) => !m)}
+          aria-label={muted ? 'Unmute' : 'Mute'}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/70 text-slate-700 shadow-sm hover:bg-white"
+          type="button"
+        >
+          {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+        </button>
+      </header>
+
+      <main
+        className={cn(
+          'relative z-10 mx-auto flex max-w-7xl flex-col items-start gap-8 px-4 pb-8 lg:flex-row lg:items-center',
+          !embedded && 'px-6 pb-16',
+        )}
+      >
+        <div className="relative mx-auto flex-1">
+          <div className="relative mx-auto" style={{ width: 'min(560px, 90vw)', aspectRatio: '1 / 1' }}>
             <div
-              className={cn(
-                'relative mb-4 overflow-hidden rounded-xl border border-primary/35 py-2.5 text-center md:mb-6 md:py-3',
-                'bg-gradient-to-b from-muted to-muted/70 text-lg tracking-widest md:text-3xl',
-              )}
-              style={{ color: 'hsl(var(--foreground))', fontWeight: 800 }}
+              className="absolute right-[-14px] top-1/2 z-20 -translate-y-1/2"
+              style={{ animation: spinning ? 'wn-bounce 0.15s ease-in-out infinite' : 'none' }}
             >
-              {winner ? `🎉 ${winner.toUpperCase()} 🎉` : slices.length === 0 ? '★ NO ENTRIES ★' : "★ SPIN THE WHEEL ★"}
+              <svg width="46" height="40" viewBox="0 0 46 40" aria-hidden>
+                <path
+                  d="M44 20 L6 2 Q14 20 6 38 Z"
+                  fill="oklch(0.6 0.24 25)"
+                  stroke="oklch(0.35 0.18 25)"
+                  strokeWidth="2"
+                  strokeLinejoin="round"
+                />
+              </svg>
             </div>
 
-            <div className="relative mx-auto flex max-w-[min(100%,22rem)] justify-center px-2 pb-2 md:max-w-md">
-              {/* Pointer */}
-              <div
-                className="pointer-events-none absolute left-1/2 top-1 z-20 -translate-x-1/2"
-                style={{
-                  width: 0,
-                  height: 0,
-                  borderLeft: '14px solid transparent',
-                  borderRight: '14px solid transparent',
-                  borderTop: '22px solid hsl(var(--primary))',
-                  filter: 'drop-shadow(0 2px 4px hsl(var(--foreground) / 0.25))',
-                }}
-                aria-hidden
-              />
-              <div
-                className="aspect-square w-full max-w-[280px] md:max-w-[320px]"
-                style={{
-                  transform: `rotate(${rotation}deg)`,
-                  transition: transitionOn && spinning ? `transform ${SPIN_MS}ms cubic-bezier(0.12, 0.85, 0.18, 1)` : 'none',
-                  transformOrigin: '50% 50%',
-                }}
-              >
-                <svg viewBox="0 0 220 220" className="h-full w-full" role="img" aria-label="Raffle wheel">
-                  <circle cx={CX} cy={CY} r={R + 4} fill="none" stroke="hsl(var(--border))" strokeWidth={6} />
-                  {segments.map((seg, i) => (
-                    <path
-                      key={`${seg.id}-${i}`}
-                      d={wedgePath(seg.start, seg.end)}
-                      fill={`hsl(${seg.hue} 62% ${embedded ? 52 : 50}% / 0.92)`}
-                      stroke="hsl(var(--card))"
-                      strokeWidth={1.5}
-                    />
-                  ))}
-                  {segments.map((seg, i) => {
-                    const t = polarToCartesian(CX, CY, R * 0.82, seg.mid);
-                    const short = seg.name.length > 14 ? `${seg.name.slice(0, 13).trimEnd()}…` : seg.name;
-                    const rot = seg.mid > 90 && seg.mid < 270 ? seg.mid + 180 : seg.mid;
-                    return (
-                      <text
-                        key={`t-${seg.id}-${i}`}
-                        x={t.x}
-                        y={t.y}
-                        textAnchor="middle"
-                        dominantBaseline="middle"
-                        fill="hsl(0 0% 100% / 0.95)"
-                        stroke="hsl(0 0% 0% / 0.35)"
-                        strokeWidth={0.6}
-                        paintOrder="stroke fill"
-                        fontSize={labelFont}
-                        fontWeight={800}
-                        style={{ transform: `rotate(${rot}deg)`, transformOrigin: `${t.x}px ${t.y}px` }}
-                      >
-                        {short}
-                      </text>
-                    );
-                  })}
-                  <circle cx={CX} cy={CY} r={18} fill="hsl(var(--card))" stroke="hsl(var(--primary))" strokeWidth={3} />
-                </svg>
+            <svg
+              viewBox="0 0 500 500"
+              className="h-full w-full"
+              role="img"
+              aria-label="Raffle wheel"
+              style={{
+                transform: `rotate(${rotation}deg)`,
+                transition: transitionOn && spinning ? 'transform 4.5s cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
+                filter: 'drop-shadow(0 12px 30px rgba(0,0,0,0.18))',
+              }}
+            >
+              <circle cx={CX} cy={CY} r={R + 4} fill="white" />
+              {segments.length ? (
+                segments.map((segment, i) => {
+                  const [tx, ty] = polar(CX, CY, CX, segment.mid);
+                  return (
+                    <g key={`${segment.id}-${i}`}>
+                      <path d={arcPath(CX, CY, R, segment.start, segment.end)} fill={segment.color} />
+                      <g transform={`translate(${tx} ${ty}) rotate(${segment.mid - 90})`}>
+                        <text
+                          x={-R * 0.08}
+                          textAnchor="end"
+                          dominantBaseline="middle"
+                          fontSize={adjustedFont}
+                          fontWeight="700"
+                          fill="white"
+                          fontFamily="system-ui, -apple-system, sans-serif"
+                          style={{ paintOrder: 'stroke', stroke: 'rgba(0,0,0,0.25)', strokeWidth: 1 }}
+                        >
+                          {segment.name}
+                        </text>
+                      </g>
+                    </g>
+                  );
+                })
+              ) : (
+                <circle cx={CX} cy={CY} r={R} fill="oklch(0.9 0.02 270)" />
+              )}
+              <circle cx={CX} cy={CY} r={R} fill="none" stroke="white" strokeWidth="3" />
+            </svg>
+
+            <button
+              onClick={spin}
+              disabled={spinning || pullLocked || slices.length < 2}
+              aria-label={spinning ? 'SPINNING' : pullLocked ? 'SAVING' : winner ? 'SPIN AGAIN' : 'SPIN!'}
+              className="absolute left-1/2 top-1/2 z-10 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white text-center font-bold uppercase tracking-wide text-slate-700 shadow-[0_6px_18px_rgba(0,0,0,0.15)] transition active:scale-95 disabled:opacity-70"
+              style={{
+                width: '26%',
+                height: '26%',
+                fontSize: 'clamp(11px, 1.6vw, 15px)',
+                lineHeight: 1.15,
+              }}
+              type="button"
+            >
+              {spinning ? (
+                <Loader2 className="h-6 w-6 animate-spin" aria-hidden />
+              ) : pullLocked ? (
+                'Saving'
+              ) : winner ? (
+                winner.name
+              ) : (
+                'Click to spin'
+              )}
+            </button>
+          </div>
+        </div>
+
+        <aside className="w-full lg:w-80">
+          <div className="rounded-2xl bg-white p-4 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.15)]">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-slate-600">
+                Entries <span className="text-slate-400">({slices.length})</span>
+              </h2>
+              <div className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-slate-500">
+                <Shuffle className="h-4 w-4" />
+                Weighted
               </div>
             </div>
 
-            <div className="mt-6 flex justify-center md:mt-8">
-              <button
-                type="button"
-                onClick={spin}
-                disabled={spinning || pullLocked || slices.length === 0}
-                className={cn(
-                  'relative inline-flex w-full max-w-sm items-center justify-center rounded-full px-8 py-4 tracking-wider md:px-12 md:py-5 md:text-2xl',
-                  'bg-primary shadow-md transition hover:bg-primary/90',
-                  'disabled:cursor-not-allowed disabled:opacity-50',
-                  'text-lg',
-                )}
-                style={{
-                  color: 'hsl(var(--primary-foreground))',
-                  fontWeight: 900,
-                  boxShadow:
-                    '0 6px 0 hsl(var(--primary) / 0.55), 0 12px 24px hsl(var(--foreground) / 0.12), inset 0 1px 0 hsl(var(--primary-foreground) / 0.2)',
-                }}
-              >
-                {spinning ? 'SPINNING…' : pullLocked ? (
-                  <>
-                    <Loader2 className="mr-2 h-5 w-5 shrink-0 animate-spin" aria-hidden />
-                    SAVING…
-                  </>
-                ) : (
-                  'SPIN!'
-                )}
-              </button>
+            <ul className="max-h-[360px] overflow-auto pr-1">
+              {slices.map((slice, i) => (
+                <li
+                  key={`${slice.id}-${i}`}
+                  className="group flex items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-slate-50"
+                >
+                  <span className="flex min-w-0 items-center gap-2 text-slate-700">
+                    <span
+                      className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+                      style={{ background: WHEEL_COLORS[i % WHEEL_COLORS.length] }}
+                    />
+                    <span className="truncate">{slice.name}</span>
+                  </span>
+                  <span className="ml-2 shrink-0 text-xs font-bold text-slate-400">{Math.max(1, slice.weight)}</span>
+                </li>
+              ))}
+              {!slices.length && (
+                <li className="px-2 py-4 text-center text-xs text-slate-400">No entries yet.</li>
+              )}
+            </ul>
+
+            <div className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">
+              <div className="flex justify-between gap-3">
+                <span>Total tickets</span>
+                <span className="font-bold text-slate-700">{totalTickets}</span>
+              </div>
             </div>
 
             {embedded && slices.length > 0 ? (
-              <p className="mt-4 px-2 text-center text-xs text-muted-foreground">
+              <p className="mt-3 text-center text-xs text-slate-500">
                 {embeddedFooter ??
                   'Slice size matches ticket weight. If deduct-on-pull is on, points update after the spin completes.'}
               </p>
             ) : null}
           </div>
+        </aside>
+      </main>
+
+      {showWin && winner ? (
+        <div
+          className="absolute inset-0 z-30 flex items-center justify-center bg-black/35 p-6"
+          onClick={closeWinner}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-2xl"
+            style={{ animation: 'wn-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)' }}
+          >
+            <button
+              onClick={closeWinner}
+              className="absolute right-3 top-3 text-slate-400 hover:text-slate-700"
+              aria-label="Close winner"
+              type="button"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <div className="text-xs font-bold uppercase tracking-[0.3em] text-slate-500">The winner is</div>
+            <div className="mt-3 break-words text-5xl font-black text-slate-800">{winner.name}</div>
+            <div className="mt-6 flex justify-center">
+              <button
+                onClick={closeWinner}
+                className="rounded-md px-5 py-2 text-sm font-bold text-white"
+                style={{ background: WHEEL_COLORS[2] }}
+                type="button"
+              >
+                Done
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
+      ) : null}
     </div>
   );
 }

@@ -555,7 +555,7 @@ export function StudentScanner({
 
     return (
         <div className={cn(
-            "w-full max-w-md rounded-[2.5rem] p-4 transition-all duration-700 relative z-10",
+            "w-full max-w-md rounded-[2.5rem] p-4 transition-all duration-700 relative z-10 [@media(max-height:720px)]:max-w-sm [@media(max-height:720px)]:rounded-3xl [@media(max-height:720px)]:p-3",
             isGraphic ? 'bg-card/90 backdrop-blur-2xl border border-border shadow-xl shadow-primary/10' : 'bg-card shadow-lg border border-border'
         )}>
             {/* Mascot Decoration for Graphic Mode */}
@@ -564,7 +564,7 @@ export function StudentScanner({
             )}
 
             <div className={cn(
-                "p-2 text-center relative z-10",
+                "p-2 text-center relative z-10 [@media(max-height:720px)]:p-1.5",
                 isGraphic ? 'border-b border-border' : 'bg-muted/30 border-b border-border'
             )}>
                 {/* Kiosk lock removed */}
@@ -573,9 +573,9 @@ export function StudentScanner({
                 </div>
             </div>
 
-            <div className="p-3">
+            <div className="p-3 [@media(max-height:720px)]:p-2">
                 <Tabs defaultValue="nfc" className="w-full" value={loginTab} onValueChange={setLoginTab}>
-                    <TabsList className={cn("grid w-full p-1 rounded-xl mb-4", tabsColsClass, isGraphic ? 'bg-muted/50' : 'bg-muted/50')}>
+                    <TabsList className={cn("grid w-full p-1 rounded-xl mb-4 [@media(max-height:720px)]:mb-2", tabsColsClass, isGraphic ? 'bg-muted/50' : 'bg-muted/50')}>
                         {cardEnabled && (
                             <TabsTrigger value="nfc" onClick={() => nfcInputRef.current?.focus()} className="flex-1 sm:flex-initial rounded-xl font-black text-[9px] sm:text-[10px] px-1 sm:px-3 py-1.5 uppercase tracking-wider sm:tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-md transition-all">
                                 <Nfc className="mr-1 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" /> Card
@@ -599,22 +599,22 @@ export function StudentScanner({
                     </TabsList>
 
                     <TabsContent value="nfc" className="text-center">
-                        <div className="py-6 space-y-4">
-                            <div className="relative w-24 h-24 mx-auto flex items-center justify-center">
+                        <div className="py-6 space-y-4 [@media(max-height:720px)]:space-y-2 [@media(max-height:720px)]:py-3">
+                            <div className="relative w-24 h-24 mx-auto flex items-center justify-center [@media(max-height:720px)]:h-20 [@media(max-height:720px)]:w-20">
                                 <div className={cn("absolute inset-0 rounded-full animate-ping opacity-25", isGraphic ? 'bg-primary' : 'bg-muted-foreground')}></div>
-                                <div className={cn("w-20 h-20 rounded-full flex items-center justify-center border-4 relative z-10 shadow-xl transition-all", isGraphic ? 'bg-background border-primary text-primary' : 'bg-card border-slate-800 dark:border-slate-200 text-slate-800 dark:text-slate-200')}>
-                                    <Nfc className="w-10 h-10" />
+                                <div className={cn("w-20 h-20 rounded-full flex items-center justify-center border-4 relative z-10 shadow-xl transition-all [@media(max-height:720px)]:h-16 [@media(max-height:720px)]:w-16", isGraphic ? 'bg-background border-primary text-primary' : 'bg-card border-slate-800 dark:border-slate-200 text-slate-800 dark:text-slate-200')}>
+                                    <Nfc className="w-10 h-10 [@media(max-height:720px)]:h-8 [@media(max-height:720px)]:w-8" />
                                 </div>
                             </div>
                             <div className="space-y-1">
-                                <p className={cn("font-black text-xl sm:text-2xl", isGraphic ? 'text-foreground' : 'text-foreground')}>
+                                <p className={cn("font-black text-xl sm:text-2xl [@media(max-height:720px)]:text-lg", isGraphic ? 'text-foreground' : 'text-foreground')}>
                                     {loginState === 'student' && studentKioskSessionError
                                         ? 'Check-in Unavailable'
                                         : loginState === 'student' && !studentKioskSessionEstablished
                                           ? 'Connecting…'
                                           : 'System Ready'}
                                 </p>
-                                <p className="text-muted-foreground text-sm sm:text-base font-semibold">
+                                <p className="text-muted-foreground text-sm sm:text-base font-semibold [@media(max-height:720px)]:text-xs">
                                     {loginState === 'student' && studentKioskSessionError
                                         ? studentKioskSessionError
                                         : loginState === 'student' && !studentKioskSessionEstablished
@@ -645,7 +645,7 @@ export function StudentScanner({
                                     <p className={cn("text-xs font-medium", isGraphic ? 'text-muted-foreground' : 'text-muted-foreground')}>Enter your Student ID</p>
                                 </div>
                             </div>
-                            <div className="py-4">
+                            <div className="py-4 [@media(max-height:720px)]:py-2">
                                 <Input
                                     value={nfcId}
                                     onChange={e => setNfcId(e.target.value)}
@@ -663,9 +663,9 @@ export function StudentScanner({
 
                     {qrEnabled && (
                     <TabsContent value="camera">
-                        <div className="py-2 space-y-4">
+                        <div className="py-2 space-y-4 [@media(max-height:720px)]:space-y-2">
                             <div className="relative border-2 border-border rounded-xl overflow-hidden shadow-xl bg-black">
-                                <video ref={videoRef as RefObject<HTMLVideoElement>} className="w-full aspect-video max-h-[220px] object-cover" playsInline muted />
+                                <video ref={videoRef as RefObject<HTMLVideoElement>} className="w-full aspect-video max-h-[220px] object-cover [@media(max-height:720px)]:max-h-[160px]" playsInline muted />
                                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                     <div className="w-3/4 h-3/4 border-2 border-white/30 rounded-[1.5rem] border-dashed animate-pulse" />
                                 </div>
@@ -684,9 +684,9 @@ export function StudentScanner({
 
                     {faceEnabled && (
                         <TabsContent value="face">
-                            <div className="py-2 space-y-4">
+                            <div className="py-2 space-y-4 [@media(max-height:720px)]:space-y-2">
                                 <div className="relative border-2 border-border rounded-xl overflow-hidden shadow-xl bg-black">
-                                    <video ref={faceVideoRef} className="w-full aspect-video max-h-[220px] object-cover" playsInline muted />
+                                    <video ref={faceVideoRef} className="w-full aspect-video max-h-[220px] object-cover [@media(max-height:720px)]:max-h-[160px]" playsInline muted />
                                 </div>
 
                                 {faceStatus && (
