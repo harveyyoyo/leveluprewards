@@ -355,6 +355,18 @@ export function JackpotMachine({
                 'shadow-[inset_0_2px_12px_hsl(var(--foreground)/0.06)]',
               )}
             >
+              {!spinning && !winner && pool.length > 0 ? (
+                <div
+                  className="pointer-events-none absolute inset-3 z-30 flex items-center justify-center rounded-xl border border-border/60 bg-background/70 backdrop-blur-sm md:inset-4"
+                  style={{ color: 'hsl(var(--foreground))' }}
+                  aria-hidden
+                >
+                  <div className="text-center">
+                    <p className="text-xs font-black uppercase tracking-[0.3em] text-muted-foreground">Ready</p>
+                    <p className="mt-1 text-sm font-semibold">Pull to start</p>
+                  </div>
+                </div>
+              ) : null}
               {reelStrips.map((strip, ri) => (
                 <div
                   key={ri}
