@@ -59,11 +59,14 @@ if (cleanedNext && process.platform === 'win32') {
 }
 
 const port = String(process.env.PORT || '3000').trim() || '3000';
+// On some Windows setups, `localhost` resolves to IPv6 (::1) and can hang while 127.0.0.1 works.
+// Default to 127.0.0.1 for a reliable local dev experience; override with HOST=0.0.0.0 for LAN access.
+const host = String(process.env.HOST || '127.0.0.1').trim() || '127.0.0.1';
 const nextCli = path.join(root, 'node_modules', 'next', 'dist', 'bin', 'next');
-console.log(`[dev:webpack] Listening on http://localhost:${port}`);
+console.log(`[dev:webpack] Listening on http://${host}:${port}`);
 console.log('[dev:webpack] If you see Cannot find module \'./NNNN.js\': stop dev, run `npm run dev:reset`, use one dev server only.\n');
 
-const child = spawn(process.execPath, [nextCli, 'dev', '-p', port], {
+const child = spawn(process.execPath, [nextCli, 'dev', '-H', host, '-p', port], {
   cwd: root,
   stdio: 'inherit',
   env: process.env,
