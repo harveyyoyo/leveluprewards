@@ -19,20 +19,19 @@ export default function AppRouteTemplate({ children }: { children: React.ReactNo
         reduceMotion
           ? false
           : {
-              opacity: 0,
-              y: 24,
-              scale: 0.985,
-              filter: 'blur(16px)',
+              // Never start at opacity 0: if motion fails to run to completion, the route can look "blank".
+              opacity: 1,
+              y: 12,
+              scale: 0.992,
             }
       }
       animate={{
         opacity: 1,
         y: 0,
         scale: 1,
-        filter: 'blur(0px)',
       }}
       transition={reduceMotion ? { duration: 0 } : springCinematic}
-      style={{ willChange: reduceMotion ? 'auto' : 'opacity, transform, filter' }}
+      style={{ willChange: reduceMotion ? 'auto' : 'transform' }}
     >
       {children}
     </motion.div>

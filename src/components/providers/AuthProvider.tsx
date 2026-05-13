@@ -248,14 +248,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return;
         }
 
-        let cancelled = false;
         const bootTimeout = window.setTimeout(() => {
-            if (!cancelled) {
-                console.warn(
-                    'AuthProvider: session restore exceeded failsafe time; allowing UI so login and navigation are not blocked.',
-                );
-                setIsInitialized(true);
-            }
+            console.warn(
+                'AuthProvider: session restore exceeded failsafe time; allowing UI so login and navigation are not blocked.',
+            );
+            setIsInitialized(true);
         }, 18_000);
 
         const restore = async () => {
@@ -446,15 +443,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 console.error('Auth session restore failed:', e);
             } finally {
                 window.clearTimeout(bootTimeout);
-                if (!cancelled) {
-                    setIsInitialized(true);
-                }
+                // Always unblock UI: effect cleanup can race with in-flight restore; skipping this left `isInitialized` false forever.
+                setIsInitialized(true);
             }
         };
 
         void restore();
         return () => {
-            cancelled = true;
             window.clearTimeout(bootTimeout);
         };
     }, [isMounted, isUserLoading, firestore, auth, returnToSchoolSession]);
