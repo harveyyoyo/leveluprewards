@@ -10,6 +10,7 @@ admin.initializeApp();
 
 const SUBCOLLECTIONS = ["students", "classes", "teachers", "staffAccounts", "categories", "prizes", "coupons"];
 const RETENTION_DAYS = 30;
+const AI_FUN_UNIFIED_PRIZE_ID = "__ai_fun_unified__";
 
 // ========================================================================
 // Auth helpers
@@ -1344,6 +1345,7 @@ exports.redeemPrizeServer = functions.https.onCall(
       throw new functions.https.HttpsError("permission-denied", "School entry required.");
     }
     const studentRef = db.collection("schools").doc(schoolId).collection("students").doc(studentId);
+    const schoolRef = db.collection("schools").doc(schoolId);
     const prizeRef = db.collection("schools").doc(schoolId).collection("prizes").doc(prizeId);
     const redeemedAt = Date.now();
 
@@ -1352,13 +1354,29 @@ exports.redeemPrizeServer = functions.https.onCall(
       if (!studentSnap.exists) {
         throw new functions.https.HttpsError("not-found", "Student not found.");
       }
-      const prizeSnap = await tx.get(prizeRef);
-      if (!prizeSnap.exists) {
+      let prize: any = null;
+      const prizeSnap = prizeId === AI_FUN_UNIFIED_PRIZE_ID ? null : await tx.get(prizeRef);
+      if (prizeId === AI_FUN_UNIFIED_PRIZE_ID) {
+        const schoolSnap = await tx.get(schoolRef);
+        const settings = schoolSnap.exists ? (schoolSnap.data()?.appSettings || {}) : {};
+        if (settings.enablePrizeAiSurprise === true) {
+          const rawPoints = Number(settings.prizeAiSurpriseDefaultPoints ?? 1);
+          prize = {
+            name: "Fun",
+            points: Number.isFinite(rawPoints) ? Math.max(0, Math.floor(rawPoints)) : 1,
+            icon: "Sparkles",
+            inStock: true,
+            aiFunReward: "picker",
+          };
+        }
+      } else if (prizeSnap?.exists) {
+        prize = prizeSnap.data() as any;
+      }
+      if (!prize) {
         throw new functions.https.HttpsError("not-found", "Prize not found.");
       }
 
       const student = studentSnap.data() as any;
-      const prize = prizeSnap.data() as any;
       const studentPoints = Number(student.points || 0);
       const prizePoints = Number(prize.points || 0);
       if (!Number.isFinite(prizePoints) || prizePoints < 0) {

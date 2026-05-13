@@ -59,11 +59,6 @@ function staffLandingPath(schoolId: string, type: StaffPortalLoginOption['type']
     return `/${schoolId}/teacher`;
 }
 
-function adminSignInForTeacherPortalPath(schoolId: string) {
-    const teacherPath = `/${schoolId}/teacher`;
-    return `/${schoolId}/admin-signin?redirect=${encodeURIComponent(teacherPath)}`;
-}
-
 export default function PortalPage() {
     const { loginState, isInitialized, schoolId, isAdmin, login, logout } = useAppContext();
     const { settings } = useSettings();
@@ -74,6 +69,7 @@ export default function PortalPage() {
     const [adminDialogOpen, setAdminDialogOpen] = useState(false);
     const [adminPasscode, setAdminPasscode] = useState('');
     const [adminSubmitting, setAdminSubmitting] = useState(false);
+    const [adminDestination, setAdminDestination] = useState<'admin' | 'teacher'>('admin');
     const [teacherDialogOpen, setTeacherDialogOpen] = useState(false);
     const [selectedTeacherKey, setSelectedTeacherKey] = useState('');
     const [teacherPasscode, setTeacherPasscode] = useState('');
@@ -410,6 +406,7 @@ export default function PortalPage() {
                                     if (needsAdminPasscode) {
                                         e.preventDefault();
                                         if (schoolId) router.prefetch(`/${schoolId}/admin`);
+                                        setAdminDestination('admin');
                                         setAdminDialogOpen(true);
                                         return;
                                     }
@@ -457,7 +454,7 @@ export default function PortalPage() {
                             setAdminSubmitting(false);
                             setAdminPasscode('');
                         } else if (schoolId) {
-                            router.prefetch(`/${schoolId}/admin`);
+                            router.prefetch(`/${schoolId}/${adminDestination}`);
                         }
                         setAdminDialogOpen(open);
                     }}
@@ -465,7 +462,9 @@ export default function PortalPage() {
                     <DialogContent className="sm:max-w-md">
                         <DialogHeader>
                             <DialogTitle className="font-headline font-black tracking-tight">Admin passcode</DialogTitle>
-                            <DialogDescription>Enter the admin passcode for this school to open Admin tools.</DialogDescription>
+                            <DialogDescription>
+                                Enter the admin passcode for this school to open {adminDestination === 'teacher' ? 'the teacher portal as admin' : 'Admin tools'}.
+                            </DialogDescription>
                         </DialogHeader>
                         <div className="space-y-2">
                             <Label htmlFor="admin-passcode" className="text-xs font-semibold text-muted-foreground">
@@ -509,7 +508,7 @@ export default function PortalPage() {
                                         }
                                         playSound('login');
                                         setAdminDialogOpen(false);
-                                        router.replace(`/${schoolId}/admin`);
+                                        router.replace(`/${schoolId}/${adminDestination}`);
                                     })();
                                 }}
                             />
@@ -556,7 +555,7 @@ export default function PortalPage() {
                                         }
                                         playSound('login');
                                         setAdminDialogOpen(false);
-                                        router.replace(`/${schoolId}/admin`);
+                                        router.replace(`/${schoolId}/${adminDestination}`);
                                     })();
                                 }}
                             >
@@ -597,6 +596,8 @@ export default function PortalPage() {
                                 onClick={() => {
                                     playSound('click');
                                     setTeacherDialogOpen(false);
+                                    setAdminDestination('teacher');
+                                    router.prefetch(`/${schoolId}/teacher`);
                                     setAdminDialogOpen(true);
                                 }}
                             >

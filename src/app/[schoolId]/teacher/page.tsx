@@ -396,7 +396,7 @@ export default function TeacherPage() {
                             <DialogContent className="sm:max-w-md">
                                 <DialogHeader>
                                     <DialogTitle className="font-headline font-black tracking-tight">Admin passcode</DialogTitle>
-                                    <DialogDescription>Enter the admin passcode for this school to open Admin tools.</DialogDescription>
+                                    <DialogDescription>Enter the admin passcode for this school to open the teacher portal as admin.</DialogDescription>
                                 </DialogHeader>
                                 <div className="space-y-2">
                                     <Label htmlFor="admin-passcode" className="text-xs font-semibold text-muted-foreground">
@@ -439,7 +439,7 @@ export default function TeacherPage() {
                                                 }
                                                 playSound('login');
                                                 setAdminDialogOpen(false);
-                                                router.replace(`/${schoolId}/admin`);
+                                                router.replace(`/${schoolId}/teacher`);
                                             })();
                                         }}
                                     />
@@ -485,7 +485,7 @@ export default function TeacherPage() {
                                                 }
                                                 playSound('login');
                                                 setAdminDialogOpen(false);
-                                                router.replace(`/${schoolId}/admin`);
+                                                router.replace(`/${schoolId}/teacher`);
                                             })();
                                         }}
                                     >

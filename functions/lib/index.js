@@ -22,6 +22,7 @@ const crypto_1 = require("./crypto");
 admin.initializeApp();
 const SUBCOLLECTIONS = ["students", "classes", "teachers", "staffAccounts", "categories", "prizes", "coupons"];
 const RETENTION_DAYS = 30;
+const AI_FUN_UNIFIED_PRIZE_ID = "__ai_fun_unified__";
 // ========================================================================
 // Auth helpers
 // ========================================================================
@@ -1102,20 +1103,38 @@ exports.redeemPrizeServer = functions.https.onCall(async (data, context) => {
         throw new functions.https.HttpsError("permission-denied", "School entry required.");
     }
     const studentRef = db.collection("schools").doc(schoolId).collection("students").doc(studentId);
+    const schoolRef = db.collection("schools").doc(schoolId);
     const prizeRef = db.collection("schools").doc(schoolId).collection("prizes").doc(prizeId);
     const redeemedAt = Date.now();
     const result = await db.runTransaction(async (tx) => {
-        var _a;
+        var _a, _b, _c;
         const studentSnap = await tx.get(studentRef);
         if (!studentSnap.exists) {
             throw new functions.https.HttpsError("not-found", "Student not found.");
         }
-        const prizeSnap = await tx.get(prizeRef);
-        if (!prizeSnap.exists) {
+        let prize = null;
+        const prizeSnap = prizeId === AI_FUN_UNIFIED_PRIZE_ID ? null : await tx.get(prizeRef);
+        if (prizeId === AI_FUN_UNIFIED_PRIZE_ID) {
+            const schoolSnap = await tx.get(schoolRef);
+            const settings = schoolSnap.exists ? (((_a = schoolSnap.data()) === null || _a === void 0 ? void 0 : _a.appSettings) || {}) : {};
+            if (settings.enablePrizeAiSurprise === true) {
+                const rawPoints = Number((_b = settings.prizeAiSurpriseDefaultPoints) !== null && _b !== void 0 ? _b : 1);
+                prize = {
+                    name: "Fun",
+                    points: Number.isFinite(rawPoints) ? Math.max(0, Math.floor(rawPoints)) : 1,
+                    icon: "Sparkles",
+                    inStock: true,
+                    aiFunReward: "picker",
+                };
+            }
+        }
+        else if (prizeSnap === null || prizeSnap === void 0 ? void 0 : prizeSnap.exists) {
+            prize = prizeSnap.data();
+        }
+        if (!prize) {
             throw new functions.https.HttpsError("not-found", "Prize not found.");
         }
         const student = studentSnap.data();
-        const prize = prizeSnap.data();
         const studentPoints = Number(student.points || 0);
         const prizePoints = Number(prize.points || 0);
         if (!Number.isFinite(prizePoints) || prizePoints < 0) {
@@ -1148,7 +1167,7 @@ exports.redeemPrizeServer = functions.https.onCall(async (data, context) => {
             if (!matchesTeacher && studentClassId) {
                 const classRef = db.collection("schools").doc(schoolId).collection("classes").doc(studentClassId);
                 const classSnap = await tx.get(classRef);
-                const primaryTeacherId = classSnap.exists ? (_a = classSnap.data()) === null || _a === void 0 ? void 0 : _a.primaryTeacherId : null;
+                const primaryTeacherId = classSnap.exists ? (_c = classSnap.data()) === null || _c === void 0 ? void 0 : _c.primaryTeacherId : null;
                 matchesTeacher = typeof primaryTeacherId === "string" && teacherIds.includes(primaryTeacherId);
             }
             if (!matchesTeacher) {
@@ -1312,6 +1331,21 @@ exports.awardSpecialDayPoints = functions.https.onCall(async (data, context) => 
             if (birthMD === today.monthDay && lastAwarded.birthday !== today.full && amount > 0) {
                 awards.push({ desc: `Happy Birthday! 🎂 (+${amount} pts)`, amount });
                 lastAwarded.birthday = today.full;
+                // Auto-post a celebration to the school bulletin board (deduped by deterministic id).
+                const studentName = [trimmedString(student.firstName), trimmedString(student.lastName)].filter(Boolean).join(" ").trim() || "A student";
+                const postId = `birthday_${studentId}_${today.full}`;
+                tx.set(schoolRef.collection("bulletinBoardPosts").doc(postId), {
+                    id: postId,
+                    kind: "birthday",
+                    emoji: "🎂",
+                    title: "Birthday Celebration",
+                    message: `Happy Birthday to ${studentName}!`,
+                    studentId,
+                    studentName,
+                    date: today.full,
+                    createdAt: now,
+                    updatedAt: now,
+                }, { merge: true });
             }
         }
         if (settings.enableSpecialDayPoints === true && settings.specialDayDate === today.monthDay) {

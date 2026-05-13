@@ -1,6 +1,6 @@
 'use client';
 
-import { Cog, Edit3, Gift, Plus, Trash2, HelpCircle, GraduationCap, ShoppingBag, Sparkles, Wand2, UserMinus, X } from 'lucide-react';
+import { Cog, Edit3, Gift, Plus, Trash2, HelpCircle, GraduationCap, ShoppingBag, Wand2, UserMinus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
@@ -25,15 +25,7 @@ import {
   teacherListedOnPrize,
 } from '@/lib/prize-utils';
 import { useSettings } from '@/components/providers/SettingsProvider';
-import { useFirebase } from '@/firebase';
-import { ensureUnifiedAiFunPrize } from '@/lib/db/prizes';
-import {
-  AI_FUN_UNIFIED_PRIZE_ID,
-  isAiSurpriseHiddenFromAdminGrid,
-  isLegacyAiSurprisePrize,
-} from '@/lib/aiJokePrize';
-
-const aiFunPrizeEnsureKeys = new Set<string>();
+import { isAiSurpriseHiddenFromAdminGrid } from '@/lib/aiJokePrize';
 
 export function AdminPrizesTab({
   prizes,
@@ -63,46 +55,15 @@ export function AdminPrizesTab({
   onEditPrize?: (p: Prize) => void;
 }) {
   const { settings } = useSettings();
-  const { firestore } = useFirebase();
   const vendingEnabled = settings.enableVendingMachine === true;
-  const prizeAiSurpriseEnabled = settings.enablePrizeAiSurprise === true;
-  const aiDefaultPoints = Math.max(0, settings.prizeAiSurpriseDefaultPoints ?? 1);
   const [helpOpen, setHelpOpen] = useState(false);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardStep, setWizardStep] = useState(0);
-  const [ensuringFunPrize, setEnsuringFunPrize] = useState(false);
 
   const tablePrizes = useMemo(
     () => (prizes || []).filter((p) => !isAiSurpriseHiddenFromAdminGrid(p)),
     [prizes],
   );
-  const legacyAiPrizes = useMemo(
-    () => (prizes || []).filter((p) => isLegacyAiSurprisePrize(p)),
-    [prizes],
-  );
-  const unifiedFunPrize = useMemo(
-    () => (prizes || []).find((p) => p.id === AI_FUN_UNIFIED_PRIZE_ID),
-    [prizes],
-  );
-
-  useEffect(() => {
-    if (!prizeAiSurpriseEnabled || !firestore || !schoolId || prizes === undefined || unifiedFunPrize) return;
-    const ensureKey = `${schoolId}:${aiDefaultPoints}`;
-    if (aiFunPrizeEnsureKeys.has(ensureKey)) return;
-    let cancelled = false;
-    aiFunPrizeEnsureKeys.add(ensureKey);
-    setEnsuringFunPrize(true);
-    void ensureUnifiedAiFunPrize(firestore, schoolId, { points: aiDefaultPoints })
-      .catch(() => {})
-      .finally(() => {
-        aiFunPrizeEnsureKeys.delete(ensureKey);
-        if (!cancelled) setEnsuringFunPrize(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [prizeAiSurpriseEnabled, firestore, schoolId, aiDefaultPoints, prizes, unifiedFunPrize]);
-
   // --- REAL prize creation wizard state ---
   const [wName, setWName] = useState('');
   const [wIcon, setWIcon] = useState('Gift');
@@ -193,182 +154,6 @@ export function AdminPrizesTab({
         </div>
       </CardHeader>
       <CardContent className="min-w-0">
-        {prizeAiSurpriseEnabled && mode === 'admin' ? (
-          <div className="mb-6 rounded-2xl border border-amber-500/25 bg-amber-500/5 p-4 space-y-4">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <p className="text-sm font-bold flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-amber-600 dark:text-amber-400" aria-hidden />
-                  Fun (AI surprise)
-                </p>
-                <p className="text-xs text-muted-foreground mt-1 max-w-xl">
-                  One shop item named &quot;Fun&quot;. Students pick joke, riddle, fortune, or random when they redeem. It does not appear in the table below — adjust cost, stock, and visibility here.
-                </p>
-              </div>
-              {ensuringFunPrize && !unifiedFunPrize ? (
-                <span className="text-xs text-muted-foreground">Preparing Fun item…</span>
-              ) : null}
-            </div>
-            {unifiedFunPrize ? (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-1">
-                  <Label htmlFor="fun-display-name">Shop label</Label>
-                  <Input
-                    id="fun-display-name"
-                    defaultValue={unifiedFunPrize.name}
-                    key={`fun-name-${unifiedFunPrize.name}`}
-                    onBlur={(e) => {
-                      const next = e.target.value.trim();
-                      if (next && next !== unifiedFunPrize.name) onUpdatePrize({ ...unifiedFunPrize, name: next });
-                    }}
-                  />
-                  <p className="text-[10px] text-muted-foreground">Default is &quot;Fun&quot;; you can rename (e.g. Fun surprise).</p>
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="fun-points">Point cost</Label>
-                  <Input
-                    id="fun-points"
-                    type="number"
-                    min={0}
-                    defaultValue={String(unifiedFunPrize.points ?? 0)}
-                    key={`fun-pts-${unifiedFunPrize.points}`}
-                    onBlur={(e) => {
-                      const next = Math.max(0, parseInt(e.target.value.trim(), 10) || 0);
-                      if (next !== unifiedFunPrize.points) onUpdatePrize({ ...unifiedFunPrize, points: next });
-                    }}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="fun-icon">Icon (Lucide name)</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="fun-icon"
-                      defaultValue={unifiedFunPrize.icon}
-                      key={`fun-icon-${unifiedFunPrize.icon}`}
-                      onBlur={(e) => {
-                        const next = e.target.value.trim() || 'Sparkles';
-                        if (next !== unifiedFunPrize.icon) onUpdatePrize({ ...unifiedFunPrize, icon: next });
-                      }}
-                    />
-                    <div className="h-10 w-10 shrink-0 rounded-lg border bg-background flex items-center justify-center">
-                      <DynamicIcon name={unifiedFunPrize.icon || 'Sparkles'} className="h-5 w-5" />
-                    </div>
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="fun-stock">Stock on hand (optional)</Label>
-                  <Input
-                    id="fun-stock"
-                    type="number"
-                    min={0}
-                    placeholder="Unlimited"
-                    defaultValue={unifiedFunPrize.stockCount === undefined ? '' : String(unifiedFunPrize.stockCount)}
-                    key={`fun-stock-${unifiedFunPrize.stockCount ?? 'u'}`}
-                    onBlur={(e) => {
-                      const raw = e.target.value.trim();
-                      const next = raw === '' ? undefined : Math.max(0, parseInt(raw, 10) || 0);
-                      if (next !== unifiedFunPrize.stockCount) onUpdatePrize({ ...unifiedFunPrize, stockCount: next });
-                    }}
-                  />
-                </div>
-                <div className="sm:col-span-2 flex flex-wrap gap-6 rounded-lg border p-3">
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      checked={unifiedFunPrize.inStock}
-                      onCheckedChange={(v) => onUpdatePrize({ ...unifiedFunPrize, inStock: v })}
-                    />
-                    <Label>List in shop</Label>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      checked={unifiedFunPrize.offerPrintTicketOnRedeem === true}
-                      onCheckedChange={(v) => onUpdatePrize({ ...unifiedFunPrize, offerPrintTicketOnRedeem: v })}
-                    />
-                    <Label>Offer print voucher</Label>
-                  </div>
-                </div>
-                <div className="sm:col-span-2 space-y-2">
-                  <Label>Teachers who can offer Fun</Label>
-                  <p className="text-xs text-muted-foreground">Leave school-wide for everyone. Same rules as other prizes.</p>
-                  <label className="flex items-center gap-2 text-sm font-medium cursor-pointer rounded-md border p-2">
-                    <Checkbox
-                      checked={prizeRestrictionTeacherIds(unifiedFunPrize).length === 0}
-                      onCheckedChange={(c) => {
-                        if (c === true) onUpdatePrize({ ...unifiedFunPrize, teacherIds: undefined, teacherId: undefined });
-                      }}
-                    />
-                    School-wide (all teachers)
-                  </label>
-                  <div className="max-h-36 overflow-y-auto space-y-2 rounded-md border p-2">
-                    {(teachers || []).map((t) => (
-                      <label key={t.id} className="flex items-center gap-2 text-sm cursor-pointer">
-                        <Checkbox
-                          checked={prizeRestrictionTeacherIds(unifiedFunPrize).includes(t.id)}
-                          onCheckedChange={(c) => {
-                            const cur = prizeRestrictionTeacherIds(unifiedFunPrize);
-                            const next =
-                              c === true ? [...new Set([...cur, t.id])] : cur.filter((id) => id !== t.id);
-                            onUpdatePrize({
-                              ...unifiedFunPrize,
-                              teacherIds: next.length ? next : undefined,
-                              teacherId: undefined,
-                            });
-                          }}
-                        />
-                        <span className="truncate">{t.name}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-                <div className="sm:col-span-2 space-y-1">
-                  <Label>Class restriction</Label>
-                  <Select
-                    value={unifiedFunPrize.classId || 'all'}
-                    onValueChange={(v) =>
-                      onUpdatePrize({ ...unifiedFunPrize, classId: v === 'all' ? undefined : v })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="All" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All (school-wide)</SelectItem>
-                      {(classes || []).map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-
-        {legacyAiPrizes.length > 0 && mode === 'admin' ? (
-          <div className="mb-4 rounded-xl border border-amber-200/80 bg-amber-50/60 dark:bg-amber-950/30 px-4 py-3 text-sm">
-            <p className="font-semibold text-amber-950 dark:text-amber-100">Older AI surprise items</p>
-            <p className="text-xs text-muted-foreground mt-1 mb-3">
-              These are hidden from the shop and this list. Remove them to clean up your database.
-            </p>
-            <ul className="flex flex-wrap gap-2">
-              {legacyAiPrizes.map((lp) => (
-                <Button
-                  key={lp.id}
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="rounded-lg text-xs"
-                  onClick={() => onDeletePrize(lp.id)}
-                >
-                  Remove &quot;{lp.name}&quot;
-                </Button>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-
         <ul className="grid grid-cols-1 gap-4 min-w-0 overflow-x-hidden pr-2">
           <AdminRecordListHeader
             gridClassName="grid-cols-[80px_minmax(140px,240px)_56px_72px_200px_44px_72px_72px_64px_96px]"
@@ -745,7 +530,6 @@ export function AdminPrizesTab({
               <li><span className="font-bold">In Stock</span>: whether it appears in the shop.</li>
               <li><span className="font-bold">Stock</span>: optional count on hand. Blank = unlimited.</li>
               <li><span className="font-bold">Shop</span>: list in shop and print voucher toggles.</li>
-              <li><span className="font-bold">Fun (AI)</span>: turn on in Settings → Fun appears as one item; students choose joke, riddle, fortune, or random when redeeming.</li>
               <li><span className="font-bold">Teachers</span>: pick multiple teachers or school-wide.</li>
               <li><span className="font-bold">Class</span>: optionally restrict by class.</li>
               <li><span className="font-bold">Vending motor</span>: enable the Vending Machine feature in settings, then use the prize motor button to pick axis X/Y/Z/E.</li>

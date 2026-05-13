@@ -86,6 +86,13 @@ export default function Header() {
   const centerLabel = schoolName;
   const centerHref = schoolId ? `/${schoolId}/portal` : '/portal';
   const webHomeHref = schoolId ? centerHref : '/';
+  const teacherPortalHref = schoolId ? `/${schoolId}/teacher` : '';
+  const adminSignInHref =
+    schoolId && pathname === teacherPortalHref
+      ? `/${schoolId}/admin-signin?redirect=${encodeURIComponent(teacherPortalHref)}`
+      : schoolId
+        ? `/${schoolId}/admin-signin`
+        : '/admin-signin';
   const isStaff =
     loginState === 'teacher' ||
     loginState === 'admin' ||
@@ -109,7 +116,7 @@ export default function Header() {
       ...(isAdmin
         ? [{ id: 'admin', href: `/${schoolId}/admin`, icon: UserCog, label: 'Admin', color: 'destructive' }]
         : isStaff
-          ? [{ id: 'admin', href: `/${schoolId}/admin-signin`, icon: UserCog, label: 'Admin', color: 'destructive' }]
+          ? [{ id: 'admin', href: adminSignInHref, icon: UserCog, label: 'Admin', color: 'destructive' }]
           : []),
       ...(isStaff ? [{ id: 'print', href: `/${schoolId}/teacher`, icon: Printer, label: 'Teacher', color: 'chart-2' }] : []),
       { id: 'redeem', href: `/${schoolId}/student`, icon: GraduationCap, label: 'Student', color: 'chart-1' },

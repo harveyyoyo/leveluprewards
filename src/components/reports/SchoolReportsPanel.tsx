@@ -145,6 +145,103 @@ function reportTitle(kind: ReportKind): string {
   }
 }
 
+type ReportOptionsVisibility = {
+  rosterSort: boolean;
+  dateRange: boolean;
+  couponStatus: boolean;
+  prizeStock: boolean;
+  includeIds: boolean;
+  includeDates: boolean;
+  includeCategoryColumns: boolean;
+};
+
+function reportOptionsVisibility(kind: ReportKind): ReportOptionsVisibility {
+  // Keep this as the single source of truth for which filters apply to which report types.
+  // If you add a new option control, add it here too so the UI always matches behavior.
+  switch (kind) {
+    case 'summary':
+      return {
+        rosterSort: false,
+        dateRange: true,
+        couponStatus: false,
+        prizeStock: false,
+        includeIds: false,
+        includeDates: false,
+        includeCategoryColumns: false,
+      };
+    case 'roster':
+      return {
+        rosterSort: true,
+        dateRange: true,
+        couponStatus: false,
+        prizeStock: false,
+        includeIds: true,
+        includeDates: true,
+        includeCategoryColumns: true,
+      };
+    case 'balances':
+      return {
+        rosterSort: true,
+        dateRange: true,
+        couponStatus: false,
+        prizeStock: false,
+        includeIds: false,
+        includeDates: true,
+        includeCategoryColumns: true,
+      };
+    case 'redemptions':
+      return {
+        rosterSort: false,
+        dateRange: true,
+        couponStatus: true,
+        prizeStock: false,
+        includeIds: false,
+        includeDates: true,
+        includeCategoryColumns: false,
+      };
+    case 'coupons':
+      return {
+        rosterSort: false,
+        dateRange: true,
+        couponStatus: true,
+        prizeStock: false,
+        includeIds: false,
+        includeDates: true,
+        includeCategoryColumns: false,
+      };
+    case 'prizes':
+      return {
+        rosterSort: false,
+        dateRange: false,
+        couponStatus: false,
+        prizeStock: true,
+        includeIds: false,
+        includeDates: false,
+        includeCategoryColumns: false,
+      };
+    case 'classes':
+      return {
+        rosterSort: false,
+        dateRange: true,
+        couponStatus: false,
+        prizeStock: false,
+        includeIds: false,
+        includeDates: false,
+        includeCategoryColumns: false,
+      };
+    case 'homework':
+      return {
+        rosterSort: true,
+        dateRange: true,
+        couponStatus: false,
+        prizeStock: false,
+        includeIds: false,
+        includeDates: false,
+        includeCategoryColumns: false,
+      };
+  }
+}
+
 export function SchoolReportsPanel({
   scope,
   schoolName,
@@ -498,6 +595,55 @@ export function SchoolReportsPanel({
       : classFilter === 'unassigned'
         ? 'Unassigned students'
         : classes.find((c) => c.id === classFilter)?.name ?? 'Selected class';
+
+  const optionsVisibility = useMemo(() => reportOptionsVisibility(reportKind), [reportKind]);
+
+  const previewLine = useMemo(() => {
+    const bits: string[] = [];
+    bits.push(reportTitle(reportKind));
+    bits.push(scopeLabel);
+    bits.push(selectedClassLabel);
+    if (optionsVisibility.dateRange) bits.push(`Date: ${dateRangeLabel}`);
+    if (optionsVisibility.rosterSort) bits.push(`Sort: ${rosterSort.replaceAll('-', ' ')}`);
+    if (optionsVisibility.couponStatus) {
+      const statusLabel =
+        couponStatus === 'all'
+          ? 'All coupons'
+          : couponStatus === 'unused'
+            ? 'Unused only'
+            : couponStatus === 'redeemed'
+              ? 'Redeemed only'
+              : 'Expired only';
+      bits.push(`Status: ${statusLabel}`);
+    }
+    if (optionsVisibility.prizeStock) {
+      const stockLabel =
+        prizeStock === 'all'
+          ? 'All items'
+          : prizeStock === 'in-stock'
+            ? 'In stock'
+            : prizeStock === 'out-of-stock'
+              ? 'Out of stock'
+              : 'Limited qty';
+      bits.push(`Stock: ${stockLabel}`);
+    }
+    if (optionsVisibility.includeDates) bits.push(includeDates ? 'Dates: on' : 'Dates: off');
+    if (optionsVisibility.includeIds) bits.push(includeIds ? 'IDs: on' : 'IDs: off');
+    if (optionsVisibility.includeCategoryColumns) bits.push(includeCategoryColumns ? 'Categories: on' : 'Categories: off');
+    return bits.join(' • ');
+  }, [
+    reportKind,
+    scopeLabel,
+    selectedClassLabel,
+    optionsVisibility,
+    dateRangeLabel,
+    rosterSort,
+    couponStatus,
+    prizeStock,
+    includeDates,
+    includeIds,
+    includeCategoryColumns,
+  ]);
 
   const [printing, setPrinting] = useState(false);
   const [generatedAt, setGeneratedAt] = useState('');
@@ -1113,88 +1259,108 @@ export function SchoolReportsPanel({
             </div>
           </div>
 
+          <p className="text-xs text-muted-foreground -mt-2">
+            <span className="font-semibold text-foreground">Preview:</span> {previewLine}
+          </p>
+
           <div className="rounded-xl border bg-background p-4">
             <div className="flex items-center gap-2 text-sm font-bold mb-4">
               <SlidersHorizontal className="w-4 h-4 text-primary" aria-hidden />
               Options
             </div>
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-              <div className="space-y-2">
-                <Label htmlFor="roster-sort">Student sort</Label>
-                <Select value={rosterSort} onValueChange={(v) => setRosterSort(v as RosterSort)}>
-                  <SelectTrigger id="roster-sort" className="rounded-xl h-10">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="class-name">Class, then name</SelectItem>
-                    <SelectItem value="name">Student name</SelectItem>
-                    <SelectItem value="points-desc">Current points high to low</SelectItem>
-                    <SelectItem value="lifetime-desc">Lifetime points high to low</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="date-range">Date range</Label>
-                <Select value={dateRange} onValueChange={(v) => setDateRange(v as DateRangeFilter)}>
-                  <SelectTrigger id="date-range" className="rounded-xl h-10">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All dates</SelectItem>
-                    <SelectItem value="today">Today</SelectItem>
-                    <SelectItem value="7-days">Last 7 days</SelectItem>
-                    <SelectItem value="30-days">Last 30 days</SelectItem>
-                    <SelectItem value="custom">Custom range</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="coupon-status">Coupon status</Label>
-                <Select value={couponStatus} onValueChange={(v) => setCouponStatus(v as CouponStatusFilter)}>
-                  <SelectTrigger id="coupon-status" className="rounded-xl h-10">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All coupons</SelectItem>
-                    <SelectItem value="unused">Unused only</SelectItem>
-                    <SelectItem value="redeemed">Redeemed only</SelectItem>
-                    <SelectItem value="expired">Expired only</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="prize-stock">Prize stock</Label>
-                <Select value={prizeStock} onValueChange={(v) => setPrizeStock(v as PrizeStockFilter)}>
-                  <SelectTrigger id="prize-stock" className="rounded-xl h-10">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All reward items</SelectItem>
-                    <SelectItem value="in-stock">In stock</SelectItem>
-                    <SelectItem value="out-of-stock">Out of stock</SelectItem>
-                    <SelectItem value="limited">Limited quantity</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-3 pt-1">
-                <label className="flex items-center gap-2 text-sm">
-                  <Checkbox checked={includeIds} onCheckedChange={(checked) => setIncludeIds(checked === true)} />
-                  Include student ID / NFC
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <Checkbox checked={includeDates} onCheckedChange={(checked) => setIncludeDates(checked === true)} />
-                  Include date columns
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <Checkbox
-                    checked={includeCategoryColumns}
-                    onCheckedChange={(checked) => setIncludeCategoryColumns(checked === true)}
-                  />
-                  Include category columns
-                </label>
-              </div>
+              {optionsVisibility.rosterSort ? (
+                <div className="space-y-2">
+                  <Label htmlFor="roster-sort">Student sort</Label>
+                  <Select value={rosterSort} onValueChange={(v) => setRosterSort(v as RosterSort)}>
+                    <SelectTrigger id="roster-sort" className="rounded-xl h-10">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="class-name">Class, then name</SelectItem>
+                      <SelectItem value="name">Student name</SelectItem>
+                      <SelectItem value="points-desc">Current points high to low</SelectItem>
+                      <SelectItem value="lifetime-desc">Lifetime points high to low</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : null}
+              {optionsVisibility.dateRange ? (
+                <div className="space-y-2">
+                  <Label htmlFor="date-range">Date range</Label>
+                  <Select value={dateRange} onValueChange={(v) => setDateRange(v as DateRangeFilter)}>
+                    <SelectTrigger id="date-range" className="rounded-xl h-10">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All dates</SelectItem>
+                      <SelectItem value="today">Today</SelectItem>
+                      <SelectItem value="7-days">Last 7 days</SelectItem>
+                      <SelectItem value="30-days">Last 30 days</SelectItem>
+                      <SelectItem value="custom">Custom range</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : null}
+              {optionsVisibility.couponStatus ? (
+                <div className="space-y-2">
+                  <Label htmlFor="coupon-status">Coupon status</Label>
+                  <Select value={couponStatus} onValueChange={(v) => setCouponStatus(v as CouponStatusFilter)}>
+                    <SelectTrigger id="coupon-status" className="rounded-xl h-10">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All coupons</SelectItem>
+                      <SelectItem value="unused">Unused only</SelectItem>
+                      <SelectItem value="redeemed">Redeemed only</SelectItem>
+                      <SelectItem value="expired">Expired only</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : null}
+              {optionsVisibility.prizeStock ? (
+                <div className="space-y-2">
+                  <Label htmlFor="prize-stock">Prize stock</Label>
+                  <Select value={prizeStock} onValueChange={(v) => setPrizeStock(v as PrizeStockFilter)}>
+                    <SelectTrigger id="prize-stock" className="rounded-xl h-10">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All reward items</SelectItem>
+                      <SelectItem value="in-stock">In stock</SelectItem>
+                      <SelectItem value="out-of-stock">Out of stock</SelectItem>
+                      <SelectItem value="limited">Limited quantity</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : null}
+              {optionsVisibility.includeIds || optionsVisibility.includeDates || optionsVisibility.includeCategoryColumns ? (
+                <div className="space-y-3 pt-1">
+                  {optionsVisibility.includeIds ? (
+                    <label className="flex items-center gap-2 text-sm">
+                      <Checkbox checked={includeIds} onCheckedChange={(checked) => setIncludeIds(checked === true)} />
+                      Include student ID / NFC
+                    </label>
+                  ) : null}
+                  {optionsVisibility.includeDates ? (
+                    <label className="flex items-center gap-2 text-sm">
+                      <Checkbox checked={includeDates} onCheckedChange={(checked) => setIncludeDates(checked === true)} />
+                      Include date columns
+                    </label>
+                  ) : null}
+                  {optionsVisibility.includeCategoryColumns ? (
+                    <label className="flex items-center gap-2 text-sm">
+                      <Checkbox
+                        checked={includeCategoryColumns}
+                        onCheckedChange={(checked) => setIncludeCategoryColumns(checked === true)}
+                      />
+                      Include category columns
+                    </label>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
-            {dateRange === 'custom' ? (
+            {optionsVisibility.dateRange && dateRange === 'custom' ? (
               <div className="grid gap-4 md:grid-cols-2 mt-4 max-w-xl">
                 <div className="space-y-2">
                   <Label htmlFor="report-start-date">Start date</Label>

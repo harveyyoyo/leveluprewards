@@ -258,30 +258,6 @@ export function AdminRaffleTab({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5 pt-6">
-          {raffleDisplayMode === 'wheel' ? (
-            <RaffleSpinWheel
-              embedded
-              title="Weekly wheel"
-              slices={wheelSlices}
-              pickWinner={handleJackpotPickWinner}
-              onSpinFinished={handleJackpotSpinFinished}
-              resetKey={jackpotResetKey}
-              pullLocked={isSavingDeduction}
-              embeddedFooter={jackpotEmbeddedFooter}
-            />
-          ) : (
-            <JackpotMachine
-              embedded
-              title="Weekly jackpot"
-              pool={jackpotPool}
-              pickWinner={handleJackpotPickWinner}
-              onSpinFinished={handleJackpotSpinFinished}
-              resetKey={jackpotResetKey}
-              pullLocked={isSavingDeduction}
-              embeddedFooter={jackpotEmbeddedFooter}
-            />
-          )}
-
           {canEditSettings ? (
             <>
               <div className="grid gap-4 md:grid-cols-2">
@@ -459,6 +435,30 @@ export function AdminRaffleTab({
               </p>
             )}
           </div>
+
+          {raffleDisplayMode === 'wheel' ? (
+            <RaffleSpinWheel
+              embedded
+              title="Weekly wheel"
+              slices={wheelSlices}
+              pickWinner={handleJackpotPickWinner}
+              onSpinFinished={handleJackpotSpinFinished}
+              resetKey={jackpotResetKey}
+              pullLocked={isSavingDeduction}
+              embeddedFooter={jackpotEmbeddedFooter}
+            />
+          ) : (
+            <JackpotMachine
+              embedded
+              title="Weekly jackpot"
+              pool={jackpotPool}
+              pickWinner={handleJackpotPickWinner}
+              onSpinFinished={handleJackpotSpinFinished}
+              resetKey={jackpotResetKey}
+              pullLocked={isSavingDeduction}
+              embeddedFooter={jackpotEmbeddedFooter}
+            />
+          )}
 
           <div className="overflow-hidden rounded-2xl border">
             <div className="border-b bg-background px-4 py-3">
