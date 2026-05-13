@@ -15,6 +15,13 @@ import { collection, doc, runTransaction, type DocumentSnapshot } from 'firebase
 import { JackpotMachine } from '@/components/raffle/JackpotMachine';
 import { RaffleSpinWheel } from '@/components/raffle/RaffleSpinWheel';
 import { parseRafflePointsPerTicket } from '@/lib/raffleTickets';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 type EntryRow = {
   id: string;
@@ -44,6 +51,8 @@ export function AdminRaffleTab({
   const [isSavingDeduction, setIsSavingDeduction] = useState(false);
   const [winner, setWinner] = useState<{ id: string; name: string } | null>(null);
   const [jackpotResetKey, setJackpotResetKey] = useState(0);
+  const [drawDialogOpen, setDrawDialogOpen] = useState(false);
+  const [drawDialogMode, setDrawDialogMode] = useState<'jackpot' | 'wheel'>('jackpot');
 
   const storedPpt = Number(settings.rafflePointsPerTicket);
   const { isGeneralRaffle, pointsPerTicket } = parseRafflePointsPerTicket(settings.rafflePointsPerTicket);
@@ -241,8 +250,8 @@ export function AdminRaffleTab({
           <CardDescription>
             {canEditSettings ? (
               <>
-                Use <span className="font-semibold">Pull!</span> or <span className="font-semibold">Spin!</span> to run the draw
-                (jackpot reels vs spinning wheel — same odds). Set <span className="font-semibold">points per ticket</span> to{' '}
+                Pick <span className="font-semibold">Jackpot</span> or <span className="font-semibold">Spinning wheel</span> to open
+                the draw in a popup (same odds). Set <span className="font-semibold">points per ticket</span> to{' '}
                 <span className="font-semibold">0</span> for a general raffle (everyone in the list gets one entry; no point
                 threshold). Otherwise choose <span className="font-semibold">equal odds</span> (one entry per qualifying student) or{' '}
                 <span className="font-semibold">scaled odds</span> (more points → more tickets). If{' '}
@@ -251,8 +260,8 @@ export function AdminRaffleTab({
               </>
             ) : (
               <>
-                Use <span className="font-semibold">Pull!</span> or <span className="font-semibold">Spin!</span> for students shown
-                below (your portal scope). Raffle rules are read-only in this mode; switch to a teacher or admin session to edit them.
+                Open the jackpot or wheel draw from the buttons below (your portal scope). Raffle rules are read-only in this mode;
+                switch to a teacher or admin session to edit them.
               </>
             )}
           </CardDescription>
@@ -344,7 +353,11 @@ export function AdminRaffleTab({
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
-                    onClick={() => updateSettings({ raffleDisplayMode: 'jackpot' })}
+                    onClick={() => {
+                      setDrawDialogMode('jackpot');
+                      updateSettings({ raffleDisplayMode: 'jackpot' });
+                      setDrawDialogOpen(true);
+                    }}
                     className={cn(
                       'rounded-xl border px-4 py-2.5 text-sm font-semibold transition',
                       raffleDisplayMode === 'jackpot'
@@ -356,7 +369,11 @@ export function AdminRaffleTab({
                   </button>
                   <button
                     type="button"
-                    onClick={() => updateSettings({ raffleDisplayMode: 'wheel' })}
+                    onClick={() => {
+                      setDrawDialogMode('wheel');
+                      updateSettings({ raffleDisplayMode: 'wheel' });
+                      setDrawDialogOpen(true);
+                    }}
                     className={cn(
                       'rounded-xl border px-4 py-2.5 text-sm font-semibold transition',
                       raffleDisplayMode === 'wheel'
@@ -368,7 +385,8 @@ export function AdminRaffleTab({
                   </button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Same odds and deduct rules — only the animation changes. Wheel slice size matches ticket weight.
+                  Same odds and deduct rules — only the animation changes. Wheel slice size matches ticket weight. Each choice opens the
+                  draw in a popup.
                 </p>
               </div>
             </>
@@ -390,9 +408,37 @@ export function AdminRaffleTab({
                 <span className="font-semibold text-foreground">Deduct on pull:</span> {deductOnPull ? 'On' : 'Off'}
               </p>
               <p>
-                <span className="font-semibold text-foreground">Display:</span>{' '}
+                <span className="font-semibold text-foreground">Saved display preference:</span>{' '}
                 {raffleDisplayMode === 'wheel' ? 'Spinning wheel' : 'Jackpot (reels)'}
               </p>
+              <div className="flex flex-wrap gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDrawDialogMode('jackpot');
+                    setDrawDialogOpen(true);
+                  }}
+                  className={cn(
+                    'rounded-xl border px-4 py-2.5 text-sm font-semibold transition',
+                    'border-border bg-background text-foreground shadow-sm hover:bg-muted/60',
+                  )}
+                >
+                  Open jackpot draw
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDrawDialogMode('wheel');
+                    setDrawDialogOpen(true);
+                  }}
+                  className={cn(
+                    'rounded-xl border px-4 py-2.5 text-sm font-semibold transition',
+                    'border-border bg-background text-foreground shadow-sm hover:bg-muted/60',
+                  )}
+                >
+                  Open wheel draw
+                </button>
+              </div>
             </div>
           )}
 
@@ -436,29 +482,44 @@ export function AdminRaffleTab({
             )}
           </div>
 
-          {raffleDisplayMode === 'wheel' ? (
-            <RaffleSpinWheel
-              embedded
-              title="Weekly wheel"
-              slices={wheelSlices}
-              pickWinner={handleJackpotPickWinner}
-              onSpinFinished={handleJackpotSpinFinished}
-              resetKey={jackpotResetKey}
-              pullLocked={isSavingDeduction}
-              embeddedFooter={jackpotEmbeddedFooter}
-            />
-          ) : (
-            <JackpotMachine
-              embedded
-              title="Weekly jackpot"
-              pool={jackpotPool}
-              pickWinner={handleJackpotPickWinner}
-              onSpinFinished={handleJackpotSpinFinished}
-              resetKey={jackpotResetKey}
-              pullLocked={isSavingDeduction}
-              embeddedFooter={jackpotEmbeddedFooter}
-            />
-          )}
+          <Dialog open={drawDialogOpen} onOpenChange={setDrawDialogOpen}>
+            <DialogContent size="xl" className="gap-0 p-0 sm:p-0">
+              <div className="border-b bg-muted/20 px-4 pb-4 pt-10 sm:px-6 sm:pt-12">
+                <DialogHeader className="text-left">
+                  <DialogTitle>{drawDialogMode === 'wheel' ? 'Weekly wheel' : 'Weekly jackpot'}</DialogTitle>
+                  <DialogDescription className="text-left">
+                    Same pool as the entries list. Close when you are done; your winner banner stays on this tab.
+                  </DialogDescription>
+                </DialogHeader>
+              </div>
+              <div className="px-2 pb-4 pt-2 sm:px-4 sm:pb-6">
+                {drawDialogOpen &&
+                  (drawDialogMode === 'wheel' ? (
+                    <RaffleSpinWheel
+                      embedded
+                      title="Weekly wheel"
+                      slices={wheelSlices}
+                      pickWinner={handleJackpotPickWinner}
+                      onSpinFinished={handleJackpotSpinFinished}
+                      resetKey={jackpotResetKey}
+                      pullLocked={isSavingDeduction}
+                      embeddedFooter={jackpotEmbeddedFooter}
+                    />
+                  ) : (
+                    <JackpotMachine
+                      embedded
+                      title="Weekly jackpot"
+                      pool={jackpotPool}
+                      pickWinner={handleJackpotPickWinner}
+                      onSpinFinished={handleJackpotSpinFinished}
+                      resetKey={jackpotResetKey}
+                      pullLocked={isSavingDeduction}
+                      embeddedFooter={jackpotEmbeddedFooter}
+                    />
+                  ))}
+              </div>
+            </DialogContent>
+          </Dialog>
 
           <div className="overflow-hidden rounded-2xl border">
             <div className="border-b bg-background px-4 py-3">
