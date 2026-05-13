@@ -28,6 +28,10 @@ class DuplicateServerDevChunksPlugin {
 }
 
 const nextConfig = {
+  async rewrites() {
+    // Browsers and tools often request /favicon.ico; serve the same asset as app/icon.png.
+    return [{ source: '/favicon.ico', destination: '/icon.png' }];
+  },
   experimental: {
     serverComponentsExternalPackages: ['pdf-parse', 'mammoth'],
     /** Faster dev compiles for barrel-import packages (tree-shaken imports). */
