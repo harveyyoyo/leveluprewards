@@ -113,8 +113,6 @@ interface Settings {
     enableColorPrinting: boolean;
     /** Optional staff reminder shown near student ID / bulk card print (browser cannot pick a printer). */
     printerReminderIdCards?: string;
-    /** When on, Admin -> Students shows a one-click DTC card-machine print button for exactly one selected student. */
-    showSingleStudentCardMachinePrintButton: boolean;
     /** Saved ID card print setups (printer family + paper) for Admin → Students. */
     idCardPrintProfiles?: IdCardPrintProfile[];
     /** Last selected saved profile id for ID card printing (optional). */
@@ -401,7 +399,6 @@ const defaultSettings: Settings = {
     enableStudentEmojiOnPrizeTickets: false,
     enableColorPrinting: true,
     printerReminderIdCards: '',
-    showSingleStudentCardMachinePrintButton: false,
     idCardPrintProfiles: [],
     lastIdCardPrintProfileId: undefined,
     idCardPrinterFamily: 'browser_sheet',

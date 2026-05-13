@@ -1540,26 +1540,10 @@ export function SettingsModal() {
                                         }
                                     />
 
-                                    <div className="flex items-center justify-between gap-3 border-t border-slate-200/60 dark:border-slate-700/50 pt-4">
-                                        <div className="min-w-0">
-                                            <div className="flex items-center gap-2">
-                                                <Printer className="w-4 h-4 text-muted-foreground" />
-                                                <span className="text-sm font-bold">Single-student card machine button</span>
-                                            </div>
-                                            <p className="mt-1 text-[11px] text-muted-foreground leading-snug">
-                                                Show a direct card-machine print action when exactly one student is selected in Admin &rarr; Students.
-                                            </p>
-                                        </div>
-                                        <Switch
-                                            checked={local.showSingleStudentCardMachinePrintButton}
-                                            onCheckedChange={(checked) => handleToggle('showSingleStudentCardMachinePrintButton', checked)}
-                                        />
-                                    </div>
-
                                     {isAdmin && (
                                         <div className="space-y-4 border-t border-slate-200/60 dark:border-slate-700/50 pt-4">
                                             <p className="text-xs text-muted-foreground leading-relaxed">
-                                                Optional printer reminders for staff. Web apps cannot select a specific printer; these notes appear next to the right Print actions so the correct device is chosen in the print dialog.
+                                                Optional printer reminders for staff. Web apps cannot select a specific printer; these notes appear near the student ID print flow so the correct device is chosen in the print dialog.
                                             </p>
                                             <div className="space-y-1.5">
                                                 <Label htmlFor="printerReminderIdCards" className="text-xs font-bold">

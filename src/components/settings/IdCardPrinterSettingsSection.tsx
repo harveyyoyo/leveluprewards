@@ -130,7 +130,7 @@ export function IdCardPrinterSettingsSection({
         Student ID card printer / stock
       </div>
       <p className="text-[11px] text-muted-foreground leading-snug pb-2">
-        One school, one setup: choose how Admin → Students bulk ID printing and previews should render (browser sheets vs direct-to-card). Staff still pick the physical printer in the browser print dialog.
+        One school, one setup: choose how Admin → Students ID printing and previews should render (browser sheets vs direct-to-card). Staff still pick the physical printer in the browser print dialog. Use <span className="font-semibold">Save this setup</span> only if you switch often between two stations (for example Avery sheets in the office and a card printer at the desk)—saved names appear under My setups so you can swap the active layout in one step.
       </p>
 
       {profiles.length > 0 && (

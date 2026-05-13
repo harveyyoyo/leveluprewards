@@ -832,14 +832,6 @@ function AdminDashboardInner() {
     setIdCardPrintJob(args);
   };
 
-  const handlePrintSingleIdCardToMachine = (args: { student: Student; classes: Class[] }) => {
-    setStudentsToPrint({
-      students: [args.student],
-      classes: args.classes,
-      printerType: 'dtc4500e',
-    });
-  };
-
   // All attendance dashboard state + orchestration lives behind one hook so
   // this component only worries about the tab's presentation. It covers:
   //   * school-level config + save + log loader
@@ -1445,7 +1437,6 @@ function AdminDashboardInner() {
               studentFilterClass={studentFilterClass}
               setStudentFilterClass={setStudentFilterClass}
               onOpenIdPrintSetup={handleOpenIdCardPrintSetup}
-              onPrintSingleIdCardToMachine={handlePrintSingleIdCardToMachine}
               getClassName={getClassName}
               teachers={teachers || []}
               handleOpenStudentModal={handleOpenStudentModal}

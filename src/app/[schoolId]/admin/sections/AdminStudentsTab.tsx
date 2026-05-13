@@ -87,7 +87,6 @@ export function AdminStudentsTab({
   studentFilterClass,
   setStudentFilterClass,
   onOpenIdPrintSetup,
-  onPrintSingleIdCardToMachine,
   getClassName,
   teachers,
   handleOpenStudentModal,
@@ -106,7 +105,6 @@ export function AdminStudentsTab({
     enableFaceLogin?: boolean;
     enableStudentWelcome?: boolean;
     enableStudentWelcomeBackScreen?: boolean;
-    showSingleStudentCardMachinePrintButton?: boolean;
   };
   classes: Class[] | null | undefined;
   students: Student[] | null | undefined;
@@ -127,7 +125,6 @@ export function AdminStudentsTab({
   studentFilterClass: string;
   setStudentFilterClass: (v: string) => void;
   onOpenIdPrintSetup: (args: { students: Student[]; classes: Class[] }) => void;
-  onPrintSingleIdCardToMachine?: (args: { student: Student; classes: Class[] }) => void;
   getClassName: (id: string) => string;
   teachers: Teacher[];
   handleOpenStudentModal?: (s: Student | null) => void;
@@ -144,7 +141,7 @@ export function AdminStudentsTab({
   const [selectedClassIdForBulk, setSelectedClassIdForBulk] = useState('');
   const filteredSelectedCount = filteredStudents.filter((s) => selectedStudentIds.has(s.id)).length;
   const selectedStudents = students?.filter((s) => selectedStudentIds.has(s.id)) || [];
-  const singleSelectedStudent = selectedStudents.length === 1 ? selectedStudents[0] : null;
+  const studentsForIdPrint = selectedStudentIds.size > 0 ? selectedStudents : filteredStudents;
   const toggleStudentSelected = (studentId: string) => {
     setSelectedStudentIds((prev) => {
       const next = new Set(prev);
@@ -183,18 +180,22 @@ export function AdminStudentsTab({
           </Button>
           <Button
             onClick={() => {
-              onOpenIdPrintSetup({ students: filteredStudents, classes: classes || [] });
+              onOpenIdPrintSetup({ students: studentsForIdPrint, classes: classes || [] });
             }}
-            variant={studentFilterClass !== 'all' ? 'default' : 'outline'}
+            disabled={studentsForIdPrint.length === 0}
+            variant={selectedStudentIds.size > 0 || studentFilterClass !== 'all' ? 'default' : 'outline'}
             className={cn(
               'rounded-xl px-4 border-ring/35 bg-background/70 hover:bg-secondary hover:text-secondary-foreground',
-              studentFilterClass !== 'all' && 'bg-secondary hover:bg-secondary/90 font-bold text-secondary-foreground'
+              (selectedStudentIds.size > 0 || studentFilterClass !== 'all') &&
+                'bg-secondary hover:bg-secondary/90 font-bold text-secondary-foreground'
             )}
           >
             <Printer className="mr-2 h-4 w-4" />
-            {studentFilterClass !== 'all'
-              ? `Print class IDs (${students?.filter((s) => s.classId === studentFilterClass).length || 0})`
-              : 'Print visible IDs'}
+            {selectedStudentIds.size > 0
+              ? `Print selected IDs (${selectedStudentIds.size})`
+              : studentFilterClass !== 'all'
+                ? `Print class IDs (${filteredStudents.length})`
+                : 'Print visible IDs'}
           </Button>
           <Button onClick={() => handleOpenStudentModal?.(null)} className="rounded-xl">
             <Plus className="mr-2 h-4 w-4" /> Add Student
@@ -263,26 +264,6 @@ export function AdminStudentsTab({
                   <span className="text-muted-foreground">({filteredSelectedCount} visible)</span>
                 ) : null}
               </div>
-              <Button
-                type="button"
-                variant="default"
-                className="h-8 rounded-lg px-3 text-xs font-semibold"
-                onClick={() => onOpenIdPrintSetup({ students: selectedStudents, classes: classes || [] })}
-              >
-                <Printer className="mr-2 h-3.5 w-3.5" />
-                Print
-              </Button>
-              {settings.showSingleStudentCardMachinePrintButton && singleSelectedStudent ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-8 rounded-lg px-3 text-xs font-semibold border-ring/25 hover:bg-secondary/60 hover:text-secondary-foreground"
-                  onClick={() => onPrintSingleIdCardToMachine?.({ student: singleSelectedStudent, classes: classes || [] })}
-                >
-                  <IdCard className="mr-2 h-3.5 w-3.5" />
-                  Print to card machine
-                </Button>
-              ) : null}
               {teachers && teachers.length > 0 ? (
                 <>
                   <Select
