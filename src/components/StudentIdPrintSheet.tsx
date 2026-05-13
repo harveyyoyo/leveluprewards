@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import type { Student, Class } from '@/lib/types';
 import { StudentIdCard } from './StudentIdCard';
 import { useSettings } from './providers/SettingsProvider';
@@ -26,15 +27,14 @@ export function StudentIdPrintSheet({ students, classes, schoolId, onReady }: St
   // Trigger print dialog only after the async configurations have finished loading
   useEffect(() => {
     document.body.classList.add('id-card-printing');
-    
+    let t: ReturnType<typeof setTimeout> | undefined;
     if (!isAppConfigLoading && !isSchoolLoading) {
-      const t = setTimeout(() => {
+      t = setTimeout(() => {
         onReady();
       }, 100); // Give the DOM a tiny slice of time to render the fetched names/logos
-      return () => clearTimeout(t);
     }
-    
     return () => {
+      if (t) clearTimeout(t);
       document.body.classList.remove('id-card-printing');
     };
   }, [isAppConfigLoading, isSchoolLoading, onReady]);
@@ -68,7 +68,7 @@ export function StudentIdPrintSheet({ students, classes, schoolId, onReady }: St
     return null;
   }
 
-  return (
+  const sheet = (
     <div id="student-id-print-wrapper">
       {studentChunks.map((chunk, pageIndex) => (
         <div key={pageIndex} className="student-id-print-page">
@@ -89,4 +89,10 @@ export function StudentIdPrintSheet({ students, classes, schoolId, onReady }: St
       ))}
     </div>
   );
+
+  if (typeof document === 'undefined') {
+    return null;
+  }
+
+  return createPortal(sheet, document.body);
 }

@@ -1042,8 +1042,12 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
   /* 3. PATH-TO-VISIBLE ISOLATION:
      The definitive way to hide everything without phantom page space.
      We hide all children of the body, then white-list the app root and the active print wrapper. */
-  body.prize-ticket-printing > *:not([data-app-view-root]):not(#prize-ticket-print-wrapper):not(#prize-ticket-standalone),
-  body.id-card-printing > *:not([data-app-view-root]) {
+  body.prize-ticket-printing > *:not([data-app-view-root]):not(#prize-ticket-print-wrapper):not(#prize-ticket-standalone) {
+    display: none !important;
+  }
+
+  /* ID card sheet is portaled to body (StudentIdPrintSheet). Hide the app shell so visibility:hidden min-h-screen UI does not paginate as blank sheets. */
+  body.id-card-printing > *:not(#student-id-print-wrapper) {
     display: none !important;
   }
 
