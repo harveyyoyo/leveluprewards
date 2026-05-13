@@ -130,7 +130,8 @@ export default function Header() {
 
     return (
       <div className="w-full">
-        <header className="no-print grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] w-full items-center relative z-20 px-3 sm:px-4 pt-3 sm:pt-4 pb-3 sm:pb-4 border-b border-border/10">
+        <div className="mx-auto w-full max-w-7xl px-4 md:px-8">
+        <header className="no-print grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] w-full min-w-0 items-center relative z-20 pt-3 sm:pt-4 pb-3 sm:pb-4 border-b border-border/10">
           <div className="flex justify-start min-w-0 justify-self-start">
             {schoolId && (
               <Link
@@ -143,10 +144,12 @@ export default function Header() {
               </Link>
             )}
           </div>
-          <div className="flex min-w-0 max-w-full items-center justify-center px-2 justify-self-center">
+          <div className="flex min-w-0 max-w-full items-center justify-center justify-self-center px-1">
             {schoolId && (
-              <Link href={centerHref} className="flex min-w-0 max-w-full flex-col items-center gap-1 truncate no-underline font-school text-lg font-black sm:text-2xl md:text-3xl">
-                <span className="truncate text-foreground font-bold">{centerLabel}</span>
+              <Link href={centerHref} className="flex min-w-0 max-w-full flex-col items-center gap-1 text-center no-underline font-school text-lg font-black sm:text-2xl md:text-3xl">
+                <span className="min-w-0 max-w-full break-words text-foreground font-bold [overflow-wrap:anywhere] line-clamp-2 sm:line-clamp-3" title={centerLabel}>
+                  {centerLabel}
+                </span>
               </Link>
             )}
           </div>
@@ -187,6 +190,7 @@ export default function Header() {
             <SettingsModal />
           </div>
         </header>
+        </div>
 
         {loginState !== 'loggedOut' && !isKioskLocked && (
           <nav className={cn("fixed bottom-0 left-0 right-0 py-3 pb-[max(1rem,env(safe-area-inset-bottom))] z-[100] no-print border-t",
@@ -216,12 +220,13 @@ export default function Header() {
   // --- WEB MODE HEADER ---
   return (
     <header className={cn(
-      "no-print w-full z-50 transition-colors border-b border-primary/10 sticky top-0",
-      "bg-background/80 backdrop-blur-xl"
+      "no-print z-50 transition-colors border-b border-primary/10 sticky top-0",
+      "bg-background/80 backdrop-blur-xl",
+      "mx-auto w-full max-w-7xl min-w-0 px-4 md:px-8"
     )}>
-      <div className="max-w-7xl mx-auto px-2 sm:px-8 h-20 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-4">
+      <div className="h-20 grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] items-center gap-2 sm:gap-4">
         {/* Left: Branding */}
-        <div className="flex items-center gap-1 sm:gap-4 shrink-0 min-w-0 justify-self-start">
+        <div className="flex min-w-0 items-center gap-1 sm:gap-4 justify-self-start">
           <Link href={logoLink} className="flex items-center gap-1 sm:gap-4 group" data-home-button="true">
             {appLogoUrl ? (
               <span className={cn(
@@ -258,11 +263,11 @@ export default function Header() {
           </Link>
         </div>
 
-        {/* Center: School Name — equal 1fr side columns so title stays true viewport-center */}
-        <div className="flex min-w-0 justify-center justify-self-center px-2 max-w-[min(100%,56vw)] sm:max-w-[min(100%,42rem)]">
+        {/* Center: school name — middle column is 1fr with min-w-0 so the grid cannot overflow the page; long names wrap */}
+        <div className="flex min-w-0 max-w-full justify-center justify-self-center px-1 sm:px-2">
           {schoolId ? (
-            <Link href={centerHref} className="flex justify-center text-center no-underline min-w-0 max-w-full">
-              <span className="inline-flex items-center gap-2 sm:gap-3 min-w-0">
+            <Link href={centerHref} className="flex min-w-0 max-w-full justify-center text-center no-underline">
+              <span className="flex min-w-0 max-w-full items-center gap-2 sm:gap-3">
                 {schoolData?.logoUrl && (
                   <span className={cn(
                     "inline-flex h-10 w-auto max-w-[200px] shrink-0 items-center justify-center transition-all duration-300",
@@ -287,8 +292,11 @@ export default function Header() {
                     />
                   </span>
                 )}
-                <div className="flex flex-col items-center justify-center min-w-0">
-                  <span className="text-sm min-[400px]:text-base sm:text-2xl md:text-3xl lg:text-3xl xl:text-4xl font-headline font-bold text-foreground truncate">
+                <div className="flex min-w-0 max-w-full flex-col items-center justify-center">
+                  <span
+                    className="max-w-full min-w-0 truncate text-sm min-[400px]:text-base sm:text-2xl md:text-3xl lg:text-3xl xl:text-4xl font-headline font-bold text-foreground"
+                    title={centerLabel}
+                  >
                     {centerLabel}
                   </span>
                 </div>
