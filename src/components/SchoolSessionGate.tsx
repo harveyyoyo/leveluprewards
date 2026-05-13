@@ -42,22 +42,41 @@ function canUseRoute(pathname: string, routeSchoolId: string, loginState: string
 }
 
 /**
- * Ensures `/{schoolId}/…` is only reachable with a matching session (or developer).
- * This is a client UX gate; Firestore rules still enforce real data access.
+ * `useSearchParams()` suspends in the App Router until the client can read the URL.
+ * Only the teacher root URL needs query params (`?account=…`); keep it isolated so
+ * `/student`, `/portal`, etc. never sit on the generic Suspense fallback indefinitely.
  */
-function SchoolSessionGateInner({
+function SchoolSessionGateTeacherSearch({
   routeSchoolId,
   children,
 }: {
   routeSchoolId: string;
   children: React.ReactNode;
 }) {
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const route = routeSchoolId.trim().toLowerCase();
+  const isStaffSignInLink = pathname === `/${route}/teacher` && !!searchParams.get('account');
+  return (
+    <SchoolSessionGateBody routeSchoolId={routeSchoolId} isStaffSignInLink={isStaffSignInLink}>
+      {children}
+    </SchoolSessionGateBody>
+  );
+}
+
+function SchoolSessionGateBody({
+  routeSchoolId,
+  isStaffSignInLink,
+  children,
+}: {
+  routeSchoolId: string;
+  isStaffSignInLink: boolean;
+  children: React.ReactNode;
+}) {
   const { schoolId, loginState, isInitialized, isUserLoading, login } = useAppContext();
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const route = routeSchoolId.trim().toLowerCase();
-  const isStaffSignInLink = pathname === `/${route}/teacher` && !!searchParams.get('account');
   /** Avoid hammering `login()` while waiting for Firestore/auth during kiosk recovery. */
   const kioskRecoverAttemptRef = useRef<string | null>(null);
 
@@ -144,6 +163,35 @@ function SchoolSessionGateInner({
   return <>{children}</>;
 }
 
+function SchoolSessionGateInner({
+  routeSchoolId,
+  children,
+}: {
+  routeSchoolId: string;
+  children: React.ReactNode;
+}) {
+  const pathname = usePathname();
+  const route = routeSchoolId.trim().toLowerCase();
+
+  if (pathname === `/${route}/teacher`) {
+    return (
+      <Suspense fallback={<SessionGateLoading label="Loading…" />}>
+        <SchoolSessionGateTeacherSearch routeSchoolId={routeSchoolId}>{children}</SchoolSessionGateTeacherSearch>
+      </Suspense>
+    );
+  }
+
+  return (
+    <SchoolSessionGateBody routeSchoolId={routeSchoolId} isStaffSignInLink={false}>
+      {children}
+    </SchoolSessionGateBody>
+  );
+}
+
+/**
+ * Ensures `/{schoolId}/…` is only reachable with a matching session (or developer).
+ * This is a client UX gate; Firestore rules still enforce real data access.
+ */
 export function SchoolSessionGate(props: {
   routeSchoolId: string;
   children: React.ReactNode;
