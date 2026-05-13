@@ -97,7 +97,7 @@ import {
 } from '@/lib/schoolDataImport';
 import { SAMPLE_BADGES, getSampleCategoryBadges } from '@/lib/sample-badges';
 
-// The Students tab is the default tab, so keep it eager. Every other tab is
+// The Students and Library tabs are eager. Other admin tabs are
 // code-split with `next/dynamic` so its chunk is only fetched when the admin
 // actually clicks into it — this dramatically reduces the initial admin JS.
 import { AdminStudentsTab } from './sections/AdminStudentsTab';
@@ -109,68 +109,89 @@ const tabLoader = () => (
   <div className="animate-pulse h-64 w-full rounded-xl bg-muted/40" aria-hidden="true" />
 );
 
+/** After dev HMR or cache mismatch, lazy tab chunks often 404; reload once so import succeeds. */
+function importAdminTabSection<M extends Record<string, unknown>, K extends keyof M>(
+  importFn: () => Promise<M>,
+  exportKey: K,
+): () => Promise<M[K]> {
+  return () =>
+    importFn()
+      .then((m) => m[exportKey])
+      .catch((err: unknown) => {
+        const e = err as { name?: string; message?: string };
+        if (
+          typeof window !== 'undefined' &&
+          (e?.name === 'ChunkLoadError' ||
+            /loading chunk|chunk load|failed to fetch dynamically imported module/i.test(String(e?.message || '')))
+        ) {
+          window.location.reload();
+        }
+        throw err;
+      });
+}
+
 const AdminStatsTab = dynamic(
-  () => import('./sections/AdminStatsTab').then((m) => m.AdminStatsTab),
+  importAdminTabSection(() => import('./sections/AdminStatsTab'), 'AdminStatsTab'),
   { loading: tabLoader, ssr: false },
 );
 const AdminNotificationsTab = dynamic(
-  () => import('./sections/AdminNotificationsTab').then((m) => m.AdminNotificationsTab),
+  importAdminTabSection(() => import('./sections/AdminNotificationsTab'), 'AdminNotificationsTab'),
   { loading: tabLoader, ssr: false },
 );
 const AdminBrandingTab = dynamic(
-  () => import('./sections/AdminBrandingTab').then((m) => m.AdminBrandingTab),
+  importAdminTabSection(() => import('./sections/AdminBrandingTab'), 'AdminBrandingTab'),
   { loading: tabLoader, ssr: false },
 );
 const AdminClassesTab = dynamic(
-  () => import('./sections/AdminClassesTab').then((m) => m.AdminClassesTab),
+  importAdminTabSection(() => import('./sections/AdminClassesTab'), 'AdminClassesTab'),
   { loading: tabLoader, ssr: false },
 );
 const AdminTeachersTab = dynamic(
-  () => import('./sections/AdminTeachersTab').then((m) => m.AdminTeachersTab),
+  importAdminTabSection(() => import('./sections/AdminTeachersTab'), 'AdminTeachersTab'),
   { loading: tabLoader, ssr: false },
 );
 const AdminCategoriesTab = dynamic(
-  () => import('./sections/AdminCategoriesTab').then((m) => m.AdminCategoriesTab),
+  importAdminTabSection(() => import('./sections/AdminCategoriesTab'), 'AdminCategoriesTab'),
   { loading: tabLoader, ssr: false },
 );
 const AdminPrizesTab = dynamic(
-  () => import('./sections/AdminPrizesTab').then((m) => m.AdminPrizesTab),
+  importAdminTabSection(() => import('./sections/AdminPrizesTab'), 'AdminPrizesTab'),
   { loading: tabLoader, ssr: false },
 );
 const AdminCouponsTab = dynamic(
-  () => import('./sections/AdminCouponsTab').then((m) => m.AdminCouponsTab),
+  importAdminTabSection(() => import('./sections/AdminCouponsTab'), 'AdminCouponsTab'),
   { loading: tabLoader, ssr: false },
 );
 const AdminAttendanceTab = dynamic(
-  () => import('./sections/AdminAttendanceTab').then((m) => m.AdminAttendanceTab),
+  importAdminTabSection(() => import('./sections/AdminAttendanceTab'), 'AdminAttendanceTab'),
   { loading: tabLoader, ssr: false },
 );
 const AdminReportsTab = dynamic(
-  () => import('./sections/AdminReportsTab').then((m) => m.AdminReportsTab),
+  importAdminTabSection(() => import('./sections/AdminReportsTab'), 'AdminReportsTab'),
   { loading: tabLoader, ssr: false },
 );
 const AdminBonusPointsTab = dynamic(
-  () => import('./sections/AdminBonusPointsTab').then((m) => m.AdminBonusPointsTab),
+  importAdminTabSection(() => import('./sections/AdminBonusPointsTab'), 'AdminBonusPointsTab'),
   { loading: tabLoader, ssr: false },
 );
 const AdminGoalsTab = dynamic(
-  () => import('./sections/AdminGoalsTab').then((m) => m.AdminGoalsTab),
+  importAdminTabSection(() => import('./sections/AdminGoalsTab'), 'AdminGoalsTab'),
   { loading: tabLoader, ssr: false },
 );
 const AdminBadgesTab = dynamic(
-  () => import('./sections/AdminBadgesTab').then((m) => m.AdminBadgesTab),
+  importAdminTabSection(() => import('./sections/AdminBadgesTab'), 'AdminBadgesTab'),
   { loading: tabLoader, ssr: false },
 );
 const AdminBulletinBoardTab = dynamic(
-  () => import('./sections/AdminBulletinBoardTab').then((m) => m.AdminBulletinBoardTab),
+  importAdminTabSection(() => import('./sections/AdminBulletinBoardTab'), 'AdminBulletinBoardTab'),
   { loading: tabLoader, ssr: false },
 );
 const AdminHallOfFameTab = dynamic(
-  () => import('./sections/AdminHallOfFameTab').then((m) => m.AdminHallOfFameTab),
+  importAdminTabSection(() => import('./sections/AdminHallOfFameTab'), 'AdminHallOfFameTab'),
   { loading: tabLoader, ssr: false },
 );
 const AdminBackupsTab = dynamic(
-  () => import('./sections/AdminBackupsTab').then((m) => m.AdminBackupsTab),
+  importAdminTabSection(() => import('./sections/AdminBackupsTab'), 'AdminBackupsTab'),
   { loading: tabLoader, ssr: false },
 );
 import { getReadableErrorMessage } from '@/lib/errorMessage';
