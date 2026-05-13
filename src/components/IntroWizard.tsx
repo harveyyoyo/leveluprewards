@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { useSettings } from './providers/SettingsProvider';
 import { ArrowRight, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { springCinematic } from '@/lib/animation';
 
 const steps = [
   {
@@ -168,7 +169,7 @@ export function IntroWizard() {
         initial={{ opacity: 0, y: 50, scale: 0.9 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 50, scale: 0.9 }}
-        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+        transition={springCinematic}
         className="fixed bottom-4 right-4 left-4 w-auto max-w-sm z-[200] sm:bottom-6 sm:left-auto sm:right-6 sm:w-full"
       >
         <Card className="shadow-2xl border-2 border-primary/20 bg-background/80 backdrop-blur-xl">

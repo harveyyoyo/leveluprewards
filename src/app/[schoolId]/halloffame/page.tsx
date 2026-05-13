@@ -18,6 +18,7 @@ import { getPeriodKeys } from '@/lib/db/helpers';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
 import { rainbowTripletForNavId, complementTripletForNavId } from '@/lib/rainbowNav';
 import { motion, AnimatePresence } from "framer-motion";
+import { springCinematic } from '@/lib/animation';
 import { Card, CardContent } from '@/components/ui/card';
 import { useSchoolMetadataDocRef } from '@/hooks/useSchoolMetadataDocRef';
 import { getLevelUpLogoHref } from '@/lib/app-branding';
@@ -487,7 +488,7 @@ export default function HallOfFamePage() {
                                 <motion.div
                                     initial={{ opacity: 0, scale: 0.9 }}
                                     animate={{ opacity: 1, scale: 1 }}
-                                    transition={{ duration: 0.5, delay: 0.2 }}
+                                    transition={{ ...springCinematic, delay: 0.2 }}
                                     className="text-center md:order-2 order-1"
                                 >
                                     <div className="bg-primary/5 backdrop-blur-md border-4 border-primary/20 rounded-t-[4rem] rounded-b-3xl p-6 md:p-8 relative shadow-2xl h-72 md:h-80 flex flex-col justify-end transition-all hover:-translate-y-2">
@@ -508,7 +509,7 @@ export default function HallOfFamePage() {
                                     <motion.div
                                         initial={{ opacity: 0, x: -20 }}
                                         animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: 0.4 }}
+                                        transition={{ ...springCinematic, delay: 0.4 }}
                                         className="text-center md:order-1 order-2"
                                     >
                                         <div className="bg-card/40 backdrop-blur-sm border-2 border-border rounded-3xl p-6 md:p-8 relative h-56 md:h-64 flex flex-col justify-end shadow-lg transition-all hover:shadow-xl hover:-translate-y-1">
@@ -530,7 +531,7 @@ export default function HallOfFamePage() {
                                     <motion.div
                                         initial={{ opacity: 0, x: 20 }}
                                         animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: 0.6 }}
+                                        transition={{ ...springCinematic, delay: 0.6 }}
                                         className="text-center md:order-3 order-3"
                                     >
                                         <div className="bg-card/40 backdrop-blur-sm border-2 border-border/50 rounded-3xl p-6 md:p-8 relative h-52 md:h-56 flex flex-col justify-end shadow-lg transition-all hover:shadow-xl hover:-translate-y-1">
@@ -558,7 +559,7 @@ export default function HallOfFamePage() {
                                             key={item.id}
                                             initial={{ opacity: 0, y: 15 }}
                                             animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: 0.1 + index * 0.05 }}
+                                            transition={{ ...springCinematic, delay: 0.1 + index * 0.05 }}
                                             className="group relative flex flex-col justify-between backdrop-blur-sm border-2 border-border/40 rounded-3xl p-5 md:p-6 transition-all hover:bg-card hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1 bg-card/40 min-h-[160px]"
                                         >
                                             <div>
@@ -609,7 +610,7 @@ export default function HallOfFamePage() {
                                                     <motion.div
                                                         initial={{ width: 0 }}
                                                         animate={{ width: `${pct}%` }}
-                                                        transition={{ duration: 1, ease: "easeOut" }}
+                                                        transition={springCinematic}
                                                         className="h-full bg-primary"
                                                     />
                                                 </div>
@@ -643,7 +644,7 @@ export default function HallOfFamePage() {
                                             key={item.id}
                                             initial={{ opacity: 0, y: 10 }}
                                             animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: 0.8 + index * 0.05 }}
+                                            transition={{ ...springCinematic, delay: 0.8 + index * 0.05 }}
                                             onMouseEnter={() => setHoveredIndex(item.id)}
                                             onMouseLeave={() => setHoveredIndex(null)}
                                             className={cn(

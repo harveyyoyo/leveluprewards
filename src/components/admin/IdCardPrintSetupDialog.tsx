@@ -14,6 +14,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import type { Class, Student } from '@/lib/types';
+import { resolveIdCardPrintJobOptions } from '@/lib/id-card-print-catalog';
 import { Printer } from 'lucide-react';
 
 export function IdCardPrintSetupDialog({
@@ -52,6 +53,7 @@ export function IdCardPrintSetupDialog({
     onConfirm({
       students,
       classes,
+      ...resolveIdCardPrintJobOptions(settings),
     });
   };
 

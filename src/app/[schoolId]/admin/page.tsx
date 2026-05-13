@@ -1,4 +1,3 @@
-
 'use client';
 import { useEffect, useLayoutEffect, useMemo, useState, useRef, ChangeEvent, type ComponentType } from 'react';
 import { useConfirm } from '@/components/providers/ConfirmProvider';
@@ -103,6 +102,7 @@ import { SAMPLE_BADGES, getSampleCategoryBadges } from '@/lib/sample-badges';
 // actually clicks into it — this dramatically reduces the initial admin JS.
 import { AdminStudentsTab } from './sections/AdminStudentsTab';
 import { budgetWindowKeyForDate } from '@/lib/teacherBudget';
+import { resolveIdCardPrintJobOptions } from '@/lib/id-card-print-catalog';
 
 const tabLoader = () => (
   <div className="animate-pulse h-64 w-full rounded-xl bg-muted/40" aria-hidden="true" />
@@ -2156,6 +2156,7 @@ function AdminDashboardInner() {
                       setStudentsToPrint({
                         students: [s],
                         classes: classes ?? [],
+                        ...resolveIdCardPrintJobOptions(settings),
                       });
                     });
                   }}

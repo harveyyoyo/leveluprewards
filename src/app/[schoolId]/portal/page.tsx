@@ -1,4 +1,3 @@
-
 'use client';
 import { useMemo, useState, useEffect, useLayoutEffect, useRef, type ComponentType, type CSSProperties } from 'react';
 import Link from 'next/link';
@@ -10,6 +9,7 @@ import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { motion, useReducedMotion } from 'framer-motion';
+import { staggerContainer, staggerItem, springCinematic } from '@/lib/animation';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -57,6 +57,11 @@ function staffLandingPath(schoolId: string, type: StaffPortalLoginOption['type']
     if (type === 'prizeClerk') return `/${schoolId}/admin`;
     if (type === 'reports') return `/${schoolId}/reports`;
     return `/${schoolId}/teacher`;
+}
+
+function adminSignInForTeacherPortalPath(schoolId: string) {
+    const teacherPath = `/${schoolId}/teacher`;
+    return `/${schoolId}/admin-signin?redirect=${encodeURIComponent(teacherPath)}`;
 }
 
 export default function PortalPage() {
@@ -288,9 +293,7 @@ export default function PortalPage() {
                 <motion.h2
                     initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.94 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    transition={
-                        prefersReducedMotion ? { duration: 0 } : { duration: 0.34, ease: [0.22, 1, 0.36, 1] }
-                    }
+                    transition={prefersReducedMotion ? { duration: 0 } : springCinematic}
                     className={cn(
                         'font-headline inline-block font-black tracking-tighter drop-shadow-md',
                         settings.displayMode === 'app'
@@ -310,8 +313,11 @@ export default function PortalPage() {
             </div>
 
             <div className="pointer-events-none fixed inset-x-0 top-0 z-[10] flex h-[100dvh] min-h-0 items-center justify-center px-4 sm:px-6">
-                <div
+                <motion.div
                     ref={gridRef}
+                    variants={prefersReducedMotion ? undefined : staggerContainer}
+                    initial={prefersReducedMotion ? false : 'hidden'}
+                    animate="show"
                     className={cn(
                         'pointer-events-auto grid w-full max-w-6xl gap-3 sm:gap-5',
                         settings.displayMode === 'app' ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-1 md:grid-cols-3',
@@ -329,20 +335,7 @@ export default function PortalPage() {
                         const needsTeacherLogin = area.id === 'print' && loginState === 'school';
                         const portalCard = (
                                 <motion.div
-                                    initial={
-                                        prefersReducedMotion ? false : { opacity: 0, x: -50 }
-                                    }
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={
-                                        prefersReducedMotion
-                                            ? { duration: 0 }
-                                            : {
-                                                  type: 'spring',
-                                                  stiffness: 420,
-                                                  damping: 28,
-                                                  delay: Math.min(0.06 + index * 0.035, 0.28),
-                                              }
-                                    }
+                                    variants={prefersReducedMotion ? undefined : staggerItem}
                                     className={cn(
                                         'relative overflow-hidden rounded-3xl border border-border bg-card text-left shadow-sm',
                                         settings.displayMode === 'app' ? 'px-5 py-5 sm:px-6 sm:py-6 min-h-0 sm:min-h-[210px] h-full flex flex-col' : 'px-6 py-6 min-h-[196px] sm:min-h-[210px]',
@@ -454,18 +447,21 @@ export default function PortalPage() {
                             </Link>
                         );
                     })}
-                </div>
+                </motion.div>
             </div>
 
-                <Dialog open={adminDialogOpen} onOpenChange={(open) => {
-                    if (!open) {
-                        setAdminSubmitting(false);
-                        setAdminPasscode('');
-                    } else if (schoolId) {
-                        router.prefetch(`/${schoolId}/admin`);
-                    }
-                    setAdminDialogOpen(open);
-                }}>
+                <Dialog
+                    open={adminDialogOpen}
+                    onOpenChange={(open) => {
+                        if (!open) {
+                            setAdminSubmitting(false);
+                            setAdminPasscode('');
+                        } else if (schoolId) {
+                            router.prefetch(`/${schoolId}/admin`);
+                        }
+                        setAdminDialogOpen(open);
+                    }}
+                >
                     <DialogContent className="sm:max-w-md">
                         <DialogHeader>
                             <DialogTitle className="font-headline font-black tracking-tight">Admin passcode</DialogTitle>
@@ -526,7 +522,7 @@ export default function PortalPage() {
                                 onClick={() => setAdminDialogOpen(false)}
                                 disabled={adminSubmitting}
                             >
-                                Cancel
+                                Back
                             </Button>
                             <Button
                                 type="button"
@@ -598,18 +594,14 @@ export default function PortalPage() {
                                 type="button"
                                 variant="outline"
                                 className="w-full rounded-xl font-bold"
-                                asChild
+                                onClick={() => {
+                                    playSound('click');
+                                    setTeacherDialogOpen(false);
+                                    setAdminDialogOpen(true);
+                                }}
                             >
-                                <Link
-                                    href={`/${schoolId}/admin-signin`}
-                                    onClick={() => {
-                                        playSound('click');
-                                        setTeacherDialogOpen(false);
-                                    }}
-                                >
-                                    <ShieldCheck className="mr-2 h-4 w-4" aria-hidden />
-                                    Sign in as admin
-                                </Link>
+                                <ShieldCheck className="mr-2 h-4 w-4" aria-hidden />
+                                Sign in as admin
                             </Button>
                         )}
 

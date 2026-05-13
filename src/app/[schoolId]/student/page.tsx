@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useRef, useCallback, useMemo, RefObject } from 'react';
@@ -44,6 +43,8 @@ import type { Student, Prize, HistoryItem, Class, LibraryItem, PrizeAiFunReward 
 import { performKioskAttendanceSignIn, describeAttendanceKioskOutcome } from '@/lib/attendance/kioskSignIn';
 import DynamicIcon from '@/components/DynamicIcon';
 import { Progress } from '@/components/ui/progress';
+import { useReducedMotion } from 'framer-motion';
+import { useStaggeredCardListEntrance } from '@/hooks/useStaggeredCardListEntrance';
 import { cn, getStudentNickname, getContrastColor } from '@/lib/utils';
 import { resolveStudentThemeWithSchoolDefault, primaryForegroundFor } from '@/lib/themeContrast';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
@@ -398,6 +399,7 @@ function StudentDashboardInner({
       : showCameraCoupon && !showManualCoupon
         ? 'Scan the coupon QR or barcode with the webcam. Use the Logout button on this card to exit.'
         : 'Scan or type a coupon code to add points. Use the camera tab to scan a QR code. Use the Logout button on this card to exit.';
+  const prefersReducedMotion = useReducedMotion();
   const authFetch = useAuthFetch();
   const isGraphic = settings.graphicMode === 'graphics';
   const animBackdrop = globalAnimatedBackdropActive(settings);
@@ -500,6 +502,14 @@ function StudentDashboardInner({
 
   const classesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'classes') : null, [firestore, schoolId]);
   const { data: classes } = useCollection<Class>(classesQuery);
+
+  const rewardGridRef = useRef<HTMLDivElement>(null);
+
+  useStaggeredCardListEntrance(rewardGridRef, {
+    dependencies: [rewardPrizes, prizesLoading],
+    skip: prizesLoading,
+    reducedMotion: !!prefersReducedMotion,
+  });
 
   const [couponCode, setCouponCode] = useState('');
   const [flyPointsValue, setFlyPointsValue] = useState<number | null>(null);
@@ -1837,7 +1847,10 @@ function StudentDashboardInner({
               </CardHeader>
               <CardContent className="px-3 pb-3 pt-2 sm:px-4">
                 <div className="w-full pr-0.5">
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-2 sm:gap-2.5">
+                <div
+                  ref={rewardGridRef}
+                  className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-2 sm:gap-2.5"
+                >
                   {prizesLoading ? (
                     [...Array(8)].map((_, i) => <Skeleton key={i} className="min-h-[7.5rem] sm:min-h-[8rem] w-full rounded-xl" />)
                   ) : rewardPrizes
@@ -1852,14 +1865,15 @@ function StudentDashboardInner({
                       <button
                         type="button"
                         key={reward.id}
+                        data-stagger-card
                         onClick={() => {
                           playSound('click');
                           setConfirmingPrize(reward);
                         }}
                         aria-label={`Redeem ${reward.name || 'prize'}`}
                         className={cn(
-                          "min-h-[7.5rem] sm:min-h-[8rem] min-w-0 p-2 sm:p-2.5 rounded-2xl transition-all flex flex-col items-stretch justify-between text-center gap-1 shadow-sm hover:shadow-md hover:-translate-y-0.5 transform duration-300 group relative overflow-visible cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
-                          !activeTheme && "border border-slate-100 dark:border-slate-800 bg-white/40 dark:bg-slate-800/40",
+                          "reward-card min-h-[7.5rem] sm:min-h-[8rem] min-w-0 p-2 sm:p-2.5 rounded-2xl flex flex-col items-stretch justify-between text-center gap-1 shadow-sm border will-change-transform transition-[transform,box-shadow] duration-500 [transition-timing-function:cubic-bezier(0.22,1,0.36,1)] hover:scale-[1.02] hover:-translate-y-1 hover:shadow-lg motion-reduce:transition-none motion-reduce:hover:scale-100 motion-reduce:hover:translate-y-0 group relative overflow-visible cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+                          !activeTheme && "border-slate-100 dark:border-slate-800 bg-white/40 dark:bg-slate-800/40",
                         )}
                         style={activeTheme ? { backgroundColor: 'var(--theme-bg)', color: 'var(--theme-text)', borderColor: 'var(--theme-primary)', borderWidth: 1, borderStyle: 'solid' } : undefined}
                       >

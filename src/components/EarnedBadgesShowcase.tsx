@@ -3,11 +3,12 @@
 import { useMemo } from 'react';
 import { format } from 'date-fns';
 import { Award } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import DynamicIcon from '@/components/DynamicIcon';
 import type { Badge, Student, StudentTheme } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { staggerContainer, staggerItem } from '@/lib/animation';
 
 const PERIOD_LABELS: Record<string, string> = {
   month: 'Month',
@@ -40,6 +41,7 @@ export interface EarnedBadgesShowcaseProps {
 }
 
 export function EarnedBadgesShowcase({ student, badges, enableBadges, theme, className }: EarnedBadgesShowcaseProps) {
+  const reduceMotion = useReducedMotion();
   const earned = useMemo(() => {
     if (!student.earnedBadges?.length || !badges?.length) return [];
     return student.earnedBadges
@@ -71,13 +73,16 @@ export function EarnedBadgesShowcase({ student, badges, enableBadges, theme, cla
         </div>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {earned.map((b, index) => (
+        <motion.div
+          className="grid grid-cols-2 sm:grid-cols-3 gap-3"
+          variants={reduceMotion ? undefined : staggerContainer}
+          initial={reduceMotion ? false : 'hidden'}
+          animate={reduceMotion ? undefined : 'show'}
+        >
+          {earned.map((b) => (
             <motion.div
               key={`${b.id}-${b.periodKey}`}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: index * 0.05, duration: 0.2 }}
+              variants={reduceMotion ? undefined : staggerItem}
               className="p-4 rounded-xl border-2 flex flex-col items-center text-center gap-2 bg-primary/5 border-primary/30"
               style={b.accentColor ? { borderColor: b.accentColor, backgroundColor: `${b.accentColor}15` } : undefined}
             >
@@ -96,7 +101,7 @@ export function EarnedBadgesShowcase({ student, badges, enableBadges, theme, cla
               )}
             </motion.div>
           ))}
-        </div>
+        </motion.div>
       </CardContent>
     </Card>
   );

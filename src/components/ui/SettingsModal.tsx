@@ -8,6 +8,7 @@ import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogHeader,
     DialogTitle,
     DialogTrigger,
@@ -32,7 +33,7 @@ import {
     BarChart3, MessageSquare, ShoppingBag, ShieldCheck, Star,
     Users, Database, Printer, LayoutDashboard, History, HelpCircle,
     Cpu, Award, Clock, Cog, Lock, Sparkles, Trash2, RotateCcw, Smile, BookOpen, Target, Megaphone, Tv,
-    Layers, UsersRound, Ticket
+    Layers, UsersRound, Ticket, Loader2
 } from 'lucide-react';
 import { useSettings, colorSchemes, type ColorScheme, type Settings as AppSettings } from '../providers/SettingsProvider';
 import type { BackupInfo, StudentTheme } from '@/lib/types';
@@ -233,6 +234,7 @@ function FeatureRow({ id, label, desc, icon, settings, onToggle, onConfigure, is
 export function SettingsModal() {
     const {
         loginState,
+        login,
         isAdmin,
         schoolId,
         getAttendanceConfig,
@@ -247,6 +249,9 @@ export function SettingsModal() {
     const { toast } = useToast();
     const firestore = useFirestore();
     const [open, setOpen] = useState(false);
+    const [adminDialogOpen, setAdminDialogOpen] = useState(false);
+    const [adminPasscode, setAdminPasscode] = useState('');
+    const [adminSubmitting, setAdminSubmitting] = useState(false);
     const [draft, setDraft] = useState<AppSettings | null>(null);
     const [view, setView] = useState<SettingsView>('hub');
     const [vendingSettingsOpen, setVendingSettingsOpen] = useState(false);
@@ -502,6 +507,126 @@ export function SettingsModal() {
 
     return (
         <>
+        <Dialog
+            open={adminDialogOpen}
+            onOpenChange={(open) => {
+                if (!open) {
+                    setAdminSubmitting(false);
+                    setAdminPasscode('');
+                }
+                setAdminDialogOpen(open);
+            }}
+        >
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle className="font-headline font-black tracking-tight">Admin passcode</DialogTitle>
+                    <DialogDescription>Enter the admin passcode for this school to open Admin tools.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-2">
+                    <Label htmlFor="admin-passcode-settings" className="text-xs font-semibold text-muted-foreground">
+                        Passcode
+                    </Label>
+                    <Input
+                        id="admin-passcode-settings"
+                        type="password"
+                        value={adminPasscode}
+                        onChange={(e) => setAdminPasscode(e.target.value)}
+                        className="h-12 rounded-xl font-mono tracking-[0.35em] text-center"
+                        autoComplete="current-password"
+                        autoFocus
+                        onKeyDown={(e) => {
+                            if (e.key !== 'Enter') return;
+                            e.preventDefault();
+                            if (adminSubmitting) return;
+                            if (!schoolId) return;
+                            void (async () => {
+                                if (!adminPasscode.trim()) {
+                                    playSound('error');
+                                    toast({
+                                        variant: 'destructive',
+                                        title: 'Missing passcode',
+                                        description: 'Enter the admin passcode to continue.',
+                                    });
+                                    return;
+                                }
+                                setAdminSubmitting(true);
+                                const authResult = await login('admin', { schoolId, passcode: adminPasscode.trim() });
+                                if (!authResult.ok) {
+                                    setAdminSubmitting(false);
+                                    playSound('error');
+                                    toast({
+                                        variant: 'destructive',
+                                        title: 'Login failed',
+                                        description: authResult.message,
+                                    });
+                                    setAdminPasscode('');
+                                    return;
+                                }
+                                playSound('login');
+                                setAdminDialogOpen(false);
+                                router.replace(`/${schoolId}/admin`);
+                            })();
+                        }}
+                    />
+                </div>
+                <DialogFooter className="gap-2 sm:gap-0">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        className="rounded-xl font-bold"
+                        onClick={() => setAdminDialogOpen(false)}
+                        disabled={adminSubmitting}
+                    >
+                        Back
+                    </Button>
+                    <Button
+                        type="button"
+                        className="rounded-xl font-black"
+                        disabled={adminSubmitting}
+                        onClick={() => {
+                            if (adminSubmitting) return;
+                            if (!schoolId) return;
+                            void (async () => {
+                                if (!adminPasscode.trim()) {
+                                    playSound('error');
+                                    toast({
+                                        variant: 'destructive',
+                                        title: 'Missing passcode',
+                                        description: 'Enter the admin passcode to continue.',
+                                    });
+                                    return;
+                                }
+                                setAdminSubmitting(true);
+                                const authResult = await login('admin', { schoolId, passcode: adminPasscode.trim() });
+                                if (!authResult.ok) {
+                                    setAdminSubmitting(false);
+                                    playSound('error');
+                                    toast({
+                                        variant: 'destructive',
+                                        title: 'Login failed',
+                                        description: authResult.message,
+                                    });
+                                    setAdminPasscode('');
+                                    return;
+                                }
+                                playSound('login');
+                                setAdminDialogOpen(false);
+                                router.replace(`/${schoolId}/admin`);
+                            })();
+                        }}
+                    >
+                        {adminSubmitting ? (
+                            <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+                                Signing in...
+                            </>
+                        ) : (
+                            'Continue'
+                        )}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
         <Dialog open={open} onOpenChange={handleOpenChange}>
             {canOpenSettings ? (
                 <DialogTrigger asChild>
@@ -530,8 +655,7 @@ export function SettingsModal() {
                         e.preventDefault();
                         e.stopPropagation();
                         playSound('click');
-                        const sid = schoolId || (typeof window !== 'undefined' ? window.location.pathname.split('/')[1] : '');
-                        router.push(`/${sid}/admin-signin?redirect=${encodeURIComponent(pathname)}`);
+                        setAdminDialogOpen(true);
                     }}
                 >
                     <Settings className="w-5 h-5 text-muted-foreground group-hover:rotate-45 transition-transform duration-300" />

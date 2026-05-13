@@ -14,6 +14,7 @@ import { useAppContext } from '@/components/AppProvider';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { LogIn, LogOut, UserCheck, Loader2, ShieldCheck } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -138,6 +139,9 @@ export default function TeacherPage() {
     const playSound = useArcadeSound();
     const { toast } = useToast();
 
+    const [adminDialogOpen, setAdminDialogOpen] = useState(false);
+    const [adminPasscode, setAdminPasscode] = useState('');
+    const [adminSubmitting, setAdminSubmitting] = useState(false);
     const [selectedLoginKey, setSelectedLoginKey] = useState('');
     const [passcode, setPasscode] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -365,15 +369,138 @@ export default function TeacherPage() {
                                 )}
                             </Button>
 
-                            <Button type="button" variant="outline" className="w-full h-12 rounded-xl font-bold" asChild>
-                                <Link
-                                    href={`/${schoolId}/admin-signin?redirect=${encodeURIComponent(`/${schoolId}/teacher`)}`}
-                                >
-                                    <ShieldCheck className="mr-2 h-4 w-4" aria-hidden />
-                                    Sign in as admin
-                                </Link>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="w-full h-12 rounded-xl font-bold"
+                                onClick={() => {
+                                    playSound('click');
+                                    setAdminDialogOpen(true);
+                                }}
+                            >
+                                <ShieldCheck className="mr-2 h-4 w-4" aria-hidden />
+                                Sign in as admin
                             </Button>
                         </form>
+
+                        <Dialog
+                            open={adminDialogOpen}
+                            onOpenChange={(open) => {
+                                if (!open) {
+                                    setAdminSubmitting(false);
+                                    setAdminPasscode('');
+                                }
+                                setAdminDialogOpen(open);
+                            }}
+                        >
+                            <DialogContent className="sm:max-w-md">
+                                <DialogHeader>
+                                    <DialogTitle className="font-headline font-black tracking-tight">Admin passcode</DialogTitle>
+                                    <DialogDescription>Enter the admin passcode for this school to open Admin tools.</DialogDescription>
+                                </DialogHeader>
+                                <div className="space-y-2">
+                                    <Label htmlFor="admin-passcode" className="text-xs font-semibold text-muted-foreground">
+                                        Passcode
+                                    </Label>
+                                    <Input
+                                        id="admin-passcode"
+                                        type="password"
+                                        value={adminPasscode}
+                                        onChange={(e) => setAdminPasscode(e.target.value)}
+                                        className="h-12 rounded-xl font-mono tracking-[0.35em] text-center"
+                                        autoComplete="current-password"
+                                        autoFocus
+                                        onKeyDown={(e) => {
+                                            if (e.key !== 'Enter') return;
+                                            e.preventDefault();
+                                            if (adminSubmitting) return;
+                                            void (async () => {
+                                                if (!adminPasscode.trim()) {
+                                                    playSound('error');
+                                                    toast({
+                                                        variant: 'destructive',
+                                                        title: 'Missing passcode',
+                                                        description: 'Enter the admin passcode to continue.',
+                                                    });
+                                                    return;
+                                                }
+                                                setAdminSubmitting(true);
+                                                const authResult = await login('admin', { schoolId, passcode: adminPasscode.trim() });
+                                                if (!authResult.ok) {
+                                                    setAdminSubmitting(false);
+                                                    playSound('error');
+                                                    toast({
+                                                        variant: 'destructive',
+                                                        title: 'Login failed',
+                                                        description: authResult.message,
+                                                    });
+                                                    setAdminPasscode('');
+                                                    return;
+                                                }
+                                                playSound('login');
+                                                setAdminDialogOpen(false);
+                                                router.replace(`/${schoolId}/admin`);
+                                            })();
+                                        }}
+                                    />
+                                </div>
+                                <DialogFooter className="gap-2 sm:gap-0">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="rounded-xl font-bold"
+                                        onClick={() => setAdminDialogOpen(false)}
+                                        disabled={adminSubmitting}
+                                    >
+                                        Back
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        className="rounded-xl font-black"
+                                        disabled={adminSubmitting}
+                                        onClick={() => {
+                                            if (adminSubmitting) return;
+                                            void (async () => {
+                                                if (!adminPasscode.trim()) {
+                                                    playSound('error');
+                                                    toast({
+                                                        variant: 'destructive',
+                                                        title: 'Missing passcode',
+                                                        description: 'Enter the admin passcode to continue.',
+                                                    });
+                                                    return;
+                                                }
+                                                setAdminSubmitting(true);
+                                                const authResult = await login('admin', { schoolId, passcode: adminPasscode.trim() });
+                                                if (!authResult.ok) {
+                                                    setAdminSubmitting(false);
+                                                    playSound('error');
+                                                    toast({
+                                                        variant: 'destructive',
+                                                        title: 'Login failed',
+                                                        description: authResult.message,
+                                                    });
+                                                    setAdminPasscode('');
+                                                    return;
+                                                }
+                                                playSound('login');
+                                                setAdminDialogOpen(false);
+                                                router.replace(`/${schoolId}/admin`);
+                                            })();
+                                        }}
+                                    >
+                                        {adminSubmitting ? (
+                                            <>
+                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+                                                Signing in...
+                                            </>
+                                        ) : (
+                                            'Continue'
+                                        )}
+                                    </Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
                     </CardContent>
                 </Card>
             </div>

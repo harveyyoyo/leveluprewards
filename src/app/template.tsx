@@ -1,13 +1,13 @@
 'use client';
 
 import { motion, useReducedMotion } from 'framer-motion';
-
-/** Smooth product UI easing: soft deceleration, no bounce. */
-const PAGE_EASE = [0.22, 1, 0.36, 1] as const;
+import { springCinematic } from '@/lib/animation';
 
 /**
  * Next.js `template.tsx` remounts on route changes, so this runs a subtle enter
  * transition for every page without wiring pathname keys manually.
+ *
+ * Uses shared easing from `@/lib/animation` for cross-dashboard consistency.
  */
 export default function AppRouteTemplate({ children }: { children: React.ReactNode }) {
   const reduceMotion = useReducedMotion();
@@ -31,10 +31,7 @@ export default function AppRouteTemplate({ children }: { children: React.ReactNo
         scale: 1,
         filter: 'blur(0px)',
       }}
-      transition={{
-        duration: reduceMotion ? 0 : 0.68,
-        ease: PAGE_EASE,
-      }}
+      transition={reduceMotion ? { duration: 0 } : springCinematic}
       style={{ willChange: reduceMotion ? 'auto' : 'opacity, transform, filter' }}
     >
       {children}

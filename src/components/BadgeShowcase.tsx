@@ -3,10 +3,11 @@
 import { useMemo } from 'react';
 import { format } from 'date-fns';
 import { Lock, Trophy } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import DynamicIcon from '@/components/DynamicIcon';
 import type { Achievement, Student, StudentTheme } from '@/lib/types';
+import { staggerContainer, staggerItem } from '@/lib/animation';
 import { cn } from '@/lib/utils';
 
 const TIER_STYLES: Record<NonNullable<Achievement['tier']>, { border: string; bg: string; text: string }> = {
@@ -25,6 +26,7 @@ export interface BadgeShowcaseProps {
 }
 
 export function BadgeShowcase({ student, achievements, enableAchievements, theme, className }: BadgeShowcaseProps) {
+  const reduceMotion = useReducedMotion();
   const earnedSet = useMemo(
     () => new Set((student.earnedAchievements || []).map((e) => e.achievementId)),
     [student.earnedAchievements]
@@ -58,8 +60,13 @@ export function BadgeShowcase({ student, achievements, enableAchievements, theme
         </div>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {achievements.map((ach, index) => {
+        <motion.div
+          className="grid grid-cols-2 sm:grid-cols-3 gap-3"
+          variants={reduceMotion ? undefined : staggerContainer}
+          initial={reduceMotion ? false : 'hidden'}
+          animate={reduceMotion ? undefined : 'show'}
+        >
+          {achievements.map((ach) => {
             const earned = earnedSet.has(ach.id);
             const earnedAt = earnedByAchievement.get(ach.id);
             const tierStyle = ach.tier ? TIER_STYLES[ach.tier] : null;
@@ -74,9 +81,7 @@ export function BadgeShowcase({ student, achievements, enableAchievements, theme
             return (
               <motion.div
                 key={ach.id}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: index * 0.05, duration: 0.2 }}
+                variants={reduceMotion ? undefined : staggerItem}
                 className={cn(
                   'relative p-4 rounded-xl border-2 transition-all flex flex-col items-center text-center gap-2 min-h-[120px]',
                   earned
@@ -121,7 +126,7 @@ export function BadgeShowcase({ student, achievements, enableAchievements, theme
               </motion.div>
             );
           })}
-        </div>
+        </motion.div>
       </CardContent>
     </Card>
   );

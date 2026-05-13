@@ -18,6 +18,7 @@ import { getLevelUpLogoHref } from '@/lib/app-branding';
 
 import { motion } from 'framer-motion';
 import { rainbowTripletForNavId, complementTripletForNavId } from '@/lib/rainbowNav';
+import { springCinematic } from '@/lib/animation';
 
 type BulletinIncentive = {
   id: string;
@@ -149,7 +150,7 @@ export default function BulletinBoardViewPage() {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
+        transition={springCinematic}
         className={cn('w-full text-center mb-10', isFullscreen ? 'max-w-none' : 'max-w-4xl')}
       >
         <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tighter text-primary drop-shadow-sm mb-3 flex items-center justify-center gap-3">
