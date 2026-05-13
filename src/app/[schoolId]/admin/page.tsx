@@ -101,6 +101,7 @@ import { SAMPLE_BADGES, getSampleCategoryBadges } from '@/lib/sample-badges';
 // code-split with `next/dynamic` so its chunk is only fetched when the admin
 // actually clicks into it — this dramatically reduces the initial admin JS.
 import { AdminStudentsTab } from './sections/AdminStudentsTab';
+import { AdminLibraryTab } from './sections/AdminLibraryTab';
 import { budgetWindowKeyForDate } from '@/lib/teacherBudget';
 import { resolveIdCardPrintJobOptions } from '@/lib/id-card-print-catalog';
 
@@ -138,10 +139,6 @@ const AdminPrizesTab = dynamic(
 );
 const AdminCouponsTab = dynamic(
   () => import('./sections/AdminCouponsTab').then((m) => m.AdminCouponsTab),
-  { loading: tabLoader, ssr: false },
-);
-const AdminLibraryTab = dynamic(
-  () => import('./sections/AdminLibraryTab').then((m) => m.AdminLibraryTab),
   { loading: tabLoader, ssr: false },
 );
 const AdminAttendanceTab = dynamic(
