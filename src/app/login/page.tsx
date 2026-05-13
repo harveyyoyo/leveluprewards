@@ -1,23 +1,33 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { SchoolDeveloperLoginForm } from '@/components/SchoolDeveloperLoginForm';
 
-function LoginFallback() {
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground p-6 text-center">
-      <div className="animate-pulse mb-4 text-primary font-bold text-xl uppercase tracking-tighter">Loading levelUp EDU…</div>
-    </div>
-  );
+function readSchoolFromUrl(): string {
+  if (typeof window === 'undefined') return '';
+  try {
+    return (new URLSearchParams(window.location.search).get('school') || '').trim();
+  } catch {
+    return '';
+  }
 }
 
-function LoginFormWithQuery() {
-  const sp = useSearchParams();
-  const schoolFromQuery = (sp.get('school') || '').trim();
-  const [initialSchoolId, setInitialSchoolId] = useState<string | undefined>(
-    schoolFromQuery ? schoolFromQuery : undefined,
-  );
+/**
+ * Avoid `useSearchParams()` here: it suspends under the App Router and can leave `/login`
+ * on a generic loading fallback until the client hydrates query handling.
+ */
+export default function LoginPage() {
+  const pathname = usePathname();
+  const [schoolFromQuery, setSchoolFromQuery] = useState('');
+  const [initialSchoolId, setInitialSchoolId] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    const read = () => setSchoolFromQuery(readSchoolFromUrl());
+    read();
+    window.addEventListener('popstate', read);
+    return () => window.removeEventListener('popstate', read);
+  }, [pathname]);
 
   useEffect(() => {
     if (schoolFromQuery) {
@@ -31,7 +41,6 @@ function LoginFormWithQuery() {
       if (ref) {
         const u = new URL(ref);
         const first = u.pathname.split('/').filter(Boolean)[0] || '';
-        // If we came from a school-scoped route like `/{schoolId}/…`, infer that schoolId.
         if (first && !['login', 'developer', 'api'].includes(first)) {
           fromReferrer = first;
         }
@@ -52,12 +61,4 @@ function LoginFormWithQuery() {
   }, [schoolFromQuery]);
 
   return <SchoolDeveloperLoginForm mode="full" initialSchoolId={initialSchoolId} />;
-}
-
-export default function LoginPage() {
-  return (
-    <Suspense fallback={<LoginFallback />}>
-      <LoginFormWithQuery />
-    </Suspense>
-  );
 }

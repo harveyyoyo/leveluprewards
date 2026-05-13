@@ -248,6 +248,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return;
         }
 
+        let cancelled = false;
+        const bootTimeout = window.setTimeout(() => {
+            if (!cancelled) {
+                console.warn(
+                    'AuthProvider: session restore exceeded failsafe time; allowing UI so login and navigation are not blocked.',
+                );
+                setIsInitialized(true);
+            }
+        }, 18_000);
+
         const restore = async () => {
             try {
             const savedState = localStorage.getItem('loginState') as LoginState | null;
@@ -435,11 +445,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             } catch (e) {
                 console.error('Auth session restore failed:', e);
             } finally {
-                setIsInitialized(true);
+                window.clearTimeout(bootTimeout);
+                if (!cancelled) {
+                    setIsInitialized(true);
+                }
             }
         };
 
         void restore();
+        return () => {
+            cancelled = true;
+            window.clearTimeout(bootTimeout);
+        };
     }, [isMounted, isUserLoading, firestore, auth, returnToSchoolSession]);
 
     // Student kiosk: `login()` already calls `enterSchoolKioskSession`, but session restore from localStorage
