@@ -49,7 +49,7 @@ type Props = {
 
 export function StudentCsvColumnMapDialog({ open, onOpenChange, csvText, onConfirm }: Props) {
   const { rows } = useMemo(() => parseStudentCsvToMatrix(csvText), [csvText]);
-  const headers = rows[0] || [];
+  const headers = useMemo(() => rows[0] || [], [rows]);
   const [columnMap, setColumnMap] = useState<StudentCsvMappedField[]>([]);
 
   useEffect(() => {
