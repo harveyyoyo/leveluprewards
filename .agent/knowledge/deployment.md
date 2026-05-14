@@ -7,6 +7,7 @@ Before any deployment, the site must be thoroughly tested to ensure it is workin
 - [ ] **Core Portals**: Verify that the Student Kiosk, Teacher Portal, and Admin Portal are accessible.
 - [ ] **Data Sync**: Confirm that Firebase Firestore synchronization is working.
 - [ ] **No Console Errors**: Check the browser console for any critical errors.
+- [ ] **Edge session cookies**: In production, school hub routes require an HttpOnly Firebase session cookie minted by `POST /api/auth/session`. The hosting runtime must be able to initialize **Firebase Admin** (Application Default Credentials or `GOOGLE_APPLICATION_CREDENTIALS`). Optional overrides: `DISABLE_AUTH_SESSION_EDGE=1` turns off middleware enforcement; `AUTH_SESSION_EDGE_ENFORCEMENT=1` forces it on in development for testing.
 
 ## Firestore Rules Drift
 

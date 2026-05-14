@@ -19,6 +19,11 @@ import { getReadableErrorMessage } from '@/lib/errorMessage';
 import { loginErr, loginOk, messageFromVerifySchoolAccessError, type LoginResult } from '@/lib/loginResult';
 import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
 import { APP_NAME } from '@/lib/appBranding';
+import {
+    syncFirebaseSessionCookie,
+    clearFirebaseSessionCookieSync,
+} from '@/lib/auth/syncFirebaseSessionCookie';
+import { sanitizeInternalNextPath } from '@/lib/auth/internalNextRedirect';
 
 export type SyncStatus = 'synced' | 'syncing' | 'offline' | 'error';
 export type LoginState = 'loggedOut' | 'school' | 'developer' | 'student' | 'teacher' | 'admin' | 'secretary' | 'prizeClerk' | 'reports';
@@ -205,6 +210,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             localStorage.removeItem('loginState');
             setLoginState('loggedOut');
             setIsAdmin(false);
+            clearFirebaseSessionCookieSync();
             router.push('/');
         } else if (
             loginState === 'admin' ||
@@ -229,6 +235,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const dest = options?.studentNavigateTo === 'portal' ? 'portal' : 'student';
             router.push(`/${schoolId}/${dest}`);
         } else {
+            clearFirebaseSessionCookieSync();
             localStorage.removeItem('loginState');
             localStorage.removeItem('schoolId');
             localStorage.removeItem(DEVELOPER_SUPPORT_SESSION_KEY);
@@ -454,6 +461,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             window.clearTimeout(bootTimeout);
         };
     }, [isMounted, isUserLoading, firestore, auth, returnToSchoolSession]);
+
+    /**
+     * Mint HttpOnly Firebase session cookie whenever the app has an active (non-logged-out) session.
+     * Edge middleware can then reject anonymous HTML navigations to school routes without this cookie.
+     * After middleware redirects to `/login?...&next=`, sync here then hard-navigate to `next`.
+     */
+    useEffect(() => {
+        if (!isInitialized || isUserLoading || loginState === 'loggedOut' || !auth?.currentUser) {
+            return;
+        }
+        let cancelled = false;
+        void (async () => {
+            const ok = await syncFirebaseSessionCookie(auth);
+            if (cancelled || !ok) return;
+            if (typeof window === 'undefined') return;
+            if (window.location.pathname !== '/login') return;
+            const params = new URLSearchParams(window.location.search);
+            const next = params.get('next');
+            if (!next) return;
+            const schoolParam = (params.get('school') || schoolId || '').trim().toLowerCase();
+            if (!schoolParam) return;
+            const target = sanitizeInternalNextPath(next, schoolParam);
+            if (!target) return;
+            window.location.assign(target);
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, [isInitialized, isUserLoading, loginState, auth, schoolId]);
 
     // Student kiosk: `login()` already calls `enterSchoolKioskSession`, but session restore from localStorage
     // (refresh, new tab, or fallback from expired staff role) skipped it — then badge lookup fails with
