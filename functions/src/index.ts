@@ -3238,13 +3238,14 @@ exports.adminSendTestNotification = functions.https.onCall(async (data: any, con
 });
 
 /**
- * Weekly parent digest (Sunday 15:00 UTC). Sends email/SMS to parents who opted in on the student record
- * when `notificationParentWeeklyDigestEnabled` is on for the school.
+ * Weekly parent digest (Sunday 15:00 America/New_York — Eastern Time, DST-aware).
+ * Sends email/SMS to parents who opted in on the student record when
+ * `notificationParentWeeklyDigestEnabled` is on for the school.
  */
 exports.scheduledParentWeeklyDigest = functions
   .runWith({ timeoutSeconds: 300, memory: "512MB" })
   .pubsub.schedule("0 15 * * 0")
-  .timeZone("UTC")
+  .timeZone("America/New_York")
   .onRun(async () => {
     const db = admin.firestore();
     const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;

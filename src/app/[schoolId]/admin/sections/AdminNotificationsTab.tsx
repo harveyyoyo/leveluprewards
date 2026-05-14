@@ -784,8 +784,8 @@ export function AdminNotificationsTab() {
             <div className="space-y-0.5">
               <Label className="text-sm font-bold">Weekly parent digest</Label>
               <p className="text-[11px] text-muted-foreground">
-                Sends a Sunday summary to parents who opted in on each student (parent email or SMS). Requires
-                Notifications on and valid parent contact.
+                Sends a Sunday summary (3:00 PM Eastern / New York time) to parents who opted in on each student
+                (parent email or SMS). Requires Notifications on and valid parent contact.
               </p>
             </div>
             <Switch
