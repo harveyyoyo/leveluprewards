@@ -324,7 +324,7 @@ export default function HallOfFamePage() {
                 bonusReward: g.bonusPointsReward
             }));
         }
-    }, [rankType, allTopStudents, classes, allGoals, goalsProgressMap, scope, sortBy, limit, getClassName, getPointsForStudent]);
+    }, [rankType, allTopStudents, classes, allGoals, goalsProgressMap, scope, sortBy, limit, getClassName, getPointsForStudent, settings.privacyStudentNameDisplayMode]);
 
     // Auto-scroll logic
     useEffect(() => {

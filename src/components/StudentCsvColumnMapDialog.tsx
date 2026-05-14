@@ -55,7 +55,7 @@ export function StudentCsvColumnMapDialog({ open, onOpenChange, csvText, onConfi
   useEffect(() => {
     if (!open || headers.length === 0) return;
     setColumnMap(guessStudentCsvColumnMap(headers));
-  }, [open, csvText, headers.length]);
+  }, [open, headers]);
 
   const firstIdx = columnMap.indexOf('firstName');
   const lastIdx = columnMap.indexOf('lastName');
