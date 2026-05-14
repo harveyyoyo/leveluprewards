@@ -1456,7 +1456,7 @@ function StudentDashboardInner({
                     asChild
                   >
                     <Link href={`/${schoolId}/student/welcome`}>
-                      <Sparkles className="h-3.5 w-3.5" aria-hidden />
+                      <Sparkles className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
                       Welcome styles
                     </Link>
                   </Button>

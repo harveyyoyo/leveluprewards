@@ -1006,16 +1006,17 @@ function ConfettiGreeting({ name, hour, palette }: StyleProps) {
         >
           <span className="animate-wiggle inline-block">👋</span> Good {timeOfDay(hour)}!
         </div>
-        <h1 className="animate-pop-in text-6xl font-black leading-[1.05] tracking-tight sm:text-8xl">
-          Hey,{" "}
+        <h1 className="animate-pop-in text-7xl font-black leading-[0.95] tracking-tighter drop-shadow-sm sm:text-9xl">
+          <span className="block opacity-90">Hey,</span>
           <span
-            className="animate-shimmer bg-clip-text text-transparent"
+            className="animate-shimmer mt-2 block bg-clip-text text-transparent"
             style={{
               backgroundImage: `linear-gradient(135deg, ${colors[0]}, ${colors[1]}, ${colors[2]}, ${colors[3]})`,
               backgroundSize: "200% 200%",
             }}
           >
-            {name}!
+            {name}
+            <span className="ml-1 inline-block animate-wiggle">✨</span>
           </span>
         </h1>
         <p className="animate-rise mt-6 text-xl opacity-80" style={{ animationDelay: "0.4s" }}>
