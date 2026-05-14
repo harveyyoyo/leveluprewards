@@ -410,55 +410,8 @@ function StudentDashboardInner({
   const hasShownWelcomeRef = useRef<string | null>(null);
   const dismissWelcome = useCallback(() => setShowWelcome(false), []);
 
-  // Student kiosk should stay open indefinitely:
-  // - Do not auto-logout on a countdown.
-  // - Keep the screen awake (where supported).
-  // - Refresh auth token periodically so the kiosk session doesn't expire due to inactivity.
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (typeof document === 'undefined') return;
-
-    let cancelled = false;
-    let wakeLock: any = null;
-
-    const requestWakeLock = async () => {
-      try {
-        if (cancelled) return;
-        const navAny = navigator as any;
-        if (!navAny?.wakeLock?.request) return;
-        wakeLock = await navAny.wakeLock.request('screen');
-        wakeLock?.addEventListener?.('release', () => {});
-      } catch {
-        // Wake Lock is best-effort: ignore errors (unsupported, permission, etc.).
-      }
-    };
-
-    const onVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        void requestWakeLock();
-      }
-    };
-
-    void requestWakeLock();
-    document.addEventListener('visibilitychange', onVisibility);
-
-    const refreshId = window.setInterval(() => {
-      const user = auth?.currentUser;
-      if (!user) return;
-      void user.getIdToken(true).catch(() => {});
-    }, 5 * 60 * 1000);
-
-    return () => {
-      cancelled = true;
-      document.removeEventListener('visibilitychange', onVisibility);
-      window.clearInterval(refreshId);
-      try {
-        void wakeLock?.release?.();
-      } catch {
-        // ignore
-      }
-    };
-  }, [auth]);
+  // Wake Lock and auth token refresh are now handled globally at the top level of StudentLoginPage
+  // to protect the session during both active and idle login scanner states.
 
   useEffect(() => {
     // Only show welcome if it's a new student ID session
@@ -1595,7 +1548,9 @@ function StudentDashboardInner({
                       value="manual" 
                       className={cn(
                         "text-[12px] font-bold rounded-lg data-[state=active]:shadow-sm flex items-center gap-1.5 py-1 min-w-0",
-                        !activeTheme && "data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700",
+                        !activeTheme &&
+                          "data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm",
+                        activeTheme && "hover:bg-[var(--theme-card)] hover:text-[var(--theme-text)] hover:shadow-sm",
                       )}
                       style={activeTheme && activeTab === 'manual' ? { backgroundColor: 'var(--theme-card)', color: 'var(--theme-text)' } : undefined}
                     >
@@ -1605,7 +1560,9 @@ function StudentDashboardInner({
                       value="camera" 
                       className={cn(
                         "text-[12px] font-bold rounded-lg data-[state=active]:shadow-sm flex items-center gap-1.5 py-1 min-w-0",
-                        !activeTheme && "data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700",
+                        !activeTheme &&
+                          "data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm",
+                        activeTheme && "hover:bg-[var(--theme-card)] hover:text-[var(--theme-text)] hover:shadow-sm",
                       )}
                       style={activeTheme && activeTab === 'camera' ? { backgroundColor: 'var(--theme-card)', color: 'var(--theme-text)' } : undefined}
                     >
@@ -1876,7 +1833,7 @@ function StudentDashboardInner({
                         }}
                         aria-label={`Redeem ${reward.name || 'prize'}`}
                         className={cn(
-                          "reward-card min-h-[7.5rem] sm:min-h-[8rem] min-w-0 p-2 sm:p-2.5 rounded-2xl flex flex-col items-stretch justify-between text-center gap-1 shadow-sm border will-change-transform transition-[transform,box-shadow] duration-500 [transition-timing-function:cubic-bezier(0.22,1,0.36,1)] hover:scale-[1.02] hover:-translate-y-1 hover:shadow-lg motion-reduce:transition-none motion-reduce:hover:scale-100 motion-reduce:hover:translate-y-0 group relative overflow-visible cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+                          "reward-card min-h-[7.5rem] sm:min-h-[8rem] min-w-0 p-2 sm:p-2.5 rounded-2xl flex flex-col items-stretch justify-between text-center gap-1 shadow-sm border transition-[box-shadow] duration-500 [transition-timing-function:cubic-bezier(0.22,1,0.36,1)] hover:shadow-lg motion-reduce:transition-none group relative overflow-visible cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
                           !activeTheme && "border-slate-100 dark:border-slate-800 bg-white/40 dark:bg-slate-800/40",
                         )}
                         style={activeTheme ? { backgroundColor: 'var(--theme-bg)', color: 'var(--theme-text)', borderColor: 'var(--theme-primary)', borderWidth: 1, borderStyle: 'solid' } : undefined}
@@ -2232,7 +2189,7 @@ export default function StudentLoginPage() {
   const { settings } = useSettings();
   const isGraphic = settings.graphicMode === 'graphics';
   const animBackdrop = globalAnimatedBackdropActive(settings);
-  const { firestore } = useFirebase();
+  const { firestore, auth } = useFirebase();
   const appConfigDocRef = useMemoFirebase(() => {
     if (!firestore) return null;
     return doc(firestore, 'appConfig', 'global');
@@ -2241,6 +2198,69 @@ export default function StudentLoginPage() {
   const { data: appConfig } = useDoc<{ appLogoUrl?: string }>(appConfigDocRef);
 
   const { activeStudentId, setActiveStudentId, handleDone, loginMeta, setLoginMeta } = useStudentKioskSession();
+  
+  const [wakeLockStatus, setWakeLockStatus] = useState<'pending' | 'active' | 'unsupported' | 'error'>('pending');
+
+  // Global Kiosk persistence:
+  // - Keep the screen awake indefinitely (if supported) across scanner and user dashboard states.
+  // - Refresh the Firebase Auth token in the background so the kiosk session doesn't timeout.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (typeof document === 'undefined') return;
+
+    let cancelled = false;
+    let wakeLock: any = null;
+
+    const requestWakeLock = async () => {
+      const navAny = navigator as any;
+      if (!navAny?.wakeLock?.request) {
+        setWakeLockStatus('unsupported');
+        return;
+      }
+
+      try {
+        if (cancelled) return;
+        wakeLock = await navAny.wakeLock.request('screen');
+        if (!cancelled) {
+          setWakeLockStatus('active');
+        }
+        wakeLock?.addEventListener?.('release', () => {
+          if (!cancelled) setWakeLockStatus('pending');
+        });
+      } catch (err) {
+        if (!cancelled) {
+          setWakeLockStatus('error');
+        }
+      }
+    };
+
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        void requestWakeLock();
+      }
+    };
+
+    void requestWakeLock();
+    document.addEventListener('visibilitychange', onVisibility);
+
+    const refreshId = window.setInterval(() => {
+      const user = auth?.currentUser;
+      if (!user) return;
+      void user.getIdToken(true).catch(() => {});
+    }, 5 * 60 * 1000);
+
+    return () => {
+      cancelled = true;
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.clearInterval(refreshId);
+      try {
+        void wakeLock?.release?.();
+      } catch {
+        // ignore
+      }
+    };
+  }, [auth]);
+
   const [studentTransition, setStudentTransition] = useState<{
     id: string;
     startedAt: number;
@@ -2472,6 +2492,18 @@ export default function StudentLoginPage() {
           </div>
         </TooltipProvider>
         <KioskSponsorBanner />
+        
+        {(wakeLockStatus === 'error' || wakeLockStatus === 'unsupported') && (
+          <div 
+            className="no-print fixed bottom-4 right-4 z-50 pointer-events-auto flex items-center gap-1.5 rounded-full bg-card/80 hover:bg-card border border-border/60 px-2.5 py-1 text-[9px] font-bold text-muted-foreground backdrop-blur-md shadow-md transition-all select-none cursor-help" 
+            title={wakeLockStatus === 'error' ? "Browser blocked Screen Wake Lock. Kiosk device might fall asleep. Grant permission or tap user interaction." : "Wake Lock is not supported on this browser."}
+          >
+            <div className={`h-1.5 w-1.5 rounded-full ${wakeLockStatus === 'error' ? 'bg-amber-500 animate-pulse' : 'bg-slate-400 dark:bg-slate-600'}`} />
+            <span className="uppercase tracking-wider">
+              {wakeLockStatus === 'error' ? 'Wake Lock Blocked' : 'Screen Lock Unavail.'}
+            </span>
+          </div>
+        )}
       </div>
     </ErrorBoundary>
   );

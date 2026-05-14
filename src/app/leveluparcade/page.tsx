@@ -212,7 +212,7 @@ export default function LevelUpArcadeLandingPage() {
             <div
               key={item.title}
               className={cn(
-                'group relative overflow-hidden rounded-3xl border border-white/[0.06] bg-white/[0.02] p-6 backdrop-blur-md transition-all duration-300 hover:-translate-y-1',
+                'group relative overflow-hidden rounded-3xl border border-white/[0.06] bg-white/[0.02] p-6 backdrop-blur-md transition-all duration-300',
                 item.border,
               )}
               style={{

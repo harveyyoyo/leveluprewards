@@ -22,6 +22,7 @@ import { springCinematic } from '@/lib/animation';
 import { Card, CardContent } from '@/components/ui/card';
 import { useSchoolMetadataDocRef } from '@/hooks/useSchoolMetadataDocRef';
 import { getLevelUpLogoHref } from '@/lib/app-branding';
+import { useToast } from '@/hooks/use-toast';
 
 function HallOfFameSkeleton({ animBackdrop }: { animBackdrop: boolean }) {
     return (
@@ -46,6 +47,7 @@ function HallOfFameSkeleton({ animBackdrop }: { animBackdrop: boolean }) {
 
 export default function HallOfFamePage() {
     const { loginState, isInitialized, schoolId } = useAppContext();
+    const { toast } = useToast();
     const firestore = useFirestore();
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -135,10 +137,15 @@ export default function HallOfFamePage() {
 
     useEffect(() => {
         if (isInitialized && !canAccessHallOfFameRoute(loginState)) {
+            toast({
+                variant: "destructive",
+                title: "Authorization Required",
+                description: "Please sign in to access the Hall of Fame display.",
+            });
             const q = schoolId ? `?school=${encodeURIComponent(schoolId)}` : '';
             router.replace(`/login${q}`);
         }
-    }, [isInitialized, loginState, router, schoolId]);
+    }, [isInitialized, loginState, router, schoolId, toast]);
 
     const currentPeriodKeys = useMemo(() => getPeriodKeys(Date.now()), []);
 
@@ -491,7 +498,7 @@ export default function HallOfFamePage() {
                                     transition={{ ...springCinematic, delay: 0.2 }}
                                     className="text-center md:order-2 order-1"
                                 >
-                                    <div className="bg-primary/5 backdrop-blur-md border-4 border-primary/20 rounded-t-[4rem] rounded-b-3xl p-6 md:p-8 relative shadow-2xl h-72 md:h-80 flex flex-col justify-end transition-all hover:-translate-y-2">
+                                    <div className="bg-primary/5 backdrop-blur-md border-4 border-primary/20 rounded-t-[4rem] rounded-b-3xl p-6 md:p-8 relative shadow-2xl h-72 md:h-80 flex flex-col justify-end transition-all">
                                         <div className="absolute -top-10 left-1/2 -translate-x-1/2 flex flex-col items-center">
                                             <Crown className="w-12 h-12 sm:w-16 sm:h-16 text-chart-5 animate-float drop-shadow-lg" />
                                         </div>
@@ -512,7 +519,7 @@ export default function HallOfFamePage() {
                                         transition={{ ...springCinematic, delay: 0.4 }}
                                         className="text-center md:order-1 order-2"
                                     >
-                                        <div className="bg-card/40 backdrop-blur-sm border-2 border-border rounded-3xl p-6 md:p-8 relative h-56 md:h-64 flex flex-col justify-end shadow-lg transition-all hover:shadow-xl hover:-translate-y-1">
+                                        <div className="bg-card/40 backdrop-blur-sm border-2 border-border rounded-3xl p-6 md:p-8 relative h-56 md:h-64 flex flex-col justify-end shadow-lg transition-all hover:shadow-xl">
                                             <div className="absolute -top-6 left-1/2 -translate-x-1/2 flex flex-col items-center">
                                                 <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-muted-foreground font-black text-xl border-4 border-background">2</div>
                                             </div>
@@ -534,7 +541,7 @@ export default function HallOfFamePage() {
                                         transition={{ ...springCinematic, delay: 0.6 }}
                                         className="text-center md:order-3 order-3"
                                     >
-                                        <div className="bg-card/40 backdrop-blur-sm border-2 border-border/50 rounded-3xl p-6 md:p-8 relative h-52 md:h-56 flex flex-col justify-end shadow-lg transition-all hover:shadow-xl hover:-translate-y-1">
+                                        <div className="bg-card/40 backdrop-blur-sm border-2 border-border/50 rounded-3xl p-6 md:p-8 relative h-52 md:h-56 flex flex-col justify-end shadow-lg transition-all hover:shadow-xl">
                                             <div className="absolute -top-6 left-1/2 -translate-x-1/2 flex flex-col items-center">
                                                 <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-muted-foreground font-black text-xl border-4 border-background">3</div>
                                             </div>
@@ -560,7 +567,7 @@ export default function HallOfFamePage() {
                                             initial={{ opacity: 0, y: 15 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ ...springCinematic, delay: 0.1 + index * 0.05 }}
-                                            className="group relative flex flex-col justify-between backdrop-blur-sm border-2 border-border/40 rounded-3xl p-5 md:p-6 transition-all hover:bg-card hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1 bg-card/40 min-h-[160px]"
+                                            className="group relative flex flex-col justify-between backdrop-blur-sm border-2 border-border/40 rounded-3xl p-5 md:p-6 transition-all hover:bg-card hover:shadow-xl hover:shadow-primary/5 bg-card/40 min-h-[160px]"
                                         >
                                             <div>
                                                 <div className="flex justify-between items-start gap-4 mb-2">
@@ -648,7 +655,7 @@ export default function HallOfFamePage() {
                                             onMouseEnter={() => setHoveredIndex(item.id)}
                                             onMouseLeave={() => setHoveredIndex(null)}
                                             className={cn(
-                                                "group relative flex items-center justify-between backdrop-blur-sm border-2 border-transparent rounded-2xl px-4 py-3 md:px-6 md:py-4 transition-all hover:bg-card hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-0.5",
+                                                "group relative flex items-center justify-between backdrop-blur-sm border-2 border-transparent rounded-2xl px-4 py-3 md:px-6 md:py-4 transition-all hover:bg-card hover:shadow-xl hover:shadow-primary/5",
                                                 index % 2 === 0 ? "bg-card/40" : "bg-card/20",
                                                 "w-full"
                                             )}

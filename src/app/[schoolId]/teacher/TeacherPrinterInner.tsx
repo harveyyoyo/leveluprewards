@@ -83,7 +83,7 @@ const teacherPortalTabContentClassName =
 const teacherPortalPanelClassName = 'w-full max-w-7xl mx-auto';
 /** Matches admin portal main `TabsTrigger` styling for visual parity. */
 const teacherPortalMainTabTriggerClassName =
-    'rounded-xl px-4 py-2 font-bold flex items-center gap-2 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)] transition-all whitespace-nowrap';
+    'rounded-xl px-4 py-2 font-bold flex items-center gap-2 text-sm text-foreground transition-all whitespace-nowrap';
 
 
 function TeacherHomeworkTab({ schoolId, teacherId, students, classes }: { schoolId: string; teacherId: string; students: Student[]; classes: Class[] }) {
@@ -432,7 +432,7 @@ function TeacherClassesTab({
         <div className="flex flex-col gap-6 items-center">
             <Card
                 className={cn(
-                    'w-full max-w-7xl border-t-8 transition-all duration-500 hover:shadow-2xl hover:-translate-y-1',
+                    'w-full max-w-7xl border-t-8 transition-all duration-500 hover:shadow-2xl',
                     isGraphic
                         ? 'bg-card/60 backdrop-blur-2xl border-chart-1 shadow-[0_20px_50px_rgba(0,0,0,0.1)]'
                         : 'bg-white border-chart-1 shadow-lg',
@@ -640,7 +640,7 @@ function TeacherRosterTab({
     return (
         <div className="flex flex-col gap-6 items-center">
             <Card className={cn(
-                "w-full max-w-7xl border-t-8 transition-all duration-500 hover:shadow-2xl hover:-translate-y-1",
+                "w-full max-w-7xl border-t-8 transition-all duration-500 hover:shadow-2xl",
                 isGraphic ? 'bg-card/60 backdrop-blur-2xl border-chart-4 shadow-[0_20px_50px_rgba(0,0,0,0.1)]' : 'bg-white border-chart-4 shadow-lg'
             )}>
                 <CardHeader className="p-4 md:p-6">
@@ -2681,7 +2681,6 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                                 ? 'inline-flex w-max sm:mx-auto flex-nowrap gap-x-1'
                                                 : 'flex flex-wrap justify-center gap-x-1 gap-y-1 w-full',
                                         )}
-                                        style={{ ['--admin-accent' as never]: 'hsl(var(--primary))' }}
                                         aria-label="Teacher portal sections"
                                     >
                                         <DropdownMenu>
@@ -2785,7 +2784,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                 <div className={teacherPortalPanelClassName}>
 
                         <Card className={cn(
-                            "w-full max-w-7xl border-t-8 transition-all duration-500 hover:shadow-2xl hover:-translate-y-1",
+                            "w-full max-w-7xl border-t-8 transition-all duration-500 hover:shadow-2xl",
                             isGraphic
                                 ? 'bg-card/60 backdrop-blur-2xl border-chart-1 shadow-[0_20px_50px_rgba(0,0,0,0.1)]'
                                 : 'bg-white border-chart-1 shadow-lg'
@@ -3125,7 +3124,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                             <TabsContent value="award" className={teacherPortalTabContentClassName}>
                                 <div className={teacherPortalPanelClassName}>
                                   <Card className={cn(
-                                    "w-full max-w-7xl border-t-8 transition-all duration-500 hover:shadow-2xl hover:-translate-y-1",
+                                    "w-full max-w-7xl border-t-8 transition-all duration-500 hover:shadow-2xl",
                                     isGraphic ? 'bg-card/60 backdrop-blur-2xl border-chart-2 shadow-[0_20px_50px_rgba(0,0,0,0.1)]' : 'bg-white border-chart-2 shadow-lg'
                                   )}>
                                     <CardHeader className="p-4 md:p-6">
@@ -3351,7 +3350,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                     <Card className={cn(
-                                        "md:col-span-2 border-t-8 transition-all duration-500 hover:shadow-2xl hover:-translate-y-1",
+                                        "md:col-span-2 border-t-8 transition-all duration-500 hover:shadow-2xl",
                                         isGraphic
                                             ? 'bg-card/60 backdrop-blur-2xl border-primary shadow-[0_20px_50px_rgba(0,0,0,0.1)]'
                                             : 'bg-white border-primary shadow-lg'

@@ -1299,7 +1299,7 @@ export function PrizeDashboard({
                                                     key={prize.id}
                                                     className={cn(
                                                         "group relative flex min-w-0 w-full flex-col items-center justify-between text-center p-5 sm:p-6 rounded-3xl border-2 border-transparent transition-all duration-300 backdrop-blur-sm hover:border-[var(--prize-card-hover-border)]",
-                                                        canAfford ? "hover:shadow-2xl hover:shadow-primary/5 hover:-translate-y-1" : "opacity-75 cursor-not-allowed"
+                                                        canAfford ? "hover:shadow-2xl hover:shadow-primary/5" : "opacity-75 cursor-not-allowed"
                                                     )}
                                                     style={activeTheme ? {
                                                         backgroundColor: canAfford ? 'var(--theme-card)' : 'transparent',

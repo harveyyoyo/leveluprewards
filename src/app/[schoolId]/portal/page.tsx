@@ -422,7 +422,7 @@ export default function PortalPage() {
                                     className={cn(
                                         'relative overflow-hidden rounded-3xl border border-border bg-card text-left shadow-sm',
                                         portalCardHoverMotion &&
-                                            'transition-[transform,box-shadow,border-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform group-hover:-translate-y-1.5 group-hover:shadow-xl group-hover:border-primary/30',
+                                            'transition-[box-shadow,border-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:shadow-xl group-hover:border-primary/30',
                                         settings.displayMode === 'app' ? 'px-5 py-5 sm:px-6 sm:py-6 min-h-0 sm:min-h-[210px] h-full flex flex-col' : 'px-6 py-6 min-h-[196px] sm:min-h-[210px]',
                                     )}
                                 >
@@ -461,8 +461,6 @@ export default function PortalPage() {
                                             <div
                                                 className={cn(
                                                     'shrink-0 rounded-2xl bg-muted p-3 shadow-lg ring-1 ring-border',
-                                                    portalCardHoverMotion &&
-                                                        'transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-105',
                                                 )}
                                                 style={{
                                                     boxShadow: `0 12px 30px ${rainbowColor}26`,
