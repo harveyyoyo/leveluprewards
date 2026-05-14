@@ -324,6 +324,10 @@ service cloud.firestore {
         allow write: if false;
       }
 
+      match /anonymousPortalSessions/{uid} {
+        allow read, write: if false;
+      }
+
       // Passcode stored here; never readable by clients.
       // The Cloud Function verifySchoolPasscode reads this via the admin SDK.
       match /secrets/{docId} {

@@ -21,6 +21,7 @@ import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
 import { APP_NAME } from '@/lib/appBranding';
 import {
     syncFirebaseSessionCookie,
+    syncSchoolGateCookie,
     clearFirebaseSessionCookieSync,
 } from '@/lib/auth/syncFirebaseSessionCookie';
 import { sanitizeInternalNextPath } from '@/lib/auth/internalNextRedirect';
@@ -473,8 +474,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         let cancelled = false;
         void (async () => {
-            const ok = await syncFirebaseSessionCookie(auth);
-            if (cancelled || !ok) return;
+            const okFb = await syncFirebaseSessionCookie(auth);
+            if (cancelled || !okFb) return;
+            const sid = schoolId?.trim();
+            if (sid) {
+                await syncSchoolGateCookie(auth, sid);
+            }
+            if (cancelled) return;
             if (typeof window === 'undefined') return;
             if (window.location.pathname !== '/login') return;
             const params = new URLSearchParams(window.location.search);

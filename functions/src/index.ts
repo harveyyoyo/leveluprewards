@@ -726,6 +726,15 @@ exports.verifySchoolAccessPasscode = functions.https.onCall(
       throw new functions.https.HttpsError("permission-denied", "Invalid passcode.");
     }
 
+    // Lets the Next.js edge gate mint a school-scoped cookie after verifying the same passcode server-side.
+    const uid = context.auth!.uid;
+    await db
+      .collection("schools")
+      .doc(schoolId)
+      .collection("anonymousPortalSessions")
+      .doc(uid)
+      .set({ grantedAt: FieldValue.serverTimestamp() }, { merge: true });
+
     return { success: true };
   }
 );
