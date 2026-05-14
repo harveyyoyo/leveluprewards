@@ -610,6 +610,7 @@ function AdminDashboardInner() {
       { value: 'teachers', label: 'Faculty', icon: User },
       { value: 'prizes', label: 'Prizes', icon: Gift },
       { value: 'categories', label: 'Points', icon: Tag },
+      { value: 'reports', label: 'Reports', icon: FileText },
     ];
 
     const pinnedExtras: AdminMainTabDef[] = pinnedAddOnTabs.map((t) => ({
@@ -913,7 +914,7 @@ function AdminDashboardInner() {
   };
 
   useLayoutEffect(() => {
-    const basicTabs = ['students', 'classes', 'teachers', 'prizes', 'categories'];
+    const basicTabs = ['students', 'classes', 'teachers', 'prizes', 'categories', 'reports'];
     if (loginState === 'developer') basicTabs.push('backups');
     const pinnedExtras = pinnedAddOnTabs.map((t) => t.value);
     const allowedTabs = new Set<string>([...basicTabs, ...pinnedExtras]);
@@ -1690,45 +1691,16 @@ function AdminDashboardInner() {
           </TabsContent>
 
           <TabsContent value="insights" className={`${scrollingAdminTabClassName} space-y-6`}>
-            <Tabs defaultValue="stats" className="space-y-6">
-              <div className="flex justify-center">
-                <TabsList className="bg-muted/30 p-1 rounded-xl border shadow-sm">
-                  {settings.enableAdminAnalytics && (
-                    <TabsTrigger value="stats" className="rounded-lg px-4 py-1.5 font-bold flex items-center gap-2 text-xs">
-                      <LayoutDashboard className="w-3.5 h-3.5" /> Stats
-                    </TabsTrigger>
-                  )}
-                  <TabsTrigger value="reports" className="rounded-lg px-4 py-1.5 font-bold flex items-center gap-2 text-xs">
-                    <FileText className="w-3.5 h-3.5" /> Reports
-                  </TabsTrigger>
-                </TabsList>
-              </div>
-
-              {settings.enableAdminAnalytics && (
-                <TabsContent value="stats">
-                  <AdminStatsTab
-                    students={students}
-                    classes={classes}
-                    teachers={teachers}
-                    coupons={coupons}
-                    usedCouponsCount={usedCouponsCount}
-                    totalPointsAwarded={totalPointsAwarded}
-                  />
-                </TabsContent>
-              )}
-              <TabsContent value="reports">
-                <AdminReportsTab
-                  schoolName={schoolData?.name?.trim() || 'School'}
-                  students={students}
-                  classes={classes}
-                  teachers={teachers}
-                  coupons={coupons}
-                  prizes={prizes}
-                  categories={categories}
-                  rafflePointsPerTicket={settings.rafflePointsPerTicket}
-                />
-              </TabsContent>
-            </Tabs>
+            {settings.enableAdminAnalytics ? (
+              <AdminStatsTab
+                students={students}
+                classes={classes}
+                teachers={teachers}
+                coupons={coupons}
+                usedCouponsCount={usedCouponsCount}
+                totalPointsAwarded={totalPointsAwarded}
+              />
+            ) : null}
           </TabsContent>
 
           <TabsContent value="categories" className={fittedAdminTabClassName}>
@@ -1766,6 +1738,19 @@ function AdminDashboardInner() {
                 if (!ok) return;
                 await deleteCategory(id);
               }}
+            />
+          </TabsContent>
+
+          <TabsContent value="reports" className={scrollingAdminTabClassName}>
+            <AdminReportsTab
+              schoolName={schoolData?.name?.trim() || 'School'}
+              students={students}
+              classes={classes}
+              teachers={teachers}
+              coupons={coupons}
+              prizes={prizes}
+              categories={categories}
+              rafflePointsPerTicket={settings.rafflePointsPerTicket}
             />
           </TabsContent>
 
