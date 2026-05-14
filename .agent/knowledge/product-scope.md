@@ -47,3 +47,6 @@ That single habit prevents unnamed behavior from accumulating.
 ## Related
 
 - `deployment.md` — stability and login verification before release.
+- `future-addon-integration-map.md` — where planned addons (inventory alerts,
+  FERPA-style display names, parent digests, SSO/roster, offline teacher queue,
+  schedule import UX, rubrics) should integrate in the repo.
