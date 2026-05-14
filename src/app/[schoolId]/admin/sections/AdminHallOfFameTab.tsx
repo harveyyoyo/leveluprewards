@@ -62,7 +62,7 @@ export function AdminHallOfFameTab({ schoolId }: { schoolId: string }) {
   const fullHref = useMemo(() => {
     const params = new URLSearchParams();
     params.set('fullscreen', '1');
-    return `/${schoolId}/halloffame?${params.toString()}`;
+    return `/${schoolId}/hall-of-fame?${params.toString()}`;
   }, [schoolId]);
 
   return (

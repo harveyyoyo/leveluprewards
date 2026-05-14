@@ -4,7 +4,7 @@ import type { Coupon } from '@/lib/types';
 import { couponRedemptionLabelForPrint } from '@/lib/couponRedemptionRules';
 import { useSettings } from './providers/SettingsProvider';
 import { cn } from '@/lib/utils';
-import { APP_NAME } from '@/lib/app-branding';
+import { APP_NAME } from '@/lib/appBranding';
 
 export function Coupon({ coupon, schoolId, isNew = false }: { coupon: Coupon, schoolId?: string | null, isNew?: boolean }) {
   const { settings } = useSettings();

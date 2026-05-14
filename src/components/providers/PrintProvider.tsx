@@ -16,9 +16,9 @@ import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useAuth } from './AuthProvider';
 import { useDoc } from '@/firebase';
 import { useSchoolMetadataDocRef } from '@/hooks/useSchoolMetadataDocRef';
-import type { CouponPrintPageSize } from '@/lib/coupon-print';
+import type { CouponPrintPageSize } from '@/lib/couponPrint';
 import { useSettings } from '@/components/providers/SettingsProvider';
-import type { PrizeVoucherPaperFormat } from '@/lib/prize-voucher-print';
+import type { PrizeVoucherPaperFormat } from '@/lib/prizeVoucherPrint';
 import { applyThermalPrizePrintRootLocks, clearThermalPrizePrintRootLocks } from '@/lib/prizeThermalPrintDom';
 
 const PrintSheet = dynamic(

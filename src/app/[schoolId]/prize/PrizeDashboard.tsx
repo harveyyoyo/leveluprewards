@@ -51,7 +51,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import DynamicIcon from '@/components/DynamicIcon';
 import { cn, getStudentNickname, getContrastColor } from '@/lib/utils';
-import { LEVELUP_BRAND_PRIMARY_HEX } from '@/lib/app-branding';
+import { LEVELUP_BRAND_PRIMARY_HEX } from '@/lib/appBranding';
 import { resolveStudentThemeWithSchoolDefault, primaryForegroundFor } from '@/lib/themeContrast';
 import { getReadableErrorMessage, OFFLINE_USER_MESSAGE } from '@/lib/errorMessage';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -71,7 +71,7 @@ import type { StudentFoundMeta } from '@/components/StudentScanner';
 import { rainbowTripletForNavId, complementTripletForNavId } from '@/lib/rainbowNav';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
 
-import { prizeIsListed, stripLeadingEmojiFromPrizeName, studentSeesPrizeByTeachers } from '@/lib/prize-utils';
+import { prizeIsListed, stripLeadingEmojiFromPrizeName, studentSeesPrizeByTeachers } from '@/lib/prizeUtils';
 import { runMotor as runVendingMotor, isConnected as motorIsConnected } from '@/lib/vendingMotor';
 import { useAuthFetch } from '@/lib/authFetch';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -1073,7 +1073,7 @@ export function PrizeDashboard({
                 <div className="relative z-10 w-full max-w-full px-4 sm:px-6 lg:px-8">
                     <Card
                         className={cn(
-                            "border-t-8 shadow-2xl mt-6 mb-8 backdrop-blur-md",
+                            "border-t-8 shadow-2xl mt-3 mb-4 backdrop-blur-md",
                             !activeTheme
                                 ? animBackdrop
                                     ? "border-chart-3 bg-card/92 border-border/30"
@@ -1084,32 +1084,32 @@ export function PrizeDashboard({
                     >
                         <CardContent className="p-5 md:p-6">
                             {/* Header */}
-                            <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-8">
+                            <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
                                 <div className="text-center md:text-left">
-                                    <h2 className="text-5xl font-black tracking-tighter font-headline drop-shadow-sm mb-4 flex items-center justify-center md:justify-start gap-4">
+                                    <h2 className="text-3xl sm:text-4xl font-black tracking-tighter font-headline drop-shadow-sm mb-3 flex items-center justify-center md:justify-start gap-3">
                                         {(student?.customEmojiUrl || activeTheme?.emoji) ? (
                                             student?.customEmojiUrl ? (
                                                 // eslint-disable-next-line @next/next/no-img-element
                                                 <img
                                                     src={student.customEmojiUrl}
                                                     alt=""
-                                                    className="theme-animated-emoji h-14 w-14 md:h-16 md:w-16 shrink-0 object-contain"
+                                                    className="theme-animated-emoji h-10 w-10 md:h-12 md:w-12 shrink-0 object-contain"
                                                     style={{ filter: activeTheme?.primary ? `drop-shadow(0 0 10px ${activeTheme.primary}) drop-shadow(0 0 20px ${activeTheme.primary})` : undefined }}
                                                 />
                                             ) : (
                                                 <span
-                                                    className="theme-animated-emoji text-6xl leading-none"
+                                                    className="theme-animated-emoji text-4xl sm:text-5xl leading-none"
                                                     style={{ filter: activeTheme?.primary ? `drop-shadow(0 0 10px ${activeTheme.primary}) drop-shadow(0 0 20px ${activeTheme.primary})` : undefined }}
                                                 >
                                                     {activeTheme?.emoji}
                                                 </span>
                                             )
                                         ) : (
-                                            <ShoppingBag className="w-12 h-12 text-primary" style={activeTheme ? { color: 'var(--theme-primary)' } : undefined} />
+                                            <ShoppingBag className="w-8 h-8 sm:w-10 sm:h-10 text-primary" style={activeTheme ? { color: 'var(--theme-primary)' } : undefined} />
                                         )}
                         <span style={activeTheme ? { color: 'var(--theme-primary)' } : { color: 'hsl(var(--primary))' }}>Rewards Shop</span>
                                     </h2>
-                                    <p className="text-sm font-bold uppercase tracking-[0.3em]" style={activeTheme ? { color: 'var(--theme-text-muted)' } : { opacity: 0.7 }}>
+                                    <p className="text-xs font-bold uppercase tracking-[0.3em]" style={activeTheme ? { color: 'var(--theme-text-muted)' } : { opacity: 0.7 }}>
                                         Redeem your points for rewards
                                     </p>
                                 </div>
@@ -1180,25 +1180,32 @@ export function PrizeDashboard({
                                         </div>
                                     </div>
                                     <div
-                                    className="backdrop-blur-md border-2 rounded-3xl p-6 px-10 text-center shadow-xl"
-                                    style={activeTheme ? {
-                                        backgroundColor: 'var(--theme-card)',
-                                        borderColor: 'var(--theme-primary)'
-                                    } : {
-                                        backgroundColor: 'hsl(var(--card) / 0.8)',
-                                        borderColor: 'hsl(var(--primary) / 0.2)'
-                                    }}
-                                >
-                                    <p className="text-xs font-black uppercase tracking-[0.2em] mb-1" style={activeTheme ? { color: 'var(--theme-text-muted)' } : { opacity: 0.7 }}>
-                                        {student.firstName} {student.lastName}
-                                    </p>
-                                    {student.nickname?.trim() ? (
-                                        <p className="text-[10px] font-black uppercase tracking-[0.25em] -mt-1 mb-2" style={activeTheme ? { color: 'var(--theme-text-muted)' } : { opacity: 0.65 }}>
-                                            {student.nickname.trim()}
+                                        className="backdrop-blur-md border-2 rounded-2xl py-3 px-5 text-center md:text-right shadow-md flex flex-col sm:flex-row md:flex-col items-center md:items-end gap-2 sm:gap-6 md:gap-0"
+                                        style={activeTheme ? {
+                                            backgroundColor: 'var(--theme-card)',
+                                            borderColor: 'var(--theme-primary)'
+                                        } : {
+                                            backgroundColor: 'hsl(var(--card) / 0.8)',
+                                            borderColor: 'hsl(var(--primary) / 0.2)'
+                                        }}
+                                    >
+                                        <div className="flex flex-col items-center md:items-end leading-tight">
+                                            <p className="text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] mb-0.5" style={activeTheme ? { color: 'var(--theme-text-muted)' } : { opacity: 0.7 }}>
+                                                {student.firstName} {student.lastName}
+                                            </p>
+                                            {student.nickname?.trim() ? (
+                                                <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.25em] -mt-0.5" style={activeTheme ? { color: 'var(--theme-text-muted)' } : { opacity: 0.65 }}>
+                                                    {student.nickname.trim()}
+                                                </p>
+                                            ) : null}
+                                        </div>
+                                        <p className="text-2xl sm:text-3xl font-black tracking-tighter" style={activeTheme ? { color: 'var(--theme-primary)' } : { color: 'hsl(var(--primary))' }}>
+                                            {(student.points || 0).toLocaleString()}
+                                            <span className="text-xs font-bold uppercase tracking-widest ml-1" style={activeTheme ? { color: 'var(--theme-primary)', opacity: 0.6 } : { color: 'hsl(var(--primary) / 0.6)' }}>
+                                                pts
+                                            </span>
                                         </p>
-                                    ) : null}
-                                    <p className="text-4xl font-black tracking-tighter" style={activeTheme ? { color: 'var(--theme-primary)' } : { color: 'hsl(var(--primary))' }}>{(student.points || 0).toLocaleString()} <span className="text-sm font-bold uppercase tracking-widest ml-1" style={activeTheme ? { color: 'var(--theme-primary)', opacity: 0.6 } : { color: 'hsl(var(--primary) / 0.6)' }}>pts</span></p>
-                                </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -1242,7 +1249,7 @@ export function PrizeDashboard({
                                 )}
 
                                 {/* Prizes Grid */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 h-fit">
+                                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 h-fit">
                                     {visiblePrizes.length === 0 ? (
                                         <div
                                             className="col-span-full bg-card/30 backdrop-blur-sm rounded-3xl border-2 border-dashed border-border"
@@ -1298,7 +1305,7 @@ export function PrizeDashboard({
                                                 <div
                                                     key={prize.id}
                                                     className={cn(
-                                                        "group relative flex min-w-0 w-full flex-col items-center justify-between text-center p-5 sm:p-6 rounded-3xl border-2 border-transparent transition-all duration-300 backdrop-blur-sm hover:border-[var(--prize-card-hover-border)]",
+                                                        "group relative flex min-w-0 w-full flex-col items-center justify-between text-center p-3.5 sm:p-4 rounded-2xl border-2 border-transparent transition-all duration-300 backdrop-blur-sm hover:border-[var(--prize-card-hover-border)]",
                                                         canAfford ? "hover:shadow-2xl hover:shadow-primary/5" : "opacity-75 cursor-not-allowed"
                                                     )}
                                                     style={activeTheme ? {
@@ -1313,7 +1320,7 @@ export function PrizeDashboard({
                                                     <div className="absolute inset-0 rounded-3xl pointer-events-none bg-primary opacity-0 transition-opacity duration-300 group-hover:opacity-5" />
 
                                                     <div className={cn(
-                                                        "w-24 h-24 rounded-[2rem] flex items-center justify-center mb-6 transition-transform duration-500 bg-gradient-to-br shadow-inner relative overflow-hidden",
+                                                        "w-16 h-16 rounded-2xl flex items-center justify-center mb-3 transition-transform duration-500 bg-gradient-to-br shadow-inner relative overflow-hidden",
                                                         canAfford ? "group-hover:scale-110 group-hover:rotate-6" : "grayscale opacity-80"
                                                     )}
                                                         style={activeTheme ? {
@@ -1345,15 +1352,15 @@ export function PrizeDashboard({
                                                                 </div>
                                                             )
                                                         )}
-                                                        <DynamicIcon name={prize.icon || 'Gift'} className="w-12 h-12 drop-shadow-sm relative z-10" />
+                                                        <DynamicIcon name={prize.icon || 'Gift'} className="w-8 h-8 drop-shadow-sm relative z-10" />
                                                     </div>
 
-                                                    <div className="mb-6 w-full min-w-0">
+                                                    <div className="mb-4 w-full min-w-0">
                                                         <Tooltip>
                                                             <TooltipTrigger asChild>
                                                                 <h3
                                                                     className={cn(
-                                                                        "font-black text-2xl sm:text-3xl tracking-tight line-clamp-2 w-full max-w-full cursor-help break-words leading-snug [overflow-wrap:anywhere]",
+                                                                        "font-extrabold text-lg sm:text-xl tracking-tight line-clamp-2 w-full max-w-full cursor-help break-words leading-snug [overflow-wrap:anywhere]",
                                                                         !activeTheme && "text-foreground"
                                                                     )}
                                                                     style={activeTheme ? { color: 'var(--theme-text)' } : undefined}
@@ -1367,9 +1374,9 @@ export function PrizeDashboard({
                                                                 </p>
                                                             </TooltipContent>
                                                         </Tooltip>
-                                                        <div className="mt-3 flex items-center justify-center gap-2">
+                                                        <div className="mt-2.5 flex flex-wrap items-center justify-center gap-1.5">
                                                             <Badge
-                                                                className="font-black text-base px-4 py-1 rounded-xl"
+                                                                className="font-black text-sm px-3 py-0.5 rounded-xl"
                                                                 style={activeTheme
                                                                     ? { backgroundColor: 'var(--theme-primary)', color: primaryForeground }
                                                                     : { backgroundColor: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))' }}
@@ -1401,7 +1408,7 @@ export function PrizeDashboard({
                                                         onClick={() => setConfirmingPrize(prize)}
                                                         disabled={!canAfford}
                                                         className={cn(
-                                                            "w-full h-12 rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-lg"
+                                                            "w-full h-10 rounded-xl font-black uppercase tracking-widest text-xs transition-all shadow-md"
                                                         )}
                                                         style={activeTheme && canAfford
                                                             ? { backgroundColor: 'var(--theme-primary)', color: primaryForeground }
@@ -1420,24 +1427,24 @@ export function PrizeDashboard({
                                 </div>
 
                                 {/* Sidebar */}
-                                <div className="space-y-5 min-w-0">
+                                <div className="space-y-3 min-w-0">
                                     <Card
                                         className="backdrop-blur-sm border-2 rounded-3xl overflow-hidden shadow-xl flex flex-col min-h-0 max-h-[min(70dvh,760px)] lg:sticky lg:top-6"
                                         style={activeTheme ? { backgroundColor: 'var(--theme-card)', borderColor: 'var(--theme-bg)', color: 'var(--theme-text)' } : { backgroundColor: 'hsl(var(--card) / 0.4)', borderColor: 'hsl(var(--border) / 0.5)' }}
                                     >
-                                        <CardHeader className="border-b py-6 px-8 shrink-0" style={activeTheme ? { backgroundColor: 'var(--theme-bg)', borderColor: 'var(--theme-bg)' } : { backgroundColor: 'hsl(var(--primary) / 0.05)', borderColor: 'hsl(var(--border) / 0.5)' }}>
+                                        <CardHeader className="border-b py-4 px-6 shrink-0" style={activeTheme ? { backgroundColor: 'var(--theme-bg)', borderColor: 'var(--theme-bg)' } : { backgroundColor: 'hsl(var(--primary) / 0.05)', borderColor: 'hsl(var(--border) / 0.5)' }}>
                                             <CardTitle className="text-sm font-black uppercase tracking-[0.3em] flex items-center gap-3" style={activeTheme ? { color: 'var(--theme-primary)' } : { color: 'hsl(var(--primary))' }}>
                                                 <Clock className="w-5 h-5" style={activeTheme ? { color: 'var(--theme-primary)' } : { color: 'hsl(var(--chart-3))' }} /> Recent Activity
                                             </CardTitle>
                                         </CardHeader>
-                                        <CardContent className="p-6 flex-1 min-h-0 overflow-hidden flex flex-col">
+                                        <CardContent className="p-4 flex-1 min-h-0 overflow-hidden flex flex-col">
                                             <PrizeActivityList schoolId={schoolId!} studentId={student.id} themed={!!activeTheme} onReprintTicket={handleReprint} />
                                         </CardContent>
                                     </Card>
 
                                     <Button
                                         variant="outline"
-                                        className="w-full h-16 rounded-3xl border-2 font-black uppercase tracking-widest text-xs transition-all group"
+                                        className="w-full h-12 rounded-2xl border-2 font-black uppercase tracking-widest text-xs transition-all group"
                                         onClick={onRequestExit}
                                         style={activeTheme ? {
                                             borderColor: 'var(--theme-text)',

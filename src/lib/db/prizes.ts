@@ -13,7 +13,7 @@ import {
 import type { Student, Prize, HistoryItem } from '../types';
 import { reportFirestorePermissionError } from '@/firebase/error-emitter';
 import { removeUndefined } from './helpers';
-import { prizeRestrictionTeacherIds } from '@/lib/prize-utils';
+import { prizeRestrictionTeacherIds } from '@/lib/prizeUtils';
 import { AI_FUN_UNIFIED_PRIZE_ID } from '@/lib/aiJokePrize';
 
 /** Creates the single Fun (AI) prize doc if missing — students choose joke/riddle/fortune teller at redeem. */

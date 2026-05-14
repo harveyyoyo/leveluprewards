@@ -14,7 +14,7 @@ export default function AppRouteTemplate({ children }: { children: React.ReactNo
 
   return (
     <motion.div
-      className="w-full min-h-0 [transform:translateZ(0)]"
+      className="w-full min-h-0 flex-1 flex flex-col [transform:translateZ(0)]"
       initial={
         reduceMotion
           ? false

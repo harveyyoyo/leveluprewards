@@ -6,7 +6,7 @@ import { RotateCcw, Trophy, XCircle, Sparkles, Loader2 } from 'lucide-react';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { LEVELUP_BRAND_PRIMARY_HEX } from '@/lib/app-branding';
+import { LEVELUP_BRAND_PRIMARY_HEX } from '@/lib/appBranding';
 
 interface BonusSpinWheelModalProps {
     isOpen: boolean;

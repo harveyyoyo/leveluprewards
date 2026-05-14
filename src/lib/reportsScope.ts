@@ -1,5 +1,5 @@
 import type { Class, Coupon, Prize, Student } from '@/lib/types';
-import { isPrizeSchoolWideTeachers, prizeRestrictionTeacherIds } from '@/lib/prize-utils';
+import { isPrizeSchoolWideTeachers, prizeRestrictionTeacherIds } from '@/lib/prizeUtils';
 
 /** Students linked to a teacher via class primary teacher or explicit `teacherIds`. */
 export function studentsInTeacherScope(teacherId: string, students: Student[], classes: Class[]): Student[] {

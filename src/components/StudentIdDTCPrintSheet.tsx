@@ -7,7 +7,7 @@ import { StudentIdCard } from './StudentIdCard';
 import { useSettings } from './providers/SettingsProvider';
 import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
-import { APP_NAME, APP_TAGLINE } from '@/lib/app-branding';
+import { APP_NAME, APP_TAGLINE } from '@/lib/appBranding';
 
 interface StudentIdDTCPrintSheetProps {
   students: Student[];

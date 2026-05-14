@@ -36,7 +36,7 @@ function canUseRoute(pathname: string, routeSchoolId: string, loginState: string
   if (section === 'prize-clerk') return loginState === 'prizeClerk' || loginState === 'admin';
   if (section === 'reports') return loginState === 'reports' || loginState === 'admin';
 
-  if (section === 'halloffame') return canAccessHallOfFameRoute(loginState);
+  if (section === 'hall-of-fame') return canAccessHallOfFameRoute(loginState);
 
   return true;
 }

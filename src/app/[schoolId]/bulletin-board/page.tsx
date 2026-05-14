@@ -14,7 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { cn } from '@/lib/utils';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
 import { DEFAULT_BULLETIN_SUBTITLE, bulletinLogoBoxClass, getBulletinBoardCardClassName } from '@/lib/bulletinBoard';
-import { getLevelUpLogoHref } from '@/lib/app-branding';
+import { getLevelUpLogoHref } from '@/lib/appBranding';
 import { useToast } from '@/hooks/use-toast';
 
 import { motion } from 'framer-motion';

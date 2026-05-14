@@ -27,7 +27,7 @@ function destinationAfterAdminLogin(redirectParam: string | null, schoolId: stri
   }
   const pathOnly = decoded.split('?')[0] ?? '';
   // Never send a freshly signed-in admin back to the sign-in page (avoids redirect loops).
-  if (/\/admin-signin\/?$/i.test(pathOnly)) {
+  if (/\/admin-sign-in\/?$/i.test(pathOnly)) {
     return null;
   }
   const seg = pathOnly.split('/').filter(Boolean)[0]?.toLowerCase();

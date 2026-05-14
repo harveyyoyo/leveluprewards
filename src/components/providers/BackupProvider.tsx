@@ -230,11 +230,11 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
         // Re-seed from built-in sample data
         let schoolData: Record<string, any>, newPasscode: string;
         if (cleanId === 'yeshiva') {
-            const { YESHIVA_DATA } = await import('@/lib/yeshiva-data');
+            const { YESHIVA_DATA } = await import('@/lib/yeshivaData');
             newPasscode = '911';
             schoolData = YESHIVA_DATA;
         } else {
-            const { SCHOOL_DATA } = await import('@/lib/school-data');
+            const { SCHOOL_DATA } = await import('@/lib/schoolData');
             newPasscode = '911';
             schoolData = SCHOOL_DATA;
         }

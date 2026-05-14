@@ -18,7 +18,7 @@ import DynamicIcon from './DynamicIcon';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { Switch } from '@/components/ui/switch';
-import { LEVELUP_BRAND_PRIMARY_HEX } from '@/lib/app-branding';
+import { LEVELUP_BRAND_PRIMARY_HEX } from '@/lib/appBranding';
 
 const PERIOD_LABELS: Record<Badge['period'], string> = {
   month: 'This month',

@@ -4,10 +4,10 @@ import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import type { Coupon } from '@/lib/types';
 import { Coupon as CouponComponent } from '@/components/Coupon';
-import { chunkCouponsForPrint, normalizeCouponPrintPageSize, type CouponPrintPageSize } from '@/lib/coupon-print';
+import { chunkCouponsForPrint, normalizeCouponPrintPageSize, type CouponPrintPageSize } from '@/lib/couponPrint';
 import { cn } from '@/lib/utils';
 
-export { COUPONS_PER_PRINT_PAGE, COUPON_PRINT_PAGE_SIZE_OPTIONS } from '@/lib/coupon-print';
+export { COUPONS_PER_PRINT_PAGE, COUPON_PRINT_PAGE_SIZE_OPTIONS } from '@/lib/couponPrint';
 
 interface PrintSheetProps {
   coupons: Coupon[];

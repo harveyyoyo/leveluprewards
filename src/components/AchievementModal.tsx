@@ -20,7 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { Checkbox } from '@/components/ui/checkbox';
 import { BonusSpinWheelModal } from './BonusSpinWheelModal';
-import { LEVELUP_BRAND_PRIMARY_HEX } from '@/lib/app-branding';
+import { LEVELUP_BRAND_PRIMARY_HEX } from '@/lib/appBranding';
 
 interface AchievementModalProps {
     isOpen: boolean;

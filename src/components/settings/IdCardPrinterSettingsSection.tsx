@@ -14,7 +14,7 @@ import {
   type IdCardPrintProfile,
   defaultPaperForFamily,
   isValidPaperForFamily,
-} from '@/lib/id-card-print-catalog';
+} from '@/lib/idCardPrintCatalog';
 import { BookmarkPlus, Printer } from 'lucide-react';
 
 function newProfileId(): string {

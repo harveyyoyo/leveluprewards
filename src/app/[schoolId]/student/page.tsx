@@ -106,9 +106,9 @@ import { EarnedBadgesShowcase } from '@/components/EarnedBadgesShowcase';
 import { useStudentKioskSession } from '@/components/providers/StudentKioskSessionProvider';
 import { FaceMismatchBanner } from '@/components/FaceMismatchBanner';
 import { appearanceVarsForSurface } from '@/lib/appearance';
-import { STUDENT_KIOSK_REQUEST_EXIT_EVENT } from '@/lib/student-kiosk';
+import { STUDENT_KIOSK_REQUEST_EXIT_EVENT } from '@/lib/studentKiosk';
 import { studentSeesWelcomeBackOverlay, studentSeesWelcomePage } from '@/lib/studentWelcome';
-import { prizeIsListed, studentSeesPrizeByTeachers } from '@/lib/prize-utils';
+import { prizeIsListed, studentSeesPrizeByTeachers } from '@/lib/prizeUtils';
 import { prizeAppearsInRewardsShop, resolveAiFunApiMode, withUnifiedAiFunPrize } from '@/lib/aiJokePrize';
 import { floorRaffleFullTickets, parseRafflePointsPerTicket } from '@/lib/raffleTickets';
 import {

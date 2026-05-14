@@ -114,7 +114,7 @@ export default function PrizePage() {
 
     if (activeStudentId) {
         return (
-            <>
+            <div className="flex min-h-0 w-full flex-1 flex-col">
                 {loginMeta?.source === 'face' && (
                     <FaceMismatchBanner
                         studentId={activeStudentId}
@@ -122,12 +122,14 @@ export default function PrizePage() {
                         onResolved={handleDone}
                     />
                 )}
-                <PrizeDashboard
-                    studentId={activeStudentId}
-                    onDone={handlePrizeSessionExit}
-                    onRequestExit={handlePrizeSessionExit}
-                />
-            </>
+                <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
+                    <PrizeDashboard
+                        studentId={activeStudentId}
+                        onDone={handlePrizeSessionExit}
+                        onRequestExit={handlePrizeSessionExit}
+                    />
+                </div>
+            </div>
         );
     }
 

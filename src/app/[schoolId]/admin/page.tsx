@@ -1440,7 +1440,7 @@ function AdminDashboardInner() {
           <div className="flex w-full min-w-0 flex-col gap-4">
             <div className="w-full min-w-0">
               <TabsList 
-                className="flex h-auto w-full flex-wrap content-start items-stretch justify-start gap-2 rounded-2xl border bg-muted/50 p-2 shadow-sm"
+                className="flex h-auto w-full flex-wrap content-center items-stretch justify-center gap-2 rounded-2xl border bg-muted/50 p-2 shadow-sm"
                 style={{ ['--admin-accent' as any]: 'hsl(var(--primary))' }}
                 aria-label="Admin portal main tabs"
                 onDragOver={(e) => {

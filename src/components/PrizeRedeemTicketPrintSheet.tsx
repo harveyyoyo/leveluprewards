@@ -4,11 +4,11 @@ import { useEffect, useLayoutEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { format } from 'date-fns';
 import DynamicIcon from '@/components/DynamicIcon';
-import { leadingEmojiSequenceFromName, stripLeadingEmojiFromPrizeName } from '@/lib/prize-utils';
-import type { PrizeVoucherPaperFormat } from '@/lib/prize-voucher-print';
+import { leadingEmojiSequenceFromName, stripLeadingEmojiFromPrizeName } from '@/lib/prizeUtils';
+import type { PrizeVoucherPaperFormat } from '@/lib/prizeVoucherPrint';
 import { clearThermalPrizePrintRootLocks } from '@/lib/prizeThermalPrintDom';
 
-export type { PrizeVoucherPaperFormat } from '@/lib/prize-voucher-print';
+export type { PrizeVoucherPaperFormat } from '@/lib/prizeVoucherPrint';
 
 export type PrizeRedeemTicket = {
   activityId: string;

@@ -21,8 +21,8 @@ export function AdminLoginButton() {
   const teacherPortalPath = `/${encodedSchoolId}/teacher`;
   const adminHref =
     pathname === teacherPortalPath
-      ? `/${encodedSchoolId}/admin-signin?redirect=${encodeURIComponent(teacherPortalPath)}`
-      : `/${encodedSchoolId}/admin-signin`;
+      ? `/${encodedSchoolId}/admin-sign-in?redirect=${encodeURIComponent(teacherPortalPath)}`
+      : `/${encodedSchoolId}/admin-sign-in`;
 
   return (
     <Button 

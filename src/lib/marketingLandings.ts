@@ -3,7 +3,7 @@
  * Keep in sync: add each approved route here so LayoutClientWrapper hides Header.
  */
 export const MARKETING_LANDING_PAGES: ReadonlyArray<{ href: string; label: string }> = [
-  { href: '/leveluparcade', label: 'LevelUp Arcade' },
+  { href: '/level-up-arcade', label: 'LevelUp Arcade' },
 ];
 
 export function isMarketingLandingPath(pathname: string | null | undefined): boolean {

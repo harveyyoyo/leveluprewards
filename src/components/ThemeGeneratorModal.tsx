@@ -16,7 +16,7 @@ import type { Student } from '@/lib/types';
 import { StudentIdCard } from '@/components/StudentIdCard';
 import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
-import { APP_NAME, APP_TAGLINE, LEVELUP_BRAND_PRIMARY_HEX } from '@/lib/app-branding';
+import { APP_NAME, APP_TAGLINE, LEVELUP_BRAND_PRIMARY_HEX } from '@/lib/appBranding';
 import { normalizeStudentTheme, primaryForegroundFor } from '@/lib/themeContrast';
 import { useSchoolMetadataDocRef } from '@/hooks/useSchoolMetadataDocRef';
 

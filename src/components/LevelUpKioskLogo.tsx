@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { LevelUpLogoDrift } from '@/components/LevelUpLogoDrift';
-import { getLevelUpLogoHref } from '@/lib/app-branding';
+import { getLevelUpLogoHref } from '@/lib/appBranding';
 
 export function LevelUpKioskLogo({ className }: { className?: string }) {
   return (

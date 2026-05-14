@@ -10,7 +10,7 @@ import {
   subscribeHomeLogoMode,
   type HomeLogoMode,
 } from '@/lib/homeLogoMode';
-import { getLevelUpLogoHref } from '@/lib/app-branding';
+import { getLevelUpLogoHref } from '@/lib/appBranding';
 
 export function HomeLandingLogo() {
   const [mounted, setMounted] = useState(false);

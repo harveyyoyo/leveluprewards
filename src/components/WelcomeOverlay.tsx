@@ -4,7 +4,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Trophy, Ticket } from 'lucide-react';
 import type { SoundEffect } from '@/hooks/useArcadeSound';
-import { LEVELUP_BRAND_PRIMARY_HEX } from '@/lib/app-branding';
+import { LEVELUP_BRAND_PRIMARY_HEX } from '@/lib/appBranding';
 
 export interface WelcomeOverlayTheme {
   primary: string;

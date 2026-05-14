@@ -3,7 +3,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import OpenAI from 'openai';
 import { guardAiRoute } from '@/lib/apiAuth';
 import { normalizeStudentTheme } from '@/lib/themeContrast';
-import { LEVELUP_BRAND_PRIMARY_HEX } from '@/lib/app-branding';
+import { LEVELUP_BRAND_PRIMARY_HEX } from '@/lib/appBranding';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 const defaultOpenAI = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || '' });

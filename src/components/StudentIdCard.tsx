@@ -5,7 +5,7 @@ import type { Student } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { resolveStudentThemeWithSchoolDefault } from '@/lib/themeContrast';
 import { useSettings } from '@/components/providers/SettingsProvider';
-import { APP_NAME, APP_TAGLINE } from '@/lib/app-branding';
+import { APP_NAME, APP_TAGLINE } from '@/lib/appBranding';
 import { GoogleFontLoader } from '@/components/GoogleFontLoader';
 
 function AutoFitLine({

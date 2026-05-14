@@ -7,7 +7,7 @@ import {
   primaryForegroundFor,
   resolveStudentThemeWithSchoolDefault,
 } from './themeContrast';
-import { LEVELUP_BRAND_PRIMARY_HEX } from './app-branding';
+import { LEVELUP_BRAND_PRIMARY_HEX } from './appBranding';
 
 describe('contrastRatio', () => {
   it('returns 21 for pure black on pure white', () => {
