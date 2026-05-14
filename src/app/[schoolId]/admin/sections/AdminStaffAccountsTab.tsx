@@ -85,7 +85,7 @@ export function AdminStaffAccountsTab({
     <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden">
       <CardHeader className="flex flex-row justify-between items-center py-6">
         <div>
-          <Helper content="Limited accounts: coupon printing only, or prize redemption at the admin Prizes desk. Share login separately from teacher accounts — desk staff open Admin (same school URL) after signing in.">
+          <Helper content="Limited accounts: coupon printing only, or prize redemption at the admin prizes desk. Share desk logins separately from full teacher accounts—desk staff still open Admin at this school's URL after signing in.">
             <CardTitle className="flex items-center gap-2">
               <Printer className="w-5 h-5 text-primary" /> Desk staff
             </CardTitle>

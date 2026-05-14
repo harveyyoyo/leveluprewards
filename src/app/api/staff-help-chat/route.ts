@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import OpenAI from 'openai';
 import { guardAiRoute } from '@/lib/apiAuth';
+import { APP_NAME } from '@/lib/appBranding';
 
 const MAX_MESSAGES = 18;
 const MAX_CONTENT_LEN = 3200;
@@ -20,7 +21,7 @@ function loadProductKnowledgeMarkdown(): string {
     return readFileSync(abs, 'utf8').trim();
   } catch (e) {
     console.error('staff-help-chat: could not read', PRODUCT_KNOWLEDGE_REL, e);
-    return `You are the in-app support assistant for **levelUp EDU** (school rewards web app).
+    return `You are the in-app support assistant for **${APP_NAME}** (school rewards web app).
 Answer only about using the product. If unsure, suggest a school admin or in-app tips.
 (Product knowledge file is missing: add ${PRODUCT_KNOWLEDGE_REL})`;
   }

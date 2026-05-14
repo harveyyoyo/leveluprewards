@@ -18,6 +18,7 @@ import { schoolPublicDocRef } from '@/lib/schoolPublic';
 import { getReadableErrorMessage } from '@/lib/errorMessage';
 import { loginErr, loginOk, messageFromVerifySchoolAccessError, type LoginResult } from '@/lib/loginResult';
 import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
+import { APP_NAME } from '@/lib/appBranding';
 
 export type SyncStatus = 'synced' | 'syncing' | 'offline' | 'error';
 export type LoginState = 'loggedOut' | 'school' | 'developer' | 'student' | 'teacher' | 'admin' | 'secretary' | 'prizeClerk' | 'reports';
@@ -939,7 +940,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             <AuthContext.Provider value={value}>
                 <div className="min-h-screen flex items-center justify-center bg-background text-foreground p-6 text-center">
                     <div className="animate-pulse text-primary font-bold text-xl uppercase tracking-tighter">
-                        Loading levelUp EDU...
+                        Loading {APP_NAME}…
                     </div>
                 </div>
             </AuthContext.Provider>

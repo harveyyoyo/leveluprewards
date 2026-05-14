@@ -176,7 +176,7 @@ export function AdminCouponsTab({
   return (
     <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden">
       <CardHeader>
-        <Helper content="This section shows all coupons that have been generated in the system, separated into those that are still available and those that have already been redeemed by a student.">
+        <Helper content="This section lists coupons generated for this school: still available, and already redeemed by a student.">
           <CardTitle className="flex items-center gap-2">
             <Ticket className="w-5 h-5 text-destructive" /> Coupon Management
           </CardTitle>

@@ -12,6 +12,7 @@ import { useSettings } from '@/components/providers/SettingsProvider';
 import { useAuthFetch } from '@/lib/authFetch';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { APP_NAME } from '@/lib/appBranding';
 import { RemoteSupportSharePanel } from '@/components/RemoteSupportSharePanel';
 import {
   Sheet,
@@ -25,8 +26,7 @@ type ChatMessage = { role: 'user' | 'assistant'; content: string };
 
 const WELCOME: ChatMessage = {
   role: 'assistant',
-  content:
-  'Hi! I can help you use levelUp EDU: Admin, Teacher, and student tools, printing coupons, the rewards shop, settings, and Admin > Notifications (email/SMS/WhatsApp alerts). What would you like to know?',
+  content: `Hi! I can help you use ${APP_NAME}: the Admin, Teacher, and student tools; printing coupons; the rewards shop; settings; and Admin → Notifications (email, SMS, and WhatsApp alerts). What would you like to know?`,
 };
 
 /** Admin, teacher, and other staff sign-in roles (not students). */

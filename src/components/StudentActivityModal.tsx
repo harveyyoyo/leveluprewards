@@ -86,7 +86,7 @@ export function StudentActivityModal({ isOpen, setIsOpen, student }: StudentActi
             Activity for {getStudentNickname(student)} {student.lastName}
           </DialogTitle>
           <DialogDescription>
-            Current Balance: <span className="font-bold text-primary">{(student.points || 0).toLocaleString()} points</span>
+            Current balance: <span className="font-bold text-primary">{(student.points || 0).toLocaleString()} points</span>
           </DialogDescription>
         </DialogHeader>
         <div className="py-4">

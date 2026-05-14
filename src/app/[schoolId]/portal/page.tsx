@@ -19,7 +19,7 @@ import { doc } from 'firebase/firestore';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { rainbowByIndex, rainbowForPortalId } from '@/lib/rainbowNav';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
-import { LEVELUP_BRAND_PRIMARY_HEX, LEVELUP_BRAND_PRIMARY_ON_DARK_HEX } from '@/lib/app-branding';
+import { LEVELUP_BRAND_PRIMARY_HEX, LEVELUP_BRAND_PRIMARY_ON_DARK_HEX } from '@/lib/appBranding';
 
 type PortalArea = {
     id: string;
@@ -285,7 +285,7 @@ export default function PortalPage() {
                 ? [
                       {
                           id: 'admin',
-                          href: `/${schoolId}/admin-signin`,
+                          href: `/${schoolId}/admin-sign-in`,
                           title: 'Admin Portal',
                           description: 'Manage students, classes, prizes, and system settings.',
                           icon: UserCog,
@@ -559,7 +559,8 @@ export default function PortalPage() {
                         <DialogHeader>
                             <DialogTitle className="font-headline font-black tracking-tight">Admin passcode</DialogTitle>
                             <DialogDescription>
-                                Enter the admin passcode for this school to open {adminDestination === 'teacher' ? 'the teacher portal as admin' : 'Admin tools'}.
+                                Enter the admin passcode for this school to open{' '}
+                                {adminDestination === 'teacher' ? 'the Teacher Portal with admin access' : 'the Admin dashboard'}.
                             </DialogDescription>
                         </DialogHeader>
                         <div className="space-y-2">
@@ -881,7 +882,7 @@ export default function PortalPage() {
                                 </Link>
                             </Button>
                             <Button variant="ghost" size="sm" asChild className="font-bold">
-                                <Link href={`/${schoolId}/admin-signin`} onClick={() => playSound('click')}>
+                                <Link href={`/${schoolId}/admin-sign-in`} onClick={() => playSound('click')}>
                                     Admin sign-in
                                 </Link>
                             </Button>

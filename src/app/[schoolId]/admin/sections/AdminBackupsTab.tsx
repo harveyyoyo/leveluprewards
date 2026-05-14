@@ -80,7 +80,8 @@ export function AdminBackupsTab({
                           <AlertDialogTitle className="text-2xl font-bold">Restore snapshot?</AlertDialogTitle>
                           <AlertDialogDescription className="text-base text-balance mt-2">
                             This will <span className="font-bold text-destructive">OVERWRITE all current school data</span> with the state from{' '}
-                            {b.createdAt ? new Date(b.createdAt).toLocaleString() : 'unknown date'}. This cannot be easily undone.
+                            {b.createdAt ? new Date(b.createdAt).toLocaleString() : 'unknown date'}. Keep another backup
+                            first—you typically reverse this only by restoring a different snapshot.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter className="mt-6">

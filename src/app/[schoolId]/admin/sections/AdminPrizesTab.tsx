@@ -23,7 +23,7 @@ import {
   prizeRestrictionTeacherIds,
   removeTeacherFromPrize,
   teacherListedOnPrize,
-} from '@/lib/prize-utils';
+} from '@/lib/prizeUtils';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { isAiSurpriseHiddenFromAdminGrid } from '@/lib/aiJokePrize';
 
@@ -524,7 +524,9 @@ export function AdminPrizesTab({
             <DialogDescription>Quick overview of item settings.</DialogDescription>
           </DialogHeader>
           <div className="space-y-3 text-sm">
-                            <p><span className="font-bold">Items</span> are rewards students redeem using points in the rewards shop.</p>
+            <p>
+              <span className="font-bold">Items</span> are rewards students redeem using points in the rewards shop.
+            </p>
             <ul className="list-disc pl-5 space-y-1">
               <li><span className="font-bold">Points</span>: cost per redemption.</li>
               <li><span className="font-bold">In Stock</span>: whether it appears in the shop.</li>
@@ -544,15 +546,19 @@ export function AdminPrizesTab({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{wizardTitle}</DialogTitle>
-            <DialogDescription>Step-by-step creation with explanations.</DialogDescription>
+            <DialogDescription>Step-by-step creation with a short explanation on each step.</DialogDescription>
           </DialogHeader>
           {wizardStep === 0 && (
             <div className="space-y-3 text-sm">
-              <p>This wizard guides you through creating a prize, understanding each option, and how redemption works.</p>
+              <p>
+                This wizard walks you through creating a prize, explains each option, and covers how redemption works.
+              </p>
               <ul className="list-disc pl-5 space-y-1">
                 <li><span className="font-bold">Set</span> name, icon, points, stock.</li>
                 <li><span className="font-bold">Choose</span> printing and who can redeem.</li>
-                                <li><span className="font-bold">Then</span> test redemption in the rewards shop.</li>
+                <li>
+                  <span className="font-bold">Then</span> test redemption in the rewards shop.
+                </li>
               </ul>
             </div>
           )}

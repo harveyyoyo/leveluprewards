@@ -8,10 +8,11 @@ import { useSettings } from './providers/SettingsProvider';
 import { ArrowRight, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { springCinematic } from '@/lib/animation';
+import { APP_NAME } from '@/lib/appBranding';
 
 const steps = [
   {
-    title: 'Welcome to levelUp EDU!',
+    title: `Welcome to ${APP_NAME}!`,
     description: 'This quick tour will walk you through the essential features of the app. Click "Next" to begin.',
     target: '/portal',
   },
@@ -85,7 +86,7 @@ const steps = [
   {
     title: "Step 13: Hall of Fame",
     description: "You've made it! This is the school leaderboard. You can see top students by points or period. You've completed the tour and are ready to level up your school!",
-    target: '/halloffame',
+    target: '/hall-of-fame',
   },
 ];
 

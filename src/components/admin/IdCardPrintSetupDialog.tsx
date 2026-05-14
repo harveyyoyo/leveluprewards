@@ -14,7 +14,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import type { Class, Student } from '@/lib/types';
-import { resolveIdCardPrintJobOptions } from '@/lib/id-card-print-catalog';
+import { resolveIdCardPrintJobOptions } from '@/lib/idCardPrintCatalog';
 import { Printer } from 'lucide-react';
 
 export function IdCardPrintSetupDialog({
@@ -66,7 +66,8 @@ export function IdCardPrintSetupDialog({
             Print ID cards
           </DialogTitle>
           <DialogDescription>
-            Uses the printer and stock chosen in Settings → Basic settings → Printing &amp; Guidance. {summaryLine}
+            These cards use the printer profile and stock selected under Settings → Basic settings → Printing &amp;
+            guidance. {summaryLine}
           </DialogDescription>
         </DialogHeader>
 

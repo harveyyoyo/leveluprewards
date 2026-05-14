@@ -10,11 +10,11 @@ import { useSettings } from '@/components/providers/SettingsProvider';
 import {
   isPublicSampleSchoolId,
   SAMPLE_SCHOOL_ACCESS_PASSCODE,
-} from '@/lib/sample-schools';
+} from '@/lib/sampleSchools';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import Logo from '@/components/Logo';
-import { getLevelUpLogoHref } from '@/lib/app-branding';
+import { getLevelUpLogoHref, APP_NAME, APP_TAGLINE } from '@/lib/appBranding';
 import { useFirestore, useMemoFirebase, useDoc, useFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import {
@@ -343,7 +343,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground p-6 text-center">
         <div className="animate-pulse mb-4 text-primary font-bold text-xl uppercase tracking-tighter">
-          Loading levelUp EDU...
+          Loading {APP_NAME}…
         </div>
         <p className="text-xs text-muted-foreground opacity-60">
           Preparing your school reward experience
@@ -365,7 +365,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
             <Link
               href={getLevelUpLogoHref()}
               className="flex items-center justify-center gap-4 no-underline outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-xl"
-              aria-label="LevelUp EDU — school sign-in"
+              aria-label={`${APP_NAME} — school sign-in`}
             >
               {appLogoUrl ? (
                 <div className="h-14 w-14 rounded-2xl overflow-hidden bg-muted border border-border/70 flex items-center justify-center">
@@ -384,8 +384,8 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
                 <Logo className="h-14 w-auto" />
               )}
               <div className="text-left">
-                <h1 className="text-2xl font-bold font-headline text-foreground">levelUp EDU</h1>
-                <p className="text-sm text-muted-foreground">School rewards system</p>
+                <h1 className="text-2xl font-bold font-headline text-foreground">{APP_NAME}</h1>
+                <p className="text-sm text-muted-foreground">{APP_TAGLINE}</p>
               </div>
             </Link>
             <p className="mt-4 text-sm text-muted-foreground leading-relaxed">

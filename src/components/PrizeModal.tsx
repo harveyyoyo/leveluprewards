@@ -21,7 +21,7 @@ import DynamicIcon from './DynamicIcon';
 import { Switch } from './ui/switch';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { uploadPrizeImage, validatePrizeImageFile } from '@/lib/prize-image-upload';
+import { uploadPrizeImage, validatePrizeImageFile } from '@/lib/prizeImageUpload';
 import { cn } from '@/lib/utils';
 import { doc, updateDoc } from 'firebase/firestore';
 import { ImagePlus, Loader2 } from 'lucide-react';
@@ -120,7 +120,7 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses, cre
     }
      if (isNaN(pointsValue) || pointsValue < 0) {
       playSound('error');
-      toast({ variant: 'destructive', title: 'Points must be a positive number.' });
+      toast({ variant: 'destructive', title: 'Points must be zero or greater.' });
       return;
     }
 
