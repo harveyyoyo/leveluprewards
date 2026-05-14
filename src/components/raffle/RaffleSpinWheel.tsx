@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Loader2, Shuffle, Volume2, VolumeX, X } from 'lucide-react';
+import confetti from 'canvas-confetti';
 import { cn } from '@/lib/utils';
 
 export type RaffleWheelSlice = { id: string; name: string; weight: number };
@@ -218,6 +219,14 @@ export function RaffleSpinWheel({
       setWinner(picked);
       setShowWin(true);
       setTransitionOn(false);
+      confetti({
+        particleCount: 150,
+        spread: 80,
+        origin: { y: 0.6 },
+        colors: ['#fde047', '#3b82f6', '#ef4444', '#10b981'],
+        disableForReducedMotion: true,
+        zIndex: 9999,
+      });
       if (!muted) playWin();
 
       try {
@@ -247,6 +256,11 @@ export function RaffleSpinWheel({
     setShowWin(false);
     setWinner(null);
 
+    if (!muted) {
+      // Initialize/resume AudioContext synchronously within the user gesture
+      getCtx();
+    }
+
     if (reduceMotion) {
       void finishSpin(runId);
       return;
@@ -267,7 +281,6 @@ export function RaffleSpinWheel({
       setRotation(next);
 
       if (!muted) {
-        getCtx();
         scheduleTicks(delta, SPIN_MS, runId);
       }
       window.setTimeout(() => void finishSpin(runId), SPIN_MS + 80);

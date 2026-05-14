@@ -3,10 +3,12 @@
 # Docs: https://firebase.google.com/docs/app-hosting
 
 runConfig:
-  minInstances: 0
+  # Keep one instance warm so the first request after deploy/inactivity does not
+  # pay a full Next.js server cold start.
+  minInstances: 1
   maxInstances: 2
   cpu: 1
-  memoryMiB: 512
+  memoryMiB: 1024
   concurrency: 80
 
 build:

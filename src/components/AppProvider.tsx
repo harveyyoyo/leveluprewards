@@ -13,33 +13,6 @@ import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { reportFirestorePermissionError } from '@/firebase/error-emitter';
 import { collection, doc, runTransaction } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
-import {
-  addCategory as dbAddCategory, deleteCategory as dbDeleteCategory, updateCategory as dbUpdateCategory,
-  addCoupons as dbAddCoupons, deleteCoupon as dbDeleteCoupon, deleteCoupons as dbDeleteCoupons,
-  addPrize as dbAddPrize,
-  redeemPrize as dbRedeemPrize,
-  updatePrize as dbUpdatePrize, deletePrize as dbDeletePrize,
-  addStudent as dbAddStudent, updateStudent as dbUpdateStudent,
-  deleteStudent as dbDeleteStudent, addClass as dbAddClass, updateClass as dbUpdateClass,
-  deleteClass as dbDeleteClass, addTeacher as dbAddTeacher, updateTeacher as dbUpdateTeacher, deleteTeacher as dbDeleteTeacher, uploadStudents as dbUploadStudents,
-  uploadClassesFromCsv as dbUploadClassesFromCsv, uploadTeachersFromCsv as dbUploadTeachersFromCsv,
-  awardPointsToStudent as dbAwardPointsToStudent,
-  awardPointsToMultipleStudents as dbAwardPointsToMultipleStudents,
-  deductPointsFromMultipleStudents as dbDeductPointsFromMultipleStudents,
-  togglePrizeFulfillment as dbTogglePrizeFulfillment,
-  purgeStudentProgress as dbPurgeStudentProgress,
-  getAttendanceConfig as dbGetAttendanceConfig,
-  setAttendanceConfig as dbSetAttendanceConfig,
-  recordClassSignIn as dbRecordClassSignIn,
-  listAttendanceLog as dbListAttendanceLog,
-  getTeacherAttendanceConfig as dbGetTeacherAttendanceConfig,
-  setTeacherAttendanceConfig as dbSetTeacherAttendanceConfig,
-  listTeacherAttendanceLog as dbListTeacherAttendanceLog,
-  addHomeworkAssignment as dbAddHomeworkAssignment,
-  deleteHomeworkAssignment as dbDeleteHomeworkAssignment,
-  submitHomework as dbSubmitHomework,
-  approveHomework as dbApproveHomework,
-} from '@/lib/db';
 import { AuthProvider, useAuth } from './providers/AuthProvider';
 import type { LogoutOptions } from './providers/AuthProvider';
 import { PrintProvider, usePrint } from './providers/PrintProvider';
@@ -49,6 +22,8 @@ import { addPendingCouponRedemption, listPendingCouponRedemptions, updatePending
 import { couponIsKnownAndValidOffline, saveCouponSnapshot } from '@/lib/couponCache';
 import type { LoginResult } from '@/lib/loginResult';
 import { AI_FUN_UNIFIED_PRIZE_ID } from '@/lib/aiJokePrize';
+
+const getDb = () => import('@/lib/db');
 
 // Re-export types from AuthProvider for backward compatibility
 export type { SyncStatus, LoginState, LogoutOptions } from './providers/AuthProvider';
@@ -357,70 +332,70 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
       .catch(() => {});
   }, [schoolId, functions, auth]);
 
-  // CRUD wrappers — delegate straight to db.ts — delegate straight to db.ts
+  // CRUD wrappers load the db helpers on demand so the root client bundle stays lean.
   const addStudent_ = useCallback((s: Omit<Student, 'id' | 'points' | 'lifetimePoints'>) => {
     if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
-    return dbAddStudent(firestore, schoolId, s);
+    return getDb().then((db) => db.addStudent(firestore, schoolId, s));
   }, [firestore, schoolId]);
 
   const updateStudent_ = useCallback((s: Student) => {
     if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
-    return dbUpdateStudent(firestore, schoolId, s);
+    return getDb().then((db) => db.updateStudent(firestore, schoolId, s));
   }, [firestore, schoolId]);
 
   const deleteStudent_ = useCallback((id: string) => {
     if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
-    return dbDeleteStudent(firestore, schoolId, id);
+    return getDb().then((db) => db.deleteStudent(firestore, schoolId, id));
   }, [firestore, schoolId]);
 
   const addClass_ = useCallback((c: Omit<Class, 'id'>) => {
     if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
-    return dbAddClass(firestore, schoolId, c);
+    return getDb().then((db) => db.addClass(firestore, schoolId, c));
   }, [firestore, schoolId]);
 
   const updateClass_ = useCallback((c: Class) => {
     if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
-    return dbUpdateClass(firestore, schoolId, c);
+    return getDb().then((db) => db.updateClass(firestore, schoolId, c));
   }, [firestore, schoolId]);
 
   const deleteClass_ = useCallback((id: string, students: Student[]) => {
     if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
-    return dbDeleteClass(firestore, schoolId, id, students);
+    return getDb().then((db) => db.deleteClass(firestore, schoolId, id, students));
   }, [firestore, schoolId]);
 
   const addTeacher_ = useCallback((t: Omit<Teacher, 'id'>) => {
     if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
-    return dbAddTeacher(firestore, schoolId, t);
+    return getDb().then((db) => db.addTeacher(firestore, schoolId, t));
   }, [firestore, schoolId]);
 
   const updateTeacher_ = useCallback((t: Teacher, options?: { clearTeacherBudget?: boolean }) => {
     if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
-    return dbUpdateTeacher(firestore, schoolId, t, options);
+    return getDb().then((db) => db.updateTeacher(firestore, schoolId, t, options));
   }, [firestore, schoolId]);
 
   const deleteTeacher_ = useCallback((id: string) => {
     if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
-    return dbDeleteTeacher(firestore, schoolId, id);
+    return getDb().then((db) => db.deleteTeacher(firestore, schoolId, id));
   }, [firestore, schoolId]);
 
   const addCategory_ = useCallback(async (data: { name: string; points: number; color?: string; teacherId?: string }) => {
     if (!firestore || !schoolId) return undefined;
-    return dbAddCategory(firestore, schoolId, data);
+    return getDb().then((db) => db.addCategory(firestore, schoolId, data));
   }, [firestore, schoolId]);
 
   const updateCategory_ = useCallback(async (category: Category) => {
     if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
-    return dbUpdateCategory(firestore, schoolId, category);
+    return getDb().then((db) => db.updateCategory(firestore, schoolId, category));
   }, [firestore, schoolId]);
 
   const deleteCategory_ = useCallback((id: string) => {
     if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
-    return dbDeleteCategory(firestore, schoolId, id);
+    return getDb().then((db) => db.deleteCategory(firestore, schoolId, id));
   }, [firestore, schoolId]);
 
   const addCoupons_ = useCallback((coupons: Coupon[]) => {
     if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
-    return dbAddCoupons(firestore, schoolId, coupons);
+    return getDb().then((db) => db.addCoupons(firestore, schoolId, coupons));
   }, [firestore, schoolId]);
 
   const redeemCoupon_ = useCallback(async (studentId: string, code: string) => {
@@ -448,31 +423,31 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
 
   const deleteCoupon_ = useCallback((couponId: string) => {
     if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
-    return dbDeleteCoupon(firestore, schoolId, couponId);
+    return getDb().then((db) => db.deleteCoupon(firestore, schoolId, couponId));
   }, [firestore, schoolId]);
 
   const deleteCoupons_ = useCallback((couponIds: string[]) => {
     if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
-    return dbDeleteCoupons(firestore, schoolId, couponIds);
+    return getDb().then((db) => db.deleteCoupons(firestore, schoolId, couponIds));
   }, [firestore, schoolId]);
 
   const awardPoints_ = useCallback(async (studentId: string, points: number, description: string) => {
     if (!firestore || !schoolId) return { success: false, message: 'Not logged in.' };
     const allAchievements = settings.enableAchievements ? (achievements || []) : [];
     const allBadges = settings.enableBadges ? (badges || []) : [];
-    return dbAwardPointsToStudent(firestore, schoolId, studentId, points, description, allAchievements, categories || [], allBadges);
+    return getDb().then((db) => db.awardPointsToStudent(firestore, schoolId, studentId, points, description, allAchievements, categories || [], allBadges));
   }, [firestore, schoolId, categories, achievements, badges, settings.enableAchievements, settings.enableBadges]);
 
   const awardPointsToMultipleStudents_ = useCallback(async (studentIds: string[], points: number, description: string) => {
     if (!firestore || !schoolId) return { success: false, message: 'Not logged in.', count: 0 };
     const allAchievements = settings.enableAchievements ? (achievements || []) : [];
     const allBadges = settings.enableBadges ? (badges || []) : [];
-    return dbAwardPointsToMultipleStudents(firestore, schoolId, studentIds, points, description, allAchievements, categories || [], allBadges);
+    return getDb().then((db) => db.awardPointsToMultipleStudents(firestore, schoolId, studentIds, points, description, allAchievements, categories || [], allBadges));
   }, [firestore, schoolId, categories, achievements, badges, settings.enableAchievements, settings.enableBadges]);
 
   const deductPointsFromMultipleStudents_ = useCallback(async (studentIds: string[], points: number, reason: string) => {
     if (!firestore || !schoolId) return { success: false, message: 'Not logged in.', count: 0 };
-    return dbDeductPointsFromMultipleStudents(firestore, schoolId, studentIds, points, reason);
+    return getDb().then((db) => db.deductPointsFromMultipleStudents(firestore, schoolId, studentIds, points, reason));
   }, [firestore, schoolId]);
 
   const redeemPrize_ = useCallback(async (studentId: string, prize: Prize, quantity: number, pointsOverride?: number) => {
@@ -509,7 +484,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
       if (canUseLocalFallback && isCallableReachabilityFailure) {
         try {
           if (prize.id !== AI_FUN_UNIFIED_PRIZE_ID) {
-            const result = await dbRedeemPrize(firestore, schoolId, studentId, prize, quantity, pointsOverride);
+            const result = await getDb().then((db) => db.redeemPrize(firestore, schoolId, studentId, prize, quantity, pointsOverride));
             return {
               success: result.success,
               activityId: result.activityId,
@@ -576,47 +551,47 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
 
   const addPrize_ = useCallback((p: Omit<Prize, 'id'>) => {
     if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
-    return dbAddPrize(firestore, schoolId, p);
+    return getDb().then((db) => db.addPrize(firestore, schoolId, p));
   }, [firestore, schoolId]);
 
   const updatePrize_ = useCallback((p: Prize) => {
     if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
-    return dbUpdatePrize(firestore, schoolId, p);
+    return getDb().then((db) => db.updatePrize(firestore, schoolId, p));
   }, [firestore, schoolId]);
 
   const deletePrize_ = useCallback((id: string) => {
     if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
-    return dbDeletePrize(firestore, schoolId, id);
+    return getDb().then((db) => db.deletePrize(firestore, schoolId, id));
   }, [firestore, schoolId]);
 
   const uploadStudents_ = useCallback((csv: string, curr: Student[], classes: Class[]) => {
     if (!firestore || !schoolId) return Promise.resolve({ success: 0, failed: 0, errors: ["Not logged in."] });
-    return dbUploadStudents(firestore, schoolId, csv, curr, classes);
+    return getDb().then((db) => db.uploadStudents(firestore, schoolId, csv, curr, classes));
   }, [firestore, schoolId]);
 
   const uploadClassesFromCsv_ = useCallback((csv: string, curr: Class[]) => {
     if (!firestore || !schoolId) return Promise.resolve({ success: 0, failed: 0, errors: ["Not logged in."] });
-    return dbUploadClassesFromCsv(firestore, schoolId, csv, curr);
+    return getDb().then((db) => db.uploadClassesFromCsv(firestore, schoolId, csv, curr));
   }, [firestore, schoolId]);
 
   const uploadTeachersFromCsv_ = useCallback((csv: string, curr: Teacher[]) => {
     if (!firestore || !schoolId) return Promise.resolve({ success: 0, failed: 0, errors: ["Not logged in."] });
-    return dbUploadTeachersFromCsv(firestore, schoolId, csv, curr);
+    return getDb().then((db) => db.uploadTeachersFromCsv(firestore, schoolId, csv, curr));
   }, [firestore, schoolId]);
 
   const togglePrizeFulfillment_ = useCallback(async (studentId: string, activityId: string, fulfilled: boolean) => {
     if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
-    return dbTogglePrizeFulfillment(firestore, schoolId, studentId, activityId, fulfilled);
+    return getDb().then((db) => db.togglePrizeFulfillment(firestore, schoolId, studentId, activityId, fulfilled));
   }, [firestore, schoolId]);
 
   const purgeStudentProgress_ = useCallback(async (studentId: string) => {
     if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
-    return dbPurgeStudentProgress(firestore, schoolId, studentId);
+    return getDb().then((db) => db.purgeStudentProgress(firestore, schoolId, studentId));
   }, [firestore, schoolId]);
 
   const getAttendanceConfig_ = useCallback(async () => {
     if (!firestore || !schoolId) return null;
-    return dbGetAttendanceConfig(firestore, schoolId);
+    return getDb().then((db) => db.getAttendanceConfig(firestore, schoolId));
   }, [firestore, schoolId]);
 
   const setAttendanceConfig_ = useCallback(async (settings: AttendanceSettings) => {
@@ -631,7 +606,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
       const code = (callableErr as { code?: string })?.code ?? '';
       if (code.includes('internal') || code.includes('unavailable') || code.includes('not-found')) {
         try {
-          await dbSetAttendanceConfig(firestore!, schoolId, settings);
+          await getDb().then((db) => db.setAttendanceConfig(firestore!, schoolId, settings));
           return;
         } catch {
           /* fallback failed, throw original so user sees callable error message */
@@ -643,47 +618,47 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
 
   const recordClassSignIn_ = useCallback(async (studentId: string, student: Student, config: AttendanceSettings) => {
     if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
-    return dbRecordClassSignIn(firestore, schoolId, studentId, student, config);
+    return getDb().then((db) => db.recordClassSignIn(firestore, schoolId, studentId, student, config));
   }, [firestore, schoolId]);
 
   const listAttendanceLog_ = useCallback(async (limitCount?: number) => {
     if (!firestore || !schoolId) return [];
-    return dbListAttendanceLog(firestore, schoolId, limitCount);
+    return getDb().then((db) => db.listAttendanceLog(firestore, schoolId, limitCount));
   }, [firestore, schoolId]);
 
   const getTeacherAttendanceConfig_ = useCallback(async (teacherId: string) => {
     if (!firestore || !schoolId || !teacherId) return null;
-    return dbGetTeacherAttendanceConfig(firestore, schoolId, teacherId);
+    return getDb().then((db) => db.getTeacherAttendanceConfig(firestore, schoolId, teacherId));
   }, [firestore, schoolId]);
 
   const setTeacherAttendanceConfig_ = useCallback(async (teacherId: string, settings: AttendanceSettings) => {
     if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
-    return dbSetTeacherAttendanceConfig(firestore, schoolId, teacherId, settings);
+    return getDb().then((db) => db.setTeacherAttendanceConfig(firestore, schoolId, teacherId, settings));
   }, [firestore, schoolId]);
 
   const listTeacherAttendanceLog_ = useCallback(async (teacherId: string, limitCount?: number) => {
     if (!firestore || !schoolId || !teacherId) return [];
-    return dbListTeacherAttendanceLog(firestore, schoolId, teacherId, limitCount);
+    return getDb().then((db) => db.listTeacherAttendanceLog(firestore, schoolId, teacherId, limitCount));
   }, [firestore, schoolId]);
 
   const addHomeworkAssignment_ = useCallback((assignment: Omit<HomeworkAssignment, 'id'>) => {
     if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
-    return dbAddHomeworkAssignment(firestore, schoolId, assignment);
+    return getDb().then((db) => db.addHomeworkAssignment(firestore, schoolId, assignment));
   }, [firestore, schoolId]);
 
   const deleteHomeworkAssignment_ = useCallback((id: string) => {
     if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
-    return dbDeleteHomeworkAssignment(firestore, schoolId, id);
+    return getDb().then((db) => db.deleteHomeworkAssignment(firestore, schoolId, id));
   }, [firestore, schoolId]);
 
   const submitHomework_ = useCallback((studentId: string, assignmentId: string) => {
     if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
-    return dbSubmitHomework(firestore, schoolId, studentId, assignmentId);
+    return getDb().then((db) => db.submitHomework(firestore, schoolId, studentId, assignmentId));
   }, [firestore, schoolId]);
 
   const approveHomework_ = useCallback((studentId: string, assignmentId: string, points: number, title: string) => {
     if (!firestore || !schoolId) return Promise.resolve({ success: false, message: "Not logged into a school." });
-    return dbApproveHomework(firestore, schoolId, studentId, assignmentId, points, title, achievements || [], categories || [], badges || []);
+    return getDb().then((db) => db.approveHomework(firestore, schoolId, studentId, assignmentId, points, title, achievements || [], categories || [], badges || []));
   }, [firestore, schoolId, achievements, categories, badges]);
 
   const value = useMemo(() => ({

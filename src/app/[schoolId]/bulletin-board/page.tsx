@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
 import { DEFAULT_BULLETIN_SUBTITLE, bulletinLogoBoxClass, getBulletinBoardCardClassName } from '@/lib/bulletinBoard';
 import { getLevelUpLogoHref } from '@/lib/app-branding';
+import { useToast } from '@/hooks/use-toast';
 
 import { motion } from 'framer-motion';
 import { rainbowTripletForNavId, complementTripletForNavId } from '@/lib/rainbowNav';
@@ -51,6 +52,7 @@ const VIEWER_LOGIN_STATES = new Set([
 
 export default function BulletinBoardViewPage() {
   const { loginState, isInitialized, schoolId } = useAppContext();
+  const { toast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { settings } = useSettings();
@@ -92,9 +94,14 @@ export default function BulletinBoardViewPage() {
 
   useEffect(() => {
     if (isInitialized && !VIEWER_LOGIN_STATES.has(loginState)) {
+      toast({
+        variant: 'destructive',
+        title: 'Authorization Required',
+        description: 'Please sign in to access the Bulletin Board display.',
+      });
       router.replace('/login');
     }
-  }, [isInitialized, loginState, router]);
+  }, [isInitialized, loginState, router, toast]);
 
   const bulletinEnabled = settings.bulletinEnabled !== false;
   const bulletinTitle = settings.bulletinTitle || 'School Bulletin Board';

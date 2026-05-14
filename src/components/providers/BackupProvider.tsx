@@ -26,8 +26,6 @@ import { httpsCallable } from "firebase/functions";
 import { useToast } from '@/hooks/use-toast';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import type { HistoryItem, Student } from '@/lib/types';
-import { YESHIVA_DATA } from '@/lib/yeshiva-data';
-import { SCHOOL_DATA } from '@/lib/school-data';
 import { DEFAULT_PLAN } from '@/lib/plans';
 
 interface BackupContextType {
@@ -232,9 +230,11 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
         // Re-seed from built-in sample data
         let schoolData: Record<string, any>, newPasscode: string;
         if (cleanId === 'yeshiva') {
+            const { YESHIVA_DATA } = await import('@/lib/yeshiva-data');
             newPasscode = '911';
             schoolData = YESHIVA_DATA;
         } else {
+            const { SCHOOL_DATA } = await import('@/lib/school-data');
             newPasscode = '911';
             schoolData = SCHOOL_DATA;
         }

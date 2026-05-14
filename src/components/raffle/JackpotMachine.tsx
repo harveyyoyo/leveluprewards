@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Sparkles, Volume2, VolumeX, Loader2 } from 'lucide-react';
+import confetti from 'canvas-confetti';
 import { cn } from '@/lib/utils';
 
 const REEL_COUNT = 3;
@@ -50,7 +51,6 @@ export function JackpotMachine({
   const [offsets, setOffsets] = useState<number[]>(() => Array(REEL_COUNT).fill(IDLE_REEL_OFFSET_PX));
   /** When true, reel transform has no transition (instant snap before each spin). */
   const [reelSnap, setReelSnap] = useState(false);
-  const [confetti, setConfetti] = useState(false);
 
   const audioRef = useRef<AudioContext | null>(null);
   const tickTimers = useRef<number[]>([]);
@@ -78,7 +78,6 @@ export function JackpotMachine({
     spinFinished.current = false;
     setSpinning(false);
     setWinner(null);
-    setConfetti(false);
     setOffsets(Array(REEL_COUNT).fill(IDLE_REEL_OFFSET_PX));
     setReelSnap(false);
   }, [resetKey]);
@@ -100,11 +99,11 @@ export function JackpotMachine({
     return audioRef.current;
   }, [muted]);
 
-  const resumeAudioIfNeeded = async () => {
+  const resumeAudioIfNeeded = () => {
     const ctx = getCtx();
     if (!ctx || ctx.state !== 'suspended') return;
     try {
-      await ctx.resume();
+      void ctx.resume();
     } catch {
       /* ignore */
     }
@@ -159,7 +158,14 @@ export function JackpotMachine({
       clearTickTimers();
       setSpinning(false);
       setWinner(picked.name);
-      setConfetti(true);
+      confetti({
+        particleCount: 150,
+        spread: 80,
+        origin: { y: 0.6 },
+        colors: ['#fde047', '#3b82f6', '#ef4444', '#10b981'],
+        disableForReducedMotion: true,
+        zIndex: 9999,
+      });
       if (!muted) playWin();
       try {
         await Promise.resolve(onSpinFinished?.(picked));
@@ -183,6 +189,10 @@ export function JackpotMachine({
   const spin = () => {
     if (spinning || pool.length === 0) return;
 
+    if (!muted) {
+      resumeAudioIfNeeded();
+    }
+
     const picked = pickWinner();
     if (!picked) return;
 
@@ -194,9 +204,7 @@ export function JackpotMachine({
 
     if (reduceMotion) {
       setWinner(picked.name);
-      setConfetti(true);
       void (async () => {
-        await resumeAudioIfNeeded();
         if (!muted) playWin();
         try {
           await Promise.resolve(onSpinFinished?.(picked));
@@ -212,13 +220,11 @@ export function JackpotMachine({
 
       setSpinning(true);
       setWinner(null);
-      setConfetti(false);
       pendingWinner.current = picked;
       spinFinished.current = false;
       const runId = spinRunId.current + 1;
       spinRunId.current = runId;
       transitionRunIdRef.current = runId;
-      if (!muted) await resumeAudioIfNeeded();
 
       const L = pool.length;
       clearTickTimers();
@@ -457,32 +463,6 @@ export function JackpotMachine({
           </div>
         </div>
       </div>
-
-      {confetti ? (
-        <div className="pointer-events-none fixed inset-0 z-50 overflow-hidden">
-          {Array.from({ length: 80 }).map((_, i) => {
-            const left = Math.random() * 100;
-            const delay = Math.random() * 0.6;
-            const dur = 2.4 + Math.random() * 2;
-            const size = 6 + Math.random() * 8;
-            const hue = Math.floor(Math.random() * 360);
-            return (
-              <div
-                key={i}
-                className="absolute -top-4"
-                style={{
-                  left: `${left}%`,
-                  width: size,
-                  height: size * 1.6,
-                  background: `hsl(${hue} 65% 55%)`,
-                  borderRadius: 2,
-                  animation: `jp-fall ${dur}s linear ${delay}s forwards`,
-                }}
-              />
-            );
-          })}
-        </div>
-      ) : null}
     </div>
   );
 }

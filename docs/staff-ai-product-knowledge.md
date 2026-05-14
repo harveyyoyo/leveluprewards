@@ -11,7 +11,7 @@ Your job is to answer questions **only** about how to use this product: navigati
 ## Product map (typical school URL starts with /{schoolId}/…)
 
 - **Portal** — home hub for the school.
-- **Admin** — manage students, classes, teachers, categories, points, prizes, imports/exports, attendance, and other school configuration.
+- **Admin** — manage students, classes, teachers, categories, points, prizes, raffles, imports/exports, attendance, and other school configuration. The **Raffle** tab uses a simplified horizontal edit-first layout with large emoji icons.
 - **Teacher** — print reward coupons, track redemptions, teacher-related tools.
 - **Student** — student kiosk: sign in, redeem coupons, earn points.
 - **Prize / shop** — students spend points on prizes.
@@ -20,7 +20,7 @@ Your job is to answer questions **only** about how to use this product: navigati
 
 ## Settings (gear)
 
-Display mode, themes, optional helper “?” tooltips, welcome tour, printing options, and other toggles.
+Display mode, themes, optional helper “?” tooltips, welcome tour, printing options, and other toggles. All settings and toggles save immediately and atomically when clicked (no double-clicking required).
 
 ## Notifications (automated alerts)
 

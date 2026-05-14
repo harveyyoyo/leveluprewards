@@ -176,13 +176,20 @@ function FeatureRow({ id, label, desc, icon, settings, onToggle, onConfigure, is
         if (!hay.includes(q)) return null;
     }
     return (
-        <div className="flex items-start justify-between py-4 px-3 border-b border-border/40 last:border-0 hover:bg-muted/30 rounded-xl transition-colors">
-            <div className={`flex items-start gap-4 ${!canUse && 'opacity-60'} mr-6`}>
+        <div 
+            className={`flex items-start justify-between py-4 px-3 border-b border-border/40 last:border-0 hover:bg-muted/30 rounded-xl transition-colors ${canUse && isAdmin ? 'cursor-pointer' : ''}`}
+            onClick={() => {
+                if (canUse && isAdmin) {
+                    onToggle(id, !isEnabled);
+                }
+            }}
+        >
+            <div className={`flex items-start gap-4 ${!canUse && 'opacity-60'} mr-6 min-w-0`}>
                 <div className={`p-2.5 rounded-xl transition-colors shrink-0 mt-0.5 ${(isEnabled && canUse) ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
                     {icon}
                 </div>
-                <div className="flex flex-col">
-                    <Label className="font-bold text-sm block text-foreground mb-1" htmlFor={canUse && isAdmin ? id : undefined}>{label}</Label>
+                <div className="flex flex-col min-w-0">
+                    <span className="font-bold text-sm block text-foreground mb-1">{label}</span>
                     <p className="text-xs text-muted-foreground leading-relaxed w-full pr-4">{desc}</p>
                 </div>
             </div>
@@ -195,7 +202,7 @@ function FeatureRow({ id, label, desc, icon, settings, onToggle, onConfigure, is
                                 variant="outline"
                                 size="icon"
                                 className="h-9 w-9 rounded-xl"
-                                onClick={onConfigure}
+                                onClick={(e) => { e.stopPropagation(); onConfigure(); }}
                                 disabled={!isAdmin || !isAllowed}
                                 title={`${label} settings`}
                                 aria-label={`${label} settings`}
@@ -203,12 +210,14 @@ function FeatureRow({ id, label, desc, icon, settings, onToggle, onConfigure, is
                                 <Cog className="h-4 w-4" />
                             </Button>
                         ) : null}
-                        <Switch
-                            id={id}
-                            checked={isEnabled && canUse}
-                            onCheckedChange={(checked) => onToggle(id, checked)}
-                            disabled={!isAdmin || !isAllowed || blockedByConfig}
-                        />
+                        <div onClick={(e) => e.stopPropagation()}>
+                            <Switch
+                                id={id}
+                                checked={isEnabled && canUse}
+                                onCheckedChange={(checked) => onToggle(id, checked)}
+                                disabled={!isAdmin || !isAllowed || blockedByConfig}
+                            />
+                        </div>
                     </div>
                     {!isAdmin && <span className="text-[10px] text-muted-foreground mt-2 font-black uppercase tracking-widest whitespace-nowrap">Admin Only</span>}
                     {isAdmin && !isAllowed && (
@@ -1858,7 +1867,7 @@ export function SettingsModal() {
                                 <FeatureRow
                                     id="enableWeeklyRaffle"
                                     label="Weekly Raffle Wheel"
-                                    desc="Turn on the Teacher portal Raffle tab. When enabled, configure ticket size, equal vs scaled odds, and deduct-on-pull below."
+                                    desc="Turn on the Teacher portal Raffle tab. Configure points per ticket, display, odds, and deduct-on-pull in Admin → Raffle."
                                     icon={<Ticket className="w-5 h-5" />}
                                     settings={local}
                                     onToggle={handleToggle}
@@ -1867,85 +1876,6 @@ export function SettingsModal() {
                                     isAllowed={isFeatureAllowed('enableWeeklyRaffle')}
                                     planLabel={planLabel}
                                 />
-                                {local.enableWeeklyRaffle && isAdmin && isFeatureAllowed('enableWeeklyRaffle') && (
-                                    <div className="mx-1 mb-3 space-y-4 rounded-xl border border-border/60 bg-muted/15 px-4 py-4">
-                                        <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">
-                                            Raffle rules (Teacher portal)
-                                        </p>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="settingsRafflePointsPerTicket" className="text-xs font-semibold text-muted-foreground">
-                                                Points per ticket
-                                            </Label>
-                                            <Input
-                                                id="settingsRafflePointsPerTicket"
-                                                type="number"
-                                                min={0}
-                                                className="h-10 max-w-[140px] rounded-lg font-mono"
-                                                value={String(
-                                                    Number.isFinite(Number(local.rafflePointsPerTicket))
-                                                        ? Math.max(0, Math.floor(Number(local.rafflePointsPerTicket)))
-                                                        : 25,
-                                                )}
-                                                onChange={(e) => {
-                                                    const n = Number(e.target.value);
-                                                    const v = Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 25;
-                                                    handleToggle('rafflePointsPerTicket', v);
-                                                }}
-                                            />
-                                            <p className="text-xs text-muted-foreground">
-                                                Use <span className="font-semibold">0</span> for a general raffle (one entry per
-                                                student in the list; no point threshold). Otherwise one ticket per N points (floor
-                                                division), e.g. 25.
-                                            </p>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="settingsRaffleDisplayMode" className="text-xs font-semibold text-muted-foreground">
-                                                Raffle display
-                                            </Label>
-                                            <select
-                                                id="settingsRaffleDisplayMode"
-                                                className="flex h-10 w-full max-w-xs rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                                                value={local.raffleDisplayMode === 'wheel' ? 'wheel' : 'jackpot'}
-                                                onChange={(e) =>
-                                                    handleToggle(
-                                                        'raffleDisplayMode',
-                                                        e.target.value === 'wheel' ? 'wheel' : 'jackpot',
-                                                    )
-                                                }
-                                            >
-                                                <option value="jackpot">Jackpot (three reels)</option>
-                                                <option value="wheel">Spinning wheel</option>
-                                            </select>
-                                            <p className="text-xs text-muted-foreground">
-                                                Teachers see the same odds and deduct rules; only the draw animation changes.
-                                            </p>
-                                        </div>
-                                        <div className="flex items-center justify-between gap-3 rounded-lg border bg-background p-3">
-                                            <div className="min-w-0">
-                                                <p className="text-sm font-semibold">One entry per student (equal odds)</p>
-                                                <p className="text-xs text-muted-foreground">
-                                                    Qualifying students each get one pool entry; extra points do not add entries.
-                                                </p>
-                                            </div>
-                                            <Switch
-                                                checked={!!local.raffleOneEntryPerStudent}
-                                                onCheckedChange={(c) => handleToggle('raffleOneEntryPerStudent', !!c)}
-                                            />
-                                        </div>
-                                        <div className="flex items-center justify-between gap-3 rounded-lg border bg-background p-3">
-                                            <div className="min-w-0">
-                                                <p className="text-sm font-semibold">Deduct points on pull</p>
-                                                <p className="text-xs text-muted-foreground">
-                                                    After each spin, subtract each eligible student&apos;s ticket value (see raffle help text on the teacher tab).
-                                                </p>
-                                            </div>
-                                            <Switch
-                                                checked={!!local.raffleDeductPoints}
-                                                onCheckedChange={(c) => handleToggle('raffleDeductPoints', !!c)}
-                                            />
-                                        </div>
-                                    </div>
-                                )}
                                 <FeatureRow
                                     id="enableNotifications"
                                     label="Notifications"

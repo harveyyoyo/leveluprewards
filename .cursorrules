@@ -1,0 +1,4 @@
+Always use Framer Motion for transitions.
+Prefer 'layoutId' for shared element transitions between pages.
+Use 'spring' physics instead of 'tween' for a more organic feel.
+Add 'staggerChildren' to parent containers for smoother entrance reveals.

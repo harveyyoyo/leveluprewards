@@ -9,11 +9,9 @@ import React, {
     useMemo,
     useRef,
 } from 'react';
+import dynamic from 'next/dynamic';
 import type { Coupon, Student, Class } from '@/lib/types';
-import { PrintSheet } from '@/components/PrintSheet';
-import { StudentIdPrintSheet } from '@/components/StudentIdPrintSheet';
-import { StudentIdDTCPrintSheet } from '@/components/StudentIdDTCPrintSheet';
-import { PrizeRedeemTicketPrintSheet, PrizeRedeemTicket } from '@/components/PrizeRedeemTicketPrintSheet';
+import type { PrizeRedeemTicket } from '@/components/PrizeRedeemTicketPrintSheet';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useAuth } from './AuthProvider';
 import { useDoc } from '@/firebase';
@@ -22,6 +20,26 @@ import type { CouponPrintPageSize } from '@/lib/coupon-print';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import type { PrizeVoucherPaperFormat } from '@/lib/prize-voucher-print';
 import { applyThermalPrizePrintRootLocks, clearThermalPrizePrintRootLocks } from '@/lib/prizeThermalPrintDom';
+
+const PrintSheet = dynamic(
+    () => import('@/components/PrintSheet').then((m) => ({ default: m.PrintSheet })),
+    { ssr: false },
+);
+
+const StudentIdPrintSheet = dynamic(
+    () => import('@/components/StudentIdPrintSheet').then((m) => ({ default: m.StudentIdPrintSheet })),
+    { ssr: false },
+);
+
+const StudentIdDTCPrintSheet = dynamic(
+    () => import('@/components/StudentIdDTCPrintSheet').then((m) => ({ default: m.StudentIdDTCPrintSheet })),
+    { ssr: false },
+);
+
+const PrizeRedeemTicketPrintSheet = dynamic(
+    () => import('@/components/PrizeRedeemTicketPrintSheet').then((m) => ({ default: m.PrizeRedeemTicketPrintSheet })),
+    { ssr: false },
+);
 
 interface PrintContextType {
     setCouponsToPrint: (coupons: Coupon[], options?: { couponsPerPage?: CouponPrintPageSize }) => void;

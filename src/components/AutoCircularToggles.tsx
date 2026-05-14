@@ -82,6 +82,7 @@ export function AutoCircularToggles<T extends Record<string, any>>({
                 : "bg-muted/40 hover:bg-muted/60 border-border text-muted-foreground/60 font-medium"
             )}
             onClick={(e) => {
+              e.preventDefault();
               e.stopPropagation();
               onToggle(key, !val);
             }}

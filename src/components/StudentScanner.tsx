@@ -529,6 +529,20 @@ export function StudentScanner({
 
             // Global keydown listener to hijack input for the scanner
             const handleGlobalKeyDown = (e: KeyboardEvent) => {
+                // Ignore if the page is hidden
+                if (document.visibilityState !== 'visible') {
+                    return;
+                }
+
+                // Ignore system keys, navigation shortcuts, or modifiers
+                if (e.ctrlKey || e.altKey || e.metaKey) return;
+                
+                // Ignore specific utility or navigation keys
+                const ignoredKeys = ['Escape', 'Tab', 'Shift', 'CapsLock', 'Control', 'Alt', 'Meta'];
+                if (ignoredKeys.includes(e.key) || /^F\d+$/.test(e.key)) {
+                    return;
+                }
+
                 // Ignore if they are typing in another input element explicitly
                 if (
                     document.activeElement?.tagName === 'INPUT' &&
@@ -577,22 +591,22 @@ export function StudentScanner({
                 <Tabs defaultValue="nfc" className="w-full" value={loginTab} onValueChange={setLoginTab}>
                     <TabsList className={cn("grid w-full p-1 rounded-xl mb-4 [@media(max-height:720px)]:mb-2", tabsColsClass, isGraphic ? 'bg-muted/50' : 'bg-muted/50')}>
                         {cardEnabled && (
-                            <TabsTrigger value="nfc" onClick={() => nfcInputRef.current?.focus()} className="flex-1 sm:flex-initial rounded-xl font-black text-[9px] sm:text-[10px] px-1 sm:px-3 py-1.5 uppercase tracking-wider sm:tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-md transition-all">
+                            <TabsTrigger value="nfc" onClick={() => nfcInputRef.current?.focus()} className="flex-1 sm:flex-initial rounded-xl font-black text-[9px] sm:text-[10px] px-1 sm:px-3 py-1.5 uppercase tracking-wider sm:tracking-widest hover:bg-card hover:text-card-foreground hover:shadow-md data-[state=active]:bg-card data-[state=active]:shadow-md transition-all">
                                 <Nfc className="mr-1 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" /> Card
                             </TabsTrigger>
                         )}
                         {typeEnabled && (
-                            <TabsTrigger value="manual" className="flex-1 sm:flex-initial rounded-xl font-black text-[9px] sm:text-[10px] px-1 sm:px-3 py-1.5 uppercase tracking-wider sm:tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-md transition-all">
+                            <TabsTrigger value="manual" className="flex-1 sm:flex-initial rounded-xl font-black text-[9px] sm:text-[10px] px-1 sm:px-3 py-1.5 uppercase tracking-wider sm:tracking-widest hover:bg-card hover:text-card-foreground hover:shadow-md data-[state=active]:bg-card data-[state=active]:shadow-md transition-all">
                                 <Type className="mr-1 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" /> Type
                             </TabsTrigger>
                         )}
                         {qrEnabled && (
-                        <TabsTrigger value="camera" className="flex-1 sm:flex-initial rounded-xl font-black text-[9px] sm:text-[10px] px-1 sm:px-3 py-1.5 uppercase tracking-wider sm:tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-md transition-all">
+                        <TabsTrigger value="camera" className="flex-1 sm:flex-initial rounded-xl font-black text-[9px] sm:text-[10px] px-1 sm:px-3 py-1.5 uppercase tracking-wider sm:tracking-widest hover:bg-card hover:text-card-foreground hover:shadow-md data-[state=active]:bg-card data-[state=active]:shadow-md transition-all">
                             <Camera className="mr-1 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" /> Scan
                         </TabsTrigger>
                         )}
                         {faceEnabled && (
-                            <TabsTrigger value="face" className="flex-1 sm:flex-initial rounded-xl font-black text-[9px] sm:text-[10px] px-1 sm:px-3 py-1.5 uppercase tracking-wider sm:tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-md transition-all">
+                            <TabsTrigger value="face" className="flex-1 sm:flex-initial rounded-xl font-black text-[9px] sm:text-[10px] px-1 sm:px-3 py-1.5 uppercase tracking-wider sm:tracking-widest hover:bg-card hover:text-card-foreground hover:shadow-md data-[state=active]:bg-card data-[state=active]:shadow-md transition-all">
                                 <ScanFace className="mr-1 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" /> Face
                             </TabsTrigger>
                         )}
@@ -664,8 +678,8 @@ export function StudentScanner({
                     {qrEnabled && (
                     <TabsContent value="camera">
                         <div className="py-2 space-y-4 [@media(max-height:720px)]:space-y-2">
-                            <div className="relative border-2 border-border rounded-xl overflow-hidden shadow-xl bg-black">
-                                <video ref={videoRef as RefObject<HTMLVideoElement>} className="w-full aspect-video max-h-[220px] object-cover [@media(max-height:720px)]:max-h-[160px]" playsInline muted />
+                            <div className="relative w-full aspect-video max-h-[220px] [@media(max-height:720px)]:max-h-[160px] border-2 border-border rounded-xl overflow-hidden shadow-xl bg-black">
+                                <video ref={videoRef as RefObject<HTMLVideoElement>} className="absolute inset-0 w-full h-full object-cover" playsInline muted />
                                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                     <div className="w-3/4 h-3/4 border-2 border-white/30 rounded-[1.5rem] border-dashed animate-pulse" />
                                 </div>
@@ -685,8 +699,8 @@ export function StudentScanner({
                     {faceEnabled && (
                         <TabsContent value="face">
                             <div className="py-2 space-y-4 [@media(max-height:720px)]:space-y-2">
-                                <div className="relative border-2 border-border rounded-xl overflow-hidden shadow-xl bg-black">
-                                    <video ref={faceVideoRef} className="w-full aspect-video max-h-[220px] object-cover [@media(max-height:720px)]:max-h-[160px]" playsInline muted />
+                                <div className="relative w-full aspect-video max-h-[220px] [@media(max-height:720px)]:max-h-[160px] border-2 border-border rounded-xl overflow-hidden shadow-xl bg-black">
+                                    <video ref={faceVideoRef} className="absolute inset-0 w-full h-full object-cover" playsInline muted />
                                 </div>
 
                                 {faceStatus && (

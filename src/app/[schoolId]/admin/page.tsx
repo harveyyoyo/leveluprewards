@@ -685,13 +685,99 @@ function AdminDashboardInner() {
     updateSettings({ adminPinnedAddOnTabs: now.filter((v) => v !== value) });
   };
 
-  const setAddOnEnabled = (tabValue: string, enabled: boolean) => {
+  const toggleAddOnTab = (tabValue: string, enabled: boolean) => {
     const def = addOnTabDefs.find((t) => t.value === tabValue);
     if (!def) return;
-    if (enabled) def.enable();
-    else {
-      def.disable();
-      if (activeMainTab === tabValue) setActiveMainTab('students');
+
+    const hiddenNow = settings.adminHiddenAddOnTabs || [];
+    const pinnedNow = settings.adminPinnedAddOnTabs || [];
+    
+    const patch: Partial<AppSettings> = {};
+
+    if (enabled) {
+      patch.adminHiddenAddOnTabs = hiddenNow.filter((x) => x !== tabValue);
+      patch.adminPinnedAddOnTabs = [...new Set([...pinnedNow, tabValue])];
+      
+      switch (tabValue) {
+        case 'coupons': patch.payRewards = true; break;
+        case 'insights': patch.enableAdminAnalytics = true; break;
+        case 'attendance':
+          patch.payAttendance = true;
+          patch.enableAttendance = true;
+          patch.enableClassSignIn = true;
+          break;
+        case 'halloffame': patch.enableClassLeaderboard = true; break;
+        case 'bulletinboard': patch.bulletinEnabled = true; break;
+        case 'library': patch.payLibrary = true; break;
+        case 'bonuspoints': patch.enableAchievements = true; break;
+        case 'category-badges': patch.enableBadges = true; break;
+        case 'goals': patch.enableGoals = true; break;
+        case 'notifications': patch.enableNotifications = true; break;
+        default: break;
+      }
+      
+      updateSettings(patch);
+      setActiveMainTab(tabValue);
+    } else {
+      patch.adminPinnedAddOnTabs = pinnedNow.filter((x) => x !== tabValue);
+      let nextHidden = [...hiddenNow];
+      
+      switch (tabValue) {
+        case 'coupons':
+          patch.payRewards = false;
+          nextHidden = nextHidden.filter((x) => x !== 'coupons');
+          break;
+        case 'insights':
+          patch.enableAdminAnalytics = false;
+          nextHidden = nextHidden.filter((x) => x !== 'insights');
+          break;
+        case 'attendance':
+          patch.payAttendance = false;
+          patch.enableAttendance = false;
+          patch.enableClassSignIn = false;
+          nextHidden = nextHidden.filter((x) => x !== 'attendance');
+          break;
+        case 'halloffame':
+          patch.enableClassLeaderboard = false;
+          nextHidden = nextHidden.filter((x) => x !== 'halloffame');
+          break;
+        case 'bulletinboard':
+          patch.bulletinEnabled = false;
+          nextHidden = nextHidden.filter((x) => x !== 'bulletinboard');
+          break;
+        case 'library':
+          patch.payLibrary = false;
+          nextHidden = nextHidden.filter((x) => x !== 'library');
+          break;
+        case 'bonuspoints':
+          patch.enableAchievements = false;
+          nextHidden = nextHidden.filter((x) => x !== 'bonuspoints');
+          break;
+        case 'category-badges':
+          patch.enableBadges = false;
+          nextHidden = nextHidden.filter((x) => x !== 'category-badges');
+          break;
+        case 'goals':
+          patch.enableGoals = false;
+          nextHidden = nextHidden.filter((x) => x !== 'goals');
+          break;
+        case 'notifications':
+          patch.enableNotifications = false;
+          nextHidden = nextHidden.filter((x) => x !== 'notifications');
+          break;
+        case 'branding':
+          if (!nextHidden.includes('branding')) nextHidden = [...nextHidden, 'branding'];
+          break;
+        default:
+          break;
+      }
+      
+      patch.adminHiddenAddOnTabs = nextHidden;
+      updateSettings(patch);
+      
+      if (activeMainTab === tabValue) {
+        setActiveMainTab('students');
+      }
     }
   };
 
@@ -1363,15 +1449,7 @@ function AdminDashboardInner() {
                           checked={checked}
                           disabled={disabled}
                           onCheckedChange={(next) => {
-                            const on = !!next;
-                            setAddOnEnabled(t.value, on);
-                            // Always keep enabled feature-tabs in the main row.
-                            if (on) {
-                              pinAddOnTab(t.value);
-                              setActiveMainTab(t.value);
-                            } else {
-                              unpinAddOnTab(t.value);
-                            }
+                            toggleAddOnTab(t.value, !!next);
                           }}
                           className="flex items-center gap-2"
                         >

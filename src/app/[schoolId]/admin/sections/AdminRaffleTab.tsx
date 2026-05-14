@@ -7,6 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Helper } from '@/components/ui/helper';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import type { Student } from '@/lib/types';
@@ -242,10 +243,10 @@ export function AdminRaffleTab({
 
   const drawButtonClass = (active: boolean) =>
     cn(
-      'flex min-h-[5.25rem] flex-1 flex-col items-start gap-1.5 rounded-2xl border px-4 py-3.5 text-left transition-all',
+      'flex min-h-[5.25rem] flex-1 flex-row items-center gap-4 rounded-2xl border p-0 text-left transition-all overflow-hidden group',
       'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
       active
-        ? 'border-primary bg-primary/12 text-foreground shadow-sm ring-1 ring-primary/20'
+        ? 'border-primary bg-primary/10 text-foreground shadow-sm ring-1 ring-primary/20'
         : 'border-border bg-card text-muted-foreground hover:border-primary/35 hover:bg-muted/40 hover:text-foreground',
     );
 
@@ -259,87 +260,64 @@ export function AdminRaffleTab({
 
   return (
     <>
-      <div className="mx-auto w-full max-w-[min(100%,96rem)] space-y-6 px-5 sm:px-10 md:px-14 lg:px-20 xl:px-24">
-        <Card className="overflow-hidden border shadow-md">
-          <CardHeader className="border-b bg-gradient-to-br from-muted/60 via-background to-background px-6 py-6 sm:px-10 lg:px-14 xl:px-16">
-            <CardTitle className="flex items-center gap-2.5 text-xl tracking-tight">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border bg-background shadow-sm">
-                <Ticket className="h-5 w-5 text-primary" aria-hidden />
-              </span>
-              Weekly raffle
-            </CardTitle>
-            <CardDescription className="mt-3 max-w-4xl text-pretty text-sm leading-relaxed lg:max-w-5xl">
-              {canEditSettings ? (
-                <>
-                  Configure the pool below, then open the <span className="font-medium text-foreground">jackpot</span> or{' '}
-                  <span className="font-medium text-foreground">wheel</span> — same odds, different animation. The draw opens in a
-                  focused popup.
-                </>
-              ) : (
-                <>
-                  Rules are read-only here. Use the draw buttons for your current class scope; edit settings from a teacher or admin
-                  session.
-                </>
-              )}
-            </CardDescription>
-            {canEditSettings ? (
-              <details className="mt-4 rounded-xl border border-dashed bg-background/60 px-3 py-2 text-xs text-muted-foreground [&_summary]:cursor-pointer [&_summary]:font-medium [&_summary]:text-foreground">
-                <summary className="select-none outline-none">How tickets, odds, and deduct work</summary>
-                <div className="mt-2 space-y-2 border-t border-border/60 pt-2 leading-relaxed">
-                  <p>
-                    Set <span className="font-medium text-foreground">points per ticket</span> to{' '}
-                    <span className="font-medium text-foreground">0</span> for a general raffle (one pool entry per student in the list;
-                    no point threshold). Otherwise use <span className="font-medium text-foreground">equal odds</span> (one entry per
-                    qualifying student) or <span className="font-medium text-foreground">scaled odds</span> (more points → more tickets).
-                  </p>
-                  <p>
-                    If <span className="font-medium text-foreground">Deduct points when you pull</span> is on, points are taken after the
-                    spin when there is a ticket value (not in general raffle at 0 per ticket).
-                  </p>
+      <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden">
+        <CardHeader className="flex flex-row justify-between items-center py-6">
+          <div>
+            <Helper content={
+              canEditSettings ? (
+                <div className="space-y-2 text-sm">
+                  <p>Configure the pool below, then open the jackpot or wheel — same odds, different animation.</p>
+                  <p>Set <strong>points per ticket</strong> to <strong>0</strong> for a general raffle. Otherwise use <strong>equal odds</strong> (one entry per qualifying student) or <strong>scaled odds</strong> (more points → more tickets).</p>
+                  <p>If <strong>Deduct points when you pull</strong> is on, points are taken after the spin when there is a ticket value.</p>
                 </div>
-              </details>
-            ) : null}
-          </CardHeader>
+              ) : "Rules are read-only here. Use the draw buttons for your current class scope; edit settings from a teacher or admin session."
+            }>
+              <CardTitle className="flex items-center gap-2">
+                <Ticket className="h-5 w-5 text-primary" aria-hidden />
+                Weekly raffle
+              </CardTitle>
+            </Helper>
+            <CardDescription>Configure rules and draw the weekly raffle.</CardDescription>
+          </div>
+        </CardHeader>
 
-          <CardContent className="space-y-8 px-6 py-6 sm:px-10 lg:px-14 xl:px-16">
+        <CardContent className="space-y-8">
             {canEditSettings ? (
               <section className="space-y-3">
                 <h2 className="text-[0.65rem] font-bold uppercase tracking-[0.14em] text-muted-foreground">Pool rules</h2>
                 <div className="rounded-2xl border bg-muted/15 p-4 shadow-sm sm:p-5">
-                  <div className="space-y-2">
-                    <Label htmlFor="rafflePointsPerTicket" className="text-xs font-semibold text-muted-foreground">
-                      Points per ticket
-                    </Label>
-                    <Input
-                      id="rafflePointsPerTicket"
-                      type="number"
-                      min={0}
-                      value={String(displayRafflePointsPerTicket)}
-                      onChange={(e) => {
-                        const n = Number(e.target.value);
-                        const v = Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 25;
-                        updateSettings({ rafflePointsPerTicket: v });
-                      }}
-                      className="h-11 max-w-[11rem] rounded-xl font-mono"
-                    />
-                    <p className="text-xs leading-relaxed text-muted-foreground">
-                      {isGeneralRaffle ? (
-                        <>
-                          <span className="font-medium text-foreground">0</span> = general raffle: one pool entry per student; points are
-                          not used for tickets.
-                        </>
-                      ) : (
-                        <>
-                          Example: 25 points = 1 ticket. Tickets ={' '}
-                          <span className="font-mono text-foreground">⌊points / {pointsPerTicket}⌋</span>.
-                        </>
-                      )}
-                    </p>
-                  </div>
+                  <div className="grid gap-4 lg:grid-cols-3 items-start">
+                    <div className="space-y-2">
+                      <Label htmlFor="rafflePointsPerTicket" className="text-xs font-semibold text-muted-foreground">
+                        Points per ticket
+                      </Label>
+                      <Input
+                        id="rafflePointsPerTicket"
+                        type="number"
+                        min={0}
+                        value={String(displayRafflePointsPerTicket)}
+                        onChange={(e) => {
+                          const n = Number(e.target.value);
+                          const v = Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 25;
+                          updateSettings({ rafflePointsPerTicket: v });
+                        }}
+                        className="h-11 w-full max-w-[11rem] rounded-xl font-mono bg-background"
+                      />
+                      <p className="text-xs leading-relaxed text-muted-foreground">
+                        {isGeneralRaffle ? (
+                          <>
+                            <span className="font-medium text-foreground">0</span> = general raffle: one pool entry per student; points are
+                            not used for tickets.
+                          </>
+                        ) : (
+                          <>
+                            Example: 25 points = 1 ticket. Tickets ={' '}
+                            <span className="font-mono text-foreground">⌊points / {pointsPerTicket}⌋</span>.
+                          </>
+                        )}
+                      </p>
+                    </div>
 
-                  <Separator className="my-5 bg-border/80" />
-
-                  <div className="grid gap-3 sm:grid-cols-2">
                     <div className="flex items-start justify-between gap-3 rounded-xl border bg-background/80 p-3.5 shadow-sm">
                       <div className="min-w-0 space-y-1">
                         <p className="text-sm font-semibold leading-snug">One entry per student</p>
@@ -428,7 +406,7 @@ export function AdminRaffleTab({
               <p className="text-xs text-muted-foreground">
                 Same pool and deduct behavior — only the animation changes. Wheel slices reflect ticket weights.
               </p>
-              <div className="flex flex-col gap-3 sm:flex-row">
+              <div className="flex flex-col gap-4 sm:flex-row">
                 <button
                   type="button"
                   onClick={() => {
@@ -438,15 +416,20 @@ export function AdminRaffleTab({
                   }}
                   className={drawButtonClass(raffleDisplayMode === 'jackpot')}
                 >
-                  <span className="flex items-center gap-2 text-sm font-bold text-foreground">
-                    <Dices className="h-4 w-4 shrink-0 text-primary" aria-hidden />
-                    Jackpot (reels)
-                  </span>
-                  <span className="text-xs font-normal leading-snug text-muted-foreground">
-                    {canEditSettings
-                      ? 'Three-reel pull — also saves as your preferred display for this school.'
-                      : 'Three-reel pull using the school’s saved raffle settings.'}
-                  </span>
+                  <div className="flex h-full w-28 shrink-0 items-center justify-center bg-gradient-to-br from-indigo-500/10 to-purple-500/10 p-3 dark:from-indigo-500/20 dark:to-purple-500/20">
+                    <span className="text-[3.5rem] leading-none transition-transform duration-300 group-hover:scale-110 drop-shadow-md">🎰</span>
+                  </div>
+                  <div className="flex flex-col gap-1.5 py-3 pr-4">
+                    <span className="flex items-center gap-2 text-sm font-bold text-foreground">
+                      <Dices className="h-4 w-4 shrink-0 text-primary" aria-hidden />
+                      Jackpot (reels)
+                    </span>
+                    <span className="text-xs font-normal leading-snug text-muted-foreground">
+                      {canEditSettings
+                        ? 'Three-reel pull — also saves as your preferred display.'
+                        : 'Three-reel pull using saved settings.'}
+                    </span>
+                  </div>
                 </button>
                 <button
                   type="button"
@@ -457,15 +440,20 @@ export function AdminRaffleTab({
                   }}
                   className={drawButtonClass(raffleDisplayMode === 'wheel')}
                 >
-                  <span className="flex items-center gap-2 text-sm font-bold text-foreground">
-                    <Disc3 className="h-4 w-4 shrink-0 text-primary" aria-hidden />
-                    Spinning wheel
-                  </span>
-                  <span className="text-xs font-normal leading-snug text-muted-foreground">
-                    {canEditSettings
-                      ? 'Weighted wheel — also saves as your preferred display for this school.'
-                      : 'Weighted wheel using the school’s saved raffle settings.'}
-                  </span>
+                  <div className="flex h-full w-28 shrink-0 items-center justify-center bg-gradient-to-br from-pink-500/10 to-orange-500/10 p-3 dark:from-pink-500/20 dark:to-orange-500/20">
+                    <span className="text-[3.5rem] leading-none transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110 drop-shadow-md">🎡</span>
+                  </div>
+                  <div className="flex flex-col gap-1.5 py-3 pr-4">
+                    <span className="flex items-center gap-2 text-sm font-bold text-foreground">
+                      <Disc3 className="h-4 w-4 shrink-0 text-primary" aria-hidden />
+                      Spinning wheel
+                    </span>
+                    <span className="text-xs font-normal leading-snug text-muted-foreground">
+                      {canEditSettings
+                        ? 'Weighted wheel — also saves as your preferred display.'
+                        : 'Weighted wheel using saved settings.'}
+                    </span>
+                  </div>
                 </button>
               </div>
             </section>
@@ -569,26 +557,18 @@ export function AdminRaffleTab({
                 ) : null}
               </div>
             </section>
-          </CardContent>
-        </Card>
-      </div>
+        </CardContent>
+      </Card>
 
       <Dialog open={drawDialogOpen} onOpenChange={setDrawDialogOpen}>
-        <DialogContent size="xl" className="gap-0 p-0 sm:p-0">
-          <div className="border-b bg-muted/20 px-4 pb-4 pt-10 sm:px-6 sm:pt-12">
-            <DialogHeader className="text-left">
-              <DialogTitle>{drawDialogMode === 'wheel' ? 'Weekly wheel' : 'Weekly jackpot'}</DialogTitle>
-              <DialogDescription className="text-left">
-                Same pool as the list on the raffle tab. Close when finished — the last winner stays on the tab.
-              </DialogDescription>
-            </DialogHeader>
-          </div>
-          <div className="px-2 pb-4 pt-2 sm:px-4 sm:pb-6">
+        <DialogContent size="xl" className="gap-0 p-0 sm:p-0 max-h-[95vh] overflow-y-auto overflow-x-hidden">
+          <DialogTitle className="sr-only">{drawDialogMode === 'wheel' ? 'Prize wheel' : 'Jackpot'}</DialogTitle>
+          <div className="p-2 sm:p-4">
             {drawDialogOpen &&
               (drawDialogMode === 'wheel' ? (
                 <RaffleSpinWheel
                   embedded
-                  title="Weekly wheel"
+                  title="Prize wheel"
                   slices={wheelSlices}
                   pickWinner={handleJackpotPickWinner}
                   onSpinFinished={handleJackpotSpinFinished}
@@ -599,7 +579,7 @@ export function AdminRaffleTab({
               ) : (
                 <JackpotMachine
                   embedded
-                  title="Weekly jackpot"
+                  title="Jackpot"
                   pool={jackpotPool}
                   pickWinner={handleJackpotPickWinner}
                   onSpinFinished={handleJackpotSpinFinished}
