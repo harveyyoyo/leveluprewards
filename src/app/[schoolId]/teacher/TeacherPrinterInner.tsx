@@ -84,7 +84,7 @@ const teacherPortalTabContentClassName =
 const teacherPortalPanelClassName = 'w-full max-w-7xl mx-auto';
 /** Matches admin portal main `TabsTrigger` styling for visual parity. */
 const teacherPortalMainTabTriggerClassName =
-    'rounded-xl px-4 py-2 font-bold flex items-center gap-2 text-sm text-foreground transition-all whitespace-nowrap';
+    'rounded-xl px-4 py-2 font-bold flex items-center gap-2 text-sm text-foreground transition-all whitespace-nowrap data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:ring-2 data-[state=active]:ring-primary/25';
 
 
 function TeacherHomeworkTab({ schoolId, teacherId, students, classes }: { schoolId: string; teacherId: string; students: Student[]; classes: Class[] }) {

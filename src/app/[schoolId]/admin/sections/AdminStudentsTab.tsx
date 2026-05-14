@@ -199,11 +199,11 @@ export function AdminStudentsTab({
               onOpenIdPrintSetup({ students: studentsForIdPrint, classes: classes || [] });
             }}
             disabled={studentsForIdPrint.length === 0}
-            variant={selectedStudentIds.size > 0 || studentFilterClass !== 'all' ? 'default' : 'outline'}
+            variant="outline"
             className={cn(
               'rounded-xl px-4 border-ring/35 bg-background/70 hover:bg-secondary hover:text-secondary-foreground',
               (selectedStudentIds.size > 0 || studentFilterClass !== 'all') &&
-                'bg-secondary hover:bg-secondary/90 font-bold text-secondary-foreground'
+                'border-primary/55 bg-primary/12 font-semibold text-foreground shadow-sm hover:bg-primary/18 hover:text-foreground',
             )}
           >
             <Printer className="mr-2 h-4 w-4" />
