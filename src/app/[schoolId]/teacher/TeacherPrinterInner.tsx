@@ -34,6 +34,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 
 import { cn } from '@/lib/utils';
+import { countPendingTeacherAwards } from '@/lib/pendingTeacherAwards';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -67,7 +68,7 @@ import {
     generateUniqueCouponCodes,
     normalizeCouponPrintPageSize,
     type CouponPrintPageSize,
-} from '@/lib/coupon-print';
+} from '@/lib/couponPrint';
 import { buildRedemptionPrintNote, couponRedemptionLabelForPrint } from '@/lib/couponRedemptionRules';
 import { SchoolReportsPanel } from '@/components/reports/SchoolReportsPanel';
 import { GoalsManager } from '@/components/goals/GoalsManager';
@@ -1914,6 +1915,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
     );
 
     const [activeTeacherTab, setActiveTeacherTab] = useState('coupons');
+    const [pendingTeacherAwardCount, setPendingTeacherAwardCount] = useState(0);
 
     useEffect(() => {
         if (secretaryMode) return;
@@ -1944,6 +1946,29 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
         teacherHomeworkTabEnabled,
         teacherGeneratedCouponsTabEnabled,
     ]);
+
+    useEffect(() => {
+        if (!schoolId || secretaryMode) {
+            setPendingTeacherAwardCount(0);
+            return;
+        }
+        const refresh = () => setPendingTeacherAwardCount(countPendingTeacherAwards(schoolId));
+        refresh();
+        const onVis = () => {
+            if (document.visibilityState === 'visible') refresh();
+        };
+        if (typeof window !== 'undefined') {
+            window.addEventListener('online', refresh);
+            window.addEventListener('arcade-pending-teacher-awards', refresh);
+            document.addEventListener('visibilitychange', onVis);
+            return () => {
+                window.removeEventListener('online', refresh);
+                window.removeEventListener('arcade-pending-teacher-awards', refresh);
+                document.removeEventListener('visibilitychange', onVis);
+            };
+        }
+        return undefined;
+    }, [schoolId, secretaryMode]);
 
     const categoriesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'categories') : null, [firestore, schoolId]);
     const { data: categories, isLoading: categoriesLoading } = useCollection<Category>(categoriesQuery);
@@ -2373,7 +2398,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
         const result = await awardPointsToMultipleStudents(selectedStudentIds, points, selectedCategory.name);
 
         if (result.success) {
-            if (!isAdmin && settings.enableTeacherBudgets && currentTeacher) {
+            if (!isAdmin && settings.enableTeacherBudgets && currentTeacher && !(result as { queued?: boolean }).queued) {
                 const next =
                     currentTeacher.monthlyBudget !== undefined
                         ? teacherWithBudgetAfterSpend(currentTeacher, totalCost)
@@ -2381,10 +2406,18 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                 await updateTeacher(next);
             }
             playSound('success');
-            toast({ title: 'Points Awarded!', description: `Awarded ${points} points to ${result.count} student(s).` });
-            setSelectedStudentIds([]);
-            if (categories && categories.length > 0) {
-                setAwardValue(categories[0].points.toString());
+            const queued = !!(result as { queued?: boolean }).queued;
+            toast({
+                title: queued ? 'Saved for later' : 'Points Awarded!',
+                description: queued
+                    ? result.message
+                    : `Awarded ${points} points to ${result.count} student(s).`,
+            });
+            if (!queued) {
+                setSelectedStudentIds([]);
+                if (categories && categories.length > 0) {
+                    setAwardValue(categories[0].points.toString());
+                }
             }
         } else {
             playSound('error');
@@ -2492,6 +2525,11 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
         }
         return list;
     }, [categories, currentTeacher, secretaryMode, isAdmin]);
+
+    const selectedCategoryForAward = useMemo(
+        () => filteredCategories.find((c) => c.id === awardCategoryId),
+        [filteredCategories, awardCategoryId],
+    );
 
     const filteredStudents = useMemo(() => {
         const normalizedSearch = studentSearch.trim().toLowerCase();
@@ -2621,6 +2659,15 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                         settings.displayMode === 'app' && 'pb-24'
                     )}
                 >
+                    {pendingTeacherAwardCount > 0 && !secretaryMode ? (
+                        <div
+                            role="status"
+                            className="rounded-xl border border-amber-500/50 bg-amber-500/10 px-4 py-3 text-sm text-amber-950 dark:text-amber-100"
+                        >
+                            <strong className="font-bold">Offline awards pending:</strong>{' '}
+                            {pendingTeacherAwardCount} batch{pendingTeacherAwardCount === 1 ? '' : 'es'} will sync when you are online.
+                        </div>
+                    ) : null}
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                         <Helper content={secretaryMode ? 'Generate coupon sheets for teachers to hand out. You cannot award points or edit prizes from here.' : 'Use Points to print coupon sheets from school categories. Use Manual to add or remove points without a printed coupon. Prizes, attendance, and reports are also here.'}>
                             <div>
@@ -3263,6 +3310,25 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                               </Button>
                                             ))}
                                           </div>
+                                          {awardMode === 'award' &&
+                                          selectedCategoryForAward?.rubricLevels &&
+                                          selectedCategoryForAward.rubricLevels.length > 0 ? (
+                                            <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-border/60">
+                                              {selectedCategoryForAward.rubricLevels.map((r) => (
+                                                <Button
+                                                  key={r.id}
+                                                  type="button"
+                                                  variant="secondary"
+                                                  size="sm"
+                                                  onClick={() => setAwardValue(String(r.points))}
+                                                  className="h-7 px-2 text-[10px] rounded-md font-bold"
+                                                  title={r.label}
+                                                >
+                                                  {r.label}: {r.points}
+                                                </Button>
+                                              ))}
+                                            </div>
+                                          ) : null}
                                         </div>
                                         {awardMode === 'deduct' ? (
                                           <Input

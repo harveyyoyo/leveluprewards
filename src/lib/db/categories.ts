@@ -1,10 +1,14 @@
 import { doc, setDoc, updateDoc, deleteDoc, Firestore } from 'firebase/firestore';
-import type { Category } from '../types';
+import type { Category, CategoryRubricLevel } from '../types';
 import { reportFirestorePermissionError } from '@/firebase/error-emitter';
 import { removeUndefined } from './helpers';
 import { getRandomColor } from '../utils';
 
-export const addCategory = async (firestore: Firestore, schoolId: string, categoryData: { name: string; points: number; color?: string; teacherId?: string }): Promise<Category> => {
+export const addCategory = async (
+  firestore: Firestore,
+  schoolId: string,
+  categoryData: { name: string; points: number; color?: string; teacherId?: string; rubricLevels?: CategoryRubricLevel[] },
+): Promise<Category> => {
   const newId = `cat_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
   const newCategory: Category = { ...categoryData, id: newId, color: categoryData.color || getRandomColor() };
   const categoryDocRef = doc(firestore, 'schools', schoolId, 'categories', newCategory.id);

@@ -14,9 +14,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAppContext } from '@/components/AppProvider';
 import { useToast } from '@/hooks/use-toast';
-import type { Category } from '@/lib/types';
+import type { Category, CategoryRubricLevel } from '@/lib/types';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { pickDistinctCategoryColor } from '@/lib/utils';
+import { Plus, Trash2 } from 'lucide-react';
 
 interface CategoryModalProps {
     isOpen: boolean;
@@ -29,6 +30,7 @@ export function CategoryModal({ isOpen, setIsOpen, category }: CategoryModalProp
     const [name, setName] = useState('');
     const [points, setPoints] = useState('10');
     const [color, setColor] = useState(pickDistinctCategoryColor());
+    const [rubricLevels, setRubricLevels] = useState<CategoryRubricLevel[]>([]);
     const { toast } = useToast();
     const playSound = useArcadeSound();
 
@@ -40,10 +42,12 @@ export function CategoryModal({ isOpen, setIsOpen, category }: CategoryModalProp
                 setName(category.name);
                 setPoints(category.points.toString());
                 setColor(category.color || '#cccccc');
+                setRubricLevels(Array.isArray(category.rubricLevels) ? category.rubricLevels : []);
             } else { // Create mode
                 setName('');
                 setPoints('10');
                 setColor(pickDistinctCategoryColor((categories || []).map((c) => c.color)));
+                setRubricLevels([]);
             }
         }
     }, [category, isOpen, categories]);
@@ -62,12 +66,18 @@ export function CategoryModal({ isOpen, setIsOpen, category }: CategoryModalProp
         }
 
         if (isEditing && category) {
-            const updatedCategory: Category = { ...category, name, points: pointsValue, color };
+            const updatedCategory: Category = {
+                ...category,
+                name,
+                points: pointsValue,
+                color,
+                rubricLevels: rubricLevels.length > 0 ? rubricLevels : undefined,
+            };
             await updateCategory(updatedCategory);
             playSound('success');
             toast({ title: 'Category updated!' });
         } else {
-            const newCategory = { name, points: pointsValue, color };
+            const newCategory = { name, points: pointsValue, color, rubricLevels: rubricLevels.length > 0 ? rubricLevels : undefined };
             await addCategory(newCategory);
             playSound('success');
             toast({ title: 'Category added!' });
@@ -101,6 +111,75 @@ export function CategoryModal({ isOpen, setIsOpen, category }: CategoryModalProp
                                     <Input id="cat-color" type="color" value={color} onChange={e => setColor(e.target.value)} className="p-1 h-10" />
                                     <Input value={color} onChange={e => setColor(e.target.value)} className="h-10" />
                                 </div>
+                            </div>
+                        </div>
+                        <div className="space-y-2 rounded-lg border bg-muted/20 p-3">
+                            <div className="flex items-center justify-between gap-2">
+                                <Label className="text-sm font-bold">Rubric quick-awards (optional)</Label>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8"
+                                    onClick={() => {
+                                        const def = Math.max(0, Math.round(parseInt(points, 10) || 0));
+                                        setRubricLevels((prev) => [
+                                            ...prev,
+                                            {
+                                                id: `rub_${Date.now()}`,
+                                                label: 'Level',
+                                                points: def,
+                                            },
+                                        ]);
+                                    }}
+                                >
+                                    <Plus className="h-4 w-4 mr-1" />
+                                    Add level
+                                </Button>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                                Teachers see these as one-tap point amounts for this category (e.g. behavior tiers).
+                            </p>
+                            <div className="space-y-2">
+                                {rubricLevels.map((row, idx) => (
+                                    <div key={row.id} className="flex flex-wrap items-end gap-2">
+                                        <div className="flex-1 min-w-[120px] space-y-1">
+                                            <Label className="text-[10px] uppercase text-muted-foreground">Label</Label>
+                                            <Input
+                                                value={row.label}
+                                                onChange={(e) => {
+                                                    const v = e.target.value;
+                                                    setRubricLevels((prev) =>
+                                                        prev.map((r, i) => (i === idx ? { ...r, label: v } : r)),
+                                                    );
+                                                }}
+                                            />
+                                        </div>
+                                        <div className="w-24 space-y-1">
+                                            <Label className="text-[10px] uppercase text-muted-foreground">Pts</Label>
+                                            <Input
+                                                type="number"
+                                                value={String(row.points)}
+                                                onChange={(e) => {
+                                                    const n = Math.max(0, Math.round(Number(e.target.value) || 0));
+                                                    setRubricLevels((prev) =>
+                                                        prev.map((r, i) => (i === idx ? { ...r, points: n } : r)),
+                                                    );
+                                                }}
+                                            />
+                                        </div>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            className="shrink-0 text-destructive"
+                                            onClick={() => setRubricLevels((prev) => prev.filter((_, i) => i !== idx))}
+                                            aria-label="Remove rubric row"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     </div>

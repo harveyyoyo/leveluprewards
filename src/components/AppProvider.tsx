@@ -7,8 +7,8 @@ import React, {
   useMemo,
   useEffect,
 } from 'react';
-import type { Student, Class, Coupon, Teacher, Prize, Category, HistoryItem, Achievement, Badge, AttendanceSettings, AttendanceLogEntry, RecordClassSignInResult, HomeworkAssignment, HomeworkSubmission } from '@/lib/types';
-import type { CouponPrintPageSize } from '@/lib/coupon-print';
+import type { Student, Class, Coupon, Teacher, Prize, Category, CategoryRubricLevel, HistoryItem, Achievement, Badge, AttendanceSettings, AttendanceLogEntry, RecordClassSignInResult, HomeworkAssignment, HomeworkSubmission } from '@/lib/types';
+import type { CouponPrintPageSize } from '@/lib/couponPrint';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { reportFirestorePermissionError } from '@/firebase/error-emitter';
 import { collection, doc, runTransaction } from 'firebase/firestore';
@@ -19,6 +19,11 @@ import { PrintProvider, usePrint } from './providers/PrintProvider';
 import { BackupProvider, useBackup } from './providers/BackupProvider';
 import { SettingsProvider, useSettings } from './providers/SettingsProvider';
 import { addPendingCouponRedemption, listPendingCouponRedemptions, updatePendingCouponRedemptions } from '@/lib/pendingSync';
+import {
+  addPendingTeacherAward,
+  listPendingTeacherAwards,
+  updatePendingTeacherAwards,
+} from '@/lib/pendingTeacherAwards';
 import { couponIsKnownAndValidOffline, saveCouponSnapshot } from '@/lib/couponCache';
 import type { LoginResult } from '@/lib/loginResult';
 import { AI_FUN_UNIFIED_PRIZE_ID } from '@/lib/aiJokePrize';
@@ -65,15 +70,15 @@ interface AppContextType {
   addTeacher: (newTeacher: Omit<Teacher, 'id'>) => Promise<void>;
   updateTeacher: (teacher: Teacher, options?: { clearTeacherBudget?: boolean }) => Promise<void>;
   deleteTeacher: (teacherId: string) => Promise<void>;
-  addCategory: (category: { name: string; points: number; color?: string; teacherId?: string }) => Promise<Category | undefined>;
+  addCategory: (category: { name: string; points: number; color?: string; teacherId?: string; rubricLevels?: CategoryRubricLevel[] }) => Promise<Category | undefined>;
   updateCategory: (category: Category) => Promise<void>;
   deleteCategory: (categoryId: string) => Promise<void>;
   addCoupons: (coupons: Coupon[]) => Promise<void>;
   redeemCoupon: (studentId: string, couponCode: string) => Promise<{ success: boolean; message: string; value?: number; bonusTotal?: number }>;
   deleteCoupon: (couponId: string) => Promise<void>;
   deleteCoupons: (couponIds: string[]) => Promise<void>;
-  awardPoints: (studentId: string, points: number, description: string) => Promise<{ success: boolean; message: string; bonusTotal?: number }>;
-  awardPointsToMultipleStudents: (studentIds: string[], points: number, description: string) => Promise<{ success: boolean; message: string; count: number }>;
+  awardPoints: (studentId: string, points: number, description: string) => Promise<{ success: boolean; message: string; bonusTotal?: number; queued?: boolean }>;
+  awardPointsToMultipleStudents: (studentIds: string[], points: number, description: string) => Promise<{ success: boolean; message: string; count: number; queued?: boolean }>;
   deductPointsFromMultipleStudents: (studentIds: string[], points: number, reason: string) => Promise<{ success: boolean; message: string; count: number; }>;
   redeemPrize: (studentId: string, prize: Prize, quantity: number, pointsOverride?: number) => Promise<{ success: boolean; activityId?: string; redeemedAt?: number; totalCost?: number; message?: string }>;
   addPrize: (prize: Omit<Prize, 'id'>) => Promise<string>;
@@ -332,6 +337,60 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
       .catch(() => {});
   }, [schoolId, functions, auth]);
 
+  // Background sync: push offline pending teacher awards when internet returns.
+  React.useEffect(() => {
+    if (!firestore || !schoolId || !auth?.currentUser) return;
+    if (settings.enableTeacherOfflineAwardQueue === false) return;
+
+    const run = () => {
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
+      const pending = listPendingTeacherAwards(schoolId);
+      if (pending.length === 0) return;
+      const allAchievements = settings.enableAchievements ? (achievements || []) : [];
+      const allBadges = settings.enableBadges ? (badges || []) : [];
+      void (async () => {
+        const updates: Array<{ id: string; status: 'synced' | 'failed'; message?: string }> = [];
+        for (const item of pending) {
+          try {
+            const db = await getDb();
+            await db.awardPointsToMultipleStudents(
+              firestore,
+              schoolId,
+              item.studentIds,
+              item.points,
+              item.description,
+              allAchievements,
+              categories || [],
+              allBadges,
+            );
+            updates.push({ id: item.id, status: 'synced' });
+          } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : 'Award sync failed.';
+            updates.push({ id: item.id, status: 'failed', message: msg });
+          }
+        }
+        if (updates.length) updatePendingTeacherAwards(updates);
+      })();
+    };
+
+    run();
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', run);
+      return () => window.removeEventListener('online', run);
+    }
+    return undefined;
+  }, [
+    schoolId,
+    firestore,
+    auth,
+    categories,
+    achievements,
+    badges,
+    settings.enableTeacherOfflineAwardQueue,
+    settings.enableAchievements,
+    settings.enableBadges,
+  ]);
+
   // CRUD wrappers load the db helpers on demand so the root client bundle stays lean.
   const addStudent_ = useCallback((s: Omit<Student, 'id' | 'points' | 'lifetimePoints'>) => {
     if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
@@ -378,7 +437,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     return getDb().then((db) => db.deleteTeacher(firestore, schoolId, id));
   }, [firestore, schoolId]);
 
-  const addCategory_ = useCallback(async (data: { name: string; points: number; color?: string; teacherId?: string }) => {
+  const addCategory_ = useCallback(async (data: { name: string; points: number; color?: string; teacherId?: string; rubricLevels?: CategoryRubricLevel[] }) => {
     if (!firestore || !schoolId) return undefined;
     return getDb().then((db) => db.addCategory(firestore, schoolId, data));
   }, [firestore, schoolId]);
@@ -433,17 +492,97 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
 
   const awardPoints_ = useCallback(async (studentId: string, points: number, description: string) => {
     if (!firestore || !schoolId) return { success: false, message: 'Not logged in.' };
+    const staffish =
+      authCtx.isAdmin ||
+      authCtx.isTeacher ||
+      authCtx.isSecretary ||
+      loginState === 'developer' ||
+      loginState === 'reports';
+    const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+    if (
+      offline &&
+      staffish &&
+      settings.enableTeacherOfflineAwardQueue !== false &&
+      points > 0
+    ) {
+      addPendingTeacherAward({
+        schoolId,
+        studentIds: [studentId],
+        points,
+        description,
+        createdAt: Date.now(),
+      });
+      return {
+        success: true,
+        message: 'Saved offline — points will be awarded when you are back online.',
+        queued: true,
+      };
+    }
     const allAchievements = settings.enableAchievements ? (achievements || []) : [];
     const allBadges = settings.enableBadges ? (badges || []) : [];
     return getDb().then((db) => db.awardPointsToStudent(firestore, schoolId, studentId, points, description, allAchievements, categories || [], allBadges));
-  }, [firestore, schoolId, categories, achievements, badges, settings.enableAchievements, settings.enableBadges]);
+  }, [
+    firestore,
+    schoolId,
+    categories,
+    achievements,
+    badges,
+    settings.enableAchievements,
+    settings.enableBadges,
+    settings.enableTeacherOfflineAwardQueue,
+    authCtx.isAdmin,
+    authCtx.isTeacher,
+    authCtx.isSecretary,
+    loginState,
+  ]);
 
   const awardPointsToMultipleStudents_ = useCallback(async (studentIds: string[], points: number, description: string) => {
     if (!firestore || !schoolId) return { success: false, message: 'Not logged in.', count: 0 };
+    const staffish =
+      authCtx.isAdmin ||
+      authCtx.isTeacher ||
+      authCtx.isSecretary ||
+      loginState === 'developer' ||
+      loginState === 'reports';
+    const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+    if (
+      offline &&
+      staffish &&
+      settings.enableTeacherOfflineAwardQueue !== false &&
+      studentIds.length > 0 &&
+      points > 0
+    ) {
+      addPendingTeacherAward({
+        schoolId,
+        studentIds: [...studentIds],
+        points,
+        description,
+        createdAt: Date.now(),
+      });
+      return {
+        success: true,
+        count: studentIds.length,
+        message: 'Saved offline — awards will sync when you are back online.',
+        queued: true,
+      };
+    }
     const allAchievements = settings.enableAchievements ? (achievements || []) : [];
     const allBadges = settings.enableBadges ? (badges || []) : [];
     return getDb().then((db) => db.awardPointsToMultipleStudents(firestore, schoolId, studentIds, points, description, allAchievements, categories || [], allBadges));
-  }, [firestore, schoolId, categories, achievements, badges, settings.enableAchievements, settings.enableBadges]);
+  }, [
+    firestore,
+    schoolId,
+    categories,
+    achievements,
+    badges,
+    settings.enableAchievements,
+    settings.enableBadges,
+    settings.enableTeacherOfflineAwardQueue,
+    authCtx.isAdmin,
+    authCtx.isTeacher,
+    authCtx.isSecretary,
+    loginState,
+  ]);
 
   const deductPointsFromMultipleStudents_ = useCallback(async (studentIds: string[], points: number, reason: string) => {
     if (!firestore || !schoolId) return { success: false, message: 'Not logged in.', count: 0 };

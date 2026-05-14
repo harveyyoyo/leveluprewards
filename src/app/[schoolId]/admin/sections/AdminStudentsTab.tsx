@@ -72,8 +72,11 @@ export function AdminStudentsTab({
   students,
   filteredStudents,
   studentCsvInputRef,
+  studentCsvMapInputRef,
   onStudentCsvFileChange,
+  onStudentCsvMapFileChange,
   handleStudentCsvUpload,
+  handleStudentCsvMapUpload,
   selectionMode: _selectionMode,
   setSelectionMode: _setSelectionMode,
   selectedStudentIds,
@@ -110,8 +113,11 @@ export function AdminStudentsTab({
   students: Student[] | null | undefined;
   filteredStudents: Student[];
   studentCsvInputRef: React.RefObject<HTMLInputElement>;
+  studentCsvMapInputRef?: React.RefObject<HTMLInputElement>;
   onStudentCsvFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onStudentCsvMapFileChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleStudentCsvUpload: () => void;
+  handleStudentCsvMapUpload?: () => void;
   selectionMode: boolean;
   setSelectionMode: (v: boolean) => void;
   selectedStudentIds: Set<string>;
@@ -178,6 +184,16 @@ export function AdminStudentsTab({
           <Button onClick={handleStudentCsvUpload} variant="outline" className="rounded-xl px-4 border-ring/35 bg-background/70 hover:bg-secondary hover:text-secondary-foreground">
             <UploadCloud className="mr-2 h-4 w-4" /> Import CSV
           </Button>
+          {handleStudentCsvMapUpload && onStudentCsvMapFileChange && studentCsvMapInputRef ? (
+            <Button
+              onClick={handleStudentCsvMapUpload}
+              variant="outline"
+              className="rounded-xl px-4 border-ring/35 bg-background/70 hover:bg-secondary hover:text-secondary-foreground"
+              type="button"
+            >
+              <Wand2 className="mr-2 h-4 w-4" /> Import CSV (map columns)
+            </Button>
+          ) : null}
           <Button
             onClick={() => {
               onOpenIdPrintSetup({ students: studentsForIdPrint, classes: classes || [] });
@@ -201,6 +217,15 @@ export function AdminStudentsTab({
             <Plus className="mr-2 h-4 w-4" /> Add Student
           </Button>
           <input type="file" ref={studentCsvInputRef} onChange={onStudentCsvFileChange} className="hidden" accept=".csv" />
+          {studentCsvMapInputRef && onStudentCsvMapFileChange ? (
+            <input
+              type="file"
+              ref={studentCsvMapInputRef}
+              onChange={onStudentCsvMapFileChange}
+              className="hidden"
+              accept=".csv"
+            />
+          ) : null}
         </div>
       </CardHeader>
       <CardContent className="p-6">

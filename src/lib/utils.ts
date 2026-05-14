@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { LEVELUP_BRAND_PRIMARY_HEX } from "@/lib/app-branding"
+import { LEVELUP_BRAND_PRIMARY_HEX } from "@/lib/appBranding"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -9,6 +9,23 @@ export function cn(...inputs: ClassValue[]) {
 export function getStudentNickname(student: { firstName: string; nickname?: string; lastName?: string }) {
   if (!student) return '';
   return student.nickname && student.nickname.trim() !== '' ? student.nickname : student.firstName;
+}
+
+/** How student names appear on shared displays (Hall of Fame, etc.). */
+export type PrivacyStudentNameDisplayMode = 'full' | 'preferred_only';
+
+/**
+ * Name for leaderboards / shared displays. `preferred_only` avoids showing legal surnames
+ * (nickname or first name only). Staff roster views should keep using full legal names.
+ */
+export function displayStudentNameOnSharedBoard(
+  student: { firstName: string; lastName?: string; nickname?: string },
+  mode: PrivacyStudentNameDisplayMode,
+): string {
+  const preferred = getStudentNickname(student).trim() || student.firstName?.trim() || 'Student';
+  if (mode === 'preferred_only') return preferred;
+  const last = (student.lastName || '').trim();
+  return last ? `${preferred} ${last}` : preferred;
 }
 
 export function getContrastColor(hexColor: string): 'black' | 'white' {

@@ -58,12 +58,21 @@ export interface Teacher {
   spentThisMonth?: number;
 }
 
+/** One row in an optional category rubric (teacher quick-award). */
+export interface CategoryRubricLevel {
+  id: string;
+  label: string;
+  points: number;
+}
+
 export interface Category {
   id: string;
   name: string;
   points: number;
   color?: string;
   teacherId?: string;
+  /** Optional preset levels (e.g. behavior tiers); shown as quick picks in the teacher portal. */
+  rubricLevels?: CategoryRubricLevel[];
 }
 
 export interface BonusSpinType {
@@ -137,6 +146,11 @@ export interface Student {
     parentEnabled?: boolean;
     /** If false, direct-to-student notifications are skipped for this student. */
     studentEnabled?: boolean;
+    /**
+     * When true and the school enables weekly digests, parent/guardian receives a weekly
+     * summary (requires parent contact on file and school notification settings).
+     */
+    parentWeeklyDigest?: boolean;
   };
   /** Optional image URL for a sticker shown by the student's name (set in admin, Students). */
   customEmojiUrl?: string;

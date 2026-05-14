@@ -21,11 +21,11 @@ import {
     type SchoolPlanConfig,
 } from '@/lib/plans';
 import type { StudentTheme } from '@/lib/types';
-import type { IdCardPrinterFamilyId, IdCardPrintProfile } from '@/lib/id-card-print-catalog';
-import { defaultPaperForFamily } from '@/lib/id-card-print-catalog';
-import type { PrizeVoucherPaperFormat } from '@/lib/prize-voucher-print';
+import type { IdCardPrinterFamilyId, IdCardPrintProfile } from '@/lib/idCardPrintCatalog';
+import { defaultPaperForFamily } from '@/lib/idCardPrintCatalog';
+import type { PrizeVoucherPaperFormat } from '@/lib/prizeVoucherPrint';
 import { STUDENT_WELCOME_STYLES_LIVE } from '@/lib/studentWelcome';
-import { LEVELUP_BRAND_PRIMARY_HEX } from '@/lib/app-branding';
+import { LEVELUP_BRAND_PRIMARY_HEX } from '@/lib/appBranding';
 
 type ColorScheme =
     | 'default'
@@ -90,6 +90,18 @@ interface Settings {
     notificationPrizeLowStockThreshold: number;
     /** When on, staff can receive a "shop empty" alert when no prizes are available. */
     notificationPrizeEmptyShopEnabled: boolean;
+    /**
+     * When on, parents who opted in on each student record can receive a weekly summary
+     * (points activity and redemptions), subject to global notification toggles.
+     */
+    notificationParentWeeklyDigestEnabled: boolean;
+    /**
+     * Student names on shared displays (e.g. Hall of Fame): `full` shows preferred + surname;
+     * `preferred_only` shows nickname or first name only.
+     */
+    privacyStudentNameDisplayMode: 'full' | 'preferred_only';
+    /** Queue teacher bulk point awards locally when the device is offline; sync when back online. */
+    enableTeacherOfflineAwardQueue: boolean;
     /**
      * Internal: last time we sent an "empty shop" alert (ms since epoch).
      * Used by Cloud Functions to rate-limit notifications.
@@ -386,6 +398,9 @@ const defaultSettings: Settings = {
     notificationPrizeInventoryEnabled: false,
     notificationPrizeLowStockThreshold: 5,
     notificationPrizeEmptyShopEnabled: false,
+    notificationParentWeeklyDigestEnabled: false,
+    privacyStudentNameDisplayMode: 'full',
+    enableTeacherOfflineAwardQueue: true,
     enableClassLeaderboard: false,
     enableClassAccumulations: false,
     enableShoutouts: false,
@@ -771,6 +786,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                 }
                 if (parsed.raffleDisplayMode !== 'jackpot' && parsed.raffleDisplayMode !== 'wheel') {
                     delete (parsed as Partial<Settings>).raffleDisplayMode;
+                }
+                if (parsed.privacyStudentNameDisplayMode !== 'full' && parsed.privacyStudentNameDisplayMode !== 'preferred_only') {
+                    delete (parsed as Partial<Settings>).privacyStudentNameDisplayMode;
                 }
                 const psp = parsed.prizeAiSurpriseDefaultPoints;
                 if (typeof psp !== 'number' || !Number.isFinite(psp) || psp < 0) {

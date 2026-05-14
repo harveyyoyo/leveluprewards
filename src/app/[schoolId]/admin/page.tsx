@@ -15,7 +15,7 @@ import {
    Users, Gift, BookOpen, Trash2, Edit, UploadCloud, Printer, LayoutDashboard, Database,
    Settings, History, Award, CheckCircle, Tag, Trophy, ArrowRight, Loader2, Play, ShieldCheck,
    User, Ticket, Upload, Download, Activity, Zap, Clock, Palette, Wand2, TableProperties,
-   FileText, Bell, Target, Megaphone, ChevronDown, X,
+   FileText, Bell, Target, Megaphone, ChevronDown, X, Plug,
  } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -95,7 +95,7 @@ import {
   type ParsedSchoolSnapshot,
   type SchoolSnapshotImportResult,
 } from '@/lib/schoolDataImport';
-import { SAMPLE_BADGES, getSampleCategoryBadges } from '@/lib/sample-badges';
+import { SAMPLE_BADGES, getSampleCategoryBadges } from '@/lib/sampleBadges';
 
 // The Students and Library tabs are eager. Other admin tabs are
 // code-split with `next/dynamic` so its chunk is only fetched when the admin
@@ -103,7 +103,7 @@ import { SAMPLE_BADGES, getSampleCategoryBadges } from '@/lib/sample-badges';
 import { AdminStudentsTab } from './sections/AdminStudentsTab';
 import { AdminLibraryTab } from './sections/AdminLibraryTab';
 import { budgetWindowKeyForDate } from '@/lib/teacherBudget';
-import { resolveIdCardPrintJobOptions } from '@/lib/id-card-print-catalog';
+import { resolveIdCardPrintJobOptions } from '@/lib/idCardPrintCatalog';
 
 const tabLoader = () => (
   <div className="animate-pulse h-64 w-full rounded-xl bg-muted/40" aria-hidden="true" />
@@ -194,8 +194,13 @@ const AdminBackupsTab = dynamic(
   importAdminTabSection(() => import('./sections/AdminBackupsTab'), 'AdminBackupsTab'),
   { loading: tabLoader, ssr: false },
 );
+const AdminIntegrationsTab = dynamic(
+  importAdminTabSection(() => import('./sections/AdminIntegrationsTab'), 'AdminIntegrationsTab'),
+  { loading: tabLoader, ssr: false },
+);
 import { getReadableErrorMessage } from '@/lib/errorMessage';
 import { BulkRosterSetupDialog } from '@/components/BulkRosterSetupDialog';
+import { StudentCsvColumnMapDialog } from '@/components/StudentCsvColumnMapDialog';
 import { AdminPrizeDeskDashboard } from './AdminPrizeDeskDashboard';
 
 function describeCsvImportReport(
@@ -320,6 +325,9 @@ function AdminDashboardInner() {
   const confirm = useConfirm();
   const playSound = useArcadeSound();
   const studentCsvInputRef = useRef<HTMLInputElement>(null);
+  const studentCsvMapInputRef = useRef<HTMLInputElement>(null);
+  const [csvColumnMapOpen, setCsvColumnMapOpen] = useState(false);
+  const [csvColumnMapText, setCsvColumnMapText] = useState('');
   const { settings, updateSettings, isFeatureAllowed } = useSettings();
 
   // All Firestore reads the dashboard needs live in a single hook so this
@@ -582,6 +590,18 @@ function AdminDashboardInner() {
         enable: () => updateSettings({ adminHiddenAddOnTabs: removeHidden('branding') }),
         disable: () => updateSettings({ adminHiddenAddOnTabs: addHidden('branding'), adminPinnedAddOnTabs: removePinned('branding') }),
       },
+      {
+        value: 'integrations',
+        label: 'Integrations',
+        icon: Plug,
+        isOn: () => !hiddenNow.includes('integrations'),
+        enable: () => updateSettings({ adminHiddenAddOnTabs: removeHidden('integrations') }),
+        disable: () =>
+          updateSettings({
+            adminHiddenAddOnTabs: addHidden('integrations'),
+            adminPinnedAddOnTabs: removePinned('integrations'),
+          }),
+      },
     ];
   }, [isFeatureAllowed, settings.adminHiddenAddOnTabs, settings.adminPinnedAddOnTabs, updateSettings]);
 
@@ -714,6 +734,8 @@ function AdminDashboardInner() {
         case 'category-badges': patch.enableBadges = true; break;
         case 'goals': patch.enableGoals = true; break;
         case 'notifications': patch.enableNotifications = true; break;
+        case 'integrations':
+          break;
         default: break;
       }
       
@@ -765,6 +787,9 @@ function AdminDashboardInner() {
         case 'notifications':
           patch.enableNotifications = false;
           nextHidden = nextHidden.filter((x) => x !== 'notifications');
+          break;
+        case 'integrations':
+          if (!nextHidden.includes('integrations')) nextHidden = [...nextHidden, 'integrations'];
           break;
         case 'branding':
           if (!nextHidden.includes('branding')) nextHidden = [...nextHidden, 'branding'];
@@ -832,6 +857,8 @@ function AdminDashboardInner() {
         case 'notifications':
           patch.enableNotifications = true;
           break;
+        case 'integrations':
+          break;
         case 'branding':
           break;
         default:
@@ -898,6 +925,9 @@ function AdminDashboardInner() {
         case 'notifications':
           patch.enableNotifications = false;
           nextHidden = nextHidden.filter((x) => x !== 'notifications');
+          break;
+        case 'integrations':
+          if (!nextHidden.includes('integrations')) nextHidden = [...nextHidden, 'integrations'];
           break;
         case 'branding':
           if (!nextHidden.includes('branding')) nextHidden = [...nextHidden, 'branding'];
@@ -1159,6 +1189,44 @@ function AdminDashboardInner() {
     if (studentCsvInputRef.current) studentCsvInputRef.current.value = '';
   };
 
+  const onStudentCsvMapFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      setCsvColumnMapText(text);
+      setCsvColumnMapOpen(true);
+    } catch (err: unknown) {
+      playSound('error');
+      toast({
+        variant: 'destructive',
+        title: 'Failed to read CSV file.',
+        description: getReadableErrorMessage(err, 'Could not read file.'),
+      });
+    }
+    if (studentCsvMapInputRef.current) studentCsvMapInputRef.current.value = '';
+  };
+
+  const handleStudentCsvMapUpload = () => {
+    studentCsvMapInputRef.current?.click();
+  };
+
+  const handleCsvColumnMapConfirm = async (canonicalCsv: string) => {
+    try {
+      const report = await uploadStudents(canonicalCsv, students || [], classes || []);
+      playSound(report.success > 0 ? 'success' : 'error');
+      const msg = describeCsvImportReport(report, 'Students');
+      toast({ variant: msg.variant, title: msg.title, description: msg.description });
+    } catch (err: unknown) {
+      playSound('error');
+      toast({
+        variant: 'destructive',
+        title: 'Import failed',
+        description: getReadableErrorMessage(err, 'Import failed.'),
+      });
+    }
+  };
+
   const handleBulkClassesCsv = async (text: string) => {
     try {
       const report = await uploadClassesFromCsv(text, classes || []);
@@ -1340,6 +1408,13 @@ function AdminDashboardInner() {
           onAiCommitSnapshot={handleAiCommitSnapshot}
         />
 
+        <StudentCsvColumnMapDialog
+          open={csvColumnMapOpen}
+          onOpenChange={setCsvColumnMapOpen}
+          csvText={csvColumnMapText}
+          onConfirm={handleCsvColumnMapConfirm}
+        />
+
         {idCardPrintJob ? (
           <IdCardPrintSetupDialog
             open
@@ -1363,14 +1438,9 @@ function AdminDashboardInner() {
             className="flex min-h-0 w-full flex-1 flex-col gap-6"
           >
           <div className="w-full flex flex-col gap-4">
-            <div className={cn(settings.displayMode === 'app' ? "flex overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 justify-center" : "w-full")}>
+            <div className="flex overflow-x-auto w-full -mx-4 px-4 sm:mx-0 sm:px-0 md:justify-center pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               <TabsList 
-                className={cn(
-                  "bg-muted/50 p-1.5 rounded-2xl border shadow-sm h-auto",
-                  settings.displayMode === 'app' 
-                    ? "inline-flex w-max sm:mx-auto flex-nowrap gap-x-1" 
-                    : "flex flex-wrap justify-center gap-x-1 gap-y-1 w-full"
-                )}
+                className="bg-muted/50 p-1.5 rounded-2xl border shadow-sm h-auto inline-flex w-max sm:mx-auto flex-nowrap gap-x-1"
                 style={{ ['--admin-accent' as any]: 'hsl(var(--primary))' }}
                 aria-label="Admin portal main tabs"
                 onDragOver={(e) => {
@@ -1497,7 +1567,7 @@ function AdminDashboardInner() {
                     >
                       <TabsTrigger
                         value={t.value}
-                        className="rounded-xl px-4 py-2 font-bold flex items-center gap-2 text-sm text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-[color:var(--admin-accent)] transition-all whitespace-nowrap"
+                        className="rounded-xl px-4 py-2 font-bold flex items-center gap-2 text-sm text-foreground transition-all whitespace-nowrap"
                         title={t.title}
                       >
                         <Icon className="w-4 h-4 shrink-0" /> {t.label}
@@ -1519,8 +1589,11 @@ function AdminDashboardInner() {
               students={students}
               filteredStudents={filteredStudents}
               studentCsvInputRef={studentCsvInputRef}
+              studentCsvMapInputRef={studentCsvMapInputRef}
               onStudentCsvFileChange={onStudentCsvFileChange}
+              onStudentCsvMapFileChange={onStudentCsvMapFileChange}
               handleStudentCsvUpload={handleStudentCsvUpload}
+              handleStudentCsvMapUpload={handleStudentCsvMapUpload}
               selectionMode={selectionMode}
               setSelectionMode={setSelectionMode}
               selectedStudentIds={selectedStudentIds}
@@ -1862,6 +1935,10 @@ function AdminDashboardInner() {
 
           <TabsContent value="notifications" className={scrollingAdminTabClassName}>
             <AdminNotificationsTab />
+          </TabsContent>
+
+          <TabsContent value="integrations" className={scrollingAdminTabClassName}>
+            <AdminIntegrationsTab />
           </TabsContent>
 
           <TabsContent value="backups" className={fittedAdminTabClassName}>

@@ -768,6 +768,71 @@ export function AdminNotificationsTab() {
         </CardContent>
       </Card>
 
+      <Card className="shadow-md">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Users className="w-4 h-4 text-primary" />
+            Families & shared displays
+          </CardTitle>
+          <CardDescription>
+            Weekly parent summaries and how names appear on Hall of Fame-style boards (staff must still sign in to open
+            those routes).
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+            <div className="space-y-0.5">
+              <Label className="text-sm font-bold">Weekly parent digest</Label>
+              <p className="text-[11px] text-muted-foreground">
+                Sends a Sunday summary to parents who opted in on each student (parent email or SMS). Requires
+                Notifications on and valid parent contact.
+              </p>
+            </div>
+            <Switch
+              checked={settings.notificationParentWeeklyDigestEnabled}
+              disabled={!settings.enableNotifications}
+              onCheckedChange={(checked) => updateSettings({ notificationParentWeeklyDigestEnabled: checked })}
+            />
+          </div>
+
+          <div className="p-4 rounded-xl border bg-muted/30 space-y-2">
+            <Label className="text-sm font-bold">Names on shared leaderboards</Label>
+            <p className="text-[11px] text-muted-foreground">
+              Preferred-only hides legal surnames on shared displays (nickname or first name). Rosters in Admin and
+              Teacher portals still show full names.
+            </p>
+            <Select
+              value={settings.privacyStudentNameDisplayMode}
+              onValueChange={(v) =>
+                updateSettings({ privacyStudentNameDisplayMode: v === 'preferred_only' ? 'preferred_only' : 'full' })
+              }
+            >
+              <SelectTrigger className="max-w-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="full">Full display name (preferred + last)</SelectItem>
+                <SelectItem value="preferred_only">Preferred / first name only</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+            <div className="space-y-0.5">
+              <Label className="text-sm font-bold">Offline teacher award queue</Label>
+              <p className="text-[11px] text-muted-foreground">
+                When the teacher device has no network, bulk point awards are saved locally and sent when the connection
+                returns.
+              </p>
+            </div>
+            <Switch
+              checked={settings.enableTeacherOfflineAwardQueue !== false}
+              onCheckedChange={(checked) => updateSettings({ enableTeacherOfflineAwardQueue: checked })}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
       <Card className="shadow-md overflow-hidden">
         <CardContent className="p-0">
           <div className="grid md:grid-cols-[1.1fr_1.4fr]">

@@ -72,6 +72,7 @@ export function StudentModal({
   const [studentPhone, setStudentPhone] = useState('');
   const [parentNotificationsAllowed, setParentNotificationsAllowed] = useState(true);
   const [studentNotificationsAllowed, setStudentNotificationsAllowed] = useState(true);
+  const [parentWeeklyDigestOptIn, setParentWeeklyDigestOptIn] = useState(false);
   const [selectedTeacherIds, setSelectedTeacherIds] = useState<string[]>([]);
   const [isPhotoUploading, setIsPhotoUploading] = useState(false);
   const [isCustomEmojiUploading, setIsCustomEmojiUploading] = useState(false);
@@ -105,6 +106,7 @@ export function StudentModal({
         setStudentPhone(decryptField(student.studentPhone) || '');
         setParentNotificationsAllowed(student.notificationPrefs?.parentEnabled !== false);
         setStudentNotificationsAllowed(student.notificationPrefs?.studentEnabled !== false);
+        setParentWeeklyDigestOptIn(student.notificationPrefs?.parentWeeklyDigest === true);
         setSelectedTeacherIds(student.teacherIds || []);
         setTheme(normalizeStudentTheme(student.theme) ?? student.theme);
         setBirthday(student.birthday || '');
@@ -125,6 +127,7 @@ export function StudentModal({
         setStudentPhone('');
         setParentNotificationsAllowed(true);
         setStudentNotificationsAllowed(true);
+        setParentWeeklyDigestOptIn(false);
         setSelectedTeacherIds([]);
         setTheme(undefined);
         setBirthday('');
@@ -394,6 +397,7 @@ export function StudentModal({
         notificationPrefs: {
           parentEnabled: parentNotificationsAllowed,
           studentEnabled: studentNotificationsAllowed,
+          parentWeeklyDigest: parentWeeklyDigestOptIn,
         },
         birthday: birthday || undefined,
         welcomePageEnabled: studentWelcomeAllowed ? true : false,
@@ -421,6 +425,7 @@ export function StudentModal({
         notificationPrefs: {
           parentEnabled: parentNotificationsAllowed,
           studentEnabled: studentNotificationsAllowed,
+          parentWeeklyDigest: parentWeeklyDigestOptIn,
         },
         birthday: birthday || undefined,
         welcomePageEnabled: studentWelcomeAllowed ? true : false,
@@ -673,6 +678,17 @@ export function StudentModal({
               <Switch checked={studentNotificationsAllowed} onCheckedChange={setStudentNotificationsAllowed} />
             </div>
           </div>
+          {settings.notificationParentWeeklyDigestEnabled ? (
+            <div className="flex items-center justify-between rounded-lg border bg-muted/30 px-3 py-2">
+              <div className="space-y-0.5">
+                <Label className="text-sm font-bold">Weekly parent digest</Label>
+                <p className="text-[11px] text-muted-foreground leading-snug">
+                  When the school turns on weekly summaries, send this student&apos;s week in review to parent email or SMS.
+                </p>
+              </div>
+              <Switch checked={parentWeeklyDigestOptIn} onCheckedChange={setParentWeeklyDigestOptIn} />
+            </div>
+          ) : null}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
               <Label htmlFor="studentEmail">Student Email (Optional)</Label>

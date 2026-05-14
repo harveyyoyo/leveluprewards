@@ -3237,5 +3237,116 @@ exports.adminSendTestNotification = functions.https.onCall(async (data: any, con
   return { mailDocId: docRef.id };
 });
 
+/**
+ * Weekly parent digest (Sunday 15:00 UTC). Sends email/SMS to parents who opted in on the student record
+ * when `notificationParentWeeklyDigestEnabled` is on for the school.
+ */
+exports.scheduledParentWeeklyDigest = functions
+  .runWith({ timeoutSeconds: 300, memory: "512MB" })
+  .pubsub.schedule("0 15 * * 0")
+  .timeZone("UTC")
+  .onRun(async () => {
+    const db = admin.firestore();
+    const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const schoolsSnap = await db.collection("schools").get();
+
+    for (const schoolDoc of schoolsSnap.docs) {
+      const schoolId = schoolDoc.id;
+      const appSettings = schoolDoc.data()?.appSettings as Record<string, any> | undefined;
+      if (!appSettings?.enableNotifications) continue;
+      if (!appSettings?.notificationParentWeeklyDigestEnabled) continue;
+
+      const schoolName = String(schoolDoc.data()?.name || "School").trim() || "School";
+      const fromEmail = `"${schoolName} Rewards" <alerts@levelup-edu.com>`;
+      const whatsappEnabled = !!appSettings.notificationWhatsAppEnabled;
+
+      const studentsSnap = await db.collection("schools").doc(schoolId).collection("students").get();
+
+      for (const st of studentsSnap.docs) {
+        const studentId = st.id;
+        const studentData = st.data() || {};
+        const prefs = (studentData.notificationPrefs || {}) as Record<string, any>;
+        if (prefs.parentWeeklyDigest !== true) continue;
+        if (prefs.parentEnabled === false) continue;
+
+        const parentEmail = decryptField(studentData.parentEmail);
+        const parentPhone = decryptField(studentData.parentPhone);
+        if (!parentEmail && !parentPhone) continue;
+
+        let earned = 0;
+        let spent = 0;
+        let redemptions = 0;
+        const lines: string[] = [];
+
+        try {
+          const actSnap = await db
+            .collection("schools")
+            .doc(schoolId)
+            .collection("students")
+            .doc(studentId)
+            .collection("activities")
+            .orderBy("date", "desc")
+            .limit(120)
+            .get();
+
+          for (const ad of actSnap.docs) {
+            const a = ad.data() as Record<string, any>;
+            const d = typeof a.date === "number" ? a.date : 0;
+            if (d < weekAgo) continue;
+            const amt = typeof a.amount === "number" ? a.amount : 0;
+            if (amt > 0) earned += amt;
+            else if (amt < 0) {
+              spent += -amt;
+              const desc = String(a.desc || "");
+              if (/redeemed/i.test(desc)) redemptions += 1;
+            }
+            if (lines.length < 10) {
+              lines.push(
+                `${new Date(d).toLocaleDateString()}: ${String(a.desc || "Activity")} (${amt > 0 ? "+" : ""}${amt} pts)`,
+              );
+            }
+          }
+        } catch (e) {
+          functions.logger.warn("parentWeeklyDigest activities read failed", { schoolId, studentId, err: String(e) });
+          continue;
+        }
+
+        const firstName = String(studentData.firstName || "Student").trim() || "Student";
+        const message =
+          `Weekly summary for ${firstName}: points gained +${earned}, points spent ${spent}, prize redemptions ${redemptions}.` +
+          (lines.length ? `\n\nRecent activity:\n${lines.join("\n")}` : "");
+
+        const html = buildCelebrationEmailHtml({
+          title: "Weekly rewards summary",
+          subtitle: schoolName,
+          message,
+          studentName: firstName,
+          accent: "#2563eb",
+          icon: "📅",
+          showArtwork: false,
+        });
+
+        const alerts: Promise<any>[] = [];
+        queueContactAlerts({
+          alerts,
+          db,
+          email: parentEmail || undefined,
+          phone: parentPhone || undefined,
+          subject: `${schoolName}: Weekly rewards summary`,
+          message,
+          html,
+          fromEmail,
+          schoolId,
+          studentId,
+          whatsappEnabled,
+        });
+        await Promise.all(alerts);
+      }
+    }
+
+    functions.logger.info("scheduledParentWeeklyDigest completed");
+    return null;
+  });
+
 // Note: onStudentActivityCreated and onAttendanceLogCreated are exported via
 // `export const` above (ES module syntax). No duplicate CommonJS assignment needed.
