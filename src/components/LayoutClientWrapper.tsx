@@ -1,7 +1,7 @@
 
 'use client';
 
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Header from "@/components/Header";
@@ -50,9 +50,11 @@ function LayoutChromeSuspenseFallback() {
 }
 
 function LayoutClientWrapperInner({ children }: LayoutClientWrapperProps) {
+    const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const { settings, isLoaded } = useSettings();
+    const [nonCriticalUiReady, setNonCriticalUiReady] = useState(false);
     const [studentChromeVisible, setStudentChromeVisible] = useState(false);
     const studentChromeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const devChunkReloadGuard = useRef(false);
@@ -88,6 +90,50 @@ function LayoutClientWrapperInner({ children }: LayoutClientWrapperProps) {
     const fullscreen = searchParams?.get('fullscreen') === '1';
     const isFullscreenSpecialPage =
       fullscreen && (pathname?.includes('/halloffame') || pathname?.includes('/bulletin-board'));
+
+    const schoolPathMatch =
+      typeof pathname === 'string'
+        ? pathname.match(/^\/([^/]+)\/(?:portal|student|student-home|teacher|admin|admin-signin|prize|secretary|prize-clerk|reports)(?:\/|$)/i)
+        : null;
+    const routeSchoolId = schoolPathMatch?.[1];
+
+    useEffect(() => {
+        const runWhenIdle = (cb: () => void, timeout = 1200) => {
+            if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+                const id = window.requestIdleCallback(cb, { timeout });
+                return () => window.cancelIdleCallback(id);
+            }
+            const id = globalThis.setTimeout(cb, Math.min(timeout, 800));
+            return () => globalThis.clearTimeout(id);
+        };
+
+        return runWhenIdle(() => setNonCriticalUiReady(true));
+    }, []);
+
+    useEffect(() => {
+        if (!routeSchoolId) return;
+        const routes = [
+            `/${routeSchoolId}/portal`,
+            `/${routeSchoolId}/student`,
+            `/${routeSchoolId}/teacher`,
+            `/${routeSchoolId}/admin-signin`,
+            `/${routeSchoolId}/prize`,
+        ];
+        const runWhenIdle = (cb: () => void) => {
+            if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+                const id = window.requestIdleCallback(cb, { timeout: 2500 });
+                return () => window.cancelIdleCallback(id);
+            }
+            const id = globalThis.setTimeout(cb, 1200);
+            return () => globalThis.clearTimeout(id);
+        };
+
+        return runWhenIdle(() => {
+            for (const route of routes) {
+                if (route !== pathname) router.prefetch(route);
+            }
+        });
+    }, [pathname, routeSchoolId, router]);
 
     useEffect(() => {
         if (!isStudentKioskPage || hideAppChrome) {
@@ -210,7 +256,9 @@ function LayoutClientWrapperInner({ children }: LayoutClientWrapperProps) {
                     className={cn(
                         'min-h-screen min-h-dvh flex flex-col',
                         // Lock viewport height so only inner panels scroll (student kiosk + app-shell staff routes).
-                        (appShellNoPageScroll || isStudentKioskPage) && 'h-dvh max-h-dvh overflow-hidden'
+                        // Portal hub: fixed layers + in-flow footer — constrain shell so main flex-1 fills without a page scrollbar.
+                        (appShellNoPageScroll || isStudentKioskPage || isPortalChoosePage) &&
+                            'h-dvh max-h-dvh overflow-hidden'
                     )}
                 >
                     {!hideAppChrome && (
@@ -241,7 +289,11 @@ function LayoutClientWrapperInner({ children }: LayoutClientWrapperProps) {
                                         ? 'relative z-10 w-full max-w-none'
                                         : 'relative z-10 mx-auto w-full max-w-7xl',
                             appShellNoPageScroll && 'overflow-hidden flex flex-col min-h-0',
-                            settings.displayMode === 'app' && !isStudentKioskPage && 'pb-24'
+                            isPortalChoosePage && 'min-h-0 flex flex-col',
+                            settings.displayMode === 'app' &&
+                                !isStudentKioskPage &&
+                                !isPortalChoosePage &&
+                                'pb-24'
                         )}
                     >
                         {children}
@@ -251,11 +303,12 @@ function LayoutClientWrapperInner({ children }: LayoutClientWrapperProps) {
                             <SiteFooter />
                         </div>
                     )}
-                    <IntroWizard />
-                    {!hideAppChrome && !isFullscreenSpecialPage && !isStudentKioskPage && <StaffAiHelpButton />}
+                    {nonCriticalUiReady && settings.showIntroWizard && <IntroWizard />}
+                    {nonCriticalUiReady && !hideAppChrome && !isFullscreenSpecialPage && !isStudentKioskPage && <StaffAiHelpButton />}
                     {!hideAppChrome &&
                       !isFullscreenSpecialPage &&
                       // Prevent a "flash of animated background" before settings hydrate from storage.
+                      nonCriticalUiReady &&
                       isLoaded &&
                       settings.enableAnimatedBackground && <AnimatedSiteBackground />}
                 </div>

@@ -9,7 +9,7 @@ import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { motion, useReducedMotion } from 'framer-motion';
-import { staggerContainer, staggerItem, springCinematic } from '@/lib/animation';
+import { easePremium, staggerContainer, staggerItem } from '@/lib/animation';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -59,6 +59,71 @@ function staffLandingPath(schoolId: string, type: StaffPortalLoginOption['type']
     return `/${schoolId}/teacher`;
 }
 
+function WhereToDrawnTitle({
+    accentColor,
+    displayMode,
+    glowColor,
+}: {
+    accentColor: string;
+    displayMode: string;
+    glowColor?: string;
+}) {
+    const titleClassName = cn(
+        'font-headline relative inline-block font-black tracking-tight',
+        displayMode === 'app'
+            ? 'px-2 py-1 text-4xl sm:py-2 sm:text-6xl'
+            : 'px-2 py-2 text-5xl sm:text-6xl',
+    );
+
+    return (
+        <h2
+            className={titleClassName}
+            style={{
+                color: accentColor,
+                textShadow: glowColor ? `0 0 12px ${glowColor}33` : undefined,
+            }}
+        >
+            <motion.span
+                className="inline-block [will-change:clip-path,opacity,transform]"
+                initial={{ clipPath: 'inset(0 100% 0 0)', opacity: 0.82, y: 2 }}
+                animate={{ clipPath: 'inset(0 0% 0 0)', opacity: 1, y: 0 }}
+                transition={{
+                    clipPath: { duration: 0.7, ease: easePremium, delay: 0.04 },
+                    opacity: { duration: 0.24, ease: easePremium, delay: 0.04 },
+                    y: { duration: 0.28, ease: easePremium, delay: 0.04 },
+                }}
+            >
+                Where to?
+            </motion.span>
+            <motion.svg
+                className="pointer-events-none absolute left-[13%] top-[86%] h-[0.14em] w-[74%] overflow-visible"
+                viewBox="0 0 220 18"
+                preserveAspectRatio="none"
+                aria-hidden="true"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: [0, 0.4, 0.2] }}
+                transition={{
+                    opacity: { duration: 0.64, ease: easePremium, delay: 0.46 },
+                }}
+            >
+                <motion.path
+                    d="M 4 11 C 54 16, 154 15, 216 7"
+                    fill="none"
+                    stroke={accentColor}
+                    strokeWidth="3.5"
+                    strokeLinecap="round"
+                    initial={{ pathLength: 0 }}
+                    animate={{ pathLength: 1 }}
+                    transition={{ duration: 0.46, ease: easePremium, delay: 0.46 }}
+                    style={{
+                        filter: glowColor ? `drop-shadow(0 0 8px ${glowColor}44)` : undefined,
+                    }}
+                />
+            </motion.svg>
+        </h2>
+    );
+}
+
 export default function PortalPage() {
     const { loginState, isInitialized, schoolId, isAdmin, login, logout } = useAppContext();
     const { settings } = useSettings();
@@ -76,6 +141,12 @@ export default function PortalPage() {
     const [teacherSubmitting, setTeacherSubmitting] = useState(false);
     const gridRef = useRef<HTMLDivElement>(null);
     const [whereToCenterY, setWhereToCenterY] = useState<number | null>(null);
+    const [reduceWhereToMotion, setReduceWhereToMotion] = useState(
+        () =>
+            typeof window !== 'undefined'
+                ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+                : !!prefersReducedMotion,
+    );
     const animBackdrop = globalAnimatedBackdropActive(settings);
 
     // Returning to the hub from a student kiosk session should become the school chooser again.
@@ -83,6 +154,16 @@ export default function PortalPage() {
         if (!isInitialized || loginState !== 'student' || !schoolId) return;
         logout({ studentNavigateTo: 'portal' });
     }, [isInitialized, loginState, logout, schoolId]);
+
+    useEffect(() => {
+        const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+        const syncReducedMotion = () => setReduceWhereToMotion(mediaQuery.matches);
+
+        syncReducedMotion();
+        mediaQuery.addEventListener('change', syncReducedMotion);
+
+        return () => mediaQuery.removeEventListener('change', syncReducedMotion);
+    }, []);
 
     /** Default scheme: real brand hex — `hsl(var(--primary))` stays near-white in `.dark` by design. */
     const defaultPortalAccent =
@@ -186,6 +267,8 @@ export default function PortalPage() {
 
     const showAdminPortalCard = isAdmin || isSchoolChooser || (isStaff && !isAdmin);
     const showTeacherPortalCard = isStaff || isSchoolChooser;
+    const whereToAccentColor = defaultPortalAccent ?? rainbowByIndex(0, settings.colorScheme);
+    const whereToGlowColor = defaultPortalAccent === null ? whereToAccentColor : undefined;
 
     const portals: PortalArea[] = [
         ...(isAdmin
@@ -232,12 +315,10 @@ export default function PortalPage() {
     return (
         <div
             className={cn(
-                'text-foreground relative w-full font-sans',
+                'text-foreground relative min-h-0 h-full w-full font-sans',
                 animBackdrop ? 'bg-transparent' : 'bg-background',
             )}
         >
-            {/* Keeps main/footer flow height while hub layers are fixed to the viewport */}
-            <div className="min-h-[100dvh] w-full shrink-0" aria-hidden />
             {/* Backdrop: keep existing palette; only subtle grid + optional noise/animated orbs */}
             <div className="pointer-events-none fixed inset-0 z-0">
                 {!animBackdrop && (
@@ -288,26 +369,30 @@ export default function PortalPage() {
                             : 'calc((5rem + 50dvh) / 2 - 2.75rem)',
                 }}
             >
-                <motion.h2
-                    initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.94 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={prefersReducedMotion ? { duration: 0 } : springCinematic}
-                    className={cn(
-                        'font-headline inline-block font-black tracking-tighter drop-shadow-md',
-                        settings.displayMode === 'app'
-                            ? 'px-2 py-1 text-4xl sm:py-2 sm:text-7xl'
-                            : 'px-2 py-2 text-6xl sm:text-7xl',
-                    )}
-                    style={{
-                        color: defaultPortalAccent ?? rainbowByIndex(0, settings.colorScheme),
-                        textShadow:
-                            defaultPortalAccent === null
-                                ? `0 0 14px ${rainbowByIndex(0, settings.colorScheme)}55, 0 0 28px ${rainbowByIndex(0, settings.colorScheme)}33`
+                {reduceWhereToMotion ? (
+                    <h2
+                        className={cn(
+                            'font-headline inline-block font-black tracking-tight',
+                            settings.displayMode === 'app'
+                                ? 'px-2 py-1 text-4xl sm:py-2 sm:text-6xl'
+                                : 'px-2 py-2 text-5xl sm:text-6xl',
+                        )}
+                        style={{
+                            color: whereToAccentColor,
+                            textShadow: whereToGlowColor
+                                ? `0 0 14px ${whereToGlowColor}55, 0 0 28px ${whereToGlowColor}33`
                                 : undefined,
-                    }}
-                >
-                    Where to?
-                </motion.h2>
+                        }}
+                    >
+                        Where to?
+                    </h2>
+                ) : (
+                    <WhereToDrawnTitle
+                        accentColor={whereToAccentColor}
+                        displayMode={settings.displayMode}
+                        glowColor={whereToGlowColor}
+                    />
+                )}
             </div>
 
             <div className="pointer-events-none fixed inset-x-0 top-0 z-[10] flex h-[100dvh] min-h-0 items-center justify-center px-4 sm:px-6">
