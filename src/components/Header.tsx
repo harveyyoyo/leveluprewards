@@ -1,5 +1,5 @@
-
 'use client';
+import { useMemo } from 'react';
 import { useParams, usePathname, useSearchParams } from 'next/navigation';
 import { doc } from 'firebase/firestore';
 import {
@@ -29,7 +29,7 @@ import {
 import dynamic from 'next/dynamic';
 // 120 KB modal — only fetched when the user actually opens settings.
 const SettingsModal = dynamic(
-  () => import('./ui/SettingsModal').then(m => m.SettingsModal),
+  () => import('./settings/SettingsModal').then(m => m.SettingsModal),
   { ssr: false },
 );
 import { useSettings } from './providers/SettingsProvider';
@@ -40,7 +40,7 @@ import { useSchoolMetadataDocRef } from '@/hooks/useSchoolMetadataDocRef';
 import Logo from './Logo';
 import { portalHoverTextClass, portalTextClass, type PortalColorKey } from '@/lib/portalColors';
 import { AdminLoginButton } from './AdminLoginButton';
-import { getLevelUpLogoHref } from '@/lib/app-branding';
+import { getLevelUpLogoHref } from '@/lib/appBranding';
 
 
 export default function Header() {
@@ -71,12 +71,27 @@ export default function Header() {
   const isDeveloperMode = loginState === 'developer' && !schoolId;
   const fullscreen = searchParams?.get('fullscreen') === '1';
   const isFullscreenSpecialPage =
-    fullscreen && (pathname?.includes('/halloffame') || pathname?.includes('/bulletin-board'));
+    fullscreen && (pathname?.includes('/hall-of-fame') || pathname?.includes('/bulletin-board'));
 
   const handleLogout = () => {
     playSound('swoosh');
     logout();
   };
+
+  const syncStatusDescription = useMemo(() => {
+    switch (syncStatus) {
+      case 'synced':
+        return 'Firestore is connected and syncing in real time. (This is not the same as “production” vs localhost.)';
+      case 'syncing':
+        return 'Connecting to Firestore…';
+      case 'offline':
+        return 'Browser appears offline; data may not sync until you are back online.';
+      case 'error':
+        return 'Firestore sync error; check the browser console for details.';
+      default:
+        return `Connection status: ${syncStatus}`;
+    }
+  }, [syncStatus]);
 
   if (isLoginPage || !isInitialized || isDeveloperMode || isFullscreenSpecialPage) {
     return null;
@@ -84,15 +99,16 @@ export default function Header() {
 
   const logoLink = schoolId ? `/login?school=${encodeURIComponent(schoolId)}` : getLevelUpLogoHref();
   const centerLabel = schoolName;
-  const centerHref = schoolId ? `/${schoolId}/portal` : '/portal';
+  /** Portal lives only under `/{schoolId}/portal`; there is no app root `/portal` page. */
+  const centerHref = schoolId ? `/${schoolId}/portal` : '/';
   const webHomeHref = schoolId ? centerHref : '/';
   const teacherPortalHref = schoolId ? `/${schoolId}/teacher` : '';
   const adminSignInHref =
     schoolId && pathname === teacherPortalHref
-      ? `/${schoolId}/admin-signin?redirect=${encodeURIComponent(teacherPortalHref)}`
+      ? `/${schoolId}/admin-sign-in?redirect=${encodeURIComponent(teacherPortalHref)}`
       : schoolId
-        ? `/${schoolId}/admin-signin`
-        : '/admin-signin';
+        ? `/${schoolId}/admin-sign-in`
+        : '/login';
   const isStaff =
     loginState === 'teacher' ||
     loginState === 'admin' ||
@@ -109,21 +125,22 @@ export default function Header() {
   if (settings.payLibrary ?? true) paidProducts.push('Library');
   const paidProductsLabel = paidProducts.join(' • ');
 
-
   // --- APP MODE HEADER ---
   if (settings.displayMode === 'app') {
-    const navItems = [
-      ...(isAdmin
-        ? [{ id: 'admin', href: `/${schoolId}/admin`, icon: UserCog, label: 'Admin', color: 'destructive' }]
-        : isStaff
-          ? [{ id: 'admin', href: adminSignInHref, icon: UserCog, label: 'Admin', color: 'destructive' }]
-          : []),
-      ...(isStaff ? [{ id: 'print', href: `/${schoolId}/teacher`, icon: Printer, label: 'Teacher', color: 'chart-2' }] : []),
-      { id: 'redeem', href: `/${schoolId}/student`, icon: GraduationCap, label: 'Student', color: 'chart-1' },
-    ].sort((a, b) => {
-      const order = ['admin', 'print', 'redeem'];
-      return order.indexOf(a.id) - order.indexOf(b.id);
-    });
+    const navItems = schoolId
+      ? [
+          ...(isAdmin
+            ? [{ id: 'admin', href: `/${schoolId}/admin`, icon: UserCog, label: 'Admin', color: 'destructive' }]
+            : isStaff
+              ? [{ id: 'admin', href: adminSignInHref, icon: UserCog, label: 'Admin', color: 'destructive' }]
+              : []),
+          ...(isStaff ? [{ id: 'print', href: `/${schoolId}/teacher`, icon: Printer, label: 'Teacher', color: 'chart-2' }] : []),
+          { id: 'redeem', href: `/${schoolId}/student`, icon: GraduationCap, label: 'Student', color: 'chart-1' },
+        ].sort((a, b) => {
+          const order = ['admin', 'print', 'redeem'];
+          return order.indexOf(a.id) - order.indexOf(b.id);
+        })
+      : [];
 
     const colorClasses = portalTextClass;
     const hoverColorClasses = portalHoverTextClass;
@@ -155,7 +172,10 @@ export default function Header() {
           </div>
           <div className="flex shrink-0 items-center justify-end gap-1 sm:gap-2 justify-self-end">
             {schoolId && loginState !== 'loggedOut' && (
-              <div className="flex h-8 w-6 items-center justify-center sm:h-9 sm:w-9">
+              <div
+                className="flex h-8 w-6 items-center justify-center sm:h-9 sm:w-9"
+                title={syncStatusDescription}
+              >
                 <span className="relative flex h-2.5 w-2.5">
                   {syncStatus === 'synced' && <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75" />}
                   <span
@@ -192,13 +212,13 @@ export default function Header() {
         </header>
         </div>
 
-        {loginState !== 'loggedOut' && !isKioskLocked && (
+        {loginState !== 'loggedOut' && !isKioskLocked && navItems.length > 0 && (
           <nav className={cn("fixed bottom-0 left-0 right-0 py-3 pb-[max(1rem,env(safe-area-inset-bottom))] z-[100] no-print border-t",
             settings.darkMode ? "bg-background/90 backdrop-blur-md border-border" : "bg-card border-border"
           )}>
             <div className="max-w-lg mx-auto flex justify-around items-center">
               {navItems.map(({ href, icon: Icon, label, color }) => {
-                const isActive = pathname === href || (href !== '/portal' && pathname.startsWith(href));
+                const isActive = pathname === href || pathname.startsWith(`${href}/`);
                 const colorKey = color as PortalColorKey;
                 const activeClass = isActive
                   ? `scale-110 ${colorClasses[colorKey] || 'text-primary'}`
@@ -317,6 +337,9 @@ export default function Header() {
                     syncStatus === 'offline' && 'bg-red-600',
                     syncStatus === 'error' && 'bg-slate-600',
                   )}
+                  title={syncStatusDescription}
+                  role="status"
+                  aria-live="polite"
                 >
                   <span className="relative flex h-1.5 w-1.5">
                     {syncStatus === 'synced' && (
