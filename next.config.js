@@ -32,6 +32,30 @@ const nextConfig = {
     // Browsers and tools often request /favicon.ico; serve the same asset as app/icon.png.
     return [{ source: '/favicon.ico', destination: '/icon.png' }];
   },
+  async redirects() {
+    return [
+      {
+        source: '/portal',
+        destination: '/login',
+        permanent: false,
+      },
+      {
+        source: '/:schoolId/admin-signin',
+        destination: '/:schoolId/admin-sign-in',
+        permanent: true,
+      },
+      {
+        source: '/:schoolId/halloffame',
+        destination: '/:schoolId/hall-of-fame',
+        permanent: true,
+      },
+      {
+        source: '/leveluparcade',
+        destination: '/level-up-arcade',
+        permanent: true,
+      },
+    ];
+  },
   experimental: {
     serverComponentsExternalPackages: ['pdf-parse', 'mammoth'],
     /** Faster dev compiles for barrel-import packages (tree-shaken imports). */

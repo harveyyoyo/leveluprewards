@@ -17,7 +17,7 @@ import { doc, getDoc, getDocFromServer, onSnapshot, type DocumentReference, type
 import { schoolPublicDocRef } from '@/lib/schoolPublic';
 import { getReadableErrorMessage } from '@/lib/errorMessage';
 import { loginErr, loginOk, messageFromVerifySchoolAccessError, type LoginResult } from '@/lib/loginResult';
-import { isPublicSampleSchoolId } from '@/lib/sample-schools';
+import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
 
 export type SyncStatus = 'synced' | 'syncing' | 'offline' | 'error';
 export type LoginState = 'loggedOut' | 'school' | 'developer' | 'student' | 'teacher' | 'admin' | 'secretary' | 'prizeClerk' | 'reports';
@@ -221,7 +221,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 const dest = options?.staffNavigateTo === 'teacher' ? 'teacher' : 'portal';
                 router.push(`/${schoolId}/${dest}`);
             } else {
-                router.push('/portal');
+                router.push('/login');
             }
         } else if (loginState === 'student' && schoolId) {
             returnToSchoolSession(schoolId);
@@ -401,7 +401,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 let recoveredSchoolId = savedSchoolId || null;
                 if (!recoveredSchoolId && typeof window !== 'undefined') {
                     const m = window.location.pathname.match(
-                        /^\/([^/]+)\/(?:student|student-home|teacher|admin|admin-signin|portal|prize|secretary|prize-clerk|reports)(?:\/|$)/i,
+                        /^\/([^/]+)\/(?:student|student-home|teacher|admin|admin-sign-in|portal|prize|secretary|prize-clerk|reports)(?:\/|$)/i,
                     );
                     const seg = m?.[1]?.trim().toLowerCase();
                     if (seg && !['login', 'developer', 's'].includes(seg)) {

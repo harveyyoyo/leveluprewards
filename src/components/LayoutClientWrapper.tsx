@@ -67,7 +67,7 @@ function LayoutClientWrapperInner({ children }: LayoutClientWrapperProps) {
 
     const isSignInPage = typeof pathname === 'string' && /\/sign-in\/?$/.test(pathname);
     const isAdminSignInPage =
-      typeof pathname === 'string' && /\/admin-signin\/?$/.test(pathname);
+      typeof pathname === 'string' && /\/admin-sign-in\/?$/.test(pathname);
     const isPortalChoosePage =
       typeof pathname === 'string' && /\/portal\/?$/.test(pathname);
     /** Version / legal footer: in document flow (not fixed); only on login + portal hub */
@@ -89,11 +89,13 @@ function LayoutClientWrapperInner({ children }: LayoutClientWrapperProps) {
 
     const fullscreen = searchParams?.get('fullscreen') === '1';
     const isFullscreenSpecialPage =
-      fullscreen && (pathname?.includes('/halloffame') || pathname?.includes('/bulletin-board'));
+      fullscreen && (pathname?.includes('/hall-of-fame') || pathname?.includes('/bulletin-board'));
 
     const schoolPathMatch =
       typeof pathname === 'string'
-        ? pathname.match(/^\/([^/]+)\/(?:portal|student|student-home|teacher|admin|admin-signin|prize|secretary|prize-clerk|reports)(?:\/|$)/i)
+        ? pathname.match(
+            /^\/([^/]+)\/(?:portal|student|student-home|teacher|admin|admin-sign-in|prize|secretary|prize-clerk|reports|sign-in|hall-of-fame|bulletin-board)(?:\/|$)/i,
+          )
         : null;
     const routeSchoolId = schoolPathMatch?.[1];
 
@@ -116,7 +118,7 @@ function LayoutClientWrapperInner({ children }: LayoutClientWrapperProps) {
             `/${routeSchoolId}/portal`,
             `/${routeSchoolId}/student`,
             `/${routeSchoolId}/teacher`,
-            `/${routeSchoolId}/admin-signin`,
+            `/${routeSchoolId}/admin-sign-in`,
             `/${routeSchoolId}/prize`,
         ];
         const runWhenIdle = (cb: () => void) => {
@@ -280,7 +282,7 @@ function LayoutClientWrapperInner({ children }: LayoutClientWrapperProps) {
                         id="screen-view"
                         className={cn(
                             'flex-1 min-w-0',
-                            /* Login / sign-in / admin-signin: full-width shell so pages can center their own content */
+                            /* Login / sign-in / admin-sign-in: full-width shell so pages can center their own content */
                             hideAppChrome || isAdminSignInPage
                                 ? 'relative z-10 flex w-full flex-col'
                                 : isStudentKioskPage
