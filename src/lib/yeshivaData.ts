@@ -1,16 +1,17 @@
 import type { Database } from './types';
+import { DEMO_STUDENT_THEMES_YESHIVA_ORDER } from './demoStudentThemes';
 
 export const YESHIVA_DATA: Omit<Database, 'passcode'> = {
   name: 'Yeshiva',
   students: [
-    { id: '100', firstName: 'Shmuel', lastName: 'Goldstein', nfcId: '100', points: 120, classId: 'yc1' },
-    { id: '101', firstName: 'Avi', lastName: 'Schwartz', nfcId: '101', points: 80, classId: 'yc2' },
-    { id: '102', firstName: 'Yosef', lastName: 'Cohen', nfcId: '102', points: 250, classId: 'yc1' },
-    { id: '103', firstName: 'David', lastName: 'Levi', nfcId: '103', points: 400, classId: 'yc3' },
-    { id: '104', firstName: 'Moshe', lastName: 'Katz', nfcId: '104', points: 150, classId: 'yc2' },
-    { id: '105', firstName: 'Dovid', lastName: 'Weiss', nfcId: '105', points: 300, classId: 'yc1' },
-    { id: '106', firstName: 'Chaim', lastName: 'Friedman', nfcId: '106', points: 50, classId: 'yc3' },
-    { id: '107', firstName: 'Yaakov', lastName: 'Rosenberg', nfcId: '107', points: 600, classId: 'yc2' },
+    { id: '100', firstName: 'Shmuel', lastName: 'Goldstein', nfcId: '100', points: 120, classId: 'yc1', theme: DEMO_STUDENT_THEMES_YESHIVA_ORDER[0] },
+    { id: '101', firstName: 'Avi', lastName: 'Schwartz', nfcId: '101', points: 80, classId: 'yc2', theme: DEMO_STUDENT_THEMES_YESHIVA_ORDER[1] },
+    { id: '102', firstName: 'Yosef', lastName: 'Cohen', nfcId: '102', points: 250, classId: 'yc1', theme: DEMO_STUDENT_THEMES_YESHIVA_ORDER[2] },
+    { id: '103', firstName: 'David', lastName: 'Levi', nfcId: '103', points: 400, classId: 'yc3', theme: DEMO_STUDENT_THEMES_YESHIVA_ORDER[3] },
+    { id: '104', firstName: 'Moshe', lastName: 'Katz', nfcId: '104', points: 150, classId: 'yc2', theme: DEMO_STUDENT_THEMES_YESHIVA_ORDER[4] },
+    { id: '105', firstName: 'Dovid', lastName: 'Weiss', nfcId: '105', points: 300, classId: 'yc1', theme: DEMO_STUDENT_THEMES_YESHIVA_ORDER[5] },
+    { id: '106', firstName: 'Chaim', lastName: 'Friedman', nfcId: '106', points: 50, classId: 'yc3', theme: DEMO_STUDENT_THEMES_YESHIVA_ORDER[6] },
+    { id: '107', firstName: 'Yaakov', lastName: 'Rosenberg', nfcId: '107', points: 600, classId: 'yc2', theme: DEMO_STUDENT_THEMES_YESHIVA_ORDER[7] },
     { id: '108', firstName: 'Yisrael', lastName: 'Adler', nfcId: '108', points: 180, classId: 'yc1' },
     { id: '109', firstName: 'Menachem', lastName: 'Gross', nfcId: '109', points: 1200, classId: 'yc3' },
     { id: '110', firstName: 'Eliezer', lastName: 'Klein', nfcId: '110', points: 220, classId: 'yc2' },

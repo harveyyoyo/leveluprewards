@@ -1,16 +1,17 @@
 import type { Database } from './types';
+import { DEMO_STUDENT_THEMES } from './demoStudentThemes';
 
 export const SCHOOL_DATA: Omit<Database, 'passcode'> = {
   name: 'School ABC',
   students: [
-    { id: '100', firstName: 'Emily', lastName: 'Smith', nfcId: '100', points: 100, classId: 'sc1' },
-    { id: '101', firstName: 'Jacob', lastName: 'Johnson', nfcId: '101', points: 215, classId: 'sc2' },
-    { id: '102', firstName: 'Sophia', lastName: 'Williams', nfcId: '102', points: 130, classId: 'sc1' },
-    { id: '103', firstName: 'Michael', lastName: 'Brown', nfcId: '103', points: 325, classId: 'sc3' },
-    { id: '104', firstName: 'Emma', lastName: 'Jones', nfcId: '104', points: 170, classId: 'sc2' },
-    { id: '105', firstName: 'William', lastName: 'Garcia', nfcId: '105', points: 50, classId: 'sc1' },
-    { id: '106', firstName: 'Olivia', lastName: 'Miller', nfcId: '106', points: 450, classId: 'sc3' },
-    { id: '107', firstName: 'James', lastName: 'Davis', nfcId: '107', points: 600, classId: 'sc2' },
+    { id: '100', firstName: 'Emily', lastName: 'Smith', nfcId: '100', points: 100, classId: 'sc1', theme: DEMO_STUDENT_THEMES[0] },
+    { id: '101', firstName: 'Jacob', lastName: 'Johnson', nfcId: '101', points: 215, classId: 'sc2', theme: DEMO_STUDENT_THEMES[1] },
+    { id: '102', firstName: 'Sophia', lastName: 'Williams', nfcId: '102', points: 130, classId: 'sc1', theme: DEMO_STUDENT_THEMES[2] },
+    { id: '103', firstName: 'Michael', lastName: 'Brown', nfcId: '103', points: 325, classId: 'sc3', theme: DEMO_STUDENT_THEMES[3] },
+    { id: '104', firstName: 'Emma', lastName: 'Jones', nfcId: '104', points: 170, classId: 'sc2', theme: DEMO_STUDENT_THEMES[4] },
+    { id: '105', firstName: 'William', lastName: 'Garcia', nfcId: '105', points: 50, classId: 'sc1', theme: DEMO_STUDENT_THEMES[5] },
+    { id: '106', firstName: 'Olivia', lastName: 'Miller', nfcId: '106', points: 450, classId: 'sc3', theme: DEMO_STUDENT_THEMES[6] },
+    { id: '107', firstName: 'James', lastName: 'Davis', nfcId: '107', points: 600, classId: 'sc2', theme: DEMO_STUDENT_THEMES[7] },
     { id: '108', firstName: 'Isabella', lastName: 'Rodriguez', nfcId: '108', points: 180, classId: 'sc1' },
     { id: '109', firstName: 'Alexander', lastName: 'Martinez', nfcId: '109', points: 1000, classId: 'sc3' },
     { id: '110', firstName: 'Mia', lastName: 'Hernandez', nfcId: '110', points: 250, classId: 'sc4' },
