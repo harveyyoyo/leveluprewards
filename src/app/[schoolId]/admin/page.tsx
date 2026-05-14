@@ -1368,7 +1368,7 @@ function AdminDashboardInner() {
     <TooltipProvider>
       <div
         className={cn(
-          "mx-auto flex h-full min-h-0 w-full max-w-7xl flex-col gap-6 p-4 md:p-8",
+          "mx-auto flex h-full min-h-0 min-w-0 w-full max-w-7xl flex-col gap-6 p-4 md:p-8",
         )}
       >
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -1430,17 +1430,17 @@ function AdminDashboardInner() {
           />
         ) : null}
 
-        <div className="flex min-h-0 w-full flex-1 flex-col">
+        <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col">
           <Tabs
             key={`admin-tabs-${schoolId ?? 'unknown'}`}
             value={activeMainTab}
             onValueChange={setActiveMainTab}
-            className="flex min-h-0 w-full flex-1 flex-col gap-6"
+            className="flex min-h-0 min-w-0 w-full flex-1 flex-col gap-6"
           >
-          <div className="w-full flex flex-col gap-4">
-            <div className="flex overflow-x-auto w-full -mx-4 px-4 sm:mx-0 sm:px-0 md:justify-center pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          <div className="flex w-full min-w-0 flex-col gap-4">
+            <div className="-mx-4 flex w-full min-w-0 touch-pan-x justify-start overflow-x-auto overscroll-x-contain px-4 pb-1 sm:mx-0 sm:px-0 sm:pb-2 [scrollbar-gutter:stable]">
               <TabsList 
-                className="bg-muted/50 p-1.5 rounded-2xl border shadow-sm h-auto inline-flex w-max sm:mx-auto flex-nowrap gap-x-1"
+                className="inline-flex h-auto w-max max-w-none flex-nowrap justify-start gap-x-1 rounded-2xl border bg-muted/50 p-1.5 shadow-sm sm:justify-start"
                 style={{ ['--admin-accent' as any]: 'hsl(var(--primary))' }}
                 aria-label="Admin portal main tabs"
                 onDragOver={(e) => {
