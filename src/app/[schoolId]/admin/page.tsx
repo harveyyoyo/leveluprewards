@@ -1438,9 +1438,9 @@ function AdminDashboardInner() {
             className="flex min-h-0 min-w-0 w-full flex-1 flex-col gap-6"
           >
           <div className="flex w-full min-w-0 flex-col gap-4">
-            <div className="-mx-4 flex w-full min-w-0 touch-pan-x justify-start overflow-x-auto overscroll-x-contain px-4 pb-1 sm:mx-0 sm:px-0 sm:pb-2 [scrollbar-gutter:stable]">
+            <div className="w-full min-w-0">
               <TabsList 
-                className="inline-flex h-auto w-max max-w-none flex-nowrap justify-start gap-x-1 rounded-2xl border bg-muted/50 p-1.5 shadow-sm sm:justify-start"
+                className="flex h-auto w-full flex-wrap content-start items-stretch justify-start gap-2 rounded-2xl border bg-muted/50 p-2 shadow-sm"
                 style={{ ['--admin-accent' as any]: 'hsl(var(--primary))' }}
                 aria-label="Admin portal main tabs"
                 onDragOver={(e) => {
@@ -1462,7 +1462,7 @@ function AdminDashboardInner() {
                   <DropdownMenuTrigger asChild>
                     <button
                       type="button"
-                      className="rounded-xl px-3 py-2 font-bold inline-flex items-center gap-2 text-sm text-foreground border bg-muted/40 hover:bg-muted/60 transition-all"
+                      className="inline-flex shrink-0 items-center gap-2 rounded-xl border bg-muted/40 px-3 py-2 text-sm font-bold text-foreground transition-all hover:bg-muted/60"
                       title="Additional features"
                       aria-label="Additional features"
                     >
@@ -1537,7 +1537,7 @@ function AdminDashboardInner() {
                     <div
                       key={t.value}
                       draggable
-                      className="inline-flex"
+                      className="flex shrink-0"
                       title={t.title ?? 'Drag to reorder'}
                       onDragStart={(e) => {
                         e.dataTransfer.setData('text/admin-main-tab', t.value);
