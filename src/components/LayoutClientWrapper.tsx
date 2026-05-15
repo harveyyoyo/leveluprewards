@@ -32,6 +32,8 @@ const StaffAiHelpButton = dynamic(
   { ssr: false }
 );
 
+const SERVICE_WORKER_PAGE_CACHE = 'levelup-offline-v1-pages';
+
 interface LayoutClientWrapperProps {
     children: React.ReactNode;
 }
@@ -186,9 +188,11 @@ function LayoutClientWrapperInner({ children }: LayoutClientWrapperProps) {
     useEffect(() => {
         if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
 
+        const serviceWorkerOverride = process.env.NEXT_PUBLIC_ENABLE_SERVICE_WORKER;
         const serviceWorkerEnabled =
             process.env.NODE_ENV === 'production' ||
-            process.env.NEXT_PUBLIC_ENABLE_SERVICE_WORKER === 'true';
+            serviceWorkerOverride === 'true' ||
+            serviceWorkerOverride === '1';
 
         if (!serviceWorkerEnabled) {
             navigator.serviceWorker.getRegistrations().then((registrations) => {
@@ -216,6 +220,16 @@ function LayoutClientWrapperInner({ children }: LayoutClientWrapperProps) {
                 type: 'LEVELUP_CACHE_URLS',
                 urls: [window.location.href],
             });
+            if ('caches' in window) {
+                void fetch(window.location.href, { credentials: 'same-origin' })
+                    .then((response) => {
+                        if (!response.ok) return undefined;
+                        return caches
+                            .open(SERVICE_WORKER_PAGE_CACHE)
+                            .then((cache) => cache.put(window.location.href, response));
+                    })
+                    .catch(() => undefined);
+            }
         };
 
         navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);

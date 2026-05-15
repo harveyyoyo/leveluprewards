@@ -1,1 +1,305 @@
-if(!self.define){let e,s={};const a=(a,c)=>(a=new URL(a+".js",c).href,s[a]||new Promise(s=>{if("document"in self){const e=document.createElement("script");e.src=a,e.onload=s,document.head.appendChild(e)}else e=a,importScripts(a),s()}).then(()=>{let e=s[a];if(!e)throw new Error(`Module ${a} didn’t register its module`);return e}));self.define=(c,n)=>{const t=e||("document"in self?document.currentScript.src:"")||location.href;if(s[t])return;let i={};const r=e=>a(e,t),d={module:{uri:t},exports:i,require:r};s[t]=Promise.all(c.map(e=>d[e]||r(e))).then(e=>(n(...e),i))}}define(["./workbox-f1770938"],function(e){"use strict";importScripts(),self.skipWaiting(),e.clientsClaim(),e.precacheAndRoute([{url:"/_next/static/SD0-0YCiDZMyIur7GLSou/_buildManifest.js",revision:"9ab16285429c5ffb01a948493ee6bbd7"},{url:"/_next/static/SD0-0YCiDZMyIur7GLSou/_ssgManifest.js",revision:"b6652df95db52feb4daf4eca35380933"},{url:"/_next/static/chunks/102-58e2971c4036742f.js",revision:"58e2971c4036742f"},{url:"/_next/static/chunks/105-cfcd5106563527f7.js",revision:"cfcd5106563527f7"},{url:"/_next/static/chunks/139.7a5a8e93a21948c1.js",revision:"7a5a8e93a21948c1"},{url:"/_next/static/chunks/200-034065a7ac535b2f.js",revision:"034065a7ac535b2f"},{url:"/_next/static/chunks/307-0c1cd2a60e2a882d.js",revision:"0c1cd2a60e2a882d"},{url:"/_next/static/chunks/330-af403214d19b99e2.js",revision:"af403214d19b99e2"},{url:"/_next/static/chunks/422-a28c0f57cd77f7a2.js",revision:"a28c0f57cd77f7a2"},{url:"/_next/static/chunks/429-ebc1bf655daf3566.js",revision:"ebc1bf655daf3566"},{url:"/_next/static/chunks/463-42ba1e4dd10040d3.js",revision:"42ba1e4dd10040d3"},{url:"/_next/static/chunks/4bd1b696-c023c6e3521b1417.js",revision:"c023c6e3521b1417"},{url:"/_next/static/chunks/515-46879c4d3a61a96a.js",revision:"46879c4d3a61a96a"},{url:"/_next/static/chunks/558-42671d107eae8d46.js",revision:"42671d107eae8d46"},{url:"/_next/static/chunks/585-c104b0a7b97d633b.js",revision:"c104b0a7b97d633b"},{url:"/_next/static/chunks/619-ba102abea3e3d0e4.js",revision:"ba102abea3e3d0e4"},{url:"/_next/static/chunks/646.f342b7cffc01feb0.js",revision:"f342b7cffc01feb0"},{url:"/_next/static/chunks/696-6d0fd0ca094a4db5.js",revision:"6d0fd0ca094a4db5"},{url:"/_next/static/chunks/770-6c6b84862fdc0741.js",revision:"6c6b84862fdc0741"},{url:"/_next/static/chunks/80-a8ce39110b1117c7.js",revision:"a8ce39110b1117c7"},{url:"/_next/static/chunks/841-3955c1a93b8dc058.js",revision:"3955c1a93b8dc058"},{url:"/_next/static/chunks/849-7d306b742af8e9cb.js",revision:"7d306b742af8e9cb"},{url:"/_next/static/chunks/86-bf755e617acc2b3e.js",revision:"bf755e617acc2b3e"},{url:"/_next/static/chunks/868-ee1d8e43f3617ab7.js",revision:"ee1d8e43f3617ab7"},{url:"/_next/static/chunks/896-797f7ebd63eaf0e2.js",revision:"797f7ebd63eaf0e2"},{url:"/_next/static/chunks/942-6e99ef8b785b80bd.js",revision:"6e99ef8b785b80bd"},{url:"/_next/static/chunks/app/_not-found/page-b4f9e1e20a024b1f.js",revision:"b4f9e1e20a024b1f"},{url:"/_next/static/chunks/app/admin/page-084f5bdd67c88e5f.js",revision:"084f5bdd67c88e5f"},{url:"/_next/static/chunks/app/api/auth/dev-login/route-b07c01b410e487d4.js",revision:"b07c01b410e487d4"},{url:"/_next/static/chunks/app/api/auth/provision/route-b07c01b410e487d4.js",revision:"b07c01b410e487d4"},{url:"/_next/static/chunks/app/developer/page-2f1c1838443a19df.js",revision:"2f1c1838443a19df"},{url:"/_next/static/chunks/app/halloffame/page-631b5b5ec839e45b.js",revision:"631b5b5ec839e45b"},{url:"/_next/static/chunks/app/layout-8d2826d5f00e2c16.js",revision:"8d2826d5f00e2c16"},{url:"/_next/static/chunks/app/page-b6a89c2b49f945c9.js",revision:"b6a89c2b49f945c9"},{url:"/_next/static/chunks/app/portal/page-1de8dddf5b347cb5.js",revision:"1de8dddf5b347cb5"},{url:"/_next/static/chunks/app/prize/page-077d1b7b65a1149c.js",revision:"077d1b7b65a1149c"},{url:"/_next/static/chunks/app/s/%5BschoolId%5D/page-bfe9d587a070c05a.js",revision:"bfe9d587a070c05a"},{url:"/_next/static/chunks/app/showcase/page-e7f180a0fc07d7f1.js",revision:"e7f180a0fc07d7f1"},{url:"/_next/static/chunks/app/student/page-10340294cad5f74e.js",revision:"10340294cad5f74e"},{url:"/_next/static/chunks/app/teacher/page-dcffaf0bcc239902.js",revision:"dcffaf0bcc239902"},{url:"/_next/static/chunks/bc9e92e6-567aadbd2cd6b6e6.js",revision:"567aadbd2cd6b6e6"},{url:"/_next/static/chunks/ceb9e9aa-72325f55161a2192.js",revision:"72325f55161a2192"},{url:"/_next/static/chunks/framework-4e51298db41fcfd4.js",revision:"4e51298db41fcfd4"},{url:"/_next/static/chunks/main-7faafb8fce2af5e5.js",revision:"7faafb8fce2af5e5"},{url:"/_next/static/chunks/main-app-aae41df6cc98ffa2.js",revision:"aae41df6cc98ffa2"},{url:"/_next/static/chunks/pages/_app-82835f42865034fa.js",revision:"82835f42865034fa"},{url:"/_next/static/chunks/pages/_error-013f4188946cdd04.js",revision:"013f4188946cdd04"},{url:"/_next/static/chunks/polyfills-42372ed130431b0a.js",revision:"846118c33b2c0e922d7b3a7676f81f6f"},{url:"/_next/static/chunks/webpack-9d5dd8c3ac445b40.js",revision:"9d5dd8c3ac445b40"},{url:"/_next/static/css/d997c45a27211a51.css",revision:"d997c45a27211a51"},{url:"/icon-192x192.png",revision:"37adada2cbf399f1dd4ae2c7ecfc88ae"},{url:"/icon-512x512.png",revision:"0e7e4a5c62f85a6c63dafbb5d6019dff"},{url:"/icon.png",revision:"dddcc5342039b36dd298ecd28456ad59"},{url:"/logo.png",revision:"bce3722b17ba8c1f9683e130afd1f579"},{url:"/manifest.json",revision:"cc59ef7d185a72b01607630a61e70995"},{url:"/screenshot-mobile.png",revision:"63924994cde05e6b3b553725a95df460"},{url:"/screenshot-wide.png",revision:"2b7d20495e17d82c41a28390a6715363"},{url:"/swe-worker-5c72df51bb1f6ee0.js",revision:"76fdd3369f623a3edcf74ce2200bfdd0"}],{ignoreURLParametersMatching:[/^utm_/,/^fbclid$/]}),e.cleanupOutdatedCaches(),e.registerRoute("/",new e.NetworkFirst({cacheName:"start-url",plugins:[{cacheWillUpdate:function(e){var s=e.response;return _async_to_generator(function(){return _ts_generator(this,function(e){return[2,s&&"opaqueredirect"===s.type?new Response(s.body,{status:200,statusText:"OK",headers:s.headers}):s]})})()}}]}),"GET"),e.registerRoute(/^https:\/\/fonts\.(?:gstatic)\.com\/.*/i,new e.CacheFirst({cacheName:"google-fonts-webfonts",plugins:[new e.ExpirationPlugin({maxEntries:4,maxAgeSeconds:31536e3})]}),"GET"),e.registerRoute(/^https:\/\/fonts\.(?:googleapis)\.com\/.*/i,new e.StaleWhileRevalidate({cacheName:"google-fonts-stylesheets",plugins:[new e.ExpirationPlugin({maxEntries:4,maxAgeSeconds:604800})]}),"GET"),e.registerRoute(/\.(?:eot|otf|ttc|ttf|woff|woff2|font.css)$/i,new e.StaleWhileRevalidate({cacheName:"static-font-assets",plugins:[new e.ExpirationPlugin({maxEntries:4,maxAgeSeconds:604800})]}),"GET"),e.registerRoute(/\.(?:jpg|jpeg|gif|png|svg|ico|webp)$/i,new e.StaleWhileRevalidate({cacheName:"static-image-assets",plugins:[new e.ExpirationPlugin({maxEntries:64,maxAgeSeconds:2592e3})]}),"GET"),e.registerRoute(/\/_next\/static.+\.js$/i,new e.CacheFirst({cacheName:"next-static-js-assets",plugins:[new e.ExpirationPlugin({maxEntries:64,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\/_next\/image\?url=.+$/i,new e.StaleWhileRevalidate({cacheName:"next-image",plugins:[new e.ExpirationPlugin({maxEntries:64,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\.(?:mp3|wav|ogg)$/i,new e.CacheFirst({cacheName:"static-audio-assets",plugins:[new e.RangeRequestsPlugin,new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\.(?:mp4|webm)$/i,new e.CacheFirst({cacheName:"static-video-assets",plugins:[new e.RangeRequestsPlugin,new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\.(?:js)$/i,new e.StaleWhileRevalidate({cacheName:"static-js-assets",plugins:[new e.ExpirationPlugin({maxEntries:48,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\.(?:css|less)$/i,new e.StaleWhileRevalidate({cacheName:"static-style-assets",plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\/_next\/data\/.+\/.+\.json$/i,new e.StaleWhileRevalidate({cacheName:"next-data",plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(/\.(?:json|xml|csv)$/i,new e.NetworkFirst({cacheName:"static-data-assets",plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(function(e){var s=e.sameOrigin,a=e.url.pathname;return!(!s||a.startsWith("/api/auth/callback")||!a.startsWith("/api/"))},new e.NetworkFirst({cacheName:"apis",networkTimeoutSeconds:10,plugins:[new e.ExpirationPlugin({maxEntries:16,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(function(e){var s=e.request,a=e.url.pathname,c=e.sameOrigin;return"1"===s.headers.get("RSC")&&"1"===s.headers.get("Next-Router-Prefetch")&&c&&!a.startsWith("/api/")},new e.NetworkFirst({cacheName:"pages-rsc-prefetch",plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(function(e){var s=e.request,a=e.url.pathname,c=e.sameOrigin;return"1"===s.headers.get("RSC")&&c&&!a.startsWith("/api/")},new e.NetworkFirst({cacheName:"pages-rsc",plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(function(e){var s=e.url.pathname;return e.sameOrigin&&!s.startsWith("/api/")},new e.NetworkFirst({cacheName:"pages",plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:86400})]}),"GET"),e.registerRoute(function(e){return!e.sameOrigin},new e.NetworkFirst({cacheName:"cross-origin",networkTimeoutSeconds:10,plugins:[new e.ExpirationPlugin({maxEntries:32,maxAgeSeconds:3600})]}),"GET")});
+/* LevelUp EDU service worker.
+ *
+ * This worker is deliberately online-first for pages and API reads so deploys
+ * win over old cache entries. Offline support comes from falling back to the
+ * last successful same-origin GET response and from Firebase's own IndexedDB
+ * persistence inside the app.
+ */
+
+const VERSION = 'levelup-offline-v1';
+const CACHE_PREFIX = 'levelup-';
+const CACHES = {
+  core: `${VERSION}-core`,
+  pages: `${VERSION}-pages`,
+  rsc: `${VERSION}-rsc`,
+  static: `${VERSION}-static`,
+  media: `${VERSION}-media`,
+  api: `${VERSION}-api`,
+};
+
+const CORE_URLS = [
+  '/manifest.json',
+  '/logo.png',
+  '/screenshot-wide.png',
+  '/screenshot-mobile.png',
+];
+
+const MAX_ENTRIES = {
+  [CACHES.pages]: 48,
+  [CACHES.rsc]: 64,
+  [CACHES.static]: 160,
+  [CACHES.media]: 80,
+  [CACHES.api]: 32,
+};
+
+const API_NETWORK_TIMEOUT_MS = 6000;
+const LEGACY_CACHE_NAMES = new Set([
+  'start-url',
+  'google-fonts-webfonts',
+  'google-fonts-stylesheets',
+  'static-font-assets',
+  'static-image-assets',
+  'next-static-js-assets',
+  'next-image',
+  'static-audio-assets',
+  'static-video-assets',
+  'static-js-assets',
+  'static-style-assets',
+  'next-data',
+  'static-data-assets',
+  'apis',
+  'pages-rsc-prefetch',
+  'pages-rsc',
+  'pages',
+  'cross-origin',
+]);
+
+self.addEventListener('install', (event) => {
+  self.skipWaiting();
+  event.waitUntil(
+    caches
+      .open(CACHES.core)
+      .then((cache) => cache.addAll(CORE_URLS))
+      .catch(() => undefined),
+  );
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches
+      .keys()
+      .then((names) =>
+        Promise.all(
+          names.map((name) => {
+            const belongsToLevelUp =
+              name.startsWith(CACHE_PREFIX) || name.includes('workbox') || LEGACY_CACHE_NAMES.has(name);
+            const current = Object.values(CACHES).includes(name);
+            return belongsToLevelUp && !current ? caches.delete(name) : undefined;
+          }),
+        ),
+      )
+      .then(() => self.clients.claim()),
+  );
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data?.type !== 'LEVELUP_CACHE_URLS') return;
+  const urls = Array.isArray(event.data.urls) ? event.data.urls : [];
+  event.waitUntil(
+    Promise.all(
+      urls
+        .filter((url) => typeof url === 'string')
+        .map((url) => networkFirst(new Request(url, { credentials: 'same-origin' }), CACHES.pages)),
+    ),
+  );
+});
+
+self.addEventListener('fetch', (event) => {
+  const { request } = event;
+  if (request.method !== 'GET') return;
+
+  const url = new URL(request.url);
+  if (!url.protocol.startsWith('http')) return;
+
+  if (url.origin !== self.location.origin) {
+    if (isCacheableCrossOriginAsset(url)) {
+      event.respondWith(staleWhileRevalidate(request, CACHES.static));
+    }
+    return;
+  }
+
+  if (isAuthOrMutationLikeApi(url)) return;
+
+  if (isNavigationRequest(request)) {
+    event.respondWith(
+      networkFirst(request, CACHES.pages, {
+        event,
+        ignoreSearchFallback: true,
+        waitForCacheWrite: true,
+      }),
+    );
+    return;
+  }
+
+  if (isRscRequest(request)) {
+    event.respondWith(networkFirst(request, CACHES.rsc, { event }));
+    return;
+  }
+
+  if (url.pathname.startsWith('/api/')) {
+    event.respondWith(networkFirst(request, CACHES.api, { event, timeoutMs: API_NETWORK_TIMEOUT_MS }));
+    return;
+  }
+
+  if (url.pathname.startsWith('/_next/static/')) {
+    event.respondWith(cacheFirst(request, CACHES.static, event));
+    return;
+  }
+
+  if (isStaticAsset(url)) {
+    event.respondWith(staleWhileRevalidate(request, isMediaAsset(url) ? CACHES.media : CACHES.static, event));
+  }
+});
+
+function isNavigationRequest(request) {
+  return request.mode === 'navigate' || request.headers.get('accept')?.includes('text/html');
+}
+
+function isRscRequest(request) {
+  return request.headers.get('RSC') === '1' || request.headers.get('Next-Router-Prefetch') === '1';
+}
+
+function isAuthOrMutationLikeApi(url) {
+  return (
+    url.pathname.startsWith('/api/auth/') ||
+    url.pathname.startsWith('/api/generate-theme') ||
+    url.pathname.startsWith('/api/parse-') ||
+    url.pathname.startsWith('/api/extract-document') ||
+    url.pathname.startsWith('/api/staff-help-chat') ||
+    url.pathname.startsWith('/api/tech-support-message')
+  );
+}
+
+function isStaticAsset(url) {
+  return (
+    /\.(?:css|js|mjs|json|png|jpg|jpeg|gif|svg|ico|webp|avif|woff2?|ttf|otf|eot|mp3|wav|ogg|mp4|webm|pdf)$/i.test(
+      url.pathname,
+    ) || url.pathname.startsWith('/_next/image')
+  );
+}
+
+function isMediaAsset(url) {
+  return /\.(?:png|jpg|jpeg|gif|svg|ico|webp|avif|mp3|wav|ogg|mp4|webm|pdf)$/i.test(url.pathname);
+}
+
+function isCacheableCrossOriginAsset(url) {
+  return (
+    /^https:\/\/fonts\.(?:googleapis|gstatic)\.com$/i.test(url.origin) ||
+    /^https:\/\/(?:images\.unsplash\.com|picsum\.photos|placehold\.co|api\.dicebear\.com)$/i.test(url.origin)
+  );
+}
+
+async function networkFirst(request, cacheName, options = {}) {
+  const cache = await caches.open(cacheName);
+  let timeoutId;
+  try {
+    const networkPromise = fetch(request);
+    const response = await (options.timeoutMs
+      ? Promise.race([
+          networkPromise,
+          new Promise((_, reject) => {
+            timeoutId = setTimeout(() => reject(new Error('network timeout')), options.timeoutMs);
+          }),
+        ])
+      : networkPromise);
+
+    if (timeoutId) clearTimeout(timeoutId);
+    if (isCacheableResponse(response)) {
+      const write = putCachedResponse(cache, request, response.clone(), cacheName);
+      if (options.waitForCacheWrite) {
+        await write;
+      } else {
+        options.event?.waitUntil(write);
+      }
+    }
+    return response;
+  } catch {
+    if (timeoutId) clearTimeout(timeoutId);
+    const cached = await cache.match(request);
+    if (cached) return cached;
+
+    if (options.ignoreSearchFallback) {
+      const cachedIgnoringSearch = await cache.match(request, { ignoreSearch: true });
+      if (cachedIgnoringSearch) return cachedIgnoringSearch;
+    }
+
+    if (isNavigationRequest(request)) {
+      return offlineDocument();
+    }
+
+    throw new Error('offline and no cached response');
+  }
+}
+
+async function cacheFirst(request, cacheName, event) {
+  const cache = await caches.open(cacheName);
+  const cached = await cache.match(request);
+  if (cached) return cached;
+
+  const response = await fetch(request);
+  if (isCacheableResponse(response)) {
+    event?.waitUntil(putCachedResponse(cache, request, response.clone(), cacheName));
+  }
+  return response;
+}
+
+async function staleWhileRevalidate(request, cacheName, event) {
+  const cache = await caches.open(cacheName);
+  const cached = await cache.match(request);
+  const refresh = fetch(request)
+    .then((response) => {
+      if (isCacheableResponse(response)) {
+        const write = putCachedResponse(cache, request, response.clone(), cacheName);
+        event?.waitUntil(write);
+      }
+      return response;
+    })
+    .catch(() => undefined);
+
+  if (cached) return cached;
+  const response = await refresh;
+  if (response) return response;
+  throw new Error('offline and no cached response');
+}
+
+function putCachedResponse(cache, request, response, cacheName) {
+  return cache
+    .put(request, response)
+    .then(() => trimCache(cacheName))
+    .catch(() => undefined);
+}
+
+function isCacheableResponse(response) {
+  return response && (response.status === 200 || response.status === 0 || response.type === 'opaqueredirect');
+}
+
+async function trimCache(cacheName) {
+  const max = MAX_ENTRIES[cacheName];
+  if (!max) return;
+
+  const cache = await caches.open(cacheName);
+  const keys = await cache.keys();
+  if (keys.length <= max) return;
+
+  await Promise.all(keys.slice(0, keys.length - max).map((request) => cache.delete(request)));
+}
+
+function offlineDocument() {
+  return new Response(
+    `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Offline | levelUp EDU</title>
+    <style>
+      body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; min-height: 100vh; display: grid; place-items: center; background: #f7faf9; color: #11231f; }
+      main { width: min(520px, calc(100vw - 32px)); border: 1px solid #cfe5dd; background: white; border-radius: 8px; padding: 28px; box-shadow: 0 16px 40px rgba(17,35,31,.12); }
+      h1 { margin: 0 0 8px; font-size: 1.5rem; }
+      p { margin: 0; line-height: 1.5; color: #42554f; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Offline</h1>
+      <p>This page has not been saved on this device yet. Reconnect once, open the kiosk or portal page, then it can be reopened offline.</p>
+    </main>
+  </body>
+</html>`,
+    {
+      headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      status: 503,
+      statusText: 'Offline',
+    },
+  );
+}
