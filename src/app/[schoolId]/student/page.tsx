@@ -1242,8 +1242,8 @@ function StudentDashboardInner({
             ? "pt-14 md:pt-16 [@media(max-height:760px)]:pt-12 [@media(max-height:760px)]:md:pt-12"
             : "pt-3 md:pt-8 [@media(max-height:760px)]:pt-2 [@media(max-height:760px)]:md:pt-3",
           settings.enableThemeAnimations && !!effectiveTheme && "theme-theme-elements-animated theme-motion-override",
-          // Avoid large bottom padding that leaves a visible gap.
-          settings.displayMode === 'app' && 'pb-6'
+          settings.displayMode === 'app' && 'pb-6',
+          'pb-[max(0.5rem,env(safe-area-inset-bottom))]'
         )}
         style={effectiveTheme ? ({
           '--theme-bg': themeBg,
@@ -1324,10 +1324,10 @@ function StudentDashboardInner({
           )}
           style={effectiveTheme ? { backgroundColor: 'var(--theme-card)', color: 'var(--theme-text)', borderColor: 'var(--theme-primary)' } : undefined}
         >
-          <CardContent className="p-4 md:p-5 flex flex-col md:flex-row justify-between items-center gap-4 [@media(max-height:760px)]:p-3 [@media(max-height:760px)]:gap-3">
-            <div className="space-y-1 text-center md:text-left">
+          <CardContent className="flex flex-col gap-4 p-4 md:flex-row md:items-center md:justify-between md:gap-6 md:p-5 [@media(max-height:760px)]:gap-3 [@media(max-height:760px)]:p-3">
+            <div className="w-full min-w-0 space-y-1 text-center md:flex-1 md:text-left">
               <p className="text-xs font-bold uppercase tracking-widest" style={{ color: effectiveTheme ? 'var(--theme-text)' : undefined, opacity: effectiveTheme ? 0.7 : undefined }}>Welcome back,</p>
-              <div className="flex items-center gap-3 mt-1">
+              <div className="mt-1 flex items-center justify-center gap-3 md:justify-start">
                 <div className="w-12 h-12 rounded-full overflow-hidden bg-primary/10 border border-border/60 flex items-center justify-center font-bold text-primary flex-shrink-0 [@media(max-height:760px)]:h-10 [@media(max-height:760px)]:w-10">
                   {student.photoUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -1336,9 +1336,9 @@ function StudentDashboardInner({
                     <span>{(student.firstName?.[0] || '')}{(student.lastName?.[0] || '')}</span>
                   )}
                 </div>
-                <div className="flex flex-col items-start gap-1">
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-2xl md:text-4xl font-black leading-tight [@media(max-height:760px)]:md:text-3xl">
+                <div className="flex min-w-0 flex-col items-center gap-1 text-left md:items-start">
+                  <div className="flex flex-wrap items-center justify-center gap-2 md:justify-start">
+                    <h2 className="text-2xl font-black leading-tight md:text-4xl [@media(max-height:760px)]:md:text-3xl">
                       {student.firstName} {student.lastName}
                     </h2>
                     {birthdayToday ? (
@@ -1400,8 +1400,18 @@ function StudentDashboardInner({
                 </div>
               </div>
             </div>
-            <div className="text-center md:text-right">
-              <p className="text-xs font-bold uppercase tracking-widest mb-0.5" style={{ color: effectiveTheme ? 'var(--theme-text)' : undefined, opacity: effectiveTheme ? 0.7 : undefined }}>Current Balance</p>
+            <div
+              className={cn(
+                'w-full shrink-0 border-t pt-4 text-center md:w-auto md:border-l md:border-t-0 md:pl-6 md:pt-0 md:text-right',
+                !effectiveTheme && 'border-border/50 md:border-border/40',
+              )}
+              style={
+                effectiveTheme
+                  ? { borderColor: 'color-mix(in srgb, var(--theme-primary) 28%, transparent)' }
+                  : undefined
+              }
+            >
+              <p className="mb-0.5 text-xs font-bold uppercase tracking-widest" style={{ color: effectiveTheme ? 'var(--theme-text)' : undefined, opacity: effectiveTheme ? 0.7 : undefined }}>Current Balance</p>
               <div
                 className="flex flex-wrap items-baseline justify-center gap-x-2 gap-y-1 md:justify-end"
                 style={{ color: effectiveTheme ? 'var(--theme-primary)' : undefined }}
@@ -1466,7 +1476,13 @@ function StudentDashboardInner({
           </CardContent>
         </Card>
 
-        <div className="grid w-full min-w-0 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_min(320px,28vw)] gap-4 relative z-10 flex-1 min-h-0 items-stretch overflow-hidden pb-[max(0.75rem,env(safe-area-inset-bottom))] [@media(max-height:760px)]:gap-3 [@media(max-height:760px)]:pb-2">
+        <div
+          className={cn(
+            'relative z-10 grid min-h-0 w-full min-w-0 flex-1 grid-cols-1 content-start gap-4 overflow-hidden pb-[max(0.75rem,env(safe-area-inset-bottom))]',
+            'lg:grid-cols-[minmax(0,1fr)_min(320px,28vw)] lg:content-stretch',
+            '[@media(max-height:760px)]:gap-3 [@media(max-height:760px)]:pb-2',
+          )}
+        >
           {/* Left Section: Content */}
           <div className="min-w-0 flex flex-1 min-h-0 flex-col gap-3 overflow-hidden pr-1 [@media(max-height:760px)]:gap-2">
             <div className="min-w-0 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overflow-x-hidden pb-3 scroll-pb-3 [@media(max-height:760px)]:gap-2 [@media(max-height:760px)]:pb-2">
@@ -1537,9 +1553,28 @@ function StudentDashboardInner({
               <CardContent className="pt-4 min-w-0 overflow-x-hidden">
                 {showCouponMethodTabs ? (
                 <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'manual' | 'camera')} className="w-full min-w-0">
+                  <div className="mb-4 md:hidden">
+                    <Label htmlFor="student-coupon-entry-mode" className="sr-only">
+                      How to enter your coupon code
+                    </Label>
+                    <Select value={activeTab} onValueChange={(v) => setActiveTab(v as 'manual' | 'camera')}>
+                      <SelectTrigger
+                        id="student-coupon-entry-mode"
+                        className="h-12 w-full rounded-xl font-bold"
+                        style={activeTheme ? { backgroundColor: 'var(--theme-bg)', borderColor: 'var(--theme-primary)', color: 'var(--theme-text)' } : undefined}
+                        aria-label="Coupon entry method"
+                      >
+                        <SelectValue placeholder="Choose method" />
+                      </SelectTrigger>
+                      <SelectContent position="popper" className="max-h-[min(60vh,320px)]">
+                        <SelectItem value="manual">Manual / USB scanner</SelectItem>
+                        <SelectItem value="camera">Webcam scan</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <TabsList 
                     className={cn(
-                      "grid w-full grid-cols-2 mb-4 p-1 rounded-xl h-12 overflow-hidden min-w-0",
+                      "mb-4 hidden h-12 min-w-0 w-full grid-cols-2 overflow-hidden rounded-xl p-1 md:grid",
                       !activeTheme && "bg-slate-100 dark:bg-slate-800",
                     )}
                     style={activeTheme ? { backgroundColor: 'var(--theme-bg)' } : undefined}
@@ -2063,8 +2098,8 @@ function StudentDashboardInner({
             </Dialog>
           </div>
 
-          {/* Right Section: Activity — fills column height on lg; list count fits visible rows (no page scroll). */}
-          <div className="min-w-0 flex min-h-0 flex-col pb-8 scroll-pb-8 lg:h-full lg:min-h-0 lg:overflow-hidden lg:pb-0">
+          {/* Right Section: Activity — fills column height on lg; on mobile stay content-height (avoid tall empty card). */}
+          <div className="flex min-h-0 w-full min-w-0 max-w-sm scroll-pb-8 flex-col self-start pb-8 max-lg:mx-auto lg:mx-0 lg:max-w-none lg:h-full lg:min-h-0 lg:self-stretch lg:overflow-hidden lg:pb-0">
           <Card
             ref={activityPanelRef}
             className={cn(
