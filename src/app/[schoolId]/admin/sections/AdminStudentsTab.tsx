@@ -404,7 +404,7 @@ export function AdminStudentsTab({
               <li
                 key={s.id}
                 className={cn(
-                  'flex items-center gap-3 py-2 px-3 rounded-xl border transition-all min-w-0 sm:grid sm:items-center',
+                  'flex flex-wrap items-center gap-3 py-2 px-3 rounded-xl border transition-all min-w-0 sm:grid sm:flex-nowrap sm:items-center',
                   styles.studentsListGrid,
                   'cursor-pointer',
                   selectedStudentIds.has(s.id)
@@ -441,7 +441,7 @@ export function AdminStudentsTab({
                     <Edit className="w-4 h-4 text-primary" />
                   </Button>
                 </div>
-                <div className="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0 overflow-hidden">
+                <div className="flex min-w-0 flex-[1_1_10rem] items-center gap-2.5 overflow-hidden sm:min-w-0 sm:gap-3">
                   <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden bg-secondary border border-ring/35 flex items-center justify-center text-xs font-bold text-secondary-foreground flex-shrink-0">
                     {s.photoUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -458,8 +458,8 @@ export function AdminStudentsTab({
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <p className="font-bold text-sm sm:text-base leading-tight truncate min-w-0">
+                    <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                      <p className="min-w-0 max-w-full break-words font-bold text-sm leading-tight sm:text-base sm:truncate">
                         {s.lastName}, {s.firstName}
                         {middle ? <span className="font-medium text-muted-foreground"> {middle}</span> : null}
                       </p>
@@ -497,7 +497,7 @@ export function AdminStudentsTab({
                   </div>
                 </div>
                 <div
-                  className="flex flex-wrap gap-1 justify-end shrink-0 sm:contents sm:pl-1 min-w-0"
+                  className="flex min-w-0 max-sm:basis-full max-sm:flex-wrap max-sm:justify-start max-sm:gap-1.5 max-sm:border-t max-sm:border-border/50 max-sm:pt-2 shrink-0 justify-end sm:contents sm:pl-1"
                   onClick={(e) => e.stopPropagation()}
                 >
                   {studentKioskWelcomeToggleDefs.length > 0 ? (
