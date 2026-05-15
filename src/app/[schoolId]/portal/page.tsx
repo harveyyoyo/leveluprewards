@@ -71,8 +71,8 @@ function WhereToDrawnTitle({
     const titleClassName = cn(
         'font-headline relative inline-block overflow-visible pb-[0.2em] font-black tracking-tight',
         displayMode === 'app'
-            ? 'px-2 py-2 text-4xl sm:py-2 sm:text-6xl'
-            : 'px-2 py-3 text-5xl sm:text-6xl',
+            ? 'px-2 py-2 text-6xl sm:text-7xl md:text-8xl'
+            : 'px-2 py-3 text-7xl sm:text-8xl md:text-9xl',
     );
 
     return (
@@ -333,8 +333,8 @@ export default function PortalPage() {
                                     className={cn(
                                         'font-headline inline-block overflow-visible pb-[0.15em] font-black tracking-tight',
                                         settings.displayMode === 'app'
-                                            ? 'px-2 py-2 text-4xl sm:py-2 sm:text-6xl'
-                                            : 'px-2 py-3 text-5xl sm:text-6xl',
+                                            ? 'px-2 py-2 text-6xl sm:text-7xl md:text-8xl'
+                                            : 'px-2 py-3 text-7xl sm:text-8xl md:text-9xl',
                                     )}
                                     style={{
                                         color: whereToAccentColor,
@@ -381,10 +381,11 @@ export default function PortalPage() {
                                 <motion.div
                                     variants={prefersReducedMotion ? undefined : staggerItem}
                                     className={cn(
-                                        'relative overflow-hidden rounded-3xl border border-border bg-card text-left shadow-sm',
+                                        'relative overflow-hidden rounded-2xl border border-border bg-card text-center shadow-sm',
                                         portalCardHoverMotion &&
                                             'transition-[box-shadow,border-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:shadow-xl group-hover:border-primary/30',
-                                        'px-3 py-4 sm:px-6 sm:py-6 min-h-0 md:min-h-[210px] h-full flex flex-col justify-center md:justify-start',
+                                        'flex h-full min-h-[17rem] flex-col md:min-h-[clamp(260px,28vw,360px)]',
+                                        'px-4 py-5 sm:px-6 sm:py-7',
                                     )}
                                 >
                                     {portalHoverTraceBorder && (
@@ -395,19 +396,19 @@ export default function PortalPage() {
                                             aria-hidden
                                         >
                                             <rect
-                                                className="transition-[stroke-dashoffset] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] [stroke-dashoffset:100] group-hover:[stroke-dashoffset:0]"
+                                                className="opacity-0 transition-[stroke-dashoffset,opacity] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] [stroke-dashoffset:100] group-hover:opacity-100 group-hover:[stroke-dashoffset:0]"
                                                 x="2.5"
                                                 y="2.5"
                                                 width="195"
                                                 height="135"
-                                                rx="22"
-                                                ry="22"
+                                                rx="16"
+                                                ry="16"
                                                 fill="none"
                                                 stroke={rainbowColor}
                                                 strokeOpacity={0.55}
                                                 strokeWidth="1.75"
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
+                                                strokeLinecap="butt"
+                                                strokeLinejoin="miter"
                                                 pathLength={100}
                                                 vectorEffect="nonScalingStroke"
                                                 style={{
@@ -417,29 +418,34 @@ export default function PortalPage() {
                                         </svg>
                                     )}
 
-                                    <div className="relative z-10 flex h-full flex-col">
-                                        <div className="flex flex-col items-center text-center gap-2 md:flex-row md:items-start md:text-left md:gap-4">
+                                    <div className="relative z-10 flex h-full min-h-0 flex-1 flex-col">
+                                        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 text-center md:gap-5">
                                             <div
                                                 className={cn(
-                                                    'shrink-0 rounded-xl md:rounded-2xl bg-muted p-2.5 md:p-3 shadow-md md:shadow-lg ring-1 ring-border',
+                                                    'shrink-0 rounded-2xl bg-muted p-4 shadow-lg ring-1 ring-border md:p-5',
                                                 )}
                                                 style={{
                                                     boxShadow: `0 12px 30px ${rainbowColor}26`,
                                                 }}
                                             >
-                                                <Icon className="h-6 w-6 md:h-7 md:w-7" style={{ color: rainbowColor }} />
+                                                <Icon className="h-9 w-9 md:h-11 md:w-11" style={{ color: rainbowColor }} />
                                             </div>
-                                            <div className="min-w-0 md:pt-0.5">
-                                                <h3 className="text-sm sm:text-base md:text-xl font-black tracking-tight leading-tight text-foreground">
+                                            <div className="min-w-0 max-w-prose space-y-2 px-0.5">
+                                                <h3 className="text-base font-black leading-tight tracking-tight text-foreground sm:text-lg md:text-xl">
                                                     <span style={{ color: rainbowColor }}>{area.title}</span>
                                                 </h3>
-                                                <p className="mt-2 text-sm font-semibold leading-normal text-muted-foreground/80 hidden md:block">
+                                                <p className="text-xs font-semibold leading-snug text-muted-foreground/85 sm:text-sm">
                                                     {area.description}
                                                 </p>
                                             </div>
                                         </div>
 
-                                        <div className={cn("mt-auto flex items-center gap-2 text-sm font-black tracking-tight text-foreground/90 hidden md:flex", settings.displayMode === 'app' ? "pt-4 sm:pt-6" : "pt-6")}>
+                                        <div
+                                            className={cn(
+                                                'mt-auto flex items-center justify-center gap-2 border-t border-border/50 pt-4 text-sm font-black tracking-tight text-foreground/90',
+                                                settings.displayMode === 'app' ? 'sm:pt-5' : 'pt-5',
+                                            )}
+                                        >
                                             <span>Continue</span>
                                             <ChevronRight
                                                 className={cn(
@@ -495,7 +501,7 @@ export default function PortalPage() {
                                         }
                                     })();
                                 }}
-                                className="block group no-underline rounded-3xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background h-full flex flex-col"
+                                className="block group no-underline rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background h-full flex flex-col"
                             >
                                 {portalCard}
                             </Link>
