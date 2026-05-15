@@ -3,7 +3,7 @@ import { useMemo, useState, useEffect, useLayoutEffect, useRef, type ComponentTy
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
-import { GraduationCap, Printer, UserCog, Loader2, ShieldCheck } from 'lucide-react';
+import { GraduationCap, Printer, UserCog, Loader2, ShieldCheck, ArrowUpRight } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useToast } from '@/hooks/use-toast';
@@ -387,11 +387,11 @@ export default function PortalPage() {
                                 <motion.div
                                     variants={prefersReducedMotion ? undefined : staggerItem}
                                     className={cn(
-                                        'relative overflow-hidden rounded-2xl border border-border bg-card text-center shadow-sm',
+                                        'relative overflow-hidden rounded-2xl border border-border bg-card text-left shadow-sm',
                                         portalCardHoverMotion &&
                                             'transition-[box-shadow,border-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:shadow-xl group-hover:border-primary/30',
-                                        'flex h-full min-h-[12rem] flex-col md:min-h-[clamp(200px,22vw,280px)]',
-                                        'px-3 py-3.5 sm:px-4 sm:py-4',
+                                        'flex h-full min-h-0 w-full flex-col justify-center',
+                                        'px-4 py-4 sm:px-5 sm:py-5',
                                     )}
                                 >
                                     {portalHoverTraceBorder && (
@@ -424,27 +424,34 @@ export default function PortalPage() {
                                         </svg>
                                     )}
 
-                                    <div className="relative z-10 flex h-full min-h-0 flex-1 flex-col">
-                                        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2.5 text-center md:gap-3">
-                                            <div
-                                                className={cn(
-                                                    'shrink-0 rounded-xl bg-muted p-3 shadow-md ring-1 ring-border md:p-4',
-                                                )}
-                                                style={{
-                                                    boxShadow: `0 12px 30px ${rainbowColor}26`,
-                                                }}
-                                            >
-                                                <Icon className="h-8 w-8 md:h-9 md:w-9" style={{ color: rainbowColor }} />
-                                            </div>
-                                            <div className="min-w-0 max-w-prose space-y-1.5 px-0.5">
-                                                <h3 className="text-sm font-black leading-tight tracking-tight text-foreground sm:text-base md:text-lg">
-                                                    <span style={{ color: rainbowColor }}>{area.title}</span>
-                                                </h3>
-                                                <p className="text-[11px] font-semibold leading-snug text-muted-foreground/85 sm:text-xs">
-                                                    {area.description}
-                                                </p>
-                                            </div>
+                                    <div className="relative z-10 flex w-full items-center gap-3 sm:gap-4">
+                                        <div
+                                            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl shadow-md sm:h-16 sm:w-16"
+                                            style={{
+                                                backgroundColor: rainbowColor,
+                                                boxShadow: `0 10px 28px ${rainbowColor}55`,
+                                            }}
+                                            aria-hidden
+                                        >
+                                            <Icon className="h-7 w-7 text-white sm:h-8 sm:w-8" />
                                         </div>
+                                        <div className="min-w-0 flex-1 space-y-1 pr-1">
+                                            <h3 className="text-base font-black leading-snug tracking-tight text-foreground sm:text-lg">
+                                                {area.title}
+                                            </h3>
+                                            <p className="text-xs font-medium leading-snug text-muted-foreground sm:text-sm">
+                                                {area.description}
+                                            </p>
+                                        </div>
+                                        <ArrowUpRight
+                                            className={cn(
+                                                'h-5 w-5 shrink-0 opacity-80 sm:h-6 sm:w-6',
+                                                portalCardHoverMotion &&
+                                                    'transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:-translate-y-0.5 group-hover:translate-x-0.5',
+                                            )}
+                                            style={{ color: rainbowColor }}
+                                            aria-hidden
+                                        />
                                     </div>
                                 </motion.div>
                         );
