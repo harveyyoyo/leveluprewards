@@ -140,7 +140,7 @@ export default function PortalPage() {
     const [teacherPasscode, setTeacherPasscode] = useState('');
     const [teacherSubmitting, setTeacherSubmitting] = useState(false);
     const gridRef = useRef<HTMLDivElement>(null);
-    const [whereToCenterY, setWhereToCenterY] = useState<number | null>(null);
+
     const [reduceWhereToMotion, setReduceWhereToMotion] = useState(
         () =>
             typeof window !== 'undefined'
@@ -212,47 +212,7 @@ export default function PortalPage() {
         [schoolPublic],
     );
 
-    /** Midpoint between global header bottom and top of the centered tile row (viewport px). */
-    useLayoutEffect(() => {
-        if (!isInitialized) return;
 
-        const measure = () => {
-            const grid = gridRef.current;
-            if (!grid) return;
-            const gridTop = grid.getBoundingClientRect().top;
-            const header =
-                (document.querySelector('header.no-print') as HTMLElement | null) ??
-                (document.querySelector('header') as HTMLElement | null);
-            const headerBottom = header?.getBoundingClientRect().bottom ?? 0;
-            /** Bias above strict midpoint so the line sits higher in the gap (0.5 = centered). */
-            const fromHeader = 0.28;
-            setWhereToCenterY(headerBottom + (gridTop - headerBottom) * fromHeader);
-        };
-
-        let raf = 0;
-        const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
-
-        measure();
-        const el = gridRef.current;
-        if (el && ro) ro.observe(el);
-        raf = requestAnimationFrame(measure);
-        window.addEventListener('resize', measure);
-
-        return () => {
-            cancelAnimationFrame(raf);
-            window.removeEventListener('resize', measure);
-            ro?.disconnect();
-        };
-    }, [
-        isInitialized,
-        settings.displayMode,
-        loginState,
-        schoolId,
-        isAdmin,
-        isStaff,
-        isSchoolChooser,
-        staffOptions.length,
-    ]);
 
     if (!isInitialized) {
         return (
@@ -360,52 +320,53 @@ export default function PortalPage() {
             </div>
 
             {/* Positioning on a plain div so Framer does not override translate-based centering */}
-            <div
-                className="pointer-events-none fixed left-1/2 z-[11] w-full max-w-6xl -translate-x-1/2 -translate-y-1/2 px-4 text-center sm:px-6"
-                style={{
-                    top:
-                        whereToCenterY != null
-                            ? `${whereToCenterY}px`
-                            : 'calc((5rem + 50dvh) / 2 - 2.75rem)',
-                }}
-            >
-                {reduceWhereToMotion ? (
-                    <h2
-                        className={cn(
-                            'font-headline inline-block font-black tracking-tight',
-                            settings.displayMode === 'app'
-                                ? 'px-2 py-1 text-4xl sm:py-2 sm:text-6xl'
-                                : 'px-2 py-2 text-5xl sm:text-6xl',
-                        )}
-                        style={{
-                            color: whereToAccentColor,
-                            textShadow: whereToGlowColor
-                                ? `0 0 14px ${whereToGlowColor}55, 0 0 28px ${whereToGlowColor}33`
-                                : undefined,
-                        }}
-                    >
-                        Where to?
-                    </h2>
-                ) : (
-                    <WhereToDrawnTitle
-                        accentColor={whereToAccentColor}
-                        displayMode={settings.displayMode}
-                        glowColor={whereToGlowColor}
-                    />
-                )}
-            </div>
+            {/* Main scrolling layout for Title and Grid */}
+            {/* Main layout: locked on mobile, scrollable on desktop */}
+            <div className="fixed inset-0 z-[10] flex flex-col overflow-hidden md:overflow-y-auto px-4 pb-24 pt-20 md:pb-6 md:py-24">
+                <div className="flex-1 flex flex-col items-center md:my-auto w-full h-full min-h-0 justify-between md:justify-center">
+                    
+                    {/* Title Container: Flex-1 centers vertically on mobile */}
+                    <div className="flex-1 flex flex-col items-center justify-center w-full min-h-0 md:flex-none md:mb-12">
+                        <div className="pointer-events-none w-full max-w-6xl text-center shrink-0">
+                            {reduceWhereToMotion ? (
+                                <h2
+                                    className={cn(
+                                        'font-headline inline-block font-black tracking-tight',
+                                        settings.displayMode === 'app'
+                                            ? 'px-2 py-1 text-4xl sm:py-2 sm:text-6xl'
+                                            : 'px-2 py-2 text-5xl sm:text-6xl',
+                                    )}
+                                    style={{
+                                        color: whereToAccentColor,
+                                        textShadow: whereToGlowColor
+                                            ? `0 0 14px ${whereToGlowColor}55, 0 0 28px ${whereToGlowColor}33`
+                                            : undefined,
+                                    }}
+                                >
+                                    Where to?
+                                </h2>
+                            ) : (
+                                <WhereToDrawnTitle
+                                    accentColor={whereToAccentColor}
+                                    displayMode={settings.displayMode}
+                                    glowColor={whereToGlowColor}
+                                />
+                            )}
+                        </div>
+                    </div>
 
-            <div className="pointer-events-none fixed inset-x-0 top-0 z-[10] flex h-[100dvh] min-h-0 items-center justify-center px-4 sm:px-6">
-                <motion.div
-                    ref={gridRef}
-                    variants={prefersReducedMotion ? undefined : staggerContainer}
-                    initial={prefersReducedMotion ? false : 'hidden'}
-                    animate="show"
-                    className={cn(
-                        'pointer-events-auto grid w-full max-w-6xl gap-3 sm:gap-5',
-                        settings.displayMode === 'app' ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-1 md:grid-cols-3',
-                    )}
-                >
+                    {/* Grid Section: Pinned to bottom on mobile */}
+                    <div className="w-full max-w-6xl shrink-0 mt-auto md:mt-0 pb-safe">
+                        <motion.div
+                            ref={gridRef}
+                            variants={prefersReducedMotion ? undefined : staggerContainer}
+                            initial={prefersReducedMotion ? false : 'hidden'}
+                            animate="show"
+                            className={cn(
+                                'pointer-events-auto grid w-full gap-3 md:gap-5',
+                                'grid-cols-1 md:grid-cols-3',
+                            )}
+                        >
                     {portals.map((area, index) => {
                         const Icon = area.icon;
                         const rainbowColor =
@@ -423,7 +384,7 @@ export default function PortalPage() {
                                         'relative overflow-hidden rounded-3xl border border-border bg-card text-left shadow-sm',
                                         portalCardHoverMotion &&
                                             'transition-[box-shadow,border-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:shadow-xl group-hover:border-primary/30',
-                                        settings.displayMode === 'app' ? 'px-5 py-5 sm:px-6 sm:py-6 min-h-0 sm:min-h-[210px] h-full flex flex-col' : 'px-6 py-6 min-h-[196px] sm:min-h-[210px]',
+                                        'px-3 py-4 sm:px-6 sm:py-6 min-h-0 md:min-h-[210px] h-full flex flex-col justify-center md:justify-start',
                                     )}
                                 >
                                     {portalHoverTraceBorder && (
@@ -457,28 +418,28 @@ export default function PortalPage() {
                                     )}
 
                                     <div className="relative z-10 flex h-full flex-col">
-                                        <div className="flex items-start gap-4">
+                                        <div className="flex flex-col items-center text-center gap-2 md:flex-row md:items-start md:text-left md:gap-4">
                                             <div
                                                 className={cn(
-                                                    'shrink-0 rounded-2xl bg-muted p-3 shadow-lg ring-1 ring-border',
+                                                    'shrink-0 rounded-xl md:rounded-2xl bg-muted p-2.5 md:p-3 shadow-md md:shadow-lg ring-1 ring-border',
                                                 )}
                                                 style={{
                                                     boxShadow: `0 12px 30px ${rainbowColor}26`,
                                                 }}
                                             >
-                                                <Icon className="h-7 w-7" style={{ color: rainbowColor }} />
+                                                <Icon className="h-6 w-6 md:h-7 md:w-7" style={{ color: rainbowColor }} />
                                             </div>
-                                            <div className="min-w-0 pt-0.5">
-                                                <h3 className="text-xl font-black tracking-tight leading-tight text-foreground">
+                                            <div className="min-w-0 md:pt-0.5">
+                                                <h3 className="text-sm sm:text-base md:text-xl font-black tracking-tight leading-tight text-foreground">
                                                     <span style={{ color: rainbowColor }}>{area.title}</span>
                                                 </h3>
-                                                <p className="mt-2 text-sm font-semibold leading-normal text-muted-foreground/80">
+                                                <p className="mt-2 text-sm font-semibold leading-normal text-muted-foreground/80 hidden md:block">
                                                     {area.description}
                                                 </p>
                                             </div>
                                         </div>
 
-                                        <div className={cn("mt-auto flex items-center gap-2 text-sm font-black tracking-tight text-foreground/90", settings.displayMode === 'app' ? "pt-4 sm:pt-6" : "pt-6")}>
+                                        <div className={cn("mt-auto flex items-center gap-2 text-sm font-black tracking-tight text-foreground/90 hidden md:flex", settings.displayMode === 'app' ? "pt-4 sm:pt-6" : "pt-6")}>
                                             <span>Continue</span>
                                             <ChevronRight
                                                 className={cn(
@@ -534,13 +495,15 @@ export default function PortalPage() {
                                         }
                                     })();
                                 }}
-                                className={cn("block group no-underline rounded-3xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background", settings.displayMode === 'app' && "h-full flex flex-col")}
+                                className="block group no-underline rounded-3xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background h-full flex flex-col"
                             >
                                 {portalCard}
                             </Link>
                         );
                     })}
                 </motion.div>
+                </div>
+                </div>
             </div>
 
                 <Dialog

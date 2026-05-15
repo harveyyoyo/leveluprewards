@@ -3,17 +3,13 @@ import { useMemo } from 'react';
 import { useParams, usePathname, useSearchParams } from 'next/navigation';
 import { doc } from 'firebase/firestore';
 import {
-  Trophy,
-  Zap,
   LogOut,
   Home,
   User,
   GraduationCap,
   Printer,
-  ShoppingBag,
   UserCog,
   ArrowRightLeft,
-  Megaphone,
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { useAppContext } from './AppProvider';
@@ -93,6 +89,79 @@ export default function Header() {
     }
   }, [syncStatus]);
 
+  const portalDockItems = useMemo(() => {
+    if (!schoolId) return [];
+    const teacherPortalHref = `/${schoolId}/teacher`;
+    const adminSignInHref =
+      pathname === teacherPortalHref
+        ? `/${schoolId}/admin-sign-in?redirect=${encodeURIComponent(teacherPortalHref)}`
+        : `/${schoolId}/admin-sign-in`;
+    const adminHref = isAdmin ? `/${schoolId}/admin` : adminSignInHref;
+    return [
+      { id: 'admin' as const, href: adminHref, icon: UserCog, label: 'Admin', color: 'destructive' as const },
+      { id: 'print' as const, href: `/${schoolId}/teacher`, icon: Printer, label: 'Teacher', color: 'chart-2' as const },
+      { id: 'redeem' as const, href: `/${schoolId}/student`, icon: GraduationCap, label: 'Student', color: 'chart-1' as const },
+    ];
+  }, [schoolId, isAdmin, pathname]);
+
+  const showPortalDock =
+    !!schoolId && loginState !== 'loggedOut' && loginState !== 'student' && !isKioskLocked;
+
+  const isPortalDockActive = (dockId: 'admin' | 'print' | 'redeem') => {
+    if (!schoolId) return false;
+    if (dockId === 'admin') {
+      return (
+        pathname.startsWith(`/${schoolId}/admin-sign-in`) ||
+        pathname === `/${schoolId}/admin` ||
+        pathname.startsWith(`/${schoolId}/admin/`)
+      );
+    }
+    if (dockId === 'print') {
+      return (
+        pathname.startsWith(`/${schoolId}/teacher`) ||
+        pathname.startsWith(`/${schoolId}/secretary`) ||
+        pathname.startsWith(`/${schoolId}/reports`) ||
+        pathname.startsWith(`/${schoolId}/prize-clerk`)
+      );
+    }
+    return pathname.startsWith(`/${schoolId}/student`) || pathname.startsWith(`/${schoolId}/student-home`);
+  };
+
+  const colorClasses = portalTextClass;
+  const hoverColorClasses = portalHoverTextClass;
+
+  const portalDockNav =
+    showPortalDock && portalDockItems.length > 0 ? (
+      <nav
+        className={cn(
+          'fixed bottom-0 left-0 right-0 z-[100] border-t py-3 pb-[max(1rem,env(safe-area-inset-bottom))] no-print',
+          settings.darkMode ? 'border-border bg-background/90 backdrop-blur-md' : 'border-border bg-card',
+        )}
+        aria-label="Portal shortcuts"
+      >
+        <div className="mx-auto flex max-w-lg items-center justify-around">
+          {portalDockItems.map(({ id, href, icon: Icon, label, color }) => {
+            const isActive = isPortalDockActive(id);
+            const colorKey = color as PortalColorKey;
+            const activeClass = isActive
+              ? `scale-110 ${colorClasses[colorKey] || 'text-primary'}`
+              : `text-slate-400 ${hoverColorClasses[colorKey] || 'hover:text-primary'}`;
+            return (
+              <Link
+                key={id}
+                href={href}
+                className={cn('flex flex-col items-center px-3 py-1 transition-all', activeClass)}
+                onClick={() => playSound('click')}
+              >
+                <Icon className="h-6 w-6" />
+                <span className="mt-1 text-[10px] font-bold uppercase tracking-wider">{label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+    ) : null;
+
   if (isLoginPage || !isInitialized || isDeveloperMode || isFullscreenSpecialPage) {
     return null;
   }
@@ -102,19 +171,6 @@ export default function Header() {
   /** Portal lives only under `/{schoolId}/portal`; there is no app root `/portal` page. */
   const centerHref = schoolId ? `/${schoolId}/portal` : '/';
   const webHomeHref = schoolId ? centerHref : '/';
-  const teacherPortalHref = schoolId ? `/${schoolId}/teacher` : '';
-  const adminSignInHref =
-    schoolId && pathname === teacherPortalHref
-      ? `/${schoolId}/admin-sign-in?redirect=${encodeURIComponent(teacherPortalHref)}`
-      : schoolId
-        ? `/${schoolId}/admin-sign-in`
-        : '/login';
-  const isStaff =
-    loginState === 'teacher' ||
-    loginState === 'admin' ||
-    loginState === 'secretary' ||
-    loginState === 'prizeClerk' ||
-    loginState === 'reports';
   const isDeveloperSupportSession = loginState === 'developer' && !!schoolId;
   const canLogout = loginState !== 'loggedOut' && loginState !== 'student';
 
@@ -127,28 +183,10 @@ export default function Header() {
 
   // --- APP MODE HEADER ---
   if (settings.displayMode === 'app') {
-    const navItems = schoolId
-      ? [
-          ...(isAdmin
-            ? [{ id: 'admin', href: `/${schoolId}/admin`, icon: UserCog, label: 'Admin', color: 'destructive' }]
-            : isStaff
-              ? [{ id: 'admin', href: adminSignInHref, icon: UserCog, label: 'Admin', color: 'destructive' }]
-              : []),
-          ...(isStaff ? [{ id: 'print', href: `/${schoolId}/teacher`, icon: Printer, label: 'Teacher', color: 'chart-2' }] : []),
-          { id: 'redeem', href: `/${schoolId}/student`, icon: GraduationCap, label: 'Student', color: 'chart-1' },
-        ].sort((a, b) => {
-          const order = ['admin', 'print', 'redeem'];
-          return order.indexOf(a.id) - order.indexOf(b.id);
-        })
-      : [];
-
-    const colorClasses = portalTextClass;
-    const hoverColorClasses = portalHoverTextClass;
-
     return (
       <div className="w-full">
         <div className="mx-auto w-full max-w-7xl px-4 md:px-8">
-        <header className="no-print grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] w-full min-w-0 items-center relative z-20 pt-3 sm:pt-4 pb-3 sm:pb-4 border-b border-border/10">
+        <header className="no-print grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] w-full min-w-0 items-center relative z-20 pt-3 sm:pt-4 pb-3 sm:pb-4 border-b border-border/10">
           <div className="flex justify-start min-w-0 justify-self-start">
             {schoolId && (
               <Link
@@ -212,42 +250,24 @@ export default function Header() {
         </header>
         </div>
 
-        {loginState !== 'loggedOut' && !isKioskLocked && navItems.length > 0 && (
-          <nav className={cn("fixed bottom-0 left-0 right-0 py-3 pb-[max(1rem,env(safe-area-inset-bottom))] z-[100] no-print border-t",
-            settings.darkMode ? "bg-background/90 backdrop-blur-md border-border" : "bg-card border-border"
-          )}>
-            <div className="max-w-lg mx-auto flex justify-around items-center">
-              {navItems.map(({ href, icon: Icon, label, color }) => {
-                const isActive = pathname === href || pathname.startsWith(`${href}/`);
-                const colorKey = color as PortalColorKey;
-                const activeClass = isActive
-                  ? `scale-110 ${colorClasses[colorKey] || 'text-primary'}`
-                  : `text-slate-400 ${hoverColorClasses[colorKey] || 'hover:text-primary'}`;
-                return (
-                  <Link key={href} href={href} className={cn('flex flex-col items-center transition-all px-3 py-1', activeClass)}>
-                    <Icon className="w-6 h-6" />
-                    <span className="text-[10px] font-bold mt-1 tracking-wider uppercase">{label}</span>
-                  </Link>
-                );
-              })}
-            </div>
-          </nav>
-        )}
+        {portalDockNav}
       </div>
     );
   }
 
   // --- WEB MODE HEADER ---
   return (
+    <>
     <header className={cn(
       "no-print z-50 transition-colors border-b border-primary/10 sticky top-0",
       "bg-background/80 backdrop-blur-xl",
       "mx-auto w-full max-w-7xl min-w-0 px-4 md:px-8"
     )}>
-      <div className="h-20 grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] items-center gap-2 sm:gap-4">
+      <div className="h-20 grid min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-4">
         {/* Left: Branding */}
         <div className="flex min-w-0 items-center gap-1 sm:gap-4 justify-self-start">
-          <Link href={logoLink} className="flex items-center gap-1 sm:gap-4 group" data-home-button="true">
+          <div className={cn("items-center gap-1 sm:gap-4", schoolId ? "hidden sm:flex" : "flex")}>
+            <Link href={logoLink} className="flex items-center gap-1 sm:gap-4 group" data-home-button="true">
             {appLogoUrl ? (
               <span className={cn(
                 "inline-flex h-10 w-auto max-w-[200px] shrink-0 items-center justify-center transition-all duration-300",
@@ -282,6 +302,7 @@ export default function Header() {
             </div>
           </Link>
         </div>
+      </div>
 
         {/* Center: school name — middle column is 1fr with min-w-0 so the grid cannot overflow the page; long names wrap */}
         <div className="flex min-w-0 max-w-full justify-center justify-self-center px-1 sm:px-2">
@@ -402,5 +423,7 @@ export default function Header() {
         </div>
       </div>
     </header>
+    {portalDockNav}
+    </>
   );
 }

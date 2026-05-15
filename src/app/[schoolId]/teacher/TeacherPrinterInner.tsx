@@ -2713,14 +2713,56 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                             className="flex min-h-0 w-full flex-1 flex-col gap-6"
                         >
                         {!secretaryMode && (
-                            <div className="w-full flex flex-col gap-4">
+                            <div className="flex w-full flex-col gap-4">
+                                <div className="w-full md:hidden">
+                                    <Label htmlFor="teacher-portal-section" className="sr-only">
+                                        Teacher portal section
+                                    </Label>
+                                    <Select value={activeTeacherTab} onValueChange={setActiveTeacherTab}>
+                                        <SelectTrigger
+                                            id="teacher-portal-section"
+                                            className="h-12 w-full rounded-xl font-bold"
+                                            aria-label="Teacher portal section"
+                                        >
+                                            <SelectValue placeholder="Choose a section" />
+                                        </SelectTrigger>
+                                        <SelectContent position="popper" className="max-h-[min(70vh,440px)]">
+                                            <SelectItem value="roster">Students</SelectItem>
+                                            <SelectItem value="classes">Classes</SelectItem>
+                                            <SelectItem value="coupons">Points</SelectItem>
+                                            <SelectItem value="award">Manual</SelectItem>
+                                            <SelectItem value="prizes">Prizes</SelectItem>
+                                            <SelectItem value="redemptions">Redemptions</SelectItem>
+                                            <SelectItem value="reports">Reports</SelectItem>
+                                            {raffleTabEnabled && <SelectItem value="raffle">Raffle</SelectItem>}
+                                            {teacherAttendanceTabEnabled && (
+                                                <SelectItem value="attendance">Attendance</SelectItem>
+                                            )}
+                                            {teacherGoalsTabEnabled && <SelectItem value="goals">Goals</SelectItem>}
+                                            {teacherHomeworkTabEnabled && (
+                                                <SelectItem value="homework">Homework</SelectItem>
+                                            )}
+                                            {teacherGeneratedCouponsTabEnabled && (
+                                                <SelectItem value="generated-coupons">Coupons</SelectItem>
+                                            )}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                                 <div
                                     className={cn(
+                                        'hidden w-full flex-col gap-4 md:flex',
                                         settings.displayMode === 'app'
-                                            ? 'flex overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 justify-center'
-                                            : 'w-full',
+                                            ? 'overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0'
+                                            : '',
                                     )}
                                 >
+                                    <div
+                                        className={cn(
+                                            settings.displayMode === 'app'
+                                                ? 'flex justify-center overflow-x-auto'
+                                                : 'w-full',
+                                        )}
+                                    >
                                     <TabsList
                                         className={cn(
                                             'bg-muted/50 p-1.5 rounded-2xl border shadow-sm h-auto',
@@ -2823,6 +2865,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                             </TabsTrigger>
                                         )}
                                     </TabsList>
+                                    </div>
                                 </div>
                             </div>
                         )}
@@ -3118,6 +3161,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                             )}
 
                                             <Button
+                                                type="button"
                                                 onClick={handlePrintSheet}
                                                 className={cn(
                                                     "w-full font-black text-lg uppercase tracking-widest h-16 rounded-2xl shadow-xl transition-all active:scale-95 group",

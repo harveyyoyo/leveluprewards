@@ -10,6 +10,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useSearchParams } from 'next/navigation';
 import { useSettings } from './providers/SettingsProvider';
+import { useAppContext } from '@/components/AppProvider';
 import { cn } from '@/lib/utils';
 import { ConfirmProvider } from '@/components/providers/ConfirmProvider';
 import { isMarketingLandingPath } from '@/lib/marketingLandings';
@@ -54,6 +55,7 @@ function LayoutClientWrapperInner({ children }: LayoutClientWrapperProps) {
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const { settings, isLoaded } = useSettings();
+    const { loginState, schoolId: contextSchoolId, isKioskLocked, isInitialized } = useAppContext();
     const [nonCriticalUiReady, setNonCriticalUiReady] = useState(false);
     const [studentChromeVisible, setStudentChromeVisible] = useState(false);
     const studentChromeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -98,6 +100,17 @@ function LayoutClientWrapperInner({ children }: LayoutClientWrapperProps) {
           )
         : null;
     const routeSchoolId = schoolPathMatch?.[1];
+
+    const dockSchoolId = contextSchoolId ?? routeSchoolId ?? null;
+    const showPortalBottomDockPadding =
+      isInitialized &&
+      !!dockSchoolId &&
+      loginState !== 'loggedOut' &&
+      loginState !== 'student' &&
+      !isKioskLocked &&
+      !hideAppChrome &&
+      !isStudentKioskPage &&
+      !isFullscreenSpecialPage;
 
     useEffect(() => {
         const runWhenIdle = (cb: () => void, timeout = 1200) => {
@@ -168,15 +181,67 @@ function LayoutClientWrapperInner({ children }: LayoutClientWrapperProps) {
         };
     }, [hideAppChrome, isStudentKioskPage]);
 
-    // Unregister service workers to prevent stale cache issues
+    // Offline support is production-only by default. Local dev keeps unregistering
+    // service workers so stale Next chunks from old builds do not break HMR.
     useEffect(() => {
-        if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(function (registrations) {
+        if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
+
+        const serviceWorkerEnabled =
+            process.env.NODE_ENV === 'production' ||
+            process.env.NEXT_PUBLIC_ENABLE_SERVICE_WORKER === 'true';
+
+        if (!serviceWorkerEnabled) {
+            navigator.serviceWorker.getRegistrations().then((registrations) => {
                 for (let registration of registrations) {
                     registration.unregister();
                 }
             });
+            return;
         }
+
+        let cancelled = false;
+        const hadController = !!navigator.serviceWorker.controller;
+        let refreshingForUpdate = false;
+        let removeOnlineUpdateListener: (() => void) | undefined;
+
+        const onControllerChange = () => {
+            if (!hadController || refreshingForUpdate) return;
+            refreshingForUpdate = true;
+            window.location.reload();
+        };
+
+        const warmCurrentPage = (registration: ServiceWorkerRegistration) => {
+            const worker = registration.active || registration.waiting || registration.installing;
+            worker?.postMessage({
+                type: 'LEVELUP_CACHE_URLS',
+                urls: [window.location.href],
+            });
+        };
+
+        navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
+
+        navigator.serviceWorker
+            .register('/sw.js', { scope: '/' })
+            .then((registration) => {
+                if (cancelled) return;
+                const update = () => registration.update().catch(() => {});
+                window.addEventListener('online', update);
+                removeOnlineUpdateListener = () => window.removeEventListener('online', update);
+                void navigator.serviceWorker.ready.then((readyRegistration) => {
+                    if (!cancelled) warmCurrentPage(readyRegistration);
+                });
+            })
+            .catch((error) => {
+                if (process.env.NODE_ENV === 'development') {
+                    console.warn('[ServiceWorker] Registration failed:', error);
+                }
+            });
+
+        return () => {
+            cancelled = true;
+            removeOnlineUpdateListener?.();
+            navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
+        };
     }, []);
 
     /**
@@ -292,10 +357,7 @@ function LayoutClientWrapperInner({ children }: LayoutClientWrapperProps) {
                                         : 'relative z-10 mx-auto w-full max-w-7xl',
                             appShellNoPageScroll && 'overflow-hidden flex flex-col min-h-0',
                             isPortalChoosePage && 'min-h-0 flex flex-col',
-                            settings.displayMode === 'app' &&
-                                !isStudentKioskPage &&
-                                !isPortalChoosePage &&
-                                'pb-24'
+                            showPortalBottomDockPadding && 'pb-24'
                         )}
                     >
                         {children}

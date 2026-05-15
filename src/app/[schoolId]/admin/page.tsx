@@ -1438,7 +1438,29 @@ function AdminDashboardInner() {
             className="flex min-h-0 min-w-0 w-full flex-1 flex-col gap-6"
           >
           <div className="flex w-full min-w-0 flex-col gap-4">
-            <div className="w-full min-w-0">
+            <div className="w-full min-w-0 space-y-3">
+              <div className="md:hidden">
+                <Label htmlFor="admin-portal-section" className="sr-only">
+                  Admin portal section
+                </Label>
+                <Select value={activeMainTab} onValueChange={setActiveMainTab}>
+                  <SelectTrigger
+                    id="admin-portal-section"
+                    className="h-12 w-full rounded-xl font-bold"
+                    aria-label="Admin portal section"
+                  >
+                    <SelectValue placeholder="Choose a section" />
+                  </SelectTrigger>
+                  <SelectContent position="popper" className="max-h-[min(70vh,440px)]">
+                    {orderedMainTabs.map((t) => (
+                      <SelectItem key={t.value} value={t.value}>
+                        {t.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="hidden md:block w-full min-w-0">
               <TabsList 
                 className="flex h-auto w-full flex-wrap content-center items-stretch justify-center gap-2 rounded-2xl border bg-muted/50 p-2 shadow-sm"
                 style={{ ['--admin-accent' as any]: 'hsl(var(--primary))' }}
@@ -1576,6 +1598,7 @@ function AdminDashboardInner() {
                   );
                 })}
               </TabsList>
+              </div>
             </div>
 
 
