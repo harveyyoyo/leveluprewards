@@ -3,7 +3,7 @@ import { useMemo, useState, useEffect, useLayoutEffect, useRef, type ComponentTy
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
-import { GraduationCap, Printer, UserCog, ChevronRight, Loader2, ShieldCheck } from 'lucide-react';
+import { GraduationCap, Printer, UserCog, Loader2, ShieldCheck } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useToast } from '@/hooks/use-toast';
@@ -390,8 +390,8 @@ export default function PortalPage() {
                                         'relative overflow-hidden rounded-2xl border border-border bg-card text-center shadow-sm',
                                         portalCardHoverMotion &&
                                             'transition-[box-shadow,border-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:shadow-xl group-hover:border-primary/30',
-                                        'flex h-full min-h-[17rem] flex-col md:min-h-[clamp(260px,28vw,360px)]',
-                                        'px-4 py-5 sm:px-6 sm:py-7',
+                                        'flex h-full min-h-[12rem] flex-col md:min-h-[clamp(200px,22vw,280px)]',
+                                        'px-3 py-3.5 sm:px-4 sm:py-4',
                                     )}
                                 >
                                     {portalHoverTraceBorder && (
@@ -425,42 +425,25 @@ export default function PortalPage() {
                                     )}
 
                                     <div className="relative z-10 flex h-full min-h-0 flex-1 flex-col">
-                                        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 text-center md:gap-5">
+                                        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2.5 text-center md:gap-3">
                                             <div
                                                 className={cn(
-                                                    'shrink-0 rounded-2xl bg-muted p-4 shadow-lg ring-1 ring-border md:p-5',
+                                                    'shrink-0 rounded-xl bg-muted p-3 shadow-md ring-1 ring-border md:p-4',
                                                 )}
                                                 style={{
                                                     boxShadow: `0 12px 30px ${rainbowColor}26`,
                                                 }}
                                             >
-                                                <Icon className="h-9 w-9 md:h-11 md:w-11" style={{ color: rainbowColor }} />
+                                                <Icon className="h-8 w-8 md:h-9 md:w-9" style={{ color: rainbowColor }} />
                                             </div>
-                                            <div className="min-w-0 max-w-prose space-y-2 px-0.5">
-                                                <h3 className="text-base font-black leading-tight tracking-tight text-foreground sm:text-lg md:text-xl">
+                                            <div className="min-w-0 max-w-prose space-y-1.5 px-0.5">
+                                                <h3 className="text-sm font-black leading-tight tracking-tight text-foreground sm:text-base md:text-lg">
                                                     <span style={{ color: rainbowColor }}>{area.title}</span>
                                                 </h3>
-                                                <p className="text-xs font-semibold leading-snug text-muted-foreground/85 sm:text-sm">
+                                                <p className="text-[11px] font-semibold leading-snug text-muted-foreground/85 sm:text-xs">
                                                     {area.description}
                                                 </p>
                                             </div>
-                                        </div>
-
-                                        <div
-                                            className={cn(
-                                                'mt-auto flex items-center justify-center gap-2 border-t border-border/50 pt-4 text-sm font-black tracking-tight text-foreground/90',
-                                                settings.displayMode === 'app' ? 'sm:pt-5' : 'pt-5',
-                                            )}
-                                        >
-                                            <span>Continue</span>
-                                            <ChevronRight
-                                                className={cn(
-                                                    'h-5 w-5 text-foreground/70',
-                                                    portalCardHoverMotion &&
-                                                        'transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:translate-x-1',
-                                                )}
-                                                aria-hidden="true"
-                                            />
                                         </div>
                                     </div>
                                 </motion.div>
