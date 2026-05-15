@@ -131,7 +131,7 @@ export default function Header() {
   const hoverColorClasses = portalHoverTextClass;
 
   const portalDockNav =
-    showPortalDock && portalDockItems.length > 0 ? (
+    settings.displayMode === 'app' && showPortalDock && portalDockItems.length > 0 ? (
       <nav
         className={cn(
           'fixed bottom-0 left-0 right-0 z-[100] border-t py-3 pb-[max(1rem,env(safe-area-inset-bottom))] no-print',

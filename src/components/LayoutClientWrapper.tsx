@@ -105,6 +105,7 @@ function LayoutClientWrapperInner({ children }: LayoutClientWrapperProps) {
 
     const dockSchoolId = contextSchoolId ?? routeSchoolId ?? null;
     const showPortalBottomDockPadding =
+      settings.displayMode === 'app' &&
       isInitialized &&
       !!dockSchoolId &&
       loginState !== 'loggedOut' &&
@@ -338,7 +339,9 @@ function LayoutClientWrapperInner({ children }: LayoutClientWrapperProps) {
                         'min-h-screen min-h-dvh flex flex-col',
                         // Lock viewport height so only inner panels scroll (student kiosk + app-shell staff routes).
                         // Portal hub: fixed layers + in-flow footer — constrain shell so main flex-1 fills without a page scrollbar.
-                        (appShellNoPageScroll || isStudentKioskPage || isPortalChoosePage) &&
+                        (appShellNoPageScroll ||
+                            isStudentKioskPage ||
+                            (isPortalChoosePage && settings.displayMode === 'app')) &&
                             'h-dvh max-h-dvh overflow-hidden'
                     )}
                 >
@@ -370,7 +373,7 @@ function LayoutClientWrapperInner({ children }: LayoutClientWrapperProps) {
                                         ? 'relative z-10 w-full max-w-none'
                                         : 'relative z-10 mx-auto w-full max-w-7xl',
                             appShellNoPageScroll && 'overflow-hidden flex flex-col min-h-0',
-                            isPortalChoosePage && 'min-h-0 flex flex-col',
+                            isPortalChoosePage && settings.displayMode === 'app' && 'min-h-0 flex flex-col',
                             showPortalBottomDockPadding && 'pb-24'
                         )}
                     >

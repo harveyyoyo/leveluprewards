@@ -71,8 +71,8 @@ function WhereToDrawnTitle({
     const titleClassName = cn(
         'font-headline relative inline-block overflow-visible pb-[0.2em] font-black tracking-tight',
         displayMode === 'app'
-            ? 'px-2 py-2 text-6xl sm:text-7xl md:text-8xl'
-            : 'px-2 py-3 text-7xl sm:text-8xl md:text-9xl',
+            ? 'px-2 py-2 text-5xl sm:text-6xl md:text-7xl'
+            : 'px-2 py-3 text-6xl sm:text-7xl md:text-8xl',
     );
 
     return (
@@ -322,7 +322,13 @@ export default function PortalPage() {
             {/* Positioning on a plain div so Framer does not override translate-based centering */}
             {/* Main scrolling layout for Title and Grid */}
             {/* Main layout: locked on mobile, scrollable on desktop */}
-            <div className="fixed inset-0 z-[10] flex flex-col overflow-hidden max-md:overflow-x-hidden md:overflow-y-auto px-4 pb-24 pt-[max(6.25rem,calc(env(safe-area-inset-top,0px)+4.5rem))] md:py-24">
+            <div
+                className={cn(
+                    settings.displayMode === 'app'
+                        ? 'fixed inset-0 z-[10] flex flex-col overflow-hidden max-md:overflow-x-hidden md:overflow-y-auto px-4 pb-24 pt-[max(6.25rem,calc(env(safe-area-inset-top,0px)+4.5rem))] md:py-24'
+                        : 'relative z-[10] flex w-full flex-col px-4 pb-8 pt-12 sm:pt-16 md:pb-12 md:pt-20',
+                )}
+            >
                 <div className="flex h-full min-h-0 w-full flex-1 flex-col items-center justify-between md:my-auto md:min-h-0 md:justify-center">
                     
                     {/* Title: on mobile avoid flex-1+min-h-0 (clips large headline under overflow-hidden). */}
@@ -333,8 +339,8 @@ export default function PortalPage() {
                                     className={cn(
                                         'font-headline inline-block overflow-visible pb-[0.15em] font-black tracking-tight',
                                         settings.displayMode === 'app'
-                                            ? 'px-2 py-2 text-6xl sm:text-7xl md:text-8xl'
-                                            : 'px-2 py-3 text-7xl sm:text-8xl md:text-9xl',
+                                            ? 'px-2 py-2 text-5xl sm:text-6xl md:text-7xl'
+                                            : 'px-2 py-3 text-6xl sm:text-7xl md:text-8xl',
                                     )}
                                     style={{
                                         color: whereToAccentColor,
