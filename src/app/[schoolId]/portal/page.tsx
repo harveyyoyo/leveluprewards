@@ -71,8 +71,8 @@ function WhereToDrawnTitle({
     const titleClassName = cn(
         'font-headline relative inline-block overflow-visible pb-[0.2em] font-black tracking-tight',
         displayMode === 'app'
-            ? 'px-2 py-2 text-4xl sm:py-2 sm:text-6xl'
-            : 'px-2 py-3 text-5xl sm:text-6xl',
+            ? 'px-2 py-2 text-5xl sm:py-2 sm:text-6xl'
+            : 'px-2 py-3 text-6xl sm:text-7xl',
     );
 
     return (
@@ -333,8 +333,8 @@ export default function PortalPage() {
                                     className={cn(
                                         'font-headline inline-block overflow-visible pb-[0.15em] font-black tracking-tight',
                                         settings.displayMode === 'app'
-                                            ? 'px-2 py-2 text-4xl sm:py-2 sm:text-6xl'
-                                            : 'px-2 py-3 text-5xl sm:text-6xl',
+                                            ? 'px-2 py-2 text-5xl sm:py-2 sm:text-6xl'
+                                            : 'px-2 py-3 text-6xl sm:text-7xl',
                                     )}
                                     style={{
                                         color: whereToAccentColor,
@@ -381,10 +381,10 @@ export default function PortalPage() {
                                 <motion.div
                                     variants={prefersReducedMotion ? undefined : staggerItem}
                                     className={cn(
-                                        'relative overflow-hidden rounded-3xl border border-border bg-card text-left shadow-sm',
+                                        'relative overflow-hidden rounded-2xl border border-border bg-card text-left shadow-sm',
                                         portalCardHoverMotion &&
                                             'transition-[box-shadow,border-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:shadow-xl group-hover:border-primary/30',
-                                        'px-3 py-4 sm:px-6 sm:py-6 min-h-0 md:min-h-[210px] h-full flex flex-col justify-center md:justify-start',
+                                        'px-3 py-4 sm:px-6 sm:py-6 min-h-0 md:min-h-[clamp(240px,30vw,320px)] h-full flex flex-col justify-center md:justify-start',
                                     )}
                                 >
                                     {portalHoverTraceBorder && (
@@ -400,8 +400,8 @@ export default function PortalPage() {
                                                 y="2.5"
                                                 width="195"
                                                 height="135"
-                                                rx="22"
-                                                ry="22"
+                                                rx="16"
+                                                ry="16"
                                                 fill="none"
                                                 stroke={rainbowColor}
                                                 strokeOpacity={0.55}
@@ -421,7 +421,7 @@ export default function PortalPage() {
                                         <div className="flex flex-col items-center text-center gap-2 md:flex-row md:items-start md:text-left md:gap-4">
                                             <div
                                                 className={cn(
-                                                    'shrink-0 rounded-xl md:rounded-2xl bg-muted p-2.5 md:p-3 shadow-md md:shadow-lg ring-1 ring-border',
+                                                    'shrink-0 rounded-lg md:rounded-xl bg-muted p-2.5 md:p-3 shadow-md md:shadow-lg ring-1 ring-border',
                                                 )}
                                                 style={{
                                                     boxShadow: `0 12px 30px ${rainbowColor}26`,
@@ -495,7 +495,7 @@ export default function PortalPage() {
                                         }
                                     })();
                                 }}
-                                className="block group no-underline rounded-3xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background h-full flex flex-col"
+                                className="block group no-underline rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background h-full flex flex-col"
                             >
                                 {portalCard}
                             </Link>

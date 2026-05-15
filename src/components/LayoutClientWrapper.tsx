@@ -235,7 +235,7 @@ function LayoutClientWrapperInner({ children }: LayoutClientWrapperProps) {
         navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
 
         navigator.serviceWorker
-            .register('/sw.js', { scope: '/' })
+            .register('/sw.js?v=levelup-offline-v1', { scope: '/' })
             .then((registration) => {
                 if (cancelled) return;
                 const update = () => registration.update().catch(() => {});
