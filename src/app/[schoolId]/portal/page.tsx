@@ -69,10 +69,10 @@ function WhereToDrawnTitle({
     glowColor?: string;
 }) {
     const titleClassName = cn(
-        'font-headline relative inline-block font-black tracking-tight',
+        'font-headline relative inline-block overflow-visible pb-[0.2em] font-black tracking-tight',
         displayMode === 'app'
-            ? 'px-2 py-1 text-4xl sm:py-2 sm:text-6xl'
-            : 'px-2 py-2 text-5xl sm:text-6xl',
+            ? 'px-2 py-2 text-4xl sm:py-2 sm:text-6xl'
+            : 'px-2 py-3 text-5xl sm:text-6xl',
     );
 
     return (
@@ -322,19 +322,19 @@ export default function PortalPage() {
             {/* Positioning on a plain div so Framer does not override translate-based centering */}
             {/* Main scrolling layout for Title and Grid */}
             {/* Main layout: locked on mobile, scrollable on desktop */}
-            <div className="fixed inset-0 z-[10] flex flex-col overflow-hidden md:overflow-y-auto px-4 pb-24 pt-20 md:pb-6 md:py-24">
-                <div className="flex-1 flex flex-col items-center md:my-auto w-full h-full min-h-0 justify-between md:justify-center">
+            <div className="fixed inset-0 z-[10] flex flex-col overflow-hidden max-md:overflow-x-hidden md:overflow-y-auto px-4 pb-24 pt-[max(6.25rem,calc(env(safe-area-inset-top,0px)+4.5rem))] md:py-24">
+                <div className="flex h-full min-h-0 w-full flex-1 flex-col items-center justify-between md:my-auto md:min-h-0 md:justify-center">
                     
-                    {/* Title Container: Flex-1 centers vertically on mobile */}
-                    <div className="flex-1 flex flex-col items-center justify-center w-full min-h-0 md:flex-none md:mb-12">
-                        <div className="pointer-events-none w-full max-w-6xl text-center shrink-0">
+                    {/* Title: on mobile avoid flex-1+min-h-0 (clips large headline under overflow-hidden). */}
+                    <div className="flex w-full shrink-0 flex-col items-center justify-center px-1 pb-3 pt-1 text-center md:mb-12 md:min-h-0 md:flex-1 md:pb-0">
+                        <div className="pointer-events-none w-full max-w-6xl text-center shrink-0 overflow-visible">
                             {reduceWhereToMotion ? (
                                 <h2
                                     className={cn(
-                                        'font-headline inline-block font-black tracking-tight',
+                                        'font-headline inline-block overflow-visible pb-[0.15em] font-black tracking-tight',
                                         settings.displayMode === 'app'
-                                            ? 'px-2 py-1 text-4xl sm:py-2 sm:text-6xl'
-                                            : 'px-2 py-2 text-5xl sm:text-6xl',
+                                            ? 'px-2 py-2 text-4xl sm:py-2 sm:text-6xl'
+                                            : 'px-2 py-3 text-5xl sm:text-6xl',
                                     )}
                                     style={{
                                         color: whereToAccentColor,
@@ -355,8 +355,8 @@ export default function PortalPage() {
                         </div>
                     </div>
 
-                    {/* Grid Section: Pinned to bottom on mobile */}
-                    <div className="w-full max-w-6xl shrink-0 mt-auto md:mt-0 pb-safe">
+                    {/* Grid: narrower cards on phone; full width from md up */}
+                    <div className="mx-auto w-full max-w-[min(22rem,calc(100%-0.5rem))] shrink-0 pb-safe sm:max-w-md md:mt-0 md:max-w-6xl">
                         <motion.div
                             ref={gridRef}
                             variants={prefersReducedMotion ? undefined : staggerContainer}

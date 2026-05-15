@@ -1869,18 +1869,6 @@ export function SettingsModal() {
                                     planLabel={planLabel}
                                 />
                                 <FeatureRow
-                                    id="enableWeeklyRaffle"
-                                    label="Weekly Raffle Wheel"
-                                    desc="Turn on the Teacher portal Raffle tab. Configure points per ticket, display, odds, and deduct-on-pull in Admin → Raffle."
-                                    icon={<Ticket className="w-5 h-5" />}
-                                    settings={local}
-                                    onToggle={handleToggle}
-                                    isImplemented={true}
-                                    isAdmin={isAdmin}
-                                    isAllowed={isFeatureAllowed('enableWeeklyRaffle')}
-                                    planLabel={planLabel}
-                                />
-                                <FeatureRow
                                     id="enableNotifications"
                                     label="Notifications"
                                     desc="Master switch for the notification system. When off, no alert mail/SMS/WhatsApp documents are created; use Admin → Notifications for per-event channels when this is on."
