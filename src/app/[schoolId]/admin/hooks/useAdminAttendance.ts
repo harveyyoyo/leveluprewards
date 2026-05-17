@@ -243,7 +243,7 @@ export function useAdminAttendance(deps: AdminAttendanceDeps) {
       let description = err?.message ?? String(error);
       if (description === 'internal' || err?.code?.includes('internal')) {
         description =
-          'Redeploy Cloud Functions (firebase deploy --only functions). If you sign in as developer, set DEV_PASSCODE in the function config. Check Firebase Console → Functions → Logs for details.';
+          'Redeploy Cloud Functions (firebase deploy --only functions). Sign in at /developer with your allowed Google account so addDeveloperMe can register your UID. Check Firebase Console → Functions → Logs for details.';
       }
       toast({ variant: 'destructive', title: 'Failed to save', description });
     } finally {

@@ -192,6 +192,27 @@ export function IdCardPrinterSettingsSection({
         {paperMeta ? <p className="text-xs text-muted-foreground leading-snug">{paperMeta.detail}</p> : null}
       </div>
 
+      <div className="space-y-2">
+        <Label htmlFor="settings-id-card-corners" className="text-[11px] font-semibold">
+          Card corners
+        </Label>
+        <Select
+          value={local.idCardCornerStyle ?? 'rounded'}
+          onValueChange={(v) => onPatch({ idCardCornerStyle: v === 'rectangular' ? 'rectangular' : 'rounded' })}
+        >
+          <SelectTrigger id="settings-id-card-corners" className="rounded-xl">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="rounded">Rounded (ID card look)</SelectItem>
+            <SelectItem value="rectangular">Rectangular (easier to cut on plain paper)</SelectItem>
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground leading-snug">
+          Same ISO ID-1 size either way. Use rectangular when printing on a regular office printer and cutting cards by hand; keep rounded for label stock or card printers.
+        </p>
+      </div>
+
       <div className="flex flex-col gap-2 rounded-xl border border-border/60 bg-muted/30 p-3 sm:flex-row sm:items-end sm:gap-3">
         <div className="flex-1 space-y-1.5">
           <Label htmlFor="settings-id-print-save-name" className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">

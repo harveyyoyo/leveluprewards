@@ -69,12 +69,29 @@ function maskRecipient(to: unknown): string {
   return `${s.slice(0, 2)}***${s.slice(at)}`;
 }
 
+/**
+ * Timing-safe string comparison to prevent side-channel attacks on passcodes.
+ * Returns true if `a` and `b` are non-empty and equal, without leaking length
+ * or character-position information through timing differences.
+ */
+function safeEqual(a: string, b: string): boolean {
+  if (!a || !b) return false;
+  const bufA = Buffer.from(a, "utf8");
+  const bufB = Buffer.from(b, "utf8");
+  if (bufA.length !== bufB.length) {
+    // Still run timingSafeEqual against bufA to avoid leaking length info via timing.
+    crypto.timingSafeEqual(bufA, bufA);
+    return false;
+  }
+  return crypto.timingSafeEqual(bufA, bufB);
+}
+
 function schoolAccessPasscodeFrom(data: Record<string, any>): string {
-  return trimmedString(data.schoolAccessPasscode) || trimmedString(data.passcode) || "1234";
+  return trimmedString(data.schoolAccessPasscode) || trimmedString(data.passcode) || "";
 }
 
 function adminPasscodeFrom(data: Record<string, any>): string {
-  return trimmedString(data.adminPasscode) || trimmedString(data.passcode) || "1234";
+  return trimmedString(data.adminPasscode) || trimmedString(data.passcode) || "";
 }
 
 // Demo schools should authenticate like any other school (no passcode bypass).
@@ -686,7 +703,14 @@ exports.verifySchoolPasscode = functions.https.onCall(
       throw new functions.https.HttpsError("invalid-argument", "A valid passcode is required.");
     }
     const schoolData = schoolDoc.data()!;
-    if (adminPasscodeFrom(schoolData) !== passcode) {
+    const expected = adminPasscodeFrom(schoolData);
+    if (!expected) {
+      throw new functions.https.HttpsError(
+        "failed-precondition",
+        "This school has no admin passcode configured. An administrator must set one before login is possible."
+      );
+    }
+    if (!safeEqual(expected, passcode)) {
       throw new functions.https.HttpsError("permission-denied", "Invalid passcode.");
     }
 
@@ -722,7 +746,14 @@ exports.verifySchoolAccessPasscode = functions.https.onCall(
     }
 
     const schoolData = schoolDoc.data()!;
-    if (schoolAccessPasscodeFrom(schoolData) !== passcode) {
+    const expected = schoolAccessPasscodeFrom(schoolData);
+    if (!expected) {
+      throw new functions.https.HttpsError(
+        "failed-precondition",
+        "This school has no access passcode configured. An administrator must set one before sign-in is possible."
+      );
+    }
+    if (!safeEqual(expected, passcode)) {
       throw new functions.https.HttpsError("permission-denied", "Invalid passcode.");
     }
 
@@ -764,17 +795,25 @@ async function requireDeveloper(context: functions.https.CallableContext): Promi
   }
 }
 
-/** Callable: add current user to developer allow-list after verifying dev passcode. */
+/** Callable: add current user to developer allow-list (allowed Google accounts only). */
 exports.addDeveloperMe = functions.https.onCall(
-  async (data: any, context: functions.https.CallableContext) => {
+  async (_data: any, context: functions.https.CallableContext) => {
     requireAuth(context);
-    if (typeof data.passcode !== "string" || data.passcode.length === 0) {
-      throw new functions.https.HttpsError("invalid-argument", "passcode is required.");
+
+    const email = (context.auth?.token?.email ?? "").trim().toLowerCase();
+    const provider = context.auth?.token?.firebase?.sign_in_provider;
+    const allowlistStr = process.env.DEVELOPER_GOOGLE_EMAIL_ALLOWLIST || process.env.NEXT_PUBLIC_DEVELOPER_GOOGLE_EMAIL_ALLOWLIST || "";
+    const allowlist = allowlistStr.split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
+
+    const isGoogleDev = provider === "google.com" && email && (allowlist.length === 0 || allowlist.includes(email));
+
+    if (!isGoogleDev) {
+      throw new functions.https.HttpsError(
+        "permission-denied",
+        "Developer access requires signing in with an allowed Google account."
+      );
     }
-    const devPasscode = process.env.DEV_PASSCODE;
-    if (!devPasscode || data.passcode !== devPasscode) {
-      throw new functions.https.HttpsError("permission-denied", "Invalid developer passcode.");
-    }
+
     const db = admin.firestore();
     const globalRef = db.collection("appConfig").doc(APP_CONFIG_GLOBAL);
     await globalRef.set(
@@ -784,6 +823,7 @@ exports.addDeveloperMe = functions.https.onCall(
     return { success: true };
   }
 );
+
 
 /** Callable: record a developer support session before opening a school's admin tools. */
 exports.startDeveloperSupportSession = functions.https.onCall(
@@ -829,14 +869,20 @@ exports.createSchoolByDeveloper = functions.https.onCall(
     const providedLegacyPasscode = trimmedString(data.passcode);
     const providedSchoolAccessPasscode = trimmedString(data.schoolAccessPasscode) || providedLegacyPasscode;
     const providedAdminPasscode = trimmedString(data.adminPasscode) || providedLegacyPasscode;
-    const defaultPasscode = "1234";
+
+    if (!providedSchoolAccessPasscode && !providedAdminPasscode) {
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "At least one passcode (schoolAccessPasscode, adminPasscode, or passcode) must be provided when creating a school."
+      );
+    }
 
     const schoolDocData: Record<string, any> = {
       name: providedName || cleanId,
       updatedAt: now,
-      passcode: providedSchoolAccessPasscode || defaultPasscode,
-      schoolAccessPasscode: providedSchoolAccessPasscode || defaultPasscode,
-      adminPasscode: providedAdminPasscode || defaultPasscode,
+      passcode: providedSchoolAccessPasscode || providedAdminPasscode,
+      schoolAccessPasscode: providedSchoolAccessPasscode || providedAdminPasscode,
+      adminPasscode: providedAdminPasscode || providedSchoolAccessPasscode,
       plan: "free",
       featureOverrides: {},
       hasMigratedStudents: true,
@@ -1147,6 +1193,53 @@ exports.enterSchoolKioskSession = functions.https.onCall(
   }
 );
 
+/** Callable: register browser for student home portal (lobby gate + API lookups). */
+exports.enterStudentPortalLobby = functions.https.onCall(
+  async (data: any, context: functions.https.CallableContext) => {
+    requireAuth(context);
+    requireString(data.schoolId, "schoolId");
+
+    const schoolId = String(data.schoolId).trim().toLowerCase();
+    const db = admin.firestore();
+
+    let appSettings: Record<string, unknown> = {};
+    let active = true;
+    const schoolSnap = await db.collection("schools").doc(schoolId).get();
+    if (schoolSnap.exists) {
+      const schoolData = schoolSnap.data() as Record<string, unknown>;
+      if (schoolData.active === false) active = false;
+      appSettings = (schoolData.appSettings as Record<string, unknown>) || {};
+    } else {
+      const publicSnap = await db.collection("schoolPublic").doc(schoolId).get();
+      if (!publicSnap.exists) {
+        throw new functions.https.HttpsError("not-found", "School not found.");
+      }
+      const publicData = publicSnap.data() as Record<string, unknown>;
+      if (publicData.active === false) active = false;
+      appSettings = (publicData.appSettings as Record<string, unknown>) || {};
+    }
+
+    if (!active) {
+      throw new functions.https.HttpsError("permission-denied", "This school is not active.");
+    }
+    if (appSettings.enableStudentPortal !== true) {
+      throw new functions.https.HttpsError(
+        "failed-precondition",
+        "Student home portal is not enabled for this school."
+      );
+    }
+
+    await db
+      .collection("schools")
+      .doc(schoolId)
+      .collection("studentPortalMembers")
+      .doc(context.auth!.uid)
+      .set({ createdAt: Date.now(), source: "student-portal-lobby" }, { merge: true });
+
+    return { success: true };
+  }
+);
+
 /** Callable: kiosk-safe student lookup by badge/card id. */
 exports.lookupStudentByBadge = functions.https.onCall(
   async (data: any, context: functions.https.CallableContext) => {
@@ -1345,6 +1438,7 @@ exports.redeemPrizeServer = functions.https.onCall(
     const prizeId = String(data.prizeId).trim();
     const rawQuantity = Number(data.quantity ?? 1);
     const quantity = Number.isFinite(rawQuantity) ? Math.floor(rawQuantity) : 1;
+    const markFulfilled = data.markFulfilled === true;
     if (quantity < 1 || quantity > 99) {
       throw new functions.https.HttpsError("invalid-argument", "Quantity must be between 1 and 99.");
     }
@@ -1434,7 +1528,7 @@ exports.redeemPrizeServer = functions.https.onCall(
         desc: `Redeemed: ${String(prize.name || "Prize")}${quantity > 1 ? ` (x${quantity})` : ""}`,
         amount: -totalCost,
         date: redeemedAt,
-        fulfilled: false,
+        fulfilled: markFulfilled,
       };
       if (teacherIds[0]) activityData.teacherId = teacherIds[0];
 

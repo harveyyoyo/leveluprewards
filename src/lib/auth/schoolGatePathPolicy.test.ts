@@ -30,5 +30,14 @@ describe('schoolPathAllowedByGate', () => {
   it('default hub routes for kiosk', () => {
     expect(schoolPathAllowedByGate(`/${sid}/student`, sid, new Set(['kiosk']))).toBe(true);
     expect(schoolPathAllowedByGate(`/${sid}/portal`, sid, new Set(['portal']))).toBe(true);
+    expect(schoolPathAllowedByGate(`/${sid}/portal`, sid, new Set(['kiosk']))).toBe(false);
+  });
+
+  it('student home allows studentPortal scope only', () => {
+    expect(schoolPathAllowedByGate(`/${sid}/student-home`, sid, new Set(['studentPortal']))).toBe(
+      true,
+    );
+    expect(schoolPathAllowedByGate(`/${sid}/student`, sid, new Set(['studentPortal']))).toBe(false);
+    expect(schoolPathAllowedByGate(`/${sid}/admin`, sid, new Set(['studentPortal']))).toBe(false);
   });
 });

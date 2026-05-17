@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { EmptyState } from '@/components/ui/empty-state';
 import { Badge } from '@/components/ui/badge';
 import { AdminRecordListHeader } from '@/components/admin/AdminRecordListHeader';
+import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 import type { Class, Student, Teacher } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -53,9 +54,12 @@ export function AdminClassesTab({
           </Helper>
           <CardDescription>Manage class groups for your school.</CardDescription>
         </div>
-        <Button onClick={onAddClass} className="rounded-xl">
-          <Plus className="mr-2 h-4 w-4" /> Add Class
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <TabWalkthroughHeaderAction />
+          <Button onClick={onAddClass} className="rounded-xl">
+            <Plus className="mr-2 h-4 w-4" /> Add Class
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         <ul className="space-y-4 pr-1">

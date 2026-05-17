@@ -2,6 +2,7 @@ import { spawnSync } from 'child_process';
 
 const PROJECT_ID = 'studio-1273073612-71183';
 const LIVE_URL = `https://${PROJECT_ID}.web.app`;
+const AUTH_SMOKE_URL = process.env.LIVE_AUTH_BASE_URL || 'https://levelupenterprises.education';
 const EXPECTED_TEXT = 'School Login';
 
 function run(command, args, options = {}) {
@@ -47,3 +48,9 @@ run('npx', ['firebase-tools', 'deploy', '--only', 'hosting', '--project', PROJEC
 });
 
 await verifyLiveSite();
+run('node', ['scripts/live-auth-smoke.mjs'], {
+  env: {
+    ...process.env,
+    LIVE_AUTH_BASE_URL: AUTH_SMOKE_URL,
+  },
+});

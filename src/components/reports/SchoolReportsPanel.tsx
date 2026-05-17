@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Helper } from '@/components/ui/helper';
+import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 import { getStudentNickname } from '@/lib/utils';
 import type { Category, Class, Coupon, Prize, Student, Teacher } from '@/lib/types';
 import {
@@ -253,7 +254,7 @@ export function SchoolReportsPanel({
   coupons: allCoupons,
   prizes: allPrizes,
   categories,
-  /** School weekly raffle setting; defaults to 25 pts/ticket when omitted (matches app defaults). */
+  /** School raffle setting; defaults to 25 pts/ticket when omitted (matches app defaults). */
   rafflePointsPerTicket: rafflePointsPerTicketProp,
 }: {
   scope: 'school' | 'teacher';
@@ -646,11 +647,20 @@ export function SchoolReportsPanel({
   ]);
 
   const [printing, setPrinting] = useState(false);
+  const [printReady, setPrintReady] = useState(false);
   const [generatedAt, setGeneratedAt] = useState('');
 
   const runPrint = useCallback(() => {
     setGeneratedAt(new Date().toLocaleString());
+    setPrintReady(false);
     setPrinting(true);
+  }, []);
+
+  const handlePrintRootRef = useCallback((node: HTMLDivElement | null) => {
+    if (!node) return;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => setPrintReady(true));
+    });
   }, []);
 
   const runCsvExport = useCallback(() => {
@@ -661,7 +671,7 @@ export function SchoolReportsPanel({
       ['Scope', scopeLabel],
       ['Class filter', selectedClassLabel],
       ['Date range', dateRangeLabel],
-      ['Weekly raffle (for ticket counts)', raffleRuleLabel],
+      ['Raffle (for ticket counts)', raffleRuleLabel],
       ['Generated', new Date().toLocaleString()],
       [],
     ];
@@ -831,13 +841,21 @@ export function SchoolReportsPanel({
 
   useEffect(() => {
     if (!printing) return;
-    let settled = false;
     document.body.classList.add('school-reports-printing');
+    return () => {
+      document.body.classList.remove('school-reports-printing');
+    };
+  }, [printing]);
+
+  useEffect(() => {
+    if (!printing || !printReady) return;
+    let settled = false;
 
     const done = () => {
       if (settled) return;
       settled = true;
       document.body.classList.remove('school-reports-printing');
+      setPrintReady(false);
       setPrinting(false);
     };
 
@@ -855,9 +873,8 @@ export function SchoolReportsPanel({
       window.clearTimeout(printTimer);
       window.clearTimeout(fallbackTimer);
       window.removeEventListener('afterprint', done);
-      document.body.classList.remove('school-reports-printing');
     };
-  }, [printing]);
+  }, [printReady, printing]);
 
   const SummaryReport = () => (
     <section className="space-y-4">
@@ -989,6 +1006,7 @@ export function SchoolReportsPanel({
     printing && typeof document !== 'undefined'
       ? createPortal(
           <div
+            ref={handlePrintRootRef}
             id="school-reports-print-wrapper"
             className="school-reports-print-root bg-white text-black text-[11pt] leading-snug"
           >
@@ -1196,19 +1214,22 @@ export function SchoolReportsPanel({
   return (
     <>
       <Card className="border-t-4 border-primary shadow-md">
-        <CardHeader className="py-6">
-          <CardTitle className="text-2xl flex items-center gap-2">
-            <FileText className="text-primary w-6 h-6" aria-hidden />
-            Reports
-          </CardTitle>
-          <CardDescription>
-            Printable and exportable summaries for documentation and meetings ({scopeLabel}).
-          </CardDescription>
-          <p className="text-xs text-muted-foreground mt-2">
-            <Helper content="Print opens your browser dialog. CSV downloads the currently selected report with the filters shown here.">
-              Print to paper, save as PDF, or export the current report as CSV.
-            </Helper>
-          </p>
+        <CardHeader className="py-6 flex flex-row items-start justify-between gap-4">
+          <div>
+            <CardTitle className="text-2xl flex items-center gap-2">
+              <FileText className="text-primary w-6 h-6" aria-hidden />
+              Reports
+            </CardTitle>
+            <CardDescription>
+              Printable and exportable summaries for documentation and meetings ({scopeLabel}).
+            </CardDescription>
+            <p className="text-xs text-muted-foreground mt-2">
+              <Helper content="Print opens your browser dialog. CSV downloads the currently selected report with the filters shown here.">
+                Print to paper, save as PDF, or export the current report as CSV.
+              </Helper>
+            </p>
+          </div>
+          <TabWalkthroughHeaderAction />
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid gap-4 lg:grid-cols-[minmax(220px,1fr)_minmax(180px,0.8fr)_auto] lg:items-end">

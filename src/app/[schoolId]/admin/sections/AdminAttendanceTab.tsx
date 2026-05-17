@@ -12,6 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import type { AttendanceRewardRule } from '@/lib/types';
 import { AttendanceSetupWizard } from '@/components/attendance/AttendanceSetupWizard';
 import { AttendanceTimeZoneField } from '@/components/attendance/AttendanceTimeZoneField';
+import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 
 export function AdminAttendanceTab(props: any) {
   const {
@@ -121,7 +122,10 @@ export function AdminAttendanceTab(props: any) {
             Use legacy assignments only for older setups. New attendance rewards should live in each teacher&apos;s rules.
           </p>
         </div>
-        <AttendanceSetupWizard variant="admin" />
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <TabWalkthroughHeaderAction />
+          <AttendanceSetupWizard variant="admin" />
+        </div>
       </div>
       <Card className="border-t-4 border-primary/60 shadow-md">
         <CardHeader className="py-6">

@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useRef } from 'react';
+import { Suspense, useEffect } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { useAppContext } from '@/components/AppProvider';
@@ -22,6 +22,17 @@ function canUseRoute(pathname: string, routeSchoolId: string, loginState: string
 
   const prefix = `/${routeSchoolId}/`;
   const section = pathname.startsWith(prefix) ? pathname.slice(prefix.length).split('/')[0] : '';
+
+  if (section === 'portal') {
+    return (
+      loginState === 'school' ||
+      loginState === 'admin' ||
+      loginState === 'teacher' ||
+      loginState === 'secretary' ||
+      loginState === 'prizeClerk' ||
+      loginState === 'reports'
+    );
+  }
 
   // Allow school chooser through: Admin page shows the passcode gate until role is granted (same idea as /teacher).
   // Prize desk staff use Admin → Prizes (same URL, no full admin passcode).
@@ -77,8 +88,6 @@ function SchoolSessionGateBody({
   const router = useRouter();
   const pathname = usePathname();
   const route = routeSchoolId.trim().toLowerCase();
-  /** Avoid hammering `login()` while waiting for Firestore/auth during kiosk recovery. */
-  const kioskRecoverAttemptRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!isInitialized || isUserLoading) return;
@@ -96,26 +105,9 @@ function SchoolSessionGateBody({
 
     const sessionSchool = schoolId?.trim().toLowerCase() ?? '';
     if (!sessionSchool || sessionSchool !== route) {
-      // Student / school-chooser kiosk often loses `schoolId` while `loginState` survives (storage quirks).
-      // Re-establish the kiosk session for this URL instead of blocking the whole layout with `null`.
-      if (loginState === 'student' || loginState === 'school') {
-        const attemptKey = `${route}:${loginState}:${sessionSchool || 'none'}`;
-        if (kioskRecoverAttemptRef.current !== attemptKey) {
-          kioskRecoverAttemptRef.current = attemptKey;
-          void (async () => {
-            const authResult = await login('student', { schoolId: route });
-            if (!authResult.ok) {
-              router.replace(`/login?school=${encodeURIComponent(route)}`);
-            }
-          })();
-        }
-        return;
-      }
       router.replace(`/login?school=${encodeURIComponent(route)}`);
       return;
     }
-
-    kioskRecoverAttemptRef.current = null;
 
     if (!canUseRoute(pathname, route, loginState)) {
       router.replace(`/login?school=${encodeURIComponent(route)}`);

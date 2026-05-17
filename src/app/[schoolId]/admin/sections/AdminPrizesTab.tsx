@@ -1,6 +1,6 @@
 'use client';
 
-import { Cog, Edit3, Gift, Plus, Trash2, HelpCircle, GraduationCap, ShoppingBag, Wand2, UserMinus, X } from 'lucide-react';
+import { Cog, Edit3, Gift, Plus, Printer, Trash2, HelpCircle, GraduationCap, ShoppingBag, Wand2, UserMinus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
@@ -11,7 +11,13 @@ import DynamicIcon from '@/components/DynamicIcon';
 import { cn } from '@/lib/utils';
 import type { Prize, Teacher, Class, VendingMotorConfig } from '@/lib/types';
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { usePrint } from '@/components/providers/PrintProvider';
+import { useFirestore } from '@/firebase';
+import { backfillPrizeScanCodes } from '@/lib/db/prizes';
+import { backfillPrizeCardColors } from '@/lib/prizeCardColor';
+import { prizeScanCodeFor } from '@/lib/prizeScanCode';
+import { useToast } from '@/hooks/use-toast';
 import { AutoCircularToggles } from '@/components/AutoCircularToggles';
 import { AdminRecordListHeader } from '@/components/admin/AdminRecordListHeader';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -19,6 +25,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   isPrizeSchoolWideTeachers,
+  buildTeacherPrizeListItems,
   isTeacherPrizeCreator,
   prizeRestrictionTeacherIds,
   removeTeacherFromPrize,
@@ -26,6 +33,7 @@ import {
 } from '@/lib/prizeUtils';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { isAiSurpriseHiddenFromAdminGrid } from '@/lib/aiJokePrize';
+import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 
 export function AdminPrizesTab({
   prizes,
@@ -55,8 +63,12 @@ export function AdminPrizesTab({
   onEditPrize?: (p: Prize) => void;
 }) {
   const { settings } = useSettings();
+  const firestore = useFirestore();
+  const { setPrizeIdCardsToPrint } = usePrint();
+  const { toast } = useToast();
   const vendingEnabled = settings.enableVendingMachine === true;
   const [helpOpen, setHelpOpen] = useState(false);
+  const cardColorBackfillStarted = useRef(false);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardStep, setWizardStep] = useState(0);
 
@@ -64,6 +76,16 @@ export function AdminPrizesTab({
     () => (prizes || []).filter((p) => !isAiSurpriseHiddenFromAdminGrid(p)),
     [prizes],
   );
+
+  const prizeListItems = useMemo(() => {
+    if (mode === 'teacher' && teacherId) {
+      return buildTeacherPrizeListItems(tablePrizes, teacherId);
+    }
+    return tablePrizes
+      .slice()
+      .sort((a, b) => a.points - b.points)
+      .map((prize) => ({ kind: 'prize' as const, prize }));
+  }, [mode, teacherId, tablePrizes]);
   // --- REAL prize creation wizard state ---
   const [wName, setWName] = useState('');
   const [wIcon, setWIcon] = useState('Gift');
@@ -106,6 +128,61 @@ export function AdminPrizesTab({
     return true;
   }, [wizardStep, wName, wPoints]);
 
+  const printPrizeCards = useCallback(
+    async (list: Prize[]) => {
+      if (!list.length) {
+        toast({ variant: 'destructive', title: 'No prizes', description: 'Add rewards before printing shelf cards.' });
+        return;
+      }
+      try {
+        await backfillPrizeScanCodes(firestore, schoolId, list);
+        const withCodes = list.map((p) => ({ ...p, scanCode: prizeScanCodeFor(p) }));
+        setPrizeIdCardsToPrint(withCodes);
+        toast({
+          title: list.length === 1 ? 'Printing prize card' : 'Printing prize cards',
+          description: `${withCodes.length} card(s) sent to the printer.`,
+        });
+      } catch (e) {
+        toast({
+          variant: 'destructive',
+          title: 'Print failed',
+          description: e instanceof Error ? e.message : 'Could not prepare prize cards.',
+        });
+      }
+    },
+    [firestore, schoolId, setPrizeIdCardsToPrint, toast],
+  );
+
+  const handlePrintPrizeCards = useCallback(() => {
+    void printPrizeCards(tablePrizes);
+  }, [printPrizeCards, tablePrizes]);
+
+  const handlePrintOnePrizeCard = useCallback(
+    (prize: Prize) => {
+      void printPrizeCards([prize]);
+    },
+    [printPrizeCards],
+  );
+
+  useEffect(() => {
+    if (!firestore || !schoolId || !tablePrizes.length || cardColorBackfillStarted.current) return;
+    const needsColors = tablePrizes.some((p) => !p.cardColor?.trim());
+    if (!needsColors) return;
+    cardColorBackfillStarted.current = true;
+    void backfillPrizeCardColors(firestore, schoolId, tablePrizes)
+      .then((count) => {
+        if (count > 0) {
+          toast({
+            title: 'Prize card colors assigned',
+            description: `${count} reward item(s) now have a unique shelf card color.`,
+          });
+        }
+      })
+      .catch(() => {
+        cardColorBackfillStarted.current = false;
+      });
+  }, [firestore, schoolId, tablePrizes, toast]);
+
   return (
     <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden">
       <CardHeader className="flex flex-row justify-between items-center py-6">
@@ -127,6 +204,10 @@ export function AdminPrizesTab({
           <CardDescription>Items available for student redemption.</CardDescription>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
+          <TabWalkthroughHeaderAction />
+          <Button variant="outline" className="rounded-xl" onClick={handlePrintPrizeCards}>
+            <Printer className="mr-2 h-4 w-4" /> Print all prize cards
+          </Button>
           <Button
             variant="outline"
             className="rounded-xl"
@@ -156,9 +237,9 @@ export function AdminPrizesTab({
       <CardContent className="min-w-0">
         <ul className="grid grid-cols-1 gap-4 min-w-0 overflow-x-hidden pr-2">
           <AdminRecordListHeader
-            gridClassName="grid-cols-[80px_minmax(140px,240px)_56px_72px_200px_44px_72px_72px_64px_96px]"
+            gridClassName="grid-cols-[minmax(148px,168px)_minmax(140px,240px)_56px_72px_200px_44px_72px_72px_64px_96px]"
             columns={[
-              { label: 'Edit' },
+              { label: 'Actions' },
               { label: 'Item Name' },
               { label: 'Cost', className: 'text-center' },
               { label: 'Stock', className: 'text-center' },
@@ -170,10 +251,22 @@ export function AdminPrizesTab({
               { label: 'Delete', className: 'text-right pr-1' },
             ]}
           />
-          {tablePrizes
-            .sort((a, b) => a.points - b.points)
-            .map((p) => (
+          {prizeListItems.map((item) =>
+            item.kind === 'section' ? (
+              <li
+                key={item.id}
+                className={cn(
+                  'list-none w-full rounded-xl border border-dashed border-muted-foreground/30 bg-muted/25 px-4 py-3',
+                  item.id === 'school-wide' && 'mt-2',
+                )}
+                role="presentation"
+              >
+                <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">{item.label}</p>
+                {item.hint ? <p className="text-xs text-muted-foreground mt-1">{item.hint}</p> : null}
+              </li>
+            ) : (
               (() => {
+                const p = item.prize;
                 const restrictionIds = prizeRestrictionTeacherIds(p);
                 const schoolWideT = isPrizeSchoolWideTeachers(p);
                 const isCreator = mode === 'teacher' && teacherId ? isTeacherPrizeCreator(p, teacherId) : false;
@@ -213,12 +306,12 @@ export function AdminPrizesTab({
                   <li
                     key={p.id}
                     className={cn(
-                      "grid grid-cols-[80px_minmax(140px,240px)_56px_72px_200px_44px_72px_72px_64px_96px] items-center gap-x-2 rounded-2xl border bg-secondary/30 p-1.5 transition-all hover:bg-background group min-w-0",
+                      "grid grid-cols-[minmax(148px,168px)_minmax(140px,240px)_56px_72px_200px_44px_72px_72px_64px_96px] items-center gap-x-2 rounded-2xl border bg-secondary/30 p-1.5 transition-all hover:bg-background group min-w-0",
                       rowDimmed && "opacity-60"
                     )}
                   >
-                    {/* 1. Edit Button First */}
-                    <div className="flex items-center">
+                    {/* 1. Edit + print */}
+                    <div className="flex flex-col gap-1 sm:flex-row sm:items-center">
                       {onEditPrize ? (
                         <Button
                           type="button"
@@ -232,11 +325,29 @@ export function AdminPrizesTab({
                           Edit
                         </Button>
                       ) : null}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 gap-1 rounded-lg font-semibold"
+                        title="Print this prize card"
+                        aria-label={`Print card for ${p.name}`}
+                        onClick={() => handlePrintOnePrizeCard(p)}
+                      >
+                        <Printer className="w-3.5 h-3.5 shrink-0" />
+                        Print
+                      </Button>
                     </div>
 
                     {/* 2. Name */}
                     <div className="min-w-0 flex items-center gap-2">
-                      <div className={cn("size-8 shrink-0 rounded-lg flex items-center justify-center bg-background border relative overflow-hidden", !p.inStock && "opacity-40 grayscale")}>
+                      <div
+                        className={cn(
+                          'size-8 shrink-0 rounded-lg flex items-center justify-center bg-background border-2 relative overflow-hidden',
+                          !p.inStock && 'opacity-40 grayscale',
+                        )}
+                        style={p.cardColor ? { borderColor: p.cardColor, backgroundColor: `${p.cardColor}22` } : undefined}
+                      >
                         {p.imageUrl ? (
                           /* eslint-disable-next-line @next/next/no-img-element */
                           <img src={p.imageUrl} alt="" className="absolute inset-0 z-[5] size-full object-cover" />
@@ -514,7 +625,8 @@ export function AdminPrizesTab({
                   </li>
                 );
               })()
-            ))}
+            ),
+          )}
         </ul>
       </CardContent>
       <Dialog open={helpOpen} onOpenChange={setHelpOpen}>
@@ -535,6 +647,8 @@ export function AdminPrizesTab({
               <li><span className="font-bold">Teachers</span>: pick multiple teachers or school-wide.</li>
               <li><span className="font-bold">Class</span>: optionally restrict by class.</li>
               <li><span className="font-bold">Vending motor</span>: enable the Vending Machine feature in settings, then use the prize motor button to pick axis X/Y/Z/E.</li>
+              <li><span className="font-bold">Print card</span>: use the printer icon on a row for one shelf card, or Print all prize cards for the full set.</li>
+              <li><span className="font-bold">Card color</span>: set per item in Edit → Shelf card color (requires color printing in settings).</li>
             </ul>
           </div>
           <DialogFooter>

@@ -1,55 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdminAuth } from '@/lib/server/firebaseAdminAuth';
-import { FIREBASE_SESSION_COOKIE_NAME } from '@/lib/auth/firebaseSessionCookie';
+import {
+  FIREBASE_SESSION_COOKIE_NAME,
+  shouldEnforceFirebaseSessionEdge,
+} from '@/lib/auth/firebaseSessionCookie';
 import { SCHOOL_GATE_COOKIE_NAME } from '@/lib/auth/schoolGateCookie';
+import { clientIp, sameOrigin, rateLimit, jsonError } from '@/lib/server/apiSecurity';
 
-const WINDOW_MS = 60_000;
 const MAX_ATTEMPTS = 20;
 const MAX_BODY_BYTES = 32 * 1024;
-const buckets = new Map<string, { count: number; windowStart: number }>();
-
-function jsonError(status: number, message: string) {
-  return NextResponse.json({ ok: false, error: message }, { status });
-}
-
-function clientIp(req: NextRequest): string {
-  const fwd = req.headers.get('x-forwarded-for');
-  if (fwd) return fwd.split(',')[0]?.trim() || 'unknown';
-  return req.headers.get('x-real-ip')?.trim() || req.ip || 'unknown';
-}
-
-function sameOrigin(req: NextRequest): boolean {
-  const origin = req.headers.get('origin');
-  const referer = req.headers.get('referer');
-  const forwardedHost = req.headers.get('x-forwarded-host');
-  const host = forwardedHost || req.headers.get('host');
-  if (!host) return false;
-
-  const hosts = host.split(',').map((h) => h.trim()).filter(Boolean);
-  const matches = (value: string) => {
-    try {
-      return hosts.includes(new URL(value).host);
-    } catch {
-      return false;
-    }
-  };
-
-  if (origin) return matches(origin);
-  if (referer) return matches(referer);
-  return false;
-}
-
-function rateLimit(key: string, max: number): boolean {
-  const now = Date.now();
-  const bucket = buckets.get(key);
-  if (!bucket || now - bucket.windowStart >= WINDOW_MS) {
-    buckets.set(key, { count: 1, windowStart: now });
-    return true;
-  }
-  if (bucket.count >= max) return false;
-  bucket.count += 1;
-  return true;
-}
 
 function sessionCookieFlags() {
   const secure = process.env.NODE_ENV === 'production';
@@ -67,6 +26,11 @@ export async function POST(req: NextRequest) {
     if (!sameOrigin(req)) {
       return jsonError(403, 'Forbidden');
     }
+
+    if (!shouldEnforceFirebaseSessionEdge()) {
+      return NextResponse.json({ ok: true, skipped: true });
+    }
+
     if (!rateLimit(`session:post:${clientIp(req)}`, MAX_ATTEMPTS)) {
       return jsonError(429, 'Too many requests');
     }

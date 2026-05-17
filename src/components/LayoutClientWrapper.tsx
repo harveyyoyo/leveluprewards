@@ -77,9 +77,15 @@ function LayoutClientWrapperInner({ children }: LayoutClientWrapperProps) {
     /** Version / legal footer: in document flow (not fixed); only on login + portal hub */
     const showSiteFooter =
       pathname === '/login' || isSignInPage || isAdminSignInPage || isPortalChoosePage;
+    const isStudentHomePage =
+      typeof pathname === 'string' && /\/student-home(?:\/|$)/.test(pathname);
     const isStudentKioskPage =
       typeof pathname === 'string' &&
       /\/(?:student|student-home|prize)(?:\/|$)/.test(pathname);
+    const showStudentHomeHeader =
+      isStudentHomePage && settings.studentPortalShowHeader === true;
+    const useHoverKioskHeader =
+      isStudentKioskPage && !hideAppChrome && !showStudentHomeHeader;
     /** Staff portal “home” routes: same shell as admin (full-width `<main>`, inner pages use `max-w-7xl`). */
     const isStaffPortalShellRoot =
       typeof pathname === 'string' &&
@@ -154,7 +160,7 @@ function LayoutClientWrapperInner({ children }: LayoutClientWrapperProps) {
     }, [pathname, routeSchoolId, router]);
 
     useEffect(() => {
-        if (!isStudentKioskPage || hideAppChrome) {
+        if (!useHoverKioskHeader) {
             setStudentChromeVisible(false);
             if (studentChromeTimerRef.current) {
                 clearTimeout(studentChromeTimerRef.current);
@@ -182,7 +188,7 @@ function LayoutClientWrapperInner({ children }: LayoutClientWrapperProps) {
                 studentChromeTimerRef.current = null;
             }
         };
-    }, [hideAppChrome, isStudentKioskPage]);
+    }, [hideAppChrome, useHoverKioskHeader]);
 
     // Offline support is production-only by default. Local dev keeps unregistering
     // service workers so stale Next chunks from old builds do not break HMR.
@@ -345,8 +351,10 @@ function LayoutClientWrapperInner({ children }: LayoutClientWrapperProps) {
                             'h-dvh max-h-dvh overflow-hidden'
                     )}
                 >
-                    {!hideAppChrome && (
-                        isStudentKioskPage ? (
+                    {!hideAppChrome &&
+                        (showStudentHomeHeader ? (
+                            <Header />
+                        ) : useHoverKioskHeader ? (
                             <div
                                 className={cn(
                                     'fixed inset-x-0 top-0 z-[200] transition-opacity duration-300 no-print',
@@ -358,8 +366,7 @@ function LayoutClientWrapperInner({ children }: LayoutClientWrapperProps) {
                             </div>
                         ) : (
                             <Header />
-                        )
-                    )}
+                        ))}
                     <main
                         id="screen-view"
                         className={cn(

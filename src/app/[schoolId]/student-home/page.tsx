@@ -1,46 +1,163 @@
 'use client';
 
-import Link from 'next/link';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, Clock, GraduationCap } from 'lucide-react';
-
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { signInAnonymously, signInWithCustomToken, signOut } from 'firebase/auth';
+import { GraduationCap } from 'lucide-react';
+import { useFirebase, useFunctions, useUser } from '@/firebase';
 import { useAppContext } from '@/components/AppProvider';
+import { useSettings } from '@/components/providers/SettingsProvider';
+import { SchoolGate } from '@/components/SchoolGate';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { StudentPortalLogin } from '@/components/student-portal/StudentPortalLogin';
+import { StudentPortalDashboard } from '@/components/student-portal/StudentPortalDashboard';
+import { logoutStudentPortal } from '@/lib/studentPortalClient';
+import { establishStudentPortalLobby } from '@/lib/studentPortalLobby';
+import {
+  syncFirebaseSessionCookie,
+  syncSchoolGateCookie,
+} from '@/lib/auth/syncFirebaseSessionCookie';
+import { getReadableErrorMessage } from '@/lib/errorMessage';
 
 export default function StudentHomePage() {
-    const params = useParams<{ schoolId: string }>();
-    const { schoolId: activeSchoolId } = useAppContext();
-    const schoolId = activeSchoolId || params.schoolId;
-    const portalHref = schoolId ? `/${schoolId}/portal` : '/login';
+  const params = useParams<{ schoolId: string }>();
+  const { schoolId: ctxSchoolId } = useAppContext();
+  const schoolId = (ctxSchoolId || params.schoolId || '').trim().toLowerCase();
+  const { auth } = useFirebase();
+  const functions = useFunctions();
+  const { user, isUserLoading } = useUser();
+  const { settings } = useSettings();
 
+  const [lobbyReady, setLobbyReady] = useState(false);
+  const [lobbyError, setLobbyError] = useState<string | null>(null);
+  const [lobbyToken, setLobbyToken] = useState<string | null>(null);
+  const [portalStudentId, setPortalStudentId] = useState<string | null>(null);
+  const [signingOut, setSigningOut] = useState(false);
+
+  const portalEnabled = settings.enableStudentPortal === true;
+
+  useEffect(() => {
+    if (!portalEnabled || !schoolId || isUserLoading || !user || !auth) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const idToken = await user.getIdToken(true);
+        await establishStudentPortalLobby(functions, idToken, schoolId);
+        await syncFirebaseSessionCookie(idToken);
+        await syncSchoolGateCookie(idToken, schoolId);
+        if (!cancelled) {
+          setLobbyToken(idToken);
+          setLobbyReady(true);
+          setLobbyError(null);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setLobbyError(getReadableErrorMessage(e, 'Could not open student portal.'));
+          setLobbyReady(false);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [portalEnabled, schoolId, isUserLoading, user, auth, functions]);
+
+  useEffect(() => {
+    if (!user || isUserLoading) return;
+    void user.getIdTokenResult().then((result) => {
+      if (result.claims.studentPortal === true) {
+        setPortalStudentId(user.uid);
+      }
+    });
+  }, [user, isUserLoading]);
+
+  const handleSignedIn = useCallback(
+    async (customToken: string, studentId: string) => {
+      if (!auth) return;
+      await signInWithCustomToken(auth, customToken);
+      const signedIn = auth.currentUser;
+      if (signedIn) {
+        const idToken = await signedIn.getIdToken(true);
+        await syncFirebaseSessionCookie(idToken);
+        await syncSchoolGateCookie(idToken, schoolId);
+      }
+      setPortalStudentId(studentId);
+    },
+    [auth, schoolId],
+  );
+
+  const lockBrowserToStudent = settings.studentPortalLockBrowserToStudent === true;
+
+  const handleSignOut = useCallback(async () => {
+    if (!auth || !schoolId) return;
+    setSigningOut(true);
+    try {
+      const sid = portalStudentId;
+      if (sid) {
+        await logoutStudentPortal(schoolId, sid, {
+          clearDevice: !lockBrowserToStudent,
+        });
+      }
+      await signOut(auth);
+      await signInAnonymously(auth);
+      setPortalStudentId(null);
+      setLobbyToken(null);
+      setLobbyReady(false);
+    } finally {
+      setSigningOut(false);
+    }
+  }, [auth, lockBrowserToStudent, portalStudentId, schoolId]);
+
+  if (!portalEnabled) {
     return (
-        <div className="min-h-[calc(100vh-5rem)] flex items-center justify-center px-4 py-12">
-            <Card className="w-full max-w-lg border-t-8 border-primary shadow-lg">
-                <CardHeader className="text-center space-y-4">
-                    <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                        <GraduationCap className="h-8 w-8" aria-hidden="true" />
-                    </div>
-                    <div className="space-y-2">
-                        <CardTitle className="text-2xl font-black tracking-tight">Student Home Portal</CardTitle>
-                        <CardDescription className="text-base">
-                            Coming soon. This feature is not available yet.
-                        </CardDescription>
-                    </div>
-                </CardHeader>
-                <CardContent className="space-y-5 text-center">
-                    <div className="rounded-2xl border bg-muted/40 p-4 text-sm text-muted-foreground">
-                        <Clock className="mx-auto mb-2 h-5 w-5 text-primary" aria-hidden="true" />
-            Students can still use the in-school kiosk and rewards shop while the home portal is being prepared.
-                    </div>
-                    <Button asChild className="w-full h-12 rounded-xl font-bold">
-                        <Link href={portalHref}>
-                            <ArrowLeft className="mr-2 h-4 w-4" aria-hidden="true" />
-                            Back to Portal
-                        </Link>
-                    </Button>
-                </CardContent>
-            </Card>
-        </div>
+      <div className="min-h-[calc(100vh-5rem)] flex items-center justify-center px-4 py-12">
+        <Card className="w-full max-w-lg border-t-8 border-muted shadow-lg">
+          <CardHeader className="text-center space-y-4">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
+              <GraduationCap className="h-8 w-8" aria-hidden />
+            </div>
+            <CardTitle className="text-2xl font-black">Student home portal</CardTitle>
+            <CardDescription>
+              Your school has not turned on the student home portal yet. Use the in-school kiosk to view rewards.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
     );
+  }
+
+  const isPortalStudent = Boolean(portalStudentId && user?.uid === portalStudentId);
+
+  return (
+    <SchoolGate allowedRoles={['school', 'student', 'admin', 'teacher']}>
+      <div className="min-h-[calc(100vh-5rem)] flex flex-col items-center justify-center px-4 py-10">
+        {lobbyError ? (
+          <Card className="w-full max-w-lg border-destructive/40">
+            <CardHeader>
+              <CardTitle>Could not load portal</CardTitle>
+              <CardDescription>{lobbyError}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">Refresh the page or try again later.</p>
+            </CardContent>
+          </Card>
+        ) : !lobbyReady || !lobbyToken ? (
+          <p className="text-muted-foreground">Preparing secure connection…</p>
+        ) : isPortalStudent && portalStudentId ? (
+          <StudentPortalDashboard
+            schoolId={schoolId}
+            studentId={portalStudentId}
+            onSignOut={() => void handleSignOut()}
+            signingOut={signingOut}
+          />
+        ) : (
+          <StudentPortalLogin
+            schoolId={schoolId}
+            lobbyIdToken={lobbyToken}
+            onSignedIn={(token, sid) => void handleSignedIn(token, sid)}
+          />
+        )}
+      </div>
+    </SchoolGate>
+  );
 }

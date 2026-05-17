@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Helper } from '@/components/ui/helper';
 import { AdminRecordListHeader } from '@/components/admin/AdminRecordListHeader';
+import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 import { cn } from '@/lib/utils';
 import type { Class, Student, Teacher } from '@/lib/types';
 import { AutoCircularToggles, type ToggleDef } from '@/components/AutoCircularToggles';
@@ -180,7 +181,8 @@ export function AdminStudentsTab({
           </CardTitle>
         </Helper>
         <CardDescription>Manage your enrollments and view student activity.</CardDescription>
-        <div className="flex flex-wrap gap-2 w-full pb-1 sm:pb-0">
+        <div className="flex flex-wrap gap-2 w-full pb-1 sm:pb-0 justify-end sm:justify-end">
+          <TabWalkthroughHeaderAction />
           <Button onClick={handleStudentCsvUpload} variant="outline" className="rounded-xl px-4 border-ring/35 bg-background/70 hover:bg-secondary hover:text-secondary-foreground">
             <UploadCloud className="mr-2 h-4 w-4" /> Import CSV
           </Button>

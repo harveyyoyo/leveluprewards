@@ -13,15 +13,17 @@ interface PrintSheetProps {
   coupons: Coupon[];
   schoolId: string | null;
   couponsPerPage?: CouponPrintPageSize;
+  onReady?: () => void;
 }
 
-export function PrintSheet({ coupons, schoolId, couponsPerPage = 10 }: PrintSheetProps) {
+export function PrintSheet({ coupons, schoolId, couponsPerPage = 10, onReady }: PrintSheetProps) {
   useEffect(() => {
     document.body.classList.add('coupon-printing');
+    onReady?.();
     return () => {
       document.body.classList.remove('coupon-printing');
     };
-  }, []);
+  }, [onReady]);
 
   if (coupons.length === 0) {
     return null;

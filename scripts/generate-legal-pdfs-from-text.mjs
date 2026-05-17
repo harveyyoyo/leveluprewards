@@ -2,6 +2,10 @@ import PDFDocument from 'pdfkit';
 import { createWriteStream, existsSync, mkdirSync } from 'fs';
 import path from 'path';
 
+const SITE_CONTACT_EMAIL = 'contact@leveluprewards.app';
+const SITE_LEGAL_UMBRELLA =
+  'LevelUp Rewards is proudly developed, owned, and operated by LevelUp EdTech Enterprises LLC.';
+
 function ensureDir(filePath) {
   const dir = path.dirname(filePath);
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
@@ -118,7 +122,11 @@ writePdf({
     { type: 'heading', text: 'Contact Us' },
     {
       type: 'paragraph',
-      text: 'If you have questions about these Terms, please contact us at admin@levelupenterprises.education.',
+      text: `If you have questions about these Terms, please contact us at ${SITE_CONTACT_EMAIL}.`,
+    },
+    {
+      type: 'paragraph',
+      text: SITE_LEGAL_UMBRELLA,
     },
   ],
 });
@@ -199,6 +207,15 @@ writePdf({
         'Signature: ____________________________________   Date: ___________',
         'Name: ____________________________________   Title: ________________',
       ],
+    },
+    { type: 'heading', text: 'Contact Us' },
+    {
+      type: 'paragraph',
+      text: `If you have questions about this Agreement or data privacy practices, please contact us at ${SITE_CONTACT_EMAIL}.`,
+    },
+    {
+      type: 'paragraph',
+      text: SITE_LEGAL_UMBRELLA,
     },
   ],
 });

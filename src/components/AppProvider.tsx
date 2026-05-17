@@ -80,7 +80,7 @@ interface AppContextType {
   awardPoints: (studentId: string, points: number, description: string) => Promise<{ success: boolean; message: string; bonusTotal?: number; queued?: boolean }>;
   awardPointsToMultipleStudents: (studentIds: string[], points: number, description: string) => Promise<{ success: boolean; message: string; count: number; queued?: boolean }>;
   deductPointsFromMultipleStudents: (studentIds: string[], points: number, reason: string) => Promise<{ success: boolean; message: string; count: number; }>;
-  redeemPrize: (studentId: string, prize: Prize, quantity: number, pointsOverride?: number) => Promise<{ success: boolean; activityId?: string; redeemedAt?: number; totalCost?: number; message?: string }>;
+  redeemPrize: (studentId: string, prize: Prize, quantity: number, pointsOverride?: number, options?: { markFulfilled?: boolean }) => Promise<{ success: boolean; activityId?: string; redeemedAt?: number; totalCost?: number; message?: string }>;
   addPrize: (prize: Omit<Prize, 'id'>) => Promise<string>;
   updatePrize: (prize: Prize) => Promise<void>;
   deletePrize: (prizeId: string) => Promise<void>;
@@ -589,7 +589,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     return getDb().then((db) => db.deductPointsFromMultipleStudents(firestore, schoolId, studentIds, points, reason));
   }, [firestore, schoolId]);
 
-  const redeemPrize_ = useCallback(async (studentId: string, prize: Prize, quantity: number, pointsOverride?: number) => {
+  const redeemPrize_ = useCallback(async (studentId: string, prize: Prize, quantity: number, pointsOverride?: number, options?: { markFulfilled?: boolean }) => {
     if (!schoolId) return Promise.reject("Not logged into a school.");
     try {
       const fn = httpsCallable(functions, 'redeemPrizeServer');
@@ -598,6 +598,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
         studentId,
         prizeId: prize.id,
         quantity,
+        markFulfilled: options?.markFulfilled === true,
       });
       const data = res.data as any;
       return {
@@ -623,7 +624,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
       if (canUseLocalFallback && isCallableReachabilityFailure) {
         try {
           if (prize.id !== AI_FUN_UNIFIED_PRIZE_ID) {
-            const result = await getDb().then((db) => db.redeemPrize(firestore, schoolId, studentId, prize, quantity, pointsOverride));
+            const result = await getDb().then((db) => db.redeemPrize(firestore, schoolId, studentId, prize, quantity, pointsOverride, options));
             return {
               success: result.success,
               activityId: result.activityId,
@@ -653,7 +654,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
               desc: `Redeemed: ${prize.name || 'Fun'}`,
               amount: -totalCost,
               date: redeemedAt,
-              fulfilled: false,
+              fulfilled: options?.markFulfilled === true,
             });
           });
 

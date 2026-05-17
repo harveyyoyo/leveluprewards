@@ -27,21 +27,18 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import type { BackupInfo } from '@/lib/types';
 import {
-  DEFAULT_PLAN,
-  getSchoolEntitlements,
-  PLAN_FEATURE_KEYS,
-  PLAN_FEATURE_LABELS,
-  PLAN_TIERS,
-  PLANS,
-  type PlanFeatureKey,
-  type PlanTier,
-} from '@/lib/plans';
+  formatActivePillars,
+  PRODUCT_PILLAR_KEYS,
+  PRODUCT_PILLAR_LABELS,
+  type ProductPillarKey,
+} from '@/lib/productPillars';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { Helper } from '@/components/ui/helper';
@@ -63,9 +60,11 @@ import { DeveloperRemoteSupportViewer } from '@/components/DeveloperRemoteSuppor
 interface SchoolInfo {
   id: string;
   name: string;
-  plan?: PlanTier;
-  featureOverrides?: Partial<Record<PlanFeatureKey, boolean>>;
-  featureSettingsDefaults?: Partial<Record<PlanFeatureKey, boolean>>;
+  appSettings?: {
+    payAttendance?: boolean;
+    payLibrary?: boolean;
+    payHomework?: boolean;
+  };
 }
 
 interface SchoolStats {
@@ -202,10 +201,12 @@ export default function DeveloperPage() {
   const [editingSchoolName, setEditingSchoolName] = useState('');
   const [editingSchoolAccessPasscode, setEditingSchoolAccessPasscode] = useState('');
   const [editingAdminPasscode, setEditingAdminPasscode] = useState('');
-  const [planSchool, setPlanSchool] = useState<SchoolInfo | null>(null);
-  const [editingPlan, setEditingPlan] = useState<PlanTier>(DEFAULT_PLAN);
-  const [editingFeatureOverrides, setEditingFeatureOverrides] = useState<Partial<Record<PlanFeatureKey, boolean>>>({});
-  const [editingFeatureSettingsDefaults, setEditingFeatureSettingsDefaults] = useState<Partial<Record<PlanFeatureKey, boolean>>>({});
+  const [pillarSchool, setPillarSchool] = useState<SchoolInfo | null>(null);
+  const [editingPillars, setEditingPillars] = useState<Record<ProductPillarKey, boolean>>({
+    payAttendance: true,
+    payLibrary: true,
+    payHomework: true,
+  });
   const [backupSchool, setBackupSchool] = useState<SchoolInfo | null>(null);
   const [schoolBackups, setSchoolBackups] = useState<BackupInfo[]>([]);
   const [statsSchool, setStatsSchool] = useState<SchoolInfo | null>(null);
@@ -497,65 +498,65 @@ export default function DeveloperPage() {
     handleCloseEditModal();
   }
 
-  const handleOpenPlanModal = (school: SchoolInfo) => {
-    setPlanSchool(school);
-    setEditingPlan(school.plan ?? DEFAULT_PLAN);
-    setEditingFeatureOverrides(school.featureOverrides ?? {});
-    setEditingFeatureSettingsDefaults(school.featureSettingsDefaults ?? {});
+  const handleOpenPillarsModal = async (school: SchoolInfo) => {
+    if (!firestore) return;
+    setPillarSchool(school);
+    try {
+      const snap = await getDoc(doc(firestore, 'schools', school.id));
+      const app = snap.data()?.appSettings as SchoolInfo['appSettings'] | undefined;
+      setEditingPillars({
+        payAttendance: app?.payAttendance !== false,
+        payLibrary: app?.payLibrary !== false,
+        payHomework: app?.payHomework !== false,
+      });
+    } catch {
+      setEditingPillars({
+        payAttendance: school.appSettings?.payAttendance !== false,
+        payLibrary: school.appSettings?.payLibrary !== false,
+        payHomework: school.appSettings?.payHomework !== false,
+      });
+    }
   };
 
-  const handleClosePlanModal = () => {
-    setPlanSchool(null);
-    setEditingPlan(DEFAULT_PLAN);
-    setEditingFeatureOverrides({});
-    setEditingFeatureSettingsDefaults({});
-  };
-
-  const handleToggleFeatureOverride = (key: PlanFeatureKey, checked: boolean) => {
-    setEditingFeatureOverrides((prev) => ({ ...prev, [key]: checked }));
-  };
-
-  const handleToggleFeatureDefault = (key: PlanFeatureKey, checked: boolean) => {
-    setEditingFeatureSettingsDefaults((prev) => ({ ...prev, [key]: checked }));
-  };
-
-  const handleClearFeatureOverride = (key: PlanFeatureKey) => {
-    setEditingFeatureOverrides((prev) => {
-      const next = { ...prev };
-      delete next[key];
-      return next;
+  const handleClosePillarsModal = () => {
+    setPillarSchool(null);
+    setEditingPillars({
+      payAttendance: true,
+      payLibrary: true,
+      payHomework: true,
     });
   };
 
-  const handleSavePlan = async () => {
-    if (!firestore || !planSchool) return;
-    const cleanOverrides = Object.fromEntries(
-      Object.entries(editingFeatureOverrides).filter(([, value]) => typeof value === 'boolean'),
-    ) as Partial<Record<PlanFeatureKey, boolean>>;
-
-    const cleanDefaults = Object.fromEntries(
-      Object.entries(editingFeatureSettingsDefaults).filter(([, value]) => typeof value === 'boolean'),
-    ) as Partial<Record<PlanFeatureKey, boolean>>;
-
+  const handleSavePillars = async () => {
+    if (!firestore || !pillarSchool) return;
     try {
-      const planPayload = {
-        plan: editingPlan,
-        featureOverrides: cleanOverrides,
-        featureSettingsDefaults: cleanDefaults,
+      const snap = await getDoc(doc(firestore, 'schools', pillarSchool.id));
+      const existingApp = (snap.data()?.appSettings ?? {}) as Record<string, unknown>;
+      const nextAppSettings = {
+        ...existingApp,
+        payAttendance: editingPillars.payAttendance,
+        payLibrary: editingPillars.payLibrary,
+        payHomework: editingPillars.payHomework,
+      };
+      const payload = {
+        appSettings: nextAppSettings,
         updatedAt: Date.now(),
       };
-      await setDoc(doc(firestore, 'schools', planSchool.id), planPayload, { merge: true });
+      await setDoc(doc(firestore, 'schools', pillarSchool.id), payload, { merge: true });
       await setDoc(
-        schoolPublicDocRef(firestore, planSchool.id),
-        mainSchoolDocToPublicPayload(planPayload as Record<string, unknown>),
+        schoolPublicDocRef(firestore, pillarSchool.id),
+        mainSchoolDocToPublicPayload(payload as Record<string, unknown>),
         { merge: true },
       );
       playSound('success');
-      toast({ title: `Plan updated for "${planSchool.id}"`, description: `${PLANS[editingPlan].label} plan saved.` });
-      handleClosePlanModal();
+      toast({
+        title: `Product pillars updated for "${pillarSchool.id}"`,
+        description: formatActivePillars(editingPillars),
+      });
+      handleClosePillarsModal();
     } catch (e) {
       playSound('error');
-      toast({ variant: 'destructive', title: 'Plan update failed', description: (e as Error).message });
+      toast({ variant: 'destructive', title: 'Pillar update failed', description: (e as Error).message });
     }
   };
 
@@ -733,8 +734,8 @@ export default function DeveloperPage() {
                     <code className="rounded bg-background px-1 py-0.5 text-xs">addDeveloperMe</code> Cloud Function runs.
                   </p>
                   <p>
-                    Sign out, sign in again with the developer passcode, and ensure{' '}
-                    <code className="rounded bg-background px-1 py-0.5 text-xs">DEV_PASSCODE</code> is set the same on Cloud Functions and on this app.
+                    Sign out, sign in again at <code className="rounded bg-background px-1 py-0.5 text-xs">/developer</code> with your allowed Google account so{' '}
+                    <code className="rounded bg-background px-1 py-0.5 text-xs">addDeveloperMe</code> can run.
                     You can also add your UID manually in the Firebase console under that document.
                   </p>
                   {auth.currentUser?.uid ? (
@@ -750,7 +751,7 @@ export default function DeveloperPage() {
                       <p className="font-bold font-code break-all">{school.id}</p>
                       <p className="text-sm text-muted-foreground">{school.name}</p>
                       <p className="mt-1 inline-flex items-center rounded-md bg-background px-2 py-0.5 text-[11px] font-bold uppercase tracking-widest text-muted-foreground border">
-                        {PLANS[school.plan ?? DEFAULT_PLAN].label} plan
+                        {formatActivePillars(school.appSettings)}
                       </p>
                       <button
                         onClick={(e) => { e.stopPropagation(); handleCopyUrl(school.id); }}
@@ -808,12 +809,12 @@ export default function DeveloperPage() {
                       </AlertDialog>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon" onClick={() => handleOpenPlanModal(school)}>
+                          <Button variant="ghost" size="icon" onClick={() => void handleOpenPillarsModal(school)}>
                             <ShieldCheck className="w-4 h-4 text-violet-500" />
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Manage plan and paid features.</p>
+                          <p>Manage product pillars (attendance, library, homework).</p>
                         </TooltipContent>
                       </Tooltip>
                       <Tooltip>
@@ -1354,81 +1355,43 @@ export default function DeveloperPage() {
           </DialogContent>
         </Dialog>
 
-        <Dialog open={!!planSchool} onOpenChange={(open) => !open && handleClosePlanModal()}>
-            <DialogContent size="xl">
+        <Dialog open={!!pillarSchool} onOpenChange={(open) => !open && handleClosePillarsModal()}>
+            <DialogContent size="md">
             <DialogHeader>
-              <DialogTitle>Plan & Features: <span className="font-code">{planSchool?.id}</span></DialogTitle>
+              <DialogTitle>Product pillars: <span className="font-code">{pillarSchool?.id}</span></DialogTitle>
               <DialogDescription>
-                Set the school's paid tier and optional per-feature overrides.
+                Turn attendance, library, and homework on or off for this school. All other features are controlled in Admin settings.
               </DialogDescription>
             </DialogHeader>
-            {planSchool && (() => {
-              const entitlements = getSchoolEntitlements({ plan: editingPlan, featureOverrides: editingFeatureOverrides });
-              return (
-                <div className="space-y-5 py-4">
-                  <div className="grid gap-2">
-                    <Label>School plan</Label>
-                    <Select value={editingPlan} onValueChange={(value) => setEditingPlan(value as PlanTier)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {PLAN_TIERS.map((tier) => (
-                          <SelectItem key={tier} value={tier}>
-                            {PLANS[tier].label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">{PLANS[editingPlan].description}</p>
-                  </div>
-
-                  <div className="max-h-[420px] overflow-y-auto rounded-lg border">
-                    {PLAN_FEATURE_KEYS.map((key) => {
-                      const hasOverride = typeof editingFeatureOverrides[key] === 'boolean';
-                      const planIncludes = PLANS[editingPlan].features.includes(key);
-                      const effective = entitlements[key];
-                      return (
-                        <div key={key} className="flex items-center justify-between gap-3 border-b p-3 last:border-0">
-                          <div className="min-w-0">
-                            <Label className="text-sm font-bold">{PLAN_FEATURE_LABELS[key]}</Label>
-                            <p className="text-xs text-muted-foreground">
-                              {hasOverride ? 'Custom override' : planIncludes ? 'Included in this tier' : 'Locked by this tier'}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            {hasOverride && (
-                              <Button type="button" variant="ghost" size="sm" onClick={() => handleClearFeatureOverride(key)}>
-                                Use tier
-                              </Button>
-                            )}
-                            <div className="flex flex-col gap-2 min-w-[140px]">
-                              <Label className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground self-end">
-                                <Checkbox
-                                  checked={effective}
-                                  onCheckedChange={(checked) => handleToggleFeatureOverride(key, checked === true)}
-                                />
-                                Allowed
-                              </Label>
-                              <Label className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground self-end">
-                                <Checkbox
-                                  checked={editingFeatureSettingsDefaults[key] ?? false}
-                                  onCheckedChange={(checked) => handleToggleFeatureDefault(key, checked === true)}
-                                />
-                                On by default
-                              </Label>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+            {pillarSchool ? (
+                <div className="space-y-4 py-2">
+                  {PRODUCT_PILLAR_KEYS.map((key) => (
+                    <div
+                      key={key}
+                      className="flex items-center justify-between gap-4 rounded-xl border p-4"
+                    >
+                      <div>
+                        <Label className="text-sm font-bold">{PRODUCT_PILLAR_LABELS[key]}</Label>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {key === 'payAttendance' && 'Class sign-in, attendance rewards, and related admin tabs.'}
+                          {key === 'payLibrary' && 'Library catalog, checkout scans, and library notifications.'}
+                          {key === 'payHomework' && 'Teacher homework rewards (not shown on the student portal).'}
+                        </p>
+                      </div>
+                      <Switch
+                        checked={editingPillars[key]}
+                        onCheckedChange={(checked) =>
+                          setEditingPillars((prev) => ({ ...prev, [key]: checked }))
+                        }
+                        aria-label={PRODUCT_PILLAR_LABELS[key]}
+                      />
+                    </div>
+                  ))}
                 </div>
-              );
-            })()}
+            ) : null}
             <DialogFooter>
-              <Button variant="secondary" onClick={handleClosePlanModal}>Cancel</Button>
-              <Button onClick={handleSavePlan}>Save Plan</Button>
+              <Button variant="secondary" onClick={handleClosePillarsModal}>Cancel</Button>
+              <Button onClick={() => void handleSavePillars()}>Save pillars</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

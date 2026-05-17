@@ -22,7 +22,8 @@ import { Switch } from './ui/switch';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { uploadPrizeImage, validatePrizeImageFile } from '@/lib/prizeImageUpload';
-import { cn } from '@/lib/utils';
+import { cn, CATEGORY_COLOR_PALETTE } from '@/lib/utils';
+import { LEVELUP_BRAND_PRIMARY_HEX } from '@/lib/appBranding';
 import { doc, updateDoc } from 'firebase/firestore';
 import { ImagePlus, Loader2 } from 'lucide-react';
 
@@ -46,6 +47,7 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses, cre
   const [inStock, setInStock] = useState(true);
   const [stockCountStr, setStockCountStr] = useState('');
   const [offerPrintTicketOnRedeem, setOfferPrintTicketOnRedeem] = useState(false);
+  const [cardColor, setCardColor] = useState('');
   const [teacherId, setTeacherId] = useState('');
   const [classId, setClassId] = useState('');
   const [aiFunRewardKind, setAiFunRewardKind] = useState<PrizeAiFunReward>('joke');
@@ -77,6 +79,7 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses, cre
         setInStock(prize.inStock);
         setStockCountStr(prize.stockCount === undefined ? '' : String(prize.stockCount));
         setOfferPrintTicketOnRedeem(prize.offerPrintTicketOnRedeem === true);
+        setCardColor(prize.cardColor || '');
         const tidFromIds = (prize.teacherIds || []).find((id) => typeof id === 'string' && id.length > 0);
         setTeacherId(prize.teacherId || tidFromIds || '');
         setClassId(prize.classId || '');
@@ -88,6 +91,7 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses, cre
         setInStock(true);
         setStockCountStr('');
         setOfferPrintTicketOnRedeem(false);
+        setCardColor('');
         setTeacherId(creatorTeacherId || '');
         setClassId('');
       }
@@ -132,6 +136,7 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses, cre
     const rawStock = stockCountStr.trim();
     const stockCount = rawStock === '' ? undefined : Math.max(0, parseInt(rawStock, 10) || 0);
 
+    const trimmedCardColor = cardColor.trim();
     const coreFields = {
       name,
       points: pointsValue,
@@ -141,6 +146,7 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses, cre
       offerPrintTicketOnRedeem,
       teacherId: teacherId || undefined,
       classId: classId || undefined,
+      cardColor: trimmedCardColor || undefined,
       ...(prize?.aiFunReward && prize.aiFunReward !== 'picker' ? { aiFunReward: aiFunRewardKind } : {}),
     };
 
@@ -339,6 +345,46 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses, cre
                 <p className="text-xs text-muted-foreground">
                   Leave blank for unlimited. When you enter a number, each redemption reduces it until it reaches zero.
                 </p>
+              </div>
+            </div>
+            <div className="space-y-2 rounded-lg border p-3 shadow-sm">
+              <Label htmlFor="prize-card-color">Shelf card color (optional)</Label>
+              <p className="text-xs text-muted-foreground">
+                Accent for printed shelf cards (enable color printing in school settings).
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {CATEGORY_COLOR_PALETTE.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    title={c}
+                    className={cn(
+                      'h-7 w-7 rounded-md border-2 transition-transform hover:scale-110',
+                      cardColor === c ? 'border-foreground ring-2 ring-primary/40' : 'border-transparent',
+                    )}
+                    style={{ backgroundColor: c }}
+                    onClick={() => setCardColor(c)}
+                    aria-label={`Card color ${c}`}
+                  />
+                ))}
+                <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => setCardColor('')}>
+                  Default
+                </Button>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  id="prize-card-color"
+                  type="color"
+                  value={cardColor && /^#[0-9A-Fa-f]{6}$/.test(cardColor) ? cardColor : LEVELUP_BRAND_PRIMARY_HEX}
+                  onChange={(e) => setCardColor(e.target.value)}
+                  className="h-9 w-9 cursor-pointer rounded border border-input"
+                />
+                <Input
+                  value={cardColor}
+                  onChange={(e) => setCardColor(e.target.value)}
+                  placeholder="e.g. #3b82f6"
+                  className="font-mono text-sm"
+                />
               </div>
             </div>
             <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">

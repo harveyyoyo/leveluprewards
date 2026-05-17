@@ -9,17 +9,8 @@ import { useDoc, useFirebase, useMemoFirebase } from '@/firebase';
 import { doc, setDoc, type DocumentData } from 'firebase/firestore';
 import { removeUndefinedDeep } from '@/lib/db/helpers';
 import { schoolPublicDocRef } from '@/lib/schoolPublic';
-import {
-    DEFAULT_PLAN,
-    getSchoolEntitlements,
-    isPlanFeatureKey,
-    normalizePlan,
-    PLAN_FEATURE_KEYS,
-    PLANS,
-    type PlanEntitlements,
-    type PlanTier,
-    type SchoolPlanConfig,
-} from '@/lib/plans';
+import { DEFAULT_PLAN, normalizePlan, PLANS, type PlanTier, type SchoolPlanConfig } from '@/lib/plans';
+import { isProductPillarKey, isSettingsKeyAllowed } from '@/lib/productPillars';
 import type { StudentTheme } from '@/lib/types';
 import type { IdCardPrinterFamilyId, IdCardPrintProfile } from '@/lib/idCardPrintCatalog';
 import { defaultPaperForFamily } from '@/lib/idCardPrintCatalog';
@@ -71,7 +62,7 @@ interface Settings {
     // Analytics
     enableTeacherCharts: boolean;
     enableAdminAnalytics: boolean;
-    /** Weekly raffle wheel (Teacher portal): convert points into raffle entries. */
+    /** Raffle (Teacher portal): convert points into raffle entries. */
     enableWeeklyRaffle: boolean;
     // Social & Communication
     enableNotifications: boolean;
@@ -133,6 +124,8 @@ interface Settings {
     idCardPrinterFamily?: IdCardPrinterFamilyId;
     /** Paper/stock id paired with `idCardPrinterFamily`. */
     idCardPaperId?: string;
+    /** Student ID card corners: rounded (ID-1 look) or rectangular (easier to cut on plain paper). */
+    idCardCornerStyle?: 'rounded' | 'rectangular';
     /** Optional staff reminder for prize redeem slips and printed coupon sheets. */
     printerReminderPrizeVouchers?: string;
     /** Browser print page size for prize redeem vouchers (thermal receipt vs small label). */
@@ -142,20 +135,31 @@ interface Settings {
     enablePointApproval: boolean;
     enableAuditLog: boolean;
     enablePdfExport: boolean;
-    /** Weekly raffle: points per ticket (e.g. 25). Use 0 for a general raffle (one pool entry per student in scope; no point threshold). */
+    /** Raffle: points per ticket (e.g. 25). Use 0 for a general raffle (one pool entry per student in scope; no point threshold). */
     rafflePointsPerTicket: number;
-    /** Weekly raffle: when on, pulling the wheel deducts ticket points from all eligible students after the spin. */
+    /** Raffle: when on, pulling deducts ticket points from all eligible students after the draw. */
     raffleDeductPoints: boolean;
     /** When on, each qualifying student has exactly one entry in the pool; when off, entries scale with points (floor). */
     raffleOneEntryPerStudent: boolean;
-    /** Weekly raffle UI: three-reel jackpot vs weighted spinning wheel. */
-    raffleDisplayMode: 'jackpot' | 'wheel';
+    /** Raffle UI: jackpot reels, weighted wheel, or loto bingo cage. */
+    raffleDisplayMode: 'jackpot' | 'wheel' | 'loto';
     // Student & Access
     enableStudentProfiles: boolean;
     enableQrLogin: boolean;
     enableParentView: boolean;
     enableMultiAdmin: boolean;
     enableStudentPortal: boolean;
+    /** When true, every student must have a portal passcode set before they can sign in at home. */
+    studentPortalRequirePasscode?: boolean;
+    /** Failed passcode attempts before portal lockout (admin unlock required). */
+    studentPortalMaxFailedAttempts?: number;
+    /**
+     * When true, the first student to sign in on a browser owns that browser until an admin resets it
+     * (sign out does not free the browser). When false (default), sign out lets a sibling sign in on the same device.
+     */
+    studentPortalLockBrowserToStudent?: boolean;
+    /** When true, student home shows the normal app header (school name, home). Default: hidden like the kiosk. */
+    studentPortalShowHeader?: boolean;
     enableClassSignIn: boolean;
     enableFaceLogin: boolean;
     /** Welcome styles picker on the kiosk (`/student/welcome`). Gated by `STUDENT_WELCOME_STYLES_LIVE` until shipped. */
@@ -314,7 +318,7 @@ interface SettingsContextType {
     updateSettings: (updates: Partial<Settings>) => void;
     planTier: PlanTier;
     planLabel: string;
-    featureEntitlements: PlanEntitlements;
+    /** @deprecated Use pillar flags (`payAttendance`, `payLibrary`, `payHomework`) instead. Always true for non-pillar keys. */
     isFeatureAllowed: (key: string) => boolean;
     /** True once settings have been loaded from storage. */
     isLoaded: boolean;
@@ -418,6 +422,7 @@ const defaultSettings: Settings = {
     lastIdCardPrintProfileId: undefined,
     idCardPrinterFamily: 'browser_sheet',
     idCardPaperId: defaultPaperForFamily('browser_sheet'),
+    idCardCornerStyle: 'rounded',
     printerReminderPrizeVouchers: '',
     prizeVoucherPaperFormat: 'label_50x70',
     enableBulkPoints: false,
@@ -433,6 +438,10 @@ const defaultSettings: Settings = {
     enableParentView: false,
     enableMultiAdmin: false,
     enableStudentPortal: false,
+    studentPortalRequirePasscode: true,
+    studentPortalMaxFailedAttempts: 5,
+    studentPortalLockBrowserToStudent: false,
+    studentPortalShowHeader: false,
     enableClassSignIn: false,
     enableFaceLogin: false,
     enableStudentWelcome: false,
@@ -647,10 +656,6 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         () => (schoolId ? normalizePlan(schoolData?.plan) : 'enterprise'),
         [schoolId, schoolData],
     );
-    const featureEntitlements = useMemo(
-        () => getSchoolEntitlements(schoolId ? schoolData : { plan: 'enterprise' }),
-        [schoolId, schoolData],
-    );
     const planLabel = PLANS[planTier]?.label ?? PLANS[DEFAULT_PLAN].label;
     const isPublicLoginRoute =
         pathname === '/' ||
@@ -658,26 +663,14 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         pathname === '/login' ||
         (typeof pathname === 'string' && pathname.startsWith('/s/'));
 
-    const isAllowed = useCallback((key: string) => {
-        if (settings.expertMode) return true;
-        if (key === 'enableClassSignIn') {
-            return featureEntitlements.enableClassSignIn || featureEntitlements.enableAttendance;
-        }
-        if (!isPlanFeatureKey(key)) return true;
-        return featureEntitlements[key];
-    }, [featureEntitlements, settings.expertMode]);
+    const isAllowed = useCallback(
+        (key: string) =>
+            isSettingsKeyAllowed(settings, key, { expertMode: settings.expertMode }),
+        [settings],
+    );
 
     const applyEntitlements = useCallback((input: Settings): Settings => {
         const next = { ...input };
-        for (const key of PLAN_FEATURE_KEYS) {
-            if (!isAllowed(key)) {
-                (next as Record<string, unknown>)[key] = false;
-            }
-        }
-        if (!isAllowed('enableClassSignIn')) {
-            next.enableClassSignIn = false;
-            next.enableAttendance = false;
-        }
         if (!(next.payAttendance ?? true)) {
             next.enableClassSignIn = false;
             next.enableAttendance = false;
@@ -686,7 +679,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             next.enableHomework = false;
         }
         return next;
-    }, [isAllowed]);
+    }, []);
 
     const latestForFirestoreRef = useRef<Settings | null>(null);
     const lastScheduledFlushSchoolIdRef = useRef<string | null>(null);
@@ -784,7 +777,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                 } else {
                     parsed.studentWelcomeBackDurationSec = Math.min(60, Math.max(1, Math.round(parsed.studentWelcomeBackDurationSec)));
                 }
-                if (parsed.raffleDisplayMode !== 'jackpot' && parsed.raffleDisplayMode !== 'wheel') {
+                if (
+                    parsed.raffleDisplayMode !== 'jackpot' &&
+                    parsed.raffleDisplayMode !== 'wheel' &&
+                    parsed.raffleDisplayMode !== 'loto'
+                ) {
                     delete (parsed as Partial<Settings>).raffleDisplayMode;
                 }
                 if (parsed.privacyStudentNameDisplayMode !== 'full' && parsed.privacyStudentNameDisplayMode !== 'preferred_only') {
@@ -920,7 +917,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                 allowedUpdates.enableClassSignIn = allowedUpdates.enableAttendance;
             }
             for (const key of Object.keys(allowedUpdates)) {
-                if (!isAllowed(key)) {
+                if (!isProductPillarKey(key) && !isAllowed(key)) {
                     delete (allowedUpdates as Record<string, unknown>)[key];
                 }
             }
@@ -1125,7 +1122,6 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             updateSettings, 
             planTier, 
             planLabel, 
-            featureEntitlements, 
             isFeatureAllowed: loginState === 'teacher' ? isTeacherAllowed : isAllowed, 
             isLoaded 
         }}>

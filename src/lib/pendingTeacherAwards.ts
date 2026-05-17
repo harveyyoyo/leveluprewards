@@ -11,6 +11,9 @@ export type PendingTeacherAward = {
 
 const KEY = 'arcade:pendingTeacherAwards:v1';
 
+/** Auto-expire pending items older than 48 hours. */
+const STALE_THRESHOLD_MS = 48 * 60 * 60 * 1000;
+
 function loadAll(): PendingTeacherAward[] {
   if (typeof localStorage === 'undefined') return [];
   try {
@@ -27,10 +30,26 @@ function saveAll(items: PendingTeacherAward[]) {
   localStorage.setItem(KEY, JSON.stringify(items.slice(0, 200)));
 }
 
+/**
+ * Prune entries that are still `pending` but older than STALE_THRESHOLD_MS.
+ * Called lazily on every read so stale items don't accumulate indefinitely.
+ */
+function pruneStale(items: PendingTeacherAward[]): PendingTeacherAward[] {
+  const cutoff = Date.now() - STALE_THRESHOLD_MS;
+  const before = items.length;
+  const filtered = items.filter(
+    (x) => x.status !== 'pending' || x.createdAt > cutoff,
+  );
+  if (filtered.length < before) {
+    saveAll(filtered);
+  }
+  return filtered;
+}
+
 export function addPendingTeacherAward(input: Omit<PendingTeacherAward, 'id' | 'status'>) {
-  const items = loadAll();
+  const items = pruneStale(loadAll());
   const next: PendingTeacherAward = {
-    id: `${Date.now()}_${Math.random().toString(16).slice(2)}`,
+    id: `${Date.now()}_${crypto.randomUUID?.() ?? Math.random().toString(16).slice(2)}`,
     status: 'pending',
     ...input,
   };
@@ -43,7 +62,7 @@ export function addPendingTeacherAward(input: Omit<PendingTeacherAward, 'id' | '
 }
 
 export function listPendingTeacherAwards(schoolId: string) {
-  return loadAll().filter((x) => x.schoolId === schoolId && x.status === 'pending');
+  return pruneStale(loadAll()).filter((x) => x.schoolId === schoolId && x.status === 'pending');
 }
 
 export function countPendingTeacherAwards(schoolId: string): number {
@@ -53,7 +72,7 @@ export function countPendingTeacherAwards(schoolId: string): number {
 export function updatePendingTeacherAwards(
   updates: Array<Pick<PendingTeacherAward, 'id' | 'status' | 'message'>>,
 ) {
-  const items = loadAll();
+  const items = pruneStale(loadAll());
   const byId = new Map(updates.map((u) => [u.id, u]));
   const next = items.map((x) => {
     const u = byId.get(x.id);

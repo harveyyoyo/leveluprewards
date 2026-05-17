@@ -28,6 +28,8 @@ export async function resolveSchoolGateScopes(uid: string, schoolId: string): Pr
     reportsSnap,
     kioskSnap,
     portalSnap,
+    studentPortalLobbySnap,
+    studentPortalSessionSnap,
   ] = await Promise.all([
     schoolRef.collection('roles_admin').doc(uid).get(),
     schoolRef.collection('roles_teacher').doc(uid).get(),
@@ -36,6 +38,8 @@ export async function resolveSchoolGateScopes(uid: string, schoolId: string): Pr
     schoolRef.collection('roles_reports').doc(uid).get(),
     schoolRef.collection('kioskMembers').doc(uid).get(),
     schoolRef.collection('anonymousPortalSessions').doc(uid).get(),
+    schoolRef.collection('studentPortalMembers').doc(uid).get(),
+    schoolRef.collection('studentPortalSessions').doc(uid).get(),
   ]);
 
   if (adminSnap.exists && adminSnap.data()?.role === 'admin') scopes.add('admin');
@@ -45,6 +49,9 @@ export async function resolveSchoolGateScopes(uid: string, schoolId: string): Pr
   if (reportsSnap.exists && reportsSnap.data()?.role === 'reports') scopes.add('reports');
   if (kioskSnap.exists) scopes.add('kiosk');
   if (portalSnap.exists) scopes.add('portal');
+  if (studentPortalLobbySnap.exists || studentPortalSessionSnap.exists) {
+    scopes.add('studentPortal');
+  }
 
   return [...scopes];
 }

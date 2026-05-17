@@ -30,29 +30,15 @@ function libraryGloballyOff(settings: Settings): boolean {
  */
 export function buildNotificationDiagnostics(args: {
   settings: Settings;
-  notificationsPlanOk: boolean;
-  planLabel: string;
 }): { lines: DiagnosticLine[]; activeRows: ActiveNotificationRow[]; headlineStatus: 'blocked' | 'limited' | 'active' } {
-  const { settings, notificationsPlanOk, planLabel } = args;
+  const { settings } = args;
 
   const lines: DiagnosticLine[] = [];
-
-  if (!notificationsPlanOk) {
-    lines.push({
-      level: 'fail',
-      text: `Plan (${planLabel}): the Notifications feature is not included. Cloud Functions skip all parent/student/staff mail for this school until the plan is upgraded or a developer grants the feature.`,
-    });
-  } else {
-    lines.push({
-      level: 'pass',
-      text: `Plan (${planLabel}): Notifications feature is allowed for this school.`,
-    });
-  }
 
   if (!settings.enableNotifications) {
     lines.push({
       level: 'fail',
-      text: 'Master switch appSettings.enableNotifications is off (or was forced off by plan). No alert documents are written to mail/sms/whatsapp.',
+      text: 'Master switch appSettings.enableNotifications is off. No alert documents are written to mail/sms/whatsapp.',
     });
   } else {
     lines.push({
@@ -66,7 +52,7 @@ export function buildNotificationDiagnostics(args: {
       level: 'warn',
       text: 'Reward redemptions and ordinary point awards (non-milestone activity) will NOT enqueue mail — "Reward Redemptions" is off.',
     });
-  } else if (settings.enableNotifications && notificationsPlanOk) {
+  } else if (settings.enableNotifications) {
     lines.push({
       level: 'pass',
       text: 'Reward redemptions and point-award activities will enqueue parent alerts (when parent email/phone exists on the student).',
@@ -78,7 +64,7 @@ export function buildNotificationDiagnostics(args: {
       level: 'warn',
       text: 'Milestones & badges: toggle is off — only descriptions starting with "Achievement earned:" or "Badge earned:" are treated as milestones; those will not notify.',
     });
-  } else if (settings.enableNotifications && notificationsPlanOk) {
+  } else if (settings.enableNotifications) {
     lines.push({
       level: 'pass',
       text: 'Milestone/badge activities (description prefix "Achievement earned:" or "Badge earned:") will enqueue parent alerts.',
@@ -102,7 +88,7 @@ export function buildNotificationDiagnostics(args: {
       level: 'warn',
       text: 'Attendance sign-ins will NOT notify — "Attendance Sign-ins" is off (separate Cloud Function on attendanceLog).',
     });
-  } else if (settings.enableNotifications && notificationsPlanOk) {
+  } else if (settings.enableNotifications && settings.payAttendance !== false) {
     lines.push({
       level: 'pass',
       text: 'Attendance sign-ins will enqueue parent alerts when a kiosk/CF writes attendanceLog (students are notified only if "Students" is on; staff are not emailed for attendance in current code).',
@@ -119,7 +105,7 @@ export function buildNotificationDiagnostics(args: {
       level: 'warn',
       text: 'Library activity will NOT notify — "Library activity" is off (checkout/return logs are treated separately from rewards).',
     });
-  } else if (settings.enableNotifications && notificationsPlanOk) {
+  } else if (settings.enableNotifications) {
     lines.push({
       level: 'pass',
       text: 'Library checkout/return activity will enqueue parent alerts when a student activity desc starts with "Checked out library item:" or "Returned library item:".',
@@ -161,19 +147,14 @@ export function buildNotificationDiagnostics(args: {
   });
 
   const redemptionOpen =
-    notificationsPlanOk && settings.enableNotifications && settings.notificationRewardsEnabled;
+    settings.enableNotifications && settings.notificationRewardsEnabled;
   const pointsNonMilestoneOpen = redemptionOpen;
-  const milestoneOpen =
-    notificationsPlanOk && settings.enableNotifications && !milestonesGloballyOff(settings);
+  const milestoneOpen = settings.enableNotifications && !milestonesGloballyOff(settings);
   const attendanceOpen =
-    notificationsPlanOk &&
     settings.enableNotifications &&
     settings.notificationAttendanceEnabled &&
     settings.payAttendance !== false;
-  const libraryOpen =
-    notificationsPlanOk &&
-    settings.enableNotifications &&
-    !libraryGloballyOff(settings);
+  const libraryOpen = settings.enableNotifications && !libraryGloballyOff(settings);
 
   const activeRows: ActiveNotificationRow[] = [
     {
@@ -184,8 +165,8 @@ export function buildNotificationDiagnostics(args: {
       studentQueue: redemptionOpen && settings.notificationStudentsEnabled,
       staffQueue: redemptionOpen && settings.notificationStaffAlertsEnabled,
       gateNote: redemptionOpen
-        ? 'Uses Reward Redemptions toggle + master switch + plan.'
-        : 'Blocked by plan, master switch, or Reward Redemptions toggle.',
+        ? 'Uses Reward Redemptions toggle + master switch.'
+        : 'Blocked by master switch or Reward Redemptions toggle.',
     },
     {
       id: 'points',
@@ -196,7 +177,7 @@ export function buildNotificationDiagnostics(args: {
       staffQueue: pointsNonMilestoneOpen && settings.notificationStaffAlertsEnabled,
       gateNote: pointsNonMilestoneOpen
         ? 'Same gate as redemptions (Reward Redemptions toggle).'
-        : 'Blocked by plan, master switch, or Reward Redemptions toggle.',
+        : 'Blocked by master switch or Reward Redemptions toggle.',
     },
     {
       id: 'milestone',
@@ -206,8 +187,8 @@ export function buildNotificationDiagnostics(args: {
       studentQueue: milestoneOpen && settings.notificationStudentsEnabled,
       staffQueue: milestoneOpen && settings.notificationStaffAlertsEnabled,
       gateNote: milestoneOpen
-        ? 'Uses Milestones toggle + master switch + plan.'
-        : 'Milestones toggle is off, or plan/master switch blocks.',
+        ? 'Uses Milestones toggle + master switch.'
+        : 'Milestones toggle is off, or master switch blocks.',
     },
     {
       id: 'attendance',
@@ -218,7 +199,7 @@ export function buildNotificationDiagnostics(args: {
       staffQueue: false,
       gateNote: attendanceOpen
         ? 'Uses Attendance Sign-ins toggle + Attendance product pillar. Staff path not implemented for attendance.'
-        : 'Blocked by plan, master switch, Attendance product pillar, or Attendance Sign-ins toggle.',
+        : 'Blocked by master switch, Attendance product pillar, or Attendance Sign-ins toggle.',
     },
     {
       id: 'library',
@@ -228,13 +209,13 @@ export function buildNotificationDiagnostics(args: {
       studentQueue: libraryOpen && settings.notificationStudentsEnabled,
       staffQueue: libraryOpen && settings.notificationStaffAlertsEnabled,
       gateNote: libraryOpen
-        ? 'Uses Library activity toggle + master switch + plan (+ Library pillar).'
-        : 'Blocked by plan, master switch, Library pillar, or Library activity toggle.',
+        ? 'Uses Library activity toggle + master switch + Library pillar.'
+        : 'Blocked by master switch, Library pillar, or Library activity toggle.',
     },
   ];
 
   let headlineStatus: 'blocked' | 'limited' | 'active' = 'active';
-  if (!notificationsPlanOk || !settings.enableNotifications) {
+  if (!settings.enableNotifications) {
     headlineStatus = 'blocked';
   } else if (
     !settings.notificationRewardsEnabled &&

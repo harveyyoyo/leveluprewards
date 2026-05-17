@@ -38,12 +38,14 @@ export function PrizeRedeemTicketPrintSheet({
   displayMode = 'overlay' as 'overlay' | 'page',
   /** School setting: label stock (e.g. M110S) vs 80mm thermal receipt (e.g. VCP-8370). */
   paperFormat = 'label_50x70' as PrizeVoucherPaperFormat,
+  onReady,
 }: {
   tickets: PrizeRedeemTicket[];
   logoUrl?: string | null;
   schoolName?: string | null;
   displayMode?: 'overlay' | 'page';
   paperFormat?: PrizeVoucherPaperFormat;
+  onReady?: () => void;
 }) {
   const [logoError, setLogoError] = useState(false);
   /** Avoid SSR/client DOM mismatch: first paint matches server (no portal), then portal thermal overlay to body. */
@@ -80,6 +82,14 @@ export function PrizeRedeemTicketPrintSheet({
       style.remove();
     };
   }, [paperFormat]);
+
+  useEffect(() => {
+    if (!tickets || tickets.length === 0) return;
+    if (displayMode === 'overlay' && paperFormat === 'thermal_80mm' && !portalReady) return;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => onReady?.());
+    });
+  }, [displayMode, onReady, paperFormat, portalReady, tickets]);
 
   if (!tickets || tickets.length === 0) return null;
 

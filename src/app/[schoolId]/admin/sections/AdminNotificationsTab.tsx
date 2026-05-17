@@ -8,14 +8,15 @@ import {
   BookOpenCheck,
   Check,
   CheckCircle2,
+  ChevronDown,
   ClipboardList,
-  Image as ImageIcon,
   ListTree,
   Mail,
   MessageSquare,
+  Plus,
   RefreshCw,
-  ShoppingBag,
   Shield,
+  ShoppingBag,
   Sparkles,
   User,
   Users,
@@ -26,6 +27,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -46,8 +48,15 @@ import {
 } from './notificationDiagnostics';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import type { Student } from '@/lib/types';
-import { doc, getDoc } from 'firebase/firestore';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import {
+  NotificationSetupWizard,
+  type NotificationWizardDraft,
+} from './NotificationSetupWizard';
+import {
+  buildActiveNotificationRules,
+  disableNotificationRule,
+} from './notificationActiveRules';
 
 type MailQueueRow = {
   id: string;
@@ -122,10 +131,9 @@ function statusBadge(headlineStatus: 'blocked' | 'limited' | 'active') {
 }
 
 export function AdminNotificationsTab() {
-  const { settings, updateSettings, isFeatureAllowed, planLabel } = useSettings();
+  const { settings, updateSettings } = useSettings();
   const { schoolId, loginState } = useAuth();
   const { functions, firestore } = useFirebase();
-  const notificationsPlanOk = isFeatureAllowed('enableNotifications');
   const attendancePillarOn = settings.payAttendance ?? true;
   const libraryPillarOn = settings.payLibrary ?? true;
 
@@ -148,14 +156,16 @@ export function AdminNotificationsTab() {
   const [testSending, setTestSending] = useState(false);
   const [testError, setTestError] = useState<string | null>(null);
 
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizardInitialDraft, setWizardInitialDraft] = useState<NotificationWizardDraft | null>(null);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+
   const { lines: diagnosticLines, activeRows, headlineStatus } = useMemo(
     () =>
       buildNotificationDiagnostics({
         settings,
-        notificationsPlanOk,
-        planLabel,
       }),
-    [settings, notificationsPlanOk, planLabel],
+    [settings],
   );
 
   const loadMailQueue = useCallback(async () => {
@@ -252,6 +262,13 @@ export function AdminNotificationsTab() {
     return [...mailRows].sort((a, b) => (a.id < b.id ? 1 : a.id > b.id ? -1 : 0));
   }, [mailRows]);
 
+  const activeRules = useMemo(() => buildActiveNotificationRules(settings), [settings]);
+
+  const openCreateWizard = () => {
+    setWizardInitialDraft(null);
+    setWizardOpen(true);
+  };
+
   return (
     <div className="space-y-6">
       <Card className="border-t-4 border-blue-500 shadow-md">
@@ -259,66 +276,113 @@ export function AdminNotificationsTab() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-1">
               <CardTitle className="flex items-center gap-2">
-                <Bell className="w-5 h-5 text-blue-500" /> Notification System
+                <Bell className="w-5 h-5 text-blue-500" /> Notifications
               </CardTitle>
               <CardDescription>
-                Configure automated alerts for parents, teachers, and administrators. Status below reflects saved
-                school settings and your subscription plan — not Firebase extension health.
+                Add alerts one step at a time — who to notify, when it fires, and how it&apos;s delivered.
               </CardDescription>
             </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              {statusBadge(headlineStatus)}
-              <span className="text-[11px] text-muted-foreground max-w-[220px] leading-snug">
-                {headlineStatus === 'blocked' && 'Functions will not enqueue outbound messages.'}
-                {headlineStatus === 'limited' &&
-                  'Master switch is on but every event trigger is off — nothing will fire.'}
-                {headlineStatus === 'active' &&
-                  'At least one event path can enqueue mail/SMS when activities occur.'}
-              </span>
+            <div className="flex flex-col items-stretch sm:items-end gap-2 shrink-0">
+              <TabWalkthroughHeaderAction />
+              <Button
+                type="button"
+                size="lg"
+                className="gap-2 shadow-md"
+                disabled={!settings.enableNotifications}
+                onClick={openCreateWizard}
+              >
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                Create a notification
+              </Button>
+              <div className="flex items-center gap-2 flex-wrap justify-end">
+                {statusBadge(headlineStatus)}
+                <span className="text-[11px] text-muted-foreground max-w-[220px] leading-snug text-right">
+                  {headlineStatus === 'blocked' && 'Turn on notifications in Admin settings.'}
+                  {headlineStatus === 'limited' && 'Create your first notification below.'}
+                  {headlineStatus === 'active' && 'At least one alert is configured.'}
+                </span>
+              </div>
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="flex items-start gap-4 p-4 rounded-xl border bg-card/50">
-              <div className="mt-1 bg-blue-100 dark:bg-blue-900/30 p-2 rounded-lg text-blue-600 dark:text-blue-400">
-                <Mail className="w-5 h-5" />
-              </div>
-              <div className="space-y-1">
-                <p className="font-bold text-sm">Email Alerts</p>
-                <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  Send activity summaries and milestone alerts to parent, student, and staff email addresses.
-                </p>
-              </div>
-            </div>
+      </Card>
 
-            <div className="flex items-start gap-4 p-4 rounded-xl border bg-card/50">
-              <div className="mt-1 bg-green-100 dark:bg-green-900/30 p-2 rounded-lg text-green-600 dark:text-green-400">
-                <MessageSquare className="w-5 h-5" />
-              </div>
-              <div className="space-y-1">
-                <p className="font-bold text-sm">SMS / Texting</p>
-                <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  Deliver instant text notifications for high-priority events like reward redemptions.
-                </p>
-              </div>
+      <Card className="shadow-md">
+        <CardHeader>
+          <CardTitle className="text-base">Your notifications</CardTitle>
+          <CardDescription>
+            {activeRules.length
+              ? 'These alerts are on for your school. Turn one off or create another anytime.'
+              : 'No alerts yet. Click Create a notification to set up your first one.'}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {activeRules.length ? (
+            <ul className="space-y-3">
+              {activeRules.map((rule) => (
+                <li
+                  key={rule.id}
+                  className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-xl border p-4 bg-muted/20"
+                >
+                  <div className="space-y-1 min-w-0">
+                    <p className="font-semibold text-sm">{rule.label}</p>
+                    <p className="text-xs text-muted-foreground">
+                      <span className="font-medium text-foreground">Who:</span> {rule.whoSummary}
+                      <span className="mx-1.5">·</span>
+                      <span className="font-medium text-foreground">How:</span> {rule.howSummary}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setWizardInitialDraft(rule.draft);
+                        setWizardOpen(true);
+                      }}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="text-muted-foreground"
+                      onClick={() => disableNotificationRule(rule.trigger, updateSettings)}
+                    >
+                      Turn off
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="rounded-xl border border-dashed p-8 text-center space-y-3">
+              <Bell className="h-10 w-10 text-muted-foreground/50 mx-auto" aria-hidden="true" />
+              <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+                Start with one simple alert — for example, email parents when a student redeems a prize.
+              </p>
+              <Button type="button" className="gap-2" disabled={!settings.enableNotifications} onClick={openCreateWizard}>
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                Create a notification
+              </Button>
             </div>
-
-            <div className="flex items-start gap-4 p-4 rounded-xl border bg-card/50">
-              <div className="mt-1 bg-purple-100 dark:bg-purple-900/30 p-2 rounded-lg text-purple-600 dark:text-purple-400">
-                <Users className="w-5 h-5" />
-              </div>
-              <div className="space-y-1">
-                <p className="font-bold text-sm">Multi-Channel</p>
-                <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  The system automatically routes alerts based on available contact info (Email first, then SMS).
-                </p>
-              </div>
-            </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 
+      <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
+        <CollapsibleTrigger asChild>
+          <Button type="button" variant="outline" className="w-full justify-between gap-2 h-11">
+            <span className="font-semibold">Advanced tools & manual controls</span>
+            <ChevronDown
+              className={`h-4 w-4 shrink-0 transition-transform ${advancedOpen ? 'rotate-180' : ''}`}
+              aria-hidden="true"
+            />
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-6 pt-6">
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <Card className="shadow-md">
           <CardHeader>
@@ -874,6 +938,18 @@ export function AdminNotificationsTab() {
           </div>
         </CardContent>
       </Card>
+        </CollapsibleContent>
+      </Collapsible>
+
+      <NotificationSetupWizard
+        open={wizardOpen}
+        onOpenChange={setWizardOpen}
+        initialDraft={wizardInitialDraft}
+        attendancePillarOn={attendancePillarOn}
+        libraryPillarOn={libraryPillarOn}
+        notificationsEnabled={settings.enableNotifications === true}
+        updateSettings={updateSettings}
+      />
     </div>
   );
 }

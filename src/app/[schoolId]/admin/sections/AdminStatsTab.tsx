@@ -3,6 +3,7 @@
 import { Activity, LayoutDashboard } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Helper } from '@/components/ui/helper';
+import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 import type { Class, Coupon, Student, Teacher } from '@/lib/types';
 
 export function AdminStatsTab({
@@ -23,11 +24,14 @@ export function AdminStatsTab({
   return (
     <>
       <Card className="border-t-4 border-primary shadow-md">
-        <CardHeader className="py-6">
-          <CardTitle className="text-2xl flex items-center gap-2">
-            <Activity className="text-destructive w-6 h-6" /> School Analytics
-          </CardTitle>
-          <CardDescription>Overview of points and engagement across the school.</CardDescription>
+        <CardHeader className="py-6 flex flex-row items-start justify-between gap-4">
+          <div>
+            <CardTitle className="text-2xl flex items-center gap-2">
+              <Activity className="text-destructive w-6 h-6" /> School Analytics
+            </CardTitle>
+            <CardDescription>Overview of points and engagement across the school.</CardDescription>
+          </div>
+          <TabWalkthroughHeaderAction />
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

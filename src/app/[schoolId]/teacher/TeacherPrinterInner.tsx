@@ -59,6 +59,10 @@ import {
 } from '@/lib/teacherBudget';
 import { Helper } from '@/components/ui/helper';
 import { AttendanceSetupWizard } from '@/components/attendance/AttendanceSetupWizard';
+import {
+  TabWalkthroughHeaderAction,
+  TabWalkthroughProvider,
+} from '@/components/tabWalkthrough/TabWalkthroughContext';
 import { getReadableErrorMessage } from '@/lib/errorMessage';
 import { AdminPrizesTab } from '@/app/[schoolId]/admin/sections/AdminPrizesTab';
 import { PrizeModal } from '@/components/PrizeModal';
@@ -204,6 +208,7 @@ function TeacherHomeworkTab({ schoolId, teacherId, students, classes }: { school
                     </h3>
                     <p className="text-sm text-muted-foreground font-medium">Give quick points for completed homework without adding anything to the student portal.</p>
                 </div>
+                <TabWalkthroughHeaderAction />
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                     <div className="relative group">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
@@ -452,10 +457,16 @@ function TeacherClassesTab({
                             </div>
                             Classes
                         </CardTitle>
-                        <Button variant="outline" className="rounded-xl gap-2 h-10 px-4" onClick={() => setIsCreateClassDialogOpen(true)}>
-                            <Plus className="w-4 h-4" />
-                            <span className="hidden sm:inline">New Class</span>
-                        </Button>
+                        <div className="flex items-center gap-2">
+                            <TabWalkthroughHeaderAction />
+                        <div className="flex items-center gap-2">
+                            <TabWalkthroughHeaderAction />
+                            <Button variant="outline" className="rounded-xl gap-2 h-10 px-4" onClick={() => setIsCreateClassDialogOpen(true)}>
+                                <Plus className="w-4 h-4" />
+                                <span className="hidden sm:inline">New Class</span>
+                            </Button>
+                        </div>
+                    </div>
                     </div>
                     <CardDescription className={isGraphic ? 'text-muted-foreground/80' : ''}>
                         Manage the classes you teach. Students in your classes are automatically added to your attendance and prize lists.
@@ -644,13 +655,14 @@ function TeacherRosterTab({
                 "w-full max-w-7xl border-t-8 transition-all duration-500 hover:shadow-2xl",
                 isGraphic ? 'bg-card/60 backdrop-blur-2xl border-chart-4 shadow-[0_20px_50px_rgba(0,0,0,0.1)]' : 'bg-white border-chart-4 shadow-lg'
             )}>
-                <CardHeader className="p-4 md:p-6">
+                <CardHeader className="p-4 md:p-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <CardTitle className="flex items-center gap-3">
                         <div className={cn("p-2 rounded-xl", isGraphic ? 'bg-chart-4/20 text-chart-4' : 'bg-primary/10 text-primary')}>
                             <Users className="w-6 h-6" />
                         </div>
                         Students
                     </CardTitle>
+                    <TabWalkthroughHeaderAction />
                     <CardDescription className={isGraphic ? 'text-muted-foreground/80' : ''}>
                         Add or remove the direct student links for your teacher account. Students in classes you teach stay visible through that class.
                     </CardDescription>
@@ -829,12 +841,15 @@ function RecentRedemptions({ schoolId, students, classes, teacherId }: { schoolI
                         Student purchases that need to be delivered.
                     </CardDescription>
                 </div>
+                <div className="flex flex-col items-end gap-2">
+                <TabWalkthroughHeaderAction />
                 <Tabs value={filterType} onValueChange={(v: any) => setFilterType(v)} className="w-[200px]">
                     <TabsList className="grid w-full grid-cols-2">
                         <TabsTrigger value="all" className="text-xs font-bold">All</TabsTrigger>
                         <TabsTrigger value="me" className="text-xs font-bold">Mine</TabsTrigger>
                     </TabsList>
                 </Tabs>
+                </div>
             </CardHeader>
             <CardContent>
                 <ScrollArea className="h-96">
@@ -977,6 +992,7 @@ function MyCoupons({ schoolId, teacherId, teacherName, students }: { schoolId: s
               Coupons you have created, separated by availability.
             </CardDescription>
           </div>
+          <TabWalkthroughHeaderAction />
         </CardHeader>
         <CardContent className="grid md:grid-cols-2 gap-6">
           <div className="space-y-4">
@@ -1886,14 +1902,14 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
     const staffCouponRedemptionUi = secretaryMode || isAdmin;
     const { toast } = useToast();
     const firestore = useFirestore();
-    const { settings, isFeatureAllowed, updateSettings } = useSettings();
+    const { settings, updateSettings } = useSettings();
     const isGraphic = settings.graphicMode === 'graphics';
     const animBackdrop = globalAnimatedBackdropActive(settings);
     const playSound = useArcadeSound();
 
     const raffleTabEnabled = useMemo(
-        () => !secretaryMode && !!settings.enableWeeklyRaffle && isFeatureAllowed('enableWeeklyRaffle'),
-        [secretaryMode, settings.enableWeeklyRaffle, isFeatureAllowed],
+        () => !secretaryMode && !!settings.enableWeeklyRaffle,
+        [secretaryMode, settings.enableWeeklyRaffle],
     );
 
     const teacherAttendanceTabEnabled = useMemo(
@@ -1901,8 +1917,8 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
         [secretaryMode, settings.payAttendance, settings.enableAttendance],
     );
     const teacherGoalsTabEnabled = useMemo(
-        () => !secretaryMode && !!settings.enableGoals && isFeatureAllowed('enableGoals'),
-        [secretaryMode, settings.enableGoals, isFeatureAllowed],
+        () => !secretaryMode && !!settings.enableGoals,
+        [secretaryMode, settings.enableGoals],
     );
     const teacherHomeworkTabEnabled = useMemo(
         () => !secretaryMode && !!settings.enableHomework,
@@ -1923,7 +1939,6 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
             'roster',
             'classes',
             'coupons',
-            'award',
             'prizes',
             'redemptions',
             'reports',
@@ -2050,6 +2065,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
     const [awardCategoryId, setAwardCategoryId] = useState('');
     const [awardValue, setAwardValue] = useState('10');
     const [awardReason, setAwardReason] = useState('');
+    const [isManualAwardDialogOpen, setIsManualAwardDialogOpen] = useState(false);
     const [minPoints, setMinPoints] = useState('');
     const [maxPoints, setMaxPoints] = useState('');
     const [badgeFilter, setBadgeFilter] = useState<'all' | 'has_nfc' | 'no_nfc'>('all');
@@ -2669,7 +2685,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                         </div>
                     ) : null}
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                        <Helper content={secretaryMode ? 'Generate coupon sheets for teachers to hand out. You cannot award points or edit prizes from here.' : 'Use Points to print coupon sheets from school categories. Use Manual to add or remove points without a printed coupon. Prizes, attendance, and reports are also here.'}>
+                        <Helper content={secretaryMode ? 'Generate coupon sheets for teachers to hand out. You cannot award points or edit prizes from here.' : 'Use Points to print coupon sheets from school categories, or open Manual Add Points for direct changes without a printed coupon. Prizes, attendance, and reports are also here.'}>
                             <div>
                                 <h2 className="text-2xl font-bold tracking-tight" style={{ color: teacherAccent }}>
                                     {secretaryMode ? 'Secretary - coupon printing' : 'Teacher & Faculty Portal'}
@@ -2677,7 +2693,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                 <p className="text-muted-foreground">
                                     {secretaryMode
                                         ? 'Create printable coupon batches using the school\'s incentive categories.'
-                                        : 'Print point coupons from the Points tab, adjust points manually on Manual, and run reports—all from this portal.'}
+                                        : 'Print point coupons from the Points tab, use Manual Add Points when you need direct changes, and run reports—all from this portal.'}
                                 </p>
                                 {teacherName ? (
                                     <p className="text-sm text-muted-foreground mt-1">
@@ -2730,7 +2746,6 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                             <SelectItem value="roster">Students</SelectItem>
                                             <SelectItem value="classes">Classes</SelectItem>
                                             <SelectItem value="coupons">Points</SelectItem>
-                                            <SelectItem value="award">Manual</SelectItem>
                                             <SelectItem value="prizes">Prizes</SelectItem>
                                             <SelectItem value="redemptions">Redemptions</SelectItem>
                                             <SelectItem value="reports">Reports</SelectItem>
@@ -2777,11 +2792,11 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                                 <button
                                                     type="button"
                                                     className="rounded-xl px-3 py-2 font-bold inline-flex items-center gap-2 text-sm text-foreground border bg-muted/40 hover:bg-muted/60 transition-all shrink-0"
-                                                    title="Additional features"
-                                                    aria-label="Additional features"
+                                                    title="Add more tabs"
+                                                    aria-label="Add more"
                                                 >
                                                     <SettingsGear className="w-4 h-4" aria-hidden />
-                                                    Features
+                                                    Add more
                                                     <ChevronDown className="w-4 h-4 opacity-70" aria-hidden />
                                                 </button>
                                             </DropdownMenuTrigger>
@@ -2847,9 +2862,6 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                         <TabsTrigger value="coupons" className={teacherPortalMainTabTriggerClassName} title="Points">
                                             <Ticket className="w-4 h-4 shrink-0" /> Points
                                         </TabsTrigger>
-                                        <TabsTrigger value="award" className={teacherPortalMainTabTriggerClassName} title="Manual">
-                                            <Award className="w-4 h-4 shrink-0" /> Manual
-                                        </TabsTrigger>
                                         <TabsTrigger value="prizes" className={teacherPortalMainTabTriggerClassName} title="Prizes">
                                             <Gift className="w-4 h-4 shrink-0" /> Prizes
                                         </TabsTrigger>
@@ -2870,8 +2882,238 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                             </div>
                         )}
 
+                            <TabWalkthroughProvider
+                                scope="teacher"
+                                tabId={secretaryMode ? 'coupons' : activeTeacherTab}
+                            >
                             <TabsContent value="coupons" className={teacherPortalTabContentClassName}>
                                 <div className={teacherPortalPanelClassName}>
+                                {!secretaryMode && (
+                                    <div className="w-full max-w-7xl mx-auto mb-4 flex justify-end">
+                                        <Dialog open={isManualAwardDialogOpen} onOpenChange={setIsManualAwardDialogOpen}>
+                                            <DialogTrigger asChild>
+                                                <Button
+                                                    type="button"
+                                                    className="rounded-xl h-11 font-bold gap-2"
+                                                    style={{ backgroundColor: teacherAccent, color: '#fff' }}
+                                                >
+                                                    <Award className="w-4 h-4 shrink-0" />
+                                                    Manual Add Points
+                                                </Button>
+                                            </DialogTrigger>
+                                            <DialogContent
+                                                className={cn(
+                                                    'max-w-4xl w-[min(96vw,56rem)] max-h-[min(92vh,900px)] flex flex-col gap-0 overflow-hidden p-0',
+                                                    isGraphic ? 'bg-card/95 backdrop-blur-2xl text-foreground border-white/10' : 'bg-white',
+                                                )}
+                                            >
+                                                <DialogHeader className="p-6 pb-2 shrink-0">
+                                                    <DialogTitle className="flex items-center gap-3 text-xl font-black">
+                                                        <div className={cn('p-2 rounded-xl', isGraphic ? 'bg-chart-2/20 text-chart-2' : 'bg-primary/10 text-primary')}>
+                                                            <Award className="w-5 h-5" />
+                                                        </div>
+                                                        Award / Deduct Points
+                                                    </DialogTitle>
+                                                    <DialogDescription>
+                                                        Select students on your roster and apply points instantly—no printed coupon required.
+                                                    </DialogDescription>
+                                                </DialogHeader>
+                                                <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-6 space-y-6">
+                                      <div className="flex items-center justify-between gap-3">
+                                        <div className="grid w-[260px] grid-cols-2 rounded-xl border bg-muted/20 p-1">
+                                          <Button
+                                            type="button"
+                                            variant={awardMode === 'award' ? 'default' : 'ghost'}
+                                            className="h-9 rounded-lg text-xs font-black uppercase tracking-widest"
+                                            onClick={() => setAwardMode('award')}
+                                            style={awardMode === 'award' ? { backgroundColor: teacherAccent, color: '#fff' } : undefined}
+                                          >
+                                            Award
+                                          </Button>
+                                          <Button
+                                            type="button"
+                                            variant={awardMode === 'deduct' ? 'default' : 'ghost'}
+                                            className="h-9 rounded-lg text-xs font-black uppercase tracking-widest"
+                                            onClick={() => setAwardMode('deduct')}
+                                            style={awardMode === 'deduct' ? { backgroundColor: teacherAccent, color: '#fff' } : undefined}
+                                          >
+                                            Deduct
+                                          </Button>
+                                        </div>
+                                        <Button variant="outline" onClick={toggleSelectAll} className="rounded-xl">
+                                          {selectedStudentIds.length === filteredStudents.length && filteredStudents.length > 0 ? 'Deselect All' : 'Select All'}
+                                        </Button>
+                                      </div>
+
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-muted/10 p-3 rounded-2xl border border-dashed">
+                                        <div className="relative group col-span-1 sm:col-span-2">
+                                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                                          <Input
+                                            placeholder="Search name, ID, or NFC..."
+                                            value={studentSearch}
+                                            onChange={e => setStudentSearch(e.target.value)}
+                                            className={cn("h-11 rounded-xl pl-9 transition-all bg-background/50 backdrop-blur-sm focus-visible:ring-primary/20", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-slate-50')}
+                                          />
+                                        </div>
+                                        <Select value={filterClassId} onValueChange={(val) => { setFilterClassId(val); localStorage.setItem('defaultClassId', val); }}>
+                                          <SelectTrigger className={cn("h-11 rounded-xl transition-all", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-slate-50')}>
+                                            <SelectValue placeholder="All Classes" />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="all">All Classes</SelectItem>
+                                            {classesForTeacherUi.map((c) => (
+                                              <SelectItem key={c.id} value={c.id}>
+                                                {c.name}
+                                              </SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
+                                        <Select value={badgeFilter} onValueChange={(v: any) => setBadgeFilter(v)}>
+                                          <SelectTrigger className={cn("h-11 rounded-xl transition-all", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-slate-50')}>
+                                            <SelectValue placeholder="Badge filter" />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="all">All NFC Statuses</SelectItem>
+                                            <SelectItem value="has_nfc">Has NFC tag</SelectItem>
+                                            <SelectItem value="no_nfc">No NFC tag</SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+
+                                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                        <Input
+                                          type="number"
+                                          placeholder="Min Points"
+                                          value={minPoints}
+                                          onChange={e => setMinPoints(e.target.value)}
+                                          className={cn("h-11 rounded-xl font-medium", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-slate-50')}
+                                        />
+                                        <Input
+                                          type="number"
+                                          placeholder="Max Points"
+                                          value={maxPoints}
+                                          onChange={e => setMaxPoints(e.target.value)}
+                                          className={cn("h-11 rounded-xl font-medium", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-slate-50')}
+                                        />
+                                        <div className="col-span-2 flex items-center gap-2">
+                                          <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => { setMinPoints(''); setMaxPoints(''); setBadgeFilter('all'); }}
+                                            className="h-11 px-3 rounded-xl text-xs font-bold w-full"
+                                          >
+                                            Clear Filters
+                                          </Button>
+                                        </div>
+                                      </div>
+
+                                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-3 border-t">
+                                        <Select value={awardCategoryId} onValueChange={setAwardCategoryId}>
+                                          <SelectTrigger className={cn("h-11 rounded-xl", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-slate-50')}>
+                                            <SelectValue placeholder="Category" />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            {filteredCategories.map((c) => (
+                                              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
+                                        <div className="space-y-1">
+                                          <Input
+                                            type="number"
+                                            value={awardValue}
+                                            onChange={(e) => setAwardValue(e.target.value)}
+                                            className={cn("h-11 rounded-xl font-black", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-slate-50')}
+                                            placeholder="Points"
+                                          />
+                                          <div className="flex flex-wrap gap-1 mt-1">
+                                            {[5, 10, 20, 50, 100].map(v => (
+                                              <Button
+                                                key={v}
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => setAwardValue(v.toString())}
+                                                className="h-6 px-1.5 text-[10px] rounded-md font-bold"
+                                              >
+                                                +{v}
+                                              </Button>
+                                            ))}
+                                          </div>
+                                          {awardMode === 'award' &&
+                                          selectedCategoryForAward?.rubricLevels &&
+                                          selectedCategoryForAward.rubricLevels.length > 0 ? (
+                                            <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-border/60">
+                                              {selectedCategoryForAward.rubricLevels.map((r) => (
+                                                <Button
+                                                  key={r.id}
+                                                  type="button"
+                                                  variant="secondary"
+                                                  size="sm"
+                                                  onClick={() => setAwardValue(String(r.points))}
+                                                  className="h-7 px-2 text-[10px] rounded-md font-bold"
+                                                  title={r.label}
+                                                >
+                                                  {r.label}: {r.points}
+                                                </Button>
+                                              ))}
+                                            </div>
+                                          ) : null}
+                                        </div>
+                                        {awardMode === 'deduct' ? (
+                                          <Input
+                                            value={awardReason}
+                                            onChange={(e) => setAwardReason(e.target.value)}
+                                            className={cn("h-11 rounded-xl", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-slate-50')}
+                                            placeholder="Reason"
+                                          />
+                                        ) : (
+                                          <div className="h-11" />
+                                        )}
+                                      </div>
+
+                                      <Button
+                                        onClick={awardMode === 'award' ? handleAwardPoints : handleDeductPoints}
+                                        className="w-full h-14 rounded-2xl font-black uppercase tracking-widest text-white"
+                                        style={{ backgroundColor: teacherAccent }}
+                                      >
+                                        {awardMode === 'award' ? 'Award Points' : 'Deduct Points'}
+                                      </Button>
+
+                                      <div className="rounded-2xl border bg-muted/20">
+                                        <ScrollArea className="h-[min(42vh,360px)] min-h-[200px] w-full">
+                                          <ul className="p-3 space-y-2">
+                                            {filteredStudents.map((s) => {
+                                              const checked = selectedStudentIds.includes(s.id);
+                                              return (
+                                                <li key={s.id} className={cn("flex items-center justify-between gap-3 p-3 rounded-xl border bg-background/60", checked && "border-primary/30")}>
+                                                  <div className="flex items-center gap-3">
+                                                    <Checkbox
+                                                      checked={checked}
+                                                      onCheckedChange={(v) => handleStudentSelect(s.id, !!v)}
+                                                      className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                                                    />
+                                                    <div>
+                                                      <p className="font-bold">{getStudentNickname(s)} {s.lastName}</p>
+                                                      <p className="text-xs text-muted-foreground">{s.classId ? (classes?.find(c => c.id === s.classId)?.name || 'Unassigned') : 'Unassigned'}</p>
+                                                    </div>
+                                                  </div>
+                                                  <span className="text-xs font-bold text-muted-foreground">{(s.points || 0).toLocaleString()} pts</span>
+                                                </li>
+                                              );
+                                            })}
+                                            {filteredStudents.length === 0 && (
+                                              <li className="text-center text-sm text-muted-foreground py-10">No students found.</li>
+                                            )}
+                                          </ul>
+                                        </ScrollArea>
+                                      </div>
+                                                </div>
+                                            </DialogContent>
+                                        </Dialog>
+                                    </div>
+                                )}
 
                         <Card className={cn(
                             "w-full max-w-7xl border-t-8 transition-all duration-500 hover:shadow-2xl",
@@ -2880,14 +3122,17 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                 : 'bg-white border-chart-1 shadow-lg'
                         )}>
                             <CardHeader className="p-4 md:p-6">
-                                <CardTitle className="flex items-center gap-3">
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-0">
+                                    <CardTitle className="flex items-center gap-3">
                                     <div className={cn("p-2 rounded-xl", isGraphic ? 'bg-chart-1/20 text-chart-1' : 'bg-primary/10 text-primary')}>
                                         <Printer className="w-6 h-6" />
                                     </div>
                                     Print coupons
-                                </CardTitle>
+                                    </CardTitle>
+                                    <TabWalkthroughHeaderAction />
+                                </div>
                                 <CardDescription className={isGraphic ? 'text-muted-foreground/80' : ''}>
-                                    Printable coupons for kiosk redemption are generated and printed here in the Teacher Portal (not in Admin). Choose 10 or 30 coupons per letter page, set how many sheets to print, and match each cell to the selected layout.
+                                    Printable coupons for kiosk redemption can be printed here or in Admin → Points. Choose 10 or 30 coupons per letter page, set how many sheets to print, and match each cell to the selected layout.
                                 </CardDescription>
                                 <PrinterReminderCallout
                                     title="Coupon / slip printer"
@@ -3185,6 +3430,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                                 <div
                                                     className={cn(
                                                         'coupon-print-preview-shell coupon-print-match-wrapper rounded-2xl border shadow-2xl',
+                                                        printCouponsPerPage === 30 && 'coupon-print-match-wrapper--30',
                                                         isGraphic ? 'border-white/10 bg-foreground/5' : 'border-border/40 bg-slate-100/80'
                                                     )}
                                                 >
@@ -3212,220 +3458,6 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                 </div>
                             </TabsContent>
 
-                            <TabsContent value="award" className={teacherPortalTabContentClassName}>
-                                <div className={teacherPortalPanelClassName}>
-                                  <Card className={cn(
-                                    "w-full max-w-7xl border-t-8 transition-all duration-500 hover:shadow-2xl",
-                                    isGraphic ? 'bg-card/60 backdrop-blur-2xl border-chart-2 shadow-[0_20px_50px_rgba(0,0,0,0.1)]' : 'bg-white border-chart-2 shadow-lg'
-                                  )}>
-                                    <CardHeader className="p-4 md:p-6">
-                                      <CardTitle className="flex items-center gap-3">
-                                        <div className={cn("p-2 rounded-xl", isGraphic ? 'bg-chart-2/20 text-chart-2' : 'bg-primary/10 text-primary')}>
-                                          <Award className="w-6 h-6" />
-                                        </div>
-                                        Award / Deduct Points
-                                      </CardTitle>
-                                      <CardDescription className={isGraphic ? 'text-muted-foreground/80' : ''}>
-                                        Select students on your roster and apply points instantly.
-                                      </CardDescription>
-                                    </CardHeader>
-                                    <CardContent className="p-4 md:p-6 space-y-6">
-                                      <div className="flex items-center justify-between gap-3">
-                                        <div className="grid w-[260px] grid-cols-2 rounded-xl border bg-muted/20 p-1">
-                                          <Button
-                                            type="button"
-                                            variant={awardMode === 'award' ? 'default' : 'ghost'}
-                                            className="h-9 rounded-lg text-xs font-black uppercase tracking-widest"
-                                            onClick={() => setAwardMode('award')}
-                                            style={awardMode === 'award' ? { backgroundColor: teacherAccent, color: '#fff' } : undefined}
-                                          >
-                                            Award
-                                          </Button>
-                                          <Button
-                                            type="button"
-                                            variant={awardMode === 'deduct' ? 'default' : 'ghost'}
-                                            className="h-9 rounded-lg text-xs font-black uppercase tracking-widest"
-                                            onClick={() => setAwardMode('deduct')}
-                                            style={awardMode === 'deduct' ? { backgroundColor: teacherAccent, color: '#fff' } : undefined}
-                                          >
-                                            Deduct
-                                          </Button>
-                                        </div>
-                                        <Button variant="outline" onClick={toggleSelectAll} className="rounded-xl">
-                                          {selectedStudentIds.length === filteredStudents.length && filteredStudents.length > 0 ? 'Deselect All' : 'Select All'}
-                                        </Button>
-                                      </div>
-
-                                      {/* Enhanced Filtering Row */}
-                                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-muted/10 p-3 rounded-2xl border border-dashed">
-                                        <div className="relative group col-span-1 sm:col-span-2">
-                                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                                          <Input
-                                            placeholder="Search name, ID, or NFC..."
-                                            value={studentSearch}
-                                            onChange={e => setStudentSearch(e.target.value)}
-                                            className={cn("h-11 rounded-xl pl-9 transition-all bg-background/50 backdrop-blur-sm focus-visible:ring-primary/20", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-slate-50')}
-                                          />
-                                        </div>
-                                        <Select value={filterClassId} onValueChange={(val) => { setFilterClassId(val); localStorage.setItem('defaultClassId', val); }}>
-                                          <SelectTrigger className={cn("h-11 rounded-xl transition-all", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-slate-50')}>
-                                            <SelectValue placeholder="All Classes" />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                            <SelectItem value="all">All Classes</SelectItem>
-                                            {classesForTeacherUi.map((c) => (
-                                              <SelectItem key={c.id} value={c.id}>
-                                                {c.name}
-                                              </SelectItem>
-                                            ))}
-                                          </SelectContent>
-                                        </Select>
-                                        <Select value={badgeFilter} onValueChange={(v: any) => setBadgeFilter(v)}>
-                                          <SelectTrigger className={cn("h-11 rounded-xl transition-all", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-slate-50')}>
-                                            <SelectValue placeholder="Badge filter" />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                            <SelectItem value="all">All NFC Statuses</SelectItem>
-                                            <SelectItem value="has_nfc">Has NFC tag</SelectItem>
-                                            <SelectItem value="no_nfc">No NFC tag</SelectItem>
-                                          </SelectContent>
-                                        </Select>
-                                      </div>
-
-                                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                        <Input
-                                          type="number"
-                                          placeholder="Min Points"
-                                          value={minPoints}
-                                          onChange={e => setMinPoints(e.target.value)}
-                                          className={cn("h-11 rounded-xl font-medium", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-slate-50')}
-                                        />
-                                        <Input
-                                          type="number"
-                                          placeholder="Max Points"
-                                          value={maxPoints}
-                                          onChange={e => setMaxPoints(e.target.value)}
-                                          className={cn("h-11 rounded-xl font-medium", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-slate-50')}
-                                        />
-                                        <div className="col-span-2 flex items-center gap-2">
-                                          <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => { setMinPoints(''); setMaxPoints(''); setBadgeFilter('all'); }}
-                                            className="h-11 px-3 rounded-xl text-xs font-bold w-full"
-                                          >
-                                            Clear Filters
-                                          </Button>
-                                        </div>
-                                      </div>
-
-                                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-3 border-t">
-                                        <Select value={awardCategoryId} onValueChange={setAwardCategoryId}>
-                                          <SelectTrigger className={cn("h-11 rounded-xl", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-slate-50')}>
-                                            <SelectValue placeholder="Category" />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                            {filteredCategories.map((c) => (
-                                              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                                            ))}
-                                          </SelectContent>
-                                        </Select>
-                                        <div className="space-y-1">
-                                          <Input
-                                            type="number"
-                                            value={awardValue}
-                                            onChange={(e) => setAwardValue(e.target.value)}
-                                            className={cn("h-11 rounded-xl font-black", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-slate-50')}
-                                            placeholder="Points"
-                                          />
-                                          {/* Presets */}
-                                          <div className="flex flex-wrap gap-1 mt-1">
-                                            {[5, 10, 20, 50, 100].map(v => (
-                                              <Button
-                                                key={v}
-                                                type="button"
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => setAwardValue(v.toString())}
-                                                className="h-6 px-1.5 text-[10px] rounded-md font-bold"
-                                              >
-                                                +{v}
-                                              </Button>
-                                            ))}
-                                          </div>
-                                          {awardMode === 'award' &&
-                                          selectedCategoryForAward?.rubricLevels &&
-                                          selectedCategoryForAward.rubricLevels.length > 0 ? (
-                                            <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-border/60">
-                                              {selectedCategoryForAward.rubricLevels.map((r) => (
-                                                <Button
-                                                  key={r.id}
-                                                  type="button"
-                                                  variant="secondary"
-                                                  size="sm"
-                                                  onClick={() => setAwardValue(String(r.points))}
-                                                  className="h-7 px-2 text-[10px] rounded-md font-bold"
-                                                  title={r.label}
-                                                >
-                                                  {r.label}: {r.points}
-                                                </Button>
-                                              ))}
-                                            </div>
-                                          ) : null}
-                                        </div>
-                                        {awardMode === 'deduct' ? (
-                                          <Input
-                                            value={awardReason}
-                                            onChange={(e) => setAwardReason(e.target.value)}
-                                            className={cn("h-11 rounded-xl", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-slate-50')}
-                                            placeholder="Reason"
-                                          />
-                                        ) : (
-                                          <div className="h-11" />
-                                        )}
-                                      </div>
-
-                                      <Button
-                                        onClick={awardMode === 'award' ? handleAwardPoints : handleDeductPoints}
-                                        className="w-full h-14 rounded-2xl font-black uppercase tracking-widest text-white"
-                                        style={{ backgroundColor: teacherAccent }}
-                                      >
-                                        {awardMode === 'award' ? 'Award Points' : 'Deduct Points'}
-                                      </Button>
-
-                                      <div className="rounded-2xl border bg-muted/20">
-                                        <ScrollArea className="h-[calc(100vh-26rem)] min-h-[250px] w-full">
-                                          <ul className="p-3 space-y-2">
-                                            {filteredStudents.map((s) => {
-                                              const checked = selectedStudentIds.includes(s.id);
-                                              return (
-                                                <li key={s.id} className={cn("flex items-center justify-between gap-3 p-3 rounded-xl border bg-background/60", checked && "border-primary/30")}>
-                                                  <div className="flex items-center gap-3">
-                                                    <Checkbox
-                                                      checked={checked}
-                                                      onCheckedChange={(v) => handleStudentSelect(s.id, !!v)}
-                                                      className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                                                    />
-                                                    <div>
-                                                      <p className="font-bold">{getStudentNickname(s)} {s.lastName}</p>
-                                                      <p className="text-xs text-muted-foreground">{s.classId ? (classes?.find(c => c.id === s.classId)?.name || 'Unassigned') : 'Unassigned'}</p>
-                                                    </div>
-                                                  </div>
-                                                  <span className="text-xs font-bold text-muted-foreground">{(s.points || 0).toLocaleString()} pts</span>
-                                                </li>
-                                              );
-                                            })}
-                                            {filteredStudents.length === 0 && (
-                                              <li className="text-center text-sm text-muted-foreground py-10">No students found.</li>
-                                            )}
-                                          </ul>
-                                        </ScrollArea>
-                                      </div>
-                                    </CardContent>
-                                  </Card>
-                                </div>
-                            </TabsContent>
 
                             <TabsContent value="roster" className={teacherPortalTabContentClassName}>
                                 <div className={teacherPortalPanelClassName}>
@@ -3456,6 +3488,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                     <p className="text-sm text-muted-foreground max-w-prose">
                                         New setup takes one rule: class, period, points. Use the walkthrough for a quick test.
                                     </p>
+                                    <TabWalkthroughHeaderAction />
                                     <AttendanceSetupWizard variant="teacher" />
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -3477,6 +3510,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                                     Create the rules that award attendance points during active class periods.
                                                 </CardDescription>
                                             </div>
+                                            <TabWalkthroughHeaderAction />
                                         </CardHeader>
                                         <CardContent className="p-4 md:p-6">
                                             <TeacherAttendanceRewardsPanel
@@ -3542,7 +3576,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                 </TabsContent>
                             )}
 
-                                {settings.enableGoals && isFeatureAllowed('enableGoals') && (
+                                {settings.enableGoals && (
                                     <TabsContent value="goals" className={teacherPortalTabContentClassName}>
                                         <div className={teacherPortalPanelClassName}>
                                             <GoalsManager
@@ -3568,6 +3602,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                             </TabsContent>
                             )}
 
+                            </TabWalkthroughProvider>
                         </Tabs>
                     </div>
                 </div>

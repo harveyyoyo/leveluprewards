@@ -1,13 +1,14 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Dices, Disc3, Ticket, Trophy, Users } from 'lucide-react';
+import { CircleDot, Dices, Disc3, Ticket, Trophy, Users } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Helper } from '@/components/ui/helper';
+import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import type { Student } from '@/lib/types';
@@ -15,6 +16,7 @@ import { useSettings } from '@/components/providers/SettingsProvider';
 import { useFirebase } from '@/firebase';
 import { collection, doc, runTransaction, type DocumentSnapshot } from 'firebase/firestore';
 import { JackpotMachine } from '@/components/raffle/JackpotMachine';
+import { RaffleLotoCage } from '@/components/raffle/RaffleLotoCage';
 import { RaffleSpinWheel } from '@/components/raffle/RaffleSpinWheel';
 import { parseRafflePointsPerTicket } from '@/lib/raffleTickets';
 import {
@@ -54,13 +56,18 @@ export function AdminRaffleTab({
   const [winner, setWinner] = useState<{ id: string; name: string } | null>(null);
   const [jackpotResetKey, setJackpotResetKey] = useState(0);
   const [drawDialogOpen, setDrawDialogOpen] = useState(false);
-  const [drawDialogMode, setDrawDialogMode] = useState<'jackpot' | 'wheel'>('jackpot');
+  const [drawDialogMode, setDrawDialogMode] = useState<'jackpot' | 'wheel' | 'loto'>('jackpot');
 
   const storedPpt = Number(settings.rafflePointsPerTicket);
   const { isGeneralRaffle, pointsPerTicket } = parseRafflePointsPerTicket(settings.rafflePointsPerTicket);
   const deductOnPull = !!settings.raffleDeductPoints;
   const oneEntryPerStudent = !!settings.raffleOneEntryPerStudent;
-  const raffleDisplayMode = settings.raffleDisplayMode === 'wheel' ? 'wheel' : 'jackpot';
+  const raffleDisplayMode =
+    settings.raffleDisplayMode === 'wheel'
+      ? 'wheel'
+      : settings.raffleDisplayMode === 'loto'
+        ? 'loto'
+        : 'jackpot';
 
   const entries = useMemo<EntryRow[]>(() => {
     const rows: EntryRow[] = [];
@@ -189,10 +196,10 @@ export function AdminRaffleTab({
             const activityRef = doc(collection(studentRef, 'activities'));
             tx.set(activityRef, {
               desc: isGeneralRaffle
-                ? 'Weekly raffle (general)'
+                ? 'Raffle (general)'
                 : oneEntryPerStudent
-                  ? `Weekly raffle (equal odds): 1 × ${pointsPerTicket} pts`
-                  : `Weekly raffle tickets (${r.fullTickets} × ${pointsPerTicket})`,
+                  ? `Raffle (equal odds): 1 × ${pointsPerTicket} pts`
+                  : `Raffle tickets (${r.fullTickets} × ${pointsPerTicket})`,
               amount: -r.deductPoints,
               date: now,
             });
@@ -266,7 +273,7 @@ export function AdminRaffleTab({
             <Helper content={
               canEditSettings ? (
                 <div className="space-y-2 text-sm">
-                  <p>Configure the pool below, then open the jackpot or wheel — same odds, different animation.</p>
+                  <p>Configure the pool below, then open the jackpot, wheel, or loto cage — same odds, different animation.</p>
                   <p>Set <strong>points per ticket</strong> to <strong>0</strong> for a general raffle. Otherwise use <strong>equal odds</strong> (one entry per qualifying student) or <strong>scaled odds</strong> (more points → more tickets).</p>
                   <p>If <strong>Deduct points when you pull</strong> is on, points are taken after the spin when there is a ticket value.</p>
                 </div>
@@ -274,11 +281,12 @@ export function AdminRaffleTab({
             }>
               <CardTitle className="flex items-center gap-2">
                 <Ticket className="h-5 w-5 text-primary" aria-hidden />
-                Weekly raffle
+                Raffle
               </CardTitle>
             </Helper>
-            <CardDescription>Configure rules and draw the weekly raffle.</CardDescription>
+            <CardDescription>Configure rules and run a draw.</CardDescription>
           </div>
+          <TabWalkthroughHeaderAction />
         </CardHeader>
 
         <CardContent className="space-y-8">
@@ -394,7 +402,11 @@ export function AdminRaffleTab({
                   <div className="rounded-lg bg-background/80 px-3 py-2">
                     <dt className="text-[0.65rem] font-bold uppercase tracking-wider text-muted-foreground">Saved display</dt>
                     <dd className="mt-0.5 font-medium text-foreground">
-                      {raffleDisplayMode === 'wheel' ? 'Spinning wheel' : 'Jackpot reels'}
+                      {raffleDisplayMode === 'wheel'
+                        ? 'Spinning wheel'
+                        : raffleDisplayMode === 'loto'
+                          ? 'Loto cage'
+                          : 'Jackpot reels'}
                     </dd>
                   </div>
                 </dl>
@@ -406,7 +418,7 @@ export function AdminRaffleTab({
               <p className="text-xs text-muted-foreground">
                 Same pool and deduct behavior — only the animation changes. Wheel slices reflect ticket weights.
               </p>
-              <div className="flex flex-col gap-4 sm:flex-row">
+              <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap">
                 <button
                   type="button"
                   onClick={() => {
@@ -452,6 +464,30 @@ export function AdminRaffleTab({
                       {canEditSettings
                         ? 'Weighted wheel — also saves as your preferred display.'
                         : 'Weighted wheel using saved settings.'}
+                    </span>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDrawDialogMode('loto');
+                    if (canEditSettings) updateSettings({ raffleDisplayMode: 'loto' });
+                    setDrawDialogOpen(true);
+                  }}
+                  className={drawButtonClass(raffleDisplayMode === 'loto')}
+                >
+                  <div className="flex h-full w-28 shrink-0 items-center justify-center bg-gradient-to-br from-amber-500/10 to-emerald-500/10 p-3 dark:from-amber-500/20 dark:to-emerald-500/20">
+                    <span className="text-[3.5rem] leading-none transition-transform duration-300 group-hover:scale-110 drop-shadow-md">🎱</span>
+                  </div>
+                  <div className="flex flex-col gap-1.5 py-3 pr-4">
+                    <span className="flex items-center gap-2 text-sm font-bold text-foreground">
+                      <CircleDot className="h-4 w-4 shrink-0 text-primary" aria-hidden />
+                      Loto (bingo cage)
+                    </span>
+                    <span className="text-xs font-normal leading-snug text-muted-foreground">
+                      {canEditSettings
+                        ? 'Wire cage draw — also saves as your preferred display.'
+                        : 'Bingo cage draw using saved settings.'}
                     </span>
                   </div>
                 </button>
@@ -562,7 +598,9 @@ export function AdminRaffleTab({
 
       <Dialog open={drawDialogOpen} onOpenChange={setDrawDialogOpen}>
         <DialogContent size="xl" className="gap-0 p-0 sm:p-0 max-h-[95vh] overflow-y-auto overflow-x-hidden">
-          <DialogTitle className="sr-only">{drawDialogMode === 'wheel' ? 'Prize wheel' : 'Jackpot'}</DialogTitle>
+          <DialogTitle className="sr-only">
+            {drawDialogMode === 'wheel' ? 'Prize wheel' : drawDialogMode === 'loto' ? 'Loto cage' : 'Jackpot'}
+          </DialogTitle>
           <div className="p-2 sm:p-4">
             {drawDialogOpen &&
               (drawDialogMode === 'wheel' ? (
@@ -570,6 +608,17 @@ export function AdminRaffleTab({
                   embedded
                   title="Prize wheel"
                   slices={wheelSlices}
+                  pickWinner={handleJackpotPickWinner}
+                  onSpinFinished={handleJackpotSpinFinished}
+                  resetKey={jackpotResetKey}
+                  pullLocked={isSavingDeduction}
+                  embeddedFooter={jackpotEmbeddedFooter}
+                />
+              ) : drawDialogMode === 'loto' ? (
+                <RaffleLotoCage
+                  embedded
+                  title="Loto"
+                  pool={jackpotPool}
                   pickWinner={handleJackpotPickWinner}
                   onSpinFinished={handleJackpotSpinFinished}
                   resetKey={jackpotResetKey}

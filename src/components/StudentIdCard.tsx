@@ -1,81 +1,12 @@
 'use client';
 
-import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React from 'react';
 import type { Student } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { resolveStudentThemeWithSchoolDefault } from '@/lib/themeContrast';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { APP_NAME, APP_TAGLINE } from '@/lib/appBranding';
 import { GoogleFontLoader } from '@/components/GoogleFontLoader';
-
-function AutoFitLine({
-  text,
-  className,
-  style,
-  minScale = 0.72,
-}: {
-  text: string;
-  className?: string;
-  style?: React.CSSProperties;
-  minScale?: number;
-}) {
-  const wrapRef = useRef<HTMLDivElement | null>(null);
-  const textRef = useRef<HTMLSpanElement | null>(null);
-  const [scaleX, setScaleX] = useState(1);
-
-  const measure = useMemo(() => {
-    return () => {
-      const wrap = wrapRef.current;
-      const span = textRef.current;
-      if (!wrap || !span) return;
-
-      // Reset first to measure unscaled width.
-      span.style.transform = 'none';
-
-      const wrapW = wrap.clientWidth;
-      const textW = span.scrollWidth;
-      if (!wrapW || !textW) return;
-
-      const next = Math.max(minScale, Math.min(1, wrapW / textW));
-      setScaleX((prev) => (Math.abs(prev - next) < 0.01 ? prev : next));
-    };
-  }, [minScale]);
-
-  useLayoutEffect(() => {
-    const wrap = wrapRef.current;
-    if (!wrap) return;
-
-    let ro: ResizeObserver | null = null;
-    if (typeof ResizeObserver !== 'undefined') {
-      ro = new ResizeObserver(() => measure());
-      ro.observe(wrap);
-    }
-
-    const t = window.setTimeout(() => measure(), 0);
-    void (document as any).fonts?.ready?.then?.(() => measure());
-
-    return () => {
-      window.clearTimeout(t);
-      if (ro) ro.disconnect();
-    };
-  }, [measure, text]);
-
-  return (
-    <div ref={wrapRef} className={cn('min-w-0', className)} style={style}>
-      <span
-        ref={textRef}
-        style={{
-          display: 'inline-block',
-          transformOrigin: 'left center',
-          transform: scaleX < 0.999 ? `scaleX(${scaleX})` : undefined,
-          willChange: 'transform',
-        }}
-      >
-        {text}
-      </span>
-    </div>
-  );
-}
 
 export function StudentIdCard({
   student,
@@ -149,9 +80,20 @@ export function StudentIdCard({
   const displayLast = student.lastName ?? '';
   const displayNickname = student.nickname?.trim() || null;
   const fullName = `${displayFirst} ${displayLast}`.trim();
+  const longestNamePart = Math.max(fullName.length, displayNickname?.length ?? 0);
+  const nameFitScale = longestNamePart >= 34 ? 0.68 : longestNamePart >= 28 ? 0.76 : longestNamePart >= 22 ? 0.88 : 1;
+  const fitStyle: React.CSSProperties = { ['--print-id-name-fit-scale' as string]: String(nameFitScale) };
+  const resolvedCardStyle = cardStyle ? { ...cardStyle, ...fitStyle } : fitStyle;
 
   return (
-    <div className={cn("print-id-card", isColorEnabled && "is-colored")} style={cardStyle}>
+    <div
+      className={cn(
+        'print-id-card',
+        isColorEnabled && 'is-colored',
+        settings.idCardCornerStyle === 'rectangular' && 'print-id-card--rectangular',
+      )}
+      style={resolvedCardStyle}
+    >
       {themeFontFamily && <GoogleFontLoader fontFamily={themeFontFamily} />}
       <div className="print-id-header-container">
         <div className="print-id-app" style={headerStyle}>
@@ -204,9 +146,9 @@ export function StudentIdCard({
           </div>
           
           <div className="print-id-text">
-            <AutoFitLine text={fullName} className="print-id-name" style={nameStyle} />
+            <div className="print-id-name" style={nameStyle}>{fullName}</div>
             {displayNickname ? (
-              <AutoFitLine text={displayNickname} className="print-id-nickname" style={metaStyle} minScale={0.78} />
+              <div className="print-id-nickname" style={metaStyle}>{displayNickname}</div>
             ) : null}
             <div className="print-id-class" style={classStyle}>Class: {className}</div>
             <div className="print-id-number" style={metaStyle}>ID #{student.nfcId}</div>

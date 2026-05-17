@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import DynamicIcon from '@/components/DynamicIcon';
 import { AutoCircularToggles } from '@/components/AutoCircularToggles';
 import { AdminRecordListHeader } from '@/components/admin/AdminRecordListHeader';
+import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 
 export function AdminBadgesTab(props: any) {
   const {
@@ -38,9 +39,10 @@ export function AdminBadgesTab(props: any) {
               <Award className="w-5 h-5 text-destructive" /> Badges
             </CardTitle>
           </Helper>
-          <CardDescription>Category-based badges. Enable in Settings &gt; Extra features &gt; Recognition &gt; Badges.</CardDescription>
+          <CardDescription>Category-based badges. Enable from Admin → Add more.</CardDescription>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <TabWalkthroughHeaderAction />
           <Button onClick={() => { setEditingCategoryBadgeNull(); setIsCategoryBadgeModalOpen(true); }} className="rounded-xl">
             <Plus className="mr-2 h-4 w-4" /> Add badge
           </Button>

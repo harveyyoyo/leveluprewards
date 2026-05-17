@@ -52,10 +52,10 @@ export function Coupon({ coupon, schoolId, isNew = false }: { coupon: Coupon, sc
           </div>
         </div>
       </div>
-      <div className="flex flex-col items-center w-full mt-[0.06em] shrink-0 gap-[0.04em]">
+      <div className="coupon-barcode-zone flex flex-col items-center w-full mt-[0.06em] shrink-0 gap-[0.04em]">
         {redemptionLabel && (
           <div
-            className="text-[0.24em] leading-tight text-black font-bold text-center w-full max-w-full px-[0.1em] overflow-hidden text-ellipsis whitespace-nowrap"
+            className="coupon-redemption-label text-[0.24em] leading-tight text-black font-bold text-center w-full max-w-full px-[0.1em] overflow-hidden text-ellipsis whitespace-nowrap"
             title={redemptionLabel}
           >
             {redemptionLabel}
@@ -63,7 +63,7 @@ export function Coupon({ coupon, schoolId, isNew = false }: { coupon: Coupon, sc
         )}
         <div
           className={cn(
-            'font-barcode leading-none text-black tracking-wider max-w-full overflow-hidden text-ellipsis whitespace-nowrap',
+            'coupon-barcode font-barcode leading-none text-black tracking-wider max-w-full whitespace-nowrap',
             hasLimitLine ? 'text-[1.02em]' : 'text-[1.22em]'
           )}
         >

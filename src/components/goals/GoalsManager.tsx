@@ -17,6 +17,7 @@ import { Loader2, Plus, Target, Trash2 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 
 function studentLabel(s: Student) {
   return `${s.firstName} ${s.lastName}`.trim() || s.id;
@@ -197,14 +198,17 @@ export function GoalsManager(props: {
           isGraphic ? 'bg-card/60 backdrop-blur-2xl border-chart-2 shadow-[0_20px_50px_rgba(0,0,0,0.1)]' : 'bg-white border-chart-2 shadow-lg dark:bg-slate-900',
         )}
       >
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Target className="w-5 h-5 text-chart-2" />
-            Add goal
-          </CardTitle>
-          <CardDescription>
-            Personal targets, savings toward shop rewards, or class-wide milestones. Enable under Settings &gt; Extra features &gt; Goals.
-          </CardDescription>
+        <CardHeader className="flex flex-row items-start justify-between gap-4">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="w-5 h-5 text-chart-2" />
+              Add goal
+            </CardTitle>
+            <CardDescription>
+              Personal targets, savings toward shop rewards, or class-wide milestones. Enable from Admin → Add more.
+            </CardDescription>
+          </div>
+          <TabWalkthroughHeaderAction />
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">

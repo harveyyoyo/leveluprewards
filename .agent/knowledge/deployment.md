@@ -10,6 +10,61 @@ Before any deployment, the site must be thoroughly tested to ensure it is workin
 - [ ] **Edge session cookies**: In production, school hub routes require an HttpOnly Firebase session cookie minted by `POST /api/auth/session`. The hosting runtime must be able to initialize **Firebase Admin** (Application Default Credentials or `GOOGLE_APPLICATION_CREDENTIALS`). Optional overrides: `DISABLE_AUTH_SESSION_EDGE=1` turns off middleware enforcement; `AUTH_SESSION_EDGE_ENFORCEMENT=1` forces it on in development for testing.
 - [ ] **School gate cookie**: Set `AUTH_GATE_SIGNING_SECRET` (32+ random characters) in the hosting environment so middleware also enforces a signed `edu_school_gate` cookie (scopes from Firestore + `anonymousPortalSessions`). Deploy **Cloud Functions** after pulling so `verifySchoolAccessPasscode` writes `schools/{id}/anonymousPortalSessions/{uid}` for school-portal sessions; then deploy Firestore rules so that path stays server-only.
 
+## Critical Auth Guardrails
+
+On 2026-05-14, live school login failed because edge session-cookie enforcement
+depended on `POST /api/auth/session`, and that SSR route returned `503` in
+production. The school passcode callable was healthy, but middleware kept
+redirecting valid users from `/{school}/portal` back to `/login`.
+
+Current production mitigation:
+
+- `DISABLE_AUTH_SESSION_EDGE=1` is used as the emergency rollback switch.
+- This does **not** bypass the school passcode/callable gate.
+- Do not re-enable strict edge enforcement until session-cookie creation is
+  healthy and the strict live smoke passes.
+
+Required checks:
+
+```powershell
+npm run test:live-auth
+```
+
+This runs `scripts/live-auth-smoke.mjs` against the live domain. It verifies:
+
+- anonymous Firebase test user creation
+- `verifySchoolAccessPasscode` accepts the canary school passcode
+- direct portal access behavior matches the current edge-enforcement mode
+- browser login reaches `/{school}/portal`
+
+`npm run deploy:hosting:safe` now runs the same live auth smoke after deploy.
+If this fails, treat the deploy as unsafe for school clients.
+
+Strict edge session-cookie mode:
+
+```powershell
+$env:LIVE_AUTH_REQUIRE_SESSION_COOKIE='1'
+npm run test:live-auth
+```
+
+Only turn on `AUTH_SESSION_EDGE_ENFORCEMENT=1` once the strict check passes.
+
+User-facing symptom if this regresses:
+
+```txt
+Secure session could not start
+Your passcode was accepted, but the server could not open the portal session.
+```
+
+First response for school-wide lockouts:
+
+```powershell
+# ensure DISABLE_AUTH_SESSION_EDGE=1 is present in deploy env
+npm run deploy:hosting:safe
+```
+
+Reference: `docs/auth-production-guardrails.md`.
+
 ## Firestore Rules Drift
 
 This project can use live Firestore during local development. Running the Functions

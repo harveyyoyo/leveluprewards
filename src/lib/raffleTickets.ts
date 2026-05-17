@@ -1,5 +1,5 @@
 /**
- * Shared raffle math (keep in sync with Admin weekly raffle / wheel).
+ * Shared raffle math (keep in sync with Admin raffle tab / wheel).
  * 0 points-per-ticket = general raffle (no point-based ticket count).
  */
 

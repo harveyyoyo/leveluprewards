@@ -24,6 +24,7 @@ import { cn, getStudentNickname } from '@/lib/utils';
 import { encryptField, decryptField } from '@/lib/crypto';
 import type { Class, StaffAccount, StaffAccountRole, Student, Teacher } from '@/lib/types';
 import { AdminRecordListHeader } from '@/components/admin/AdminRecordListHeader';
+import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 
 function normalizePortalKeyPart(value: string) {
   return value.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '');
@@ -307,6 +308,7 @@ export function AdminTeachersTab({
           <CardDescription>Faculty can issue rewards. Desk staff get limited coupon, prize, or reports access.</CardDescription>
         </div>
         <div className="flex flex-wrap gap-2">
+          <TabWalkthroughHeaderAction />
           <Button onClick={openNewDeskStaff} variant="outline" className="rounded-xl">
             <Plus className="mr-2 h-4 w-4" /> Add desk staff
           </Button>

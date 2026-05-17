@@ -5,6 +5,15 @@
 export const APP_NAME = 'LevelUp';
 export const APP_TAGLINE = 'School Rewards System';
 
+/** Verified business contact for procurement and school inquiries. */
+export const SITE_CONTACT_EMAIL = 'contact@leveluprewards.app';
+export const SITE_CONTACT_MAILTO =
+  'mailto:contact@leveluprewards.app?subject=NYC%20DOE%20Procurement%20Inquiry';
+
+/** Legal entity line shown in public footers (matches tax paperwork). */
+export const SITE_LEGAL_UMBRELLA =
+  'LevelUp Rewards is proudly developed, owned, and operated by LevelUp EdTech Enterprises LLC.';
+
 /** Matches `LevelUpLogo` arrow fill: `oklch(0.28 0.06 252)`. */
 export const LEVELUP_BRAND_PRIMARY_HEX = '#102a45';
 

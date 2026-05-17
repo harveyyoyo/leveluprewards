@@ -1,4 +1,6 @@
 import Link from 'next/link';
+import { LegalPageFooter } from '@/components/LegalPageFooter';
+import { SITE_CONTACT_EMAIL, SITE_CONTACT_MAILTO } from '@/lib/appBranding';
 
 export const dynamic = 'force-dynamic';
 
@@ -122,17 +124,18 @@ export default function TermsPage() {
             <p>
               If you have questions about these Terms, please contact us at{' '}
               <a
-                href="mailto:admin@levelupenterprises.education"
+                href={SITE_CONTACT_MAILTO}
                 className="font-bold underline underline-offset-4 hover:text-foreground"
               >
-                admin@levelupenterprises.education
+                {SITE_CONTACT_EMAIL}
               </a>
               .
             </p>
           </section>
         </div>
 
-        <div className="mt-10 print:hidden">
+        <LegalPageFooter />
+        <div className="mt-6 print:hidden">
           <Link
             href="/"
             className="text-sm font-semibold text-muted-foreground underline underline-offset-4 hover:text-foreground transition-colors"

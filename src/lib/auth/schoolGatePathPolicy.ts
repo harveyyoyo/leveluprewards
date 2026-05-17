@@ -18,6 +18,16 @@ export function schoolPathAllowedByGate(
   if (section === 'admin') {
     return scopes.has('admin') || scopes.has('portal') || scopes.has('prizeClerk');
   }
+  if (section === 'portal') {
+    return (
+      scopes.has('portal') ||
+      scopes.has('admin') ||
+      scopes.has('teacher') ||
+      scopes.has('secretary') ||
+      scopes.has('prizeClerk') ||
+      scopes.has('reports')
+    );
+  }
   if (section === 'teacher') {
     if (pathname === prefix + 'teacher' || pathname === prefix + 'teacher/') {
       return true;
@@ -35,6 +45,30 @@ export function schoolPathAllowedByGate(
   }
   if (section === 'hall-of-fame') {
     return (
+      scopes.has('admin') ||
+      scopes.has('teacher') ||
+      scopes.has('secretary') ||
+      scopes.has('prizeClerk') ||
+      scopes.has('reports')
+    );
+  }
+
+  if (section === 'student-home') {
+    return (
+      scopes.has('studentPortal') ||
+      scopes.has('kiosk') ||
+      scopes.has('portal') ||
+      scopes.has('admin') ||
+      scopes.has('teacher') ||
+      scopes.has('secretary') ||
+      scopes.has('prizeClerk') ||
+      scopes.has('reports')
+    );
+  }
+
+  if (section === 'student') {
+    return (
+      scopes.has('kiosk') ||
       scopes.has('admin') ||
       scopes.has('teacher') ||
       scopes.has('secretary') ||

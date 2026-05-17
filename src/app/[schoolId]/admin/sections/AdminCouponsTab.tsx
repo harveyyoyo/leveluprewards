@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import Link from 'next/link';
 import { Ticket, Search, Trash2, X, ChevronsUpDown } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Helper } from '@/components/ui/helper';
@@ -7,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AdminRecordListHeader } from '@/components/admin/AdminRecordListHeader';
+import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 import type { Coupon } from '@/lib/types';
 import { couponRedemptionLabelForPrint } from '@/lib/couponRedemptionRules';
 
@@ -175,18 +175,18 @@ export function AdminCouponsTab({
 
   return (
     <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden">
-      <CardHeader>
+      <CardHeader className="flex flex-row items-start justify-between gap-4">
+        <div>
         <Helper content="This section lists coupons generated for this school: still available, and already redeemed by a student.">
           <CardTitle className="flex items-center gap-2">
             <Ticket className="w-5 h-5 text-destructive" /> Coupon Management
           </CardTitle>
         </Helper>
         <CardDescription>
-          View all available and redeemed coupons in the system. To print coupons please go to the{' '}
-          <Link href={`/${schoolId}/teacher`} className="text-primary hover:underline font-bold">
-            Faculty Portal
-          </Link>.
+          View all available and redeemed coupons in the system. Print new coupon sheets from Admin → Points.
         </CardDescription>
+        </div>
+        <TabWalkthroughHeaderAction />
       </CardHeader>
 
       <div className="px-6 pb-4 flex flex-wrap gap-4 items-end border-b">

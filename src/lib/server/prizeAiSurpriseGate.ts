@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server';
-import { isFeatureAllowed, type SchoolPlanConfig } from '@/lib/plans';
 
 const SCHOOL_ID_RE = /^[\w-]{1,128}$/;
 
 /**
- * Ensures the school’s plan allows AI prize surprise and the setting is on in `appSettings`.
+ * Ensures AI prize surprise is turned on in the school's `appSettings`.
  * Returns a NextResponse when the request must be rejected; otherwise null.
  *
  * Set `SKIP_PRIZE_AI_SERVER_PLAN_CHECK=1` only for local/dev when Firebase Admin credentials are unavailable.
@@ -37,29 +36,19 @@ export async function assertPrizeAiSurpriseAllowedForSchool(schoolId: string): P
       return NextResponse.json({ error: 'School not found.' }, { status: 404 });
     }
     const d = snap.data()!;
-    const config: SchoolPlanConfig = {
-      plan: d.plan as SchoolPlanConfig['plan'],
-      featureOverrides: d.featureOverrides as SchoolPlanConfig['featureOverrides'],
-    };
-    if (!isFeatureAllowed(config, 'enablePrizeAiSurprise')) {
-    return NextResponse.json({ error: 'AI rewards shop surprise is not included in this school plan.' }, { status: 403 });
-    }
     const appSettings = d.appSettings as Record<string, unknown> | undefined;
     if (appSettings?.enablePrizeAiSurprise !== true) {
-    return NextResponse.json({ error: 'AI rewards shop surprise is turned off in school settings.' }, { status: 403 });
+      return NextResponse.json({ error: 'AI rewards shop surprise is turned off in school settings.' }, { status: 403 });
     }
     return null;
   } catch (e) {
     console.error('assertPrizeAiSurpriseAllowedForSchool:', e);
     if (process.env.NODE_ENV === 'development') {
       console.warn(
-        '[prize AI gate] Skipping server plan check in development after Firebase Admin error. For full checks, set GOOGLE_APPLICATION_CREDENTIALS (or FIREBASE_ADMIN_PROJECT_ID + ADC), or set SKIP_PRIZE_AI_SERVER_PLAN_CHECK=1.',
+        'assertPrizeAiSurpriseAllowedForSchool: Firebase Admin unavailable; set SKIP_PRIZE_AI_SERVER_PLAN_CHECK=1 to bypass in dev.',
       );
       return null;
     }
-    return NextResponse.json(
-      { error: 'Could not verify school settings for this feature.' },
-      { status: 503 },
-    );
+    return NextResponse.json({ error: 'Could not verify school settings.' }, { status: 503 });
   }
 }

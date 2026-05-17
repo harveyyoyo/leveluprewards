@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useCallback, useState } from 'react';
+import { Suspense, useCallback, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useAppContext } from '@/components/AppProvider';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,11 @@ import { cn } from '@/lib/utils';
 import { appearanceVarsForSurface } from '@/lib/appearance';
 import { PrizeDashboard } from '@/app/[schoolId]/prize/PrizeDashboard';
 import type { StudentFoundMeta } from '@/components/StudentScanner';
+import type { Prize } from '@/lib/types';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import { PrizeDeskCardScan } from '@/components/PrizeDeskCardScan';
+import { withUnifiedAiFunPrize } from '@/lib/aiJokePrize';
 
 const StudentScanner = dynamic(
   () =>
@@ -27,21 +32,39 @@ const StudentScanner = dynamic(
   { ssr: false },
 );
 
-/** Scan-in + redeem flow for desk staff — lives under Admin → Prizes (not the student kiosk). */
+/** Scan-in + redeem flow for desk staff — student card, then prize shelf card. */
 export function AdminPrizeDeskPanel({ className }: { className?: string }) {
-  const { logout, userName } = useAppContext();
+  const { logout, userName, schoolId } = useAppContext();
   const { settings } = useSettings();
+  const firestore = useFirestore();
   const isGraphic = settings.graphicMode === 'graphics';
   const playSound = useArcadeSound();
   const { toast } = useToast();
   const [deskStudentId, setDeskStudentId] = useState<string | null>(null);
+  const [catalogOpen, setCatalogOpen] = useState(false);
+
+  const prizesQuery = useMemoFirebase(
+    () => (schoolId ? collection(firestore, 'schools', schoolId, 'prizes') : null),
+    [firestore, schoolId],
+  );
+  const { data: prizesRaw } = useCollection<Prize>(prizesQuery);
+  const prizes = useMemo(
+    () =>
+      withUnifiedAiFunPrize(prizesRaw, {
+        enablePrizeAiSurprise: settings.enablePrizeAiSurprise === true,
+        defaultPoints: settings.prizeAiSurpriseDefaultPoints,
+      }),
+    [prizesRaw, settings.enablePrizeAiSurprise, settings.prizeAiSurpriseDefaultPoints],
+  );
 
   const onScannerStudent = useCallback((id: string, _meta?: StudentFoundMeta) => {
     setDeskStudentId(id);
+    setCatalogOpen(false);
   }, []);
 
   const handleDone = useCallback(() => {
     setDeskStudentId(null);
+    setCatalogOpen(false);
   }, []);
 
   const handlePrizeSessionExit = useCallback(() => {
@@ -56,7 +79,7 @@ export function AdminPrizeDeskPanel({ className }: { className?: string }) {
     logout({ staffNavigateTo: 'portal' });
   };
 
-  if (deskStudentId) {
+  if (deskStudentId && catalogOpen) {
     return (
       <div className={cn('min-h-0 flex flex-col', className)}>
         <Suspense
@@ -68,6 +91,28 @@ export function AdminPrizeDeskPanel({ className }: { className?: string }) {
         >
           <PrizeDashboard studentId={deskStudentId} onDone={handleDone} onRequestExit={handlePrizeSessionExit} />
         </Suspense>
+      </div>
+    );
+  }
+
+  if (deskStudentId) {
+    return (
+      <div className={cn('flex flex-col gap-4', className)}>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm text-muted-foreground">
+            Signed in as <span className="font-semibold text-foreground">{userName || 'Prize desk'}</span>
+          </p>
+          <Button variant="outline" size="sm" onClick={handleStaffLogout} className="gap-2 shrink-0">
+            <LogOut className="w-4 h-4" aria-hidden />
+            End desk shift
+          </Button>
+        </div>
+        <PrizeDeskCardScan
+          studentId={deskStudentId}
+          prizes={prizes}
+          onClearStudent={handleDone}
+          onOpenCatalog={() => setCatalogOpen(true)}
+        />
       </div>
     );
   }
@@ -94,7 +139,7 @@ export function AdminPrizeDeskPanel({ className }: { className?: string }) {
           <StudentScanner
             onStudentFound={onScannerStudent}
             title="Prize desk"
-            description="Identify the student, then redeem prizes from the catalog."
+            description="Scan the student ID card, then scan the prize shelf card to deliver the reward."
             icon={<Gift className="w-10 h-10" />}
           />
         </div>

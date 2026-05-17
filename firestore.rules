@@ -48,6 +48,12 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/schools/$(schoolId)/kioskMembers/$(request.auth.uid));
     }
 
+    // Signed in via student home portal (custom token uid == student doc id).
+    function hasStudentPortalSession(schoolId) {
+      return isAuth()
+        && exists(/databases/$(database)/documents/schools/$(schoolId)/studentPortalSessions/$(request.auth.uid));
+    }
+
     // Any staff member OR a student with an active kiosk session for this school.
     function isSchoolMember(schoolId) {
       return isAdmin(schoolId) || isTeacher(schoolId) || isSecretary(schoolId)
@@ -154,7 +160,7 @@ service cloud.firestore {
       allow read: if isDeveloper() || isAdmin(schoolId) || isTeacher(schoolId) || isSecretary(schoolId) || isPrizeClerk(schoolId) || isReports(schoolId);
       allow create: if isDeveloper();
       allow delete: if isAdmin(schoolId) || isDeveloper();
-      // Teachers may adjust weekly raffle knobs (stored in appSettings) without full admin rights.
+      // Teachers may adjust raffle knobs (stored in appSettings) without full admin rights.
       allow update: if isAdmin(schoolId) || isDeveloper()
         || (
           isTeacher(schoolId)
@@ -165,12 +171,14 @@ service cloud.firestore {
       // Students and anonymous users use `schoolPublic/{schoolId}` instead.
 
       match /students/{studentId} {
-        allow read: if isSchoolMember(schoolId) || (isAuth() && request.auth.uid == studentId);
+        allow read: if isSchoolMember(schoolId)
+          || (isAuth() && request.auth.uid == studentId && hasStudentPortalSession(schoolId));
         allow create, delete: if isAdmin(schoolId);
         allow update: if isAdmin(schoolId) || isTeacher(schoolId) || isPrizeClerk(schoolId);
 
         match /activities/{activityId} {
-          allow read: if isSchoolMember(schoolId) || (isAuth() && request.auth.uid == studentId);
+          allow read: if isSchoolMember(schoolId)
+            || (isAuth() && request.auth.uid == studentId && hasStudentPortalSession(schoolId));
           allow create: if isAdmin(schoolId) || isTeacher(schoolId) || isPrizeClerk(schoolId) || isLibraryCheckoutActivity();
           allow update: if isAdmin(schoolId) || isTeacher(schoolId) || isPrizeClerk(schoolId);
           allow delete: if isAdmin(schoolId);
@@ -216,7 +224,7 @@ service cloud.firestore {
       
       match /categories/{categoryId} {
         // Categories are used by teachers in the UI.
-        allow read: if isSchoolMember(schoolId);
+        allow read: if isSchoolMember(schoolId) || hasStudentPortalSession(schoolId);
         allow create: if isAdmin(schoolId) || isDeveloper()
           || isTeacherOwnedCreate(schoolId);
         allow update: if isAdmin(schoolId) || isDeveloper()
@@ -237,12 +245,13 @@ service cloud.firestore {
 
       match /badges/{badgeId} {
         // Read: staff can load badge definitions and earned badges.
-        allow read: if isAdmin(schoolId) || isTeacher(schoolId) || isReports(schoolId) || isDeveloper();
+        allow read: if isAdmin(schoolId) || isTeacher(schoolId) || isReports(schoolId) || isDeveloper()
+          || hasStudentPortalSession(schoolId);
         allow write: if isAdmin(schoolId);
       }
 
       match /goals/{goalId} {
-        allow read: if isSchoolMember(schoolId);
+        allow read: if isSchoolMember(schoolId) || hasStudentPortalSession(schoolId);
         allow create, update, delete: if isAdmin(schoolId) || isTeacher(schoolId) || isDeveloper();
       }
 
@@ -262,7 +271,7 @@ service cloud.firestore {
       }
 
       match /prizes/{prizeId} {
-        allow read: if isSchoolMember(schoolId);
+        allow read: if isSchoolMember(schoolId) || hasStudentPortalSession(schoolId);
         allow create: if isAdmin(schoolId) || isTeacherOwnedPrizeCreate(schoolId);
         allow update: if isAdmin(schoolId) || isTeacherOwnedPrizeUpdate(schoolId)
           || (
@@ -325,6 +334,19 @@ service cloud.firestore {
       }
 
       match /anonymousPortalSessions/{uid} {
+        allow read, write: if false;
+      }
+
+      match /studentPortalMembers/{uid} {
+        allow read, write: if false;
+      }
+
+      match /studentPortalSessions/{studentId} {
+        allow read: if isAuth() && request.auth.uid == studentId;
+        allow write: if false;
+      }
+
+      match /studentPortalDevices/{deviceId} {
         allow read, write: if false;
       }
 

@@ -29,17 +29,16 @@ import {
 } from '@/components/ui/select';
 import {
     Settings, Volume2, VolumeX, Monitor, Smartphone, ChevronRight,
-    Bell, Shield, Moon, Sun, ArrowLeft, Palette, Zap, Trophy,
+    Shield, Moon, Sun, ArrowLeft, Palette, Zap, Trophy,
     BarChart3, MessageSquare, ShoppingBag, ShieldCheck, Star,
     Users, Database, Printer, LayoutDashboard, History, HelpCircle,
-    Cpu, Award, Clock, Cog, Lock, Sparkles, Trash2, RotateCcw, Smile, BookOpen, Target, Megaphone, Tv,
+    Cpu, Cog, Lock, Sparkles, Trash2, RotateCcw, Smile, BookOpen, Tv,
     Layers, UsersRound, Ticket, Loader2
 } from 'lucide-react';
 import { useSettings, colorSchemes, type ColorScheme, type Settings as AppSettings } from '../providers/SettingsProvider';
 import type { BackupInfo, StudentTheme } from '@/lib/types';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useToast } from '@/hooks/use-toast';
-import { AttendanceTimeZoneField } from '@/components/attendance/AttendanceTimeZoneField';
 import { VendingMotorPanel } from '@/components/VendingMotorPanel';
 import { ANIMATED_BACKGROUND_STYLES, type AnimatedBackgroundStyle } from '@/lib/animatedBackdrop';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
@@ -57,7 +56,6 @@ const FeatureFilterContext = createContext<FeatureFilter>({ query: '', enabledOn
 
 const FEATURE_SECTION_NAV = [
     { id: 'settings-features-core', label: 'Core' },
-    { id: 'settings-features-attendance', label: 'Attendance' },
     { id: 'settings-features-recognition', label: 'Recognition' },
     { id: 'settings-features-shop', label: 'Shop' },
     { id: 'settings-features-students', label: 'Students' },
@@ -73,7 +71,6 @@ const INTERFACE_SECTION_NAV = [
 
 /** Settings keys that correspond to Admin main-row add-on tabs (see admin/page.tsx addOnTabDefs). */
 const ADD_ON_TAB_FOR_SETTINGS_KEY: Record<string, string> = {
-    payRewards: 'coupons',
     enableAdminAnalytics: 'insights',
     enableClassLeaderboard: 'halloffame',
     payLibrary: 'library',
@@ -159,16 +156,16 @@ function cloneSettings(s: AppSettings): AppSettings {
     return JSON.parse(JSON.stringify(s)) as AppSettings;
 }
 
-function FeatureRow({ id, label, desc, icon, settings, onToggle, onConfigure, isImplemented = true, isAdmin = true, isAllowed = true, planLabel, blockHint }: {
+function FeatureRow({ id, label, desc, icon, settings, onToggle, onConfigure, isImplemented = true, isAdmin = true, blockHint }: {
     id: string; label: string; desc: string; icon: React.ReactNode;
-    settings: any; onToggle: (key: string, val: any) => void; onConfigure?: () => void; isImplemented?: boolean; isAdmin?: boolean; isAllowed?: boolean; planLabel?: string;
-    /** When set (e.g. product pillar off), the toggle is forced off and disabled even if the plan allows the feature. */
+    settings: any; onToggle: (key: string, val: any) => void; onConfigure?: () => void; isImplemented?: boolean; isAdmin?: boolean;
+    /** When set (e.g. product pillar off), the toggle is forced off and disabled. */
     blockHint?: string;
 }) {
     const filter = useContext(FeatureFilterContext);
     const isEnabled = settings[id] || false;
     const blockedByConfig = Boolean(blockHint);
-    const canUse = isImplemented && isAllowed && !blockedByConfig;
+    const canUse = isImplemented && !blockedByConfig;
     if (filter.enabledOnly && !isEnabled) return null;
     if (filter.query.trim()) {
         const q = filter.query.trim().toLowerCase();
@@ -203,7 +200,7 @@ function FeatureRow({ id, label, desc, icon, settings, onToggle, onConfigure, is
                                 size="icon"
                                 className="h-9 w-9 rounded-xl"
                                 onClick={(e) => { e.stopPropagation(); onConfigure(); }}
-                                disabled={!isAdmin || !isAllowed}
+                                disabled={!isAdmin}
                                 title={`${label} settings`}
                                 aria-label={`${label} settings`}
                             >
@@ -215,17 +212,12 @@ function FeatureRow({ id, label, desc, icon, settings, onToggle, onConfigure, is
                                 id={id}
                                 checked={isEnabled && canUse}
                                 onCheckedChange={(checked) => onToggle(id, checked)}
-                                disabled={!isAdmin || !isAllowed || blockedByConfig}
+                                disabled={!isAdmin || blockedByConfig}
                             />
                         </div>
                     </div>
                     {!isAdmin && <span className="text-[10px] text-muted-foreground mt-2 font-black uppercase tracking-widest whitespace-nowrap">Admin Only</span>}
-                    {isAdmin && !isAllowed && (
-                        <span className="text-[10px] text-amber-700 dark:text-amber-400 mt-2 font-black uppercase tracking-widest whitespace-nowrap flex items-center gap-1" title={`Current plan: ${planLabel ?? 'Free'}`}>
-                            <Lock className="h-3 w-3" /> Upgrade
-                        </span>
-                    )}
-                    {isAdmin && isAllowed && blockedByConfig && blockHint && (
+                    {isAdmin && blockedByConfig && blockHint && (
                         <span className="text-[10px] text-muted-foreground mt-2 font-semibold tracking-wide max-w-[220px] text-right leading-snug" title={blockHint}>
                             {blockHint}
                         </span>
@@ -246,14 +238,12 @@ export function SettingsModal() {
         login,
         isAdmin,
         schoolId,
-        getAttendanceConfig,
-        setAttendanceConfig,
         devCreateBackup,
         devRestoreFromBackup,
         devDownloadBackup,
     } = useAppContext();
     const canOpenSettings = loginState === 'admin' || loginState === 'developer' || loginState === 'teacher';
-    const { settings, updateSettings, isFeatureAllowed, planLabel } = useSettings();
+    const { settings, updateSettings } = useSettings();
     const playSound = useArcadeSound();
     const { toast } = useToast();
     const firestore = useFirestore();
@@ -261,6 +251,7 @@ export function SettingsModal() {
     const [adminDialogOpen, setAdminDialogOpen] = useState(false);
     const [adminPasscode, setAdminPasscode] = useState('');
     const [adminSubmitting, setAdminSubmitting] = useState(false);
+    const [openSettingsAfterAdminUnlock, setOpenSettingsAfterAdminUnlock] = useState(false);
     const [draft, setDraft] = useState<AppSettings | null>(null);
     const [view, setView] = useState<SettingsView>('hub');
     const [vendingSettingsOpen, setVendingSettingsOpen] = useState(false);
@@ -305,6 +296,13 @@ export function SettingsModal() {
         window.addEventListener('open-settings-modal', handler as EventListener);
         return () => window.removeEventListener('open-settings-modal', handler as EventListener);
     }, [canOpenSettings, beginSettingsSession]);
+
+    useEffect(() => {
+        if (!openSettingsAfterAdminUnlock || !isAdmin || adminDialogOpen) return;
+        setOpenSettingsAfterAdminUnlock(false);
+        beginSettingsSession('hub');
+        setOpen(true);
+    }, [adminDialogOpen, beginSettingsSession, isAdmin, openSettingsAfterAdminUnlock]);
 
     const canLivePreviewInterfaceRole = useMemo(() => {
         if (interfaceRole === 'global') return true;
@@ -404,7 +402,7 @@ export function SettingsModal() {
         hub: 'Settings',
         interface: 'Interface & display',
         security: 'Basic settings',
-        features: 'Extra features',
+        features: 'Advanced settings',
         pillars: 'Product Pillars',
         developer: 'Developer tools',
     };
@@ -458,7 +456,7 @@ export function SettingsModal() {
     };
 
     // Allow deep-linking into the settings modal via query param.
-    // Example: `?settings=features` opens the modal on "Extra features".
+    // Example: `?settings=features` opens the modal on "Advanced settings".
     useEffect(() => {
         if (!canOpenSettings) return;
         if (!searchParams) return;
@@ -511,6 +509,38 @@ export function SettingsModal() {
         handleOpenChange(false);
     };
 
+    const handleAdminUnlockForSettings = useCallback(async () => {
+        if (adminSubmitting || !schoolId) return;
+        if (!adminPasscode.trim()) {
+            playSound('error');
+            toast({
+                variant: 'destructive',
+                title: 'Missing passcode',
+                description: 'Enter the admin passcode to continue.',
+            });
+            return;
+        }
+
+        setAdminSubmitting(true);
+        const authResult = await login('admin', { schoolId, passcode: adminPasscode.trim() });
+        if (!authResult.ok) {
+            setAdminSubmitting(false);
+            playSound('error');
+            toast({
+                variant: 'destructive',
+                title: 'Login failed',
+                description: authResult.message,
+            });
+            setAdminPasscode('');
+            return;
+        }
+
+        playSound('login');
+        setOpenSettingsAfterAdminUnlock(true);
+        setAdminSubmitting(false);
+        setAdminDialogOpen(false);
+    }, [adminPasscode, adminSubmitting, login, playSound, schoolId, toast]);
+
     // For short-link kiosk entry routes, keep the UI minimal (and avoid showing settings).
     if (isShortLinkKioskRoute) return null;
 
@@ -546,38 +576,7 @@ export function SettingsModal() {
                         onKeyDown={(e) => {
                             if (e.key !== 'Enter') return;
                             e.preventDefault();
-                            if (adminSubmitting) return;
-                            if (!schoolId) return;
-                            void (async () => {
-                                if (!adminPasscode.trim()) {
-                                    playSound('error');
-                                    toast({
-                                        variant: 'destructive',
-                                        title: 'Missing passcode',
-                                        description: 'Enter the admin passcode to continue.',
-                                    });
-                                    return;
-                                }
-                                setAdminSubmitting(true);
-                                const authResult = await login('admin', { schoolId, passcode: adminPasscode.trim() });
-                                if (!authResult.ok) {
-                                    setAdminSubmitting(false);
-                                    playSound('error');
-                                    toast({
-                                        variant: 'destructive',
-                                        title: 'Login failed',
-                                        description: authResult.message,
-                                    });
-                                    setAdminPasscode('');
-                                    return;
-                                }
-                                playSound('login');
-                                setAdminSubmitting(false);
-                                setAdminDialogOpen(false);
-                                // Include ?settings= so the destination page opens the modal after navigation
-                                // (otherwise this component unmounts and `open` resets to false).
-                                router.replace(`/${schoolId}/admin?settings=hub`);
-                            })();
+                            void handleAdminUnlockForSettings();
                         }}
                     />
                 </div>
@@ -596,36 +595,7 @@ export function SettingsModal() {
                         className="rounded-xl font-black"
                         disabled={adminSubmitting}
                         onClick={() => {
-                            if (adminSubmitting) return;
-                            if (!schoolId) return;
-                            void (async () => {
-                                if (!adminPasscode.trim()) {
-                                    playSound('error');
-                                    toast({
-                                        variant: 'destructive',
-                                        title: 'Missing passcode',
-                                        description: 'Enter the admin passcode to continue.',
-                                    });
-                                    return;
-                                }
-                                setAdminSubmitting(true);
-                                const authResult = await login('admin', { schoolId, passcode: adminPasscode.trim() });
-                                if (!authResult.ok) {
-                                    setAdminSubmitting(false);
-                                    playSound('error');
-                                    toast({
-                                        variant: 'destructive',
-                                        title: 'Login failed',
-                                        description: authResult.message,
-                                    });
-                                    setAdminPasscode('');
-                                    return;
-                                }
-                                playSound('login');
-                                setAdminSubmitting(false);
-                                setAdminDialogOpen(false);
-                                router.replace(`/${schoolId}/admin?settings=hub`);
-                            })();
+                            void handleAdminUnlockForSettings();
                         }}
                     >
                         {adminSubmitting ? (
@@ -761,8 +731,8 @@ export function SettingsModal() {
                                     </span>
                                     <ChevronRight className="h-5 w-5 shrink-0 text-amber-700/50 dark:text-amber-400/50" aria-hidden />
                                 </div>
-                            <span className="font-black text-amber-900 dark:text-amber-100">Extra features</span>
-                                <span className="text-xs leading-snug text-amber-800/90 dark:text-amber-200/80">Attendance, shop, recognition, library checkout, and more</span>
+                            <span className="font-black text-amber-900 dark:text-amber-100">Advanced settings</span>
+                                <span className="text-xs leading-snug text-amber-800/90 dark:text-amber-200/80">Kiosk experience, shop options, teacher tools, and more</span>
                             </button>
                             {loginState === 'developer' && (
                                 <button
@@ -1496,7 +1466,7 @@ export function SettingsModal() {
                                     </div>
                                     {!local.enableStudentWelcomeBackScreen ? (
                                         <p className="text-[11px] text-muted-foreground">
-                                            Turn on <span className="font-semibold">Welcome back splash</span> in Extra features to use this.
+                                            Turn on <span className="font-semibold">Welcome back splash</span> in Advanced settings to use this.
                                         </p>
                                     ) : null}
                                 </div>
@@ -1721,26 +1691,8 @@ export function SettingsModal() {
                                 </div>
                             </div>
 
-                            {/* Current Plan Banner */}
-                            {planLabel === 'Enterprise' && (
-                                <div className="bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800/50 rounded-2xl p-4 flex items-center justify-between shadow-sm">
-                                    <div className="flex items-center gap-4">
-                                        <div className="h-12 w-12 rounded-xl bg-amber-500 flex items-center justify-center text-white shadow-inner">
-                                            <Zap className="w-7 h-7" />
-                                        </div>
-                                        <div>
-                                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-600 dark:text-amber-400">Current Plan</p>
-                                            <h3 className="text-xl font-headline font-black text-amber-900 dark:text-amber-100 uppercase italic tracking-tighter">Enterprise</h3>
-                                        </div>
-                                    </div>
-                                    <div className="text-[10px] font-black bg-amber-500 text-white px-3 py-1.5 rounded-full uppercase tracking-widest shadow-sm">
-                                        Unlimited
-                                    </div>
-                                </div>
-                            )}
-
                             <div className="flex items-center justify-between mb-3 border-b border-border/40 pb-3 mt-1">
-                                <h3 className="text-sm font-bold text-muted-foreground">Manage Extra Features</h3>
+                                <h3 className="text-sm font-bold text-muted-foreground">Manage Advanced Settings</h3>
                                 <div className="flex items-center gap-2 shrink-0">
                                     <Button variant="outline" size="sm" className="h-8 rounded-xl text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-700 dark:hover:text-emerald-300" onClick={() => {
                                         if (local.soundEnabled) playSound('click');
@@ -1748,21 +1700,18 @@ export function SettingsModal() {
                                             if (!prev) return prev;
                                             const next = { ...prev };
                                             const keys = [
-                                                'enableTeacherBudgets', 'enableHomework', 'enableBulkPoints', 'enableAdminAnalytics',
-                                                'enableNotifications', 'enableTeacherCharts', 'enableClassSignIn', 'enableStudentPortal',
+                                                'enableTeacherBudgets', 'enableHomework', 'enableBulkPoints',
+                                                'enableTeacherCharts',
                                                 'enableStudentWelcomeBackScreen', 'enableStudentWelcome', 'enableFaceLogin', 'enableQrLogin',
                                                 'enablePrizeImages', 'enableWishlist', 'kioskSponsorEnabled',
-                                                'enableAchievements', 'enableBadges', 'enableLevels', 'enableStreaks', 'enableGoals',
+                                                'enableLevels', 'enableStreaks',
                                                 'enableClassAccumulations', 'enableBirthdayPoints', 'enableSpecialDayPoints',
                                                 'enablePrizeAiSurprise', 'enableVendingMachine', 'enableStudentEmojiOnPrizeTickets',
                                                 'enableThemeAnimations',
                                             ];
                                             keys.forEach(k => {
-                                                if (isFeatureAllowed(k)) {
-                                                    (next as any)[k] = true;
-                                                }
+                                                (next as any)[k] = true;
                                             });
-                                            next.enableAttendance = !!next.enableClassSignIn;
                                             return next;
                                         });
                                     }}>
@@ -1774,11 +1723,11 @@ export function SettingsModal() {
                                             if (!prev) return prev;
                                             const next = { ...prev };
                                             const keys = [
-                                                'enableTeacherBudgets', 'enableHomework', 'enableBulkPoints', 'enableAdminAnalytics',
-                                                'enableNotifications', 'enableTeacherCharts', 'enableClassSignIn', 'enableStudentPortal',
+                                                'enableTeacherBudgets', 'enableHomework', 'enableBulkPoints',
+                                                'enableTeacherCharts',
                                                 'enableStudentWelcomeBackScreen', 'enableStudentWelcome', 'enableFaceLogin', 'enableQrLogin',
                                                 'enablePrizeImages', 'enableWishlist', 'kioskSponsorEnabled',
-                                                'enableAchievements', 'enableBadges', 'enableLevels', 'enableStreaks', 'enableGoals',
+                                                'enableLevels', 'enableStreaks',
                                                 'enableClassAccumulations', 'enableBirthdayPoints', 'enableSpecialDayPoints',
                                                 'enablePrizeAiSurprise', 'enableVendingMachine', 'enableStudentEmojiOnPrizeTickets',
                                                 'enableThemeAnimations',
@@ -1786,7 +1735,6 @@ export function SettingsModal() {
                                             keys.forEach(k => {
                                                 (next as any)[k] = false;
                                             });
-                                            next.enableAttendance = false;
                                             return next;
                                         });
                                     }}>
@@ -1796,8 +1744,8 @@ export function SettingsModal() {
                             </div>
 
                             <SettingsSectionJumpNav
-                                sections={FEATURE_SECTION_NAV.filter(s => s.id !== 'settings-features-attendance' || (local.payAttendance ?? true))}
-                                ariaLabel="Feature categories"
+                                sections={FEATURE_SECTION_NAV}
+                                ariaLabel="Advanced setting categories"
                                 onJump={jumpToSettingsSection}
                             />
 
@@ -1816,8 +1764,6 @@ export function SettingsModal() {
                                     onToggle={handleToggle}
                                     isImplemented={true}
                                     isAdmin={isAdmin}
-                                    isAllowed={isFeatureAllowed('enableTeacherBudgets')}
-                                    planLabel={planLabel}
                                 />
                                 <FeatureRow
                                     id="enableHomework"
@@ -1828,8 +1774,6 @@ export function SettingsModal() {
                                     onToggle={handleToggle}
                                     isImplemented={true}
                                     isAdmin={isAdmin}
-                                    isAllowed={isFeatureAllowed('enableHomework')}
-                                    planLabel={planLabel}
                                     blockHint={!(local.payHomework ?? true) ? 'Turn on the Homework product pillar in Settings → Product Pillars first.' : undefined}
                                 />
                                 <FeatureRow
@@ -1841,8 +1785,6 @@ export function SettingsModal() {
                                     onToggle={handleToggle}
                                     isImplemented={true}
                                     isAdmin={isAdmin}
-                                    isAllowed={true}
-                                    planLabel={planLabel}
                                 />
                                 <FeatureRow
                                     id="enableBulkPoints"
@@ -1853,32 +1795,6 @@ export function SettingsModal() {
                                     onToggle={handleToggle}
                                     isImplemented={false}
                                     isAdmin={isAdmin}
-                                    isAllowed={isFeatureAllowed('enableBulkPoints')}
-                                    planLabel={planLabel}
-                                />
-                                <FeatureRow
-                                    id="enableAdminAnalytics"
-                                    label="Admin Analytics"
-                                    desc="Turn on the Admin → Stats view with school-wide totals, trends, and active student counts."
-                                    icon={<ShieldCheck className="w-5 h-5" />}
-                                    settings={local}
-                                    onToggle={handleToggle}
-                                    isImplemented={true}
-                                    isAdmin={isAdmin}
-                                    isAllowed={isFeatureAllowed('enableAdminAnalytics')}
-                                    planLabel={planLabel}
-                                />
-                                <FeatureRow
-                                    id="enableNotifications"
-                                    label="Notifications"
-                                    desc="Master switch for the notification system. When off, no alert mail/SMS/WhatsApp documents are created; use Admin → Notifications for per-event channels when this is on."
-                                    icon={<Bell className="w-5 h-5" />}
-                                    settings={local}
-                                    onToggle={handleToggle}
-                                    isImplemented={true}
-                                    isAdmin={isAdmin}
-                                    isAllowed={isFeatureAllowed('enableNotifications')}
-                                    planLabel={planLabel}
                                 />
                                 <FeatureRow
                                     id="enableTeacherCharts"
@@ -1889,66 +1805,11 @@ export function SettingsModal() {
                                     onToggle={handleToggle}
                                     isImplemented={false}
                                     isAdmin={isAdmin}
-                                    isAllowed={isFeatureAllowed('enableTeacherCharts')}
-                                    planLabel={planLabel}
                                 />
                             </div>
 
-                            {(local.payAttendance ?? true) && (
-                                <div id="settings-features-attendance" className="scroll-mt-[5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
-                                    <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><Clock className="w-3.5 h-3.5" /> Attendance</p>
-                                    <FeatureRow
-                                        id="enableClassSignIn"
-                                        label="Attendance"
-                                        desc="Use student kiosk login as class attendance. Optional punctuality points and schedules can be configured in Admin → Attendance."
-                                        icon={<Clock className="w-5 h-5" />}
-                                        settings={local}
-                                        onToggle={handleToggle}
-                                        isImplemented={true}
-                                        isAdmin={isAdmin}
-                                        isAllowed={isFeatureAllowed('enableClassSignIn')}
-                                        planLabel={planLabel}
-                                    />
-                                    {isFeatureAllowed('enableClassSignIn') && isAdmin ? (
-                                        <div className="px-3 pb-4 pt-0">
-                                            <AttendanceTimeZoneField
-                                                schoolId={schoolId}
-                                                getAttendanceConfig={getAttendanceConfig}
-                                                setAttendanceConfig={setAttendanceConfig}
-                                                enabled
-                                                compact
-                                            />
-                                        </div>
-                                    ) : null}
-                                </div>
-                            )}
-
                             <div id="settings-features-recognition" className="scroll-mt-[5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
                                 <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><Trophy className="w-3.5 h-3.5" /> Recognition</p>
-                                <FeatureRow
-                                    id="enableAchievements"
-                                    label="Bonus Points"
-                                    desc="Students earn extra points when they hit point milestones; show milestones and bonus points."
-                                    icon={<Trophy className="w-5 h-5" />}
-                                    settings={local}
-                                    onToggle={handleToggle}
-                                    isImplemented={true}
-                                    isAdmin={isAdmin}
-                                    isAllowed={isFeatureAllowed('enableAchievements')}
-                                    planLabel={planLabel}
-                                />
-                                <FeatureRow
-                                    id="enableBadges"
-                                    label="Badges"
-                                    desc="Students earn badges for reaching a points threshold in a category within a time period (e.g. Good Behavior badge this month)."
-                                    icon={<Award className="w-5 h-5" />}
-                                    settings={local}
-                                    onToggle={handleToggle}
-                                    isImplemented={true}
-                                    isAdmin={isAdmin}
-                                    isAllowed={isFeatureAllowed('enableBadges')}
-                                    planLabel={planLabel}
-                                />
                                 <FeatureRow
                                     id="enableLevels"
                                     label="Levels (Soon)"
@@ -1958,8 +1819,6 @@ export function SettingsModal() {
                                     onToggle={handleToggle}
                                     isImplemented={false}
                                     isAdmin={isAdmin}
-                                    isAllowed={isFeatureAllowed('enableLevels')}
-                                    planLabel={planLabel}
                                 />
                                 <FeatureRow
                                     id="enableStreaks"
@@ -1970,32 +1829,16 @@ export function SettingsModal() {
                                     onToggle={handleToggle}
                                     isImplemented={false}
                                     isAdmin={isAdmin}
-                                    isAllowed={isFeatureAllowed('enableStreaks')}
-                                    planLabel={planLabel}
-                                />
-                                <FeatureRow
-                                    id="enableGoals"
-                                    label="Goals"
-                                    desc="Set personal point goals for students to reach over time."
-                                    icon={<Target className="w-5 h-5" />}
-                                    settings={local}
-                                    onToggle={handleToggle}
-                                    isImplemented={true}
-                                    isAdmin={isAdmin}
-                                    isAllowed={isFeatureAllowed('enableGoals')}
-                                    planLabel={planLabel}
                                 />
                                 <FeatureRow
                                     id="enableClassAccumulations"
                                     label="Class Accumulations"
-                                    desc="Class standings (combined balances by class) live on Hall of Fame. This toggle is for future extra features; it does not show class standings on the student kiosk."
+                                    desc="Class standings (combined balances by class) live on Hall of Fame. This toggle is for future advanced options; it does not show class standings on the student kiosk."
                                     icon={<UsersRound className="w-5 h-5" />}
                                     settings={local}
                                     onToggle={handleToggle}
                                     isImplemented={true}
                                     isAdmin={isAdmin}
-                                    isAllowed={isFeatureAllowed('enableClassAccumulations')}
-                                    planLabel={planLabel}
                                 />
                             </div>
 
@@ -2010,10 +1853,8 @@ export function SettingsModal() {
                                     onToggle={handleToggle}
                                     isImplemented={true}
                                     isAdmin={isAdmin}
-                                    isAllowed={isFeatureAllowed('enablePrizeAiSurprise')}
-                                    planLabel={planLabel}
                                 />
-                                {local.enablePrizeAiSurprise && isFeatureAllowed('enablePrizeAiSurprise') ? (
+                                {local.enablePrizeAiSurprise ? (
                                     <div className="px-3 pb-4 pt-0 border-t border-slate-100 dark:border-slate-800/50 mt-1">
                                         <Label htmlFor="prizeAiSurpriseDefaultPoints" className="text-xs font-bold text-foreground">
                                             Default point cost for Fun (AI surprise)
@@ -2044,8 +1885,6 @@ export function SettingsModal() {
                                     onConfigure={() => setVendingSettingsOpen(true)}
                                     isImplemented={true}
                                     isAdmin={isAdmin}
-                                    isAllowed={isFeatureAllowed('enableVendingMachine')}
-                                    planLabel={planLabel}
                                 />
                                 <FeatureRow
                                     id="enableStudentEmojiOnPrizeTickets"
@@ -2056,26 +1895,12 @@ export function SettingsModal() {
                                     onToggle={handleToggle}
                                     isImplemented={true}
                                     isAdmin={isAdmin}
-                                    isAllowed={isFeatureAllowed('enableStudentEmojiOnPrizeTickets')}
-                                    planLabel={planLabel}
                                 />
 
                             </div>
 
                             <div id="settings-features-students" className="scroll-mt-[5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
                                 <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><Smartphone className="w-3.5 h-3.5" /> Student Experience</p>
-                                <FeatureRow
-                                    id="enableStudentPortal"
-                                    label="Student Home Portal (Soon)"
-                                    desc="At-home access is planned. For now, students should use the in-school kiosk and rewards shop."
-                                    icon={<Smartphone className="w-5 h-5" />}
-                                    settings={local}
-                                    onToggle={handleToggle}
-                                    isImplemented={false}
-                                    isAdmin={isAdmin}
-                                    isAllowed={isFeatureAllowed('enableStudentPortal')}
-                                    planLabel={planLabel}
-                                />
                                 <FeatureRow
                                     id="enableStudentWelcomeBackScreen"
                                     label="Welcome back splash"
@@ -2085,8 +1910,6 @@ export function SettingsModal() {
                                     onToggle={handleToggle}
                                     isImplemented={true}
                                     isAdmin={isAdmin}
-                                    isAllowed={isFeatureAllowed('enableStudentWelcomeBackScreen')}
-                                    planLabel={planLabel}
                                 />
                                 <FeatureRow
                                     id="enableThemeAnimations"
@@ -2097,7 +1920,6 @@ export function SettingsModal() {
                                     onToggle={handleToggle}
                                     isImplemented={true}
                                     isAdmin={isAdmin}
-                                    isAllowed={true}
                                 />
                                 <FeatureRow
                                     id="enableStudentWelcome"
@@ -2108,10 +1930,8 @@ export function SettingsModal() {
                                     onToggle={handleToggle}
                                     isImplemented={false}
                                     isAdmin={isAdmin}
-                                    isAllowed={isFeatureAllowed('enableStudentWelcome')}
-                                    planLabel={planLabel}
                                 />
-                                {isAdmin && local.enableStudentWelcome && isFeatureAllowed('enableStudentWelcome') ? (
+                                {isAdmin && local.enableStudentWelcome ? (
                                     <div className="px-3 pb-4 pt-1">
                                         <Label className="text-xs font-bold text-foreground">
                                             Default welcome style (school)
@@ -2159,8 +1979,6 @@ export function SettingsModal() {
                                     onToggle={handleToggle}
                                     isImplemented={false}
                                     isAdmin={isAdmin}
-                                    isAllowed={isFeatureAllowed('enablePrizeImages')}
-                                    planLabel={planLabel}
                                 />
                                 <FeatureRow
                                     id="enableWishlist"
@@ -2171,8 +1989,6 @@ export function SettingsModal() {
                                     onToggle={handleToggle}
                                     isImplemented={false}
                                     isAdmin={isAdmin}
-                                    isAllowed={isFeatureAllowed('enableWishlist')}
-                                    planLabel={planLabel}
                                 />
                             </div>
 
@@ -2187,7 +2003,6 @@ export function SettingsModal() {
                                     onToggle={handleToggle}
                                     isImplemented={true}
                                     isAdmin={isAdmin}
-                                    isAllowed={true}
                                 />
                                 {local.enableBirthdayPoints && (
                                     <div className="px-3 pb-4 space-y-3">
@@ -2212,7 +2027,6 @@ export function SettingsModal() {
                                     onToggle={handleToggle}
                                     isImplemented={true}
                                     isAdmin={isAdmin}
-                                    isAllowed={true}
                                 />
                                 {local.enableSpecialDayPoints && (
                                     <div className="px-3 pb-4 space-y-4 pt-1">

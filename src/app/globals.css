@@ -213,6 +213,24 @@
     /* Same as .print-coupon-wrapper — em-based coupon scales with this root */
     font-size: 24px;
   }
+
+  .coupon-print-match-wrapper--30 .coupon-scalable {
+    font-size: 19px;
+  }
+
+  .coupon-print-match-wrapper--30 .coupon-barcode {
+    font-size: 1.72em;
+    line-height: 0.72;
+    font-weight: 400;
+    font-style: normal;
+    transform: scaleY(1.42);
+    transform-origin: center bottom;
+    letter-spacing: 0.04em;
+  }
+
+  .coupon-print-match-wrapper--30 .coupon-redemption-label {
+    font-size: 0.2em;
+  }
 }
 
 @media (max-height: 760px) {
@@ -405,6 +423,16 @@
   --border: 199 50% 25%;
   --muted: 199 40% 15%;
   --muted-foreground: 199 30% 70%;
+  --primary: 199 89% 48%;
+  --primary-foreground: 222 47% 11%;
+  --accent: 199 40% 20%;
+  --accent-foreground: 199 90% 90%;
+  --ring: 199 89% 48%;
+  --chart-1: 199 89% 48%;
+  --chart-2: 160 84% 39%;
+  --chart-3: 40 90% 60%;
+  --chart-4: 110 60% 50%;
+  --chart-5: 280 70% 60%;
 }
 
 .dark[data-color-scheme="rose"] {
@@ -414,6 +442,16 @@
   --border: 347 50% 25%;
   --muted: 347 40% 15%;
   --muted-foreground: 347 30% 72%;
+  --primary: 347 77% 48%;
+  --primary-foreground: 210 40% 98%;
+  --accent: 347 40% 20%;
+  --accent-foreground: 347 90% 90%;
+  --ring: 347 77% 48%;
+  --chart-1: 347 77% 50%;
+  --chart-2: 25 95% 53%;
+  --chart-3: 199 89% 48%;
+  --chart-4: 110 60% 50%;
+  --chart-5: 280 70% 60%;
 }
 
 .dark[data-color-scheme="mint"] {
@@ -423,6 +461,16 @@
   --border: 160 45% 22%;
   --muted: 160 40% 15%;
   --muted-foreground: 160 30% 70%;
+  --primary: 160 84% 39%;
+  --primary-foreground: 222 47% 11%;
+  --accent: 160 40% 20%;
+  --accent-foreground: 160 90% 90%;
+  --ring: 160 84% 39%;
+  --chart-1: 160 84% 39%;
+  --chart-2: 199 89% 48%;
+  --chart-3: 40 90% 60%;
+  --chart-4: 110 60% 50%;
+  --chart-5: 280 70% 60%;
 }
 
 .dark[data-color-scheme="lavender"] {
@@ -432,6 +480,16 @@
   --border: 263 45% 25%;
   --muted: 263 40% 15%;
   --muted-foreground: 263 30% 72%;
+  --primary: 263 70% 58%;
+  --primary-foreground: 210 40% 98%;
+  --accent: 263 40% 20%;
+  --accent-foreground: 263 90% 90%;
+  --ring: 263 70% 58%;
+  --chart-1: 263 70% 58%;
+  --chart-2: 199 89% 48%;
+  --chart-3: 160 84% 39%;
+  --chart-4: 40 90% 60%;
+  --chart-5: 280 70% 60%;
 }
 
 .dark[data-color-scheme="peach"] {
@@ -441,6 +499,16 @@
   --border: 25 60% 25%;
   --muted: 25 40% 15%;
   --muted-foreground: 25 30% 72%;
+  --primary: 25 95% 53%;
+  --primary-foreground: 222 47% 11%;
+  --accent: 25 40% 20%;
+  --accent-foreground: 25 90% 90%;
+  --ring: 25 95% 53%;
+  --chart-1: 25 95% 53%;
+  --chart-2: 347 77% 50%;
+  --chart-3: 199 89% 48%;
+  --chart-4: 160 84% 39%;
+  --chart-5: 280 70% 60%;
 }
 
 .dark[data-color-scheme="ocean"] {
@@ -454,6 +522,14 @@
   --border: 197 45% 22%;
   --muted: 197 38% 14%;
   --muted-foreground: 197 28% 72%;
+  --primary: 192 70% 30%;
+  --primary-foreground: 210 40% 98%;
+  --ring: 40 63% 56%;
+  --chart-1: 192 70% 38%;
+  --chart-2: 40 63% 56%;
+  --chart-3: 160 84% 39%;
+  --chart-4: 199 89% 48%;
+  --chart-5: 280 70% 60%;
 }
 
 .dark[data-color-scheme="sunset"] {
@@ -467,6 +543,14 @@
   --border: 24 55% 24%;
   --muted: 24 40% 14%;
   --muted-foreground: 24 30% 72%;
+  --primary: 12 66% 55%;
+  --primary-foreground: 222 47% 11%;
+  --ring: 229 30% 50%;
+  --chart-1: 12 66% 55%;
+  --chart-2: 229 30% 50%;
+  --chart-3: 199 89% 48%;
+  --chart-4: 160 84% 39%;
+  --chart-5: 280 70% 60%;
 }
 
 .dark[data-color-scheme="sapphire"] {
@@ -480,6 +564,14 @@
   --border: 220 50% 24%;
   --muted: 220 40% 14%;
   --muted-foreground: 220 30% 72%;
+  --primary: 217 64% 40%;
+  --primary-foreground: 210 40% 98%;
+  --ring: 40 62% 50%;
+  --chart-1: 217 64% 40%;
+  --chart-2: 40 62% 50%;
+  --chart-3: 160 84% 39%;
+  --chart-4: 347 77% 50%;
+  --chart-5: 199 89% 48%;
 }
 
 .dark[data-color-scheme="coral"] {
@@ -493,6 +585,14 @@
   --border: 16 55% 24%;
   --muted: 16 40% 14%;
   --muted-foreground: 16 30% 72%;
+  --primary: 4 63% 59%;
+  --primary-foreground: 222 47% 11%;
+  --ring: 177 53% 37%;
+  --chart-1: 4 63% 59%;
+  --chart-2: 177 53% 37%;
+  --chart-3: 199 89% 48%;
+  --chart-4: 160 84% 39%;
+  --chart-5: 280 70% 60%;
 }
 
 /*
@@ -539,6 +639,7 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
 .print-id-card {
   /* Set inline from StudentIdCard when a theme uses fontScale (default 1). */
   --print-id-font-scale: 1.15;
+  --print-id-name-fit-scale: 1;
   border: 1px solid hsl(var(--border));
   padding: 12px 14px;
   text-align: center;
@@ -555,6 +656,10 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
   position: relative;
   border-radius: 12px;
   overflow: hidden;
+}
+
+.print-id-card--rectangular {
+  border-radius: 0;
 }
 
 .print-id-header-container {
@@ -688,26 +793,28 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
   flex-direction: column;
   gap: 2px;
   text-align: left;
+  flex: 1 1 auto;
   min-width: 0;
 }
 .print-id-name {
   font-weight: 800;
-  font-size: calc(14px * var(--print-id-font-scale));
+  font-size: calc(14px * var(--print-id-font-scale) * var(--print-id-name-fit-scale));
   letter-spacing: 0.03em;
-  line-height: 1.05;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.12;
+  white-space: normal;
+  word-break: normal;
+  overflow-wrap: anywhere;
 }
 .print-id-nickname {
-  font-size: calc(12px * var(--print-id-font-scale));
+  font-size: calc(12px * var(--print-id-font-scale) * var(--print-id-name-fit-scale));
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   opacity: 0.85;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.12;
+  white-space: normal;
+  word-break: normal;
+  overflow-wrap: anywhere;
 }
 .print-id-class {
   font-size: calc(12px * var(--print-id-font-scale));
@@ -916,7 +1023,8 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
 /* Print Styles */
 #coupon-print-root,
 #student-id-print-container,
-#prize-ticket-print-wrapper {
+#prize-ticket-print-wrapper,
+#library-barcode-print-wrapper {
   display: none;
 }
 
@@ -981,7 +1089,9 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
 
   /* ID cards: multiple Avery pages — same as coupons; pinned 100% viewport + overflow:hidden clips page 2+. */
   html:has(body.id-card-printing),
-  body.id-card-printing {
+  body.id-card-printing,
+  html:has(body.library-barcode-printing),
+  body.library-barcode-printing {
     overflow: visible !important;
     height: auto !important;
   }
@@ -1004,7 +1114,8 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
   /* Scorched Earth: Hide EVERYTHING on body */
   body.coupon-printing *,
   body.prize-ticket-printing *,
-  body.id-card-printing * {
+  body.id-card-printing *,
+  body.library-barcode-printing * {
     visibility: hidden !important;
   }
 
@@ -1016,7 +1127,9 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
   body.prize-ticket-printing #prize-ticket-standalone,
   body.prize-ticket-printing #prize-ticket-standalone *,
   body.id-card-printing #student-id-print-wrapper,
-  body.id-card-printing #student-id-print-wrapper * {
+  body.id-card-printing #student-id-print-wrapper *,
+  body.library-barcode-printing #library-barcode-print-wrapper,
+  body.library-barcode-printing #library-barcode-print-wrapper * {
     visibility: visible !important;
   }
 
@@ -1047,7 +1160,8 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
   }
 
   /* ID card sheet is portaled to body (StudentIdPrintSheet). Hide the app shell so visibility:hidden min-h-screen UI does not paginate as blank sheets. */
-  body.id-card-printing > *:not(#student-id-print-wrapper) {
+  body.id-card-printing > *:not(#student-id-print-wrapper),
+  body.library-barcode-printing > *:not(#library-barcode-print-wrapper) {
     display: none !important;
   }
 
@@ -1070,7 +1184,8 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
   body.coupon-printing #coupon-print-root,
   body.prize-ticket-printing #prize-ticket-print-wrapper,
   body.prize-ticket-printing #prize-ticket-standalone,
-  body.id-card-printing #student-id-print-wrapper {
+  body.id-card-printing #student-id-print-wrapper,
+  body.library-barcode-printing #library-barcode-print-wrapper {
     display: block !important;
     position: static !important;
     inset: auto !important;
@@ -1483,7 +1598,42 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
   }
 
   .coupon-print-page--30 .print-coupon-wrapper .coupon-scalable {
-    font-size: 18px !important;
+    font-size: 19px !important;
+  }
+
+  /* Scanner-friendly Code 39 on all coupon print layouts */
+  .print-coupon-wrapper .coupon-barcode {
+    overflow: visible !important;
+    text-overflow: clip !important;
+    font-weight: 400 !important;
+    font-style: normal !important;
+    line-height: 0.72 !important;
+    color: #000000 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .print-coupon-wrapper .coupon-barcode-zone {
+    flex-shrink: 0 !important;
+    background: #ffffff !important;
+  }
+
+  /* 30-up: larger bars + taller module height (matches ID card print technique) */
+  .coupon-print-page--30 .print-coupon-wrapper .coupon-barcode {
+    font-size: 1.72em !important;
+    letter-spacing: 0.04em !important;
+    transform: scaleY(1.42);
+    transform-origin: center bottom;
+  }
+
+  .coupon-print-page--30 .print-coupon-wrapper .coupon-redemption-label {
+    font-size: 0.2em !important;
+    margin-bottom: 0.02em !important;
+  }
+
+  .coupon-print-page--30 .print-coupon-wrapper .coupon-barcode-zone {
+    min-height: 1.5em;
+    padding-bottom: 0.04em;
   }
 
   #student-id-print-wrapper {
@@ -1515,6 +1665,99 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
     page-break-after: auto;
   }
 
+  #library-barcode-print-wrapper {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background: #fff;
+  }
+
+  .library-barcode-print-page {
+    display: grid !important;
+    grid-template-columns: repeat(3, 2.625in) !important;
+    grid-template-rows: repeat(10, 1in) !important;
+    column-gap: 0.125in !important;
+    row-gap: 0 !important;
+    width: 8.5in !important;
+    height: 11in !important;
+    padding: 0.5in 0.1875in !important;
+    box-sizing: border-box !important;
+    page-break-after: always;
+    page-break-inside: avoid;
+    justify-content: center !important;
+    align-content: start !important;
+  }
+
+  .library-barcode-print-page:last-child {
+    page-break-after: auto;
+  }
+
+  .library-barcode-sticker {
+    box-sizing: border-box !important;
+    width: 2.625in !important;
+    height: 1in !important;
+    padding: 0.06in 0.1in 0.04in !important;
+    border: 1px dashed #d1d5db !important;
+    border-radius: 2px !important;
+    background: #fff !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    overflow: hidden !important;
+    page-break-inside: avoid;
+    text-align: center;
+  }
+
+  .library-barcode-sticker-school {
+    width: 100%;
+    font-size: 5.5pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #6b7280;
+    line-height: 1.1;
+  }
+
+  .library-barcode-sticker-title {
+    width: 100%;
+    line-height: 1.1;
+    max-height: 2.2em;
+    overflow: hidden;
+  }
+
+  .library-barcode-sticker-meta {
+    width: 100%;
+    margin: 0;
+    line-height: 1.1;
+  }
+
+  .library-barcode-sticker-code {
+    font-size: 14pt !important;
+    line-height: 1 !important;
+    color: #000 !important;
+    max-width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .library-barcode-sticker-upc {
+    margin: 0;
+    line-height: 1;
+  }
+
+  body.id-card-printing #student-id-print-wrapper .print-prize-id-card.print-id-card {
+    background: var(--prize-card-accent, #fff) !important;
+    border: 2px solid var(--prize-card-accent, hsl(var(--border))) !important;
+    color: var(--prize-card-text, #0f172a) !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body.id-card-printing #student-id-print-wrapper .print-prize-id-card .print-id-header-container {
+    border-bottom-color: var(--prize-card-divider, rgba(0, 0, 0, 0.15)) !important;
+  }
+
   .print-id-card {
     /* Preserve the physical print slot, but keep the card formatted like the screen preview. */
     border: 1px solid hsl(var(--border)) !important;
@@ -1539,6 +1782,10 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
     overflow: hidden !important;
   }
 
+  .print-id-card--rectangular {
+    border-radius: 0 !important;
+  }
+
   .print-id-header-container {
     display: flex;
     justify-content: space-between;
@@ -1552,6 +1799,8 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
     display: flex;
     align-items: center;
     gap: 6px;
+    flex-shrink: 0;
+    min-width: 0;
   }
   .print-id-app-logo {
     width: auto;
@@ -1580,18 +1829,25 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
     font-weight: 800;
     letter-spacing: 0.02em;
     line-height: 1.2;
+    overflow-wrap: break-word;
+    word-break: normal;
   }
   .print-id-app-tagline {
     font-size: calc(8px * var(--print-id-font-scale));
     font-weight: 600;
     opacity: 0.85;
     line-height: 1.2;
+    overflow-wrap: break-word;
+    word-break: normal;
   }
   .print-id-school {
     display: flex;
     align-items: center;
     gap: 6px;
     text-align: right;
+    flex: 1;
+    min-width: 0;
+    justify-content: flex-end;
   }
   .print-id-school-logo {
     width: auto;
@@ -1615,6 +1871,10 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
     font-weight: 800;
     letter-spacing: 0.02em;
     font-family: 'Ubuntu', sans-serif;
+    overflow-wrap: break-word;
+    word-break: normal;
+    white-space: normal;
+    line-height: 1.1;
   }
   
   .print-id-main {
@@ -1678,30 +1938,35 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
 
   .print-id-name {
     font-weight: 800;
-    font-size: calc(14px * var(--print-id-font-scale));
+    font-size: calc(14px * var(--print-id-font-scale) * var(--print-id-name-fit-scale));
     letter-spacing: 0.03em;
-    line-height: 1.05;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    line-height: 1.15;
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: anywhere;
     text-transform: none;
   }
 
   .print-id-nickname {
-    font-size: calc(12px * var(--print-id-font-scale));
+    font-size: calc(12px * var(--print-id-font-scale) * var(--print-id-name-fit-scale));
     font-weight: 800;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     opacity: 0.85;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.15;
   }
 
   .print-id-class {
     font-size: calc(12px * var(--print-id-font-scale));
     color: #4b5563;
     font-weight: 600;
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: break-word;
+    line-height: 1.15;
   }
 
   .print-id-number {
@@ -1710,6 +1975,10 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
     font-weight: 600;
     letter-spacing: 0.08em;
     text-transform: uppercase;
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: break-word;
+    line-height: 1.15;
   }
 
   .print-id-barcode-container {
@@ -1787,6 +2056,9 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
     page-break-inside: avoid !important;
     box-sizing: border-box !important;
   }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--rectangular {
+    border-radius: 0 !important;
+  }
   /* Inherit theme font (and italic) from the card root; Avery/print rules above set Ubuntu on .print-id-header, etc. */
   body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card *:not(.font-barcode) {
     font-family: inherit !important;
@@ -1804,6 +2076,8 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
     display: flex !important;
     align-items: center !important;
     gap: 6px !important;
+    flex-shrink: 0 !important;
+    min-width: 0 !important;
   }
   body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-app-logo {
     width: 24px !important;
@@ -1821,18 +2095,25 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
     font-weight: 800 !important;
     letter-spacing: 0.02em !important;
     line-height: 1.2 !important;
+    overflow-wrap: break-word !important;
+    word-break: normal !important;
   }
   body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-app-tagline {
     font-size: calc(8px * var(--print-id-font-scale)) !important;
     font-weight: 600 !important;
     opacity: 0.85 !important;
     line-height: 1.2 !important;
+    overflow-wrap: break-word !important;
+    word-break: normal !important;
   }
   body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-school {
     display: flex !important;
     align-items: center !important;
     gap: 6px !important;
     text-align: right !important;
+    flex: 1 !important;
+    min-width: 0 !important;
+    justify-content: flex-end !important;
   }
   body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-school-logo {
     width: 24px !important;
@@ -1843,6 +2124,10 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
     font-size: calc(10px * var(--print-id-font-scale)) !important;
     font-weight: 800 !important;
     letter-spacing: 0.02em !important;
+    white-space: normal !important;
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+    line-height: 1.1 !important;
   }
   body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-main {
     flex: 1 !important;
@@ -1867,26 +2152,41 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
   }
   body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-name {
     font-weight: 800 !important;
-    font-size: calc(14px * var(--print-id-font-scale)) !important;
+    font-size: calc(14px * var(--print-id-font-scale) * var(--print-id-name-fit-scale)) !important;
     letter-spacing: 0.03em !important;
-    line-height: 1.05 !important;
+    line-height: 1.15 !important;
     text-transform: none !important;
+    white-space: normal !important;
+    word-break: normal !important;
+    overflow-wrap: anywhere !important;
   }
   body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-nickname {
-    font-size: calc(12px * var(--print-id-font-scale)) !important;
+    font-size: calc(12px * var(--print-id-font-scale) * var(--print-id-name-fit-scale)) !important;
     font-weight: 800 !important;
     letter-spacing: 0.08em !important;
     text-transform: uppercase !important;
+    white-space: normal !important;
+    word-break: normal !important;
+    overflow-wrap: anywhere !important;
+    line-height: 1.15 !important;
   }
   body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-class {
     font-size: calc(12px * var(--print-id-font-scale)) !important;
     font-weight: 600 !important;
+    white-space: normal !important;
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+    line-height: 1.15 !important;
   }
   body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-number {
     font-size: calc(10px * var(--print-id-font-scale)) !important;
     font-weight: 600 !important;
     letter-spacing: 0.08em !important;
     text-transform: uppercase !important;
+    white-space: normal !important;
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+    line-height: 1.15 !important;
   }
   body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-barcode-container {
     width: 100% !important;

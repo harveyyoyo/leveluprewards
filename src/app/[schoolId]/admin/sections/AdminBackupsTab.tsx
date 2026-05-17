@@ -5,6 +5,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Helper } from '@/components/ui/helper';
+import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 import type { BackupInfo } from '@/lib/types';
 
 export function AdminBackupsTab({
@@ -29,9 +30,12 @@ export function AdminBackupsTab({
           </Helper>
           <CardDescription>Create and restore data snapshots.</CardDescription>
         </div>
-        <Button onClick={onCreateBackup} className="rounded-xl">
-          <Plus className="mr-2 h-4 w-4" /> Create Snapshot
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <TabWalkthroughHeaderAction />
+          <Button onClick={onCreateBackup} className="rounded-xl">
+            <Plus className="mr-2 h-4 w-4" /> Create Snapshot
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="p-6">
         <div>

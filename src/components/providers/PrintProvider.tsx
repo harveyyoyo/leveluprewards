@@ -5,12 +5,11 @@ import React, {
     createContext,
     useContext,
     useState,
-    useEffect,
     useMemo,
     useRef,
 } from 'react';
 import dynamic from 'next/dynamic';
-import type { Coupon, Student, Class } from '@/lib/types';
+import type { Coupon, Student, Class, Prize, LibraryItem } from '@/lib/types';
 import type { PrizeRedeemTicket } from '@/components/PrizeRedeemTicketPrintSheet';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useAuth } from './AuthProvider';
@@ -41,10 +40,22 @@ const PrizeRedeemTicketPrintSheet = dynamic(
     { ssr: false },
 );
 
+const PrizeIdPrintSheet = dynamic(
+    () => import('@/components/PrizeIdPrintSheet').then((m) => ({ default: m.PrizeIdPrintSheet })),
+    { ssr: false },
+);
+
+const LibraryBarcodePrintSheet = dynamic(
+    () => import('@/components/LibraryBarcodePrintSheet').then((m) => ({ default: m.LibraryBarcodePrintSheet })),
+    { ssr: false },
+);
+
 interface PrintContextType {
     setCouponsToPrint: (coupons: Coupon[], options?: { couponsPerPage?: CouponPrintPageSize }) => void;
     setStudentsToPrint: (data: { students: Student[]; classes: Class[]; printerType?: 'dtc4500e' }) => void;
     printPrizeTickets: (tickets: PrizeRedeemTicket[]) => void;
+    setPrizeIdCardsToPrint: (prizes: Prize[]) => void;
+    setLibraryStickersToPrint: (items: LibraryItem[]) => void;
 }
 
 const PrintContext = createContext<PrintContextType | null>(null);
@@ -67,6 +78,8 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
     const [couponPrintJob, setCouponPrintJob] = useState<{ coupons: Coupon[]; couponsPerPage: CouponPrintPageSize } | null>(null);
     const [printData, setPrintData] = useState<{ students: Student[]; classes: Class[]; printerType?: 'dtc4500e' } | null>(null);
     const [prizeTicketsToPrint, setPrizeTicketsToPrint] = useState<PrizeRedeemTicket[]>([]);
+    const [prizeIdCardsToPrint, setPrizeIdCardsToPrint] = useState<Prize[]>([]);
+    const [libraryStickersToPrint, setLibraryStickersToPrint] = useState<LibraryItem[]>([]);
     const { settings } = useSettings();
     const prizeVoucherPaperFormat: PrizeVoucherPaperFormat =
         settings.prizeVoucherPaperFormat === 'thermal_80mm' ? 'thermal_80mm' : 'label_50x70';
@@ -78,7 +91,7 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
     const printSchoolLogoUrl = (schoolData?.logoUrl ?? '').trim() || null;
 
     const printTriggered = useRef(false);
-    useEffect(() => {
+    const triggerCouponPrint = React.useCallback(() => {
         if (couponPrintJob && couponPrintJob.coupons.length > 0 && !printTriggered.current) {
             printTriggered.current = true;
             const afterPrint = () => {
@@ -107,13 +120,17 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
             };
             window.addEventListener('afterprint', afterPrint);
             playSound('swoosh');
-            document.fonts.load('48pt "Libre Barcode 39"').finally(window.print);
+            document.fonts.load('48pt "Libre Barcode 39"').finally(() => {
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => window.print());
+                });
+            });
         }
     }, [printData, playSound]);
 
     const prizePrintTriggered = useRef(false);
     const prizeTicketAfterPrintRef = useRef<(() => void) | null>(null);
-    useEffect(() => {
+    const triggerPrizeTicketPrint = React.useCallback(() => {
         if (prizeTicketsToPrint.length > 0 && !prizePrintTriggered.current) {
             prizePrintTriggered.current = true;
             const afterPrint = () => {
@@ -143,13 +160,53 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
         }
     }, [prizeTicketsToPrint, playSound, prizeVoucherPaperFormat]);
 
+    const prizeIdPrintTriggered = useRef(false);
+    const triggerPrizeIdPrint = React.useCallback(() => {
+        if (prizeIdCardsToPrint.length > 0 && !prizeIdPrintTriggered.current) {
+            prizeIdPrintTriggered.current = true;
+            const afterPrint = () => {
+                setPrizeIdCardsToPrint([]);
+                prizeIdPrintTriggered.current = false;
+                window.removeEventListener('afterprint', afterPrint);
+            };
+            window.addEventListener('afterprint', afterPrint);
+            playSound('swoosh');
+            document.fonts.load('48pt "Libre Barcode 39"').finally(() => {
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => window.print());
+                });
+            });
+        }
+    }, [prizeIdCardsToPrint, playSound]);
+
+    const libraryPrintTriggered = useRef(false);
+    const triggerLibraryStickerPrint = React.useCallback(() => {
+        if (libraryStickersToPrint.length > 0 && !libraryPrintTriggered.current) {
+            libraryPrintTriggered.current = true;
+            const afterPrint = () => {
+                setLibraryStickersToPrint([]);
+                libraryPrintTriggered.current = false;
+                window.removeEventListener('afterprint', afterPrint);
+            };
+            window.addEventListener('afterprint', afterPrint);
+            playSound('swoosh');
+            document.fonts.load('32pt "Libre Barcode 39"').finally(() => {
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => window.print());
+                });
+            });
+        }
+    }, [libraryStickersToPrint, playSound]);
+
     const value = useMemo(
         () => ({ 
             setCouponsToPrint: (coupons: Coupon[], options?: { couponsPerPage?: CouponPrintPageSize }) => {
                 setCouponPrintJob({ coupons, couponsPerPage: options?.couponsPerPage ?? 10 });
             }, 
             setStudentsToPrint: setPrintData,
-            printPrizeTickets: setPrizeTicketsToPrint
+            printPrizeTickets: setPrizeTicketsToPrint,
+            setPrizeIdCardsToPrint,
+            setLibraryStickersToPrint,
         }),
         []
     );
@@ -162,6 +219,7 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
                     coupons={couponPrintJob.coupons}
                     couponsPerPage={couponPrintJob.couponsPerPage}
                     schoolId={schoolId}
+                    onReady={triggerCouponPrint}
                 />
             )}
             {printData && printData.students.length > 0 && printData.printerType !== 'dtc4500e' && <StudentIdPrintSheet students={printData.students} classes={printData.classes} schoolId={schoolId} onReady={triggerStudentPrint} />}
@@ -172,6 +230,17 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
                     schoolName={printSchoolName}
                     logoUrl={printSchoolLogoUrl}
                     paperFormat={prizeVoucherPaperFormat}
+                    onReady={triggerPrizeTicketPrint}
+                />
+            )}
+            {prizeIdCardsToPrint.length > 0 && (
+                <PrizeIdPrintSheet prizes={prizeIdCardsToPrint} schoolId={schoolId} onReady={triggerPrizeIdPrint} />
+            )}
+            {libraryStickersToPrint.length > 0 && (
+                <LibraryBarcodePrintSheet
+                    items={libraryStickersToPrint}
+                    schoolId={schoolId}
+                    onReady={triggerLibraryStickerPrint}
                 />
             )}
         </PrintContext.Provider>

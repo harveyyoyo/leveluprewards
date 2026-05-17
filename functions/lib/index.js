@@ -63,11 +63,28 @@ function maskRecipient(to) {
         return `${s.slice(0, 3)}…`;
     return `${s.slice(0, 2)}***${s.slice(at)}`;
 }
+/**
+ * Timing-safe string comparison to prevent side-channel attacks on passcodes.
+ * Returns true if `a` and `b` are non-empty and equal, without leaking length
+ * or character-position information through timing differences.
+ */
+function safeEqual(a, b) {
+    if (!a || !b)
+        return false;
+    const bufA = Buffer.from(a, "utf8");
+    const bufB = Buffer.from(b, "utf8");
+    if (bufA.length !== bufB.length) {
+        // Still run timingSafeEqual against bufA to avoid leaking length info via timing.
+        crypto.timingSafeEqual(bufA, bufA);
+        return false;
+    }
+    return crypto.timingSafeEqual(bufA, bufB);
+}
 function schoolAccessPasscodeFrom(data) {
-    return trimmedString(data.schoolAccessPasscode) || trimmedString(data.passcode) || "1234";
+    return trimmedString(data.schoolAccessPasscode) || trimmedString(data.passcode) || "";
 }
 function adminPasscodeFrom(data) {
-    return trimmedString(data.adminPasscode) || trimmedString(data.passcode) || "1234";
+    return trimmedString(data.adminPasscode) || trimmedString(data.passcode) || "";
 }
 // Demo schools should authenticate like any other school (no passcode bypass).
 async function hasSchoolRole(schoolId, uid, roles) {
@@ -547,7 +564,11 @@ exports.verifySchoolPasscode = functions.https.onCall(async (data, context) => {
         throw new functions.https.HttpsError("invalid-argument", "A valid passcode is required.");
     }
     const schoolData = schoolDoc.data();
-    if (adminPasscodeFrom(schoolData) !== passcode) {
+    const expected = adminPasscodeFrom(schoolData);
+    if (!expected) {
+        throw new functions.https.HttpsError("failed-precondition", "This school has no admin passcode configured. An administrator must set one before login is possible.");
+    }
+    if (!safeEqual(expected, passcode)) {
         throw new functions.https.HttpsError("permission-denied", "Invalid passcode.");
     }
     // Provision admin role using the Admin SDK (path must match client: schools/{schoolId}/roles_admin/{uid})
@@ -573,7 +594,11 @@ exports.verifySchoolAccessPasscode = functions.https.onCall(async (data, context
         throw new functions.https.HttpsError("not-found", "School not found.");
     }
     const schoolData = schoolDoc.data();
-    if (schoolAccessPasscodeFrom(schoolData) !== passcode) {
+    const expected = schoolAccessPasscodeFrom(schoolData);
+    if (!expected) {
+        throw new functions.https.HttpsError("failed-precondition", "This school has no access passcode configured. An administrator must set one before sign-in is possible.");
+    }
+    if (!safeEqual(expected, passcode)) {
         throw new functions.https.HttpsError("permission-denied", "Invalid passcode.");
     }
     // Lets the Next.js edge gate mint a school-scoped cookie after verifying the same passcode server-side.
@@ -606,15 +631,17 @@ async function requireDeveloper(context) {
         throw new functions.https.HttpsError("permission-denied", "Developer access is required.");
     }
 }
-/** Callable: add current user to developer allow-list after verifying dev passcode. */
-exports.addDeveloperMe = functions.https.onCall(async (data, context) => {
+/** Callable: add current user to developer allow-list (allowed Google accounts only). */
+exports.addDeveloperMe = functions.https.onCall(async (_data, context) => {
+    var _a, _b, _c, _d, _e, _f;
     requireAuth(context);
-    if (typeof data.passcode !== "string" || data.passcode.length === 0) {
-        throw new functions.https.HttpsError("invalid-argument", "passcode is required.");
-    }
-    const devPasscode = process.env.DEV_PASSCODE;
-    if (!devPasscode || data.passcode !== devPasscode) {
-        throw new functions.https.HttpsError("permission-denied", "Invalid developer passcode.");
+    const email = ((_c = (_b = (_a = context.auth) === null || _a === void 0 ? void 0 : _a.token) === null || _b === void 0 ? void 0 : _b.email) !== null && _c !== void 0 ? _c : "").trim().toLowerCase();
+    const provider = (_f = (_e = (_d = context.auth) === null || _d === void 0 ? void 0 : _d.token) === null || _e === void 0 ? void 0 : _e.firebase) === null || _f === void 0 ? void 0 : _f.sign_in_provider;
+    const allowlistStr = process.env.DEVELOPER_GOOGLE_EMAIL_ALLOWLIST || process.env.NEXT_PUBLIC_DEVELOPER_GOOGLE_EMAIL_ALLOWLIST || "";
+    const allowlist = allowlistStr.split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
+    const isGoogleDev = provider === "google.com" && email && (allowlist.length === 0 || allowlist.includes(email));
+    if (!isGoogleDev) {
+        throw new functions.https.HttpsError("permission-denied", "Developer access requires signing in with an allowed Google account.");
     }
     const db = admin.firestore();
     const globalRef = db.collection("appConfig").doc(APP_CONFIG_GLOBAL);
@@ -657,13 +684,15 @@ exports.createSchoolByDeveloper = functions.https.onCall(async (data, context) =
     const providedLegacyPasscode = trimmedString(data.passcode);
     const providedSchoolAccessPasscode = trimmedString(data.schoolAccessPasscode) || providedLegacyPasscode;
     const providedAdminPasscode = trimmedString(data.adminPasscode) || providedLegacyPasscode;
-    const defaultPasscode = "1234";
+    if (!providedSchoolAccessPasscode && !providedAdminPasscode) {
+        throw new functions.https.HttpsError("invalid-argument", "At least one passcode (schoolAccessPasscode, adminPasscode, or passcode) must be provided when creating a school.");
+    }
     const schoolDocData = {
         name: providedName || cleanId,
         updatedAt: now,
-        passcode: providedSchoolAccessPasscode || defaultPasscode,
-        schoolAccessPasscode: providedSchoolAccessPasscode || defaultPasscode,
-        adminPasscode: providedAdminPasscode || defaultPasscode,
+        passcode: providedSchoolAccessPasscode || providedAdminPasscode,
+        schoolAccessPasscode: providedSchoolAccessPasscode || providedAdminPasscode,
+        adminPasscode: providedAdminPasscode || providedSchoolAccessPasscode,
         plan: "free",
         featureOverrides: {},
         hasMigratedStudents: true,
@@ -1103,6 +1132,7 @@ exports.redeemPrizeServer = functions.https.onCall(async (data, context) => {
     const prizeId = String(data.prizeId).trim();
     const rawQuantity = Number((_a = data.quantity) !== null && _a !== void 0 ? _a : 1);
     const quantity = Number.isFinite(rawQuantity) ? Math.floor(rawQuantity) : 1;
+    const markFulfilled = data.markFulfilled === true;
     if (quantity < 1 || quantity > 99) {
         throw new functions.https.HttpsError("invalid-argument", "Quantity must be between 1 and 99.");
     }
@@ -1187,7 +1217,7 @@ exports.redeemPrizeServer = functions.https.onCall(async (data, context) => {
             desc: `Redeemed: ${String(prize.name || "Prize")}${quantity > 1 ? ` (x${quantity})` : ""}`,
             amount: -totalCost,
             date: redeemedAt,
-            fulfilled: false,
+            fulfilled: markFulfilled,
         };
         if (teacherIds[0])
             activityData.teacherId = teacherIds[0];

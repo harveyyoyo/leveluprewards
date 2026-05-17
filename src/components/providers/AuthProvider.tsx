@@ -25,6 +25,7 @@ import {
     clearFirebaseSessionCookieSync,
 } from '@/lib/auth/syncFirebaseSessionCookie';
 import { sanitizeInternalNextPath } from '@/lib/auth/internalNextRedirect';
+import { isAllowedDeveloperGoogleUser } from '@/lib/developerAccess';
 
 export type SyncStatus = 'synced' | 'syncing' | 'offline' | 'error';
 export type LoginState = 'loggedOut' | 'school' | 'developer' | 'student' | 'teacher' | 'admin' | 'secretary' | 'prizeClerk' | 'reports';
@@ -82,6 +83,17 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const DEVELOPER_SUPPORT_SESSION_KEY = 'developerSupportSession';
+const SESSION_SYNC_FAILED_EVENT = 'levelup:session-sync-failed';
+
+function reportSessionSyncFailure(phase: 'firebase-session' | 'school-gate') {
+    console.error(`Auth session sync failed during ${phase}.`);
+    if (typeof window === 'undefined') return;
+    window.dispatchEvent(
+        new CustomEvent(SESSION_SYNC_FAILED_EVENT, {
+            detail: { phase },
+        }),
+    );
+}
 
 async function waitForReadableRole(
     roleRef: DocumentReference,
@@ -405,23 +417,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 setIsPrizeClerk(false);
                 setIsReports(false);
             } else if (savedState) {
-                // `loginState` can persist without `schoolId` (cleared storage, migration). Recover from the
-                // current path so kiosk routes like /{school}/student are not stuck with student + null schoolId.
-                let recoveredSchoolId = savedSchoolId || null;
-                if (!recoveredSchoolId && typeof window !== 'undefined') {
-                    const m = window.location.pathname.match(
-                        /^\/([^/]+)\/(?:student|student-home|teacher|admin|admin-sign-in|portal|prize|secretary|prize-clerk|reports)(?:\/|$)/i,
-                    );
-                    const seg = m?.[1]?.trim().toLowerCase();
-                    if (seg && !['login', 'developer', 's'].includes(seg)) {
-                        recoveredSchoolId = seg;
-                        localStorage.setItem('schoolId', recoveredSchoolId);
-                    }
-                }
                 const needsSchool = ['student', 'school', 'teacher', 'admin', 'secretary', 'prizeClerk', 'reports'].includes(
                     savedState,
                 );
-                if (needsSchool && !recoveredSchoolId) {
+                if (needsSchool) {
                     localStorage.removeItem('loginState');
                     localStorage.removeItem('schoolId');
                     localStorage.removeItem('userName');
@@ -437,9 +436,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     setIsPrizeClerk(false);
                     setIsReports(false);
                 } else {
-                    if (recoveredSchoolId) {
-                        setSchoolId(recoveredSchoolId);
-                    }
                     setLoginState(savedState);
                     setIsAdmin(false);
                     setIsTeacher(false);
@@ -469,16 +465,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
      * After middleware redirects to `/login?...&next=`, sync here then hard-navigate to `next`.
      */
     useEffect(() => {
-        if (!isInitialized || isUserLoading || loginState === 'loggedOut' || !auth?.currentUser) {
+        if (
+            !isInitialized ||
+            isUserLoading ||
+            loginState === 'loggedOut' ||
+            loginState === 'developer' ||
+            !auth?.currentUser
+        ) {
             return;
         }
         let cancelled = false;
         void (async () => {
             const okFb = await syncFirebaseSessionCookie(auth);
-            if (cancelled || !okFb) return;
+            if (cancelled) return;
+            if (!okFb) {
+                reportSessionSyncFailure('firebase-session');
+                return;
+            }
             const sid = schoolId?.trim();
             if (sid) {
-                await syncSchoolGateCookie(auth, sid);
+                const okSchoolGate = await syncSchoolGateCookie(auth, sid);
+                if (cancelled) return;
+                if (!okSchoolGate) {
+                    reportSessionSyncFailure('school-gate');
+                    return;
+                }
             }
             if (cancelled) return;
             if (typeof window === 'undefined') return;
@@ -605,53 +616,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         ): Promise<LoginResult> => {
             if (type === 'developer') {
                 try {
-                    const res = await fetch('/api/auth/dev-login', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ passcode: credentials.passcode }),
-                    });
-                    const data = await res.json();
-                    if (data.success) {
-                        // Listing `schools` in Firestore requires `isDeveloper()` (UID in appConfig/global.developerUids).
-                        // addDeveloperMe merges the current Firebase user's UID into that allow-list (needs DEV_PASSCODE on Functions).
-                        let uid = auth.currentUser?.uid ?? null;
-                        if (!uid) {
-                            for (let i = 0; i < 50; i++) {
-                                await new Promise((r) => setTimeout(r, 80));
-                                uid = auth.currentUser?.uid ?? null;
-                                if (uid) break;
-                            }
-                        }
-                        if (!uid) {
-                            console.error('Developer login: no Firebase signed-in user (anonymous auth should run first).');
-                            return loginErr(
-                                'No Firebase session yet. Refresh the page and try again.',
-                            );
-                        }
-                        try {
-                            const addDeveloperMe = httpsCallable(functions, 'addDeveloperMe');
-                            await addDeveloperMe({ passcode: credentials.passcode });
-                        } catch (e) {
-                            console.error('addDeveloperMe failed:', e);
-                            return loginErr(
-                                getReadableErrorMessage(e, 'Could not finish developer sign-in. Check your connection and try again.'),
-                            );
-                        }
-                        setLoginState('developer');
-                        setIsAdmin(true);
-                        setIsTeacher(false);
-                        setIsSecretary(false);
-                        setIsPrizeClerk(false);
-                        setIsReports(false);
-                        setUserName('Developer');
-                        setUserId(uid);
-                        return loginOk();
+                    if (!isAllowedDeveloperGoogleUser(auth.currentUser)) {
+                        return loginErr(
+                            'Sign in with an allowed Google account to access developer tools.',
+                        );
                     }
+
+                    // Listing `schools` in Firestore requires `isDeveloper()` (UID in appConfig/global.developerUids).
+                    // addDeveloperMe merges the current Firebase user's UID into that allow-list.
+                    let uid = auth.currentUser?.uid ?? null;
+                    if (!uid) {
+                        for (let i = 0; i < 50; i++) {
+                            await new Promise((r) => setTimeout(r, 80));
+                            uid = auth.currentUser?.uid ?? null;
+                            if (uid) break;
+                        }
+                    }
+                    if (!uid) {
+                        console.error('Developer login: no Firebase signed-in user (anonymous auth should run first).');
+                        return loginErr(
+                            'No Firebase session yet. Refresh the page and try again.',
+                        );
+                    }
+                    try {
+                        const addDeveloperMe = httpsCallable(functions, 'addDeveloperMe');
+                        await addDeveloperMe({});
+                    } catch (e) {
+                        console.error('addDeveloperMe failed:', e);
+                        return loginErr(
+                            getReadableErrorMessage(e, 'Could not finish developer sign-in. Check your connection and try again.'),
+                        );
+                    }
+                    setLoginState('developer');
+                    setIsAdmin(true);
+                    setIsTeacher(false);
+                    setIsSecretary(false);
+                    setIsPrizeClerk(false);
+                    setIsReports(false);
+                    setUserName('Developer');
+                    setUserId(uid);
+                    return loginOk();
                 } catch (e) {
                     console.error("Developer login error", e);
                     return loginErr(getReadableErrorMessage(e, 'Developer sign-in failed. Check your connection and try again.'));
                 }
-                return loginErr('Wrong developer passcode or sign-in was rejected.');
             } else if (type === 'school' && credentials.schoolId) {
                 const lowerSchoolId = credentials.schoolId.trim().toLowerCase();
                 if (!auth.currentUser) {

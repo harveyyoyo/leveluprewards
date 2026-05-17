@@ -125,7 +125,7 @@ function WhereToDrawnTitle({
 }
 
 export default function PortalPage() {
-    const { loginState, isInitialized, schoolId, isAdmin, login, logout } = useAppContext();
+    const { loginState, isInitialized, schoolId, isAdmin, login } = useAppContext();
     const { settings } = useSettings();
     const prefersReducedMotion = useReducedMotion();
     const playSound = useArcadeSound();
@@ -148,12 +148,6 @@ export default function PortalPage() {
                 : !!prefersReducedMotion,
     );
     const animBackdrop = globalAnimatedBackdropActive(settings);
-
-    // Returning to the hub from a student kiosk session should become the school chooser again.
-    useEffect(() => {
-        if (!isInitialized || loginState !== 'student' || !schoolId) return;
-        logout({ studentNavigateTo: 'portal' });
-    }, [isInitialized, loginState, logout, schoolId]);
 
     useEffect(() => {
         const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -178,10 +172,8 @@ export default function PortalPage() {
         !animBackdrop &&
         !!settings.enableAnimatedBackground &&
         !settings.legacyMode;
-    /** SVG stroke-dash “line draws around the card” on hover (skipped in legacy / reduced motion). */
-    const portalHoverTraceBorder = !prefersReducedMotion && !settings.legacyMode;
-    /** Lift, shadow, and chevron nudge on card hover (same gates as trace border). */
-    const portalCardHoverMotion = portalHoverTraceBorder;
+    /** Pop-out via lift + neutral shadow only (no glow, gradient, or icon scale). */
+    const portalCardHoverEffects = !prefersReducedMotion && !settings.legacyMode;
     const isSchoolChooser = loginState === 'school';
     const isStaff =
         loginState === 'teacher' ||
@@ -369,7 +361,7 @@ export default function PortalPage() {
                             initial={prefersReducedMotion ? false : 'hidden'}
                             animate="show"
                             className={cn(
-                                'pointer-events-auto grid w-full gap-3 md:gap-5',
+                                'pointer-events-auto grid w-full gap-3 overflow-visible md:gap-5',
                                 'grid-cols-1 md:grid-cols-3',
                             )}
                         >
@@ -383,47 +375,22 @@ export default function PortalPage() {
                         // session — send them straight to `/teacher` like an already-signed-in teacher.
                         // Otherwise opening the dialog here often led to picking "Prize desk" and landing on `/admin`.
                         const needsTeacherLogin = area.id === 'print' && loginState === 'school';
+                        const isAppDisplay = settings.displayMode === 'app';
                         const portalCard = (
                                 <motion.div
                                     variants={prefersReducedMotion ? undefined : staggerItem}
                                     className={cn(
-                                        'relative overflow-hidden rounded-2xl border border-border bg-card text-left shadow-sm',
-                                        portalCardHoverMotion &&
-                                            'transition-[box-shadow,border-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:shadow-xl group-hover:border-primary/30',
+                                        'relative overflow-hidden rounded-2xl border border-border bg-card shadow-sm',
+                                        isAppDisplay ? 'text-left' : 'text-center',
+                                        portalCardHoverEffects &&
+                                            'transition-[transform,box-shadow,border-color] duration-200 ease-out group-hover:-translate-y-1 group-hover:border-foreground/20 group-hover:shadow-lg group-active:translate-y-0 group-active:shadow-md',
                                         'flex h-full min-h-0 w-full flex-col justify-center',
-                                        'px-4 py-4 sm:px-5 sm:py-5',
+                                        isAppDisplay
+                                            ? 'px-4 py-4 sm:px-5 sm:py-5'
+                                            : 'min-h-[12rem] px-3 py-3.5 sm:min-h-[clamp(200px,24vw,300px)] sm:px-5 sm:py-5 md:min-h-[clamp(220px,24vw,300px)]',
                                     )}
                                 >
-                                    {portalHoverTraceBorder && (
-                                        <svg
-                                            className="pointer-events-none absolute inset-0 z-[1] h-full w-full"
-                                            viewBox="0 0 200 140"
-                                            preserveAspectRatio="none"
-                                            aria-hidden
-                                        >
-                                            <rect
-                                                className="opacity-0 transition-[stroke-dashoffset,opacity] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] [stroke-dashoffset:100] group-hover:opacity-100 group-hover:[stroke-dashoffset:0]"
-                                                x="2.5"
-                                                y="2.5"
-                                                width="195"
-                                                height="135"
-                                                rx="16"
-                                                ry="16"
-                                                fill="none"
-                                                stroke={rainbowColor}
-                                                strokeOpacity={0.55}
-                                                strokeWidth="1.75"
-                                                strokeLinecap="butt"
-                                                strokeLinejoin="miter"
-                                                pathLength={100}
-                                                vectorEffect="nonScalingStroke"
-                                                style={{
-                                                    strokeDasharray: 100,
-                                                }}
-                                            />
-                                        </svg>
-                                    )}
-
+                                    {isAppDisplay ? (
                                     <div className="relative z-10 flex w-full items-center gap-3 sm:gap-4">
                                         <div
                                             className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl shadow-md sm:h-16 sm:w-16"
@@ -436,23 +403,45 @@ export default function PortalPage() {
                                             <Icon className="h-7 w-7 text-white sm:h-8 sm:w-8" />
                                         </div>
                                         <div className="min-w-0 flex-1 space-y-1 pr-1">
-                                            <h3 className="text-base font-black leading-snug tracking-tight text-foreground sm:text-lg">
+                                            <h3 className="text-lg font-black leading-snug tracking-tight text-foreground sm:text-xl">
                                                 {area.title}
                                             </h3>
-                                            <p className="text-xs font-medium leading-snug text-muted-foreground sm:text-sm">
+                                            <p className="text-sm font-medium leading-snug text-muted-foreground sm:text-base">
                                                 {area.description}
                                             </p>
                                         </div>
                                         <ArrowUpRight
                                             className={cn(
-                                                'h-5 w-5 shrink-0 opacity-80 sm:h-6 sm:w-6',
-                                                portalCardHoverMotion &&
-                                                    'transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:-translate-y-0.5 group-hover:translate-x-0.5',
+                                                'h-5 w-5 shrink-0 opacity-70 sm:h-6 sm:w-6',
+                                                portalCardHoverEffects &&
+                                                    'transition-opacity duration-200 ease-out group-hover:opacity-100',
                                             )}
                                             style={{ color: rainbowColor }}
                                             aria-hidden
                                         />
                                     </div>
+                                    ) : (
+                                    <div className="relative z-10 flex h-full min-h-0 flex-1 flex-col">
+                                        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2.5 text-center md:gap-4">
+                                            <motion.div
+                                                className="shrink-0 rounded-xl bg-muted p-3 shadow-md ring-1 ring-border md:p-4"
+                                                style={{
+                                                    boxShadow: `0 12px 30px ${rainbowColor}26`,
+                                                }}
+                                            >
+                                                <Icon className="h-8 w-8 md:h-9 md:w-9" style={{ color: rainbowColor }} />
+                                            </motion.div>
+                                            <div className="min-w-0 max-w-prose space-y-1.5 px-0.5">
+                                                <h3 className="text-base font-black leading-tight tracking-tight text-foreground sm:text-lg md:text-xl">
+                                                    <span style={{ color: rainbowColor }}>{area.title}</span>
+                                                </h3>
+                                                <p className="text-xs font-semibold leading-snug text-muted-foreground/85 sm:text-sm md:text-base">
+                                                    {area.description}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    )}
                                 </motion.div>
                         );
 
@@ -497,7 +486,10 @@ export default function PortalPage() {
                                         }
                                     })();
                                 }}
-                                className="block group no-underline rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background h-full flex flex-col"
+                                className={cn(
+                                    'group relative block h-full flex flex-col rounded-2xl no-underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+                                    portalCardHoverEffects && 'z-0 hover:z-10 focus-visible:z-10',
+                                )}
                             >
                                 {portalCard}
                             </Link>

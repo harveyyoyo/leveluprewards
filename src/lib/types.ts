@@ -15,7 +15,19 @@ export interface LibraryItem {
   checkedOutTo?: string | null;
   checkedOutAt?: number | null;
   addedBy?: string;
+  /** Optional catalog fields for shelving and reporting. */
+  author?: string;
+  isbn?: string;
+  category?: string;
+  shelfLocation?: string;
+  copyNumber?: string;
+  notes?: string;
 }
+
+export type LibraryItemInput = Pick<
+  LibraryItem,
+  'name' | 'upc' | 'author' | 'isbn' | 'category' | 'shelfLocation' | 'copyNumber' | 'notes'
+>;
 
 export interface Class {
   id: string;
@@ -178,6 +190,12 @@ export interface Student {
   theme?: StudentTheme;
   /** ISO date string (YYYY-MM-DD) for student's birthday. */
   birthday?: string;
+  /** True when a portal passcode exists in admin-only secrets (not the hash itself). */
+  portalPasscodeSet?: boolean;
+  /** Portal locked after too many failed passcodes; admin unlock only. */
+  portalLocked?: boolean;
+  portalFailedAttempts?: number;
+  portalLockedAt?: number;
   /** Tracks the last date (YYYY-MM-DD) special day points were awarded to prevent duplicates. */
   lastSpecialDayAwarded?: {
     birthday?: string;
@@ -274,6 +292,10 @@ export interface Prize {
   /** When a teacher created this prize in the teacher UI; used for delete vs "remove from me" rules. */
   createdByTeacherId?: string;
   classId?: string;
+  /** Scannable shelf / ID card code (e.g. PZ4K7M2X). Unique per school when stored. */
+  scanCode?: string;
+  /** Optional accent for printed shelf / scan cards (hex, e.g. #3b82f6). Requires color printing in settings. */
+  cardColor?: string;
 }
 
 export interface Achievement {

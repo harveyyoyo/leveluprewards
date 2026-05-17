@@ -59,6 +59,40 @@ export function isTeacherPrizeCreator(p: Prize, teacherId: string): boolean {
   return false;
 }
 
+export type TeacherPrizeListItem =
+  | { kind: 'section'; id: string; label: string; hint?: string }
+  | { kind: 'prize'; prize: Prize };
+
+/** Teacher portal: own items first, then school-wide / everything else. */
+export function buildTeacherPrizeListItems(prizes: Prize[], teacherId: string): TeacherPrizeListItem[] {
+  const byPoints = (a: Prize, b: Prize) => (a.points ?? 0) - (b.points ?? 0);
+  const yours = prizes.filter((p) => isTeacherPrizeCreator(p, teacherId)).sort(byPoints);
+  const rest = prizes.filter((p) => !isTeacherPrizeCreator(p, teacherId)).sort(byPoints);
+  const out: TeacherPrizeListItem[] = [];
+
+  if (yours.length > 0) {
+    out.push({
+      kind: 'section',
+      id: 'yours',
+      label: 'Your rewards',
+      hint: 'Items you added for your students',
+    });
+    for (const prize of yours) out.push({ kind: 'prize', prize });
+  }
+
+  if (rest.length > 0) {
+    out.push({
+      kind: 'section',
+      id: 'school-wide',
+      label: yours.length > 0 ? 'School-wide & shared' : 'School rewards',
+      hint: 'From admin or available to all teachers',
+    });
+    for (const prize of rest) out.push({ kind: 'prize', prize });
+  }
+
+  return out;
+}
+
 /** Remove this teacher from the restriction list (does not delete the prize). */
 export function removeTeacherFromPrize(p: Prize, teacherId: string): Prize {
   const ids = prizeRestrictionTeacherIds(p).filter((id) => id !== teacherId);

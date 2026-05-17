@@ -30,6 +30,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Helper } from '@/components/ui/helper';
+import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -195,11 +196,14 @@ export function AdminBulletinBoardTab({
               not shown on the student kiosk.
             </CardDescription>
           </div>
-          <Button asChild variant="outline" className="rounded-xl gap-2 shrink-0">
-            <Link href={fullHref} target="_blank" rel="noopener noreferrer">
-              View full page <ArrowUpRight className="w-4 h-4" aria-hidden />
-            </Link>
-          </Button>
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <TabWalkthroughHeaderAction />
+            <Button asChild variant="outline" className="rounded-xl gap-2">
+              <Link href={fullHref} target="_blank" rel="noopener noreferrer">
+                View full page <ArrowUpRight className="w-4 h-4" aria-hidden />
+              </Link>
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-4 mb-6">

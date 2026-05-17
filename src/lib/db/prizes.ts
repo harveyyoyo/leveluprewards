@@ -15,6 +15,8 @@ import { reportFirestorePermissionError } from '@/firebase/error-emitter';
 import { removeUndefined } from './helpers';
 import { prizeRestrictionTeacherIds } from '@/lib/prizeUtils';
 import { AI_FUN_UNIFIED_PRIZE_ID } from '@/lib/aiJokePrize';
+import { derivePrizeScanCode, generatePrizeScanCode, isPrizeScanCode } from '@/lib/prizeScanCode';
+import { prizeCardColorForId } from '@/lib/prizeCardColor';
 
 /** Creates the single Fun (AI) prize doc if missing — students choose joke/riddle/fortune teller at redeem. */
 export async function ensureUnifiedAiFunPrize(
@@ -42,9 +44,38 @@ export async function ensureUnifiedAiFunPrize(
   }
 }
 
+export async function ensurePrizeScanCode(
+  firestore: Firestore,
+  schoolId: string,
+  prize: Prize,
+): Promise<string> {
+  const existing = prize.scanCode?.trim().toUpperCase();
+  if (existing && isPrizeScanCode(existing)) return existing;
+  const scanCode = derivePrizeScanCode(prize.id);
+  const prizeDocRef = doc(firestore, 'schools', schoolId, 'prizes', prize.id);
+  try {
+    await updateDoc(prizeDocRef, { scanCode });
+  } catch (error) {
+    reportFirestorePermissionError(error, { path: prizeDocRef.path, operation: 'update', requestResourceData: { scanCode } });
+    throw error;
+  }
+  return scanCode;
+}
+
+/** Assigns missing scan codes for all prizes in a school (idempotent). */
+export async function backfillPrizeScanCodes(firestore: Firestore, schoolId: string, prizes: Prize[]): Promise<void> {
+  await Promise.all(prizes.map((p) => ensurePrizeScanCode(firestore, schoolId, p)));
+}
+
 export const addPrize = async (firestore: Firestore, schoolId: string, prizeData: Omit<Prize, 'id'>): Promise<string> => {
   const newId = `p_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-  const newPrize: Prize = { ...prizeData, id: newId };
+  const scanCode = prizeData.scanCode?.trim().toUpperCase() || generatePrizeScanCode();
+  const newPrize: Prize = {
+    ...prizeData,
+    id: newId,
+    scanCode,
+    cardColor: prizeData.cardColor?.trim() || prizeCardColorForId(newId),
+  };
   const prizeDocRef = doc(firestore, 'schools', schoolId, 'prizes', newPrize.id);
   try {
     const ids = prizeRestrictionTeacherIds(newPrize);
@@ -69,7 +100,7 @@ export const addPrize = async (firestore: Firestore, schoolId: string, prizeData
 export const updatePrize = async (firestore: Firestore, schoolId: string, updatedPrize: Prize) => {
   const prizeDocRef = doc(firestore, 'schools', schoolId, 'prizes', updatedPrize.id);
   try {
-    const { stockCount, imageUrl, teacherId, teacherIds, vendingMotor, aiFunReward, id, ...rest } = updatedPrize;
+    const { stockCount, imageUrl, cardColor, teacherId, teacherIds, vendingMotor, aiFunReward, id, ...rest } = updatedPrize;
     const payload = removeUndefined({ ...rest } as unknown as Record<string, unknown>) as Record<string, unknown>;
     if (stockCount === undefined) {
       payload.stockCount = deleteField();
@@ -80,6 +111,11 @@ export const updatePrize = async (firestore: Firestore, schoolId: string, update
       payload.imageUrl = deleteField();
     } else {
       payload.imageUrl = imageUrl;
+    }
+    if (!cardColor?.trim()) {
+      payload.cardColor = deleteField();
+    } else {
+      payload.cardColor = cardColor.trim();
     }
     if (vendingMotor === undefined) {
       payload.vendingMotor = deleteField();
@@ -126,7 +162,8 @@ export const redeemPrize = async (
   studentId: string,
   prize: Prize,
   quantity: number,
-  pointsOverride?: number
+  pointsOverride?: number,
+  options?: { markFulfilled?: boolean },
 ): Promise<{ success: boolean; activityId: string; redeemedAt: number; totalCost: number }> => {
   const studentRef = doc(firestore, 'schools', schoolId, 'students', studentId);
   const prizeRef = doc(firestore, 'schools', schoolId, 'prizes', prize.id);
@@ -168,7 +205,7 @@ export const redeemPrize = async (
         desc: `Redeemed: ${prizeData.name}${quantity > 1 ? ` (x${quantity})` : ''}`,
         amount: -totalCost,
         date: redeemedAt,
-        fulfilled: false,
+        fulfilled: options?.markFulfilled === true,
         teacherId: restrictionIds[0] ?? prizeData.teacherId,
       };
 

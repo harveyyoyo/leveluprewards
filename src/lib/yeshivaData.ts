@@ -2,7 +2,7 @@ import type { Database } from './types';
 import { DEMO_STUDENT_THEMES_YESHIVA_ORDER } from './demoStudentThemes';
 
 export const YESHIVA_DATA: Omit<Database, 'passcode'> = {
-  name: 'Yeshiva',
+  name: 'Yeshiva Demo',
   students: [
     { id: '100', firstName: 'Shmuel', lastName: 'Goldstein', nfcId: '100', points: 120, classId: 'yc1', theme: DEMO_STUDENT_THEMES_YESHIVA_ORDER[0] },
     { id: '101', firstName: 'Avi', lastName: 'Schwartz', nfcId: '101', points: 80, classId: 'yc2', theme: DEMO_STUDENT_THEMES_YESHIVA_ORDER[1] },

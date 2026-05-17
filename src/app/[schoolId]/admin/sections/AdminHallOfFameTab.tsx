@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { getStudentNickname } from '@/lib/utils';
 import type { Student } from '@/lib/types';
+import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 import type { Class, Category } from '@/lib/types';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -76,11 +77,14 @@ export function AdminHallOfFameTab({ schoolId }: { schoolId: string }) {
             Configure the view here, then open the full-screen display (opens in a new tab).
           </CardDescription>
         </div>
-        <Button asChild variant="outline" className="rounded-xl gap-2 shrink-0">
-          <Link href={fullHref} target="_blank" rel="noopener noreferrer">
-            View full page <ArrowUpRight className="w-4 h-4" aria-hidden />
-          </Link>
-        </Button>
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <TabWalkthroughHeaderAction />
+          <Button asChild variant="outline" className="rounded-xl gap-2">
+            <Link href={fullHref} target="_blank" rel="noopener noreferrer">
+              View full page <ArrowUpRight className="w-4 h-4" aria-hidden />
+            </Link>
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-4 mb-6">

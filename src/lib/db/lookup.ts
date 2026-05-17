@@ -7,6 +7,8 @@ import {
   where,
   Firestore,
 } from 'firebase/firestore';
+import type { Prize } from '../types';
+import { isPrizeScanCode, normalizeScanInput, prizeScanCodeFor } from '@/lib/prizeScanCode';
 
 /** Look up a student by scanned ID (document ID, nfcId string, or nfcId number). Used by both student kiosk and prize redemption. */
 export const lookupStudentId = async (
@@ -32,5 +34,28 @@ export const lookupStudentId = async (
     if (!numSnap.empty) return numSnap.docs[0].id;
   }
 
+  return null;
+};
+
+/** Look up a prize by shelf / ID card scan code. Returns prize id or null. */
+export const lookupPrizeByScanCode = async (
+  firestore: Firestore,
+  schoolId: string,
+  rawCode: string,
+): Promise<string | null> => {
+  if (!rawCode?.trim() || !schoolId) return null;
+  const code = normalizeScanInput(rawCode);
+  if (!isPrizeScanCode(code)) return null;
+
+  const prizesRef = collection(firestore, 'schools', schoolId, 'prizes');
+  const qStored = query(prizesRef, where('scanCode', '==', code));
+  const storedSnap = await getDocs(qStored);
+  if (!storedSnap.empty) return storedSnap.docs[0].id;
+
+  const allSnap = await getDocs(prizesRef);
+  for (const d of allSnap.docs) {
+    const prize = { ...(d.data() as Prize), id: d.id };
+    if (prizeScanCodeFor(prize) === code) return d.id;
+  }
   return null;
 };

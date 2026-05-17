@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { BookOpen, Link2, Shield } from 'lucide-react';
+import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 
 type StatusPayload = {
   googleClassroomConfigured: boolean;
@@ -51,17 +52,20 @@ export function AdminIntegrationsTab() {
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
-      <div className="flex items-start gap-3">
-        <div className="rounded-2xl bg-primary/10 p-3 text-primary">
-          <Link2 className="h-6 w-6" aria-hidden />
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3 min-w-0">
+          <div className="rounded-2xl bg-primary/10 p-3 text-primary shrink-0">
+            <Link2 className="h-6 w-6" aria-hidden />
+          </div>
+          <div>
+            <h2 className="text-2xl font-black tracking-tight">Integrations</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Connect roster and sign-in providers. OAuth and sync jobs run on the server; configure environment
+              variables for your deployment.
+            </p>
+          </div>
         </div>
-        <div>
-          <h2 className="text-2xl font-black tracking-tight">Integrations</h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Connect roster and sign-in providers. OAuth and sync jobs run on the server; configure environment
-            variables for your deployment.
-          </p>
-        </div>
+        <TabWalkthroughHeaderAction />
       </div>
 
       {err ? (

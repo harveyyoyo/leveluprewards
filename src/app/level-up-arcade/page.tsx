@@ -2,6 +2,11 @@ import Link from 'next/link';
 import Image from 'next/image';
 import Logo from '@/components/Logo';
 import { buttonVariants } from '@/components/ui/button';
+import {
+  SITE_CONTACT_EMAIL,
+  SITE_CONTACT_MAILTO,
+  SITE_LEGAL_UMBRELLA,
+} from '@/lib/appBranding';
 import { cn } from '@/lib/utils';
 
 export const metadata = {
@@ -310,17 +315,24 @@ export default function LevelUpArcadeLandingPage() {
 
       {/* ── Footer ── */}
       <footer className="relative z-10 border-t border-white/[0.06] py-10">
-        <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-4 px-6 text-xs text-slate-500 sm:flex-row">
-          <div className="flex items-center gap-2">
-            <span className="font-semibold text-slate-400">© {new Date().getFullYear()} levelUp EDU.</span> All Rights Reserved.
-          </div>
-          <div className="flex items-center gap-6 font-semibold">
-            <Link href="/privacy" className="transition-colors hover:text-slate-300">
-              Privacy Quest
-            </Link>
-            <Link href="/terms" className="transition-colors hover:text-slate-300">
-              Terms of Play
-            </Link>
+        <div className="mx-auto flex max-w-5xl flex-col items-center gap-4 px-6 text-center">
+          <p className="max-w-2xl text-[10px] leading-snug text-slate-500">{SITE_LEGAL_UMBRELLA}</p>
+          <div className="flex w-full flex-col items-center justify-between gap-4 text-xs text-slate-500 sm:flex-row sm:text-left">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-slate-400">© {new Date().getFullYear()} levelUp EDU.</span>{' '}
+              All Rights Reserved.
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 font-semibold sm:justify-end">
+              <a href={SITE_CONTACT_MAILTO} className="transition-colors hover:text-slate-300">
+                {SITE_CONTACT_EMAIL}
+              </a>
+              <Link href="/privacy" className="transition-colors hover:text-slate-300">
+                Privacy Quest
+              </Link>
+              <Link href="/terms" className="transition-colors hover:text-slate-300">
+                Terms of Play
+              </Link>
+            </div>
           </div>
         </div>
       </footer>

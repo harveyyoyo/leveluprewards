@@ -1,5 +1,5 @@
 /**
- * Per-school subscription plans and feature entitlements.
+ * Per-school subscription plans and portal entitlements.
  *
  * Plans live on the school Firestore document (`schools/{schoolId}`):
  *   - `plan`: one of the `PlanTier` values. Defaults to 'free'.
@@ -7,10 +7,9 @@
  *     can set on a per-school basis to grant a locked feature (true) or force
  *     an included feature off (false). Overrides win over the plan defaults.
  *
- * The SettingsProvider uses `getSchoolEntitlements` to compute the allowed
- * feature map and force any disallowed flag back to `false` when reading
- * settings from localStorage. The SettingsModal shows an "Upgrade plan"
- * state for features that aren't allowed by the school's plan.
+ * Subscription tiers are retained for developer billing labels only.
+ * Runtime gating uses product pillars (`payAttendance`, `payLibrary`, `payHomework`)
+ * via `@/lib/productPillars` — not plan tiers.
  */
 
 export type PlanTier = 'free' | 'basic' | 'pro' | 'enterprise';
@@ -161,7 +160,7 @@ export const PLAN_TIERS: PlanTier[] = ['free', 'basic', 'pro', 'enterprise'];
 /** Human-friendly labels for each gated feature (shown in the developer UI). */
 export const PLAN_FEATURE_LABELS: Record<PlanFeatureKey, string> = {
   enableAdminAnalytics: 'Admin Analytics',
-  enableWeeklyRaffle: 'Weekly Raffle Wheel',
+  enableWeeklyRaffle: 'Raffle',
   enableTeacherCharts: 'Teacher Analytics',
   enableAttendance: 'Attendance',
   enableClassSignIn: 'Class Sign-In',
@@ -213,31 +212,23 @@ export function normalizePlan(value: unknown): PlanTier {
 export type PlanEntitlements = Record<PlanFeatureKey, boolean>;
 
 /**
- * Computes the effective feature entitlements for a school, combining the
- * selected plan tier with any developer-set overrides.
+ * @deprecated Plan tiers no longer gate features. Returns all features as allowed.
+ * Use `@/lib/productPillars` for attendance, library, and homework pillars.
  */
-export function getSchoolEntitlements(config: SchoolPlanConfig | null | undefined): PlanEntitlements {
-  const plan = normalizePlan(config?.plan);
-  const includedFeatures = PLANS[plan]?.features ?? [];
-  const overrides = config?.featureOverrides ?? {};
-
+export function getSchoolEntitlements(_config?: SchoolPlanConfig | null): PlanEntitlements {
   const entitlements = {} as PlanEntitlements;
   for (const key of PLAN_FEATURE_KEYS) {
-    if (typeof overrides[key] === 'boolean') {
-      entitlements[key] = overrides[key]!;
-    } else {
-      entitlements[key] = includedFeatures.includes(key);
-    }
+    entitlements[key] = true;
   }
   return entitlements;
 }
 
-/** True when a given feature is allowed for the given school config. */
+/** @deprecated Always true — see `productPillars.isSettingsKeyAllowed` for pillar gates. */
 export function isFeatureAllowed(
-  config: SchoolPlanConfig | null | undefined,
+  _config: SchoolPlanConfig | null | undefined,
   key: PlanFeatureKey,
 ): boolean {
-  return getSchoolEntitlements(config)[key];
+  return getSchoolEntitlements(_config)[key];
 }
 
 /** Type-guard to check whether a settings key is plan-gated. */

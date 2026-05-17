@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { PrizeRedeemTicketPrintSheet } from '@/components/PrizeRedeemTicketPrintSheet';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
@@ -100,6 +100,10 @@ export default function PrizeRedeemTicketPage() {
     }));
   }, [ticket]);
 
+  const handleTicketReady = useCallback(() => {
+    setPrintRequested(true);
+  }, []);
+
   useEffect(() => {
     const style = document.createElement('style');
     style.setAttribute('data-prize-ticket-print', 'true');
@@ -115,10 +119,9 @@ export default function PrizeRedeemTicketPage() {
   }, []);
 
   useEffect(() => {
-    if (printRequested) return;
+    if (!printRequested) return;
     if (!prizeTickets?.length) return;
 
-    setPrintRequested(true);
     const safety = window.setTimeout(() => {
       if (ticket.returnPath) router.replace(ticket.returnPath);
       else router.back();
@@ -164,6 +167,7 @@ export default function PrizeRedeemTicketPage() {
         schoolName={schoolName}
         logoUrl={logoUrl}
         paperFormat={prizeVoucherPaperFormat}
+        onReady={handleTicketReady}
       />
     </div>
   );

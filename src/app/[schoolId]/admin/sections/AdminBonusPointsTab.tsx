@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import DynamicIcon from '@/components/DynamicIcon';
 import { AdminRecordListHeader } from '@/components/admin/AdminRecordListHeader';
+import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 
 function achievementCriteriaLabel(ach: any) {
   if (ach.criteria.type === 'points') return `>= ${ach.criteria.threshold} current`;
@@ -32,14 +33,15 @@ export function AdminBonusPointsTab(props: any) {
     <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden">
       <CardHeader className="flex flex-row justify-between items-center py-6">
         <div>
-          <Helper content="Define bonus point milestones. When students hit these point thresholds they earn extra bonus points. Enable in Settings → Extra features → Recognition.">
+          <Helper content="Define bonus point milestones. When students hit these point thresholds they earn extra bonus points. Enable from Admin → Add more.">
             <CardTitle className="flex items-center gap-2">
               <Trophy className="w-5 h-5 text-destructive" /> Bonus Points
             </CardTitle>
           </Helper>
           <CardDescription>Create milestones that award extra points when students reach point thresholds.</CardDescription>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <TabWalkthroughHeaderAction />
           <Button variant="outline" onClick={() => setIsAddSampleBadgesOpen(true)} className="rounded-xl" disabled={isAddingSamples}>
             {isAddingSamples ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trophy className="mr-2 h-4 w-4" />}
             Add sample milestones

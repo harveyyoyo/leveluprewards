@@ -19,6 +19,7 @@ import { normalizeStudentTheme } from '@/lib/themeContrast';
 import type { StudentTheme } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { KioskSponsorBanner } from '@/components/KioskSponsorBanner';
+import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 
 
 export function AdminBrandingTab({
@@ -87,13 +88,16 @@ export function AdminBrandingTab({
     <div className="space-y-6">
       {/* LOGO CARD */}
       <Card className="border-t-4 border-primary shadow-md">
-        <CardHeader className="py-6">
-          <Helper content="Upload your school logo to show it next to the school name across the app.">
-            <CardTitle className="flex items-center gap-2">
-              <UploadCloud className="w-5 h-5 text-primary" /> School Logo
-            </CardTitle>
-          </Helper>
-          <CardDescription>Logo appears beside the school name in the header. PNG, JPG, or WebP under 10MB.</CardDescription>
+        <CardHeader className="py-6 flex flex-row items-start justify-between gap-4">
+          <div>
+            <Helper content="Upload your school logo to show it next to the school name across the app.">
+              <CardTitle className="flex items-center gap-2">
+                <UploadCloud className="w-5 h-5 text-primary" /> School Logo
+              </CardTitle>
+            </Helper>
+            <CardDescription>Logo appears beside the school name in the header. PNG, JPG, or WebP under 10MB.</CardDescription>
+          </div>
+          <TabWalkthroughHeaderAction />
         </CardHeader>
         <CardContent className="flex flex-col sm:flex-row items-center gap-6">
           <div className="flex flex-col items-center gap-1">

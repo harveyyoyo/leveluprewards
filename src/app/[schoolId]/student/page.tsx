@@ -385,7 +385,7 @@ function StudentDashboardInner({
   const firestore = useFirestore();
   const { functions, auth } = useFirebase();
   const { toast } = useToast();
-  const { settings, isFeatureAllowed } = useSettings();
+  const { settings } = useSettings();
   const { kioskAiFunAndVoucherActive, markKioskRewardsActivity } = useKioskAiFunAndVoucherIdleActive(
     settings.kioskAiFunAndVoucherIdleOffMin,
     isKioskLocked,
@@ -874,7 +874,7 @@ function StudentDashboardInner({
         animationKey.current += 1;
         setFlyPointsValue(result.value || null);
         setTimeout(() => { setFlyPointsValue(null); setShowRedeem(false); }, 1500);
-        if (settings.enableGoals && isFeatureAllowed('enableGoals') && schoolId && firestore) {
+        if (settings.enableGoals && schoolId && firestore) {
           void import('@/lib/goalsProgress').then((m) =>
             m.syncGoalsForStudent(firestore, schoolId, student.id).catch(() => {}),
           );
@@ -894,7 +894,7 @@ function StudentDashboardInner({
     } finally {
       if (activeTab === 'manual') setCouponCode('');
     }
-  }, [couponCode, resetLogoutTimer, redeemCoupon, student, toast, playSound, activeTab, settings.payLibrary, settings.enableGoals, firestore, schoolId, isFeatureAllowed]);
+  }, [couponCode, resetLogoutTimer, redeemCoupon, student, toast, playSound, activeTab, settings.payLibrary, settings.enableGoals, firestore, schoolId]);
 
   const handleRedeemPrize = useCallback(async () => {
     if (!student || !confirmingPrize) return;
@@ -922,7 +922,7 @@ function StudentDashboardInner({
         description: `Successfully redeemed ${prize.name}.`,
       });
 
-      if (settings.enableGoals && isFeatureAllowed('enableGoals') && schoolId && firestore) {
+      if (settings.enableGoals && schoolId && firestore) {
         void import('@/lib/goalsProgress').then((m) =>
           m.syncGoalsForStudent(firestore, schoolId, student.id).catch(() => {}),
         );
@@ -1044,7 +1044,7 @@ function StudentDashboardInner({
     } finally {
       setIsRedeemingPrize(false);
     }
-  }, [authFetch, confirmingFunKind, confirmingPrize, playSound, redeemPrize, resetLogoutTimer, schoolId, settings.defaultStudentTheme, settings.enableStudentThemes, settings.enablePrizeAiSurprise, settings.enableStudentEmojiOnPrizeTickets, settings.enableGoals, student, toast, firestore, isFeatureAllowed, kioskAiFunAndVoucherActive]);
+  }, [authFetch, confirmingFunKind, confirmingPrize, playSound, redeemPrize, resetLogoutTimer, schoolId, settings.defaultStudentTheme, settings.enableStudentThemes, settings.enablePrizeAiSurprise, settings.enableStudentEmojiOnPrizeTickets, settings.enableGoals, student, toast, firestore, kioskAiFunAndVoucherActive]);
 
   const handlePrintPrizeTicket = useCallback(() => {
     if (!prizeTicketData) return;
@@ -1161,7 +1161,7 @@ function StudentDashboardInner({
   }, [student?.earnedBadges, badges]);
 
   const portalRaffleTickets = useMemo(() => {
-    if (!settings.enableWeeklyRaffle || !isFeatureAllowed('enableWeeklyRaffle')) return null;
+    if (!settings.enableWeeklyRaffle) return null;
     const { isGeneralRaffle, pointsPerTicket } = parseRafflePointsPerTicket(settings.rafflePointsPerTicket);
     if (isGeneralRaffle || pointsPerTicket < 1) return null;
     return {
@@ -1173,7 +1173,6 @@ function StudentDashboardInner({
     settings.enableWeeklyRaffle,
     settings.rafflePointsPerTicket,
     settings.raffleOneEntryPerStudent,
-    isFeatureAllowed,
     student?.points,
   ]);
 
@@ -1312,495 +1311,536 @@ function StudentDashboardInner({
           </div>
         )}
 
-        {/* Hero Welcome Section */}
-        <Card
-          className={cn(
-            "shrink-0 overflow-hidden shadow-xl border-t-8 border-chart-1",
-            isGraphic && !effectiveTheme
-              ? animBackdrop
-                ? "bg-card/90 backdrop-blur-md border-border/40"
-                : "bg-gradient-to-br from-indigo-100/50 to-indigo-50/30 dark:from-indigo-950/40 dark:to-slate-900/40"
-              : !effectiveTheme ? "bg-card dark:bg-slate-800" : "",
-          )}
-          style={effectiveTheme ? { backgroundColor: 'var(--theme-card)', color: 'var(--theme-text)', borderColor: 'var(--theme-primary)' } : undefined}
-        >
-          <CardContent className="flex flex-col gap-4 p-4 md:flex-row md:items-center md:justify-between md:gap-6 md:p-5 [@media(max-height:760px)]:gap-3 [@media(max-height:760px)]:p-3">
-            <div className="w-full min-w-0 space-y-1 text-center md:flex-1 md:text-left">
-              <p className="text-xs font-bold uppercase tracking-widest" style={{ color: effectiveTheme ? 'var(--theme-text)' : undefined, opacity: effectiveTheme ? 0.7 : undefined }}>Welcome back,</p>
-              <div className="mt-1 flex items-center justify-center gap-3 md:justify-start">
-                <div className="w-12 h-12 rounded-full overflow-hidden bg-primary/10 border border-border/60 flex items-center justify-center font-bold text-primary flex-shrink-0 [@media(max-height:760px)]:h-10 [@media(max-height:760px)]:w-10">
-                  {student.photoUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={student.photoUrl} alt={`${student.firstName} ${student.lastName}`} className={settings.photoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />
-                  ) : (
-                    <span>{(student.firstName?.[0] || '')}{(student.lastName?.[0] || '')}</span>
-                  )}
-                </div>
-                <div className="flex min-w-0 flex-col items-center gap-1 text-left md:items-start">
-                  <div className="flex flex-wrap items-center justify-center gap-2 md:justify-start">
-                    <h2 className="text-2xl font-black leading-tight md:text-4xl [@media(max-height:760px)]:md:text-3xl">
-                      {student.firstName} {student.lastName}
-                    </h2>
-                    {birthdayToday ? (
-                      <>
-                        <BirthdayHat size={52} className="hidden sm:block shrink-0 -mt-1" />
-                        <span
-                          className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20 px-2 py-1 text-[10px] font-black uppercase tracking-widest"
-                          title="Birthday today"
-                        >
-                          🎂 Birthday
-                        </span>
-                      </>
-                    ) : null}
-                    {(student.customEmojiUrl || effectiveTheme?.emoji) && (
-                      student.customEmojiUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={student.customEmojiUrl}
-                          alt=""
-                          className="theme-animated-emoji h-9 w-9 md:h-11 md:w-11 shrink-0 object-contain"
-                          style={{ filter: effectiveTheme?.primary ? `drop-shadow(0 0 8px ${effectiveTheme.primary}) drop-shadow(0 0 16px ${effectiveTheme.primary})` : undefined }}
-                        />
-                      ) : (
-                        <span
-                          className="theme-animated-emoji text-3xl md:text-4xl leading-none"
-                          style={{ filter: effectiveTheme?.primary ? `drop-shadow(0 0 8px ${effectiveTheme.primary}) drop-shadow(0 0 16px ${effectiveTheme.primary})` : undefined }}
-                        >
-                          {effectiveTheme?.emoji ?? ''}
-                        </span>
-                      )
-                    )}
-                  </div>
-                  {student.nickname?.trim() ? (
-                    <div className="text-[10px] md:text-xs font-black uppercase tracking-[0.25em] opacity-75">
-                      {student.nickname.trim()}
-                    </div>
-                  ) : null}
-                  {settings.enableBadges && headerBadges.length > 0 && (
-                    <div className="flex items-center gap-1.5 flex-wrap mt-1">
-                      {headerBadges.map((b) => (
-                        <div
-                          key={b.id}
-                          className="w-7 h-7 rounded-full border border-white/40 bg-white/10 flex items-center justify-center shadow-sm"
-                        >
-                          <DynamicIcon
-                            name={b.icon}
-                            className="w-4 h-4"
-                            style={b.accentColor ? { color: b.accentColor } : undefined}
-                          />
-                        </div>
-                      ))}
-                      {totalUniqueBadges > headerBadges.length && (
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-white/80">
-                          +{totalUniqueBadges - headerBadges.length} more
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+        <header className="relative z-10 flex shrink-0 flex-wrap items-center justify-between gap-3 md:gap-4">
+          <div className="flex min-w-0 items-center gap-3">
             <div
               className={cn(
-                'w-full shrink-0 border-t pt-4 text-center md:w-auto md:border-l md:border-t-0 md:pl-6 md:pt-0 md:text-right',
-                !effectiveTheme && 'border-border/50 md:border-border/40',
+                'flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 text-sm font-black uppercase tracking-wide shadow-md [@media(max-height:760px)]:h-10 [@media(max-height:760px)]:w-10',
+                !effectiveTheme && 'border-primary/30 bg-primary text-primary-foreground',
               )}
               style={
                 effectiveTheme
-                  ? { borderColor: 'color-mix(in srgb, var(--theme-primary) 28%, transparent)' }
+                  ? {
+                      borderColor: 'var(--theme-primary)',
+                      backgroundColor: 'var(--theme-primary)',
+                      color: primaryForeground,
+                    }
                   : undefined
               }
             >
-              <p className="mb-0.5 text-xs font-bold uppercase tracking-widest" style={{ color: effectiveTheme ? 'var(--theme-text)' : undefined, opacity: effectiveTheme ? 0.7 : undefined }}>Current Balance</p>
-              <div
-                className="flex flex-wrap items-baseline justify-center gap-x-2 gap-y-1 md:justify-end"
-                style={{ color: effectiveTheme ? 'var(--theme-primary)' : undefined }}
-              >
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-4xl md:text-5xl font-black leading-none [@media(max-height:760px)]:md:text-4xl" style={{ color: effectiveTheme ? 'var(--theme-primary)' : 'hsl(var(--primary))' }}>
-                    {(student.points || 0).toLocaleString()}
-                  </span>
-                  <span className="text-lg md:text-xl font-bold uppercase tracking-widest" style={{ color: effectiveTheme ? 'var(--theme-primary)' : 'hsl(var(--primary) / 0.6)', opacity: 0.6 }}>pts</span>
-                </div>
-                {portalRaffleTickets ? (
-                  <>
-                    <span className="text-lg font-black opacity-35 select-none" aria-hidden>
-                      ·
-                    </span>
-                    <div
-                      className="flex items-baseline gap-1"
-                      title={
-                        `Weekly raffle: ${portalRaffleTickets.count === 1 ? '1 ticket' : `${portalRaffleTickets.count} tickets`} from your balance at ${portalRaffleTickets.pointsPerTicket} points per ticket.` +
-                        (portalRaffleTickets.equalOddsNote
-                          ? ' Your school uses equal odds on the wheel (one pool entry per qualifying student, not one slice per ticket shown).'
-                          : '')
-                      }
-                    >
-                      <Ticket className="h-5 w-5 shrink-0 opacity-70" aria-hidden />
-                      <span className="text-2xl md:text-3xl font-black tabular-nums leading-none" style={{ color: effectiveTheme ? 'var(--theme-primary)' : 'hsl(var(--primary))' }}>
-                        {portalRaffleTickets.count.toLocaleString()}
-                      </span>
-                      <span className="text-xs md:text-sm font-bold uppercase tracking-widest opacity-60">
-                        raffle {portalRaffleTickets.count === 1 ? 'ticket' : 'tickets'}
-                      </span>
-                    </div>
-                  </>
-                ) : null}
-              </div>
-              <div className="mt-3 flex flex-wrap items-center justify-center gap-2 md:justify-end">
-                {studentSeesWelcomePage(settings, student) && schoolId && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-9 gap-1.5 rounded-full text-[11px] font-bold uppercase tracking-widest"
-                    style={
-                      activeTheme
-                        ? {
-                            borderColor: 'var(--theme-primary)',
-                            backgroundColor: 'transparent',
-                            color: 'var(--theme-primary)',
-                          }
-                        : undefined
-                    }
-                    asChild
-                  >
-                    <Link href={`/${schoolId}/student/welcome`}>
-                      <Sparkles className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
-                      Welcome styles
-                    </Link>
-                  </Button>
-                )}
-              </div>
+              {student.photoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={student.photoUrl}
+                  alt=""
+                  className={cn(
+                    'h-full w-full',
+                    settings.photoDisplayMode === 'cover' ? 'object-cover' : 'object-contain',
+                  )}
+                />
+              ) : (
+                <span aria-hidden>
+                  {(student.firstName?.[0] || '')}
+                  {(student.lastName?.[0] || '')}
+                </span>
+              )}
             </div>
-          </CardContent>
-        </Card>
+            <div className="min-w-0">
+              <p
+                className="text-[10px] font-bold uppercase tracking-[0.22em] opacity-70"
+                style={{ color: effectiveTheme ? 'var(--theme-text)' : undefined }}
+              >
+                Welcome back
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <h1
+                  className="truncate text-xl font-black leading-tight sm:text-2xl md:text-3xl [@media(max-height:760px)]:text-xl"
+                  style={{ color: effectiveTheme ? 'var(--theme-text)' : undefined }}
+                >
+                  {student.firstName} {student.lastName}
+                </h1>
+                {birthdayToday ? (
+                  <span
+                    className="inline-flex items-center gap-1 rounded-full border border-amber-500/25 bg-amber-500/15 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-amber-800 dark:text-amber-200"
+                    title="Birthday today"
+                  >
+                    🎂 Birthday
+                  </span>
+                ) : null}
+                {(student.customEmojiUrl || effectiveTheme?.emoji) &&
+                  (student.customEmojiUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={student.customEmojiUrl}
+                      alt=""
+                      className="theme-animated-emoji h-8 w-8 shrink-0 object-contain"
+                    />
+                  ) : (
+                    <span className="theme-animated-emoji text-2xl leading-none">{effectiveTheme?.emoji ?? ''}</span>
+                  ))}
+              </div>
+              {student.nickname?.trim() ? (
+                <p
+                  className="mt-0.5 truncate text-[10px] font-bold uppercase tracking-[0.2em] opacity-60"
+                  style={{ color: effectiveTheme ? 'var(--theme-text)' : undefined }}
+                >
+                  {student.nickname.trim()}
+                </p>
+              ) : null}
+              {settings.enableBadges && headerBadges.length > 0 ? (
+                <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                  {headerBadges.map((b) => (
+                    <div
+                      key={b.id}
+                      className="flex h-6 w-6 items-center justify-center rounded-full border border-border/50 bg-card/80 shadow-sm"
+                    >
+                      <DynamicIcon
+                        name={b.icon}
+                        className="h-3.5 w-3.5"
+                        style={b.accentColor ? { color: b.accentColor } : undefined}
+                      />
+                    </div>
+                  ))}
+                  {totalUniqueBadges > headerBadges.length ? (
+                    <span className="text-[9px] font-bold uppercase tracking-widest opacity-60">
+                      +{totalUniqueBadges - headerBadges.length}
+                    </span>
+                  ) : null}
+                </div>
+              ) : null}
+              {studentSeesWelcomePage(settings, student) && schoolId ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-2 h-8 gap-1 rounded-full text-[10px] font-bold uppercase tracking-widest"
+                  style={
+                    activeTheme
+                      ? {
+                          borderColor: 'var(--theme-primary)',
+                          backgroundColor: 'transparent',
+                          color: 'var(--theme-primary)',
+                        }
+                      : undefined
+                  }
+                  asChild
+                >
+                  <Link href={`/${schoolId}/student/welcome`}>
+                    <Sparkles className="h-3.5 w-3.5 shrink-0 opacity-90" aria-hidden />
+                    Welcome styles
+                  </Link>
+                </Button>
+              ) : null}
+            </div>
+          </div>
+
+          <div
+            className={cn(
+              'flex shrink-0 items-center gap-3 rounded-2xl border px-4 py-2.5 shadow-lg backdrop-blur-sm sm:gap-5 sm:px-5',
+              !effectiveTheme && 'border-border/60 bg-card/95',
+            )}
+            style={
+              effectiveTheme
+                ? {
+                    backgroundColor: 'color-mix(in srgb, var(--theme-card) 92%, white)',
+                    borderColor: 'color-mix(in srgb, var(--theme-primary) 22%, transparent)',
+                    color: 'var(--theme-text)',
+                  }
+                : undefined
+            }
+          >
+            <div className="text-center sm:text-left">
+              <p
+                className="text-[9px] font-bold uppercase tracking-[0.2em] opacity-55"
+                style={{ color: effectiveTheme ? 'var(--theme-text)' : undefined }}
+              >
+                Balance
+              </p>
+              <p
+                className="text-lg font-black tabular-nums leading-none sm:text-xl"
+                style={{ color: effectiveTheme ? 'var(--theme-primary)' : 'hsl(var(--primary))' }}
+              >
+                {(student.points || 0).toLocaleString()}{' '}
+                <span className="text-[10px] font-bold uppercase tracking-widest opacity-70">pts</span>
+              </p>
+            </div>
+            {portalRaffleTickets ? (
+              <>
+                <div
+                  className="h-8 w-px shrink-0 opacity-20"
+                  style={
+                    effectiveTheme
+                      ? { backgroundColor: 'var(--theme-primary)' }
+                      : { backgroundColor: 'hsl(var(--border))' }
+                  }
+                  aria-hidden
+                />
+                <div
+                  className="text-center sm:text-left"
+                  title={
+                    `Raffle: ${portalRaffleTickets.count === 1 ? '1 ticket' : `${portalRaffleTickets.count} tickets`} from your balance at ${portalRaffleTickets.pointsPerTicket} points per ticket.` +
+                    (portalRaffleTickets.equalOddsNote
+                      ? ' Your school uses equal odds on the wheel (one pool entry per qualifying student, not one slice per ticket shown).'
+                      : '')
+                  }
+                >
+                  <p
+                    className="text-[9px] font-bold uppercase tracking-[0.2em] opacity-55"
+                    style={{ color: effectiveTheme ? 'var(--theme-text)' : undefined }}
+                  >
+                    Raffles
+                  </p>
+                  <p
+                    className="flex items-center justify-center gap-1 text-lg font-black tabular-nums leading-none sm:justify-start sm:text-xl"
+                    style={{ color: effectiveTheme ? 'var(--theme-primary)' : 'hsl(var(--primary))' }}
+                  >
+                    <Ticket className="h-4 w-4 shrink-0 opacity-75" aria-hidden />
+                    {portalRaffleTickets.count.toLocaleString()}
+                  </p>
+                </div>
+              </>
+            ) : null}
+          </div>
+        </header>
+
 
         <div
           className={cn(
-            'relative z-10 grid min-h-0 w-full min-w-0 flex-1 grid-cols-1 content-start gap-4 overflow-hidden pb-[max(0.75rem,env(safe-area-inset-bottom))]',
-            'lg:grid-cols-[minmax(0,1fr)_min(320px,28vw)] lg:content-stretch',
+            'relative z-10 flex min-h-0 w-full min-w-0 flex-1 flex-col gap-4 overflow-hidden pb-[max(0.75rem,env(safe-area-inset-bottom))]',
             '[@media(max-height:760px)]:gap-3 [@media(max-height:760px)]:pb-2',
           )}
         >
-          {/* Left Section: Content */}
-          <div className="min-w-0 flex flex-1 min-h-0 flex-col gap-3 overflow-hidden pr-1 [@media(max-height:760px)]:gap-2">
-            <div className="min-w-0 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overflow-x-hidden pb-3 scroll-pb-3 [@media(max-height:760px)]:gap-2 [@media(max-height:760px)]:pb-2">
-            <StudentGoalsCard
-              schoolId={schoolId!}
-              student={student}
-              enabled={settings.enableGoals && isFeatureAllowed('enableGoals')}
-              themed={!!effectiveTheme}
-              themeForeground={effectiveTheme ? 'var(--theme-primary)' : undefined}
-            />
-
-            {couponSectionEnabled && (
-            <Card
-              className={cn(
-                "relative z-20 w-full min-w-0 max-w-full origin-center overflow-hidden rounded-3xl border-2 shadow-[0_24px_60px_rgba(15,23,42,0.28)] ring-4 ring-offset-4 ring-offset-background transition-transform duration-300",
-                !effectiveTheme
-                  ? "border-amber-300/80 bg-white ring-amber-200/70 dark:border-amber-400/60 dark:bg-slate-900 dark:ring-amber-500/20"
-                  : "",
-              )}
-              style={effectiveTheme ? {
-                backgroundColor: 'var(--theme-card)',
-                borderColor: 'var(--theme-primary)',
-                boxShadow: '0 24px 60px color-mix(in srgb, var(--theme-primary) 34%, transparent)',
-                color: 'var(--theme-text)',
-                ['--tw-ring-color' as string]: 'color-mix(in srgb, var(--theme-primary) 32%, transparent)',
-              } : undefined}
-            >
-              <CardHeader className="pb-3 border-b" style={effectiveTheme ? { borderColor: 'var(--theme-bg)' } : undefined}>
-                <Helper content={couponHelperText}>
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <CardTitle className="text-sm font-black flex items-center gap-2">
-                      <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", !effectiveTheme && "bg-slate-100 dark:bg-slate-800")} style={effectiveTheme ? { backgroundColor: 'var(--theme-bg)' } : undefined}>
-                        <Wallet className="w-4 h-4" style={effectiveTheme ? { color: 'var(--theme-primary)' } : undefined} />
-                      </div>
-                      Redeem Coupon Code
-                    </CardTitle>
-                    <div className="flex items-center gap-2 self-start sm:self-auto">
-                      <div
-                        className={cn(
-                          "px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-colors whitespace-nowrap",
-                          isKioskLocked
-                            ? "bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-red-100 dark:border-red-800"
-                            : "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border-emerald-100 dark:border-emerald-800"
-                        )}
-                        aria-label={isKioskLocked ? 'Kiosk locked' : `Auto logout in ${logoutTimer} seconds`}
-                      >
-                        <span>
-                          {isKioskLocked ? 'Kiosk Locked • ' : ''}
-                          {isKioskLocked ? 'Stays signed in' : `Auto-logout: ${logoutTimer}s`}
-                        </span>
-                      </div>
-                      <div className="relative">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="relative h-8 px-3.5 rounded-full text-[11px] font-bold uppercase tracking-widest whitespace-nowrap"
-                          onClick={handleManualLogout}
-                          aria-label="Log out now."
-                        >
-                          Logout
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </Helper>
-              </CardHeader>
-              <CardContent className="pt-4 min-w-0 overflow-x-hidden">
-                {showCouponMethodTabs ? (
-                <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'manual' | 'camera')} className="w-full min-w-0">
-                  <div className="mb-4 md:hidden">
-                    <Label htmlFor="student-coupon-entry-mode" className="sr-only">
-                      How to enter your coupon code
-                    </Label>
-                    <Select value={activeTab} onValueChange={(v) => setActiveTab(v as 'manual' | 'camera')}>
-                      <SelectTrigger
-                        id="student-coupon-entry-mode"
-                        className="h-12 w-full rounded-xl font-bold"
-                        style={activeTheme ? { backgroundColor: 'var(--theme-bg)', borderColor: 'var(--theme-primary)', color: 'var(--theme-text)' } : undefined}
-                        aria-label="Coupon entry method"
-                      >
-                        <SelectValue placeholder="Choose method" />
-                      </SelectTrigger>
-                      <SelectContent position="popper" className="max-h-[min(60vh,320px)]">
-                        <SelectItem value="manual">Manual / USB scanner</SelectItem>
-                        <SelectItem value="camera">Webcam scan</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <TabsList 
-                    className={cn(
-                      "mb-4 hidden h-12 min-w-0 w-full grid-cols-2 overflow-hidden rounded-xl p-1 md:grid",
-                      !activeTheme && "bg-slate-100 dark:bg-slate-800",
-                    )}
-                    style={activeTheme ? { backgroundColor: 'var(--theme-bg)' } : undefined}
-                  >
-                    <TabsTrigger 
-                      value="manual" 
-                      className={cn(
-                        "text-[12px] font-bold rounded-lg data-[state=active]:shadow-sm flex items-center gap-1.5 py-1 min-w-0",
-                        !activeTheme &&
-                          "data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm",
-                        activeTheme && "hover:bg-[var(--theme-card)] hover:text-[var(--theme-text)] hover:shadow-sm",
-                      )}
-                      style={activeTheme && activeTab === 'manual' ? { backgroundColor: 'var(--theme-card)', color: 'var(--theme-text)' } : undefined}
-                    >
-                      <Type className="w-3.5 h-3.5" /> Manual / USB
-                    </TabsTrigger>
-                    <TabsTrigger 
-                      value="camera" 
-                      className={cn(
-                        "text-[12px] font-bold rounded-lg data-[state=active]:shadow-sm flex items-center gap-1.5 py-1 min-w-0",
-                        !activeTheme &&
-                          "data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm",
-                        activeTheme && "hover:bg-[var(--theme-card)] hover:text-[var(--theme-text)] hover:shadow-sm",
-                      )}
-                      style={activeTheme && activeTab === 'camera' ? { backgroundColor: 'var(--theme-card)', color: 'var(--theme-text)' } : undefined}
-                    >
-                      <Camera className="w-3.5 h-3.5" /> Webcam Scan
-                    </TabsTrigger>
-                  </TabsList>
-
-                  {activeTab === 'manual' ? (
-                    <div className="space-y-3 w-full min-w-0">
-                      <div
-                        className={cn(
-                          'relative flex flex-wrap items-center justify-center gap-2 sm:gap-3 rounded-xl border-2 border-dashed px-3 py-4 min-h-[3.5rem] text-center motion-safe:animate-[pulse_1.35s_ease-in-out_infinite] motion-reduce:animate-none',
-                          !activeTheme &&
-                            'border-amber-400/80 bg-gradient-to-r from-amber-900/95 via-amber-950/92 to-amber-900/95 text-amber-50 shadow-[0_10px_44px_-10px_rgba(251,191,36,0.45)] dark:border-amber-500/55 dark:from-amber-900/95 dark:via-amber-950/92 dark:to-amber-900/95 dark:shadow-[0_10px_44px_-10px_rgba(251,191,36,0.38)]',
-                        )}
-                        style={
-                          activeTheme
-                            ? {
-                                borderColor: 'color-mix(in srgb, var(--theme-primary) 50%, transparent)',
-                                background: `linear-gradient(165deg, color-mix(in srgb, var(--theme-primary) 54%, var(--theme-card)), color-mix(in srgb, var(--theme-primary) 64%, var(--theme-card)) 50%, color-mix(in srgb, var(--theme-primary) 54%, var(--theme-card)))`,
-                                boxShadow:
-                                  '0 12px 44px -10px color-mix(in srgb, var(--theme-primary) 48%, transparent)',
-                                color: 'rgba(248, 250, 252, 0.97)',
-                              }
-                            : undefined
-                        }
-                        role="status"
-                        aria-live="polite"
-                      >
-                        <ScanBarcode
-                          className={cn(
-                            'h-7 w-7 shrink-0 sm:h-8 sm:w-8',
-                            !activeTheme && 'text-amber-200',
-                          )}
-                          style={
-                            activeTheme
-                              ? {
-                                  color: 'color-mix(in srgb, var(--theme-primary) 72%, white)',
-                                }
-                              : undefined
-                          }
-                          aria-hidden
-                        />
-                        <span
-                          className={cn(
-                            'max-w-full text-base sm:text-lg md:text-xl font-black uppercase tracking-[0.12em] sm:tracking-[0.18em] leading-snug',
-                            !activeTheme && 'text-amber-50',
-                          )}
-                          style={activeTheme ? { color: 'rgba(248, 250, 252, 0.97)' } : undefined}
-                        >
-                          Scan coupon
-                        </span>
-                      </div>
-                      <form
-                        className="flex flex-col gap-2 min-w-0 w-full sm:flex-row sm:gap-2"
-                        onSubmit={(e) => {
-                          e.preventDefault();
-                          void handleRedeemCoupon();
-                        }}
-                      >
-                        <Input
-                          placeholder="Code appears here when scanned"
-                          value={couponCode}
-                          onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                          className="w-full min-w-0 font-mono text-left tracking-widest h-12 border-2 rounded-xl text-sm sm:flex-1"
-                          style={activeTheme ? { backgroundColor: 'var(--theme-bg)', borderColor: 'var(--theme-primary)', color: 'var(--theme-text)' } : undefined}
-                          autoFocus
-                          autoComplete="one-time-code"
-                        />
-                        <Button
-                          type="submit"
-                          className="h-12 w-full sm:w-auto px-6 font-black rounded-xl shadow-lg transition-all active:scale-95 uppercase tracking-widest text-xs shrink-0"
-                          style={activeTheme ? {
-                            backgroundColor: 'var(--theme-primary)',
-                            color: primaryForeground,
-                          } : { backgroundColor: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))' }}
-                        >
-                          Redeem
-                        </Button>
-                      </form>
-                      <p 
-                        className="text-[10px] text-center pt-1" 
-                        style={activeTheme ? { color: 'var(--theme-text)', opacity: 0.7 } : { color: 'hsl(var(--muted-foreground))' }}
-                      >
-                        Available coupon codes can be viewed in the Admin panel.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="relative h-36 sm:h-40 rounded-xl overflow-hidden bg-black border-2 border-slate-100 dark:border-slate-800 shadow-inner">
-                      <video ref={videoRef as RefObject<HTMLVideoElement>} className="w-full h-full object-cover" playsInline muted />
-                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <div className="w-3/4 h-3/2 border-2 border-white/40 rounded-2xl border-dashed" />
-                      </div>
-                      {!hasCameraPermission && (
-                        <div className="absolute inset-0 bg-background/90 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
-                          <Camera className="w-12 h-12 text-destructive mb-4" />
-                          <p className="text-foreground font-bold">Camera access required</p>
-                          <p className="text-muted-foreground text-xs mt-2">Please enable camera in settings</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </Tabs>
-                ) : showManualCoupon ? (
-                    <div className="space-y-3 w-full min-w-0">
-                      <div
-                        className={cn(
-                          'relative flex flex-wrap items-center justify-center gap-2 sm:gap-3 rounded-xl border-2 border-dashed px-3 py-4 min-h-[3.5rem] text-center motion-safe:animate-[pulse_1.35s_ease-in-out_infinite] motion-reduce:animate-none',
-                          !activeTheme &&
-                            'border-amber-400/80 bg-gradient-to-r from-amber-900/95 via-amber-950/92 to-amber-900/95 text-amber-50 shadow-[0_10px_44px_-10px_rgba(251,191,36,0.45)] dark:border-amber-500/55 dark:from-amber-900/95 dark:via-amber-950/92 dark:to-amber-900/95 dark:shadow-[0_10px_44px_-10px_rgba(251,191,36,0.38)]',
-                        )}
-                        style={
-                          activeTheme
-                            ? {
-                                borderColor: 'color-mix(in srgb, var(--theme-primary) 50%, transparent)',
-                                background: `linear-gradient(165deg, color-mix(in srgb, var(--theme-primary) 54%, var(--theme-card)), color-mix(in srgb, var(--theme-primary) 64%, var(--theme-card)) 50%, color-mix(in srgb, var(--theme-primary) 54%, var(--theme-card)))`,
-                                boxShadow:
-                                  '0 12px 44px -10px color-mix(in srgb, var(--theme-primary) 48%, transparent)',
-                                color: 'rgba(248, 250, 252, 0.97)',
-                              }
-                            : undefined
-                        }
-                        role="status"
-                        aria-live="polite"
-                      >
-                        <ScanBarcode
-                          className={cn(
-                            'h-7 w-7 shrink-0 sm:h-8 sm:w-8',
-                            !activeTheme && 'text-amber-200',
-                          )}
-                          style={
-                            activeTheme
-                              ? {
-                                  color: 'color-mix(in srgb, var(--theme-primary) 72%, white)',
-                                }
-                              : undefined
-                          }
-                          aria-hidden
-                        />
-                        <span
-                          className={cn(
-                            'max-w-full text-base sm:text-lg md:text-xl font-black uppercase tracking-[0.12em] sm:tracking-[0.18em] leading-snug',
-                            !activeTheme && 'text-amber-50',
-                          )}
-                          style={activeTheme ? { color: 'rgba(248, 250, 252, 0.97)' } : undefined}
-                        >
-                          Scan coupon
-                        </span>
-                      </div>
-                      <form
-                        className="flex flex-col gap-2 min-w-0 w-full sm:flex-row sm:gap-2"
-                        onSubmit={(e) => {
-                          e.preventDefault();
-                          void handleRedeemCoupon();
-                        }}
-                      >
-                        <Input
-                          placeholder="Code appears here when scanned"
-                          value={couponCode}
-                          onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                          className="w-full min-w-0 font-mono text-left tracking-widest h-12 border-2 rounded-xl text-sm sm:flex-1"
-                          style={activeTheme ? { backgroundColor: 'var(--theme-bg)', borderColor: 'var(--theme-primary)', color: 'var(--theme-text)' } : undefined}
-                          autoFocus
-                          autoComplete="one-time-code"
-                        />
-                        <Button
-                          type="submit"
-                          className="h-12 w-full sm:w-auto px-6 font-black rounded-xl shadow-lg transition-all active:scale-95 uppercase tracking-widest text-xs shrink-0"
-                          style={activeTheme ? {
-                            backgroundColor: 'var(--theme-primary)',
-                            color: primaryForeground,
-                          } : { backgroundColor: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))' }}
-                        >
-                          Redeem
-                        </Button>
-                      </form>
-                      <p 
-                        className="text-[10px] text-center pt-1" 
-                        style={activeTheme ? { color: 'var(--theme-text)', opacity: 0.7 } : { color: 'hsl(var(--muted-foreground))' }}
-                      >
-                        Available coupon codes can be viewed in the Admin panel.
-                      </p>
-                    </div>
-                ) : showCameraCoupon ? (
-                    <div className="relative h-36 sm:h-40 rounded-xl overflow-hidden bg-black border-2 border-slate-100 dark:border-slate-800 shadow-inner">
-                      <video ref={videoRef as RefObject<HTMLVideoElement>} className="w-full h-full object-cover" playsInline muted />
-                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <div className="w-3/4 h-3/2 border-2 border-white/40 rounded-2xl border-dashed" />
-                      </div>
-                      {!hasCameraPermission && (
-                        <div className="absolute inset-0 bg-background/90 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
-                          <Camera className="w-12 h-12 text-destructive mb-4" />
-                          <p className="text-foreground font-bold">Camera access required</p>
-                          <p className="text-muted-foreground text-xs mt-2">Please enable camera in settings</p>
-                        </div>
-                      )}
-                    </div>
-                ) : null}
-
-              </CardContent>
-            </Card>
+          {couponSectionEnabled && (
+          <Card
+            className={cn(
+              "relative z-20 w-full shrink-0 min-w-0 max-w-full origin-center overflow-hidden rounded-3xl border-2 shadow-[0_24px_60px_rgba(15,23,42,0.28)] ring-4 ring-offset-4 ring-offset-background transition-transform duration-300",
+              !effectiveTheme
+                ? "border-primary/25 bg-card ring-primary/15 dark:border-amber-400/60 dark:bg-slate-900 dark:ring-amber-500/20"
+                : "",
             )}
+            style={effectiveTheme ? {
+              backgroundColor: 'var(--theme-card)',
+              borderColor: 'var(--theme-primary)',
+              boxShadow: '0 24px 60px color-mix(in srgb, var(--theme-primary) 34%, transparent)',
+              color: 'var(--theme-text)',
+              ['--tw-ring-color' as string]: 'color-mix(in srgb, var(--theme-primary) 32%, transparent)',
+            } : undefined}
+          >
+            <CardHeader className="pb-3 border-b" style={effectiveTheme ? { borderColor: 'var(--theme-bg)' } : undefined}>
+              <Helper content={couponHelperText}>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <CardTitle className="text-sm font-black flex items-center gap-2">
+                    <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", !effectiveTheme && "bg-slate-100 dark:bg-slate-800")} style={effectiveTheme ? { backgroundColor: 'var(--theme-bg)' } : undefined}>
+                      <Wallet className="w-4 h-4" style={effectiveTheme ? { color: 'var(--theme-primary)' } : undefined} />
+                    </div>
+                    Redeem Coupon
+                  </CardTitle>
+                  <div className="flex items-center gap-2 self-start sm:self-auto">
+                    <div
+                      className={cn(
+                        "px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-colors whitespace-nowrap",
+                        isKioskLocked
+                          ? "bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-red-100 dark:border-red-800"
+                          : "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border-emerald-100 dark:border-emerald-800"
+                      )}
+                      aria-label={isKioskLocked ? 'Kiosk locked' : `Auto logout in ${logoutTimer} seconds`}
+                    >
+                      <span>
+                        {isKioskLocked ? 'Kiosk Locked • ' : ''}
+                        {isKioskLocked ? 'Stays signed in' : `Auto-logout ${logoutTimer}`}
+                      </span>
+                    </div>
+                    <div className="relative">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="relative h-8 px-3.5 rounded-full text-[11px] font-bold uppercase tracking-widest whitespace-nowrap"
+                        onClick={handleManualLogout}
+                        aria-label="Log out now."
+                      >
+                        Logout
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </Helper>
+            </CardHeader>
+            <CardContent className="pt-4 min-w-0 overflow-x-hidden">
+              {showCouponMethodTabs ? (
+              <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'manual' | 'camera')} className="w-full min-w-0">
+                <div className="mb-4 md:hidden">
+                  <Label htmlFor="student-coupon-entry-mode" className="sr-only">
+                    How to enter your coupon code
+                  </Label>
+                  <Select value={activeTab} onValueChange={(v) => setActiveTab(v as 'manual' | 'camera')}>
+                    <SelectTrigger
+                      id="student-coupon-entry-mode"
+                      className="h-12 w-full rounded-xl font-bold"
+                      style={activeTheme ? { backgroundColor: 'var(--theme-bg)', borderColor: 'var(--theme-primary)', color: 'var(--theme-text)' } : undefined}
+                      aria-label="Coupon entry method"
+                    >
+                      <SelectValue placeholder="Choose method" />
+                    </SelectTrigger>
+                    <SelectContent position="popper" className="max-h-[min(60vh,320px)]">
+                      <SelectItem value="manual">Manual / USB scanner</SelectItem>
+                      <SelectItem value="camera">Webcam scan</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <TabsList 
+                  className={cn(
+                    "mb-4 hidden h-12 min-w-0 w-full grid-cols-2 overflow-hidden rounded-xl p-1 md:grid",
+                    !activeTheme && "bg-slate-100 dark:bg-slate-800",
+                  )}
+                  style={activeTheme ? { backgroundColor: 'var(--theme-bg)' } : undefined}
+                >
+                  <TabsTrigger 
+                    value="manual" 
+                    className={cn(
+                      "text-[12px] font-bold rounded-lg data-[state=active]:shadow-sm flex items-center gap-1.5 py-1 min-w-0",
+                      !activeTheme &&
+                        "data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm",
+                      activeTheme && "hover:bg-[var(--theme-card)] hover:text-[var(--theme-text)] hover:shadow-sm",
+                    )}
+                    style={activeTheme && activeTab === 'manual' ? { backgroundColor: 'var(--theme-card)', color: 'var(--theme-text)' } : undefined}
+                  >
+                    <Type className="w-3.5 h-3.5" /> Manual / USB
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="camera" 
+                    className={cn(
+                      "text-[12px] font-bold rounded-lg data-[state=active]:shadow-sm flex items-center gap-1.5 py-1 min-w-0",
+                      !activeTheme &&
+                        "data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm",
+                      activeTheme && "hover:bg-[var(--theme-card)] hover:text-[var(--theme-text)] hover:shadow-sm",
+                    )}
+                    style={activeTheme && activeTab === 'camera' ? { backgroundColor: 'var(--theme-card)', color: 'var(--theme-text)' } : undefined}
+                  >
+                    <Camera className="w-3.5 h-3.5" /> Webcam Scan
+                  </TabsTrigger>
+                </TabsList>
 
+                {activeTab === 'manual' ? (
+                  <div className="space-y-3 w-full min-w-0">
+                    <div
+                      className={cn(
+                        'relative flex flex-wrap items-center justify-center gap-2 sm:gap-3 rounded-xl border-2 border-dashed px-3 py-4 min-h-[3.5rem] text-center motion-safe:animate-[pulse_1.35s_ease-in-out_infinite] motion-reduce:animate-none',
+                        !activeTheme &&
+                          'border-amber-400/80 bg-gradient-to-r from-amber-900/95 via-amber-950/92 to-amber-900/95 text-amber-50 shadow-[0_10px_44px_-10px_rgba(251,191,36,0.45)] dark:border-amber-500/55 dark:from-amber-900/95 dark:via-amber-950/92 dark:to-amber-900/95 dark:shadow-[0_10px_44px_-10px_rgba(251,191,36,0.38)]',
+                      )}
+                      style={
+                        activeTheme
+                          ? {
+                              borderColor: 'color-mix(in srgb, var(--theme-primary) 50%, transparent)',
+                              background: `linear-gradient(165deg, color-mix(in srgb, var(--theme-primary) 54%, var(--theme-card)), color-mix(in srgb, var(--theme-primary) 64%, var(--theme-card)) 50%, color-mix(in srgb, var(--theme-primary) 54%, var(--theme-card)))`,
+                              boxShadow:
+                                '0 12px 44px -10px color-mix(in srgb, var(--theme-primary) 48%, transparent)',
+                              color: 'rgba(248, 250, 252, 0.97)',
+                            }
+                          : undefined
+                      }
+                      role="status"
+                      aria-live="polite"
+                    >
+                      <ScanBarcode
+                        className={cn(
+                          'h-7 w-7 shrink-0 sm:h-8 sm:w-8',
+                          !activeTheme && 'text-amber-200',
+                        )}
+                        style={
+                          activeTheme
+                            ? {
+                                color: 'color-mix(in srgb, var(--theme-primary) 72%, white)',
+                              }
+                            : undefined
+                        }
+                        aria-hidden
+                      />
+                      <span
+                        className={cn(
+                          'max-w-full text-base sm:text-lg md:text-xl font-black uppercase tracking-[0.12em] sm:tracking-[0.18em] leading-snug',
+                          !activeTheme && 'text-amber-50',
+                        )}
+                        style={activeTheme ? { color: 'rgba(248, 250, 252, 0.97)' } : undefined}
+                      >
+                        Scan coupon
+                      </span>
+                      <p
+                        className="w-full text-center text-[11px] font-semibold opacity-90 sm:text-xs"
+                        style={activeTheme ? { color: 'rgba(248, 250, 252, 0.92)' } : undefined}
+                      >
+                        Hold your code under the camera, or type below
+                      </p>
+                    </div>
+                    <form
+                      className="flex flex-col gap-2 min-w-0 w-full sm:flex-row sm:gap-2"
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        void handleRedeemCoupon();
+                      }}
+                    >
+                      <Input
+                        placeholder="Code appears here when scanned"
+                        value={couponCode}
+                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                        className="w-full min-w-0 font-mono text-left tracking-widest h-12 border-2 rounded-xl text-sm sm:flex-1"
+                        style={activeTheme ? { backgroundColor: 'var(--theme-bg)', borderColor: 'var(--theme-primary)', color: 'var(--theme-text)' } : undefined}
+                        autoFocus
+                        autoComplete="one-time-code"
+                      />
+                      <Button
+                        type="submit"
+                        className="h-12 w-full sm:w-auto px-6 font-black rounded-xl shadow-lg transition-all active:scale-95 uppercase tracking-widest text-xs shrink-0"
+                        style={activeTheme ? {
+                          backgroundColor: 'var(--theme-primary)',
+                          color: primaryForeground,
+                        } : { backgroundColor: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))' }}
+                      >
+                        Redeem
+                      </Button>
+                    </form>
+                    <p 
+                      className="text-[10px] text-center pt-1" 
+                      style={activeTheme ? { color: 'var(--theme-text)', opacity: 0.7 } : { color: 'hsl(var(--muted-foreground))' }}
+                    >
+                      Available coupon codes can be viewed in the Admin panel.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="relative h-36 sm:h-40 rounded-xl overflow-hidden bg-black border-2 border-slate-100 dark:border-slate-800 shadow-inner">
+                    <video ref={videoRef as RefObject<HTMLVideoElement>} className="w-full h-full object-cover" playsInline muted />
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <div className="w-3/4 h-3/2 border-2 border-white/40 rounded-2xl border-dashed" />
+                    </div>
+                    {!hasCameraPermission && (
+                      <div className="absolute inset-0 bg-background/90 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
+                        <Camera className="w-12 h-12 text-destructive mb-4" />
+                        <p className="text-foreground font-bold">Camera access required</p>
+                        <p className="text-muted-foreground text-xs mt-2">Please enable camera in settings</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </Tabs>
+              ) : showManualCoupon ? (
+                  <div className="space-y-3 w-full min-w-0">
+                    <div
+                      className={cn(
+                        'relative flex flex-wrap items-center justify-center gap-2 sm:gap-3 rounded-xl border-2 border-dashed px-3 py-4 min-h-[3.5rem] text-center motion-safe:animate-[pulse_1.35s_ease-in-out_infinite] motion-reduce:animate-none',
+                        !activeTheme &&
+                          'border-amber-400/80 bg-gradient-to-r from-amber-900/95 via-amber-950/92 to-amber-900/95 text-amber-50 shadow-[0_10px_44px_-10px_rgba(251,191,36,0.45)] dark:border-amber-500/55 dark:from-amber-900/95 dark:via-amber-950/92 dark:to-amber-900/95 dark:shadow-[0_10px_44px_-10px_rgba(251,191,36,0.38)]',
+                      )}
+                      style={
+                        activeTheme
+                          ? {
+                              borderColor: 'color-mix(in srgb, var(--theme-primary) 50%, transparent)',
+                              background: `linear-gradient(165deg, color-mix(in srgb, var(--theme-primary) 54%, var(--theme-card)), color-mix(in srgb, var(--theme-primary) 64%, var(--theme-card)) 50%, color-mix(in srgb, var(--theme-primary) 54%, var(--theme-card)))`,
+                              boxShadow:
+                                '0 12px 44px -10px color-mix(in srgb, var(--theme-primary) 48%, transparent)',
+                              color: 'rgba(248, 250, 252, 0.97)',
+                            }
+                          : undefined
+                      }
+                      role="status"
+                      aria-live="polite"
+                    >
+                      <ScanBarcode
+                        className={cn(
+                          'h-7 w-7 shrink-0 sm:h-8 sm:w-8',
+                          !activeTheme && 'text-amber-200',
+                        )}
+                        style={
+                          activeTheme
+                            ? {
+                                color: 'color-mix(in srgb, var(--theme-primary) 72%, white)',
+                              }
+                            : undefined
+                        }
+                        aria-hidden
+                      />
+                      <span
+                        className={cn(
+                          'max-w-full text-base sm:text-lg md:text-xl font-black uppercase tracking-[0.12em] sm:tracking-[0.18em] leading-snug',
+                          !activeTheme && 'text-amber-50',
+                        )}
+                        style={activeTheme ? { color: 'rgba(248, 250, 252, 0.97)' } : undefined}
+                      >
+                        Scan coupon
+                      </span>
+                      <p
+                        className="w-full text-center text-[11px] font-semibold opacity-90 sm:text-xs"
+                        style={activeTheme ? { color: 'rgba(248, 250, 252, 0.92)' } : undefined}
+                      >
+                        Hold your code under the camera, or type below
+                      </p>
+                    </div>
+                    <form
+                      className="flex flex-col gap-2 min-w-0 w-full sm:flex-row sm:gap-2"
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        void handleRedeemCoupon();
+                      }}
+                    >
+                      <Input
+                        placeholder="Code appears here when scanned"
+                        value={couponCode}
+                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                        className="w-full min-w-0 font-mono text-left tracking-widest h-12 border-2 rounded-xl text-sm sm:flex-1"
+                        style={activeTheme ? { backgroundColor: 'var(--theme-bg)', borderColor: 'var(--theme-primary)', color: 'var(--theme-text)' } : undefined}
+                        autoFocus
+                        autoComplete="one-time-code"
+                      />
+                      <Button
+                        type="submit"
+                        className="h-12 w-full sm:w-auto px-6 font-black rounded-xl shadow-lg transition-all active:scale-95 uppercase tracking-widest text-xs shrink-0"
+                        style={activeTheme ? {
+                          backgroundColor: 'var(--theme-primary)',
+                          color: primaryForeground,
+                        } : { backgroundColor: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))' }}
+                      >
+                        Redeem
+                      </Button>
+                    </form>
+                    <p 
+                      className="text-[10px] text-center pt-1" 
+                      style={activeTheme ? { color: 'var(--theme-text)', opacity: 0.7 } : { color: 'hsl(var(--muted-foreground))' }}
+                    >
+                      Available coupon codes can be viewed in the Admin panel.
+                    </p>
+                  </div>
+              ) : showCameraCoupon ? (
+                  <div className="relative h-36 sm:h-40 rounded-xl overflow-hidden bg-black border-2 border-slate-100 dark:border-slate-800 shadow-inner">
+                    <video ref={videoRef as RefObject<HTMLVideoElement>} className="w-full h-full object-cover" playsInline muted />
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <div className="w-3/4 h-3/2 border-2 border-white/40 rounded-2xl border-dashed" />
+                    </div>
+                    {!hasCameraPermission && (
+                      <div className="absolute inset-0 bg-background/90 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
+                        <Camera className="w-12 h-12 text-destructive mb-4" />
+                        <p className="text-foreground font-bold">Camera access required</p>
+                        <p className="text-muted-foreground text-xs mt-2">Please enable camera in settings</p>
+                      </div>
+                    )}
+                  </div>
+              ) : null}
+
+            </CardContent>
+          </Card>
+          )}
+
+
+
+          <div
+            className={cn(
+              'grid min-h-0 w-full min-w-0 flex-1 grid-cols-1 gap-4 overflow-hidden',
+              'lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:content-stretch',
+              '[@media(max-height:760px)]:gap-3',
+            )}
+          >
+          {/* Right column on lg: prizes */}
+          <div className="order-2 min-w-0 flex flex-1 min-h-0 flex-col gap-3 overflow-hidden pr-1 lg:order-2 [@media(max-height:760px)]:gap-2">
+            <div className="min-w-0 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overflow-x-hidden pb-3 scroll-pb-3 [@media(max-height:760px)]:gap-2 [@media(max-height:760px)]:pb-2">
             {/* Eligible Rewards */}
             <Card
                 className={cn(
@@ -1845,7 +1885,7 @@ function StudentDashboardInner({
                 <div className="w-full pr-0.5">
                 <div
                   ref={rewardGridRef}
-                  className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-2 sm:gap-2.5"
+                  className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-2 sm:gap-2.5"
                 >
                   {prizesLoading ? (
                     [...Array(8)].map((_, i) => <Skeleton key={i} className="min-h-[7.5rem] sm:min-h-[8rem] w-full rounded-xl" />)
@@ -2098,12 +2138,19 @@ function StudentDashboardInner({
             </Dialog>
           </div>
 
-          {/* Right Section: Activity — fills column height on lg; on mobile stay content-height (avoid tall empty card). */}
-          <div className="flex min-h-0 w-full min-w-0 max-w-sm scroll-pb-8 flex-col self-start pb-8 max-lg:mx-auto lg:mx-0 lg:max-w-none lg:h-full lg:min-h-0 lg:self-stretch lg:overflow-hidden lg:pb-0">
+          {/* Left column on lg: activity */}
+          <div className="order-1 flex min-h-0 w-full min-w-0 flex-col gap-3 self-start pb-8 max-lg:mx-auto lg:order-1 lg:mx-0 lg:h-full lg:min-h-0 lg:self-stretch lg:overflow-hidden lg:pb-0">
+            <StudentGoalsCard
+              schoolId={schoolId!}
+              student={student}
+              enabled={!!settings.enableGoals}
+              themed={!!effectiveTheme}
+              themeForeground={effectiveTheme ? 'var(--theme-primary)' : undefined}
+            />
           <Card
             ref={activityPanelRef}
             className={cn(
-              'min-w-0 w-full max-w-sm mx-auto lg:mx-0 lg:max-w-none flex flex-col min-h-0 rounded-2xl border-2 shadow-md ring-1 ring-black/5 dark:ring-white/10 overflow-hidden',
+              'min-w-0 w-full flex flex-col min-h-0 rounded-2xl border-2 shadow-md ring-1 ring-black/5 dark:ring-white/10 overflow-hidden',
               'lg:flex-1 lg:h-full lg:min-h-0',
               !activeTheme && 'border-slate-200 bg-white dark:border-slate-600 dark:bg-slate-900',
             )}
@@ -2160,6 +2207,7 @@ function StudentDashboardInner({
           </div>
         </div>
 
+        </div>
         {welcomeBackdropActive && (
           <>
             {/* One composited backdrop layer — avoids filter-blurring the whole dashboard (very janky). */}
