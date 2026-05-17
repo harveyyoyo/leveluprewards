@@ -2001,7 +2001,7 @@ function AdminDashboardInner() {
           </TabsContent>
 
           <TabsContent value="student-portal" className={scrollingAdminTabClassName}>
-            <AdminStudentPortalTab schoolId={schoolId} students={students} />
+            <AdminStudentPortalTab schoolId={schoolId!} students={students} />
           </TabsContent>
 
           <TabsContent value="backups" className={fittedAdminTabClassName}>
