@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { LegalPageFooter } from '@/components/LegalPageFooter';
-import { SITE_CONTACT_EMAIL, SITE_CONTACT_MAILTO } from '@/lib/appBranding';
+import { getContactFormHref } from '@/lib/appBranding';
 
 export const dynamic = 'force-dynamic';
 
@@ -156,13 +156,13 @@ export default function PrivacyPage() {
           <section className="space-y-3">
             <h2 className="text-base font-black tracking-tight text-foreground">Contact Us</h2>
             <p>
-              If you have questions about this Agreement or data privacy practices, please contact us at{' '}
-              <a
-                href={SITE_CONTACT_MAILTO}
+              If you have questions about this Agreement or data privacy practices, please{' '}
+              <Link
+                href={getContactFormHref()}
                 className="font-bold underline underline-offset-4 hover:text-foreground"
               >
-                {SITE_CONTACT_EMAIL}
-              </a>
+                contact us
+              </Link>
               .
             </p>
           </section>

@@ -18,6 +18,11 @@ import {
   syncSchoolGateCookie,
 } from '@/lib/auth/syncFirebaseSessionCookie';
 import { getReadableErrorMessage } from '@/lib/errorMessage';
+import { cn } from '@/lib/utils';
+import {
+  isStudentPortalPortraitDisplay,
+  studentPortalPageShellClass,
+} from '@/lib/studentPortalLayout';
 
 export default function StudentHomePage() {
   const params = useParams<{ schoolId: string }>();
@@ -35,6 +40,7 @@ export default function StudentHomePage() {
   const [signingOut, setSigningOut] = useState(false);
 
   const portalEnabled = settings.enableStudentPortal === true;
+  const portraitDisplay = isStudentPortalPortraitDisplay(settings);
 
   useEffect(() => {
     if (!portalEnabled || !schoolId || isUserLoading || !user || !auth) return;
@@ -110,8 +116,12 @@ export default function StudentHomePage() {
 
   if (!portalEnabled) {
     return (
-      <div className="min-h-[calc(100vh-5rem)] flex items-center justify-center px-4 py-12">
-        <Card className="w-full max-w-lg border-t-8 border-muted shadow-lg">
+      <div className={studentPortalPageShellClass(portraitDisplay)}>
+        <Card
+          className={
+            portraitDisplay ? 'w-full max-w-md border-t-8 border-muted shadow-lg' : 'w-full max-w-lg border-t-8 border-muted shadow-lg'
+          }
+        >
           <CardHeader className="text-center space-y-4">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
               <GraduationCap className="h-8 w-8" aria-hidden />
@@ -130,9 +140,14 @@ export default function StudentHomePage() {
 
   return (
     <SchoolGate>
-      <div className="min-h-[calc(100vh-5rem)] flex flex-col items-center justify-center px-4 py-10">
+      <div className={studentPortalPageShellClass(portraitDisplay)}>
         {lobbyError ? (
-          <Card className="w-full max-w-lg border-destructive/40">
+          <Card
+            className={cn(
+              'w-full border-destructive/40',
+              portraitDisplay ? 'max-w-md' : 'max-w-lg',
+            )}
+          >
             <CardHeader>
               <CardTitle>Could not load portal</CardTitle>
               <CardDescription>{lobbyError}</CardDescription>
@@ -147,6 +162,7 @@ export default function StudentHomePage() {
           <StudentPortalDashboard
             schoolId={schoolId}
             studentId={portalStudentId}
+            portraitDisplay={portraitDisplay}
             onSignOut={() => void handleSignOut()}
             signingOut={signingOut}
           />
@@ -154,6 +170,7 @@ export default function StudentHomePage() {
           <StudentPortalLogin
             schoolId={schoolId}
             lobbyIdToken={lobbyToken}
+            portraitDisplay={portraitDisplay}
             onSignedIn={(token, sid) => void handleSignedIn(token, sid)}
           />
         )}

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
-import { Copy, ExternalLink, GraduationCap, Lock, MonitorOff, Unlock } from 'lucide-react';
+import { Copy, ExternalLink, GraduationCap, Lock, MonitorOff, Smartphone, Unlock } from 'lucide-react';
 import { useFirebase, useUser } from '@/firebase';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import type { Student } from '@/lib/types';
@@ -245,6 +245,25 @@ export function AdminStudentPortalTab({ schoolId, students }: Props) {
                   checked={settings.studentPortalShowHeader === true}
                   onCheckedChange={(checked) =>
                     updateSettings({ studentPortalShowHeader: checked })
+                  }
+                />
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border p-4">
+                <div>
+                  <Label className="font-semibold flex items-center gap-2">
+                    <Smartphone className="h-4 w-4 shrink-0" aria-hidden />
+                    Portrait display layout
+                  </Label>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Turn on when the student portal runs on a screen mounted in portrait (tall and narrow).
+                    Content stacks in a single column with tighter spacing so it fits the screen.
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.studentPortalPortraitDisplay === true}
+                  onCheckedChange={(checked) =>
+                    updateSettings({ studentPortalPortraitDisplay: checked })
                   }
                 />
               </div>

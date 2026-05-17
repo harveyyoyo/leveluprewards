@@ -17,14 +17,23 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { lookupStudentPortal, verifyStudentPortal } from '@/lib/studentPortalClient';
 import { getReadableErrorMessage } from '@/lib/errorMessage';
+import { scanMismatchAtStudentLogin } from '@/lib/scanMismatch';
+import { studentPortalLoginCardClass } from '@/lib/studentPortalLayout';
+import { cn } from '@/lib/utils';
 
 type Props = {
   schoolId: string;
   lobbyIdToken: string;
+  portraitDisplay?: boolean;
   onSignedIn: (customToken: string, studentId: string) => void;
 };
 
-export function StudentPortalLogin({ schoolId, lobbyIdToken, onSignedIn }: Props) {
+export function StudentPortalLogin({
+  schoolId,
+  lobbyIdToken,
+  portraitDisplay = false,
+  onSignedIn,
+}: Props) {
   const { toast } = useToast();
   const [badgeId, setBadgeId] = useState('');
   const [busy, setBusy] = useState(false);
@@ -62,10 +71,11 @@ export function StudentPortalLogin({ schoolId, lobbyIdToken, onSignedIn }: Props
     try {
       const result = await lookupStudentPortal(lobbyIdToken, schoolId, id);
       if (!result.found || !result.studentId) {
+        const mismatch = await scanMismatchAtStudentLogin(null, schoolId, id);
         toast({
           variant: 'destructive',
-          title: 'Student not found',
-          description: 'Check your ID and try again.',
+          title: mismatch?.title ?? 'Student not found',
+          description: mismatch?.description ?? 'Check your student ID and try again.',
         });
         return;
       }
@@ -106,20 +116,32 @@ export function StudentPortalLogin({ schoolId, lobbyIdToken, onSignedIn }: Props
 
   return (
     <>
-      <Card className="w-full max-w-lg border-t-8 border-primary shadow-lg">
-        <CardHeader className="text-center space-y-4">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-            <GraduationCap className="h-8 w-8" aria-hidden />
+      <Card className={studentPortalLoginCardClass(portraitDisplay)}>
+        <CardHeader className={cn('text-center space-y-4', portraitDisplay && 'px-4 py-5')}>
+          <div
+            className={cn(
+              'mx-auto flex items-center justify-center rounded-2xl bg-primary/10 text-primary',
+              portraitDisplay ? 'h-14 w-14' : 'h-16 w-16',
+            )}
+          >
+            <GraduationCap className={cn(portraitDisplay ? 'h-7 w-7' : 'h-8 w-8')} aria-hidden />
           </div>
           <div className="space-y-2">
-            <CardTitle className="text-2xl font-black tracking-tight">Student home</CardTitle>
-            <CardDescription className="text-base">
+            <CardTitle
+              className={cn(
+                'font-black tracking-tight',
+                portraitDisplay ? 'text-xl' : 'text-2xl',
+              )}
+            >
+              Student home
+            </CardTitle>
+            <CardDescription className={cn(portraitDisplay ? 'text-sm' : 'text-base')}>
               Enter your student ID to view your points and rewards.
             </CardDescription>
           </div>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <CardContent className={portraitDisplay ? 'px-4 pb-5' : undefined}>
+          <form onSubmit={handleSubmit} className={cn('space-y-4', portraitDisplay && 'space-y-3')}>
             <div className="space-y-2">
               <Label htmlFor="portal-student-id" className="flex items-center gap-2">
                 <Type className="h-4 w-4" aria-hidden />

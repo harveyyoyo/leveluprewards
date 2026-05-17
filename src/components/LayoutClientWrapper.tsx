@@ -64,7 +64,9 @@ function LayoutClientWrapperInner({ children }: LayoutClientWrapperProps) {
     const devChunkReloadGuard = useRef(false);
     const isLoginPage =
       pathname === '/' ||
+      pathname === '/contact' ||
       pathname === '/login' ||
+      pathname === '/portal' ||
       pathname === '/developer' ||
       (typeof pathname === 'string' && pathname.includes('/student/welcome')) ||
       pathname.startsWith('/s/');

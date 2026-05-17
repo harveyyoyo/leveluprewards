@@ -15,6 +15,16 @@ There are three main portals to access the system, plus a few special pages.
 
 Once you've logged into a school, you can choose from several portals:
 
+### URL conventions
+
+School-specific links intentionally include a public school slug in the URL, for example:
+
+```text
+https://portal.yourdomain.com/yeshiva/student
+```
+
+That is acceptable for this app. The school slug should be treated as public and bookmarkable; security must come from passcodes, Firebase auth, role checks, Firestore rules, and kiosk/session gates. Use clean slugs such as `yeshiva`, `schoolabc`, or `riverdale`, and avoid putting sensitive internal details in the slug.
+
 *   **Redeem Coupons / Kiosk:**
     *   **How to Log In:** Students can log in by scanning their unique ID card or manually typing in their ID number.
     *   **What you can do:**

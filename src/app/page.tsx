@@ -6,28 +6,27 @@ import { MARKETING_LANDING_PAGES } from '@/lib/marketingLandings';
 
 export default function RootPage() {
   const scheduleDemoHref = getScheduleDemoHref();
-  const scheduleDemoExternal = !scheduleDemoHref.startsWith('mailto:');
+  const scheduleDemoExternal = scheduleDemoHref.startsWith('http');
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-8 bg-slate-950 p-6 text-slate-100">
       <HomeLandingLogo />
       <div className="flex w-full max-w-xs flex-col gap-3">
         <Button asChild className="h-12 w-full rounded-xl font-bold">
-          <Link href="/login">School Login</Link>
+          <Link href="/portal">School Portal</Link>
         </Button>
         <Button
           asChild
           variant="outline"
           className="h-12 w-full rounded-xl border-slate-700 bg-slate-900/50 font-bold text-slate-100 hover:bg-slate-800 hover:text-white"
         >
-          <a
-            href={scheduleDemoHref}
-            {...(scheduleDemoExternal
-              ? { target: '_blank', rel: 'noopener noreferrer' }
-              : {})}
-          >
-            Schedule a Demo
-          </a>
+          {scheduleDemoExternal ? (
+            <a href={scheduleDemoHref} target="_blank" rel="noopener noreferrer">
+              Request a Demo
+            </a>
+          ) : (
+            <Link href={scheduleDemoHref}>Request a Demo</Link>
+          )}
         </Button>
       </div>
       <nav

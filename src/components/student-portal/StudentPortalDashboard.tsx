@@ -11,17 +11,25 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge as UiBadge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn, getStudentNickname } from '@/lib/utils';
+import { studentPortalContentClass } from '@/lib/studentPortalLayout';
 import { EarnedBadgesShowcase } from '@/components/EarnedBadgesShowcase';
 import { StudentGoalsCard } from '@/components/goals/StudentGoalsCard';
 
 type Props = {
   schoolId: string;
   studentId: string;
+  portraitDisplay?: boolean;
   onSignOut: () => void;
   signingOut?: boolean;
 };
 
-export function StudentPortalDashboard({ schoolId, studentId, onSignOut, signingOut }: Props) {
+export function StudentPortalDashboard({
+  schoolId,
+  studentId,
+  portraitDisplay = false,
+  onSignOut,
+  signingOut,
+}: Props) {
   const firestore = useFirestore();
   const { settings } = useSettings();
 
@@ -86,30 +94,63 @@ export function StudentPortalDashboard({ schoolId, studentId, onSignOut, signing
   }
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-6 px-4 py-8">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-widest text-primary">Student home</p>
-          <h1 className="font-headline text-3xl font-black tracking-tight">{displayName}</h1>
+    <div className={studentPortalContentClass(portraitDisplay)}>
+      <div
+        className={cn(
+          'flex gap-3',
+          portraitDisplay ? 'flex-col items-stretch' : 'flex-wrap items-start justify-between gap-4',
+        )}
+      >
+        <div className="min-w-0">
+          <p
+            className={cn(
+              'font-semibold uppercase tracking-widest text-primary',
+              portraitDisplay ? 'text-xs' : 'text-sm',
+            )}
+          >
+            Student home
+          </p>
+          <h1
+            className={cn(
+              'font-headline font-black tracking-tight',
+              portraitDisplay ? 'text-2xl' : 'text-3xl',
+            )}
+          >
+            {displayName}
+          </h1>
           <p className="text-muted-foreground text-sm mt-1">
             View your points and rewards. Redeem prizes at school on the kiosk.
           </p>
         </div>
-        <Button variant="outline" className="rounded-xl" onClick={onSignOut} disabled={signingOut}>
+        <Button
+          variant="outline"
+          className={cn('rounded-xl shrink-0', portraitDisplay && 'w-full')}
+          onClick={onSignOut}
+          disabled={signingOut}
+        >
           <LogOut className="mr-2 h-4 w-4" aria-hidden />
           {signingOut ? 'Signing out…' : 'Sign out'}
         </Button>
       </div>
 
-      <Card className="border-t-4 border-primary shadow-lg">
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-xl">
+      <Card className={cn('border-t-4 border-primary shadow-lg', portraitDisplay && 'shadow-md')}>
+        <CardHeader className={cn('pb-2', portraitDisplay && 'px-4 py-3')}>
+          <CardTitle
+            className={cn('flex items-center gap-2', portraitDisplay ? 'text-lg' : 'text-xl')}
+          >
             <Star className="h-5 w-5 text-primary" aria-hidden />
             Points balance
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <p className="font-headline text-5xl font-black tabular-nums text-primary">{student.points ?? 0}</p>
+        <CardContent className={portraitDisplay ? 'px-4 pb-4 pt-0' : undefined}>
+          <p
+            className={cn(
+              'font-headline font-black tabular-nums text-primary',
+              portraitDisplay ? 'text-4xl' : 'text-5xl',
+            )}
+          >
+            {student.points ?? 0}
+          </p>
           {typeof student.lifetimePoints === 'number' ? (
             <p className="text-sm text-muted-foreground mt-2">Lifetime: {student.lifetimePoints}</p>
           ) : null}
@@ -124,19 +165,26 @@ export function StudentPortalDashboard({ schoolId, studentId, onSignOut, signing
         <EarnedBadgesShowcase student={student} badges={badges ?? []} enableBadges={settings.enableBadges} />
       ) : null}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+      <Card className={portraitDisplay ? 'shadow-md' : undefined}>
+        <CardHeader className={portraitDisplay ? 'px-4 py-3' : undefined}>
+          <CardTitle
+            className={cn('flex items-center gap-2', portraitDisplay && 'text-lg')}
+          >
             <Gift className="h-5 w-5" aria-hidden />
             Prize shop
           </CardTitle>
           <CardDescription>Available at school — redeem on the in-school kiosk.</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className={portraitDisplay ? 'px-4 pb-4' : undefined}>
           {visiblePrizes.length === 0 ? (
             <p className="text-sm text-muted-foreground">No prizes listed right now.</p>
           ) : (
-            <ul className="grid gap-2 sm:grid-cols-2">
+            <ul
+              className={cn(
+                'grid gap-2',
+                portraitDisplay ? 'grid-cols-1' : 'sm:grid-cols-2',
+              )}
+            >
               {visiblePrizes.slice(0, 12).map((p) => (
                 <li
                   key={p.id}
@@ -156,15 +204,19 @@ export function StudentPortalDashboard({ schoolId, studentId, onSignOut, signing
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+      <Card className={portraitDisplay ? 'shadow-md' : undefined}>
+        <CardHeader className={portraitDisplay ? 'px-4 py-3' : undefined}>
+          <CardTitle
+            className={cn('flex items-center gap-2', portraitDisplay && 'text-lg')}
+          >
             <History className="h-5 w-5" aria-hidden />
             Recent activity
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <ScrollArea className="h-[220px] pr-3">
+        <CardContent className={portraitDisplay ? 'px-4 pb-4' : undefined}>
+          <ScrollArea
+            className={cn('pr-3', portraitDisplay ? 'h-[min(38vh,240px)]' : 'h-[220px]')}
+          >
             {!activities?.length ? (
               <p className="text-sm text-muted-foreground">No activity yet.</p>
             ) : (

@@ -444,5 +444,11 @@ service cloud.firestore {
         );
       allow write: if false;
     }
+
+    // Public marketing contact form (written via Admin SDK only).
+    match /siteContactSubmissions/{submissionId} {
+      allow read: if isDeveloper();
+      allow write: if false;
+    }
   }
 }

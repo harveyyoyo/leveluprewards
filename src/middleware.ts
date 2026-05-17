@@ -12,6 +12,11 @@ import {
 } from '@/lib/auth/schoolGateCookie';
 import { verifySchoolGateJwt } from '@/lib/auth/verifySchoolGateJwt';
 import { schoolPathAllowedByGate } from '@/lib/auth/schoolGatePathPolicy';
+import {
+  canonicalPortalRedirectUrl,
+  isPortalHostname,
+  portalHostRedirectPath,
+} from '@/lib/portalRouting';
 
 function applySecurityHeaders(response: NextResponse) {
   response.headers.set('X-Content-Type-Options', 'nosniff');
@@ -51,6 +56,30 @@ function clearAuthCookies(response: NextResponse) {
 
 export async function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
+  const forwardedHost = request.headers.get('x-forwarded-host') ?? request.headers.get('host');
+
+  const canonicalPortalUrl = canonicalPortalRedirectUrl(
+    pathname,
+    search,
+    forwardedHost,
+    request.nextUrl.protocol,
+  );
+  if (canonicalPortalUrl) {
+    const redirect = NextResponse.redirect(canonicalPortalUrl);
+    applySecurityHeaders(redirect);
+    return redirect;
+  }
+
+  if (isPortalHostname(forwardedHost)) {
+    const portalPath = portalHostRedirectPath(pathname);
+    if (portalPath && portalPath !== pathname) {
+      const url = request.nextUrl.clone();
+      url.pathname = portalPath;
+      const redirect = NextResponse.redirect(url);
+      applySecurityHeaders(redirect);
+      return redirect;
+    }
+  }
 
   const gated = parseSchoolScopedSessionPath(pathname);
   const enforce = shouldEnforceFirebaseSessionEdge();

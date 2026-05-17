@@ -36,6 +36,7 @@ import {
     Layers, UsersRound, Ticket, Loader2
 } from 'lucide-react';
 import { useSettings, colorSchemes, type ColorScheme, type Settings as AppSettings } from '../providers/SettingsProvider';
+import { normalizeDisplayModePreference } from '@/lib/displayMode';
 import type { BackupInfo, StudentTheme } from '@/lib/types';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useToast } from '@/hooks/use-toast';
@@ -243,7 +244,7 @@ export function SettingsModal() {
         devDownloadBackup,
     } = useAppContext();
     const canOpenSettings = loginState === 'admin' || loginState === 'developer' || loginState === 'teacher';
-    const { settings, updateSettings } = useSettings();
+    const { settings, settingsPreferences, updateSettings } = useSettings();
     const playSound = useArcadeSound();
     const { toast } = useToast();
     const firestore = useFirestore();
@@ -272,12 +273,12 @@ export function SettingsModal() {
     const beginSettingsSession = useCallback(
         (initialView?: SettingsView) => {
             committedRef.current = false;
-            originalSettingsRef.current = cloneSettings(settings);
-            setDraft(cloneSettings(settings));
+            originalSettingsRef.current = cloneSettings(settingsPreferences);
+            setDraft(cloneSettings(settingsPreferences));
             setView(initialView ?? 'hub');
             setPreviewMode(isAdmin ? 'draft' : 'live');
         },
-        [settings, isAdmin],
+        [settingsPreferences, isAdmin],
     );
 
     useLayoutEffect(() => {
@@ -688,7 +689,7 @@ export function SettingsModal() {
                                     <ChevronRight className="h-5 w-5 shrink-0 text-sky-700/50 dark:text-sky-400/50" aria-hidden />
                                 </div>
                                 <span className="font-black text-sky-900 dark:text-sky-100">Interface &amp; display</span>
-                                <span className="text-xs leading-snug text-sky-800/90 dark:text-sky-200/80">Accent colors, dark mode, motion, sound, and Web vs App layout</span>
+                                <span className="text-xs leading-snug text-sky-800/90 dark:text-sky-200/80">Accent colors, dark mode, motion, sound, and Auto / Web / App layout</span>
                             </button>
                             {isAdmin && (
                                 <button
@@ -1216,35 +1217,42 @@ export function SettingsModal() {
                                 </div>
 
                                  {/* Display Mode */}
-                                 <div className="flex items-center justify-between bg-muted/40 p-1.5 rounded-2xl border border-border/50">
-                                     <button
-                                         onClick={() => {
-                                             const roleKey = interfaceRole === 'student' ? 'studentDisplayMode' : interfaceRole === 'teacher' ? 'teacherDisplayMode' : 'displayMode';
-                                             handleToggle(roleKey, 'web');
-                                         }}
-                                         className={cn(
-                                             "flex-1 py-2 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                                             (interfaceRole === 'student' ? (local.studentDisplayMode || local.displayMode) : interfaceRole === 'teacher' ? (local.teacherDisplayMode || local.displayMode) : local.displayMode) === 'web' 
-                                                 ? 'bg-background text-foreground shadow-sm border border-border/50' 
-                                                 : 'text-muted-foreground hover:text-foreground'
-                                         )}
-                                     >
-                                         Web
-                                     </button>
-                                     <button
-                                         onClick={() => {
-                                             const roleKey = interfaceRole === 'student' ? 'studentDisplayMode' : interfaceRole === 'teacher' ? 'teacherDisplayMode' : 'displayMode';
-                                             handleToggle(roleKey, 'app');
-                                         }}
-                                         className={cn(
-                                             "flex-1 py-2 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                                             (interfaceRole === 'student' ? (local.studentDisplayMode || local.displayMode) : interfaceRole === 'teacher' ? (local.teacherDisplayMode || local.displayMode) : local.displayMode) === 'app' 
-                                                 ? 'bg-background text-foreground shadow-sm border border-border/50' 
-                                                 : 'text-muted-foreground hover:text-foreground'
-                                         )}
-                                     >
-                                         App
-                                     </button>
+                                 <div className="space-y-2">
+                                     <div className="flex items-center justify-between bg-muted/40 p-1.5 rounded-2xl border border-border/50">
+                                         {(['auto', 'web', 'app'] as const).map((mode) => {
+                                             const roleKey =
+                                                 interfaceRole === 'student'
+                                                     ? 'studentDisplayMode'
+                                                     : interfaceRole === 'teacher'
+                                                       ? 'teacherDisplayMode'
+                                                       : 'displayMode';
+                                             const rawPref =
+                                                 interfaceRole === 'student'
+                                                     ? local.studentDisplayMode ?? local.displayMode
+                                                     : interfaceRole === 'teacher'
+                                                       ? local.teacherDisplayMode ?? local.displayMode
+                                                       : local.displayMode;
+                                             const activePref = normalizeDisplayModePreference(rawPref);
+                                             return (
+                                                 <button
+                                                     key={mode}
+                                                     type="button"
+                                                     onClick={() => handleToggle(roleKey, mode)}
+                                                     className={cn(
+                                                         'flex-1 py-2 px-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all',
+                                                         activePref === mode
+                                                             ? 'bg-background text-foreground shadow-sm border border-border/50'
+                                                             : 'text-muted-foreground hover:text-foreground',
+                                                     )}
+                                                 >
+                                                     {mode === 'auto' ? 'Auto' : mode === 'web' ? 'Web' : 'App'}
+                                                 </button>
+                                             );
+                                         })}
+                                     </div>
+                                     <p className="text-[10px] text-muted-foreground font-medium leading-snug px-1">
+                                         Auto uses app layout on tablets and phones, web on larger screens. Web and App always use that layout.
+                                     </p>
                                  </div>
                             </div>
                                 </div>

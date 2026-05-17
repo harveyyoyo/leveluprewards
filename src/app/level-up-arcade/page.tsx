@@ -2,11 +2,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import Logo from '@/components/Logo';
 import { buttonVariants } from '@/components/ui/button';
-import {
-  SITE_CONTACT_EMAIL,
-  SITE_CONTACT_MAILTO,
-  SITE_LEGAL_UMBRELLA,
-} from '@/lib/appBranding';
+import { getContactFormHref, SITE_LEGAL_UMBRELLA } from '@/lib/appBranding';
 import { cn } from '@/lib/utils';
 
 export const metadata = {
@@ -323,9 +319,9 @@ export default function LevelUpArcadeLandingPage() {
               All Rights Reserved.
             </div>
             <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 font-semibold sm:justify-end">
-              <a href={SITE_CONTACT_MAILTO} className="transition-colors hover:text-slate-300">
-                {SITE_CONTACT_EMAIL}
-              </a>
+              <Link href={getContactFormHref()} className="transition-colors hover:text-slate-300">
+                Contact Us
+              </Link>
               <Link href="/privacy" className="transition-colors hover:text-slate-300">
                 Privacy Quest
               </Link>

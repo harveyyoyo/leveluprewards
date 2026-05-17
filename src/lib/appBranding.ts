@@ -1,3 +1,5 @@
+import { buildSiteContactHref } from '@/lib/siteContact';
+
 /**
  * Default app branding used when appConfig does not override them.
  * Change these to rebrand the app name and tagline across the project.
@@ -7,16 +9,13 @@ export const APP_TAGLINE = 'School Rewards System';
 
 /** Verified business contact for procurement and school inquiries. */
 export const SITE_CONTACT_EMAIL = 'contact@leveluprewards.app';
+/** @deprecated Use {@link getContactFormHref} in UI instead of mailto links. */
 export const SITE_CONTACT_MAILTO =
   'mailto:contact@leveluprewards.app?subject=NYC%20DOE%20Procurement%20Inquiry';
 
-/** Default mailto when no external booking URL is configured. */
-export const SITE_SCHEDULE_DEMO_MAILTO =
-  'mailto:contact@leveluprewards.app?subject=Schedule%20a%20LevelUp%20Demo';
-
 /**
- * URL for "Schedule a Demo" CTAs (Calendly, HubSpot, etc.).
- * Set `NEXT_PUBLIC_SCHEDULE_DEMO_URL` to override per deployment.
+ * URL for "Request a Demo" CTAs (Calendly, HubSpot, etc.).
+ * Set `NEXT_PUBLIC_SCHEDULE_DEMO_URL` to override per deployment; otherwise opens the contact form.
  */
 export function getScheduleDemoHref(): string {
   const env =
@@ -24,7 +23,12 @@ export function getScheduleDemoHref(): string {
       ? process.env.NEXT_PUBLIC_SCHEDULE_DEMO_URL.trim()
       : '';
   if (env) return env;
-  return SITE_SCHEDULE_DEMO_MAILTO;
+  return buildSiteContactHref('demo');
+}
+
+/** Public contact form for general inquiries. */
+export function getContactFormHref(): string {
+  return buildSiteContactHref('contact');
 }
 
 /** Legal entity line shown in public footers (matches tax paperwork). */

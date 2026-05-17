@@ -13,10 +13,11 @@ import { useSettings } from '@/components/providers/SettingsProvider';
 import { useToast } from '@/hooks/use-toast';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { cn } from '@/lib/utils';
-import { useFunctions, useUser } from '@/firebase';
+import { useFirestore, useFunctions, useUser } from '@/firebase';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { useFaceDescriptor } from '@/hooks/useFaceDescriptor';
 import { getReadableErrorMessage, OFFLINE_USER_MESSAGE } from '@/lib/errorMessage';
+import { scanMismatchAtStudentLogin } from '@/lib/scanMismatch';
 import {
     getStudentSignInThrottleStatus,
     recordStudentSignIn,
@@ -82,6 +83,7 @@ export function StudentScanner({
     isActive = true,
 }: StudentScannerProps) {
     const { schoolId } = useAppContext();
+    const firestore = useFirestore();
     const functions = useFunctions();
     const { user, isUserLoading } = useUser();
     const { loginState, studentKioskSessionEstablished, studentKioskSessionError } = useAuth();
@@ -435,11 +437,22 @@ export function StudentScanner({
                 onStudentFound(finalStudentId);
             } else {
                 playSound('error');
-                toast({
-                    variant: 'destructive',
-                    title: 'Student Not Found',
-                    description: 'The provided ID does not match any student.',
-                });
+                void (async () => {
+                    const mismatch = await scanMismatchAtStudentLogin(firestore, schoolId, badgeId);
+                    if (mismatch) {
+                        toast({
+                            variant: 'destructive',
+                            title: mismatch.title,
+                            description: mismatch.description,
+                        });
+                        return;
+                    }
+                    toast({
+                        variant: 'destructive',
+                        title: 'Student Not Found',
+                        description: 'The provided ID does not match any student. Use your student card or ID number to sign in.',
+                    });
+                })();
             }
         };
 
@@ -480,6 +493,7 @@ export function StudentScanner({
         }
         setNfcId('');
     }, [
+        firestore,
         functions,
         schoolId,
         user,

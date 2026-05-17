@@ -4,7 +4,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useAuth, type LoginState } from './AuthProvider';
-import { useIsMobile, useIsTabletOrMobile } from '@/hooks/use-mobile';
+import { useIsTabletOrMobile } from '@/hooks/use-mobile';
 import { useDoc, useFirebase, useMemoFirebase } from '@/firebase';
 import { doc, setDoc, type DocumentData } from 'firebase/firestore';
 import { removeUndefinedDeep } from '@/lib/db/helpers';
@@ -17,6 +17,17 @@ import { defaultPaperForFamily } from '@/lib/idCardPrintCatalog';
 import type { PrizeVoucherPaperFormat } from '@/lib/prizeVoucherPrint';
 import { STUDENT_WELCOME_STYLES_LIVE } from '@/lib/studentWelcome';
 import { LEVELUP_BRAND_PRIMARY_HEX } from '@/lib/appBranding';
+import {
+    normalizeDisplayModePreference,
+    resolveDisplayMode,
+    type DisplayModePreference,
+    type ResolvedDisplayMode,
+} from '@/lib/displayMode';
+import {
+    getBrowserLegacyModeSignals,
+    resolveLegacyModePreference,
+    type LegacyModeSignals,
+} from '@/lib/legacyMode';
 
 type ColorScheme =
     | 'default'
@@ -40,7 +51,7 @@ type AppearanceColorOverrides = Partial<Record<ColorScheme, AppearanceColorPair>
 
 interface Settings {
     graphicMode: 'classic' | 'graphics';
-    displayMode: 'web' | 'app';
+    displayMode: DisplayModePreference;
     colorScheme: ColorScheme;
     customAppearanceColors?: AppearanceColorOverrides;
     soundEnabled: boolean;
@@ -160,6 +171,11 @@ interface Settings {
     studentPortalLockBrowserToStudent?: boolean;
     /** When true, student home shows the normal app header (school name, home). Default: hidden like the kiosk. */
     studentPortalShowHeader?: boolean;
+    /**
+     * When true, student home uses a tall narrow layout for portrait-mounted displays
+     * (e.g. a tablet or monitor rotated vertically in the lobby).
+     */
+    studentPortalPortraitDisplay?: boolean;
     enableClassSignIn: boolean;
     enableFaceLogin: boolean;
     /** Welcome styles picker on the kiosk (`/student/welcome`). Gated by `STUDENT_WELCOME_STYLES_LIVE` until shipped. */
@@ -274,7 +290,7 @@ interface Settings {
     payLibrary?: boolean;
 
     // Student Portal Interface overrides (set by admin)
-    studentDisplayMode?: 'web' | 'app';
+    studentDisplayMode?: DisplayModePreference;
     studentColorScheme?: ColorScheme;
     studentDarkMode?: boolean;
     studentDarkModeColorized?: boolean;
@@ -282,7 +298,7 @@ interface Settings {
     studentAnimatedBackgroundStyle?: string;
 
     // Teacher Portal Interface overrides (set by admin)
-    teacherDisplayMode?: 'web' | 'app';
+    teacherDisplayMode?: DisplayModePreference;
     teacherColorScheme?: ColorScheme;
     teacherDarkMode?: boolean;
     teacherDarkModeColorized?: boolean;
@@ -313,8 +329,13 @@ interface Settings {
     hallOfFameGridLayout?: boolean;
 }
 
+/** Settings with display mode resolved for rendering (`web` | `app` only). */
+type ResolvedSettings = Omit<Settings, 'displayMode'> & { displayMode: ResolvedDisplayMode };
+
 interface SettingsContextType {
-    settings: Settings;
+    settings: ResolvedSettings;
+    /** Stored preferences (includes `displayMode: auto | web | app`). */
+    settingsPreferences: Settings;
     updateSettings: (updates: Partial<Settings>) => void;
     planTier: PlanTier;
     planLabel: string;
@@ -372,7 +393,7 @@ const colorSchemes: Record<ColorScheme, { bg: string; card: string; accent: stri
 
 const defaultSettings: Settings = {
     graphicMode: 'classic',
-    displayMode: 'web',
+    displayMode: 'auto',
     colorScheme: 'default',
     customAppearanceColors: {},
     soundEnabled: true,
@@ -442,6 +463,7 @@ const defaultSettings: Settings = {
     studentPortalMaxFailedAttempts: 5,
     studentPortalLockBrowserToStudent: false,
     studentPortalShowHeader: false,
+    studentPortalPortraitDisplay: false,
     enableClassSignIn: false,
     enableFaceLogin: false,
     enableStudentWelcome: false,
@@ -604,6 +626,7 @@ function contrastForegroundTriplet(hex: string) {
 
 export { colorSchemes };
 export type { AppearanceColorOverrides, ColorScheme, Settings };
+export type { DisplayModePreference } from '@/lib/displayMode';
 
 const SettingsContext = createContext<SettingsContextType | null>(null);
 
@@ -620,7 +643,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     const { firestore } = useFirebase();
     const [settings, setSettings] = useState<Settings>(defaultSettings);
     const [isLoaded, setIsLoaded] = useState(false);
-    const isMobile = useIsMobile();
+    const [automaticLegacySignals, setAutomaticLegacySignals] = useState<LegacyModeSignals>({});
     const pathname = usePathname();
     const isStaff = loginState === 'admin' || loginState === 'developer' || loginState === 'teacher' || loginState === 'secretary' || loginState === 'prizeClerk' || loginState === 'reports';
     const schoolDocRef = useMemoFirebase(() => {
@@ -787,6 +810,13 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                 if (parsed.privacyStudentNameDisplayMode !== 'full' && parsed.privacyStudentNameDisplayMode !== 'preferred_only') {
                     delete (parsed as Partial<Settings>).privacyStudentNameDisplayMode;
                 }
+                parsed.displayMode = normalizeDisplayModePreference(parsed.displayMode);
+                if (parsed.studentDisplayMode !== undefined) {
+                    parsed.studentDisplayMode = normalizeDisplayModePreference(parsed.studentDisplayMode);
+                }
+                if (parsed.teacherDisplayMode !== undefined) {
+                    parsed.teacherDisplayMode = normalizeDisplayModePreference(parsed.teacherDisplayMode);
+                }
                 const psp = parsed.prizeAiSurpriseDefaultPoints;
                 if (typeof psp !== 'number' || !Number.isFinite(psp) || psp < 0) {
                     delete (parsed as Partial<Settings>).prizeAiSurpriseDefaultPoints;
@@ -856,13 +886,35 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                     enableHelperMode: true
                 } : {}),
             };
-            if (isMobile) {
-                initialSettings.displayMode = 'app';
-            }
             setSettings(applyEntitlements(initialSettings));
         }
         setIsLoaded(true);
-    }, [schoolId, isInitialized, isMobile, applyEntitlements, stableRemoteAppSettingsJson, stableFeatureDefaultsJson, loginState]);
+    }, [schoolId, isInitialized, applyEntitlements, stableRemoteAppSettingsJson, stableFeatureDefaultsJson, loginState]);
+
+    useEffect(() => {
+        if (!isLoaded) return;
+
+        const updateAutomaticLegacySignals = () => {
+            setAutomaticLegacySignals(getBrowserLegacyModeSignals());
+        };
+
+        updateAutomaticLegacySignals();
+        const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+        reducedMotion?.addEventListener?.('change', updateAutomaticLegacySignals);
+        window.addEventListener('online', updateAutomaticLegacySignals);
+        window.addEventListener('offline', updateAutomaticLegacySignals);
+
+        return () => {
+            reducedMotion?.removeEventListener?.('change', updateAutomaticLegacySignals);
+            window.removeEventListener('online', updateAutomaticLegacySignals);
+            window.removeEventListener('offline', updateAutomaticLegacySignals);
+        };
+    }, [isLoaded]);
+
+    const effectiveLegacyMode = useMemo(
+        () => resolveLegacyModePreference(settings.legacyMode, automaticLegacySignals),
+        [settings.legacyMode, automaticLegacySignals],
+    );
 
     const flushAppSettingsToFirestore = useCallback((next: Settings, sid: string) => {
         const fs = firestoreRef.current;
@@ -1042,16 +1094,16 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         settings.teacherColorScheme,
     ]);
 
-    // Apply legacy class to document root
+    // Apply saved-or-automatic legacy class to document root.
     useEffect(() => {
         if (!isLoaded) return;
         const root = document.documentElement;
-        if (settings.legacyMode) {
+        if (effectiveLegacyMode) {
             root.classList.add('legacy');
         } else {
             root.classList.remove('legacy');
         }
-    }, [settings.legacyMode, isLoaded]);
+    }, [effectiveLegacyMode, isLoaded]);
 
     // Force a neutral public appearance on public/login routes regardless of saved settings.
     useEffect(() => {
@@ -1059,7 +1111,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         if (!isPublicLoginRoute) return;
 
         const root = document.documentElement;
-        const next = { ...settings, ...publicLoginSettings };
+        const next = { ...settings, legacyMode: effectiveLegacyMode, ...publicLoginSettings };
 
         if (next.darkMode) root.classList.add('dark');
         else root.classList.remove('dark');
@@ -1068,22 +1120,27 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         root.setAttribute('data-color-scheme', next.colorScheme ?? 'default');
         root.removeAttribute('data-dark-colorize');
         THEMED_ROOT_PROPS.forEach((prop) => root.style.removeProperty(prop));
-    }, [isLoaded, isPublicLoginRoute, settings]);
+    }, [isLoaded, isPublicLoginRoute, settings, effectiveLegacyMode]);
 
     const isTabletOrMobile = useIsTabletOrMobile();
     
-    const effectiveSettings = useMemo(() => {
-        const s = { ...settings };
-        
+    const effectiveSettings = useMemo((): ResolvedSettings => {
+        const s = { ...settings, legacyMode: effectiveLegacyMode };
+        let displayPreference = normalizeDisplayModePreference(s.displayMode);
+
         if (loginState === 'student') {
-            if (s.studentDisplayMode) s.displayMode = s.studentDisplayMode;
+            if (s.studentDisplayMode !== undefined) {
+                displayPreference = normalizeDisplayModePreference(s.studentDisplayMode);
+            }
             if (s.studentColorScheme) s.colorScheme = s.studentColorScheme;
             if (typeof s.studentDarkMode === 'boolean') s.darkMode = s.studentDarkMode;
             if (typeof s.studentDarkModeColorized === 'boolean') s.darkModeColorized = s.studentDarkModeColorized;
             if (typeof s.studentEnableAnimatedBackground === 'boolean') s.enableAnimatedBackground = s.studentEnableAnimatedBackground;
             if (s.studentAnimatedBackgroundStyle) s.animatedBackgroundStyle = s.studentAnimatedBackgroundStyle;
         } else if (loginState === 'teacher') {
-            if (s.teacherDisplayMode) s.displayMode = s.teacherDisplayMode;
+            if (s.teacherDisplayMode !== undefined) {
+                displayPreference = normalizeDisplayModePreference(s.teacherDisplayMode);
+            }
             if (s.teacherColorScheme) s.colorScheme = s.teacherColorScheme;
             if (typeof s.teacherDarkMode === 'boolean') s.darkMode = s.teacherDarkMode;
             if (typeof s.teacherDarkModeColorized === 'boolean') s.darkModeColorized = s.teacherDarkModeColorized;
@@ -1091,13 +1148,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             if (s.teacherAnimatedBackgroundStyle) s.animatedBackgroundStyle = s.teacherAnimatedBackgroundStyle;
         }
 
-        // Tablet and mobile automatically switch to app mode overrides EVERYTHING else
-        if (isTabletOrMobile) {
-            s.displayMode = 'app';
-        }
-
-        return s;
-    }, [settings, loginState, isTabletOrMobile]);
+        return {
+            ...s,
+            displayMode: resolveDisplayMode(displayPreference, isTabletOrMobile),
+        };
+    }, [settings, loginState, isTabletOrMobile, effectiveLegacyMode]);
 
     const isTeacherAllowed = useCallback((key: string) => {
         if (!isAllowed(key)) return false;
@@ -1118,7 +1173,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
     return (
         <SettingsContext.Provider value={{ 
-            settings: effectiveSettings, 
+            settings: effectiveSettings,
+            settingsPreferences: settings,
             updateSettings, 
             planTier, 
             planLabel, 

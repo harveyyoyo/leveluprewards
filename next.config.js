@@ -35,11 +35,6 @@ const nextConfig = {
   async redirects() {
     return [
       {
-        source: '/portal',
-        destination: '/login',
-        permanent: false,
-      },
-      {
         source: '/:schoolId/admin-signin',
         destination: '/:schoolId/admin-sign-in',
         permanent: true,
