@@ -94,7 +94,7 @@ export function RaffleLotoCage({
     setWinner(null);
     setExitBall(false);
     setTumbleBalls(buildTumbleBalls(pool));
-  }, [resetKey]);
+  }, [resetKey, pool]);
 
   useEffect(() => {
     return () => clearTickTimers();

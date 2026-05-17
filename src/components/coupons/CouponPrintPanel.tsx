@@ -72,9 +72,9 @@ export function CouponPrintPanel({
   const playSound = useArcadeSound();
 
   const teacherName = issuerDisplayName.trim() || 'Admin';
-  const categoryList = categories ?? [];
-  const classList = classes ?? [];
-  const teacherList = teachers ?? [];
+  const categoryList = useMemo(() => categories ?? [], [categories]);
+  const classList = useMemo(() => classes ?? [], [classes]);
+  const teacherList = useMemo(() => teachers ?? [], [teachers]);
 
   const [printCategoryId, setPrintCategoryId] = useState('');
   const [printValue, setPrintValue] = useState('10');
@@ -320,12 +320,17 @@ export function CouponPrintPanel({
       .sort((a, b) => a.name.localeCompare(b.name))
       .map((t) => t.name),
   });
-  const previewScopeFields: Partial<Pick<Coupon, 'redemptionScope' | 'allowedClassIds' | 'allowedTeacherIds'>> =
-    printRedemptionScope === 'classes'
-      ? { redemptionScope: 'classes' as const, allowedClassIds: [...printScopeClassIds] }
-      : printRedemptionScope === 'teachers'
-        ? { redemptionScope: 'teachers' as const, allowedTeacherIds: [...printScopeTeacherIds] }
-        : { redemptionScope: 'school' as const };
+  const previewScopeFields = useMemo<
+    Partial<Pick<Coupon, 'redemptionScope' | 'allowedClassIds' | 'allowedTeacherIds'>>
+  >(
+    () =>
+      printRedemptionScope === 'classes'
+        ? { redemptionScope: 'classes' as const, allowedClassIds: [...printScopeClassIds] }
+        : printRedemptionScope === 'teachers'
+          ? { redemptionScope: 'teachers' as const, allowedTeacherIds: [...printScopeTeacherIds] }
+          : { redemptionScope: 'school' as const },
+    [printRedemptionScope, printScopeClassIds, printScopeTeacherIds],
+  );
 
   const previewStartsAt = computeStartsAt();
   const previewExpiresAt = computeExpiresAt();
