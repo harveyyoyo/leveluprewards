@@ -84,14 +84,14 @@ function LayoutClientWrapperInner({ children }: LayoutClientWrapperProps) {
       /\/(?:student|student-home|prize)(?:\/|$)/.test(pathname);
     const showStudentHomeHeader =
       isStudentHomePage && settings.studentPortalShowHeader === true;
+    const hideAppChrome =
+      isLoginPage || isSignInPage || isMarketingLandingPath(pathname);
     const useHoverKioskHeader =
       isStudentKioskPage && !hideAppChrome && !showStudentHomeHeader;
     /** Staff portal “home” routes: same shell as admin (full-width `<main>`, inner pages use `max-w-7xl`). */
     const isStaffPortalShellRoot =
       typeof pathname === 'string' &&
       /\/(?:admin|teacher|secretary|reports)\/?$/.test(pathname);
-    const hideAppChrome =
-      isLoginPage || isSignInPage || isMarketingLandingPath(pathname);
     const appShellNoPageScroll =
       typeof pathname === 'string' &&
       !isStaffPortalShellRoot &&

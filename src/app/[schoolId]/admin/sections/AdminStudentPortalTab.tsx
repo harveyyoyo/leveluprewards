@@ -87,7 +87,7 @@ export function AdminStudentPortalTab({ schoolId, students }: Props) {
       toast({
         variant: 'destructive',
         title: 'Unlock failed',
-        description: getReadableErrorMessage(e),
+        description: getReadableErrorMessage(e, 'Unlock failed.'),
       });
     } finally {
       setBusyId(null);
@@ -110,7 +110,7 @@ export function AdminStudentPortalTab({ schoolId, students }: Props) {
       toast({
         variant: 'destructive',
         title: 'Could not save passcode',
-        description: getReadableErrorMessage(e),
+        description: getReadableErrorMessage(e, 'Could not save passcode.'),
       });
     } finally {
       setBusyId(null);
@@ -133,7 +133,7 @@ export function AdminStudentPortalTab({ schoolId, students }: Props) {
       toast({
         variant: 'destructive',
         title: 'Reset failed',
-        description: getReadableErrorMessage(e),
+        description: getReadableErrorMessage(e, 'Reset failed.'),
       });
     } finally {
       setBusyId(null);
@@ -150,7 +150,7 @@ export function AdminStudentPortalTab({ schoolId, students }: Props) {
       toast({
         variant: 'destructive',
         title: 'Could not clear passcode',
-        description: getReadableErrorMessage(e),
+        description: getReadableErrorMessage(e, 'Could not clear passcode.'),
       });
     } finally {
       setBusyId(null);

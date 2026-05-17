@@ -43,8 +43,8 @@ export default function StudentHomePage() {
       try {
         const idToken = await user.getIdToken(true);
         await establishStudentPortalLobby(functions, idToken, schoolId);
-        await syncFirebaseSessionCookie(idToken);
-        await syncSchoolGateCookie(idToken, schoolId);
+        await syncFirebaseSessionCookie(auth);
+        await syncSchoolGateCookie(auth, schoolId);
         if (!cancelled) {
           setLobbyToken(idToken);
           setLobbyReady(true);
@@ -77,9 +77,9 @@ export default function StudentHomePage() {
       await signInWithCustomToken(auth, customToken);
       const signedIn = auth.currentUser;
       if (signedIn) {
-        const idToken = await signedIn.getIdToken(true);
-        await syncFirebaseSessionCookie(idToken);
-        await syncSchoolGateCookie(idToken, schoolId);
+        await signedIn.getIdToken(true);
+        await syncFirebaseSessionCookie(auth);
+        await syncSchoolGateCookie(auth, schoolId);
       }
       setPortalStudentId(studentId);
     },
@@ -129,7 +129,7 @@ export default function StudentHomePage() {
   const isPortalStudent = Boolean(portalStudentId && user?.uid === portalStudentId);
 
   return (
-    <SchoolGate allowedRoles={['school', 'student', 'admin', 'teacher']}>
+    <SchoolGate>
       <div className="min-h-[calc(100vh-5rem)] flex flex-col items-center justify-center px-4 py-10">
         {lobbyError ? (
           <Card className="w-full max-w-lg border-destructive/40">

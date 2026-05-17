@@ -29,7 +29,7 @@ export function StudentPortalDashboard({ schoolId, studentId, onSignOut, signing
     () => (firestore && schoolId && studentId ? doc(firestore, 'schools', schoolId, 'students', studentId) : null),
     [firestore, schoolId, studentId],
   );
-  const { data: student, loading: studentLoading } = useDoc<Student>(studentRef);
+  const { data: student, isLoading: studentLoading } = useDoc<Student>(studentRef);
 
   const activitiesQuery = useMemoFirebase(
     () =>

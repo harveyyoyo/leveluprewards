@@ -10,6 +10,23 @@ export const SITE_CONTACT_EMAIL = 'contact@leveluprewards.app';
 export const SITE_CONTACT_MAILTO =
   'mailto:contact@leveluprewards.app?subject=NYC%20DOE%20Procurement%20Inquiry';
 
+/** Default mailto when no external booking URL is configured. */
+export const SITE_SCHEDULE_DEMO_MAILTO =
+  'mailto:contact@leveluprewards.app?subject=Schedule%20a%20LevelUp%20Demo';
+
+/**
+ * URL for "Schedule a Demo" CTAs (Calendly, HubSpot, etc.).
+ * Set `NEXT_PUBLIC_SCHEDULE_DEMO_URL` to override per deployment.
+ */
+export function getScheduleDemoHref(): string {
+  const env =
+    typeof process.env.NEXT_PUBLIC_SCHEDULE_DEMO_URL === 'string'
+      ? process.env.NEXT_PUBLIC_SCHEDULE_DEMO_URL.trim()
+      : '';
+  if (env) return env;
+  return SITE_SCHEDULE_DEMO_MAILTO;
+}
+
 /** Legal entity line shown in public footers (matches tax paperwork). */
 export const SITE_LEGAL_UMBRELLA =
   'LevelUp Rewards is proudly developed, owned, and operated by LevelUp EdTech Enterprises LLC.';
