@@ -1285,6 +1285,28 @@ export function SettingsModal() {
                                         </div>
                                     </div>
 
+                                    <div className="flex items-center justify-between gap-4">
+                                        <div className="flex flex-col min-w-0 flex-1">
+                                            <span className="text-sm font-bold">Portrait display layout</span>
+                                            <p className="text-[11px] text-muted-foreground">
+                                                Tall narrow layout for portrait-mounted kiosk screens (portal hub, sign-in, rewards shop).
+                                            </p>
+                                        </div>
+                                        <Switch
+                                            checked={
+                                                local.kioskPortraitDisplay === true ||
+                                                local.studentPortalPortraitDisplay === true
+                                            }
+                                            onCheckedChange={(checked) => {
+                                                handleToggle('kioskPortraitDisplay', checked);
+                                                if (local.studentPortalPortraitDisplay) {
+                                                    handleToggle('studentPortalPortraitDisplay', false);
+                                                }
+                                            }}
+                                            disabled={!isAdmin}
+                                        />
+                                    </div>
+
                                     <div className="flex items-center justify-between">
                                         <div className="flex flex-col">
                                             <span className="text-sm font-bold">Kiosk Auto-Logout</span>
@@ -1855,7 +1877,7 @@ export function SettingsModal() {
                                 <FeatureRow
                                     id="enablePrizeAiSurprise"
                                     label="AI reward surprises"
-                                    desc="Adds a single built-in Fun reward in the shop; students pick joke, riddle, fortune teller, or random when redeeming. Requires API keys on the server."
+                                    desc="Adds a single built-in Fun reward in the shop; students pick joke, riddle, fortune teller, name poem, or random when redeeming. Requires API keys on the server."
                                     icon={<Sparkles className="w-5 h-5" />}
                                     settings={local}
                                     onToggle={handleToggle}

@@ -13,7 +13,7 @@ export default function RootPage() {
       <HomeLandingLogo />
       <div className="flex w-full max-w-xs flex-col gap-3">
         <Button asChild className="h-12 w-full rounded-xl font-bold">
-          <Link href="/portal">School Portal</Link>
+          <Link href="/portal">School Login</Link>
         </Button>
         <Button
           asChild

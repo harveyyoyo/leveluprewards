@@ -172,9 +172,11 @@ interface Settings {
     /** When true, student home shows the normal app header (school name, home). Default: hidden like the kiosk. */
     studentPortalShowHeader?: boolean;
     /**
-     * When true, student home uses a tall narrow layout for portrait-mounted displays
-     * (e.g. a tablet or monitor rotated vertically in the lobby).
+     * When true, student kiosk screens (portal hub, sign-in, rewards shop) use a tall narrow
+     * layout for portrait-mounted displays (e.g. a floor stand with a rotated monitor).
      */
+    kioskPortraitDisplay?: boolean;
+    /** @deprecated Use kioskPortraitDisplay */
     studentPortalPortraitDisplay?: boolean;
     enableClassSignIn: boolean;
     enableFaceLogin: boolean;
@@ -463,7 +465,7 @@ const defaultSettings: Settings = {
     studentPortalMaxFailedAttempts: 5,
     studentPortalLockBrowserToStudent: false,
     studentPortalShowHeader: false,
-    studentPortalPortraitDisplay: false,
+    kioskPortraitDisplay: false,
     enableClassSignIn: false,
     enableFaceLogin: false,
     enableStudentWelcome: false,

@@ -17,6 +17,7 @@ export {
   awardPointsToMultipleStudents,
   deductPointsFromMultipleStudents,
   purgeStudentProgress,
+  purgeStudentsProgress,
   uploadStudents,
   importStudentsFromParsedRows,
 } from './students';

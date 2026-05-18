@@ -51,7 +51,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import DynamicIcon from '@/components/DynamicIcon';
 import { cn, getStudentNickname, getContrastColor } from '@/lib/utils';
-import { LEVELUP_BRAND_PRIMARY_HEX } from '@/lib/appBranding';
 import { resolveStudentThemeWithSchoolDefault, primaryForegroundFor } from '@/lib/themeContrast';
 import { getReadableErrorMessage, OFFLINE_USER_MESSAGE } from '@/lib/errorMessage';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -70,12 +69,15 @@ import { useActiveStudentSession } from '@/hooks/useActiveStudentSession';
 import type { StudentFoundMeta } from '@/components/StudentScanner';
 import { rainbowTripletForNavId, complementTripletForNavId } from '@/lib/rainbowNav';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
+import { appearanceVarsForSurface } from '@/lib/appearance';
 
 import { prizeIsListed, stripLeadingEmojiFromPrizeName, studentSeesPrizeByTeachers } from '@/lib/prizeUtils';
 import { runMotor as runVendingMotor, isConnected as motorIsConnected } from '@/lib/vendingMotor';
 import { useAuthFetch } from '@/lib/authFetch';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { isAiFunPrize, prizeAppearsInRewardsShop, resolveAiFunApiMode, withUnifiedAiFunPrize } from '@/lib/aiJokePrize';
+import { acrosticFirstNameFromStudent } from '@/lib/prizeAiFunAcrostic';
+import { requestAcrosticSurprise } from '@/lib/prizeAiFunRequest';
 import { prizeAiFunAgeBandKey, studentAgeYearsFromBirthday } from '@/lib/studentAiFunAge';
 import {
     type AiSurpriseBody,
@@ -99,11 +101,12 @@ const AI_SURPRISE_KIND_LABEL: Record<string, string> = {
     joke: 'Your joke',
     riddle: 'Your riddle',
     fortune: 'Fortune teller',
+    acrostic: 'Your name poem',
 };
 
 const aiSurpriseStockFetches = new Set<string>();
 
-const FALLBACK_AI_SURPRISES: Record<AiSurpriseKind, AiSurpriseBody[]> = {
+const FALLBACK_AI_SURPRISES: Record<Exclude<AiSurpriseKind, 'acrostic'>, AiSurpriseBody[]> = {
     joke: [
         { kind: 'joke', text: 'Why did the pencil get invited to class? Because it always had a good point.' },
         { kind: 'joke', text: 'Why was the math book smiling? It finally solved one of its problems.' },
@@ -122,12 +125,16 @@ const FALLBACK_AI_SURPRISES: Record<AiSurpriseKind, AiSurpriseBody[]> = {
 };
 
 function pickAiSurpriseKind(mode: PrizeAiFunReward | undefined): AiSurpriseKind {
-    if (mode === 'riddle' || mode === 'fortune' || mode === 'joke') return mode;
-    const roll = Math.floor(Math.random() * 3);
-    return (['joke', 'riddle', 'fortune'] as const)[roll];
+    if (mode === 'riddle' || mode === 'fortune' || mode === 'joke' || mode === 'acrostic') return mode;
+    const roll = Math.floor(Math.random() * 4);
+    return (['joke', 'riddle', 'fortune', 'acrostic'] as const)[roll];
 }
 
-function takeAiSurpriseFromStock(schoolId: string, kind: AiSurpriseKind, ageBand = '0'): AiSurpriseBody {
+function takeAiSurpriseFromStock(
+    schoolId: string,
+    kind: Exclude<AiSurpriseKind, 'acrostic'>,
+    ageBand = '0',
+): AiSurpriseBody {
     const recentKeys = recentAiSurpriseDedupeSet(schoolId, kind, ageBand);
     const stock = readAiSurpriseStock(schoolId, kind, ageBand).filter(
         (item) => !recentKeys.has(aiSurpriseDedupeKey(kind, item.text)),
@@ -149,7 +156,7 @@ function takeAiSurpriseFromStock(schoolId: string, kind: AiSurpriseKind, ageBand
 async function refillAiSurpriseStock(
     authFetch: ReturnType<typeof useAuthFetch>,
     schoolId: string,
-    kind: AiSurpriseKind,
+    kind: Exclude<AiSurpriseKind, 'acrostic'>,
     force = false,
     ageBand = '0',
     ageYears?: number,
@@ -201,6 +208,9 @@ function ConfirmRedemptionDialog({
     onOpenChange,
     onConfirm,
     isRedeeming = false,
+    hasTheme = false,
+    themeSurfaceStyle,
+    primaryForeground = '#ffffff',
 }: {
     student: Student | null,
     prize: Prize | null,
@@ -208,6 +218,9 @@ function ConfirmRedemptionDialog({
     onOpenChange: (open: boolean) => void,
     onConfirm: (quantity: number, aiFunUserPick?: PrizeAiFunReward) => void,
     isRedeeming?: boolean,
+    hasTheme?: boolean,
+    themeSurfaceStyle?: CSSProperties,
+    primaryForeground?: string,
 }) {
     const [quantity, setQuantity] = useState(1);
     const [pickerKind, setPickerKind] = useState<PrizeAiFunReward>('joke');
@@ -251,12 +264,17 @@ function ConfirmRedemptionDialog({
         playSound('click');
     };
 
+    const mutedTextStyle: CSSProperties | undefined = hasTheme ? { color: 'var(--theme-text)', opacity: 0.7 } : undefined;
+
     return (
         <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
-            <AlertDialogContent>
+            <AlertDialogContent style={themeSurfaceStyle}>
                 <AlertDialogHeader>
-                    <AlertDialogTitle>Confirm Purchase</AlertDialogTitle>
-                    <AlertDialogDescription className="break-words [overflow-wrap:anywhere]">
+                    <AlertDialogTitle style={hasTheme ? { color: 'var(--theme-text)' } : undefined}>Confirm Purchase</AlertDialogTitle>
+                    <AlertDialogDescription
+                        className="break-words [overflow-wrap:anywhere]"
+                        style={hasTheme ? { color: 'var(--theme-text)', opacity: 0.85 } : undefined}
+                    >
                         You are redeeming{' '}
                         <span className="text-xl font-black sm:text-2xl">{prize.name}</span>.
                     </AlertDialogDescription>
@@ -309,7 +327,7 @@ function ConfirmRedemptionDialog({
                                 </Button>
                             </div>
                             {quantity >= maxQuantity && (
-                                <p className="text-xs text-center text-muted-foreground">
+                                <p className={cn("text-xs text-center", !hasTheme && "text-muted-foreground")} style={mutedTextStyle}>
                                     {maxByStock !== Number.POSITIVE_INFINITY && quantity >= maxByStock
                                         ? `Only ${maxByStock} in stock.`
                                         : prizePoints > 0
@@ -320,32 +338,40 @@ function ConfirmRedemptionDialog({
                         </>
                     ) : pickerSurprise ? (
                         <div className="space-y-2">
-                            <Label htmlFor="fun-ai-kind" className="text-xs font-semibold">
+                            <Label htmlFor="fun-ai-kind" className="text-xs font-semibold" style={hasTheme ? { color: 'var(--theme-text)' } : undefined}>
                                 What do you want?
                             </Label>
                             <Select value={pickerKind} onValueChange={(v) => setPickerKind(v as PrizeAiFunReward)}>
-                                <SelectTrigger id="fun-ai-kind" className="h-11">
+                                <SelectTrigger
+                                    id="fun-ai-kind"
+                                    className="h-11"
+                                    style={hasTheme ? { backgroundColor: 'var(--theme-bg)', borderColor: 'var(--theme-primary)', color: 'var(--theme-text)' } : undefined}
+                                >
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="joke">Joke</SelectItem>
                                     <SelectItem value="riddle">Riddle</SelectItem>
                                     <SelectItem value="fortune">Fortune teller</SelectItem>
+                                    <SelectItem value="acrostic">Name poem (your first name)</SelectItem>
                                     <SelectItem value="random">Surprise me</SelectItem>
                                 </SelectContent>
                             </Select>
-                            <p className="text-xs text-center text-muted-foreground font-semibold">One per redeem.</p>
+                            <p className={cn("text-xs text-center font-semibold", !hasTheme && "text-muted-foreground")} style={mutedTextStyle}>One per redeem.</p>
                         </div>
                     ) : (
-                        <p className="text-xs text-center text-muted-foreground font-semibold">
+                        <p className={cn("text-xs text-center font-semibold", !hasTheme && "text-muted-foreground")} style={mutedTextStyle}>
                             One per redeem.
                         </p>
                     )}
-                    <div className="text-sm space-y-1 bg-secondary p-3 rounded-lg">
+                    <div
+                        className={cn("text-sm space-y-1 p-3 rounded-lg", !hasTheme && "bg-secondary")}
+                        style={hasTheme ? { backgroundColor: 'var(--theme-bg)', color: 'var(--theme-text)' } : undefined}
+                    >
                         {typeof prize.stockCount === 'number' && (
-                            <div className="flex justify-between text-xs font-semibold text-muted-foreground">
+                            <div className={cn("flex justify-between text-xs font-semibold", !hasTheme && "text-muted-foreground")} style={mutedTextStyle}>
                                 <span>In stock</span>
-                                <span className="font-bold text-foreground">{prize.stockCount}</span>
+                                <span className="font-bold" style={hasTheme ? { color: 'var(--theme-text)' } : undefined}>{prize.stockCount}</span>
                             </div>
                         )}
                         <div className="flex justify-between"><span>Total Cost:</span> <span className="font-bold">{totalCost.toLocaleString()} pts</span></div>
@@ -361,6 +387,7 @@ function ConfirmRedemptionDialog({
                         onClick={() =>
                             onConfirm(effectiveQty, pickerSurprise ? pickerKind : undefined)
                         }
+                        style={hasTheme && canAfford ? { backgroundColor: 'var(--theme-primary)', color: primaryForeground } : undefined}
                     >
                         {isRedeeming ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />Processing…</> : 'Confirm'}
                     </Button>
@@ -538,7 +565,7 @@ export function PrizeDashboard({
         prizeIcon?: string;
         quantity: number;
         totalCost: number;
-        aiSurpriseKind?: 'joke' | 'riddle' | 'fortune';
+        aiSurpriseKind?: 'joke' | 'riddle' | 'fortune' | 'acrostic';
         aiSurpriseText?: string;
         aiSurpriseAnswer?: string;
     } | null>(null);
@@ -570,7 +597,8 @@ export function PrizeDashboard({
             setTicketData(p);
             return;
         }
-        const kind = s!.kind === 'riddle' || s!.kind === 'fortune' ? s!.kind : 'joke';
+        const kind =
+            s!.kind === 'riddle' || s!.kind === 'fortune' || s!.kind === 'acrostic' ? s!.kind : 'joke';
         setTicketData({
             ...p,
             aiSurpriseKind: kind,
@@ -692,9 +720,7 @@ export function PrizeDashboard({
 
     const handleRedeemReward = async (prize: Prize, quantity: number, aiFunUserPick?: PrizeAiFunReward) => {
         if (!student || isRedeeming) return;
-        setIsRedeeming(true);
         resetTimer();
-        setConfirmingPrize(null);
         if (typeof navigator !== 'undefined' && navigator.onLine === false) {
             playSound('error');
             toast({
@@ -705,6 +731,8 @@ export function PrizeDashboard({
             });
             return;
         }
+        setIsRedeeming(true);
+        setConfirmingPrize(null);
         try {
             const result = await redeemPrize(student.id, prize, quantity);
             if (!result.success) {
@@ -791,20 +819,43 @@ export function PrizeDashboard({
             if (prize.aiFunReward && schoolId && settings.enablePrizeAiSurprise === true && kioskAiFunAndVoucherActive) {
                 pendingTicketAfterAiRef.current = ticketPayload;
                 setAiSurpriseErr(null);
-                setAiSurpriseLoading(false);
                 const apiMode = resolveAiFunApiMode(prize, aiFunUserPick);
                 const stockKind = pickAiSurpriseKind(apiMode);
-                const surprise = takeAiSurpriseFromStock(schoolId, stockKind, prizeAiFunAgeBand);
-                setAiSurpriseBody(surprise);
                 setAiSurpriseOpen(true);
-                void refillAiSurpriseStock(
-                    authFetch,
-                    schoolId,
-                    stockKind,
-                    true,
-                    prizeAiFunAgeBand,
-                    prizeAiFunAgeYears,
-                );
+
+                if (stockKind === 'acrostic') {
+                    setAiSurpriseLoading(true);
+                    setAiSurpriseBody(null);
+                    const firstName = acrosticFirstNameFromStudent(student);
+                    void requestAcrosticSurprise(authFetch, {
+                        schoolId,
+                        firstName,
+                        ageBand: prizeAiFunAgeBand,
+                        ageYears: prizeAiFunAgeYears,
+                    })
+                        .then((surprise) => {
+                            rememberAiSurprise(schoolId, surprise, prizeAiFunAgeBand);
+                            setAiSurpriseBody(surprise);
+                            setAiSurpriseErr(null);
+                        })
+                        .catch((e: unknown) => {
+                            console.warn('Prize AI acrostic unavailable:', e);
+                            setAiSurpriseErr('Could not load your name poem. Try again in a moment.');
+                        })
+                        .finally(() => setAiSurpriseLoading(false));
+                } else {
+                    setAiSurpriseLoading(false);
+                    const surprise = takeAiSurpriseFromStock(schoolId, stockKind, prizeAiFunAgeBand);
+                    setAiSurpriseBody(surprise);
+                    void refillAiSurpriseStock(
+                        authFetch,
+                        schoolId,
+                        stockKind,
+                        true,
+                        prizeAiFunAgeBand,
+                        prizeAiFunAgeYears,
+                    );
+                }
             } else if (ticketPayload) {
                 setTicketData(ticketPayload);
             }
@@ -838,7 +889,7 @@ export function PrizeDashboard({
                   aiSurpriseKind: ticketData.aiSurpriseKind ?? 'joke',
                   aiSurpriseText: surpriseText,
                   aiSurpriseAnswer:
-                      (ticketData.aiSurpriseKind ?? 'joke') === 'riddle' && ticketData.aiSurpriseAnswer?.trim()
+                      ticketData.aiSurpriseKind === 'riddle' && ticketData.aiSurpriseAnswer?.trim()
                           ? ticketData.aiSurpriseAnswer.trim()
                           : undefined,
               }
@@ -1011,40 +1062,66 @@ export function PrizeDashboard({
         settings.enableStudentThemes,
     );
     const fontScale = activeTheme?.fontScale ?? 1.15;
-    const themeBg = activeTheme?.background || 'transparent';
-    const computedThemeText = activeTheme?.text || (getContrastColor(activeTheme?.background || activeTheme?.cardBackground || activeTheme?.primary || LEVELUP_BRAND_PRIMARY_HEX) === 'black' ? '#020617' : '#ffffff');
-    // Readable foreground for anything rendered on top of `--theme-primary`
-    // (redeem buttons, points badges). Falls back to white when there is
-    // no custom theme (matching the existing default-theme look).
+    const themeBg = activeTheme?.background || '#020617';
+    const computedThemeText =
+        activeTheme?.text || (getContrastColor(themeBg) === 'black' ? '#020617' : '#ffffff');
     const primaryForeground = activeTheme ? primaryForegroundFor(activeTheme) : '#ffffff';
-    const prizeAccentTriplet = rainbowTripletForNavId('prize', settings.colorScheme);
+    const themedFieldStyle: CSSProperties | undefined = activeTheme
+        ? { backgroundColor: 'var(--theme-bg)', borderColor: 'var(--theme-primary)', color: 'var(--theme-text)' }
+        : undefined;
+    const themedMutedStyle: CSSProperties | undefined = activeTheme
+        ? { color: 'var(--theme-text)', opacity: 0.7 }
+        : undefined;
+    const themeSurfaceStyle: CSSProperties | undefined = activeTheme
+        ? ({
+            ['--theme-bg' as string]: themeBg,
+            ['--theme-text' as string]: computedThemeText,
+            ['--theme-text-muted' as string]: `${computedThemeText}b3`,
+            ['--theme-primary' as string]: activeTheme.primary || 'hsl(var(--primary))',
+            ['--theme-primary-foreground' as string]: primaryForeground,
+            ['--theme-card' as string]: activeTheme.cardBackground || 'hsl(var(--card))',
+            ['--theme-accent' as string]: activeTheme.accent || 'hsl(var(--accent))',
+            backgroundColor: 'var(--theme-card)',
+            color: 'var(--theme-text)',
+            borderColor: 'color-mix(in srgb, var(--theme-primary) 42%, transparent)',
+        } as CSSProperties)
+        : undefined;
 
+    const prizeAccentTriplet = rainbowTripletForNavId('prize', settings.colorScheme);
     const complementAccentTriplet = complementTripletForNavId('prize', settings.colorScheme);
 
     const fallbackStyle: CSSProperties = {
         fontSize: '1.15em',
-        ['--primary' as any]: prizeAccentTriplet,
-        ['--chart-1' as any]: prizeAccentTriplet,
-        ['--chart-2' as any]: complementAccentTriplet,
-        ['--chart-3' as any]: prizeAccentTriplet,
-        ['--chart-4' as any]: complementAccentTriplet,
-        ['--chart-5' as any]: prizeAccentTriplet,
-        ['--ring' as any]: complementAccentTriplet,
+        ['--primary' as string]: prizeAccentTriplet,
+        ['--chart-1' as string]: prizeAccentTriplet,
+        ['--chart-2' as string]: complementAccentTriplet,
+        ['--chart-3' as string]: prizeAccentTriplet,
+        ['--chart-4' as string]: complementAccentTriplet,
+        ['--chart-5' as string]: prizeAccentTriplet,
+        ['--ring' as string]: complementAccentTriplet,
+        ...appearanceVarsForSurface(settings, 'prize'),
     };
 
-    const themeStyle: CSSProperties = (student && activeTheme) ? ({
-        '--theme-bg': themeBg,
-        '--theme-text': computedThemeText,
-        '--theme-text-muted': `${computedThemeText}b3`, // 70% opacity
-        '--theme-primary': activeTheme.primary || 'hsl(var(--primary))',
-        '--theme-primary-foreground': primaryForeground,
-        '--theme-card': activeTheme.cardBackground || 'hsl(var(--card))',
-        '--theme-accent': activeTheme.accent || 'hsl(var(--accent))',
-        background: activeTheme.backgroundStyle || `radial-gradient(circle at top left, ${activeTheme.primary || 'hsl(var(--primary))'}22 0, transparent 45%), radial-gradient(circle at bottom right, ${activeTheme.accent || 'hsl(var(--accent))'}22 0, ${activeTheme.background || 'transparent'} 55%)`,
-        color: 'var(--theme-text)',
-        fontFamily: activeTheme.fontFamily || 'inherit',
-        fontSize: fontScale !== 1 ? `${fontScale}em` : undefined,
-    } as any) : {};
+    const themeStyle: CSSProperties = activeTheme
+        ? ({
+            ['--theme-bg' as string]: themeBg,
+            ['--theme-text' as string]: computedThemeText,
+            ['--theme-text-muted' as string]: `${computedThemeText}b3`,
+            ['--theme-primary' as string]: activeTheme.primary || 'hsl(var(--primary))',
+            ['--theme-primary-foreground' as string]: primaryForeground,
+            ['--theme-card' as string]: activeTheme.cardBackground || 'hsl(var(--card))',
+            ['--theme-accent' as string]: activeTheme.accent || 'hsl(var(--accent))',
+            ...(activeTheme.backgroundStyle
+                ? { background: activeTheme.backgroundStyle }
+                : {
+                    backgroundColor: themeBg,
+                    backgroundImage: `radial-gradient(circle at top left, ${activeTheme.primary || 'hsl(var(--primary))'}22 0, transparent 45%), radial-gradient(circle at bottom right, ${activeTheme.accent || 'hsl(var(--accent))'}22 0, transparent 55%)`,
+                }),
+            color: 'var(--theme-text)',
+            fontFamily: activeTheme.fontFamily || 'inherit',
+            fontSize: fontScale !== 1 ? `${fontScale}em` : undefined,
+        } as CSSProperties)
+        : fallbackStyle;
 
     return (
         <TooltipProvider>
@@ -1055,7 +1132,7 @@ export function PrizeDashboard({
                     settings.displayMode === 'app' && 'pb-24',
                     (!student || !activeTheme) && (animBackdrop ? "bg-transparent text-foreground" : "bg-background text-foreground"),
                 )}
-                style={activeTheme ? themeStyle : fallbackStyle}
+                style={themeStyle}
             >
                 {activeTheme?.fontFamily && <GoogleFontLoader fontFamily={activeTheme.fontFamily} />}
 
@@ -1078,9 +1155,18 @@ export function PrizeDashboard({
                                 ? animBackdrop
                                     ? "border-chart-3 bg-card/92 border-border/30"
                                     : "border-chart-3 bg-card/80"
-                                : "bg-card/40",
+                                : "border-2",
                         )}
-                        style={activeTheme ? { backgroundColor: 'var(--theme-card)', color: 'var(--theme-text)', borderColor: 'var(--theme-primary)' } : undefined}
+                        style={
+                            activeTheme
+                                ? {
+                                    backgroundColor: 'var(--theme-card)',
+                                    color: 'var(--theme-text)',
+                                    borderColor: 'color-mix(in srgb, var(--theme-primary) 42%, transparent)',
+                                    boxShadow: 'inset 0 1px 0 0 color-mix(in srgb, var(--theme-text) 6%, transparent)',
+                                }
+                                : undefined
+                        }
                     >
                         <CardContent className="p-5 md:p-6">
                             {/* Header */}
@@ -1174,6 +1260,7 @@ export function PrizeDashboard({
                                                 className="relative h-8 px-3.5 rounded-full text-[11px] font-bold uppercase tracking-widest whitespace-nowrap"
                                                 onClick={onRequestExit}
                                                 aria-label={`Log out now. Auto logout in ${logoutTimer} seconds.`}
+                                                style={activeTheme ? themedFieldStyle : undefined}
                                             >
                                                 Logout
                                             </Button>
@@ -1228,13 +1315,18 @@ export function PrizeDashboard({
                                                 placeholder="Search prizes..."
                                                 value={searchTerm}
                                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                                className="h-11 rounded-xl bg-card/60"
+                                                className={cn("h-11 rounded-xl", !activeTheme && "bg-card/60")}
+                                                style={themedFieldStyle}
                                             />
                                         </div>
                                         <div>
                                             <label htmlFor="prize-sort" className="sr-only">Sort prizes</label>
                                             <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
-                                                <SelectTrigger id="prize-sort" className="h-11 rounded-xl bg-card/60 font-semibold">
+                                                <SelectTrigger
+                                                    id="prize-sort"
+                                                    className={cn("h-11 rounded-xl font-semibold", !activeTheme && "bg-card/60")}
+                                                    style={themedFieldStyle}
+                                                >
                                                     <SelectValue placeholder="Sort by..." />
                                                 </SelectTrigger>
                                                 <SelectContent>
@@ -1252,8 +1344,19 @@ export function PrizeDashboard({
                                 <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 h-fit">
                                     {visiblePrizes.length === 0 ? (
                                         <div
-                                            className="col-span-full bg-card/30 backdrop-blur-sm rounded-3xl border-2 border-dashed border-border"
-                                            style={activeTheme ? { color: 'var(--theme-text)' } : undefined}
+                                            className={cn(
+                                                "col-span-full backdrop-blur-sm rounded-3xl border-2 border-dashed",
+                                                !activeTheme && "bg-card/30 border-border",
+                                            )}
+                                            style={
+                                                activeTheme
+                                                    ? {
+                                                        color: 'var(--theme-text)',
+                                                        backgroundColor: 'var(--theme-bg)',
+                                                        borderColor: 'color-mix(in srgb, var(--theme-primary) 38%, transparent)',
+                                                    }
+                                                    : undefined
+                                            }
                                         >
                                             {searchTerm.trim() ? (
                                                 <EmptyState
@@ -1309,8 +1412,11 @@ export function PrizeDashboard({
                                                         canAfford ? "hover:shadow-2xl hover:shadow-primary/5" : "opacity-75 cursor-not-allowed"
                                                     )}
                                                     style={activeTheme ? {
-                                                        backgroundColor: canAfford ? 'var(--theme-card)' : 'transparent',
+                                                        backgroundColor: canAfford ? 'var(--theme-card)' : 'color-mix(in srgb, var(--theme-card) 35%, transparent)',
                                                         color: 'var(--theme-text)',
+                                                        borderColor: canAfford ? 'color-mix(in srgb, var(--theme-primary) 38%, transparent)' : 'color-mix(in srgb, var(--theme-text) 20%, transparent)',
+                                                        borderWidth: 1,
+                                                        borderStyle: 'solid',
                                                         ['--prize-card-hover-border' as any]: canAfford ? 'var(--theme-primary)' : 'transparent',
                                                     } : {
                                                         backgroundColor: canAfford ? 'hsl(var(--card) / 0.4)' : 'hsl(var(--card) / 0.1)',
@@ -1396,7 +1502,19 @@ export function PrizeDashboard({
                                                             {typeof prize.stockCount === 'number' && (
                                                                 <Badge
                                                                     variant="secondary"
-                                                                    className="font-black text-xs px-2 py-1 rounded-xl"
+                                                                    className={cn(
+                                                                        "font-black text-xs px-2 py-1 rounded-xl",
+                                                                        !activeTheme && undefined,
+                                                                    )}
+                                                                    style={
+                                                                        activeTheme
+                                                                            ? {
+                                                                                backgroundColor: 'color-mix(in srgb, var(--theme-primary) 18%, var(--theme-card))',
+                                                                                color: 'var(--theme-text)',
+                                                                                borderColor: 'color-mix(in srgb, var(--theme-primary) 30%, transparent)',
+                                                                            }
+                                                                            : undefined
+                                                                    }
                                                                 >
                                                                     {prize.stockCount} in stock
                                                                 </Badge>
@@ -1429,10 +1547,31 @@ export function PrizeDashboard({
                                 {/* Sidebar */}
                                 <div className="space-y-3 min-w-0">
                                     <Card
-                                        className="backdrop-blur-sm border-2 rounded-3xl overflow-hidden shadow-xl flex flex-col min-h-0 max-h-[min(70dvh,760px)] lg:sticky lg:top-6"
-                                        style={activeTheme ? { backgroundColor: 'var(--theme-card)', borderColor: 'var(--theme-bg)', color: 'var(--theme-text)' } : { backgroundColor: 'hsl(var(--card) / 0.4)', borderColor: 'hsl(var(--border) / 0.5)' }}
+                                        className={cn(
+                                            "backdrop-blur-sm border-2 rounded-3xl overflow-hidden shadow-xl flex flex-col min-h-0 max-h-[min(70dvh,760px)] lg:sticky lg:top-6",
+                                            !activeTheme && "border-border/50",
+                                        )}
+                                        style={
+                                            activeTheme
+                                                ? {
+                                                    backgroundColor: 'var(--theme-card)',
+                                                    borderColor: 'color-mix(in srgb, var(--theme-primary) 28%, transparent)',
+                                                    color: 'var(--theme-text)',
+                                                }
+                                                : { backgroundColor: 'hsl(var(--card) / 0.4)', borderColor: 'hsl(var(--border) / 0.5)' }
+                                        }
                                     >
-                                        <CardHeader className="border-b py-4 px-6 shrink-0" style={activeTheme ? { backgroundColor: 'var(--theme-bg)', borderColor: 'var(--theme-bg)' } : { backgroundColor: 'hsl(var(--primary) / 0.05)', borderColor: 'hsl(var(--border) / 0.5)' }}>
+                                        <CardHeader
+                                            className="border-b py-4 px-6 shrink-0"
+                                            style={
+                                                activeTheme
+                                                    ? {
+                                                        backgroundColor: 'color-mix(in srgb, var(--theme-bg) 55%, var(--theme-card))',
+                                                        borderColor: 'color-mix(in srgb, var(--theme-primary) 28%, transparent)',
+                                                    }
+                                                    : { backgroundColor: 'hsl(var(--primary) / 0.05)', borderColor: 'hsl(var(--border) / 0.5)' }
+                                            }
+                                        >
                                             <CardTitle className="text-sm font-black uppercase tracking-[0.3em] flex items-center gap-3" style={activeTheme ? { color: 'var(--theme-primary)' } : { color: 'hsl(var(--primary))' }}>
                                                 <Clock className="w-5 h-5" style={activeTheme ? { color: 'var(--theme-primary)' } : { color: 'hsl(var(--chart-3))' }} /> Recent Activity
                                             </CardTitle>
@@ -1473,13 +1612,16 @@ export function PrizeDashboard({
                     student={student}
                     prize={confirmingPrize}
                     isRedeeming={isRedeeming}
+                    hasTheme={!!activeTheme}
+                    themeSurfaceStyle={themeSurfaceStyle}
+                    primaryForeground={primaryForeground}
                     onConfirm={(quantity: number, aiPick?: PrizeAiFunReward) => {
                         const p = confirmingPrize;
                         if (p) void handleRedeemReward(p, quantity, aiPick);
                     }}
                 />
                 <AlertDialog open={!!ticketData} onOpenChange={(open) => { if (!open) setTicketData(null); }}>
-                    <AlertDialogContent className="no-print">
+                    <AlertDialogContent className="no-print" style={themeSurfaceStyle}>
                         <AlertDialogHeader>
                             <AlertDialogTitle>Print redeem voucher?</AlertDialogTitle>
                             <AlertDialogDescription>
@@ -1509,9 +1651,12 @@ export function PrizeDashboard({
                         }
                     }}
                 >
-                    <DialogContent className="no-print sm:max-w-md">
+                    <DialogContent className="no-print sm:max-w-md" style={themeSurfaceStyle}>
                         <DialogHeader>
-                            <DialogTitle className="flex items-center gap-2 text-left">
+                            <DialogTitle
+                                className="flex items-center gap-2 text-left"
+                                style={activeTheme ? { color: 'var(--theme-text)' } : undefined}
+                            >
                                 <Sparkles className="h-5 w-5 shrink-0 text-amber-500" aria-hidden />
                                 {aiSurpriseLoading
                                     ? 'Your surprise'
@@ -1523,18 +1668,31 @@ export function PrizeDashboard({
                         </DialogHeader>
                         <div className="min-h-[100px] py-1">
                             {aiSurpriseLoading ? (
-                                <div className="flex flex-col items-center justify-center gap-3 py-8 text-muted-foreground">
+                                <div
+                                    className={cn("flex flex-col items-center justify-center gap-3 py-8", !activeTheme && "text-muted-foreground")}
+                                    style={themedMutedStyle}
+                                >
                                     <Loader2 className="h-10 w-10 animate-spin" aria-hidden />
                                     <p className="text-sm font-medium">Cooking up something fun…</p>
                                 </div>
                             ) : aiSurpriseErr ? (
                                 <p className="text-sm text-destructive">{aiSurpriseErr}</p>
                             ) : aiSurpriseBody ? (
-                                <div className="space-y-4 text-base leading-relaxed">
-                                    <p className="font-medium">{aiSurpriseBody.text}</p>
+                                <div className="space-y-4 text-base leading-relaxed" style={activeTheme ? { color: 'var(--theme-text)' } : undefined}>
+                                    <p
+                                        className={cn(
+                                            'font-medium',
+                                            aiSurpriseBody.kind === 'acrostic' && 'whitespace-pre-line',
+                                        )}
+                                    >
+                                        {aiSurpriseBody.text}
+                                    </p>
                                     {aiSurpriseBody.kind === 'riddle' && aiSurpriseBody.answer ? (
-                                        <p className="text-sm rounded-lg bg-muted/80 px-3 py-2 border border-border">
-                                            <span className="font-semibold text-muted-foreground">Answer: </span>
+                                        <p
+                                            className={cn("text-sm rounded-lg px-3 py-2 border", !activeTheme && "bg-muted/80 border-border")}
+                                            style={activeTheme ? { backgroundColor: 'var(--theme-bg)', borderColor: 'var(--theme-primary)' } : undefined}
+                                        >
+                                            <span className="font-semibold" style={themedMutedStyle}>Answer: </span>
                                             {aiSurpriseBody.answer}
                                         </p>
                                     ) : null}
@@ -1548,6 +1706,7 @@ export function PrizeDashboard({
                                 className="w-full sm:w-auto"
                                 onClick={closeAiSurprise}
                                 disabled={aiSurpriseLoading}
+                                style={activeTheme ? { backgroundColor: 'var(--theme-primary)', color: primaryForeground } : undefined}
                             >
                                 {aiSurpriseLoading ? 'Please wait…' : 'Awesome'}
                             </Button>

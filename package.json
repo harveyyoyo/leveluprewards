@@ -23,6 +23,7 @@
     "test": "vitest run",
     "check:firestore-rules": "node scripts/check-firestore-rule-coverage.mjs && npx firebase-tools deploy --only firestore:rules --dry-run",
     "test:permissions": "node e2e/test_no_permission_errors.mjs",
+    "test:live-uptime": "node scripts/live-uptime-check.mjs",
     "test:live-auth": "node scripts/live-auth-smoke.mjs",
     "predeploy:check": "npm run check:firestore-rules && npm run test:permissions",
     "deploy:hosting:safe": "node scripts/deploy-hosting-safe.mjs",

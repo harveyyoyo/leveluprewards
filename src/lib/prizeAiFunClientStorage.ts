@@ -1,6 +1,7 @@
 import type { PrizeAiFunReward } from '@/lib/types';
+import { acrosticTraitFingerprint } from '@/lib/prizeAiFunAcrostic';
 
-export type AiSurpriseKind = 'joke' | 'riddle' | 'fortune';
+export type AiSurpriseKind = 'joke' | 'riddle' | 'fortune' | 'acrostic';
 export type AiSurpriseBody = { kind: AiSurpriseKind; text: string; answer?: string };
 
 const AI_SURPRISE_STOCK_PREFIX = 'levelup:ai-fun-stock:v2';
@@ -26,6 +27,10 @@ export function aiSurpriseDedupeKey(kind: AiSurpriseKind, text: string): string 
   const t = squash(text).slice(0, 140);
   if (kind === 'riddle') return `r|${t}`;
   if (kind === 'fortune') return `f|${t}`;
+  if (kind === 'acrostic') {
+    const traits = acrosticTraitFingerprint(text);
+    return traits ? `a|${traits}` : `a|${t}`;
+  }
   return `j|${t}`;
 }
 
@@ -96,7 +101,10 @@ export function aiSurpriseRecentKey(schoolId: string, kind: AiSurpriseKind, ageB
 export function normalizeAiSurpriseBody(value: unknown, expectedKind: AiSurpriseKind): AiSurpriseBody | null {
   if (!value || typeof value !== 'object') return null;
   const raw = value as Record<string, unknown>;
-  const kind = raw.kind === 'riddle' || raw.kind === 'fortune' || raw.kind === 'joke' ? raw.kind : expectedKind;
+  const kind =
+    raw.kind === 'riddle' || raw.kind === 'fortune' || raw.kind === 'joke' || raw.kind === 'acrostic'
+      ? raw.kind
+      : expectedKind;
   const text = typeof raw.text === 'string' ? raw.text.trim() : '';
   if (!text) return null;
   const answer = typeof raw.answer === 'string' && raw.answer.trim() ? raw.answer.trim() : undefined;
@@ -137,6 +145,7 @@ export function readAllRecentAiSurpriseTexts(schoolId: string, ageBand = '0'): s
     ...readRecentAiSurpriseText(schoolId, 'joke', ageBand),
     ...readRecentAiSurpriseText(schoolId, 'riddle', ageBand),
     ...readRecentAiSurpriseText(schoolId, 'fortune', ageBand),
+    ...readRecentAiSurpriseText(schoolId, 'acrostic', ageBand),
   ];
   const seen = new Set<string>();
   const out: string[] = [];
@@ -189,7 +198,7 @@ export function buildPrizeAiFunAvoidTexts(
   const base =
     apiMode === 'random'
       ? readAllRecentAiSurpriseTexts(schoolId, ageBand)
-      : apiMode === 'joke' || apiMode === 'riddle' || apiMode === 'fortune'
+      : apiMode === 'joke' || apiMode === 'riddle' || apiMode === 'fortune' || apiMode === 'acrostic'
         ? readRecentAiSurpriseText(schoolId, apiMode, ageBand)
         : readRecentAiSurpriseText(schoolId, 'joke', ageBand);
   const seen = new Set<string>();
@@ -216,7 +225,7 @@ export function isAiSurpriseTextRecentlySeen(
   return recentAiSurpriseDedupeSet(schoolId, kind, ageBand).has(aiSurpriseDedupeKey(kind, text));
 }
 
-const AI_SURPRISE_ALL_KINDS: AiSurpriseKind[] = ['joke', 'riddle', 'fortune'];
+const AI_SURPRISE_ALL_KINDS: AiSurpriseKind[] = ['joke', 'riddle', 'fortune', 'acrostic'];
 const AI_SURPRISE_ALL_AGE_BANDS = ['0', '1', '2', '3', '4'] as const;
 
 /** Wipe prefetch + recent lines for this school (all age bands). Call after birthday / age signal changes. */

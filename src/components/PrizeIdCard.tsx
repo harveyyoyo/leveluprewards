@@ -6,6 +6,7 @@ import { APP_NAME, APP_TAGLINE } from '@/lib/appBranding';
 import DynamicIcon from '@/components/DynamicIcon';
 import { prizeScanCodeFor } from '@/lib/prizeScanCode';
 import { prizeCardColorForId } from '@/lib/prizeCardColor';
+import { useSettings } from '@/components/providers/SettingsProvider';
 
 export function PrizeIdCard({
   prize,
@@ -14,6 +15,7 @@ export function PrizeIdCard({
   appLogoUrl,
   appName,
   appTagline,
+  isColorEnabled,
   className,
 }: {
   prize: Prize;
@@ -22,8 +24,10 @@ export function PrizeIdCard({
   appLogoUrl?: string | null;
   appName?: string;
   appTagline?: string;
+  isColorEnabled: boolean;
   className?: string;
 }) {
+  const { settings } = useSettings();
   const scanCode = prizeScanCodeFor(prize);
   const nameFitScale = prize.name.length >= 28 ? 0.78 : prize.name.length >= 22 ? 0.88 : 1;
   const fitStyle: React.CSSProperties = { ['--print-id-name-fit-scale' as string]: String(nameFitScale) };
@@ -34,7 +38,7 @@ export function PrizeIdCard({
   const dividerColor = onColor ? 'rgba(255,255,255,0.35)' : 'rgba(15,23,42,0.18)';
   const iconBg = onColor ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.45)';
 
-  const cardStyle: React.CSSProperties = {
+  const coloredCardStyle: React.CSSProperties = {
     ['--prize-card-accent' as string]: accent,
     ['--prize-card-text' as string]: textColor,
     ['--prize-card-muted' as string]: mutedText,
@@ -48,18 +52,36 @@ export function PrizeIdCard({
     ...fitStyle,
   };
 
-  const headerStyle: React.CSSProperties = { color: textColor };
-  const iconBoxStyle: React.CSSProperties = {
-    borderColor: onColor ? 'rgba(255,255,255,0.55)' : 'rgba(15,23,42,0.2)',
-    backgroundColor: iconBg,
-    color: textColor,
-    WebkitPrintColorAdjust: 'exact',
-    printColorAdjust: 'exact',
-  };
+  const cardStyle = isColorEnabled ? coloredCardStyle : fitStyle;
+  const headerStyle: React.CSSProperties = isColorEnabled ? { color: textColor } : {};
+  const iconBoxStyle: React.CSSProperties = isColorEnabled
+    ? {
+        borderColor: onColor ? 'rgba(255,255,255,0.55)' : 'rgba(15,23,42,0.2)',
+        backgroundColor: iconBg,
+        color: textColor,
+        WebkitPrintColorAdjust: 'exact',
+        printColorAdjust: 'exact',
+      }
+    : {
+        borderColor: 'rgba(15,23,42,0.2)',
+        backgroundColor: 'rgba(15,23,42,0.06)',
+        color: '#0f172a',
+      };
+  const mainTextColor = isColorEnabled ? textColor : '#0f172a';
+  const mainMutedText = isColorEnabled ? mutedText : 'rgba(15,23,42,0.72)';
+  const barcodeDivider = isColorEnabled ? dividerColor : '#e5e7eb';
 
   return (
-    <div className={cn('print-id-card print-prize-id-card is-colored', className)} style={cardStyle}>
-      <div className="print-id-header-container" style={{ borderBottomColor: dividerColor }}>
+    <div
+      className={cn(
+        'print-id-card print-prize-id-card',
+        isColorEnabled && 'is-colored',
+        settings.idCardCornerStyle === 'rectangular' && 'print-id-card--rectangular',
+        className,
+      )}
+      style={cardStyle}
+    >
+      <div className="print-id-header-container" style={{ borderBottomColor: barcodeDivider }}>
         <div className="print-id-app" style={headerStyle}>
           {appLogoUrl ? (
             <div className="print-id-app-logo">
@@ -67,7 +89,7 @@ export function PrizeIdCard({
               <img src={appLogoUrl} alt="" className="object-contain" />
             </div>
           ) : null}
-          <PrizeIdCardAppText appName={appName} appTagline={appTagline} textColor={textColor} mutedText={mutedText} />
+          <PrizeIdCardAppText appName={appName} appTagline={appTagline} textColor={mainTextColor} mutedText={mainMutedText} />
         </div>
         <div className="print-id-school" style={headerStyle}>
           <span className="print-id-header">{schoolName}</span>
@@ -88,12 +110,12 @@ export function PrizeIdCard({
         >
           <DynamicIcon name={prize.icon || 'Gift'} className="h-8 w-8" />
         </div>
-        <div className="min-w-0 flex-1 text-left" style={{ color: textColor }}>
+        <div className="min-w-0 flex-1 text-left" style={{ color: mainTextColor }}>
           <div className="print-id-name text-left">{prize.name}</div>
-          <p className="text-[8pt] font-semibold uppercase tracking-wide mt-0.5" style={{ color: mutedText }}>
+          <p className="text-[8pt] font-semibold uppercase tracking-wide mt-0.5" style={{ color: mainMutedText }}>
             Reward
           </p>
-          <p className="text-[11pt] font-black leading-tight" style={{ color: textColor }}>
+          <p className="text-[11pt] font-black leading-tight" style={{ color: mainTextColor }}>
             {prize.points} <span className="text-[8pt] font-bold uppercase tracking-wider opacity-80">pts</span>
           </p>
         </div>
@@ -101,7 +123,7 @@ export function PrizeIdCard({
 
       <div
         className="print-id-barcode-container mt-auto"
-        style={{ background: '#ffffff', color: '#000000', borderTop: `1px solid ${dividerColor}` }}
+        style={{ background: '#ffffff', color: '#000000', borderTop: `1px solid ${barcodeDivider}` }}
       >
         <div
           className="font-barcode text-[10px] leading-none"

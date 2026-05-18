@@ -45,6 +45,11 @@ const PrizeIdPrintSheet = dynamic(
     { ssr: false },
 );
 
+const PrizeIdDTCPrintSheet = dynamic(
+    () => import('@/components/PrizeIdDTCPrintSheet').then((m) => ({ default: m.PrizeIdDTCPrintSheet })),
+    { ssr: false },
+);
+
 const LibraryBarcodePrintSheet = dynamic(
     () => import('@/components/LibraryBarcodePrintSheet').then((m) => ({ default: m.LibraryBarcodePrintSheet })),
     { ssr: false },
@@ -54,7 +59,7 @@ interface PrintContextType {
     setCouponsToPrint: (coupons: Coupon[], options?: { couponsPerPage?: CouponPrintPageSize }) => void;
     setStudentsToPrint: (data: { students: Student[]; classes: Class[]; printerType?: 'dtc4500e' }) => void;
     printPrizeTickets: (tickets: PrizeRedeemTicket[]) => void;
-    setPrizeIdCardsToPrint: (prizes: Prize[]) => void;
+    setPrizeIdCardsToPrint: (data: { prizes: Prize[]; printerType?: 'dtc4500e' }) => void;
     setLibraryStickersToPrint: (items: LibraryItem[]) => void;
 }
 
@@ -78,7 +83,7 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
     const [couponPrintJob, setCouponPrintJob] = useState<{ coupons: Coupon[]; couponsPerPage: CouponPrintPageSize } | null>(null);
     const [printData, setPrintData] = useState<{ students: Student[]; classes: Class[]; printerType?: 'dtc4500e' } | null>(null);
     const [prizeTicketsToPrint, setPrizeTicketsToPrint] = useState<PrizeRedeemTicket[]>([]);
-    const [prizeIdCardsToPrint, setPrizeIdCardsToPrint] = useState<Prize[]>([]);
+    const [prizeIdPrintData, setPrizeIdPrintData] = useState<{ prizes: Prize[]; printerType?: 'dtc4500e' } | null>(null);
     const [libraryStickersToPrint, setLibraryStickersToPrint] = useState<LibraryItem[]>([]);
     const { settings } = useSettings();
     const prizeVoucherPaperFormat: PrizeVoucherPaperFormat =
@@ -162,10 +167,10 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
 
     const prizeIdPrintTriggered = useRef(false);
     const triggerPrizeIdPrint = React.useCallback(() => {
-        if (prizeIdCardsToPrint.length > 0 && !prizeIdPrintTriggered.current) {
+        if (prizeIdPrintData && prizeIdPrintData.prizes.length > 0 && !prizeIdPrintTriggered.current) {
             prizeIdPrintTriggered.current = true;
             const afterPrint = () => {
-                setPrizeIdCardsToPrint([]);
+                setPrizeIdPrintData(null);
                 prizeIdPrintTriggered.current = false;
                 window.removeEventListener('afterprint', afterPrint);
             };
@@ -177,7 +182,7 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
                 });
             });
         }
-    }, [prizeIdCardsToPrint, playSound]);
+    }, [prizeIdPrintData, playSound]);
 
     const libraryPrintTriggered = useRef(false);
     const triggerLibraryStickerPrint = React.useCallback(() => {
@@ -205,7 +210,7 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
             }, 
             setStudentsToPrint: setPrintData,
             printPrizeTickets: setPrizeTicketsToPrint,
-            setPrizeIdCardsToPrint,
+            setPrizeIdCardsToPrint: setPrizeIdPrintData,
             setLibraryStickersToPrint,
         }),
         []
@@ -233,8 +238,11 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
                     onReady={triggerPrizeTicketPrint}
                 />
             )}
-            {prizeIdCardsToPrint.length > 0 && (
-                <PrizeIdPrintSheet prizes={prizeIdCardsToPrint} schoolId={schoolId} onReady={triggerPrizeIdPrint} />
+            {prizeIdPrintData && prizeIdPrintData.prizes.length > 0 && prizeIdPrintData.printerType !== 'dtc4500e' && (
+                <PrizeIdPrintSheet prizes={prizeIdPrintData.prizes} schoolId={schoolId} onReady={triggerPrizeIdPrint} />
+            )}
+            {prizeIdPrintData && prizeIdPrintData.prizes.length > 0 && prizeIdPrintData.printerType === 'dtc4500e' && (
+                <PrizeIdDTCPrintSheet prizes={prizeIdPrintData.prizes} schoolId={schoolId} onReady={triggerPrizeIdPrint} />
             )}
             {libraryStickersToPrint.length > 0 && (
                 <LibraryBarcodePrintSheet

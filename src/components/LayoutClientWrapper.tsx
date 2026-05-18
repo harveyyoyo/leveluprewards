@@ -12,6 +12,7 @@ import { useSearchParams } from 'next/navigation';
 import { useSettings } from './providers/SettingsProvider';
 import { useAppContext } from '@/components/AppProvider';
 import { cn } from '@/lib/utils';
+import { isKioskPortraitDisplay } from '@/lib/kioskPortraitLayout';
 import { ConfirmProvider } from '@/components/providers/ConfirmProvider';
 import { isMarketingLandingPath } from '@/lib/marketingLandings';
 
@@ -84,6 +85,11 @@ function LayoutClientWrapperInner({ children }: LayoutClientWrapperProps) {
     const isStudentKioskPage =
       typeof pathname === 'string' &&
       /\/(?:student|student-home|prize)(?:\/|$)/.test(pathname);
+    const isKioskPortraitRoute =
+      typeof pathname === 'string' &&
+      !/\/student-home(?:\/|$)/.test(pathname) &&
+      /\/(?:portal|student|prize)(?:\/|$)/.test(pathname);
+    const kioskPortraitLayout = isKioskPortraitDisplay(settings) && isKioskPortraitRoute;
     const showStudentHomeHeader =
       isStudentHomePage && settings.studentPortalShowHeader === true;
     const hideAppChrome =
@@ -343,8 +349,10 @@ function LayoutClientWrapperInner({ children }: LayoutClientWrapperProps) {
         <TooltipProvider>
             <ConfirmProvider>
                 <div
+                    data-kiosk-portrait={kioskPortraitLayout ? 'true' : undefined}
                     className={cn(
                         'min-h-screen min-h-dvh flex flex-col',
+                        kioskPortraitLayout && 'kiosk-portrait-layout',
                         // Lock viewport height so only inner panels scroll (student kiosk + app-shell staff routes).
                         // Portal hub: fixed layers + in-flow footer — constrain shell so main flex-1 fills without a page scrollbar.
                         (appShellNoPageScroll ||

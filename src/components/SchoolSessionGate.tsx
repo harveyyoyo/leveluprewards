@@ -26,6 +26,7 @@ function canUseRoute(pathname: string, routeSchoolId: string, loginState: string
   if (section === 'portal') {
     return (
       loginState === 'school' ||
+      loginState === 'student' ||
       loginState === 'admin' ||
       loginState === 'teacher' ||
       loginState === 'secretary' ||
@@ -105,7 +106,10 @@ function SchoolSessionGateBody({
 
     const sessionSchool = schoolId?.trim().toLowerCase() ?? '';
     if (!sessionSchool || sessionSchool !== route) {
-      router.replace(`/login?school=${encodeURIComponent(route)}`);
+      // Student / school chooser sessions may restore schoolId shortly after navigation.
+      if (loginState !== 'student' && loginState !== 'school') {
+        router.replace(`/login?school=${encodeURIComponent(route)}`);
+      }
       return;
     }
 

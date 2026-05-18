@@ -34,6 +34,7 @@ import {
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { isAiSurpriseHiddenFromAdminGrid } from '@/lib/aiJokePrize';
 import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
+import { IdCardPrintSetupDialog } from '@/components/admin/IdCardPrintSetupDialog';
 
 export function AdminPrizesTab({
   prizes,
@@ -69,6 +70,7 @@ export function AdminPrizesTab({
   const vendingEnabled = settings.enableVendingMachine === true;
   const [helpOpen, setHelpOpen] = useState(false);
   const cardColorBackfillStarted = useRef(false);
+  const [prizeIdPrintJob, setPrizeIdPrintJob] = useState<Prize[] | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardStep, setWizardStep] = useState(0);
 
@@ -137,11 +139,7 @@ export function AdminPrizesTab({
       try {
         await backfillPrizeScanCodes(firestore, schoolId, list);
         const withCodes = list.map((p) => ({ ...p, scanCode: prizeScanCodeFor(p) }));
-        setPrizeIdCardsToPrint(withCodes);
-        toast({
-          title: list.length === 1 ? 'Printing prize card' : 'Printing prize cards',
-          description: `${withCodes.length} card(s) sent to the printer.`,
-        });
+        setPrizeIdPrintJob(withCodes);
       } catch (e) {
         toast({
           variant: 'destructive',
@@ -150,7 +148,7 @@ export function AdminPrizesTab({
         });
       }
     },
-    [firestore, schoolId, setPrizeIdCardsToPrint, toast],
+    [firestore, schoolId, toast],
   );
 
   const handlePrintPrizeCards = useCallback(() => {
@@ -889,6 +887,25 @@ export function AdminPrizesTab({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {prizeIdPrintJob ? (
+        <IdCardPrintSetupDialog
+          variant="prize"
+          open
+          onOpenChange={(o) => {
+            if (!o) setPrizeIdPrintJob(null);
+          }}
+          prizes={prizeIdPrintJob}
+          onConfirm={({ prizes, printerType }) => {
+            setPrizeIdCardsToPrint({ prizes, printerType });
+            setPrizeIdPrintJob(null);
+            toast({
+              title: prizes.length === 1 ? 'Printing prize card' : 'Printing prize cards',
+              description: `${prizes.length} card(s) sent to the printer.`,
+            });
+          }}
+        />
+      ) : null}
 
     </Card>
   );

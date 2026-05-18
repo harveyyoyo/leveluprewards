@@ -1642,6 +1642,7 @@ function AdminDashboardInner() {
           <div className="min-h-0 w-full flex-1">
           <TabsContent value="students" className={fittedAdminTabClassName}>
             <AdminStudentsTab
+              schoolId={schoolId!}
               settings={settings}
               classes={classes}
               students={students}
@@ -1838,6 +1839,7 @@ function AdminDashboardInner() {
               categories={categories}
               teachers={teachers}
               classes={classes}
+              students={students}
               schoolId={schoolId!}
               onRandomizeColors={async () => {
                 const ok = await confirm({

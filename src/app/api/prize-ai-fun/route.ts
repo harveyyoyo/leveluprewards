@@ -5,17 +5,20 @@ import OpenAI from 'openai';
 import { guardAiRoute } from '@/lib/apiAuth';
 import { assertPrizeAiSurpriseAllowedForSchool } from '@/lib/server/prizeAiSurpriseGate';
 import type { PrizeAiFunReward } from '@/lib/types';
+import { lettersForAcrosticName } from '@/lib/prizeAiFunAcrostic';
 import { clampStudentAgeYearsForAiRequest, prizeAiFunAudiencePromptBlock } from '@/lib/studentAiFunAge';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 const defaultOpenAI = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || '' });
 
-const MODES: PrizeAiFunReward[] = ['random', 'joke', 'riddle', 'fortune'];
+const MODES: PrizeAiFunReward[] = ['random', 'joke', 'riddle', 'fortune', 'acrostic'];
 
-function resolveKind(mode: PrizeAiFunReward): 'joke' | 'riddle' | 'fortune' {
+type AiFunKind = 'joke' | 'riddle' | 'fortune' | 'acrostic';
+
+function resolveKind(mode: PrizeAiFunReward): AiFunKind {
   if (mode === 'random') {
-    const roll = Math.floor(Math.random() * 3);
-    return ['joke', 'riddle', 'fortune'][roll] as 'joke' | 'riddle' | 'fortune';
+    const roll = Math.floor(Math.random() * 4);
+    return (['joke', 'riddle', 'fortune', 'acrostic'] as const)[roll];
   }
   if (mode === 'picker') return 'joke';
   return mode;
@@ -70,6 +73,7 @@ export async function POST(req: NextRequest) {
       model = 'gpt-4o-mini',
       avoidTexts: rawAvoid,
       ageYears: rawAgeYears,
+      firstName: rawFirstName,
     } = guarded.value.body;
 
     if (typeof rawSchoolId !== 'string' || !rawSchoolId.trim()) {
@@ -81,20 +85,35 @@ export async function POST(req: NextRequest) {
     if (planDenied) return planDenied;
 
     if (typeof rawMode !== 'string' || !MODES.includes(rawMode as PrizeAiFunReward)) {
-      return NextResponse.json({ error: 'mode must be random, joke, riddle, or fortune.' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'mode must be random, joke, riddle, fortune, or acrostic.' },
+        { status: 400 },
+      );
     }
     const mode = rawMode as PrizeAiFunReward;
     const selectedModel = typeof model === 'string' ? model : 'gpt-4o-mini';
     const kind = resolveKind(mode);
     const ageYears = clampStudentAgeYearsForAiRequest(rawAgeYears);
     const audienceBlock = prizeAiFunAudiencePromptBlock(ageYears);
+
+    const acrosticLetters =
+      kind === 'acrostic'
+        ? lettersForAcrosticName(typeof rawFirstName === 'string' ? rawFirstName : '')
+        : '';
+    if (kind === 'acrostic' && acrosticLetters.length < 1) {
+      return NextResponse.json({ error: 'firstName is required for acrostic mode.' }, { status: 400 });
+    }
+    const acrosticNameBlock =
+      kind === 'acrostic'
+        ? `\n\nName acrostic letters (use EXACTLY these letters in this order, one line each): ${[...acrosticLetters].join(' ')}`
+        : '';
     const avoidLines = clampAvoidTexts(rawAvoid);
     const avoidBlock =
       avoidLines.length > 0
         ? `\n\nHard rule: Your "text" (and for riddles, the "answer" too) must be clearly different from ALL of the following lines this student has already seen recently. Do not repeat them, do not swap only a couple of words, and do not deliver the same punchline with different wording:\n${avoidLines.map((line, i) => `${i + 1}. ${line}`).join('\n')}`
         : '';
 
-    const systemInstruction = `You write short, wholesome content for a public school rewards kiosk (AI Fun: joke, riddle, or fortune-teller line).
+    const systemInstruction = `You write short, wholesome content for a public school rewards kiosk (AI Fun: joke, riddle, fortune-teller line, or name acrostic).
 
 ${audienceBlock}
 
@@ -117,11 +136,16 @@ Kind-specific:
 - joke: "text" is one clean punchline-friendly joke (one or two sentences max). Omit "answer".
 - riddle: "text" is the riddle only; "answer" is the solution (few words).
 - fortune: "text" is one short fortune-teller style line (inspiring or gently humorous). Omit "answer".
+- acrostic: "text" is a name poem — one line per letter listed below. Format each line exactly as "L — short positive trait" (letter, em dash, 1–4 wholesome words). Traits must be unique across the whole school: do not reuse compliment words from the avoid list, even for a different name. No romance, no appearance/body comments, no comparisons to other students. For X use a positive word starting with X or "eXtra …" / "eXcellent …". Omit "answer".
 
-School context id (opaque): ${schoolId}${avoidBlock}`;
+School context id (opaque): ${schoolId}${acrosticNameBlock}${avoidBlock}`;
 
-    const kindLabel = kind === 'fortune' ? 'fortune teller line' : kind;
-    const userPrompt = `Generate one fresh ${kindLabel} now. Make it original — avoid clichéd riddles like "what has keys but can't open locks".`;
+    const kindLabel =
+      kind === 'fortune' ? 'fortune teller line' : kind === 'acrostic' ? 'name acrostic' : kind;
+    const userPrompt =
+      kind === 'acrostic'
+        ? `Generate one fresh name acrostic now using the exact letters provided. Every trait must be different from the avoid list and from common repeats like "kind", "awesome", "smart" unless you have not used them recently.`
+        : `Generate one fresh ${kindLabel} now. Make it original — avoid clichéd riddles like "what has keys but can't open locks".`;
 
     let responseText = '';
 

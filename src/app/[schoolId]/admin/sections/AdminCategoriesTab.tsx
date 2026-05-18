@@ -8,12 +8,14 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { AdminRecordListHeader } from '@/components/admin/AdminRecordListHeader';
 import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 import { CouponPrintPanel } from '@/components/coupons/CouponPrintPanel';
-import type { Category, Class, Teacher } from '@/lib/types';
+import { ManualPointsAwardDialog } from '@/components/points/ManualPointsAwardDialog';
+import type { Category, Class, Student, Teacher } from '@/lib/types';
 
 export function AdminCategoriesTab({
   categories,
   teachers,
   classes,
+  students,
   schoolId,
   onRandomizeColors,
   onAddCategory,
@@ -23,12 +25,15 @@ export function AdminCategoriesTab({
   categories: Category[] | null | undefined;
   teachers: Teacher[] | null | undefined;
   classes: Class[] | null | undefined;
+  students: Student[] | null | undefined;
   schoolId: string;
   onRandomizeColors: () => void | Promise<void>;
   onAddCategory: () => void;
   onEditCategory: (c: Category) => void;
   onDeleteCategory: (categoryId: string) => void;
 }) {
+  const sortedClasses = (classes ?? []).slice().sort((a, b) => a.name.localeCompare(b.name));
+
   return (
     <div className="space-y-6">
       <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden">
@@ -116,6 +121,13 @@ export function AdminCategoriesTab({
           </ul>
         </CardContent>
       </Card>
+
+      <ManualPointsAwardDialog
+        students={students ?? []}
+        classes={sortedClasses}
+        categories={categories}
+        description="Select any students in the school and apply points instantly—no printed coupon required."
+      />
 
       <CouponPrintPanel
         schoolId={schoolId}

@@ -211,7 +211,7 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses, cre
             </div>
             {prize?.aiFunReward === 'picker' ? (
               <p className="text-xs text-muted-foreground">
-                Students choose joke, riddle, fortune teller, or a random surprise when they redeem this reward.
+                Students choose joke, riddle, fortune teller, name poem, or a random surprise when they redeem this reward.
               </p>
             ) : prize?.aiFunReward ? (
               <div className="space-y-1">
@@ -221,10 +221,11 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses, cre
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="random">Random (joke, riddle, or fortune teller)</SelectItem>
+                    <SelectItem value="random">Random (joke, riddle, fortune, or name poem)</SelectItem>
                     <SelectItem value="joke">Short joke</SelectItem>
                     <SelectItem value="riddle">Riddle (with answer)</SelectItem>
                     <SelectItem value="fortune">Fortune teller line</SelectItem>
+                    <SelectItem value="acrostic">Name poem (first-name acrostic)</SelectItem>
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">

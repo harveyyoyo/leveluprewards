@@ -20,6 +20,12 @@ import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { rainbowByIndex, rainbowForPortalId } from '@/lib/rainbowNav';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
 import { LEVELUP_BRAND_PRIMARY_HEX, LEVELUP_BRAND_PRIMARY_ON_DARK_HEX } from '@/lib/appBranding';
+import {
+    isKioskPortraitDisplay,
+    portalChooseGridClass,
+    portalChoosePageShellClass,
+    portalChooseTitleClass,
+} from '@/lib/kioskPortraitLayout';
 
 type PortalArea = {
     id: string;
@@ -148,6 +154,8 @@ export default function PortalPage() {
                 : !!prefersReducedMotion,
     );
     const animBackdrop = globalAnimatedBackdropActive(settings);
+    const kioskPortrait = isKioskPortraitDisplay(settings);
+    const isAppDisplay = settings.displayMode === 'app';
 
     useEffect(() => {
         const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -316,9 +324,10 @@ export default function PortalPage() {
             {/* Main layout: locked on mobile, scrollable on desktop */}
             <div
                 className={cn(
-                    settings.displayMode === 'app'
+                    isAppDisplay
                         ? 'fixed inset-0 z-[10] flex flex-col overflow-hidden max-md:overflow-x-hidden md:overflow-y-auto px-4 pb-24 pt-[max(6.25rem,calc(env(safe-area-inset-top,0px)+4.5rem))] md:py-24'
                         : 'relative z-[10] flex w-full flex-col px-4 pb-8 pt-12 sm:pt-16 md:pb-12 md:pt-20',
+                    portalChoosePageShellClass(kioskPortrait, isAppDisplay),
                 )}
             >
                 <div className="flex h-full min-h-0 w-full flex-1 flex-col items-center justify-between md:my-auto md:min-h-0 md:justify-center">
@@ -330,9 +339,11 @@ export default function PortalPage() {
                                 <h2
                                     className={cn(
                                         'font-headline inline-block overflow-visible pb-[0.15em] font-black tracking-tight',
-                                        settings.displayMode === 'app'
-                                            ? 'px-2 py-2 text-5xl sm:text-6xl md:text-7xl'
-                                            : 'px-2 py-3 text-6xl sm:text-7xl md:text-8xl',
+                                        kioskPortrait
+                                            ? portalChooseTitleClass(true, isAppDisplay)
+                                            : isAppDisplay
+                                              ? 'px-2 py-2 text-5xl sm:text-6xl md:text-7xl'
+                                              : 'px-2 py-3 text-6xl sm:text-7xl md:text-8xl',
                                     )}
                                     style={{
                                         color: whereToAccentColor,
@@ -354,7 +365,12 @@ export default function PortalPage() {
                     </div>
 
                     {/* Grid: narrower cards on phone; full width from md up */}
-                    <div className="mx-auto w-full max-w-[min(22rem,calc(100%-0.5rem))] shrink-0 pb-safe sm:max-w-md md:mt-0 md:max-w-6xl">
+                    <div
+                        className={cn(
+                            'mx-auto w-full max-w-[min(22rem,calc(100%-0.5rem))] shrink-0 pb-safe sm:max-w-md md:mt-0 md:max-w-6xl',
+                            portalChooseGridClass(kioskPortrait),
+                        )}
+                    >
                         <motion.div
                             ref={gridRef}
                             variants={prefersReducedMotion ? undefined : staggerContainer}
@@ -362,7 +378,7 @@ export default function PortalPage() {
                             animate="show"
                             className={cn(
                                 'pointer-events-auto grid w-full gap-3 overflow-visible md:gap-5',
-                                'grid-cols-1 md:grid-cols-3',
+                                kioskPortrait ? 'grid-cols-1 md:grid-cols-1' : 'grid-cols-1 md:grid-cols-3',
                             )}
                         >
                     {portals.map((area, index) => {

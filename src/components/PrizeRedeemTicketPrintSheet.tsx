@@ -25,7 +25,7 @@ export type PrizeRedeemTicket = {
   quantity: number;
   totalCost?: number;
   /** When set (e.g. after AI surprise + print voucher), show on the physical ticket. */
-  aiSurpriseKind?: 'joke' | 'riddle' | 'fortune';
+  aiSurpriseKind?: 'joke' | 'riddle' | 'fortune' | 'acrostic';
   aiSurpriseText?: string;
   aiSurpriseAnswer?: string;
 };
@@ -120,7 +120,10 @@ export function PrizeRedeemTicketPrintSheet({
 
         const surpriseText = (t.aiSurpriseText || '').trim();
         const hasSurprise = Boolean(surpriseText);
-        const surpriseKind = t.aiSurpriseKind === 'riddle' || t.aiSurpriseKind === 'fortune' ? t.aiSurpriseKind : 'joke';
+        const surpriseKind =
+          t.aiSurpriseKind === 'riddle' || t.aiSurpriseKind === 'fortune' || t.aiSurpriseKind === 'acrostic'
+            ? t.aiSurpriseKind
+            : 'joke';
         const surpriseAnswer =
           surpriseKind === 'riddle' && (t.aiSurpriseAnswer || '').trim() ? (t.aiSurpriseAnswer || '').trim() : '';
 

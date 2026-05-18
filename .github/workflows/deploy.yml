@@ -73,6 +73,16 @@ jobs:
         env:
           FIREBASE_CLI_EXPERIMENTS: webframeworks
 
+      - name: Install Playwright browser for live auth smoke
+        run: npx playwright install --with-deps chromium
+
+      - name: Run live auth smoke against production
+        run: npm run test:live-auth
+        env:
+          LIVE_AUTH_BASE_URL: https://levelupenterprises.education
+          LIVE_AUTH_SCHOOL_ID: yeshiva
+          LIVE_AUTH_PASSCODE: ${{ secrets.LIVE_AUTH_PASSCODE || '1234' }}
+
       - name: Upload Firebase CLI debug log (on failure)
         if: failure()
         uses: actions/upload-artifact@v4

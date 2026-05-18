@@ -375,6 +375,24 @@ export const purgeStudentProgress = async (firestore: Firestore, schoolId: strin
   }
 };
 
+export const purgeStudentsProgress = async (
+  firestore: Firestore,
+  schoolId: string,
+  studentIds: string[],
+): Promise<{ success: number; failed: number }> => {
+  let success = 0;
+  let failed = 0;
+  for (const studentId of studentIds) {
+    try {
+      await purgeStudentProgress(firestore, schoolId, studentId);
+      success += 1;
+    } catch {
+      failed += 1;
+    }
+  }
+  return { success, failed };
+};
+
 async function persistStudentDocuments(firestore: Firestore, schoolId: string, studentsToCreate: Student[]) {
   if (studentsToCreate.length === 0) return;
   const BATCH_LIMIT = 499;

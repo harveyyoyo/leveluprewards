@@ -1,5 +1,5 @@
 /**
- * Derives age-appropriate guidance for the prize AI Fun endpoint (joke / riddle / fortune teller).
+ * Derives age-appropriate guidance for the prize AI Fun endpoint (joke / riddle / fortune / name acrostic).
  * Birthday is the primary signal; when unknown, prompts use a conservative mixed-age baseline.
  */
 

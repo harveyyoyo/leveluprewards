@@ -79,6 +79,7 @@ import { GoalsManager } from '@/components/goals/GoalsManager';
 import { homeworkRewardCategoryKey } from '@/lib/homeworkRewards';
 import { studentsInTeacherScope } from '@/lib/reportsScope';
 import { AdminRaffleTab } from '@/app/[schoolId]/admin/sections/AdminRaffleTab';
+import { ManualPointsAwardDialog } from '@/components/points/ManualPointsAwardDialog';
 
 /** Max sheets per run. Bounded for sensible printer jobs and UI. */
 const MAX_COUPON_PRINT_SHEETS = 100;
@@ -1895,7 +1896,7 @@ function TeacherAttendanceRewardsPanel({
 }
 
 export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretaryMode = false }: { teacherName: string, teacherId: string, onLogout: () => void, secretaryMode?: boolean }) {
-    const { updateTeacher, addCoupons, setCouponsToPrint, addCategory, schoolId, awardPointsToMultipleStudents, deductPointsFromMultipleStudents, addPrize, updatePrize, deletePrize, getTeacherAttendanceConfig, setTeacherAttendanceConfig, listTeacherAttendanceLog, categories: globalCategories, isAdmin, isTeacher } = useAppContext();
+    const { updateTeacher, addCoupons, setCouponsToPrint, addCategory, schoolId, addPrize, updatePrize, deletePrize, getTeacherAttendanceConfig, setTeacherAttendanceConfig, listTeacherAttendanceLog, categories: globalCategories, isAdmin, isTeacher } = useAppContext();
     /** Admin using the teacher portal can act on the whole school (like secretary data scope) while keeping teacher tabs/tools. */
     const schoolWideTeacherScope = secretaryMode || isAdmin;
     /** Same redemption options as secretary (schoolwide / classes / teachers) when admin is on the teacher portal. */
@@ -2052,30 +2053,11 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
     const [newPrintCategoryName, setNewPrintCategoryName] = useState('');
     const [newPrintCategoryPoints, setNewPrintCategoryPoints] = useState('10');
 
-    // State for direct/bulk awarding
-    const [awardMode, setAwardMode] = useState<'award' | 'deduct'>('award');
-    const [studentSearch, setStudentSearch] = useState('');
-    const [filterClassId, setFilterClassId] = useState(() => {
-        if (typeof window !== 'undefined') {
-            return localStorage.getItem('defaultClassId') || 'all';
-        }
-        return 'all';
-    });
-    const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
-    const [awardCategoryId, setAwardCategoryId] = useState('');
-    const [awardValue, setAwardValue] = useState('10');
-    const [awardReason, setAwardReason] = useState('');
-    const [isManualAwardDialogOpen, setIsManualAwardDialogOpen] = useState(false);
-    const [minPoints, setMinPoints] = useState('');
-    const [maxPoints, setMaxPoints] = useState('');
-    const [badgeFilter, setBadgeFilter] = useState<'all' | 'has_nfc' | 'no_nfc'>('all');
-
     useEffect(() => {
         if (categories && categories.length > 0) {
             if (!printCategoryId) setPrintCategoryId(categories[0].id);
-            if (!awardCategoryId) setAwardCategoryId(categories[0].id);
         }
-    }, [categories, printCategoryId, awardCategoryId]);
+    }, [categories, printCategoryId]);
 
     useEffect(() => {
         const category = categories?.find(c => c.id === printCategoryId);
@@ -2085,30 +2067,11 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
     }, [printCategoryId, categories]);
 
     useEffect(() => {
-        const category = categories?.find(c => c.id === awardCategoryId);
-        if (category) {
-            setAwardValue(category.points.toString());
-        }
-    }, [awardCategoryId, categories]);
-
-    useEffect(() => {
         if (secretaryMode || isAdmin) return;
         if (printRedemptionScope === 'school' || printRedemptionScope === 'teachers') {
             setPrintRedemptionScope('creator');
         }
     }, [secretaryMode, isAdmin, printRedemptionScope]);
-
-    useEffect(() => {
-        if (filterClassId === 'all') return;
-        if (!classesForTeacherUi.some((c) => c.id === filterClassId)) {
-            setFilterClassId('all');
-        }
-    }, [filterClassId, classesForTeacherUi]);
-
-    useEffect(() => {
-        const allowed = new Set(studentsForTeacherActions.map((s) => s.id));
-        setSelectedStudentIds((prev) => prev.filter((id) => allowed.has(id)));
-    }, [studentsForTeacherActions]);
 
     useEffect(() => {
         const valid = new Set(classesForTeacherUi.map((c) => c.id));
@@ -2364,127 +2327,6 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
         setCouponsToPrint(couponsToCreate, { couponsPerPage: printCouponsPerPage });
     };
 
-    const handleAwardPoints = async () => {
-        const points = parseInt(awardValue);
-        if (selectedStudentIds.length === 0) {
-            playSound('error');
-            toast({ variant: 'destructive', title: 'No students selected.' });
-            return;
-        }
-        const selectedCategory = categories?.find(c => c.id === awardCategoryId);
-        if (!selectedCategory) {
-            playSound('error');
-            toast({ variant: 'destructive', title: 'Please select a category.' });
-            return;
-        }
-        if (isNaN(points) || points <= 0) {
-            playSound('error');
-            toast({ variant: 'destructive', title: 'Points must be a positive number.' });
-            return;
-        }
-
-        if (!schoolWideTeacherScope && teacherId) {
-            const allowed = new Set(studentsForTeacherActions.map((s) => s.id));
-            if (selectedStudentIds.some((id) => !allowed.has(id))) {
-                playSound('error');
-                toast({
-                    variant: 'destructive',
-                    title: 'Invalid selection',
-                    description: 'You can only award points to students on your roster.',
-                });
-                return;
-            }
-        }
-
-        const totalCost = points * selectedStudentIds.length;
-        if (!isAdmin && settings.enableTeacherBudgets && currentTeacher && currentTeacher.monthlyBudget !== undefined) {
-            const remainingPts = remainingTeacherBudgetPoints(currentTeacher);
-            if (remainingPts !== null && totalCost > remainingPts) {
-                const phrase = teacherBudgetRemainingPhrase(resolveTeacherBudgetPeriod(currentTeacher));
-                playSound('error');
-                toast({
-                    variant: 'destructive',
-                    title: 'Budget Exceeded',
-                    description: `Awarding requires ${totalCost} pts, but you only have ${remainingPts.toLocaleString()} pts remaining ${phrase}.`,
-                });
-                return;
-            }
-        }
-
-        const result = await awardPointsToMultipleStudents(selectedStudentIds, points, selectedCategory.name);
-
-        if (result.success) {
-            if (!isAdmin && settings.enableTeacherBudgets && currentTeacher && !(result as { queued?: boolean }).queued) {
-                const next =
-                    currentTeacher.monthlyBudget !== undefined
-                        ? teacherWithBudgetAfterSpend(currentTeacher, totalCost)
-                        : { ...currentTeacher, spentThisMonth: (currentTeacher.spentThisMonth || 0) + totalCost };
-                await updateTeacher(next);
-            }
-            playSound('success');
-            const queued = !!(result as { queued?: boolean }).queued;
-            toast({
-                title: queued ? 'Saved for later' : 'Points Awarded!',
-                description: queued
-                    ? result.message
-                    : `Awarded ${points} points to ${result.count} student(s).`,
-            });
-            if (!queued) {
-                setSelectedStudentIds([]);
-                if (categories && categories.length > 0) {
-                    setAwardValue(categories[0].points.toString());
-                }
-            }
-        } else {
-            playSound('error');
-            toast({ variant: 'destructive', title: 'Failed to award points', description: result.message });
-        }
-    };
-
-    const handleDeductPoints = async () => {
-        const points = parseInt(awardValue);
-        if (selectedStudentIds.length === 0) {
-            playSound('error');
-            toast({ variant: 'destructive', title: 'No students selected.' });
-            return;
-        }
-        if (!awardReason.trim()) {
-            playSound('error');
-            toast({ variant: 'destructive', title: 'A reason is required for deductions.' });
-            return;
-        }
-        if (isNaN(points) || points <= 0) {
-            playSound('error');
-            toast({ variant: 'destructive', title: 'Points to deduct must be a positive number.' });
-            return;
-        }
-
-        if (!schoolWideTeacherScope && teacherId) {
-            const allowed = new Set(studentsForTeacherActions.map((s) => s.id));
-            if (selectedStudentIds.some((id) => !allowed.has(id))) {
-                playSound('error');
-                toast({
-                    variant: 'destructive',
-                    title: 'Invalid selection',
-                    description: 'You can only deduct points from students on your roster.',
-                });
-                return;
-            }
-        }
-
-        const result = await deductPointsFromMultipleStudents(selectedStudentIds, points, awardReason);
-
-        if (result.success) {
-            playSound('swoosh');
-            toast({ title: 'Points Deducted!', description: `Deducted ${points} points from ${result.count} student(s).` });
-            setSelectedStudentIds([]);
-            setAwardReason('');
-        } else {
-            playSound('error');
-            toast({ variant: 'destructive', title: 'Failed to deduct points', description: result.message });
-        }
-    };
-
     const selectedCategoryForPreview = categories?.find(c => c.id === printCategoryId);
     const redemptionPreviewScope: CouponRedemptionScope = staffCouponRedemptionUi
         ? printRedemptionScope === 'classes' || printRedemptionScope === 'teachers'
@@ -2541,58 +2383,6 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
         }
         return list;
     }, [categories, currentTeacher, secretaryMode, isAdmin]);
-
-    const selectedCategoryForAward = useMemo(
-        () => filteredCategories.find((c) => c.id === awardCategoryId),
-        [filteredCategories, awardCategoryId],
-    );
-
-    const filteredStudents = useMemo(() => {
-        const normalizedSearch = studentSearch.trim().toLowerCase();
-        const minVal = minPoints.trim() === '' ? -Infinity : Number(minPoints);
-        const maxVal = maxPoints.trim() === '' ? Infinity : Number(maxPoints);
-
-        return studentsForTeacherActions.filter((s) => {
-            const classMatch = filterClassId === 'all' || s.classId === filterClassId;
-            if (!classMatch) return false;
-
-            const currentPts = s.points || 0;
-            if (currentPts < minVal || currentPts > maxVal) return false;
-
-            if (badgeFilter === 'has_nfc' && !s.nfcId) return false;
-            if (badgeFilter === 'no_nfc' && s.nfcId) return false;
-
-            if (!normalizedSearch) return true;
-
-            const computedName = `${getStudentNickname(s)} ${s.lastName}`.toLowerCase();
-            return computedName.includes(normalizedSearch) ||
-                s.id.toLowerCase().includes(normalizedSearch) ||
-                (s.nfcId && s.nfcId.toLowerCase().includes(normalizedSearch));
-        }).sort((a, b) => a.lastName.localeCompare(b.lastName));
-    }, [studentsForTeacherActions, studentSearch, filterClassId, minPoints, maxPoints, badgeFilter]);
-
-    useEffect(() => {
-        if (filteredStudents.length === 1) {
-            setSelectedStudentIds([filteredStudents[0].id]);
-        }
-    }, [filteredStudents]);
-
-    const toggleSelectAll = () => {
-        if (selectedStudentIds.length === filteredStudents.length) {
-            setSelectedStudentIds([]);
-        } else {
-            setSelectedStudentIds(filteredStudents.map(s => s.id));
-        }
-    };
-
-    const handleStudentSelect = (studentId: string, isSelected: boolean) => {
-        if (isSelected) {
-            setSelectedStudentIds(prev => [...prev, studentId]);
-        } else {
-            setSelectedStudentIds(prev => prev.filter(id => id !== studentId));
-        }
-    };
-
 
     const isLoading = secretaryMode
         ? categoriesLoading
@@ -2685,7 +2475,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                         </div>
                     ) : null}
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                        <Helper content={secretaryMode ? 'Generate coupon sheets for teachers to hand out. You cannot award points or edit prizes from here.' : 'Use Points to print coupon sheets from school categories, or open Manual Add Points for direct changes without a printed coupon. Prizes, attendance, and reports are also here.'}>
+                        <Helper content={secretaryMode ? 'Generate coupon sheets for teachers to hand out. You cannot award points or edit prizes from here.' : 'Use Points to print coupon sheets from school categories, or open Manually Add or Deduct Points for direct changes without a printed coupon. Prizes, attendance, and reports are also here.'}>
                             <div>
                                 <h2 className="text-2xl font-bold tracking-tight" style={{ color: teacherAccent }}>
                                     {secretaryMode ? 'Secretary - coupon printing' : 'Teacher & Faculty Portal'}
@@ -2693,7 +2483,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                 <p className="text-muted-foreground">
                                     {secretaryMode
                                         ? 'Create printable coupon batches using the school\'s incentive categories.'
-                                        : 'Print point coupons from the Points tab, use Manual Add Points when you need direct changes, and run reports—all from this portal.'}
+                                        : 'Print point coupons from the Points tab, use Manually Add or Deduct Points when you need direct changes, and run reports—all from this portal.'}
                                 </p>
                                 {teacherName ? (
                                     <p className="text-sm text-muted-foreground mt-1">
@@ -2889,232 +2679,35 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                             <TabsContent value="coupons" className={teacherPortalTabContentClassName}>
                                 <div className={teacherPortalPanelClassName}>
                                 {!secretaryMode && (
-                                    <div className="w-full max-w-7xl mx-auto mb-4 flex justify-end">
-                                        <Dialog open={isManualAwardDialogOpen} onOpenChange={setIsManualAwardDialogOpen}>
-                                            <DialogTrigger asChild>
-                                                <Button
-                                                    type="button"
-                                                    className="rounded-xl h-11 font-bold gap-2"
-                                                    style={{ backgroundColor: teacherAccent, color: '#fff' }}
-                                                >
-                                                    <Award className="w-4 h-4 shrink-0" />
-                                                    Manual Add Points
-                                                </Button>
-                                            </DialogTrigger>
-                                            <DialogContent
-                                                className={cn(
-                                                    'max-w-4xl w-[min(96vw,56rem)] max-h-[min(92vh,900px)] flex flex-col gap-0 overflow-hidden p-0',
-                                                    isGraphic ? 'bg-card/95 backdrop-blur-2xl text-foreground border-white/10' : 'bg-white',
-                                                )}
-                                            >
-                                                <DialogHeader className="p-6 pb-2 shrink-0">
-                                                    <DialogTitle className="flex items-center gap-3 text-xl font-black">
-                                                        <div className={cn('p-2 rounded-xl', isGraphic ? 'bg-chart-2/20 text-chart-2' : 'bg-primary/10 text-primary')}>
-                                                            <Award className="w-5 h-5" />
-                                                        </div>
-                                                        Award / Deduct Points
-                                                    </DialogTitle>
-                                                    <DialogDescription>
-                                                        Select students on your roster and apply points instantly—no printed coupon required.
-                                                    </DialogDescription>
-                                                </DialogHeader>
-                                                <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-6 space-y-6">
-                                      <div className="flex items-center justify-between gap-3">
-                                        <div className="grid w-[260px] grid-cols-2 rounded-xl border bg-muted/20 p-1">
-                                          <Button
-                                            type="button"
-                                            variant={awardMode === 'award' ? 'default' : 'ghost'}
-                                            className="h-9 rounded-lg text-xs font-black uppercase tracking-widest"
-                                            onClick={() => setAwardMode('award')}
-                                            style={awardMode === 'award' ? { backgroundColor: teacherAccent, color: '#fff' } : undefined}
-                                          >
-                                            Award
-                                          </Button>
-                                          <Button
-                                            type="button"
-                                            variant={awardMode === 'deduct' ? 'default' : 'ghost'}
-                                            className="h-9 rounded-lg text-xs font-black uppercase tracking-widest"
-                                            onClick={() => setAwardMode('deduct')}
-                                            style={awardMode === 'deduct' ? { backgroundColor: teacherAccent, color: '#fff' } : undefined}
-                                          >
-                                            Deduct
-                                          </Button>
-                                        </div>
-                                        <Button variant="outline" onClick={toggleSelectAll} className="rounded-xl">
-                                          {selectedStudentIds.length === filteredStudents.length && filteredStudents.length > 0 ? 'Deselect All' : 'Select All'}
-                                        </Button>
-                                      </div>
-
-                                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-muted/10 p-3 rounded-2xl border border-dashed">
-                                        <div className="relative group col-span-1 sm:col-span-2">
-                                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                                          <Input
-                                            placeholder="Search name, ID, or NFC..."
-                                            value={studentSearch}
-                                            onChange={e => setStudentSearch(e.target.value)}
-                                            className={cn("h-11 rounded-xl pl-9 transition-all bg-background/50 backdrop-blur-sm focus-visible:ring-primary/20", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-slate-50')}
-                                          />
-                                        </div>
-                                        <Select value={filterClassId} onValueChange={(val) => { setFilterClassId(val); localStorage.setItem('defaultClassId', val); }}>
-                                          <SelectTrigger className={cn("h-11 rounded-xl transition-all", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-slate-50')}>
-                                            <SelectValue placeholder="All Classes" />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                            <SelectItem value="all">All Classes</SelectItem>
-                                            {classesForTeacherUi.map((c) => (
-                                              <SelectItem key={c.id} value={c.id}>
-                                                {c.name}
-                                              </SelectItem>
-                                            ))}
-                                          </SelectContent>
-                                        </Select>
-                                        <Select value={badgeFilter} onValueChange={(v: any) => setBadgeFilter(v)}>
-                                          <SelectTrigger className={cn("h-11 rounded-xl transition-all", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-slate-50')}>
-                                            <SelectValue placeholder="Badge filter" />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                            <SelectItem value="all">All NFC Statuses</SelectItem>
-                                            <SelectItem value="has_nfc">Has NFC tag</SelectItem>
-                                            <SelectItem value="no_nfc">No NFC tag</SelectItem>
-                                          </SelectContent>
-                                        </Select>
-                                      </div>
-
-                                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                        <Input
-                                          type="number"
-                                          placeholder="Min Points"
-                                          value={minPoints}
-                                          onChange={e => setMinPoints(e.target.value)}
-                                          className={cn("h-11 rounded-xl font-medium", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-slate-50')}
-                                        />
-                                        <Input
-                                          type="number"
-                                          placeholder="Max Points"
-                                          value={maxPoints}
-                                          onChange={e => setMaxPoints(e.target.value)}
-                                          className={cn("h-11 rounded-xl font-medium", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-slate-50')}
-                                        />
-                                        <div className="col-span-2 flex items-center gap-2">
-                                          <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => { setMinPoints(''); setMaxPoints(''); setBadgeFilter('all'); }}
-                                            className="h-11 px-3 rounded-xl text-xs font-bold w-full"
-                                          >
-                                            Clear Filters
-                                          </Button>
-                                        </div>
-                                      </div>
-
-                                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-3 border-t">
-                                        <Select value={awardCategoryId} onValueChange={setAwardCategoryId}>
-                                          <SelectTrigger className={cn("h-11 rounded-xl", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-slate-50')}>
-                                            <SelectValue placeholder="Category" />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                            {filteredCategories.map((c) => (
-                                              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                                            ))}
-                                          </SelectContent>
-                                        </Select>
-                                        <div className="space-y-1">
-                                          <Input
-                                            type="number"
-                                            value={awardValue}
-                                            onChange={(e) => setAwardValue(e.target.value)}
-                                            className={cn("h-11 rounded-xl font-black", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-slate-50')}
-                                            placeholder="Points"
-                                          />
-                                          <div className="flex flex-wrap gap-1 mt-1">
-                                            {[5, 10, 20, 50, 100].map(v => (
-                                              <Button
-                                                key={v}
-                                                type="button"
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => setAwardValue(v.toString())}
-                                                className="h-6 px-1.5 text-[10px] rounded-md font-bold"
-                                              >
-                                                +{v}
-                                              </Button>
-                                            ))}
-                                          </div>
-                                          {awardMode === 'award' &&
-                                          selectedCategoryForAward?.rubricLevels &&
-                                          selectedCategoryForAward.rubricLevels.length > 0 ? (
-                                            <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-border/60">
-                                              {selectedCategoryForAward.rubricLevels.map((r) => (
-                                                <Button
-                                                  key={r.id}
-                                                  type="button"
-                                                  variant="secondary"
-                                                  size="sm"
-                                                  onClick={() => setAwardValue(String(r.points))}
-                                                  className="h-7 px-2 text-[10px] rounded-md font-bold"
-                                                  title={r.label}
-                                                >
-                                                  {r.label}: {r.points}
-                                                </Button>
-                                              ))}
-                                            </div>
-                                          ) : null}
-                                        </div>
-                                        {awardMode === 'deduct' ? (
-                                          <Input
-                                            value={awardReason}
-                                            onChange={(e) => setAwardReason(e.target.value)}
-                                            className={cn("h-11 rounded-xl", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-slate-50')}
-                                            placeholder="Reason"
-                                          />
-                                        ) : (
-                                          <div className="h-11" />
-                                        )}
-                                      </div>
-
-                                      <Button
-                                        onClick={awardMode === 'award' ? handleAwardPoints : handleDeductPoints}
-                                        className="w-full h-14 rounded-2xl font-black uppercase tracking-widest text-white"
-                                        style={{ backgroundColor: teacherAccent }}
-                                      >
-                                        {awardMode === 'award' ? 'Award Points' : 'Deduct Points'}
-                                      </Button>
-
-                                      <div className="rounded-2xl border bg-muted/20">
-                                        <ScrollArea className="h-[min(42vh,360px)] min-h-[200px] w-full">
-                                          <ul className="p-3 space-y-2">
-                                            {filteredStudents.map((s) => {
-                                              const checked = selectedStudentIds.includes(s.id);
-                                              return (
-                                                <li key={s.id} className={cn("flex items-center justify-between gap-3 p-3 rounded-xl border bg-background/60", checked && "border-primary/30")}>
-                                                  <div className="flex items-center gap-3">
-                                                    <Checkbox
-                                                      checked={checked}
-                                                      onCheckedChange={(v) => handleStudentSelect(s.id, !!v)}
-                                                      className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                                                    />
-                                                    <div>
-                                                      <p className="font-bold">{getStudentNickname(s)} {s.lastName}</p>
-                                                      <p className="text-xs text-muted-foreground">{s.classId ? (classes?.find(c => c.id === s.classId)?.name || 'Unassigned') : 'Unassigned'}</p>
-                                                    </div>
-                                                  </div>
-                                                  <span className="text-xs font-bold text-muted-foreground">{(s.points || 0).toLocaleString()} pts</span>
-                                                </li>
-                                              );
-                                            })}
-                                            {filteredStudents.length === 0 && (
-                                              <li className="text-center text-sm text-muted-foreground py-10">No students found.</li>
-                                            )}
-                                          </ul>
-                                        </ScrollArea>
-                                      </div>
-                                                </div>
-                                            </DialogContent>
-                                        </Dialog>
-                                    </div>
+                                    <ManualPointsAwardDialog
+                                        className="w-full max-w-7xl mx-auto mb-4"
+                                        students={studentsForTeacherActions}
+                                        classes={classesForTeacherUi}
+                                        categories={filteredCategories}
+                                        accentColor={teacherAccent}
+                                        isGraphic={isGraphic}
+                                        description="Select students on your roster and apply points instantly—no printed coupon required."
+                                        budgetOptions={
+                                            isAdmin
+                                                ? undefined
+                                                : {
+                                                      isAdmin: false,
+                                                      currentTeacher: currentTeacher ?? null,
+                                                      onBudgetSpend: async (totalCost) => {
+                                                          if (!currentTeacher) return;
+                                                          const next =
+                                                              currentTeacher.monthlyBudget !== undefined
+                                                                  ? teacherWithBudgetAfterSpend(currentTeacher, totalCost)
+                                                                  : {
+                                                                        ...currentTeacher,
+                                                                        spentThisMonth: (currentTeacher.spentThisMonth || 0) + totalCost,
+                                                                    };
+                                                          await updateTeacher(next);
+                                                      },
+                                                  }
+                                        }
+                                    />
                                 )}
-
                         <Card className={cn(
                             "w-full max-w-7xl border-t-8 transition-all duration-500 hover:shadow-2xl",
                             isGraphic

@@ -22,10 +22,11 @@ const ADMIN_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
         ],
       },
       {
-        title: 'Kiosk options per student',
+        title: 'Bulk selection',
         checklist: [
-          'Use row toggles for welcome splash and style welcome when those school features are on.',
-          'Open Activity to review points history for one student.',
+          'Use Select visible or row checkboxes to pick students (filter by class first if needed).',
+          'Bulk bar: print IDs, purge points & badges, delete, move class, teachers, and kiosk splash/style toggles.',
+          'Per-row ⚡ still purges one student; Activity and badges stay per-student.',
         ],
       },
     ],
@@ -102,8 +103,9 @@ const ADMIN_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
         ],
       },
       {
-        title: 'Print coupon sheets',
+        title: 'Manual and printed points',
         checklist: [
+          'Use Manually Add or Deduct Points for direct awards or deductions without printing coupons.',
           'Use Print coupons below to generate scannable sheets (10 or 30 per page).',
           'Faculty can also print from their Points tab using the same categories.',
           'Students redeem codes at the kiosk to bank points.',

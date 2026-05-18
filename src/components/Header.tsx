@@ -166,10 +166,10 @@ export default function Header() {
     return null;
   }
 
-  const logoLink = schoolId ? `/login?school=${encodeURIComponent(schoolId)}` : getLevelUpLogoHref();
   const centerLabel = schoolName;
   /** Portal lives only under `/{schoolId}/portal`; there is no app root `/portal` page. */
   const centerHref = schoolId ? `/${schoolId}/portal` : '/';
+  const logoLink = schoolId ? centerHref : getLevelUpLogoHref();
   const webHomeHref = schoolId ? centerHref : '/';
   const isDeveloperSupportSession = loginState === 'developer' && !!schoolId;
   const canLogout = loginState !== 'loggedOut' && loginState !== 'student';

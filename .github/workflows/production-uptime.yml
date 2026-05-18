@@ -1,0 +1,40 @@
+name: Production Uptime
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'Production base URL'
+        required: false
+        default: 'https://levelupenterprises.education'
+      school_id:
+        description: 'Canary school id'
+        required: false
+        default: 'yeshiva'
+  schedule:
+    # Daily at 12:17 UTC. Keeps monitoring cheap and avoids hourly Codex spend.
+    - cron: '17 12 * * *'
+
+concurrency:
+  group: production-uptime
+  cancel-in-progress: true
+
+jobs:
+  uptime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      LIVE_UPTIME_BASE_URL: ${{ github.event.inputs.base_url || 'https://levelupenterprises.education' }}
+      LIVE_UPTIME_SCHOOL_ID: ${{ github.event.inputs.school_id || 'yeshiva' }}
+      LIVE_UPTIME_PORTAL_MODE: public
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Check production uptime
+        run: npm run test:live-uptime

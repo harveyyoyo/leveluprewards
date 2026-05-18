@@ -21,6 +21,8 @@ export function schoolPathAllowedByGate(
   if (section === 'portal') {
     return (
       scopes.has('portal') ||
+      scopes.has('kiosk') ||
+      scopes.has('studentPortal') ||
       scopes.has('admin') ||
       scopes.has('teacher') ||
       scopes.has('secretary') ||

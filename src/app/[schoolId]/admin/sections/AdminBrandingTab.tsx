@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2, Trash2, UploadCloud, Palette, User, Shield, Clock, Megaphone, Tv } from 'lucide-react';
+import { Loader2, Trash2, UploadCloud, Palette, User, Shield, Clock, Megaphone, Tv, Smartphone } from 'lucide-react';
 import type { DocumentReference, Firestore } from 'firebase/firestore';
 import { updateDoc, setDoc } from 'firebase/firestore';
 import { schoolPublicDocRef } from '@/lib/schoolPublic';
@@ -563,6 +563,31 @@ export function AdminBrandingTab({
                 <p className="text-[11px] text-muted-foreground">
                   How long the kiosk “Welcome back” screen stays up (1–60). Students can still tap Skip to dismiss sooner.
                 </p>
+              </div>
+
+              <div className="flex items-start justify-between gap-4 rounded-xl border border-border/60 bg-muted/20 p-4 col-span-1 md:col-span-2">
+                <div className="min-w-0 flex-1 space-y-1">
+                  <Label className="text-sm font-bold flex items-center gap-2">
+                    <Smartphone className="w-4 h-4 shrink-0" aria-hidden />
+                    Portrait display layout
+                  </Label>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    Turn on when student kiosk screens (portal hub, sign-in, rewards shop) run on a tall narrow
+                    monitor. Content stacks in a single column with tighter spacing.
+                  </p>
+                </div>
+                <Switch
+                  checked={
+                    settings.kioskPortraitDisplay === true ||
+                    settings.studentPortalPortraitDisplay === true
+                  }
+                  onCheckedChange={(checked) =>
+                    updateSettings({
+                      kioskPortraitDisplay: checked,
+                      studentPortalPortraitDisplay: false,
+                    })
+                  }
+                />
               </div>
             </div>
           </div>

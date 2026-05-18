@@ -1287,6 +1287,87 @@ exports.lookupStudentByBadge = functions
   }
 );
 
+const STUDENT_THEME_HEX = /^#[0-9a-fA-F]{6}$/;
+
+function sanitizeKioskStudentThemePayload(raw: unknown): Record<string, unknown> | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const data = raw as Record<string, unknown>;
+  const requireHex = (value: unknown, fallback: string): string => {
+    const s = typeof value === "string" ? value.trim() : "";
+    return STUDENT_THEME_HEX.test(s) ? s : fallback;
+  };
+  const out: Record<string, unknown> = {
+    background: requireHex(data.background, "#020617"),
+    text: requireHex(data.text, "#ffffff"),
+    primary: requireHex(data.primary, "#13a58d"),
+    cardBackground: requireHex(data.cardBackground, "#111827"),
+    accent: requireHex(data.accent, "#22c55e"),
+  };
+  if (typeof data.emoji === "string" && data.emoji.trim()) {
+    out.emoji = data.emoji.trim().slice(0, 8);
+  }
+  if (typeof data.fontFamily === "string" && data.fontFamily.trim()) {
+    out.fontFamily = data.fontFamily.trim().replace(/[^\w\s-]/g, "").slice(0, 80);
+  }
+  if (typeof data.backgroundStyle === "string") {
+    const bs = data.backgroundStyle.trim().slice(0, 500);
+    if (bs.startsWith("linear-gradient") || bs.startsWith("radial-gradient")) {
+      out.backgroundStyle = bs;
+    }
+  }
+  if (typeof data.fontScale === "number" && Number.isFinite(data.fontScale)) {
+    out.fontScale = Math.min(1.5, Math.max(0.85, data.fontScale));
+  }
+  if (typeof data.fontTracking === "number" && Number.isFinite(data.fontTracking)) {
+    out.fontTracking = Math.min(0.2, Math.max(-0.05, data.fontTracking));
+  }
+  if (data.fontStyle === "normal" || data.fontStyle === "italic") {
+    out.fontStyle = data.fontStyle;
+  }
+  if (typeof data.fontWeight === "number" && Number.isFinite(data.fontWeight)) {
+    out.fontWeight = data.fontWeight >= 600 ? 800 : 400;
+  }
+  return out;
+}
+
+/** Callable: kiosk may set or clear a student's personal theme (theme field only). */
+exports.setStudentKioskTheme = functions.https.onCall(
+  async (data: any, context: functions.https.CallableContext) => {
+    requireAuth(context);
+    requireString(data.schoolId, "schoolId");
+    const schoolId = String(data.schoolId).trim().toLowerCase();
+    if (!(await hasKioskMembershipOrStaff(schoolId, context))) {
+      throw new functions.https.HttpsError("permission-denied", "School entry required.");
+    }
+    requireString(data.studentId, "studentId");
+    const studentId = String(data.studentId).trim();
+    const db = admin.firestore();
+    const schoolSnap = await db.collection("schools").doc(schoolId).get();
+    const appSettings = schoolSnap.exists ? (schoolSnap.data()?.appSettings || {}) : {};
+    if (appSettings.enableStudentThemes === false) {
+      throw new functions.https.HttpsError(
+        "failed-precondition",
+        "Student themes are turned off for this school."
+      );
+    }
+    const studentRef = db.collection("schools").doc(schoolId).collection("students").doc(studentId);
+    const studentSnap = await studentRef.get();
+    if (!studentSnap.exists) {
+      throw new functions.https.HttpsError("not-found", "Student not found.");
+    }
+    if (data.remove === true || data.theme === null) {
+      await studentRef.update({ theme: admin.firestore.FieldValue.delete() });
+      return { success: true };
+    }
+    const theme = sanitizeKioskStudentThemePayload(data.theme);
+    if (!theme) {
+      throw new functions.https.HttpsError("invalid-argument", "Invalid theme payload.");
+    }
+    await studentRef.update({ theme });
+    return { success: true };
+  }
+);
+
 async function redeemCouponForStudent(
   db: admin.firestore.Firestore,
   schoolId: string,

@@ -55,7 +55,7 @@ export async function getFirebaseAdminAuth(): Promise<Auth> {
         }),
       });
     } else if (process.env.FIREBASE_CONFIG) {
-      // App Hosting injects FIREBASE_CONFIG and expects Admin SDK auto-init.
+      // Managed Firebase runtimes inject FIREBASE_CONFIG for Admin SDK auto-init.
       initializeApp();
     } else if (projectId) {
       initializeApp({ projectId });

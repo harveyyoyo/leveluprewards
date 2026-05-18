@@ -2393,11 +2393,12 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
     padding: 0 4mm;
   }
 
-  /* Full joke/riddle/fortune line(s) in the hero — smaller than one-word prize titles for readability */
+  /* Full joke/riddle/fortune/acrostic line(s) in the hero — smaller than one-word prize titles for readability */
   .prize-ticket__prize-name--surprise-body {
     font-size: 11mm !important;
     line-height: 1.08;
     letter-spacing: 0;
+    white-space: pre-line;
   }
 
   .prize-ticket__banner {

@@ -4,6 +4,7 @@ import { useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import type { Prize } from '@/lib/types';
 import { PrizeIdCard } from './PrizeIdCard';
+import { useSettings } from './providers/SettingsProvider';
 import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { APP_NAME, APP_TAGLINE } from '@/lib/appBranding';
@@ -15,6 +16,7 @@ interface PrizeIdPrintSheetProps {
 }
 
 export function PrizeIdPrintSheet({ prizes, schoolId, onReady }: PrizeIdPrintSheetProps) {
+  const { settings } = useSettings();
   const firestore = useFirestore();
   const appConfigRef = useMemoFirebase(() => (firestore ? doc(firestore, 'appConfig', 'global') : null), [firestore]);
   const schoolDocRef = useMemoFirebase(() => (firestore && schoolId ? doc(firestore, 'schools', schoolId) : null), [firestore, schoolId]);
@@ -58,7 +60,7 @@ export function PrizeIdPrintSheet({ prizes, schoolId, onReady }: PrizeIdPrintShe
               prize={p}
               schoolName={schoolName}
               schoolLogoUrl={schoolData?.logoUrl ?? null}
-              className="student-id-print-slot"
+              isColorEnabled={settings.enableColorPrinting}
               appLogoUrl={appLogoUrl}
               appName={appName}
               appTagline={appTagline}

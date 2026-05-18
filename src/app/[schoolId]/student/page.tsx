@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback, useMemo, RefObject } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
@@ -63,7 +63,6 @@ import {
   Wallet,
   User,
   ChevronRight,
-  Settings,
   Lock,
   Unlock,
   Loader2,
@@ -114,16 +113,19 @@ import { prizeIsListed, studentSeesPrizeByTeachers } from '@/lib/prizeUtils';
 import { prizeAppearsInRewardsShop, resolveAiFunApiMode, withUnifiedAiFunPrize } from '@/lib/aiJokePrize';
 import { floorRaffleFullTickets, parseRafflePointsPerTicket } from '@/lib/raffleTickets';
 import {
-  buildPrizeAiFunAvoidTexts,
   canonicalAiSurpriseText,
   isAiSurpriseTextRecentlySeen,
   rememberAiSurprise,
+  type AiSurpriseKind,
 } from '@/lib/prizeAiFunClientStorage';
+import { acrosticFirstNameFromStudent, buildFallbackAcrostic } from '@/lib/prizeAiFunAcrostic';
+import { requestPrizeAiFunSurprise } from '@/lib/prizeAiFunRequest';
 import { prizeAiFunAgeBandKey, studentAgeYearsFromBirthday } from '@/lib/studentAiFunAge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuthFetch } from '@/lib/authFetch';
 import { WelcomeOverlay } from '@/components/WelcomeOverlay';
 import { StudentKioskTransitionFlash } from '@/components/StudentKioskTransitionFlash';
+import { StudentKioskOptionsMenu } from '@/components/student-kiosk/StudentKioskOptionsMenu';
 
 const STUDENT_TRANSITION_MIN_VISIBLE_MS = 650;
 const STUDENT_TRANSITION_EXIT_MS = 320;
@@ -135,9 +137,10 @@ const AI_SURPRISE_KIND_LABEL: Record<string, string> = {
   joke: 'Your joke',
   riddle: 'Your riddle',
   fortune: 'Fortune teller',
+  acrostic: 'Your name poem',
 };
 
-type PrizeSurprise = { kind: 'joke' | 'riddle' | 'fortune'; text: string; answer?: string };
+type PrizeSurprise = { kind: AiSurpriseKind; text: string; answer?: string };
 
 const FALLBACK_PRIZE_SURPRISES: Record<'joke' | 'riddle' | 'fortune', PrizeSurprise[]> = {
   joke: [
@@ -170,16 +173,20 @@ function fallbackPrizeSurprise(
   mode: Prize['aiFunReward'],
   prizeName: string,
   previousText?: string,
+  firstName?: string,
 ): PrizeSurprise {
   const roll =
     mode === 'random'
-      ? (['joke', 'riddle', 'fortune'] as const)[Math.floor(Math.random() * 3)]
+      ? (['joke', 'riddle', 'fortune', 'acrostic'] as const)[Math.floor(Math.random() * 4)]
       : mode === 'picker'
         ? 'joke'
-        : mode === 'riddle' || mode === 'fortune'
+        : mode === 'riddle' || mode === 'fortune' || mode === 'acrostic'
           ? mode
           : 'joke';
   const kind = roll;
+  if (kind === 'acrostic') {
+    return buildFallbackAcrostic(firstName || 'Star');
+  }
   const options = FALLBACK_PRIZE_SURPRISES[kind];
   const prevCanon = previousText ? canonicalAiSurpriseText(previousText) : '';
   const freshOptions = prevCanon
@@ -460,6 +467,10 @@ function StudentDashboardInner({
 
   const classesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'classes') : null, [firestore, schoolId]);
   const { data: classes } = useCollection<Class>(classesQuery);
+  const studentClassLabel = useMemo(() => {
+    if (!student?.classId || !classes?.length) return 'Unassigned';
+    return classes.find((c) => c.id === student.classId)?.name ?? 'Unassigned';
+  }, [student?.classId, classes]);
 
   const rewardGridRef = useRef<HTMLDivElement>(null);
 
@@ -518,7 +529,7 @@ function StudentDashboardInner({
     prizeIcon?: string;
     quantity: number;
     totalCost: number;
-    aiSurpriseKind?: 'joke' | 'riddle' | 'fortune';
+    aiSurpriseKind?: 'joke' | 'riddle' | 'fortune' | 'acrostic';
     aiSurpriseText?: string;
     aiSurpriseAnswer?: string;
   } | null>(null);
@@ -544,7 +555,8 @@ function StudentDashboardInner({
       setPrizeTicketData(pending);
       return;
     }
-    const kind = s!.kind === 'riddle' || s!.kind === 'fortune' ? s!.kind : 'joke';
+    const kind =
+      s!.kind === 'riddle' || s!.kind === 'fortune' || s!.kind === 'acrostic' ? s!.kind : 'joke';
     setPrizeTicketData({
       ...pending,
       aiSurpriseKind: kind,
@@ -978,61 +990,58 @@ function StudentDashboardInner({
           const apiMode = resolveAiFunApiMode(prize, prize.aiFunReward === 'picker' ? confirmingFunKind : undefined);
           const requestId = aiSurpriseRequestIdRef.current + 1;
           aiSurpriseRequestIdRef.current = requestId;
-          const instantSurprise = fallbackPrizeSurprise(apiMode, prize.name, lastAiSurpriseTextRef.current);
+          const acrosticName = acrosticFirstNameFromStudent(student);
+          const stockKind: AiSurpriseKind =
+            apiMode === 'riddle' || apiMode === 'fortune' || apiMode === 'acrostic'
+              ? apiMode
+              : apiMode === 'joke'
+                ? 'joke'
+                : (['joke', 'riddle', 'fortune', 'acrostic'] as const)[Math.floor(Math.random() * 4)];
+          const instantSurprise = fallbackPrizeSurprise(
+            apiMode,
+            prize.name,
+            lastAiSurpriseTextRef.current,
+            acrosticName,
+          );
           const sessionExtraAvoid = lastAiSurpriseTextRef.current?.trim()
             ? [lastAiSurpriseTextRef.current.trim()]
             : [];
           const ageYears = studentAgeYearsFromBirthday(student?.birthday);
           const ageBand = prizeAiFunAgeBandKey(ageYears);
-          const avoidTexts = buildPrizeAiFunAvoidTexts(
-            schoolId,
-            apiMode,
-            [...sessionExtraAvoid, instantSurprise.text],
-            18,
-            ageBand,
-          );
           lastAiSurpriseTextRef.current = instantSurprise.text;
           setAiSurpriseBody(instantSurprise);
           rememberAiSurprise(schoolId, instantSurprise, ageBand);
-          setAiSurpriseLoading(false);
+          setAiSurpriseLoading(stockKind === 'acrostic');
           setAiSurpriseOpen(true);
           void (async () => {
             const controller = new AbortController();
-            const timeoutId = window.setTimeout(() => controller.abort(), 1200);
+            const timeoutId = window.setTimeout(() => controller.abort(), stockKind === 'acrostic' ? 8000 : 1200);
             try {
-              const res = await authFetch('/api/prize-ai-fun', {
-                method: 'POST',
+              const body = await requestPrizeAiFunSurprise(authFetch, {
+                schoolId,
+                mode: stockKind,
+                ageBand,
+                ageYears,
+                firstName: stockKind === 'acrostic' ? acrosticName : undefined,
+                extraAvoid: [...sessionExtraAvoid, instantSurprise.text],
                 signal: controller.signal,
-                body: JSON.stringify({
-                  schoolId,
-                  mode: apiMode,
-                  avoidTexts,
-                  ...(ageYears != null ? { ageYears } : {}),
-                }),
               });
-              const j = (await res.json()) as { error?: string; kind?: string; text?: string; answer?: string };
-              if (!res.ok) throw new Error(j.error || 'Could not load surprise.');
-              const kind: PrizeSurprise['kind'] =
-                j.kind === 'riddle' || j.kind === 'fortune' ? j.kind : 'joke';
-              const text = typeof j.text === 'string' ? j.text.trim() : '';
-              if (!text || aiSurpriseRequestIdRef.current !== requestId) return;
+              if (!body || aiSurpriseRequestIdRef.current !== requestId) return;
+              const text = body.text.trim();
+              if (!text) return;
               const canonInstant = canonicalAiSurpriseText(instantSurprise.text);
               if (canonicalAiSurpriseText(text) === canonInstant) return;
-              if (isAiSurpriseTextRecentlySeen(schoolId, kind, text, ageBand)) return;
+              if (isAiSurpriseTextRecentlySeen(schoolId, body.kind, text, ageBand)) return;
               lastAiSurpriseTextRef.current = text;
-              const nextBody: PrizeSurprise = {
-                kind,
-                text,
-                answer: kind === 'riddle' && typeof j.answer === 'string' ? j.answer : undefined,
-              };
-              setAiSurpriseBody(nextBody);
-              rememberAiSurprise(schoolId, nextBody, ageBand);
+              setAiSurpriseBody(body);
+              rememberAiSurprise(schoolId, body, ageBand);
             } catch (e: unknown) {
               if ((e as { name?: string })?.name !== 'AbortError') {
                 console.warn('Prize AI surprise unavailable:', e);
               }
             } finally {
               window.clearTimeout(timeoutId);
+              setAiSurpriseLoading(false);
             }
           })();
         }
@@ -1061,7 +1070,7 @@ function StudentDashboardInner({
           aiSurpriseKind: prizeTicketData.aiSurpriseKind ?? 'joke',
           aiSurpriseText: surpriseText,
           aiSurpriseAnswer:
-            (prizeTicketData.aiSurpriseKind ?? 'joke') === 'riddle' && prizeTicketData.aiSurpriseAnswer?.trim()
+            prizeTicketData.aiSurpriseKind === 'riddle' && prizeTicketData.aiSurpriseAnswer?.trim()
               ? prizeTicketData.aiSurpriseAnswer.trim()
               : undefined,
         }
@@ -1448,6 +1457,7 @@ function StudentDashboardInner({
             </div>
           </div>
 
+          <div className="flex shrink-0 items-center gap-2">
           <div
             className={cn(
               'flex shrink-0 items-center gap-3 rounded-2xl border px-4 py-2.5 shadow-lg backdrop-blur-sm sm:gap-5 sm:px-5',
@@ -1514,6 +1524,15 @@ function StudentDashboardInner({
                 </div>
               </>
             ) : null}
+          </div>
+          {schoolId ? (
+            <StudentKioskOptionsMenu
+              schoolId={schoolId}
+              student={student}
+              classLabel={studentClassLabel}
+              themed={!!effectiveTheme}
+            />
+          ) : null}
           </div>
         </header>
 
@@ -2057,6 +2076,7 @@ function StudentDashboardInner({
                         <SelectItem value="joke">Joke</SelectItem>
                         <SelectItem value="riddle">Riddle</SelectItem>
                         <SelectItem value="fortune">Fortune teller</SelectItem>
+                        <SelectItem value="acrostic">Name poem (your first name)</SelectItem>
                         <SelectItem value="random">Surprise me</SelectItem>
                       </SelectContent>
                     </Select>
@@ -2119,18 +2139,25 @@ function StudentDashboardInner({
                       : (AI_SURPRISE_KIND_LABEL[aiSurpriseBody?.kind ?? ''] ?? 'Your surprise')}
                   </DialogTitle>
                   <DialogDescription className="sr-only">
-                    Joke, riddle, or fortune teller line shown after redeeming a prize.
+                    Joke, riddle, fortune teller, or name poem shown after redeeming a prize.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="min-h-[100px] py-1">
                   {aiSurpriseLoading ? (
                     <div className="flex flex-col items-center justify-center gap-3 py-8 text-muted-foreground">
                       <Loader2 className="h-10 w-10 animate-spin" aria-hidden />
-                      <p className="text-sm font-medium">Loading your joke...</p>
+                      <p className="text-sm font-medium">Cooking up something fun…</p>
                     </div>
                   ) : aiSurpriseBody ? (
                     <div className="space-y-4 text-base leading-relaxed">
-                      <p className="font-medium">{aiSurpriseBody.text}</p>
+                      <p
+                        className={cn(
+                          'font-medium',
+                          aiSurpriseBody.kind === 'acrostic' && 'whitespace-pre-line',
+                        )}
+                      >
+                        {aiSurpriseBody.text}
+                      </p>
                       {aiSurpriseBody.kind === 'riddle' && aiSurpriseBody.answer ? (
                         <p className="rounded-lg border border-border bg-muted/80 px-3 py-2 text-sm">
                           <span className="font-semibold text-muted-foreground">Answer: </span>
@@ -2281,6 +2308,7 @@ function StudentDashboardInner({
 export default function StudentLoginPage() {
   const { loginState, isInitialized, schoolId, login, logout, syncStatus } = useAppContext();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const playSound = useArcadeSound();
   const { settings } = useSettings();
@@ -2419,6 +2447,25 @@ export default function StudentLoginPage() {
     },
     [clearStudentTransitionTimers, setActiveStudentId, setLoginMeta],
   );
+
+  const [pendingStudentLogin, setPendingStudentLogin] = useState<{ id: string } | null>(null);
+
+  useEffect(() => {
+    const linkedStudentId = searchParams.get('student')?.trim();
+    if (!linkedStudentId || activeStudentId === linkedStudentId || pendingStudentLogin?.id === linkedStudentId) {
+      return;
+    }
+    setPendingStudentLogin({ id: linkedStudentId });
+  }, [activeStudentId, pendingStudentLogin?.id, searchParams]);
+
+  useEffect(() => {
+    if (!pendingStudentLogin) return;
+    onScannerStudent(pendingStudentLogin.id);
+    setPendingStudentLogin(null);
+    if (schoolId) {
+      router.replace(`/${schoolId}/student`, { scroll: false });
+    }
+  }, [pendingStudentLogin, onScannerStudent, router, schoolId]);
 
   const handleDashboardReady = useCallback((readyStudentId: string) => {
     if (dashboardReadyStudentRef.current === readyStudentId) {

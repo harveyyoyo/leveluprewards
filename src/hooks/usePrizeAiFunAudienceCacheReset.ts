@@ -5,7 +5,7 @@ import { clearPrizeAiFunSchoolClientCache } from '@/lib/prizeAiFunClientStorage'
 import { studentAgeYearsFromBirthday } from '@/lib/studentAiFunAge';
 
 /**
- * Prefetched AI Fun jokes/riddles/fortunes are stored per school + coarse age band.
+ * Prefetched AI Fun jokes/riddles/fortunes (and recent acrostics) are stored per school + coarse age band.
  * Refills are skipped while stock is "full", so a birthday edit can leave stale lines
  * even when the API would use a new exact age. Clear browser cache when the audience signal changes.
  */

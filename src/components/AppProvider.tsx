@@ -111,6 +111,7 @@ interface AppContextType {
   devResetSampleSchool: (schoolId: string) => Promise<void>;
   devSyncSchoolPublicIndex: () => Promise<void>;
   purgeStudentProgress: (studentId: string) => Promise<void>;
+  purgeStudentsProgress: (studentIds: string[]) => Promise<{ success: number; failed: number }>;
   getAttendanceConfig: () => Promise<AttendanceSettings | null>;
   setAttendanceConfig: (settings: AttendanceSettings) => Promise<void>;
   recordClassSignIn: (studentId: string, student: Student, config: AttendanceSettings) => Promise<RecordClassSignInResult>;
@@ -729,6 +730,11 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     return getDb().then((db) => db.purgeStudentProgress(firestore, schoolId, studentId));
   }, [firestore, schoolId]);
 
+  const purgeStudentsProgress_ = useCallback(async (studentIds: string[]) => {
+    if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
+    return getDb().then((db) => db.purgeStudentsProgress(firestore, schoolId, studentIds));
+  }, [firestore, schoolId]);
+
   const getAttendanceConfig_ = useCallback(async () => {
     if (!firestore || !schoolId) return null;
     return getDb().then((db) => db.getAttendanceConfig(firestore, schoolId));
@@ -835,6 +841,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     // Backup
     ...backupCtx,
     purgeStudentProgress: purgeStudentProgress_,
+    purgeStudentsProgress: purgeStudentsProgress_,
     getAttendanceConfig: getAttendanceConfig_,
     setAttendanceConfig: setAttendanceConfig_,
     recordClassSignIn: recordClassSignIn_,
@@ -858,7 +865,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     uploadClassesFromCsv_,
     uploadTeachersFromCsv_,
     togglePrizeFulfillment_,
-    purgeStudentProgress_,
+    purgeStudentProgress_, purgeStudentsProgress_,
     getAttendanceConfig_, setAttendanceConfig_, recordClassSignIn_, listAttendanceLog_,
     getTeacherAttendanceConfig_, setTeacherAttendanceConfig_, listTeacherAttendanceLog_,
     addHomeworkAssignment_, deleteHomeworkAssignment_, submitHomework_, approveHomework_,

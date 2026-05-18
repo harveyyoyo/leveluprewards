@@ -15,7 +15,9 @@ export function getAiFunRewardFromPrizeId(id: string | null | undefined): PrizeA
   if (id === AI_JOKE_PRIZE_ID) return 'joke';
   if (!id.startsWith(AI_FUN_PRIZE_PREFIX)) return null;
   const mode = id.slice(AI_FUN_PRIZE_PREFIX.length);
-  if (mode === 'random' || mode === 'joke' || mode === 'riddle' || mode === 'fortune') return mode;
+  if (mode === 'random' || mode === 'joke' || mode === 'riddle' || mode === 'fortune' || mode === 'acrostic') {
+    return mode;
+  }
   return null;
 }
 
@@ -29,7 +31,7 @@ export function resolveAiFunApiMode(
     const p = userPick && userPick !== 'picker' ? userPick : 'joke';
     return p as PrizeAiFunSurpriseRequestMode;
   }
-  if (ar === 'random' || ar === 'joke' || ar === 'riddle' || ar === 'fortune') return ar;
+  if (ar === 'random' || ar === 'joke' || ar === 'riddle' || ar === 'fortune' || ar === 'acrostic') return ar;
   return 'joke';
 }
 
@@ -118,7 +120,9 @@ export function createAiFunPrize(
         ? 'AI Riddle'
         : aiFunReward === 'fortune'
           ? 'AI Fortune Teller'
-          : 'AI Surprise';
+          : aiFunReward === 'acrostic'
+            ? 'Name Acrostic'
+            : 'AI Surprise';
   return {
     id,
     name,

@@ -41,7 +41,7 @@ const TEACHER_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
       {
         title: 'Manual points',
         checklist: [
-          'Use Manual Add Points for one-off awards without printing.',
+          'Use Manually Add or Deduct Points for one-off awards or deductions without printing.',
         ],
       },
     ],

@@ -30,6 +30,31 @@ LIVE_AUTH_PASSCODE=1234
 
 Override these when testing another deployment or a different canary school.
 
+GitHub deploys also run `npm run test:live-auth` after Firebase Hosting deploys. This keeps the
+full browser login smoke in CI instead of an hourly Codex automation.
+
+## Lightweight Uptime Check
+
+Use the cheap HTTP-only check for recurring monitoring:
+
+```bash
+npm run test:live-uptime
+```
+
+It checks `/api/health`, `/login?school={schoolId}&next=/{schoolId}/portal`, and
+`/{schoolId}/portal` without launching a browser or creating a Firebase Auth user.
+
+The `Production Uptime` GitHub Actions workflow runs this once daily and can also be run
+manually. Override targets with:
+
+```bash
+LIVE_UPTIME_BASE_URL=https://levelupenterprises.education
+LIVE_UPTIME_SCHOOL_ID=yeshiva
+LIVE_UPTIME_PORTAL_MODE=public
+```
+
+Use `LIVE_UPTIME_PORTAL_MODE=strict` only when edge session enforcement is intentionally enabled.
+
 ## Edge Session Enforcement
 
 Production middleware can require an HttpOnly Firebase session cookie before serving `/{school}/...` pages.
