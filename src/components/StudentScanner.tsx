@@ -75,6 +75,42 @@ function getStudentLookupFailure(error: unknown, user: unknown, isUserLoading: b
     };
 }
 
+const STUDENT_LOOKUP_CACHE_TTL_MS = 12 * 60 * 60 * 1000;
+
+function studentLookupCacheKey(schoolId: string, badgeId: string) {
+    return `levelup_student_lookup:${schoolId}:${badgeId}`;
+}
+
+function getCachedStudentLookup(schoolId: string, badgeId: string): string | null {
+    if (typeof window === 'undefined') return null;
+    try {
+        const raw = window.localStorage.getItem(studentLookupCacheKey(schoolId, badgeId));
+        if (!raw) return null;
+        const parsed = JSON.parse(raw) as { studentId?: unknown; cachedAt?: unknown };
+        const studentId = typeof parsed.studentId === 'string' ? parsed.studentId.trim() : '';
+        const cachedAt = typeof parsed.cachedAt === 'number' ? parsed.cachedAt : 0;
+        if (!studentId || Date.now() - cachedAt > STUDENT_LOOKUP_CACHE_TTL_MS) {
+            window.localStorage.removeItem(studentLookupCacheKey(schoolId, badgeId));
+            return null;
+        }
+        return studentId;
+    } catch {
+        return null;
+    }
+}
+
+function cacheStudentLookup(schoolId: string, badgeId: string, studentId: string) {
+    if (typeof window === 'undefined') return;
+    try {
+        window.localStorage.setItem(
+            studentLookupCacheKey(schoolId, badgeId),
+            JSON.stringify({ studentId, cachedAt: Date.now() }),
+        );
+    } catch {
+        // Storage can be unavailable in locked-down browsers; the server lookup still works.
+    }
+}
+
 export function StudentScanner({
     onStudentFound,
     title = "Student Identification",
@@ -414,27 +450,40 @@ export function StudentScanner({
             return lookup({ schoolId, badgeId });
         };
 
+        const acceptStudent = (finalStudentId: string) => {
+            const throttle = getStudentSignInThrottleStatus(
+                schoolId,
+                finalStudentId,
+                throttleConfigRef.current,
+            );
+            if (throttle.frozen && throttle.secondsRemaining > 0) {
+                const remaining = throttle.secondsRemaining;
+                playSound('error');
+                toast({
+                    variant: 'destructive',
+                    title: 'Please Wait',
+                    description: `You just signed in. Try again in ${remaining} second${remaining === 1 ? '' : 's'}.`,
+                });
+                return false;
+            }
+            recordStudentSignIn(schoolId, finalStudentId);
+            playSound('login');
+            onStudentFound(finalStudentId);
+            return true;
+        };
+
+        const cachedStudentId = getCachedStudentLookup(schoolId, badgeId);
+        if (cachedStudentId) {
+            acceptStudent(cachedStudentId);
+            setNfcId('');
+            return;
+        }
+
         const onSuccess = (data: { studentId?: unknown }) => {
             const finalStudentId = typeof data.studentId === 'string' ? data.studentId : null;
             if (finalStudentId) {
-                const throttle = getStudentSignInThrottleStatus(
-                    schoolId,
-                    finalStudentId,
-                    throttleConfigRef.current,
-                );
-                if (throttle.frozen && throttle.secondsRemaining > 0) {
-                    const remaining = throttle.secondsRemaining;
-                    playSound('error');
-                    toast({
-                        variant: 'destructive',
-                        title: 'Please Wait',
-                        description: `You just signed in. Try again in ${remaining} second${remaining === 1 ? '' : 's'}.`,
-                    });
-                    return;
-                }
-                recordStudentSignIn(schoolId, finalStudentId);
-                playSound('login');
-                onStudentFound(finalStudentId);
+                cacheStudentLookup(schoolId, badgeId, finalStudentId);
+                acceptStudent(finalStudentId);
             } else {
                 playSound('error');
                 void (async () => {

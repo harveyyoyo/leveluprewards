@@ -11,6 +11,11 @@ admin.initializeApp();
 const SUBCOLLECTIONS = ["students", "classes", "teachers", "staffAccounts", "categories", "prizes", "coupons"];
 const RETENTION_DAYS = 30;
 const AI_FUN_UNIFIED_PRIZE_ID = "__ai_fun_unified__";
+const HOT_KIOSK_FUNCTION_OPTIONS = {
+  timeoutSeconds: 30,
+  memory: "256MB" as const,
+  minInstances: 1,
+};
 
 // ========================================================================
 // Auth helpers
@@ -1241,33 +1246,41 @@ exports.enterStudentPortalLobby = functions.https.onCall(
 );
 
 /** Callable: kiosk-safe student lookup by badge/card id. */
-exports.lookupStudentByBadge = functions.https.onCall(
+exports.lookupStudentByBadge = functions
+  .runWith(HOT_KIOSK_FUNCTION_OPTIONS)
+  .https.onCall(
   async (data: any, context: functions.https.CallableContext) => {
     requireAuth(context);
     requireString(data.schoolId, "schoolId");
-    requireString(data.badgeId, "badgeId");
     const schoolId = String(data.schoolId).trim().toLowerCase();
-    const badgeId = String(data.badgeId).trim();
 
     if (!(await hasKioskMembershipOrStaff(schoolId, context))) {
       throw new functions.https.HttpsError("permission-denied", "School entry required.");
     }
+    if (data?.warmup === true) {
+      return { warmed: true, studentId: null };
+    }
+
+    requireString(data.badgeId, "badgeId");
+    const badgeId = String(data.badgeId).trim();
     const db = admin.firestore();
 
     const studentsRef = db.collection("schools").doc(schoolId).collection("students");
+    const numericBadgeId = /^\d+$/.test(badgeId) ? Number(badgeId) : null;
 
-    const byDoc = await studentsRef.doc(badgeId).get();
+    const [byDoc, byStr, byNum] = await Promise.all([
+      studentsRef.doc(badgeId).get(),
+      studentsRef.where("nfcId", "==", badgeId).limit(1).get(),
+      numericBadgeId !== null && Number.isFinite(numericBadgeId)
+        ? studentsRef.where("nfcId", "==", numericBadgeId).limit(1).get()
+        : Promise.resolve(null),
+    ]);
     if (byDoc.exists) return { studentId: byDoc.id };
 
-    const byStr = await studentsRef.where("nfcId", "==", badgeId).limit(1).get();
     if (!byStr.empty) return { studentId: byStr.docs[0].id };
 
-    if (/^\d+$/.test(badgeId)) {
-      const asNum = Number(badgeId);
-      if (Number.isFinite(asNum)) {
-        const byNum = await studentsRef.where("nfcId", "==", asNum).limit(1).get();
-        if (!byNum.empty) return { studentId: byNum.docs[0].id };
-      }
+    if (byNum && !byNum.empty) {
+      return { studentId: byNum.docs[0].id };
     }
 
     return { studentId: null };
@@ -1400,20 +1413,32 @@ async function redeemCouponForStudent(
 }
 
 /** Callable: redeem coupon (server-authoritative; kiosk-safe). */
-exports.redeemCouponServer = functions.https.onCall(
+exports.redeemCouponServer = functions
+  .runWith(HOT_KIOSK_FUNCTION_OPTIONS)
+  .https.onCall(
   async (data: any, context: functions.https.CallableContext) => {
     requireAuth(context);
     requireString(data.schoolId, "schoolId");
-    requireString(data.studentId, "studentId");
-    requireString(data.couponCode, "couponCode");
 
     const schoolId = String(data.schoolId).trim().toLowerCase();
-    const studentId = String(data.studentId).trim();
-    const couponCode = String(data.couponCode).trim().toUpperCase();
 
     if (!(await hasKioskMembershipOrStaff(schoolId, context))) {
       throw new functions.https.HttpsError("permission-denied", "School entry required.");
     }
+    if (data?.warmup === true) {
+      return {
+        success: true,
+        message: "Warmed",
+        value: 0,
+        bonusTotal: 0,
+      };
+    }
+
+    requireString(data.studentId, "studentId");
+    requireString(data.couponCode, "couponCode");
+    const studentId = String(data.studentId).trim();
+    const couponCode = String(data.couponCode).trim().toUpperCase();
+
     const db = admin.firestore();
     const result = await redeemCouponForStudent(db, schoolId, studentId, couponCode);
     return {
@@ -1426,14 +1451,27 @@ exports.redeemCouponServer = functions.https.onCall(
 );
 
 /** Callable: kiosk-safe prize redemption with trusted balance + stock updates. */
-exports.redeemPrizeServer = functions.https.onCall(
+exports.redeemPrizeServer = functions
+  .runWith(HOT_KIOSK_FUNCTION_OPTIONS)
+  .https.onCall(
   async (data: any, context: functions.https.CallableContext) => {
     requireAuth(context);
     requireString(data.schoolId, "schoolId");
-    requireString(data.studentId, "studentId");
-    requireString(data.prizeId, "prizeId");
 
     const schoolId = String(data.schoolId).trim().toLowerCase();
+    const db = admin.firestore();
+    if (!(await hasKioskMembershipOrStaff(schoolId, context, ["admin", "teacher", "prizeClerk"]))) {
+      throw new functions.https.HttpsError("permission-denied", "School entry required.");
+    }
+    if (data?.warmup === true) {
+      return {
+        success: true,
+        message: "Warmed",
+      };
+    }
+
+    requireString(data.studentId, "studentId");
+    requireString(data.prizeId, "prizeId");
     const studentId = String(data.studentId).trim();
     const prizeId = String(data.prizeId).trim();
     const rawQuantity = Number(data.quantity ?? 1);
@@ -1443,10 +1481,6 @@ exports.redeemPrizeServer = functions.https.onCall(
       throw new functions.https.HttpsError("invalid-argument", "Quantity must be between 1 and 99.");
     }
 
-    const db = admin.firestore();
-    if (!(await hasKioskMembershipOrStaff(schoolId, context, ["admin", "teacher", "prizeClerk"]))) {
-      throw new functions.https.HttpsError("permission-denied", "School entry required.");
-    }
     const studentRef = db.collection("schools").doc(schoolId).collection("students").doc(studentId);
     const schoolRef = db.collection("schools").doc(schoolId);
     const prizeRef = db.collection("schools").doc(schoolId).collection("prizes").doc(prizeId);

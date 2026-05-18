@@ -5,6 +5,11 @@ const functions = require("firebase-functions/v1");
 const admin = require("firebase-admin");
 const attendanceResolveCore_1 = require("./attendanceResolveCore");
 const schoolDayClock_1 = require("./schoolDayClock");
+const HOT_KIOSK_FUNCTION_OPTIONS = {
+    timeoutSeconds: 30,
+    memory: "256MB",
+    minInstances: 1,
+};
 function requireAuth(context) {
     if (!context.auth) {
         throw new functions.https.HttpsError("unauthenticated", "The function must be called while authenticated.");
@@ -159,21 +164,32 @@ function applyRecordClassSignIn(db, schoolId, studentId, student, config, now) {
         return { pointsAwarded: computedPoints, onTime, periodLabel, reason: "recorded" };
     });
 }
-exports.signInAttendance = functions.https.onCall(async (data, context) => {
+exports.signInAttendance = functions
+    .runWith(HOT_KIOSK_FUNCTION_OPTIONS)
+    .https.onCall(async (data, context) => {
     var _a, _b;
     requireAuth(context);
     const payload = data;
     requireString(payload.schoolId, "schoolId");
-    requireString(payload.studentId, "studentId");
     // Firestore document IDs are case-sensitive; do NOT normalize casing here.
     // The client passes the canonical `schoolId` used for document paths.
     const schoolId = String(payload.schoolId).trim();
-    const studentId = String(payload.studentId).trim();
     const db = admin.firestore();
     const now = Date.now();
     if (!(await hasKioskMembershipOrStaff(schoolId, context.auth.uid))) {
         throw new functions.https.HttpsError("permission-denied", "School entry required.");
     }
+    if (payload.warmup === true) {
+        return {
+            pointsAwarded: 0,
+            onTime: false,
+            periodLabel: null,
+            reason: "warmup",
+            serverTimeMs: now,
+        };
+    }
+    requireString(payload.studentId, "studentId");
+    const studentId = String(payload.studentId).trim();
     try {
         const studentSnap = await db.collection("schools").doc(schoolId).collection("students").doc(studentId).get();
         if (!studentSnap.exists) {

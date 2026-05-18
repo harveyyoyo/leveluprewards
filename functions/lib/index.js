@@ -23,6 +23,11 @@ admin.initializeApp();
 const SUBCOLLECTIONS = ["students", "classes", "teachers", "staffAccounts", "categories", "prizes", "coupons"];
 const RETENTION_DAYS = 30;
 const AI_FUN_UNIFIED_PRIZE_ID = "__ai_fun_unified__";
+const HOT_KIOSK_FUNCTION_OPTIONS = {
+    timeoutSeconds: 30,
+    memory: "256MB",
+    minInstances: 1,
+};
 // ========================================================================
 // Auth helpers
 // ========================================================================
@@ -953,31 +958,76 @@ exports.enterSchoolKioskSession = functions.https.onCall(async (data, context) =
         .set({ createdAt: Date.now(), source: "student-login" }, { merge: true });
     return { success: true };
 });
-/** Callable: kiosk-safe student lookup by badge/card id. */
-exports.lookupStudentByBadge = functions.https.onCall(async (data, context) => {
+/** Callable: register browser for student home portal (lobby gate + API lookups). */
+exports.enterStudentPortalLobby = functions.https.onCall(async (data, context) => {
     requireAuth(context);
     requireString(data.schoolId, "schoolId");
-    requireString(data.badgeId, "badgeId");
     const schoolId = String(data.schoolId).trim().toLowerCase();
-    const badgeId = String(data.badgeId).trim();
+    const db = admin.firestore();
+    let appSettings = {};
+    let active = true;
+    const schoolSnap = await db.collection("schools").doc(schoolId).get();
+    if (schoolSnap.exists) {
+        const schoolData = schoolSnap.data();
+        if (schoolData.active === false)
+            active = false;
+        appSettings = schoolData.appSettings || {};
+    }
+    else {
+        const publicSnap = await db.collection("schoolPublic").doc(schoolId).get();
+        if (!publicSnap.exists) {
+            throw new functions.https.HttpsError("not-found", "School not found.");
+        }
+        const publicData = publicSnap.data();
+        if (publicData.active === false)
+            active = false;
+        appSettings = publicData.appSettings || {};
+    }
+    if (!active) {
+        throw new functions.https.HttpsError("permission-denied", "This school is not active.");
+    }
+    if (appSettings.enableStudentPortal !== true) {
+        throw new functions.https.HttpsError("failed-precondition", "Student home portal is not enabled for this school.");
+    }
+    await db
+        .collection("schools")
+        .doc(schoolId)
+        .collection("studentPortalMembers")
+        .doc(context.auth.uid)
+        .set({ createdAt: Date.now(), source: "student-portal-lobby" }, { merge: true });
+    return { success: true };
+});
+/** Callable: kiosk-safe student lookup by badge/card id. */
+exports.lookupStudentByBadge = functions
+    .runWith(HOT_KIOSK_FUNCTION_OPTIONS)
+    .https.onCall(async (data, context) => {
+    requireAuth(context);
+    requireString(data.schoolId, "schoolId");
+    const schoolId = String(data.schoolId).trim().toLowerCase();
     if (!(await hasKioskMembershipOrStaff(schoolId, context))) {
         throw new functions.https.HttpsError("permission-denied", "School entry required.");
     }
+    if ((data === null || data === void 0 ? void 0 : data.warmup) === true) {
+        return { warmed: true, studentId: null };
+    }
+    requireString(data.badgeId, "badgeId");
+    const badgeId = String(data.badgeId).trim();
     const db = admin.firestore();
     const studentsRef = db.collection("schools").doc(schoolId).collection("students");
-    const byDoc = await studentsRef.doc(badgeId).get();
+    const numericBadgeId = /^\d+$/.test(badgeId) ? Number(badgeId) : null;
+    const [byDoc, byStr, byNum] = await Promise.all([
+        studentsRef.doc(badgeId).get(),
+        studentsRef.where("nfcId", "==", badgeId).limit(1).get(),
+        numericBadgeId !== null && Number.isFinite(numericBadgeId)
+            ? studentsRef.where("nfcId", "==", numericBadgeId).limit(1).get()
+            : Promise.resolve(null),
+    ]);
     if (byDoc.exists)
         return { studentId: byDoc.id };
-    const byStr = await studentsRef.where("nfcId", "==", badgeId).limit(1).get();
     if (!byStr.empty)
         return { studentId: byStr.docs[0].id };
-    if (/^\d+$/.test(badgeId)) {
-        const asNum = Number(badgeId);
-        if (Number.isFinite(asNum)) {
-            const byNum = await studentsRef.where("nfcId", "==", asNum).limit(1).get();
-            if (!byNum.empty)
-                return { studentId: byNum.docs[0].id };
-        }
+    if (byNum && !byNum.empty) {
+        return { studentId: byNum.docs[0].id };
     }
     return { studentId: null };
 });
@@ -1100,17 +1150,27 @@ async function redeemCouponForStudent(db, schoolId, studentId, couponCode) {
     });
 }
 /** Callable: redeem coupon (server-authoritative; kiosk-safe). */
-exports.redeemCouponServer = functions.https.onCall(async (data, context) => {
+exports.redeemCouponServer = functions
+    .runWith(HOT_KIOSK_FUNCTION_OPTIONS)
+    .https.onCall(async (data, context) => {
     requireAuth(context);
     requireString(data.schoolId, "schoolId");
-    requireString(data.studentId, "studentId");
-    requireString(data.couponCode, "couponCode");
     const schoolId = String(data.schoolId).trim().toLowerCase();
-    const studentId = String(data.studentId).trim();
-    const couponCode = String(data.couponCode).trim().toUpperCase();
     if (!(await hasKioskMembershipOrStaff(schoolId, context))) {
         throw new functions.https.HttpsError("permission-denied", "School entry required.");
     }
+    if ((data === null || data === void 0 ? void 0 : data.warmup) === true) {
+        return {
+            success: true,
+            message: "Warmed",
+            value: 0,
+            bonusTotal: 0,
+        };
+    }
+    requireString(data.studentId, "studentId");
+    requireString(data.couponCode, "couponCode");
+    const studentId = String(data.studentId).trim();
+    const couponCode = String(data.couponCode).trim().toUpperCase();
     const db = admin.firestore();
     const result = await redeemCouponForStudent(db, schoolId, studentId, couponCode);
     return {
@@ -1121,13 +1181,25 @@ exports.redeemCouponServer = functions.https.onCall(async (data, context) => {
     };
 });
 /** Callable: kiosk-safe prize redemption with trusted balance + stock updates. */
-exports.redeemPrizeServer = functions.https.onCall(async (data, context) => {
+exports.redeemPrizeServer = functions
+    .runWith(HOT_KIOSK_FUNCTION_OPTIONS)
+    .https.onCall(async (data, context) => {
     var _a;
     requireAuth(context);
     requireString(data.schoolId, "schoolId");
+    const schoolId = String(data.schoolId).trim().toLowerCase();
+    const db = admin.firestore();
+    if (!(await hasKioskMembershipOrStaff(schoolId, context, ["admin", "teacher", "prizeClerk"]))) {
+        throw new functions.https.HttpsError("permission-denied", "School entry required.");
+    }
+    if ((data === null || data === void 0 ? void 0 : data.warmup) === true) {
+        return {
+            success: true,
+            message: "Warmed",
+        };
+    }
     requireString(data.studentId, "studentId");
     requireString(data.prizeId, "prizeId");
-    const schoolId = String(data.schoolId).trim().toLowerCase();
     const studentId = String(data.studentId).trim();
     const prizeId = String(data.prizeId).trim();
     const rawQuantity = Number((_a = data.quantity) !== null && _a !== void 0 ? _a : 1);
@@ -1135,10 +1207,6 @@ exports.redeemPrizeServer = functions.https.onCall(async (data, context) => {
     const markFulfilled = data.markFulfilled === true;
     if (quantity < 1 || quantity > 99) {
         throw new functions.https.HttpsError("invalid-argument", "Quantity must be between 1 and 99.");
-    }
-    const db = admin.firestore();
-    if (!(await hasKioskMembershipOrStaff(schoolId, context, ["admin", "teacher", "prizeClerk"]))) {
-        throw new functions.https.HttpsError("permission-denied", "School entry required.");
     }
     const studentRef = db.collection("schools").doc(schoolId).collection("students").doc(studentId);
     const schoolRef = db.collection("schools").doc(schoolId);

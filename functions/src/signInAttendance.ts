@@ -9,6 +9,12 @@ import {
 } from "./attendanceResolveCore";
 import { getSchoolDayClock } from "./schoolDayClock";
 
+const HOT_KIOSK_FUNCTION_OPTIONS = {
+  timeoutSeconds: 30,
+  memory: "256MB" as const,
+  minInstances: 1,
+};
+
 function requireAuth(context: functions.https.CallableContext): void {
   if (!context.auth) {
     throw new functions.https.HttpsError(
@@ -208,22 +214,34 @@ function applyRecordClassSignIn(
   });
 }
 
-export const signInAttendance = functions.https.onCall(
+export const signInAttendance = functions
+  .runWith(HOT_KIOSK_FUNCTION_OPTIONS)
+  .https.onCall(
   async (data: unknown, context: functions.https.CallableContext) => {
     requireAuth(context);
-    const payload = data as { schoolId?: string; studentId?: string };
+    const payload = data as { schoolId?: string; studentId?: string; warmup?: boolean };
     requireString(payload.schoolId, "schoolId");
-    requireString(payload.studentId, "studentId");
     // Firestore document IDs are case-sensitive; do NOT normalize casing here.
     // The client passes the canonical `schoolId` used for document paths.
     const schoolId = String(payload.schoolId).trim();
-    const studentId = String(payload.studentId).trim();
 
     const db = admin.firestore();
     const now = Date.now();
     if (!(await hasKioskMembershipOrStaff(schoolId, context.auth!.uid))) {
       throw new functions.https.HttpsError("permission-denied", "School entry required.");
     }
+    if (payload.warmup === true) {
+      return {
+        pointsAwarded: 0,
+        onTime: false,
+        periodLabel: null as string | null,
+        reason: "warmup" as const,
+        serverTimeMs: now,
+      };
+    }
+
+    requireString(payload.studentId, "studentId");
+    const studentId = String(payload.studentId).trim();
 
     try {
       const studentSnap = await db.collection("schools").doc(schoolId).collection("students").doc(studentId).get();

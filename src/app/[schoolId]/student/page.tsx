@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { format } from 'date-fns';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useKioskAiFunAndVoucherIdleActive } from '@/hooks/useKioskAiFunAndVoucherIdle';
+import { useKioskBackendWarmup } from '@/hooks/useKioskBackendWarmup';
 import { usePrizeAiFunAudienceCacheReset } from '@/hooks/usePrizeAiFunAudienceCacheReset';
 import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
 import { useSettings } from '@/components/providers/SettingsProvider';
@@ -2285,7 +2286,7 @@ export default function StudentLoginPage() {
   const { settings } = useSettings();
   const isGraphic = settings.graphicMode === 'graphics';
   const animBackdrop = globalAnimatedBackdropActive(settings);
-  const { firestore, auth } = useFirebase();
+  const { firestore, auth, functions } = useFirebase();
   const appConfigDocRef = useMemoFirebase(() => {
     if (!firestore) return null;
     return doc(firestore, 'appConfig', 'global');
@@ -2294,6 +2295,17 @@ export default function StudentLoginPage() {
   const { data: appConfig } = useDoc<{ appLogoUrl?: string }>(appConfigDocRef);
 
   const { activeStudentId, setActiveStudentId, handleDone, loginMeta, setLoginMeta } = useStudentKioskSession();
+
+  useKioskBackendWarmup({
+    enabled:
+      isInitialized &&
+      !!schoolId &&
+      loginState !== 'loggedOut' &&
+      loginState !== 'prizeClerk',
+    firestore,
+    functions,
+    schoolId,
+  });
   
   const [wakeLockStatus, setWakeLockStatus] = useState<'pending' | 'active' | 'unsupported' | 'error'>('pending');
 
