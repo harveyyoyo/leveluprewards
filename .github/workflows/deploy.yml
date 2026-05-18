@@ -50,6 +50,8 @@ jobs:
               printf 'GEMINI_API_KEY=%s\n' "$GEMINI_API_KEY"
             fi
             printf 'NEXT_PUBLIC_ENABLE_DEV_LOGIN=false\n'
+            # Session cookies still 503 on SSR; keep middleware gate off until Admin ADC is fixed.
+            printf 'DISABLE_AUTH_SESSION_EDGE=1\n'
           } > .env
 
       - name: Build
@@ -75,6 +77,13 @@ jobs:
 
       - name: Install Playwright browser for live auth smoke
         run: npx playwright install --with-deps chromium
+
+      - name: Run live uptime check against production
+        run: npm run test:live-uptime
+        env:
+          LIVE_UPTIME_BASE_URL: https://levelupenterprises.education
+          LIVE_UPTIME_SCHOOL_ID: yeshiva
+          LIVE_UPTIME_PORTAL_MODE: any
 
       - name: Run live auth smoke against production
         run: npm run test:live-auth

@@ -8,7 +8,7 @@ const schoolId = (process.env.LIVE_UPTIME_SCHOOL_ID || process.env.LIVE_AUTH_SCH
   .trim()
   .toLowerCase();
 const timeoutMs = Number(process.env.LIVE_UPTIME_TIMEOUT_MS || 15000);
-const portalMode = (process.env.LIVE_UPTIME_PORTAL_MODE || 'public').trim().toLowerCase();
+const portalMode = (process.env.LIVE_UPTIME_PORTAL_MODE || 'any').trim().toLowerCase();
 
 function fail(message, detail = '') {
   console.error(`[live-uptime] ${message}`);

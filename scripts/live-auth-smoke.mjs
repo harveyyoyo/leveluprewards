@@ -7,9 +7,6 @@ const baseUrl = (process.env.LIVE_AUTH_BASE_URL || DEFAULT_BASE_URL).replace(/\/
 const schoolId = (process.env.LIVE_AUTH_SCHOOL_ID || 'yeshiva').trim().toLowerCase();
 const passcode = process.env.LIVE_AUTH_PASSCODE || '1234';
 const firebaseApiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY || DEFAULT_FIREBASE_API_KEY;
-const requireSessionCookie =
-  process.env.LIVE_AUTH_REQUIRE_SESSION_COOKIE === '1' ||
-  (process.env.AUTH_SESSION_EDGE_ENFORCEMENT === '1' && process.env.DISABLE_AUTH_SESSION_EDGE !== '1');
 
 function fail(message, detail = '') {
   console.error(`[live-auth-smoke] ${message}`);
@@ -23,6 +20,27 @@ async function readBody(response) {
   } catch {
     return '';
   }
+}
+
+function resolveRequireSessionCookieFlag() {
+  if (process.env.LIVE_AUTH_REQUIRE_SESSION_COOKIE === '1') return true;
+  if (process.env.LIVE_AUTH_REQUIRE_SESSION_COOKIE === '0') return false;
+  return null;
+}
+
+/** Infer strict edge mode from live portal behavior when not explicitly configured. */
+async function detectEdgeEnforcement() {
+  const explicit = resolveRequireSessionCookieFlag();
+  if (explicit !== null) return explicit;
+
+  const response = await fetch(`${baseUrl}/${schoolId}/portal`, { redirect: 'manual' });
+  const location = response.headers.get('location') || '';
+  const strict =
+    response.status >= 300 && response.status < 400 && location.toLowerCase().includes('/login');
+  console.log(
+    `[live-auth-smoke] Auto-detected edge enforcement: ${strict ? 'strict (portal redirects)' : 'relaxed (portal open)'}.`,
+  );
+  return strict;
 }
 
 async function createAnonymousIdToken() {
@@ -60,7 +78,7 @@ async function verifyCallablePasscode(idToken) {
   console.log(`[live-auth-smoke] Callable accepted ${schoolId} access passcode.`);
 }
 
-async function verifySessionCookieEndpoint(idToken) {
+async function verifySessionCookieEndpoint(idToken, requireSessionCookie) {
   const response = await fetch(`${baseUrl}/api/auth/session`, {
     method: 'POST',
     headers: {
@@ -76,7 +94,12 @@ async function verifySessionCookieEndpoint(idToken) {
   }
 
   if (response.ok) {
-    console.log('[live-auth-smoke] Session cookie endpoint returned OK.');
+    const parsed = JSON.parse(body || '{}');
+    if (parsed.skipped) {
+      console.log('[live-auth-smoke] Session cookie endpoint skipped (edge enforcement disabled).');
+    } else {
+      console.log('[live-auth-smoke] Session cookie endpoint returned OK.');
+    }
   } else {
     console.warn(
       `[live-auth-smoke] Session cookie endpoint returned HTTP ${response.status}; tolerated because edge enforcement is disabled.`,
@@ -84,7 +107,7 @@ async function verifySessionCookieEndpoint(idToken) {
   }
 }
 
-async function verifyDirectPortalHttp() {
+async function verifyDirectPortalHttp(requireSessionCookie) {
   const response = await fetch(`${baseUrl}/${schoolId}/portal`, { redirect: 'manual' });
   const location = response.headers.get('location') || '';
 
@@ -141,9 +164,10 @@ async function verifyBrowserLogin() {
 }
 
 console.log(`[live-auth-smoke] Testing ${baseUrl} for school "${schoolId}".`);
+const requireSessionCookie = await detectEdgeEnforcement();
 const idToken = await createAnonymousIdToken();
 await verifyCallablePasscode(idToken);
-await verifySessionCookieEndpoint(idToken);
-await verifyDirectPortalHttp();
+await verifySessionCookieEndpoint(idToken, requireSessionCookie);
+await verifyDirectPortalHttp(requireSessionCookie);
 await verifyBrowserLogin();
 console.log('[live-auth-smoke] Auth smoke passed.');

@@ -20,4 +20,8 @@ This rule defines general requirements and standards for the application UI and 
 ## Deployment & Stability
 - **Pre-Deployment Check**: Before any deployment, the site must be verified to be working well.
 - **Login Verification**: Specifically ensure that account login functionality (School, Student, Teacher, Admin) is fully operational.
+- **Post-Deploy Verification (required)**: After every push to `main` / deploy, verify production before reporting success:
+  - `npm run test:live-uptime` (health, login shell, portal reachability)
+  - `npm run test:live-auth` (callable passcode + browser login to `/{school}/portal`)
+  - Confirm the GitHub Actions deploy workflow for the commit concluded **success** (not only that the push succeeded).
 - **Notes**: Refer to `.agent/knowledge/deployment.md` for the full pre-deployment checklist.
