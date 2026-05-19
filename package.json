@@ -32,7 +32,9 @@
     "backup:code": "node scripts/backup-code.mjs",
     "generate:legal-pdfs": "node scripts/generate-legal-pdfs.mjs",
     "generate:legal-pdfs:text": "node scripts/generate-legal-pdfs-from-text.mjs",
-    "generate:flyer-pdf": "node scripts/generate-flyer-pdf.mjs"
+    "generate:flyer-pdf": "node scripts/generate-flyer-pdf.mjs",
+    "capture:walkthrough": "node scripts/capture-walkthrough-videos.mjs",
+    "nanobanana:ppt": "cd tools/NanoBanana-PPT-Skills && venv\\Scripts\\python.exe generate_ppt.py"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

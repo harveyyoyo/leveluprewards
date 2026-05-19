@@ -1361,6 +1361,7 @@ function AdminDashboardInner() {
         status: 'available',
         checkedOutTo: null,
         checkedOutAt: null,
+        createdAt: Date.now(),
         addedBy: 'Admin',
       });
     }
@@ -1387,14 +1388,21 @@ function AdminDashboardInner() {
 
   const handleReturnLibraryItem = async (itemId: string) => {
     if (!firestore || !schoolId) return;
-    if (await confirm({ title: 'Force Return Item?', description: 'This will forcefully check the item back in. Proceed?' })) {
-      updateDoc(doc(firestore, 'schools', schoolId, 'library', itemId), {
-        status: 'available',
-        checkedOutTo: null,
-        checkedOutAt: null
+    const item = library?.find((i) => i.id === itemId);
+    if (!item) return;
+    if (await confirm({ title: 'Force Return Item?', description: 'This will check the item back in and apply any late/on-time library points. Proceed?' })) {
+      const { forceReturnLibraryItem } = await import('@/lib/libraryOperations');
+      const { getLibraryPolicyFromSettings } = await import('@/lib/libraryPolicy');
+      const policy = getLibraryPolicyFromSettings(settings, categories);
+      const res = await forceReturnLibraryItem(firestore, schoolId, item, {
+        policy,
+        functions,
       });
       playSound('success');
-      toast({ title: 'Item Returned', description: 'The item is now available.' });
+      toast({
+        title: 'Item Returned',
+        description: res.message || 'The item is now available.',
+      });
     }
   };
 
@@ -1941,11 +1949,14 @@ function AdminDashboardInner() {
           <TabsContent value="library" className={fittedAdminTabClassName}>
             <AdminLibraryTab
               libraryItems={library}
+              categories={categories}
               getStudentName={getStudentName}
               onAddLibraryItem={handleAddLibraryItem}
               onEditLibraryItem={handleEditLibraryItem}
               onDeleteLibraryItem={handleDeleteLibraryItem}
               onReturnLibraryItem={handleReturnLibraryItem}
+              onRegisterFromScan={handleSaveLibraryItem}
+              upcTaken={(upc) => libraryUpcTaken(upc)}
             />
           </TabsContent>
 

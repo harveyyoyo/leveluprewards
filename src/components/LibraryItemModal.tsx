@@ -122,7 +122,7 @@ export function LibraryItemModal({
         <DialogHeader className="border-b px-6 pb-4 pt-6">
           <DialogTitle>{isEditing ? 'Edit library item' : 'Add library item'}</DialogTitle>
           <DialogDescription>
-            Students scan the barcode on the portal to check out or return. Print stickers after saving.
+            Use a LIB barcode for school copies, or scan ISBN on the intake camera to auto-fill. Students check out by scanning their card, then the book.
           </DialogDescription>
         </DialogHeader>
         <div className="flex-1 overflow-y-auto px-6 py-4">

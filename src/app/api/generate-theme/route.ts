@@ -4,6 +4,11 @@ import OpenAI from 'openai';
 import { guardAiRoute } from '@/lib/apiAuth';
 import { normalizeStudentTheme } from '@/lib/themeContrast';
 import { LEVELUP_BRAND_PRIMARY_HEX } from '@/lib/appBranding';
+import {
+    geminiModelAttemptOrder,
+    isLlmProviderFailure,
+    userFacingLlmError,
+} from '@/lib/server/llmProviderErrors';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 const defaultOpenAI = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || '' });
@@ -85,6 +90,70 @@ function sanitizeTheme(raw: unknown): ThemeResponse | null {
     };
 }
 
+async function generateThemeWithOpenAi(
+    prompt: string,
+    systemInstruction: string,
+    model: string,
+): Promise<string> {
+    const effectiveKey = process.env.OPENAI_API_KEY;
+    if (!effectiveKey) {
+        throw new Error('OpenAI API key configuration error (Server)');
+    }
+
+    const response = await defaultOpenAI.chat.completions.create({
+        model: model as 'gpt-4o-mini',
+        response_format: { type: 'json_object' },
+        messages: [
+            { role: 'system', content: systemInstruction },
+            { role: 'user', content: `Generate a theme for this prompt: "${prompt}"` },
+        ],
+    });
+    return response.choices[0].message.content || '';
+}
+
+async function generateThemeWithGemini(
+    prompt: string,
+    systemInstruction: string,
+    selectedModel: string,
+): Promise<string> {
+    const effectiveKey = process.env.GEMINI_API_KEY;
+    if (!effectiveKey) {
+        throw new Error('API key configuration error');
+    }
+
+    const userMessage = `Generate a theme for this prompt: "${prompt}"`;
+    let lastError: unknown;
+
+    for (const modelName of geminiModelAttemptOrder(selectedModel)) {
+        try {
+            const activeModel = genAI.getGenerativeModel({
+                model: modelName,
+                generationConfig: {
+                    responseMimeType: 'application/json',
+                },
+                systemInstruction,
+            });
+            const result = await activeModel.generateContent(userMessage);
+            const text = result.response.text();
+            if (modelName !== selectedModel) {
+                console.warn(
+                    `generate-theme: used ${modelName} after ${selectedModel} failed`,
+                );
+            }
+            return text;
+        } catch (e) {
+            lastError = e;
+            if (!isLlmProviderFailure(e)) throw e;
+            console.warn(
+                `generate-theme: Gemini model ${modelName} failed:`,
+                e instanceof Error ? e.message.slice(0, 160) : e,
+            );
+        }
+    }
+
+    throw lastError ?? new Error('Gemini theme generation failed');
+}
+
 export async function POST(req: NextRequest) {
     try {
         const guarded = await guardAiRoute(req, { requireSchoolStaff: true, maxRequests: 12 });
@@ -121,38 +190,27 @@ Required schema:
         let responseText = '';
 
         if (selectedModel.startsWith('gpt')) {
-            const effectiveKey = process.env.OPENAI_API_KEY;
-            if (!effectiveKey) {
-                return NextResponse.json({ error: 'OpenAI API key configuration error (Server)' }, { status: 500 });
-            }
-
-            const response = await defaultOpenAI.chat.completions.create({
-                model: selectedModel as any,
-                response_format: { type: 'json_object' },
-                messages: [
-                    { role: 'system', content: systemInstruction },
-                    { role: 'user', content: `Generate a theme for this prompt: "${prompt}"` }
-                ]
-            });
-            responseText = response.choices[0].message.content || '';
+            responseText = await generateThemeWithOpenAi(prompt, systemInstruction, selectedModel);
         } else {
-            const effectiveKey = process.env.GEMINI_API_KEY;
-
-            if (!effectiveKey) {
-                console.error('GEMINI_API_KEY is missing from environment variables (Server)');
-                return NextResponse.json({ error: 'API key configuration error' }, { status: 500 });
+            try {
+                responseText = await generateThemeWithGemini(prompt, systemInstruction, selectedModel);
+            } catch (geminiError) {
+                if (process.env.OPENAI_API_KEY && isLlmProviderFailure(geminiError)) {
+                    console.warn(
+                        'generate-theme: all Gemini models failed; falling back to gpt-4o-mini.',
+                    );
+                    responseText = await generateThemeWithOpenAi(
+                        prompt,
+                        systemInstruction,
+                        'gpt-4o-mini',
+                    );
+                } else if (!process.env.GEMINI_API_KEY) {
+                    console.error('GEMINI_API_KEY is missing from environment variables (Server)');
+                    return NextResponse.json({ error: 'API key configuration error' }, { status: 500 });
+                } else {
+                    throw geminiError;
+                }
             }
-
-            const activeModel = genAI.getGenerativeModel({
-                model: selectedModel,
-                generationConfig: {
-                    responseMimeType: 'application/json',
-                },
-                systemInstruction,
-            });
-
-            const result = await activeModel.generateContent(`Generate a theme for this prompt: "${prompt}"`);
-            responseText = result.response.text();
         }
 
 
@@ -174,10 +232,9 @@ Required schema:
 
     } catch (error) {
         console.error('Error in /api/generate-theme:', error);
-        const message =
-            error instanceof Error
-                ? error.message.slice(0, 240) || 'Failed to generate theme'
-                : 'Failed to generate theme';
-        return NextResponse.json({ error: message }, { status: 500 });
+        return NextResponse.json(
+            { error: userFacingLlmError(error) },
+            { status: 500 },
+        );
     }
 }

@@ -3,19 +3,21 @@
 import { useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import type { LibraryItem } from '@/lib/types';
+import type { LibraryLabelFormat } from '@/lib/libraryScanCode';
 import { LibraryBarcodeSticker } from './LibraryBarcodeSticker';
 import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 
 interface LibraryBarcodePrintSheetProps {
   items: LibraryItem[];
+  format?: LibraryLabelFormat;
   schoolId: string | null;
   onReady: () => void;
 }
 
 const STICKERS_PER_PAGE = 30;
 
-export function LibraryBarcodePrintSheet({ items, schoolId, onReady }: LibraryBarcodePrintSheetProps) {
+export function LibraryBarcodePrintSheet({ items, format = 'sticker', schoolId, onReady }: LibraryBarcodePrintSheetProps) {
   const firestore = useFirestore();
   const schoolDocRef = useMemoFirebase(
     () => (firestore && schoolId ? doc(firestore, 'schools', schoolId) : null),
@@ -48,11 +50,11 @@ export function LibraryBarcodePrintSheet({ items, schoolId, onReady }: LibraryBa
   const schoolName = schoolData?.name?.trim() || (schoolId ? schoolId.replace(/_/g, ' ') : 'School');
 
   const sheet = (
-    <div id="library-barcode-print-wrapper">
+    <div id="library-barcode-print-wrapper" data-label-format={format}>
       {pages.map((chunk, pageIndex) => (
         <div key={pageIndex} className="library-barcode-print-page">
           {chunk.map((item) => (
-            <LibraryBarcodeSticker key={item.id} item={item} schoolName={schoolName} />
+            <LibraryBarcodeSticker key={item.id} item={item} schoolName={schoolName} format={format} />
           ))}
         </div>
       ))}

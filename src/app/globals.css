@@ -103,35 +103,157 @@
   .lovable-tab-content[data-state='active'],
   .lovable-tab-trigger[data-state='active'],
   .student-kiosk-transition-card,
-  .student-kiosk-transition-ring {
+  .student-kiosk-transition-ring,
+  .student-kiosk-warm-aurora,
+  .student-kiosk-scan-beam,
+  .rk-dot,
+  .rk-rise,
+  .rk-title {
     animation: none !important;
     transform: none !important;
     filter: none !important;
   }
 }
 
+/* Student kiosk redeem — warm OKLCH kiosk aesthetic (default / unthemed) */
+@keyframes rk-aurora {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(20px, -15px) scale(1.08);
+  }
+}
+
+@keyframes rk-shimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes rk-scan {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(1100%);
+  }
+}
+
+@keyframes rk-pulse {
+  0%,
+  100% {
+    opacity: 0.65;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+
+@keyframes rk-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.student-kiosk-warm-shell {
+  color: oklch(0.28 0.08 0);
+  background:
+    radial-gradient(1200px 700px at 10% -10%, oklch(0.94 0.06 10), transparent 60%),
+    radial-gradient(900px 600px at 110% 10%, oklch(0.94 0.06 350), transparent 60%),
+    radial-gradient(900px 600px at 50% 110%, oklch(0.96 0.04 20), transparent 60%),
+    linear-gradient(180deg, oklch(0.985 0.01 10), oklch(0.97 0.03 10));
+}
+
+.student-kiosk-warm-grid {
+  background-image:
+    linear-gradient(oklch(0.5 0.1 10 / 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, oklch(0.5 0.1 10 / 0.05) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse at center, black 25%, transparent 80%);
+}
+
+.student-kiosk-warm-aurora {
+  animation: rk-aurora 12s ease-in-out infinite;
+}
+
+.student-kiosk-warm-aurora-reverse {
+  animation: rk-aurora 14s ease-in-out infinite reverse;
+}
+
+.student-kiosk-scan-beam {
+  animation: rk-scan 2.4s linear infinite;
+}
+
+.rk-title {
+  background: linear-gradient(
+    110deg,
+    oklch(0.5 0.22 10) 0%,
+    oklch(0.55 0.22 350) 55%,
+    oklch(0.5 0.22 20) 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: rk-shimmer 8s ease-in-out infinite;
+}
+
+.rk-rise {
+  animation: rk-rise 0.6s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+.rk-dot {
+  animation: rk-pulse 1.6s ease-in-out infinite;
+}
+
+.student-kiosk-gradient-brand {
+  background: linear-gradient(135deg, oklch(0.6 0.22 10), oklch(0.6 0.22 350));
+}
+
+.student-kiosk-gradient-text {
+  background: linear-gradient(90deg, oklch(0.5 0.22 10), oklch(0.55 0.22 350));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
 @layer base {
   :root {
-    --background: 210 20% 98%;
+    --background: 218 55% 93%;
     --foreground: 222 47% 11%;
-    --card: 0 0% 100%;
+    --card: 214 40% 98%;
     --card-foreground: 222 47% 11%;
-    --popover: 0 0% 100%;
+    --popover: 214 40% 98%;
     --popover-foreground: 222 47% 11%;
     /* LevelUp logo arrow (oklch 0.28 0.06 252) — see LEVELUP_BRAND_PRIMARY_HEX */
     --primary: 211 62% 17%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 210 20% 96%;
-    --secondary-foreground: 222 47% 11%;
-    --muted: 210 20% 96%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 20% 96%;
-    --accent-foreground: 222 47% 11%;
+    --secondary: 214 45% 88%;
+    --secondary-foreground: 211 45% 22%;
+    --muted: 214 38% 90%;
+    --muted-foreground: 215 24% 34%;
+    --accent: 211 58% 88%;
+    --accent-foreground: 211 52% 22%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 211 62% 17%;
+    --border: 214 36% 82%;
+    --input: 214 36% 82%;
+    --ring: 199 80% 40%;
     --chart-1: 220 70% 50%;
     --chart-2: 340 80% 60%;
     --chart-3: 40 90% 60%;
@@ -265,7 +387,78 @@
   }
 }
 
+/* Portal hub — layered neutral depth + per-card accent tint (set --portal-accent on .group) */
+.portal-choose-card {
+  box-shadow:
+    0 1px 2px hsl(222 47% 11% / 0.06),
+    0 4px 12px hsl(222 47% 11% / 0.07),
+    0 12px 28px hsl(222 47% 11% / 0.09),
+    0 18px 42px color-mix(in srgb, var(--portal-accent, hsl(var(--primary))) 18%, transparent);
+}
+
+.group:hover .portal-choose-card,
+.group:focus-visible .portal-choose-card {
+  box-shadow:
+    0 2px 4px hsl(222 47% 11% / 0.07),
+    0 10px 24px hsl(222 47% 11% / 0.11),
+    0 22px 48px hsl(222 47% 11% / 0.13),
+    0 28px 60px color-mix(in srgb, var(--portal-accent, hsl(var(--primary))) 26%, transparent);
+}
+
+.portal-choose-icon {
+  box-shadow:
+    0 2px 6px hsl(222 47% 11% / 0.22),
+    0 8px 22px color-mix(in srgb, var(--portal-accent, hsl(var(--primary))) 38%, transparent);
+}
+
+.portal-choose-title-depth {
+  text-shadow:
+    0 2px 18px hsl(var(--primary) / 0.2),
+    0 1px 3px hsl(222 47% 11% / 0.14);
+}
+
 /* Color Schemes for both Light & Dark Mode */
+[data-color-scheme="default"] {
+  --primary: 211 62% 17%;
+  --primary-foreground: 0 0% 100%;
+  --background: 218 55% 93%;
+  --foreground: 222 47% 11%;
+  --card: 214 40% 98%;
+  --card-foreground: 222 47% 11%;
+  --popover: 214 40% 98%;
+  --popover-foreground: 222 47% 11%;
+  --accent: 211 58% 88%;
+  --accent-foreground: 211 52% 22%;
+  --secondary: 214 45% 86%;
+  --secondary-foreground: 211 45% 22%;
+  --border: 214 36% 80%;
+  --muted: 214 38% 90%;
+  --muted-foreground: 215 24% 34%;
+  --input: 214 36% 80%;
+  --ring: 199 80% 40%;
+  --chart-1: 211 62% 28%;
+  --chart-2: 199 89% 48%;
+  --chart-3: 217 64% 40%;
+  --chart-4: 160 65% 42%;
+  --chart-5: 280 62% 55%;
+}
+
+html[data-color-scheme="default"] body {
+  background-color: hsl(var(--background));
+  background-image:
+    radial-gradient(ellipse 125% 90% at 8% -12%, hsl(var(--primary) / 0.16) 0%, transparent 52%),
+    radial-gradient(ellipse 110% 85% at 96% 6%, hsl(var(--chart-2) / 0.14) 0%, transparent 48%),
+    radial-gradient(ellipse 100% 75% at 50% 108%, hsl(var(--chart-3) / 0.12) 0%, transparent 54%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-color-scheme="default"] body {
+    background-attachment: scroll;
+  }
+}
+
 [data-color-scheme="sky"] {
   --primary: 199 89% 48%;
   --primary-foreground: 222 47% 11%;
@@ -442,6 +635,27 @@
 }
 
 /* Dark mode variations for themes */
+.dark[data-color-scheme="default"] {
+  --background: 220 45% 7%;
+  --card: 222 47% 11%;
+  --card-foreground: 210 40% 98%;
+  --border: 217 38% 22%;
+  --muted: 217 34% 14%;
+  --muted-foreground: 215 24% 72%;
+  --primary: 211 58% 42%;
+  --primary-foreground: 210 40% 98%;
+  --accent: 211 40% 18%;
+  --accent-foreground: 211 85% 88%;
+  --secondary: 217 38% 18%;
+  --secondary-foreground: 210 40% 96%;
+  --ring: 199 75% 48%;
+  --chart-1: 211 58% 52%;
+  --chart-2: 199 89% 48%;
+  --chart-3: 217 64% 48%;
+  --chart-4: 160 65% 46%;
+  --chart-5: 280 62% 58%;
+}
+
 .dark[data-color-scheme="sky"] {
   --background: 199 80% 5%;
   --card: 222 47% 11%;
@@ -1789,6 +2003,28 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
   .library-barcode-sticker-upc {
     margin: 0;
     line-height: 1;
+  }
+
+  .library-barcode-sticker--spine {
+    width: 0.55in !important;
+    height: 1.25in !important;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    padding: 2mm !important;
+  }
+
+  .library-barcode-sticker--spine .library-barcode-sticker-code {
+    font-size: 11pt !important;
+  }
+
+  .library-barcode-sticker--pocket {
+    width: 2.75in !important;
+    height: 1.75in !important;
+    padding: 3mm !important;
+  }
+
+  .library-barcode-sticker--pocket .library-barcode-sticker-title {
+    font-size: 11pt !important;
   }
 
   body.id-card-printing #student-id-print-wrapper .print-prize-id-card.print-id-card {

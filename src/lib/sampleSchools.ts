@@ -11,4 +11,4 @@ export function isPublicSampleSchoolId(id: string | null | undefined): boolean {
 }
 
 /** Demo schools should log in like any other school (matches seeded access passcode). */
-export const SAMPLE_SCHOOL_ACCESS_PASSCODE = '911';
+export const SAMPLE_SCHOOL_ACCESS_PASSCODE = '1234';

@@ -2,7 +2,9 @@ import { chromium } from '@playwright/test';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 const DEMO_SCHOOL_ID = (process.env.DEMO_SCHOOL_ID || 'schoolabc').trim().toLowerCase();
-const DEMO_SCHOOL_PASSCODE = (process.env.DEMO_SCHOOL_PASSCODE || '911').trim();
+const DEMO_SCHOOL_PASSCODE = (
+  process.env.DEMO_SCHOOL_PASSCODE || process.env.DEV_PASSCODE || '1234'
+).trim();
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));

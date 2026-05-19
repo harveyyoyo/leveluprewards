@@ -32,6 +32,7 @@ const FEATURE_REQUIRES_PILLAR: Partial<Record<string, ProductPillarKey>> = {
 };
 
 export function pillarRequiredForFeature(key: string): ProductPillarKey | undefined {
+  if (key.startsWith('library')) return 'payLibrary';
   return FEATURE_REQUIRES_PILLAR[key];
 }
 

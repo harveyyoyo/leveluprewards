@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   canonicalPortalRedirectUrl,
+  isLocalDevHost,
   isPortalHostname,
   portalHostRedirectPath,
 } from './portalRouting';
@@ -27,6 +28,28 @@ describe('portal routing', () => {
     expect(portalHostRedirectPath('/portal')).toBeNull();
     expect(portalHostRedirectPath('/login')).toBeNull();
     expect(portalHostRedirectPath('/api/health')).toBeNull();
+  });
+
+  it('does not canonicalize localhost away to production', () => {
+    const previous = process.env.PORTAL_CANONICAL_HOST;
+    process.env.PORTAL_CANONICAL_HOST = 'portal.leveluprewards.app';
+    try {
+      expect(isLocalDevHost('localhost:3000')).toBe(true);
+      expect(isLocalDevHost('127.0.0.1:3000')).toBe(true);
+      expect(isLocalDevHost('portal.localhost:3000')).toBe(true);
+      expect(
+        canonicalPortalRedirectUrl('/login', '', 'localhost:3000', 'http:'),
+      ).toBeNull();
+      expect(
+        canonicalPortalRedirectUrl('/portal', '', '127.0.0.1:3000', 'http:'),
+      ).toBeNull();
+    } finally {
+      if (previous === undefined) {
+        delete process.env.PORTAL_CANONICAL_HOST;
+      } else {
+        process.env.PORTAL_CANONICAL_HOST = previous;
+      }
+    }
   });
 
   it('canonicalizes portal entry points when a canonical host is configured', () => {

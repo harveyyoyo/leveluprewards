@@ -235,7 +235,7 @@ export function StaffAiHelpButton() {
         <Button
           type="button"
           size="lg"
-          className="h-12 w-12 rounded-full shadow-lg border border-primary/20 bg-primary text-primary-foreground hover:bg-primary/90"
+          className="h-12 w-12 rounded-full border border-primary/20 bg-primary text-primary-foreground shadow-[0_4px_14px_hsl(var(--primary)/0.35),0_8px_28px_hsl(222_47%_11%/0.18)] hover:bg-primary/90 hover:shadow-[0_6px_18px_hsl(var(--primary)/0.42),0_12px_32px_hsl(222_47%_11%/0.22)]"
           onClick={() => setOpen(true)}
           aria-label="Open help and support"
         >

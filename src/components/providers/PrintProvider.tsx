@@ -10,6 +10,7 @@ import React, {
 } from 'react';
 import dynamic from 'next/dynamic';
 import type { Coupon, Student, Class, Prize, LibraryItem } from '@/lib/types';
+import type { LibraryLabelFormat } from '@/lib/libraryScanCode';
 import type { PrizeRedeemTicket } from '@/components/PrizeRedeemTicketPrintSheet';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useAuth } from './AuthProvider';
@@ -60,7 +61,7 @@ interface PrintContextType {
     setStudentsToPrint: (data: { students: Student[]; classes: Class[]; printerType?: 'dtc4500e' }) => void;
     printPrizeTickets: (tickets: PrizeRedeemTicket[]) => void;
     setPrizeIdCardsToPrint: (data: { prizes: Prize[]; printerType?: 'dtc4500e' }) => void;
-    setLibraryStickersToPrint: (items: LibraryItem[]) => void;
+    setLibraryStickersToPrint: (items: LibraryItem[], options?: { format?: LibraryLabelFormat }) => void;
 }
 
 const PrintContext = createContext<PrintContextType | null>(null);
@@ -84,7 +85,7 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
     const [printData, setPrintData] = useState<{ students: Student[]; classes: Class[]; printerType?: 'dtc4500e' } | null>(null);
     const [prizeTicketsToPrint, setPrizeTicketsToPrint] = useState<PrizeRedeemTicket[]>([]);
     const [prizeIdPrintData, setPrizeIdPrintData] = useState<{ prizes: Prize[]; printerType?: 'dtc4500e' } | null>(null);
-    const [libraryStickersToPrint, setLibraryStickersToPrint] = useState<LibraryItem[]>([]);
+    const [libraryPrintJob, setLibraryPrintJob] = useState<{ items: LibraryItem[]; format: LibraryLabelFormat } | null>(null);
     const { settings } = useSettings();
     const prizeVoucherPaperFormat: PrizeVoucherPaperFormat =
         settings.prizeVoucherPaperFormat === 'thermal_80mm' ? 'thermal_80mm' : 'label_50x70';
@@ -186,10 +187,10 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
 
     const libraryPrintTriggered = useRef(false);
     const triggerLibraryStickerPrint = React.useCallback(() => {
-        if (libraryStickersToPrint.length > 0 && !libraryPrintTriggered.current) {
+        if (libraryPrintJob && libraryPrintJob.items.length > 0 && !libraryPrintTriggered.current) {
             libraryPrintTriggered.current = true;
             const afterPrint = () => {
-                setLibraryStickersToPrint([]);
+                setLibraryPrintJob(null);
                 libraryPrintTriggered.current = false;
                 window.removeEventListener('afterprint', afterPrint);
             };
@@ -201,7 +202,7 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
                 });
             });
         }
-    }, [libraryStickersToPrint, playSound]);
+    }, [libraryPrintJob, playSound]);
 
     const value = useMemo(
         () => ({ 
@@ -211,7 +212,9 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
             setStudentsToPrint: setPrintData,
             printPrizeTickets: setPrizeTicketsToPrint,
             setPrizeIdCardsToPrint: setPrizeIdPrintData,
-            setLibraryStickersToPrint,
+            setLibraryStickersToPrint: (items: LibraryItem[], options?: { format?: LibraryLabelFormat }) => {
+                setLibraryPrintJob({ items, format: options?.format ?? 'sticker' });
+            },
         }),
         []
     );
@@ -244,9 +247,10 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
             {prizeIdPrintData && prizeIdPrintData.prizes.length > 0 && prizeIdPrintData.printerType === 'dtc4500e' && (
                 <PrizeIdDTCPrintSheet prizes={prizeIdPrintData.prizes} schoolId={schoolId} onReady={triggerPrizeIdPrint} />
             )}
-            {libraryStickersToPrint.length > 0 && (
+            {libraryPrintJob && libraryPrintJob.items.length > 0 && (
                 <LibraryBarcodePrintSheet
-                    items={libraryStickersToPrint}
+                    items={libraryPrintJob.items}
+                    format={libraryPrintJob.format}
                     schoolId={schoolId}
                     onReady={triggerLibraryStickerPrint}
                 />

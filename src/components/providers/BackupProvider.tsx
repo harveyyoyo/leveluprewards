@@ -27,6 +27,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import type { HistoryItem, Student } from '@/lib/types';
 import { DEFAULT_PLAN } from '@/lib/plans';
+import { SAMPLE_SCHOOL_ACCESS_PASSCODE } from '@/lib/sampleSchools';
 
 interface BackupContextType {
     createSchool: (schoolId: string, name?: string, passcodes?: SchoolPasscodeUpdates) => Promise<CreateSchoolResult | null>;
@@ -231,11 +232,11 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
         let schoolData: Record<string, any>, newPasscode: string;
         if (cleanId === 'yeshiva') {
             const { YESHIVA_DATA } = await import('@/lib/yeshivaData');
-            newPasscode = '911';
+            newPasscode = SAMPLE_SCHOOL_ACCESS_PASSCODE;
             schoolData = YESHIVA_DATA;
         } else {
             const { SCHOOL_DATA } = await import('@/lib/schoolData');
-            newPasscode = '911';
+            newPasscode = SAMPLE_SCHOOL_ACCESS_PASSCODE;
             schoolData = SCHOOL_DATA;
         }
 

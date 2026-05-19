@@ -69,6 +69,18 @@ function isSchoolIdSegment(segment: string): boolean {
   return SCHOOL_ID_RE.test(segment) && !RESERVED_PORTAL_SEGMENTS.has(lower);
 }
 
+/** Local dev hosts should never be canonicalized away to production portal URLs. */
+export function isLocalDevHost(rawHost: string | null | undefined): boolean {
+  const host = normalizeHost(rawHost);
+  if (!host) return false;
+  return (
+    host === 'localhost' ||
+    host.endsWith('.localhost') ||
+    host === '[::1]' ||
+    host.startsWith('127.')
+  );
+}
+
 export function portalHostRedirectPath(pathname: string): string | null {
   const parts = pathname.split('/').filter(Boolean);
   if (parts.length === 0) return '/portal';
@@ -95,6 +107,7 @@ export function canonicalPortalRedirectUrl(
 ): URL | null {
   const targetHost = canonicalPortalHost();
   if (!targetHost) return null;
+  if (isLocalDevHost(rawCurrentHost)) return null;
   if (normalizeHostWithPort(rawCurrentHost) === targetHost) return null;
   if (isPortalHostname(rawCurrentHost)) return null;
 

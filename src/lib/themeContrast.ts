@@ -15,6 +15,19 @@
  * page background, card background, and primary/accent chips.
  */
 import type { StudentTheme } from './types';
+import { LEVELUP_BRAND_PRIMARY_HEX } from './appBranding';
+
+/** CSS custom properties consumed by `student-theme-surface` and the student portal. */
+export type StudentThemeCssVars = {
+  '--theme-bg': string;
+  '--theme-page-text': string;
+  '--theme-text': string;
+  '--theme-text-muted': string;
+  '--theme-primary': string;
+  '--theme-primary-foreground': string;
+  '--theme-card': string;
+  '--theme-accent': string;
+};
 
 const BLACK = '#020617';
 const WHITE = '#ffffff';
@@ -320,4 +333,35 @@ export function resolveStudentThemeWithSchoolDefault(
 export function primaryForegroundFor(theme: StudentTheme | null | undefined): string {
   const p = clampHex(theme?.primary) || BLACK;
   return pickReadableOn(p);
+}
+
+/**
+ * Normalized theme tokens for rendering (student portal + theme wizard preview).
+ * Mirrors contrast logic in the student dashboard shell.
+ */
+export function getStudentThemeCssVars(
+  theme: StudentTheme | null | undefined,
+): { vars: StudentThemeCssVars; effective: StudentTheme } | null {
+  const effective = normalizeStudentTheme(theme);
+  if (!effective) return null;
+
+  const themeBg = clampHex(effective.background) || BLACK;
+  const themeCard = clampHex(effective.cardBackground) || themeBg;
+  const computedThemeText = clampHex(effective.text) || pickReadableOn(themeCard);
+  const computedThemePageText = ensureContrast(computedThemeText, themeBg, 4.5);
+  const computedThemeCardText = ensureContrast(computedThemeText, themeCard, 4.5);
+
+  return {
+    effective,
+    vars: {
+      '--theme-bg': themeBg,
+      '--theme-page-text': computedThemePageText,
+      '--theme-text': computedThemeCardText,
+      '--theme-text-muted': `${computedThemeCardText}b3`,
+      '--theme-primary': clampHex(effective.primary) || LEVELUP_BRAND_PRIMARY_HEX,
+      '--theme-primary-foreground': primaryForegroundFor(effective),
+      '--theme-card': themeCard,
+      '--theme-accent': clampHex(effective.accent) || '#22c55e',
+    },
+  };
 }

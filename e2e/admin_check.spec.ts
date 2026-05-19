@@ -1,12 +1,13 @@
 
 import { test } from '@playwright/test';
+import { SAMPLE_SCHOOL_ACCESS_PASSCODE } from '../src/lib/sampleSchools';
 
 test('login to school and then to admin portal', async ({ page }) => {
     page.on('console', msg => console.log(`BROWSER MSG: ${msg.text()}`));
     page.on('pageerror', error => console.log(`BROWSER ERROR: ${error.message}`));
 
     const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
-    const demoPasscode = process.env.DEMO_SCHOOL_PASSCODE || '911';
+    const demoPasscode = process.env.DEMO_SCHOOL_PASSCODE || SAMPLE_SCHOOL_ACCESS_PASSCODE;
     
     // 1. School Login Gate
     console.log(`Navigating to login page at ${baseUrl}/login...`);

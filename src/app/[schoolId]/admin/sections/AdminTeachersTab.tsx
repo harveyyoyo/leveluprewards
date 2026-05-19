@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, Copy, Edit, FileText, Gift, Minus, Plus, Printer, Trash2, User, UserMinus, UserPlus } from 'lucide-react';
+import { Book, ChevronDown, Copy, Edit, FileText, Gift, Minus, Plus, Printer, Trash2, User, UserMinus, UserPlus } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -38,12 +38,14 @@ function teacherPortalKey(teacher: Teacher) {
 function staffRoleLabel(role: StaffAccountRole) {
   if (role === 'secretary') return 'Coupon printing';
   if (role === 'prizeClerk') return 'Prize desk';
+  if (role === 'librarian') return 'Library only';
   return 'Reports';
 }
 
 function StaffRoleIcon({ role }: { role: StaffAccountRole }) {
   if (role === 'secretary') return <Printer className="w-5 h-5" />;
   if (role === 'prizeClerk') return <Gift className="w-5 h-5" />;
+  if (role === 'librarian') return <Book className="w-5 h-5" />;
   return <FileText className="w-5 h-5" />;
 }
 
@@ -305,7 +307,7 @@ export function AdminTeachersTab({
               <User className="w-5 h-5 text-destructive" /> Faculty
             </CardTitle>
           </Helper>
-          <CardDescription>Faculty can issue rewards. Desk staff get limited coupon, prize, or reports access.</CardDescription>
+          <CardDescription>Faculty can issue rewards. Desk staff get limited coupon, prize, library, or reports access.</CardDescription>
         </div>
         <div className="flex flex-wrap gap-2">
           <TabWalkthroughHeaderAction />
@@ -721,6 +723,7 @@ export function AdminTeachersTab({
                   {([
                     ['secretary', 'Coupon printing'],
                     ['prizeClerk', 'Prize desk redemption'],
+                    ['librarian', 'Library catalog & checkouts'],
                     ['reports', 'Reports'],
                   ] as const).map(([value, label]) => (
                     <label key={value} className="flex items-center gap-2 text-sm font-medium">

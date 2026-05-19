@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback, RefObject, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { httpsCallable } from 'firebase/functions';
 import { Nfc, Type, Camera, GraduationCap, User, ScanFace } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -18,6 +19,8 @@ import { useAuth } from '@/components/providers/AuthProvider';
 import { useFaceDescriptor } from '@/hooks/useFaceDescriptor';
 import { getReadableErrorMessage, OFFLINE_USER_MESSAGE } from '@/lib/errorMessage';
 import { scanMismatchAtStudentLogin } from '@/lib/scanMismatch';
+import { findLibraryItemByUpc } from '@/lib/libraryOperations';
+import { normalizeLibraryUpc } from '@/lib/libraryScanCode';
 import {
     getStudentSignInThrottleStatus,
     recordStudentSignIn,
@@ -407,8 +410,20 @@ export function StudentScanner({
         stopFaceCamera,
     ]);
 
+    const router = useRouter();
+
     const handleLookup = useCallback(async (rawId: string) => {
         if (!rawId?.trim() || !schoolId || !functions) return;
+
+        if (settings.payLibrary !== false && firestore) {
+            const libCode = normalizeLibraryUpc(rawId);
+            const found = await findLibraryItemByUpc(firestore, schoolId, libCode);
+            if (found) {
+                router.push(`/${schoolId}/library/book?code=${encodeURIComponent(libCode)}`);
+                setNfcId('');
+                return;
+            }
+        }
 
         if (loginState === 'student') {
             if (studentKioskSessionError) {
@@ -552,6 +567,8 @@ export function StudentScanner({
         toast,
         loginState,
         studentKioskSessionEstablished,
+        settings.payLibrary,
+        router,
         studentKioskSessionError,
     ]);
 

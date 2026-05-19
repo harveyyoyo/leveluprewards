@@ -1,0 +1,16 @@
+{
+  "title": "levelUp EDU — App Flyer",
+  "total_slides": 2,
+  "slides": [
+    {
+      "slide_number": 1,
+      "page_type": "cover",
+      "content": "PROMOTIONAL MARKETING FLYER / POSTER for a school rewards app.\n\nBrand: levelUp EDU\nTagline: Turn school behavior into an arcade adventure.\n\nSubheadline: PBIS made fun — students earn points, unlock levels, and redeem epic rewards.\n\nHero visual: playful arcade cabinet, glowing coins, trophy, student ID card, and prize shop icons floating around a central glass 3D logo.\n\nCall to action badge: Get Started Today\nFooter line: Cloud-powered · Works on any device · Built for K–12 schools\n\nColor mood: fuchsia, violet, cyan neon accents on dark premium background — match a modern gaming / ed-tech product."
+    },
+    {
+      "slide_number": 2,
+      "page_type": "content",
+      "content": "FLYER BACK / FEATURES PANEL for levelUp EDU\n\nHeadline: Everything your school needs to level up\n\nFeature cards (icon + short label each):\n1. Student Kiosk — Scan ID, redeem coupons, check points\n2. Teacher Station — Print reward coupons in seconds\n3. Prize Shop — Students redeem points for real prizes\n4. Admin Portal — Manage students, teachers, prizes & backups\n5. Hall of Fame — Celebrate top point earners\n6. Barcode & NFC Login — Fast check-in at any station\n\nBottom banner: Positive behavior support that students actually love.\nContact strip: levelUp EDU · portal.yourdomain.com/your-school"
+    }
+  ]
+}

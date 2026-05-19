@@ -27,7 +27,8 @@ export function schoolPathAllowedByGate(
       scopes.has('teacher') ||
       scopes.has('secretary') ||
       scopes.has('prizeClerk') ||
-      scopes.has('reports')
+      scopes.has('reports') ||
+      scopes.has('librarian')
     );
   }
   if (section === 'teacher') {
@@ -45,13 +46,20 @@ export function schoolPathAllowedByGate(
   if (section === 'reports') {
     return scopes.has('reports') || scopes.has('admin');
   }
+  if (section === 'librarian') {
+    return scopes.has('librarian') || scopes.has('admin');
+  }
+  if (section === 'library') {
+    return true;
+  }
   if (section === 'hall-of-fame') {
     return (
       scopes.has('admin') ||
       scopes.has('teacher') ||
       scopes.has('secretary') ||
       scopes.has('prizeClerk') ||
-      scopes.has('reports')
+      scopes.has('reports') ||
+      scopes.has('librarian')
     );
   }
 
@@ -64,7 +72,8 @@ export function schoolPathAllowedByGate(
       scopes.has('teacher') ||
       scopes.has('secretary') ||
       scopes.has('prizeClerk') ||
-      scopes.has('reports')
+      scopes.has('reports') ||
+      scopes.has('librarian')
     );
   }
 
@@ -75,7 +84,8 @@ export function schoolPathAllowedByGate(
       scopes.has('teacher') ||
       scopes.has('secretary') ||
       scopes.has('prizeClerk') ||
-      scopes.has('reports')
+      scopes.has('reports') ||
+      scopes.has('librarian')
     );
   }
 
@@ -86,6 +96,7 @@ export function schoolPathAllowedByGate(
     scopes.has('teacher') ||
     scopes.has('secretary') ||
     scopes.has('prizeClerk') ||
-    scopes.has('reports')
+    scopes.has('reports') ||
+    scopes.has('librarian')
   );
 }

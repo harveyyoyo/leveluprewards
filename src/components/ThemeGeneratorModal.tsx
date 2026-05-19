@@ -17,8 +17,10 @@ import { StudentIdCard } from '@/components/StudentIdCard';
 import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { APP_NAME, APP_TAGLINE, LEVELUP_BRAND_PRIMARY_HEX } from '@/lib/appBranding';
-import { normalizeStudentTheme, primaryForegroundFor } from '@/lib/themeContrast';
+import { getStudentThemeCssVars, normalizeStudentTheme } from '@/lib/themeContrast';
 import { useSchoolMetadataDocRef } from '@/hooks/useSchoolMetadataDocRef';
+const THEME_AI_MODEL_KEY = 'arcade_theme_ai_model';
+const DEFAULT_THEME_AI_MODEL = 'gpt-4o-mini';
 
 function hexForColorInput(color: string | undefined, fallback: string): string {
     if (!color) return fallback;
@@ -86,27 +88,28 @@ function StudentPortalThemePreview({
     theme: StudentTheme;
     studentName: string;
 }) {
-    const primaryForeground = primaryForegroundFor(theme);
-    const themeBg = theme.background || '#020617';
-    const fontScale = theme.fontScale ?? 1.05;
+    const themed = getStudentThemeCssVars(theme);
+    if (!themed) return null;
+
+    const { vars, effective } = themed;
+    const themeBg = vars['--theme-bg'];
+    const fontScale = effective.fontScale ?? 1.05;
     const previewStyle: CSSProperties = {
-        ['--theme-bg' as string]: themeBg,
-        ['--theme-text' as string]: theme.text || '#ffffff',
-        ['--theme-primary' as string]: theme.primary || LEVELUP_BRAND_PRIMARY_HEX,
-        ['--theme-primary-foreground' as string]: primaryForeground,
-        ['--theme-card' as string]: theme.cardBackground || themeBg,
-        ['--theme-accent' as string]: theme.accent || '#22c55e',
+        ...vars,
         background:
-            theme.backgroundStyle ||
-            `radial-gradient(circle at top left, ${theme.primary || LEVELUP_BRAND_PRIMARY_HEX}22 0, transparent 45%), radial-gradient(circle at bottom right, ${theme.accent || '#22c55e'}22 0, ${themeBg} 55%)`,
-        color: 'var(--theme-text)',
-        fontFamily: theme.fontFamily || undefined,
+            effective.backgroundStyle ||
+            `radial-gradient(circle at top left, ${vars['--theme-primary']}22 0, transparent 45%), radial-gradient(circle at bottom right, ${vars['--theme-accent']}22 0, ${themeBg} 55%)`,
+        color: 'var(--theme-page-text)',
+        fontFamily: effective.fontFamily || undefined,
         fontSize: fontScale !== 1 ? `${fontScale}em` : undefined,
-    } as CSSProperties;
+    };
 
     return (
-        <div className="overflow-hidden rounded-2xl border border-border shadow-inner" style={previewStyle}>
-            {theme.fontFamily && <GoogleFontLoader fontFamily={theme.fontFamily} />}
+        <div
+            className="student-theme-surface overflow-hidden rounded-2xl border border-border shadow-inner"
+            style={previewStyle}
+        >
+            {effective.fontFamily && <GoogleFontLoader fontFamily={effective.fontFamily} />}
             <div className="space-y-3 p-3">
                 <div
                     className="rounded-xl border px-3 py-2.5"
@@ -127,7 +130,7 @@ function StudentPortalThemePreview({
                                         color: 'var(--theme-primary)',
                                     }}
                                 >
-                                    {theme.emoji || studentName.trim().charAt(0).toUpperCase() || 'S'}
+                                    {effective.emoji || studentName.trim().charAt(0).toUpperCase() || 'S'}
                                 </div>
                                 <p className="truncate text-base font-black leading-tight">{studentName || 'Student Preview'}</p>
                             </div>
@@ -314,7 +317,7 @@ export function ThemeGeneratorModal({
     const [isGenerating, setIsGenerating] = useState(false);
     const [previewTheme, setPreviewTheme] = useState<StudentTheme | undefined>(initialTheme);
     const [previousTheme, setPreviousTheme] = useState<StudentTheme | undefined>(initialTheme);
-    const [model, setModel] = useState<string>('gpt-4o-mini');
+    const [model, setModel] = useState<string>(DEFAULT_THEME_AI_MODEL);
     const [animatePreview, setAnimatePreview] = useState(false);
     const { toast } = useToast();
     const { schoolId } = useAppContext();
@@ -382,10 +385,9 @@ export function ThemeGeneratorModal({
         };
     }, [isOpen]);
 
-    // Load provider from local storage on mount
     useEffect(() => {
-        const savedModel = localStorage.getItem('arcade_ai_model');
-        if (savedModel) setModel(savedModel);
+        const saved = localStorage.getItem(THEME_AI_MODEL_KEY);
+        if (saved) setModel(saved);
     }, []);
 
     // When the dialog opens, reset preview from the latest saved theme (per student / school default).
@@ -581,17 +583,17 @@ export function ThemeGeneratorModal({
                                     value={model}
                                     onValueChange={(v: string) => {
                                         setModel(v);
-                                        localStorage.setItem('arcade_ai_model', v);
+                                        localStorage.setItem(THEME_AI_MODEL_KEY, v);
                                     }}
                                 >
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select Model" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="gemini-2.5-flash">Google Gemini 2.5 Flash (Fastest)</SelectItem>
-                                        <SelectItem value="gemini-2.5-pro">Google Gemini 2.5 Pro (Best Reasoning)</SelectItem>
-                                        <SelectItem value="gpt-4o-mini">OpenAI GPT-4o-mini (Fast)</SelectItem>
+                                        <SelectItem value="gpt-4o-mini">OpenAI GPT-4o-mini (Default)</SelectItem>
                                         <SelectItem value="gpt-4o">OpenAI GPT-4o (Robust)</SelectItem>
+                                        <SelectItem value="gemini-2.5-flash">Google Gemini 2.5 Flash</SelectItem>
+                                        <SelectItem value="gemini-2.5-flash-lite">Google Gemini 2.5 Flash-Lite</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>

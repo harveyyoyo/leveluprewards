@@ -135,7 +135,9 @@ export default function Header() {
       <nav
         className={cn(
           'fixed bottom-0 left-0 right-0 z-[100] border-t py-3 pb-[max(1rem,env(safe-area-inset-bottom))] no-print',
-          settings.darkMode ? 'border-border bg-background/90 backdrop-blur-md' : 'border-border bg-card',
+          settings.darkMode
+            ? 'border-border bg-background/90 shadow-[0_-8px_28px_hsl(222_47%_11%/0.35)] backdrop-blur-md'
+            : 'border-border bg-card shadow-[0_-8px_28px_hsl(var(--primary)/0.1)]',
         )}
         aria-label="Portal shortcuts"
       >
@@ -186,8 +188,8 @@ export default function Header() {
     return (
       <div className="w-full">
         <div className="mx-auto w-full max-w-7xl px-4 md:px-8">
-        <header className="no-print grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] w-full min-w-0 items-center relative z-20 pt-3 sm:pt-4 pb-3 sm:pb-4 border-b border-border/10">
-          <div className="flex justify-start min-w-0 justify-self-start">
+        <header className="no-print relative flex w-full min-w-0 items-center justify-between z-20 pt-3 sm:pt-4 pb-3 sm:pb-4 border-b border-border/10 shadow-[0_4px_20px_hsl(var(--primary)/0.08)]">
+          <div className="relative z-10 flex shrink-0 justify-start">
             {schoolId && (
               <Link
                 href={centerHref}
@@ -199,16 +201,22 @@ export default function Header() {
               </Link>
             )}
           </div>
-          <div className="flex min-w-0 max-w-full items-center justify-center justify-self-center px-1">
-            {schoolId && (
-              <Link href={centerHref} className="flex min-w-0 max-w-full flex-col items-center gap-1 text-center no-underline font-school text-lg font-black sm:text-2xl md:text-3xl">
-                <span className="min-w-0 max-w-full break-words text-foreground font-bold [overflow-wrap:anywhere] line-clamp-2 sm:line-clamp-3" title={centerLabel}>
+          {schoolId && (
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-16 sm:px-24 md:px-32">
+              <Link
+                href={centerHref}
+                className="pointer-events-auto flex w-full max-w-full flex-col items-center gap-1 text-center no-underline font-school font-black"
+              >
+                <span
+                  className="w-full min-w-0 break-words text-foreground font-bold [overflow-wrap:anywhere] line-clamp-2 sm:line-clamp-3 text-[clamp(1.125rem,4.5vw,1.875rem)] sm:text-[clamp(1.25rem,5vw,2.25rem)]"
+                  title={centerLabel}
+                >
                   {centerLabel}
                 </span>
               </Link>
-            )}
-          </div>
-          <div className="flex shrink-0 items-center justify-end gap-1 sm:gap-2 justify-self-end">
+            </div>
+          )}
+          <div className="relative z-10 flex shrink-0 items-center justify-end gap-1 sm:gap-2">
             {schoolId && loginState !== 'loggedOut' && (
               <div
                 className="flex h-8 w-6 items-center justify-center sm:h-9 sm:w-9"
@@ -260,12 +268,12 @@ export default function Header() {
     <>
     <header className={cn(
       "no-print z-50 transition-colors border-b border-primary/10 sticky top-0",
-      "bg-background/80 backdrop-blur-xl",
+      "bg-background/80 backdrop-blur-xl shadow-[0_4px_24px_hsl(var(--primary)/0.1)]",
       "mx-auto w-full max-w-7xl min-w-0 px-4 md:px-8"
     )}>
-      <div className="h-20 grid min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-4">
+      <div className="relative h-20 min-w-0">
         {/* Left: Branding */}
-        <div className="flex min-w-0 items-center gap-1 sm:gap-4 justify-self-start">
+        <div className="absolute inset-y-0 left-0 z-10 flex min-w-0 shrink-0 items-center gap-1 sm:gap-4">
           <div className={cn("items-center gap-1 sm:gap-4", schoolId ? "hidden sm:flex" : "flex")}>
             <Link href={logoLink} className="flex items-center gap-1 sm:gap-4 group" data-home-button="true">
             {appLogoUrl ? (
@@ -302,13 +310,13 @@ export default function Header() {
             </div>
           </Link>
         </div>
-      </div>
+        </div>
 
-        {/* Center: school name — middle column is 1fr with min-w-0 so the grid cannot overflow the page; long names wrap */}
-        <div className="flex min-w-0 max-w-full justify-center justify-self-center px-1 sm:px-2">
-          {schoolId ? (
-            <Link href={centerHref} className="flex min-w-0 max-w-full justify-center text-center no-underline">
-              <span className="flex min-w-0 max-w-full items-center gap-2 sm:gap-3">
+        {/* Center: school name — absolutely centered in the full header width */}
+        {schoolId ? (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-[clamp(5.5rem,24vw,20rem)] sm:px-[clamp(7rem,28vw,22rem)]">
+            <Link href={centerHref} className="pointer-events-auto flex w-full max-w-full justify-center text-center no-underline">
+              <span className="inline-flex max-w-full min-w-0 items-center justify-center gap-2 sm:gap-3">
                 {schoolData?.logoUrl && (
                   <span className={cn(
                     "inline-flex h-10 w-auto max-w-[200px] shrink-0 items-center justify-center transition-all duration-300",
@@ -333,21 +341,19 @@ export default function Header() {
                     />
                   </span>
                 )}
-                <div className="flex min-w-0 max-w-full flex-col items-center justify-center">
-                  <span
-                    className="max-w-full min-w-0 truncate text-sm min-[400px]:text-base sm:text-2xl md:text-3xl lg:text-3xl xl:text-4xl font-headline font-bold text-foreground"
-                    title={centerLabel}
-                  >
-                    {centerLabel}
-                  </span>
-                </div>
+                <span
+                  className="min-w-0 break-words text-center font-headline font-bold text-foreground [overflow-wrap:anywhere] line-clamp-2 text-[clamp(1rem,4.5vw,2.25rem)] sm:text-[clamp(1.25rem,5vw,2.75rem)] xl:text-[clamp(1.5rem,4vw,2.75rem)]"
+                  title={centerLabel}
+                >
+                  {centerLabel}
+                </span>
               </span>
             </Link>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
 
         {/* Right: Actions */}
-        <div className="flex items-center justify-end gap-1 sm:gap-2 min-w-0 justify-self-end">
+        <div className="absolute inset-y-0 right-0 z-10 flex shrink-0 items-center justify-end gap-1 sm:gap-2 min-w-0">
           {isInitialized && (
             <>
                 <div

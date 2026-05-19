@@ -22,14 +22,14 @@ export type NavColorScheme =
 
 const PALETTES: Record<NavColorScheme, readonly string[]> = {
   default: [
-    // LevelUp logo navy (matches LEVELUP_BRAND_PRIMARY_HEX / --primary).
+    // LevelUp navy family — brand primary plus readable blue accents.
     '211 62% 17%',
-    '211 62% 17%',
-    '211 62% 17%',
-    '211 62% 17%',
-    '211 62% 17%',
-    '211 62% 17%',
-    '211 62% 17%',
+    '211 58% 22%',
+    '211 54% 28%',
+    '217 60% 32%',
+    '217 56% 38%',
+    '199 70% 38%',
+    '199 75% 42%',
   ],
   rainbow: [
     '0 84% 60%', // red
@@ -272,6 +272,15 @@ export function rainbowTripletForNavId(id: string, scheme?: NavColorScheme) {
 // Each array is parallel to the primary palette (7 entries).
 // Schemes not listed here fall back to their primary palette.
 const COMPLEMENT_PALETTES: Partial<Record<NavColorScheme, readonly string[]>> = {
+  default: [
+    '199 75% 42%',
+    '199 80% 48%',
+    '205 82% 52%',
+    '199 70% 38%',
+    '205 78% 46%',
+    '192 68% 36%',
+    '199 72% 44%',
+  ],
   ocean: [
     // Warm amber/sand complements for ocean blues (dual-tone nav / rings)
     '40 63% 56%',

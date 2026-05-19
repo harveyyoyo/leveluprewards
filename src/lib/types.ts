@@ -15,6 +15,7 @@ export interface LibraryItem {
   checkedOutTo?: string | null;
   checkedOutAt?: number | null;
   addedBy?: string;
+  createdAt?: number;
   /** Optional catalog fields for shelving and reporting. */
   author?: string;
   isbn?: string;
@@ -22,6 +23,8 @@ export interface LibraryItem {
   shelfLocation?: string;
   copyNumber?: string;
   notes?: string;
+  /** Due date for overdue tracking (optional). */
+  dueAt?: number | null;
 }
 
 export type LibraryItemInput = Pick<
@@ -40,7 +43,7 @@ export interface Class {
 export type TeacherBudgetPeriod = 'day' | 'week' | 'month';
 
 /** Desk staff logins managed in Admin (not full teachers). */
-export type StaffAccountRole = 'secretary' | 'prizeClerk' | 'reports';
+export type StaffAccountRole = 'secretary' | 'prizeClerk' | 'reports' | 'librarian';
 
 export interface StaffAccount {
   id: string;

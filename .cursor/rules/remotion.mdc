@@ -1,0 +1,30 @@
+---
+description: Rules and guidelines for creating, modifying, and rendering programmatic videos using Remotion.
+globs: promo-video/**/*, my-video/**/*
+---
+
+# Remotion Guidelines
+
+This rule governs standard practices for writing, configuring, and rendering programmatic videos using Remotion in this workspace.
+
+## Best Practices
+
+1. **Modular Architecture**:
+   - Keep compositions modular. Separate main slides, overlays, and animations into separate component files if they exceed 100 lines.
+   - Use standard configurations: `fps: 30`, resolutions of `1280x720` (720p) or `1920x1080` (1080p).
+   - Use the `<Sequence>` component for structured timeline transitions.
+
+2. **Physical Animations**:
+   - Prefer spring-based physical animations (`spring`) over linear interpolations for smooth, premium transitions (e.g., scale-ups, text entries).
+   - Coordinate entry and exit offsets utilizing the `useCurrentFrame()` and `useVideoConfig()` hooks.
+
+3. **Asset Loading**:
+   - Place all external static files (raw recordings, `.mp4`, `.png`, `.mp3`) inside the project's `public/` directory.
+   - Access assets using the `staticFile("filename.ext")` helper to guarantee correct path resolution.
+
+4. **Rendering Videos**:
+   - To render a composition, run:
+     ```bash
+     npx remotion render src/index.ts <CompositionId> <OutputFile.mp4>
+     ```
+   - Avoid committing compiled media assets (`.mp4`) inside the Remotion project subfolder itself.

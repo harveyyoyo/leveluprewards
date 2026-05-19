@@ -47,6 +47,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
   const schoolIdRef = useRef<HTMLInputElement | null>(null);
   const passcodeRef = useRef<HTMLInputElement | null>(null);
   const lastAutoFocusedRef = useRef<null | 'schoolId' | 'passcode'>(null);
+  const developerAutoLoginAttemptedRef = useRef(false);
   const { login, isInitialized, isUserLoading, loginState } = useAppContext();
   const { toast } = useToast();
   const router = useRouter();
@@ -155,10 +156,10 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
     lastAutoFocusedRef.current = desired;
   }, [isDeveloper, isDeveloperOnly, initialSchoolId, isInitialized, isUserLoading, mode, mounted, schoolId]);
 
-  // Developer access should only be surfaced on the dedicated `/developer` route (mode: developer-only).
-  // The public school login (`/login`) should not expose developer options.
+  // `/developer` is always allowed to complete Google + developer login (email allowlist + addDeveloperMe gate access).
+  // `NEXT_PUBLIC_ENABLE_DEV_LOGIN` only controls whether `/login` shows the optional developer toggle.
   const allowDeveloperLogin =
-    isDeveloperOnly &&
+    isDeveloperOnly ||
     (process.env.NEXT_PUBLIC_ENABLE_DEV_LOGIN === 'true' || process.env.NODE_ENV === 'development');
 
   const hasGoogleUser =
@@ -183,8 +184,9 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
     if (!mounted || !isInitialized || isUserLoading) return;
     if (loginState === 'developer') return;
     if (!allowDeveloperLogin || !isAllowedGoogleEmail) return;
-    if (isSubmitting) return;
+    if (isSubmitting || developerAutoLoginAttemptedRef.current) return;
 
+    developerAutoLoginAttemptedRef.current = true;
     setIsSubmitting(true);
     void (async () => {
       try {
@@ -194,6 +196,15 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
           if (pathname !== '/developer') {
             router.push('/developer');
           }
+        } else {
+          developerAutoLoginAttemptedRef.current = false;
+          playSound('error');
+          triggerShake();
+          toast({
+            variant: 'destructive',
+            title: 'Developer sign-in failed',
+            description: result.message,
+          });
         }
       } finally {
         setIsSubmitting(false);
@@ -229,6 +240,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
           : 'This Google account is not on the developer allowlist.',
       });
       if (allowed) {
+        developerAutoLoginAttemptedRef.current = true;
         setIsSubmitting(true);
         try {
           const loginRes = await login('developer', {});
@@ -237,6 +249,15 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
             if (pathname !== '/developer') {
               router.push('/developer');
             }
+          } else {
+            developerAutoLoginAttemptedRef.current = false;
+            playSound('error');
+            triggerShake();
+            toast({
+              variant: 'destructive',
+              title: 'Developer sign-in failed',
+              description: loginRes.message,
+            });
           }
         } finally {
           setIsSubmitting(false);
@@ -456,7 +477,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
               </div>
             )}
             <div className="pt-4 flex flex-col gap-3">
-              {isAllowedGoogleEmail && (isDeveloperOnly || isDeveloper) ? (
+              {(isSubmitting || isGoogleSigningIn) && (isDeveloperOnly || isDeveloper) ? (
                 <div className="text-center bg-primary/10 border border-primary/20 text-primary rounded-xl p-4 flex flex-col items-center gap-2 font-semibold text-sm animate-pulse">
                   <Loader2 className="h-5 w-5 animate-spin" />
                   <span>Initializing developer portal session…</span>

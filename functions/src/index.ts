@@ -104,7 +104,7 @@ function adminPasscodeFrom(data: Record<string, any>): string {
 async function hasSchoolRole(
   schoolId: string,
   uid: string,
-  roles: Array<"admin" | "teacher" | "secretary" | "prizeClerk" | "reports">
+  roles: Array<"admin" | "teacher" | "secretary" | "prizeClerk" | "reports" | "librarian">
 ): Promise<boolean> {
   const db = admin.firestore();
   const roleCollections: Record<string, string> = {
@@ -113,6 +113,7 @@ async function hasSchoolRole(
     secretary: "roles_secretary",
     prizeClerk: "roles_prizeClerk",
     reports: "roles_reports",
+    librarian: "roles_librarian",
   };
   const snaps = await Promise.all(
     roles.map((role) =>
@@ -125,7 +126,7 @@ async function hasSchoolRole(
 async function hasKioskMembershipOrStaff(
   schoolId: string,
   context: functions.https.CallableContext,
-  roles: Array<"admin" | "teacher" | "secretary" | "prizeClerk" | "reports"> = ["admin", "teacher", "secretary", "prizeClerk"]
+  roles: Array<"admin" | "teacher" | "secretary" | "prizeClerk" | "reports" | "librarian"> = ["admin", "teacher", "secretary", "prizeClerk", "librarian"]
 ): Promise<boolean> {
   requireAuth(context);
   const uid = context.auth!.uid;
@@ -949,6 +950,14 @@ exports.createSchoolByDeveloper = functions.https.onCall(
         role: "reports",
         roles: ["reports"],
       },
+      {
+        id: "default_librarian_staff",
+        displayName: "Library Staff",
+        username: "library",
+        passcode: "1234",
+        role: "librarian",
+        roles: ["librarian"],
+      },
     ];
 
     const db = admin.firestore();
@@ -1530,6 +1539,164 @@ exports.redeemCouponServer = functions
     };
   }
 );
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+function libraryDaysOverdue(dueAt: unknown, now: number): number {
+  const due = typeof dueAt === "number" ? dueAt : 0;
+  if (!due || now <= due) return 0;
+  return Math.ceil((now - due) / MS_PER_DAY);
+}
+
+/** Callable: return library book + optional category point adjustments (kiosk-safe). */
+exports.libraryReturnServer = functions
+  .runWith(HOT_KIOSK_FUNCTION_OPTIONS)
+  .https.onCall(async (data: any, context: functions.https.CallableContext) => {
+    requireAuth(context);
+    requireString(data.schoolId, "schoolId");
+    requireString(data.studentId, "studentId");
+    requireString(data.upc, "upc");
+
+    const schoolId = String(data.schoolId).trim().toLowerCase();
+    const studentId = String(data.studentId).trim();
+    const upc = String(data.upc).trim().toUpperCase();
+
+    if (
+      !(await hasKioskMembershipOrStaff(schoolId, context, [
+        "admin",
+        "teacher",
+        "secretary",
+        "prizeClerk",
+        "librarian",
+      ]))
+    ) {
+      throw new functions.https.HttpsError("permission-denied", "School entry required.");
+    }
+
+    const db = admin.firestore();
+    const schoolRef = db.collection("schools").doc(schoolId);
+    const libSnap = await schoolRef.collection("library").where("upc", "==", upc).limit(1).get();
+    if (libSnap.empty) {
+      throw new functions.https.HttpsError("not-found", "Library item not found.");
+    }
+    const itemDoc = libSnap.docs[0];
+    const itemData = itemDoc.data() as {
+      name?: string;
+      status?: string;
+      checkedOutTo?: string;
+      dueAt?: number;
+    };
+
+    if (itemData.status !== "checked_out" || itemData.checkedOutTo !== studentId) {
+      throw new functions.https.HttpsError(
+        "failed-precondition",
+        "This book is not checked out to this student."
+      );
+    }
+
+    const schoolSnap = await schoolRef.get();
+    const appSettings = (schoolSnap.data()?.appSettings ?? {}) as Record<string, unknown>;
+    const loanPeriodDays =
+      typeof appSettings.libraryLoanPeriodDays === "number" && appSettings.libraryLoanPeriodDays > 0
+        ? appSettings.libraryLoanPeriodDays
+        : 14;
+    void loanPeriodDays;
+    const lateFeesEnabled = appSettings.libraryLateFeesEnabled !== false;
+    const latePointsPerDay =
+      typeof appSettings.libraryLatePointsPerDay === "number" && appSettings.libraryLatePointsPerDay >= 0
+        ? appSettings.libraryLatePointsPerDay
+        : 2;
+    const onTimeReturnPoints =
+      typeof appSettings.libraryOnTimeReturnPoints === "number" && appSettings.libraryOnTimeReturnPoints > 0
+        ? appSettings.libraryOnTimeReturnPoints
+        : 0;
+    const categoryId =
+      typeof appSettings.libraryPointsCategoryId === "string"
+        ? appSettings.libraryPointsCategoryId.trim()
+        : "";
+
+    let categoryName = "";
+    if (categoryId) {
+      const catSnap = await schoolRef.collection("categories").doc(categoryId).get();
+      if (catSnap.exists && typeof catSnap.data()?.name === "string") {
+        categoryName = catSnap.data()!.name.trim();
+      }
+    }
+
+    const itemName = typeof itemData.name === "string" ? itemData.name.trim() : "Book";
+    const now = Date.now();
+    const daysOverdue = libraryDaysOverdue(itemData.dueAt, now);
+
+    let pointsDelta = 0;
+    let pointsMessage = "";
+
+    if (categoryName) {
+      if (daysOverdue > 0 && lateFeesEnabled && latePointsPerDay > 0) {
+        pointsDelta = -(daysOverdue * latePointsPerDay);
+        pointsMessage = `Late return: ${Math.abs(pointsDelta)} point(s) deducted (${categoryName}).`;
+      } else if (daysOverdue === 0 && onTimeReturnPoints > 0) {
+        pointsDelta = onTimeReturnPoints;
+        pointsMessage = `On-time return: +${pointsDelta} point(s) (${categoryName}).`;
+      }
+    }
+
+    await db.runTransaction(async (tx) => {
+      const studentRef = schoolRef.collection("students").doc(studentId);
+      const studentSnap = await tx.get(studentRef);
+
+      tx.update(itemDoc.ref, {
+        status: "available",
+        checkedOutTo: null,
+        checkedOutAt: null,
+        dueAt: null,
+      });
+
+      if (pointsDelta !== 0 && studentSnap.exists) {
+        const studentData = studentSnap.data() as {
+          points?: number;
+          categoryPoints?: Record<string, number>;
+        };
+        const currentPoints = typeof studentData.points === "number" ? studentData.points : 0;
+        const newPoints = Math.max(0, currentPoints + pointsDelta);
+        const categoryPoints = { ...(studentData.categoryPoints ?? {}) };
+        categoryPoints[categoryName] = (categoryPoints[categoryName] || 0) + pointsDelta;
+
+        tx.update(studentRef, {
+          points: newPoints,
+          categoryPoints,
+          updatedAt: now,
+        });
+
+        const activityRef = studentRef.collection("activities").doc();
+        tx.set(activityRef, {
+          desc:
+            pointsDelta < 0
+              ? `Library late fee (${daysOverdue} day${daysOverdue === 1 ? "" : "s"}): ${itemName}`
+              : `Library on-time bonus: ${itemName}`,
+          amount: pointsDelta,
+          date: now,
+        });
+      }
+
+      const returnActivityRef = studentRef.collection("activities").doc();
+      tx.set(returnActivityRef, {
+        desc: `Returned library item: ${itemName}`,
+        amount: 0,
+        date: now,
+      });
+    });
+
+    return {
+      success: true,
+      pointsDelta,
+      daysOverdue,
+      message:
+        pointsMessage ||
+        (daysOverdue > 0
+          ? `Returned "${itemName}" (${daysOverdue} day${daysOverdue === 1 ? "" : "s"} late).`
+          : `Returned "${itemName}".`),
+    };
+  });
 
 /** Callable: kiosk-safe prize redemption with trusted balance + stock updates. */
 exports.redeemPrizeServer = functions
@@ -2343,7 +2510,7 @@ exports.getStaffPortalLoginOptions = functions.https.onCall(
           role?: string;
         };
         const role =
-          row.role === "secretary" || row.role === "prizeClerk" || row.role === "reports"
+          row.role === "secretary" || row.role === "prizeClerk" || row.role === "reports" || row.role === "librarian"
             ? row.role
             : null;
         const username = typeof row.username === "string" ? row.username.trim().toLowerCase() : "";
@@ -2373,10 +2540,10 @@ exports.verifyStaffAccountPasscode = functions.https.onCall(
     requireString(data.username, "username");
     requireString(data.passcode, "passcode");
     const role = data.role as string;
-    if (role !== "secretary" && role !== "prizeClerk" && role !== "reports") {
+    if (role !== "secretary" && role !== "prizeClerk" && role !== "reports" && role !== "librarian") {
       throw new functions.https.HttpsError(
         "invalid-argument",
-        "role must be 'secretary', 'prizeClerk', or 'reports'."
+        "role must be 'secretary', 'prizeClerk', 'reports', or 'librarian'."
       );
     }
 
@@ -2404,14 +2571,16 @@ exports.verifyStaffAccountPasscode = functions.https.onCall(
 
     const row = match.data() as { displayName?: string; role?: string; roles?: string[] };
     const roles = (Array.isArray(row.roles) && row.roles.length > 0 ? row.roles : [row.role])
-      .filter((item): item is string => item === "secretary" || item === "prizeClerk" || item === "reports");
+      .filter((item): item is string => item === "secretary" || item === "prizeClerk" || item === "reports" || item === "librarian");
     const writes = roles.map((staffRole) => {
       const roleCollection =
         staffRole === "secretary"
           ? "roles_secretary"
           : staffRole === "prizeClerk"
             ? "roles_prizeClerk"
-            : "roles_reports";
+            : staffRole === "librarian"
+              ? "roles_librarian"
+              : "roles_reports";
       return db
         .collection("schools")
         .doc(schoolId)

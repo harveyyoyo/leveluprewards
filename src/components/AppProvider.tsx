@@ -39,18 +39,19 @@ interface AppContextType {
   // Auth
   isInitialized: boolean;
   isUserLoading: boolean;
-  loginState: 'loggedOut' | 'school' | 'developer' | 'student' | 'teacher' | 'admin' | 'secretary' | 'prizeClerk' | 'reports';
+  loginState: 'loggedOut' | 'school' | 'developer' | 'student' | 'teacher' | 'admin' | 'secretary' | 'prizeClerk' | 'reports' | 'librarian';
   isAdmin: boolean;
   isTeacher: boolean;
   isSecretary: boolean;
   isPrizeClerk: boolean;
   isReports: boolean;
+  isLibrarian: boolean;
   userName: string | null;
   userId: string | null;
   teacherDocId: string | null;
   schoolId: string | null;
   syncStatus: 'synced' | 'syncing' | 'offline' | 'error';
-  login: (type: 'school' | 'developer' | 'student' | 'teacher' | 'admin' | 'secretary' | 'prizeClerk' | 'reports', credentials: { schoolId?: string; passcode?: string; username?: string; teacherName?: string; teacherDocId?: string; staffRole?: 'secretary' | 'prizeClerk' | 'reports'; }) => Promise<LoginResult>;
+  login: (type: 'school' | 'developer' | 'student' | 'teacher' | 'admin' | 'secretary' | 'prizeClerk' | 'reports' | 'librarian', credentials: { schoolId?: string; passcode?: string; username?: string; teacherName?: string; teacherDocId?: string; staffRole?: 'secretary' | 'prizeClerk' | 'reports' | 'librarian'; }) => Promise<LoginResult>;
   startDeveloperSupportSession: (schoolId: string) => Promise<boolean>;
   logout: (options?: LogoutOptions) => void;
   setUserName: (name: string | null) => void;
@@ -815,6 +816,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     isSecretary: authCtx.isSecretary,
     isPrizeClerk: authCtx.isPrizeClerk,
     isReports: authCtx.isReports,
+    isLibrarian: authCtx.isLibrarian,
     // Print
     ...printCtx,
     printPrizeTickets: printCtx.printPrizeTickets,

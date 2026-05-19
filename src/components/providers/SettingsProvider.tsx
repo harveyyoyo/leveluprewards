@@ -294,6 +294,16 @@ interface Settings {
     payAttendance?: boolean;
     payHomework?: boolean;
     payLibrary?: boolean;
+    /** Default checkout loan length before a book is overdue. */
+    libraryLoanPeriodDays?: number;
+    /** When true, overdue returns deduct points via the library category. */
+    libraryLateFeesEnabled?: boolean;
+    /** Points removed per calendar day late (applied on return). */
+    libraryLatePointsPerDay?: number;
+    /** Optional points added when returned on or before due date. */
+    libraryOnTimeReturnPoints?: number;
+    /** Category used for library late fees and on-time bonuses. */
+    libraryPointsCategoryId?: string;
 
     // Student Portal Interface overrides (set by admin)
     studentDisplayMode?: DisplayModePreference;
@@ -353,7 +363,7 @@ interface SettingsContextType {
 
 const colorSchemes: Record<ColorScheme, { bg: string; card: string; accent: string; border: string; label: string; swatch: string; swatchColors: readonly [string, string] }> = {
     /* Swatch must stay a literal `bg-[…]` so Tailwind JIT includes it (matches LEVELUP_BRAND_PRIMARY_HEX). */
-    default: { bg: 'bg-slate-50', card: 'bg-white', accent: 'text-slate-800', border: 'border-slate-200', label: 'Default', swatch: 'bg-[#102a45]', swatchColors: ['#102a45', '#64748b'] },
+    default: { bg: 'bg-blue-50', card: 'bg-white', accent: 'text-blue-950', border: 'border-blue-200', label: 'Default', swatch: 'bg-[#102a45]', swatchColors: ['#102a45', '#2563eb'] },
     sky: { bg: 'bg-sky-50', card: 'bg-white', accent: 'text-sky-700', border: 'border-sky-200', label: 'Sky', swatch: 'bg-sky-300', swatchColors: ['#0ea5e9', '#10b981'] },
     rose: { bg: 'bg-rose-50', card: 'bg-white', accent: 'text-rose-700', border: 'border-rose-200', label: 'Rose', swatch: 'bg-rose-300', swatchColors: ['#e11d48', '#f97316'] },
     mint: { bg: 'bg-emerald-50', card: 'bg-white', accent: 'text-emerald-700', border: 'border-emerald-200', label: 'Mint', swatch: 'bg-emerald-300', swatchColors: ['#10b981', '#0ea5e9'] },
@@ -494,11 +504,11 @@ const defaultSettings: Settings = {
     hiddenAnimatedBackgroundIds: [],
     defaultStudentTheme: {
         fontScale: 1.15,
-        background: '#f8fafc',
+        background: '#eff6ff',
         text: '#020617',
         primary: LEVELUP_BRAND_PRIMARY_HEX,
         cardBackground: '#ffffff',
-        accent: '#64748b',
+        accent: '#2563eb',
     },
     adminSessionTimeoutMs: 5 * 60 * 1000,
     kioskSessionTimeoutSec: 10,
@@ -542,6 +552,10 @@ const defaultSettings: Settings = {
     payAttendance: true,
     payHomework: true,
     payLibrary: true,
+    libraryLoanPeriodDays: 14,
+    libraryLateFeesEnabled: true,
+    libraryLatePointsPerDay: 2,
+    libraryOnTimeReturnPoints: 0,
 
     // Role-based defaults
     // Additional (admin-controlled) teacher features should start OFF by default.

@@ -6,6 +6,7 @@ import {
   normalizeStudentTheme,
   pickReadableOn,
   primaryForegroundFor,
+  getStudentThemeCssVars,
   resolveStudentThemeWithSchoolDefault,
 } from './themeContrast';
 import { LEVELUP_BRAND_PRIMARY_HEX } from './appBranding';
@@ -174,6 +175,22 @@ describe('resolveStudentThemeWithSchoolDefault', () => {
   it('returns undefined when student themes are disabled (data ignored, not erased)', () => {
     expect(resolveStudentThemeWithSchoolDefault(undefined, school, false)).toBeUndefined();
     expect(resolveStudentThemeWithSchoolDefault(school, undefined, false)).toBeUndefined();
+  });
+});
+
+describe('getStudentThemeCssVars', () => {
+  it('exposes readable page and card text tokens', () => {
+    const out = getStudentThemeCssVars({
+      background: '#001f3f',
+      text: '#001f3f',
+      primary: '#2563eb',
+      cardBackground: '#003366',
+      accent: '#60a5fa',
+    })!;
+    expect(out.vars['--theme-page-text']).toMatch(/^#/);
+    expect(out.vars['--theme-text']).toMatch(/^#/);
+    expect(contrastRatio(out.vars['--theme-text'], out.vars['--theme-card'])).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(out.vars['--theme-page-text'], out.vars['--theme-bg'])).toBeGreaterThanOrEqual(4.5);
   });
 });
 

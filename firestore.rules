@@ -42,6 +42,12 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/schools/$(schoolId)/roles_reports/$(request.auth.uid)).data.role == 'reports';
     }
 
+    function isLibrarian(schoolId) {
+      return isAuth()
+        && exists(/databases/$(database)/documents/schools/$(schoolId)/roles_librarian/$(request.auth.uid))
+        && get(/databases/$(database)/documents/schools/$(schoolId)/roles_librarian/$(request.auth.uid)).data.role == 'librarian';
+    }
+
     // A student who has entered a school kiosk session via the Cloud Function.
     function hasKioskSession(schoolId) {
       return isAuth()
@@ -57,7 +63,7 @@ service cloud.firestore {
     // Any staff member OR a student with an active kiosk session for this school.
     function isSchoolMember(schoolId) {
       return isAdmin(schoolId) || isTeacher(schoolId) || isSecretary(schoolId)
-        || isPrizeClerk(schoolId) || isReports(schoolId) || isDeveloper()
+        || isPrizeClerk(schoolId) || isReports(schoolId) || isLibrarian(schoolId) || isDeveloper()
         || hasKioskSession(schoolId);
     }
 
@@ -72,19 +78,20 @@ service cloud.firestore {
 
     function isLibraryCheckoutUpdate() {
       return isAuth()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'checkedOutTo', 'checkedOutAt'])
         && (
           (
             resource.data.status == 'available'
             && request.resource.data.status == 'checked_out'
             && request.resource.data.checkedOutTo is string
             && request.resource.data.checkedOutAt is number
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'checkedOutTo', 'checkedOutAt', 'dueAt'])
           )
           || (
             resource.data.status == 'checked_out'
             && request.resource.data.status == 'available'
             && request.resource.data.checkedOutTo == null
             && request.resource.data.checkedOutAt == null
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'checkedOutTo', 'checkedOutAt', 'dueAt'])
           )
         );
     }
@@ -295,9 +302,9 @@ service cloud.firestore {
       }
 
       match /library/{itemId} {
-        allow read: if isSchoolMember(schoolId);
-        allow create, delete: if isAdmin(schoolId) || isTeacher(schoolId) || isSecretary(schoolId) || isPrizeClerk(schoolId) || isDeveloper();
-        allow update: if isAdmin(schoolId) || isTeacher(schoolId) || isSecretary(schoolId) || isPrizeClerk(schoolId) || isDeveloper() || isLibraryCheckoutUpdate();
+        allow read: if isSchoolMember(schoolId) || hasStudentPortalSession(schoolId);
+        allow create, delete: if isAdmin(schoolId) || isTeacher(schoolId) || isLibrarian(schoolId) || isDeveloper();
+        allow update: if isAdmin(schoolId) || isTeacher(schoolId) || isLibrarian(schoolId) || isDeveloper() || isLibraryCheckoutUpdate();
       }
 
       // Desk staff logins (admin-managed). School admins + platform developers
@@ -329,6 +336,11 @@ service cloud.firestore {
       }
 
       match /roles_reports/{uid} {
+        allow read: if isAuth() && request.auth.uid == uid;
+        allow write: if false;
+      }
+
+      match /roles_librarian/{uid} {
         allow read: if isAuth() && request.auth.uid == uid;
         allow write: if false;
       }

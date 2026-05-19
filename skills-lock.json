@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "nanobanana-ppt-skills": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "skillPath": "skills/nanobanana-ppt-skills/SKILL.md",
+      "computedHash": "be6f029e370c809976dc8f6040b2346717568c5e694a38cb12addd9f61adbd2d"
+    },
+    "remotion-best-practices": {
+      "source": "remotion-dev/skills",
+      "sourceType": "github",
+      "skillPath": "skills/remotion/SKILL.md",
+      "computedHash": "d9457a606202a23c28b4c17b2611c65ecc09311ce46a5d93ffe8493d2e8ea4f3"
+    }
+  }
+}

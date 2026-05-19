@@ -6,7 +6,7 @@ import { Loader2 } from 'lucide-react';
 import { useAppContext } from '@/components/AppProvider';
 import { canAccessHallOfFameRoute } from '@/lib/hallOfFameAccess';
 
-const ALLOWED = new Set(['school', 'student', 'teacher', 'admin', 'developer', 'secretary', 'prizeClerk', 'reports']);
+const ALLOWED = new Set(['school', 'student', 'teacher', 'admin', 'developer', 'secretary', 'prizeClerk', 'reports', 'librarian']);
 
 function SessionGateLoading({ label }: { label?: string }) {
   return (
@@ -31,7 +31,8 @@ function canUseRoute(pathname: string, routeSchoolId: string, loginState: string
       loginState === 'teacher' ||
       loginState === 'secretary' ||
       loginState === 'prizeClerk' ||
-      loginState === 'reports'
+      loginState === 'reports' ||
+      loginState === 'librarian'
     );
   }
 
@@ -47,6 +48,8 @@ function canUseRoute(pathname: string, routeSchoolId: string, loginState: string
   if (section === 'secretary') return loginState === 'secretary' || loginState === 'admin';
   if (section === 'prize-clerk') return loginState === 'prizeClerk' || loginState === 'admin';
   if (section === 'reports') return loginState === 'reports' || loginState === 'admin';
+  if (section === 'librarian') return loginState === 'librarian' || loginState === 'admin';
+  if (section === 'library') return true;
 
   if (section === 'hall-of-fame') return canAccessHallOfFameRoute(loginState);
 

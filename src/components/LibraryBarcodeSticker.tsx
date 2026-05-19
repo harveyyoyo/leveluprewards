@@ -1,16 +1,18 @@
 'use client';
 
 import type { LibraryItem } from '@/lib/types';
-import { libraryBarcodeForPrint } from '@/lib/libraryScanCode';
+import { libraryBarcodeForPrint, type LibraryLabelFormat } from '@/lib/libraryScanCode';
 import { cn } from '@/lib/utils';
 
 export function LibraryBarcodeSticker({
   item,
   schoolName,
+  format = 'sticker',
   className,
 }: {
   item: LibraryItem;
   schoolName: string;
+  format?: LibraryLabelFormat;
   className?: string;
 }) {
   const barcode = libraryBarcodeForPrint(item);
@@ -20,7 +22,7 @@ export function LibraryBarcodeSticker({
     .join(' · ');
 
   return (
-    <div className={cn('library-barcode-sticker', className)}>
+    <div className={cn('library-barcode-sticker', `library-barcode-sticker--${format}`, className)}>
       <div className="library-barcode-sticker-school truncate">{schoolName}</div>
       <div className={cn('library-barcode-sticker-title font-bold leading-tight text-slate-900', titleFit)}>
         {item.name}

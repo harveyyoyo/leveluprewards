@@ -141,9 +141,10 @@ async function checkSchoolRole(
     `${base}/roles_secretary/${encodeURIComponent(uid)}`,
     `${base}/roles_prizeClerk/${encodeURIComponent(uid)}`,
     `${base}/roles_reports/${encodeURIComponent(uid)}`,
+    `${base}/roles_librarian/${encodeURIComponent(uid)}`,
   ];
 
-  const STAFF_ROLES = new Set(['admin', 'teacher', 'secretary', 'prizeClerk', 'reports']);
+  const STAFF_ROLES = new Set(['admin', 'teacher', 'secretary', 'prizeClerk', 'reports', 'librarian']);
 
   let allowed = false;
   try {

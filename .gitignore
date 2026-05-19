@@ -73,3 +73,7 @@ codex-*.err.log
 
 # assistant handoff scratch (local only)
 HANDOFF.md
+
+# NanoBanana PPT (local venv + generated outputs)
+tools/NanoBanana-PPT-Skills/venv/
+tools/NanoBanana-PPT-Skills/outputs/
