@@ -42,7 +42,7 @@ export const LEVELUP_BRAND_PRIMARY_HEX = '#102a45';
 export const LEVELUP_BRAND_PRIMARY_ON_DARK_HEX = '#7dd3fc';
 
 /**
- * URL for the LevelUp logo / wordmark across the app (default: preschool org sign-in chooser).
+ * URL for the LevelUp logo / wordmark across the app (default: app school sign-in chooser).
  * Set `NEXT_PUBLIC_LEVELUP_LOGO_HREF` to override per deployment.
  */
 export function getLevelUpLogoHref(): string {
@@ -51,6 +51,6 @@ export function getLevelUpLogoHref(): string {
       ? process.env.NEXT_PUBLIC_LEVELUP_LOGO_HREF.trim()
       : '';
   if (env) return env;
-  // Default to the public login screen. (Avoid hardcoded schoolIds like "preschool".)
-  return '/login';
+  // Default to a fresh public login screen. (Avoid hardcoded schoolIds like "preschool".)
+  return '/login?changeSchool=1';
 }

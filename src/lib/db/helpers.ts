@@ -7,6 +7,11 @@ import type { DocumentData } from 'firebase/firestore';
 // that's what `setDoc` / `updateDoc` / `transaction.update` expect — using a
 // stricter `Record<string, unknown>` here breaks those call sites.
 // -------------------------------------------------------------------------
+/** Best-effort "last changed" time for roster sorting (legacy rows may only have createdAt). */
+export function studentLastChangedAt(student: Pick<Student, 'updatedAt' | 'createdAt'>): number {
+  return student.updatedAt ?? student.createdAt ?? 0;
+}
+
 export const removeUndefined = <T extends Record<string, unknown>>(obj: T): DocumentData => {
   const newObj: DocumentData = {};
   Object.keys(obj).forEach(key => {

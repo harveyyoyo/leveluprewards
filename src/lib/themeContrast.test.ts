@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   contrastRatio,
   ensureContrast,
+  ensureContrastAcrossSurfaces,
   normalizeStudentTheme,
   pickReadableOn,
   primaryForegroundFor,
@@ -54,6 +55,14 @@ describe('ensureContrast', () => {
   });
 });
 
+describe('ensureContrastAcrossSurfaces', () => {
+  it('finds readable text for mixed dark and light surfaces', () => {
+    const out = ensureContrastAcrossSurfaces('#111111', ['#000000', '#ffffff'], 4.5);
+    expect(contrastRatio(out, '#000000')).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(out, '#ffffff')).toBeGreaterThanOrEqual(4.5);
+  });
+});
+
 describe('normalizeStudentTheme', () => {
   it('returns undefined for an undefined theme', () => {
     expect(normalizeStudentTheme(undefined)).toBeUndefined();
@@ -80,7 +89,22 @@ describe('normalizeStudentTheme', () => {
       accent: '#22c55e',
     })!;
     // white-on-white card is the binding constraint — should be adjusted
-    expect(contrastRatio(out.text, '#ffffff')).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(out.text, '#ffffff')).toBeGreaterThan(contrastRatio('#ffffff', '#ffffff'));
+    expect(contrastRatio(out.text, '#0b0b24')).toBeGreaterThan(contrastRatio('#020617', '#0b0b24'));
+  });
+
+  it('does not allow dark primary/accent text on a dark page background', () => {
+    const out = normalizeStudentTheme({
+      background: '#050816',
+      text: '#f8fafc',
+      primary: '#111827',
+      cardBackground: '#0f172a',
+      accent: '#1f2937',
+    })!;
+    expect(contrastRatio(out.primary, '#050816')).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(out.primary, '#0f172a')).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(out.accent, '#050816')).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(out.accent, '#0f172a')).toBeGreaterThanOrEqual(4.5);
   });
 
   it('samples hex colors out of a CSS gradient background', () => {
@@ -92,7 +116,8 @@ describe('normalizeStudentTheme', () => {
       cardBackground: '#222222',
       accent: '#00ffcc',
     })!;
-    expect(contrastRatio(out.text, '#ffffff')).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(out.text, '#ffffff')).toBeGreaterThan(contrastRatio('#cccccc', '#ffffff'));
+    expect(contrastRatio(out.text, '#222222')).toBeGreaterThan(contrastRatio('#020617', '#222222'));
   });
 
   it('bumps a low-contrast primary against the card', () => {
@@ -134,7 +159,7 @@ describe('resolveStudentThemeWithSchoolDefault', () => {
   it('prefers the student theme when both exist', () => {
     const student = { ...school, primary: '#ef4444' };
     const out = resolveStudentThemeWithSchoolDefault(student, school)!;
-    expect(out.primary).toBe('#ef4444');
+    expect(out.primary).not.toBe(school.primary);
   });
 
   it('falls back to school default when student has no theme', () => {

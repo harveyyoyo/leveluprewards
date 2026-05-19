@@ -168,6 +168,8 @@ export interface Student {
   customEmojiUrl?: string;
   /** When the student record was created (ms since epoch). */
   createdAt?: number;
+  /** When the student record was last modified (ms since epoch). */
+  updatedAt?: number;
   points: number;
   lifetimePoints?: number;
   classId?: string;

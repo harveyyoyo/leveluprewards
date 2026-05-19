@@ -47,7 +47,7 @@ import { Progress } from '@/components/ui/progress';
 import { useReducedMotion } from 'framer-motion';
 import { useStaggeredCardListEntrance } from '@/hooks/useStaggeredCardListEntrance';
 import { cn, getStudentNickname, getContrastColor } from '@/lib/utils';
-import { resolveStudentThemeWithSchoolDefault, primaryForegroundFor } from '@/lib/themeContrast';
+import { ensureContrast, resolveStudentThemeWithSchoolDefault, primaryForegroundFor } from '@/lib/themeContrast';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
 import { getReadableErrorMessage, OFFLINE_USER_MESSAGE } from '@/lib/errorMessage';
 import { scanMismatchAtCouponRedeem } from '@/lib/scanMismatch';
@@ -126,6 +126,7 @@ import { useAuthFetch } from '@/lib/authFetch';
 import { WelcomeOverlay } from '@/components/WelcomeOverlay';
 import { StudentKioskTransitionFlash } from '@/components/StudentKioskTransitionFlash';
 import { StudentKioskOptionsMenu } from '@/components/student-kiosk/StudentKioskOptionsMenu';
+import { getStudentPointTypeTotals } from '@/lib/studentPointTypes';
 
 const STUDENT_TRANSITION_MIN_VISIBLE_MS = 650;
 const STUDENT_TRANSITION_EXIT_MS = 320;
@@ -396,11 +397,12 @@ function StudentDashboardInner({
   const { functions, auth } = useFirebase();
   const { toast } = useToast();
   const { settings } = useSettings();
-  const { kioskAiFunAndVoucherActive, markKioskRewardsActivity } = useKioskAiFunAndVoucherIdleActive(
-    settings.kioskAiFunAndVoucherIdleOffMin,
+  const { kioskAiFunActive, kioskVoucherActive, markKioskRewardsActivity } = useKioskAiFunAndVoucherIdleActive(
+    settings.kioskAiFunIdleOffSec,
+    settings.kioskVoucherIdleOffSec,
     isKioskLocked,
   );
-  const kioskAiFunInShop = settings.enablePrizeAiSurprise === true && kioskAiFunAndVoucherActive;
+  const kioskAiFunInShop = settings.enablePrizeAiSurprise === true && kioskAiFunActive;
   const showManualCoupon = settings.kioskCouponRedemptionManualEnabled !== false;
   const showCameraCoupon = settings.kioskCouponRedemptionCameraEnabled !== false;
   const couponSectionEnabled = showManualCoupon || showCameraCoupon;
@@ -950,7 +952,7 @@ function StudentDashboardInner({
       let ticketPayload: typeof prizeTicketData = null;
       if (
         prize.offerPrintTicketOnRedeem === true &&
-        kioskAiFunAndVoucherActive &&
+        kioskVoucherActive &&
         activityId &&
         redeemedAt &&
         typeof totalCost === 'number'
@@ -980,10 +982,10 @@ function StudentDashboardInner({
         };
       }
 
-      if (prize.aiFunReward && schoolId && settings.enablePrizeAiSurprise === true && kioskAiFunAndVoucherActive) {
+      if (prize.aiFunReward && schoolId && settings.enablePrizeAiSurprise === true && kioskAiFunActive) {
         const aiCooldownOk = Date.now() - lastAiSurpriseCallRef.current > 10_000;
         if (!aiCooldownOk) {
-          if (ticketPayload && kioskAiFunAndVoucherActive) setPrizeTicketData(ticketPayload);
+          if (ticketPayload && kioskVoucherActive) setPrizeTicketData(ticketPayload);
         } else {
           lastAiSurpriseCallRef.current = Date.now();
           pendingPrizeTicketAfterAiRef.current = ticketPayload;
@@ -1045,7 +1047,7 @@ function StudentDashboardInner({
             }
           })();
         }
-      } else if (ticketPayload && kioskAiFunAndVoucherActive) {
+      } else if (ticketPayload && kioskVoucherActive) {
         setPrizeTicketData(ticketPayload);
       }
       setConfirmingPrize(null);
@@ -1059,7 +1061,7 @@ function StudentDashboardInner({
     } finally {
       setIsRedeemingPrize(false);
     }
-  }, [authFetch, confirmingFunKind, confirmingPrize, playSound, redeemPrize, resetLogoutTimer, schoolId, settings.defaultStudentTheme, settings.enableStudentThemes, settings.enablePrizeAiSurprise, settings.enableStudentEmojiOnPrizeTickets, settings.enableGoals, student, toast, firestore, kioskAiFunAndVoucherActive]);
+  }, [authFetch, confirmingFunKind, confirmingPrize, playSound, redeemPrize, resetLogoutTimer, schoolId, settings.defaultStudentTheme, settings.enableStudentThemes, settings.enablePrizeAiSurprise, settings.enableStudentEmojiOnPrizeTickets, settings.enableGoals, student, toast, firestore, kioskAiFunActive, kioskVoucherActive]);
 
   const handlePrintPrizeTicket = useCallback(() => {
     if (!prizeTicketData) return;
@@ -1191,6 +1193,11 @@ function StudentDashboardInner({
     student?.points,
   ]);
 
+  const pointTypeTotals = useMemo(
+    () => (student ? getStudentPointTypeTotals(student) : []),
+    [student?.categoryPoints, student?.lifetimePoints, student?.points],
+  );
+
   if (studentLoading || !student || !schoolId) {
     return (
       <div
@@ -1238,8 +1245,26 @@ function StudentDashboardInner({
 
   const fontScale = effectiveTheme?.fontScale ?? 1.15;
   const themeBg = effectiveTheme?.background || '#020617';
+  const themeCard = effectiveTheme?.cardBackground || themeBg;
   const computedThemeText = effectiveTheme?.text || (getContrastColor(themeBg) === 'black' ? '#020617' : '#ffffff');
+  const computedThemePageText = effectiveTheme ? ensureContrast(computedThemeText, themeBg, 4.5) : computedThemeText;
+  const computedThemeCardText = effectiveTheme ? ensureContrast(computedThemeText, themeCard, 4.5) : computedThemeText;
   const primaryForeground = effectiveTheme ? primaryForegroundFor(effectiveTheme) : '#ffffff';
+  const themeSurfaceStyle: React.CSSProperties | undefined = effectiveTheme
+    ? ({
+        '--theme-bg': themeBg,
+        '--theme-page-text': computedThemePageText,
+        '--theme-text': computedThemeCardText,
+        '--theme-text-muted': `${computedThemeCardText}b3`,
+        '--theme-primary': effectiveTheme.primary || 'hsl(var(--primary))',
+        '--theme-primary-foreground': primaryForeground,
+        '--theme-card': themeCard,
+        '--theme-accent': effectiveTheme.accent || 'hsl(var(--accent))',
+        backgroundColor: 'var(--theme-card)',
+        color: 'var(--theme-text)',
+        borderColor: 'color-mix(in srgb, var(--theme-primary) 42%, transparent)',
+      } as unknown as React.CSSProperties)
+    : undefined;
 
   const welcomeBackdropActive =
     showWelcome && studentSeesWelcomeBackOverlay(settings, student);
@@ -1256,15 +1281,17 @@ function StudentDashboardInner({
             ? "pt-14 md:pt-16 [@media(max-height:760px)]:pt-12 [@media(max-height:760px)]:md:pt-12"
             : "pt-3 md:pt-8 [@media(max-height:760px)]:pt-2 [@media(max-height:760px)]:md:pt-3",
           settings.enableThemeAnimations && !!effectiveTheme && "theme-theme-elements-animated theme-motion-override",
+          effectiveTheme && 'student-theme-surface',
           settings.displayMode === 'app' && 'pb-6',
           'pb-[max(0.5rem,env(safe-area-inset-bottom))]'
         )}
         style={effectiveTheme ? ({
           '--theme-bg': themeBg,
-          '--theme-text': computedThemeText,
+          '--theme-page-text': computedThemePageText,
+          '--theme-text': computedThemeCardText,
           '--theme-primary': effectiveTheme.primary || 'hsl(var(--primary))',
           '--theme-primary-foreground': primaryForeground,
-          '--theme-card': effectiveTheme.cardBackground || 'hsl(var(--card))',
+          '--theme-card': themeCard,
           '--theme-accent': effectiveTheme.accent || 'hsl(var(--accent))',
           ...(effectiveTheme.backgroundStyle
             ? { background: effectiveTheme.backgroundStyle }
@@ -1272,7 +1299,7 @@ function StudentDashboardInner({
                 backgroundColor: themeBg,
                 backgroundImage: `radial-gradient(circle at top left, ${effectiveTheme.primary || 'hsl(var(--primary))'}22 0, transparent 45%), radial-gradient(circle at bottom right, ${effectiveTheme.accent || 'hsl(var(--accent))'}22 0, transparent 55%)`,
               }),
-          color: 'var(--theme-text)',
+          color: 'var(--theme-page-text)',
           fontFamily: effectiveTheme.fontFamily || 'inherit',
           fontSize: fontScale !== 1 ? `calc(var(--student-dashboard-density, 1) * ${fontScale}em)` : undefined,
         } as unknown as React.CSSProperties) : ({
@@ -1371,14 +1398,14 @@ function StudentDashboardInner({
             <div className="min-w-0">
               <p
                 className="text-[10px] font-bold uppercase tracking-[0.22em] opacity-70"
-                style={{ color: effectiveTheme ? 'var(--theme-text)' : undefined }}
+                style={{ color: effectiveTheme ? 'var(--theme-page-text)' : undefined }}
               >
                 Welcome back
               </p>
               <div className="flex flex-wrap items-center gap-2">
                 <h1
                   className="truncate text-xl font-black leading-tight sm:text-2xl md:text-3xl [@media(max-height:760px)]:text-xl"
-                  style={{ color: effectiveTheme ? 'var(--theme-text)' : undefined }}
+                  style={{ color: effectiveTheme ? 'var(--theme-page-text)' : undefined }}
                 >
                   {student.firstName} {student.lastName}
                 </h1>
@@ -1405,7 +1432,7 @@ function StudentDashboardInner({
               {student.nickname?.trim() ? (
                 <p
                   className="mt-0.5 truncate text-[10px] font-bold uppercase tracking-[0.2em] opacity-60"
-                  style={{ color: effectiveTheme ? 'var(--theme-text)' : undefined }}
+                  style={{ color: effectiveTheme ? 'var(--theme-page-text)' : undefined }}
                 >
                   {student.nickname.trim()}
                 </p>
@@ -1487,6 +1514,28 @@ function StudentDashboardInner({
                 {(student.points || 0).toLocaleString()}{' '}
                 <span className="text-[10px] font-bold uppercase tracking-widest opacity-70">pts</span>
               </p>
+              <div className="mt-2 flex max-w-[17rem] flex-wrap justify-center gap-1 sm:justify-start">
+                {pointTypeTotals.length > 0 ? (
+                  pointTypeTotals.slice(0, 4).map((row) => (
+                    <span
+                      key={row.label}
+                      className="rounded-full border px-2 py-0.5 text-[10px] font-bold leading-tight"
+                      style={
+                        effectiveTheme
+                          ? {
+                              borderColor: 'color-mix(in srgb, var(--theme-primary) 22%, transparent)',
+                              color: 'var(--theme-text)',
+                            }
+                          : undefined
+                      }
+                    >
+                      {row.label}: {row.points.toLocaleString()}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-[10px] font-semibold opacity-60">No point types yet</span>
+                )}
+              </div>
             </div>
             {portalRaffleTickets ? (
               <>
@@ -2056,10 +2105,16 @@ function StudentDashboardInner({
             <AlertDialog open={!!confirmingPrize} onOpenChange={(open) => {
               if (!open && !isRedeemingPrize) setConfirmingPrize(null);
             }}>
-              <AlertDialogContent>
+              <AlertDialogContent
+                className={cn(activeTheme && 'student-theme-surface')}
+                style={themeSurfaceStyle}
+              >
                 <AlertDialogHeader>
                   <AlertDialogTitle>Redeem prize?</AlertDialogTitle>
-                  <AlertDialogDescription className="break-words [overflow-wrap:anywhere]">
+                  <AlertDialogDescription
+                    className="break-words [overflow-wrap:anywhere]"
+                    style={activeTheme ? { color: 'var(--theme-text)', opacity: 0.85 } : undefined}
+                  >
                     Redeem{' '}
                     <span className="text-xl font-black sm:text-2xl [overflow-wrap:anywhere]">{confirmingPrize?.name}</span>
                     {confirmingPrize ? ` for ${(confirmingPrize.points || 0).toLocaleString()} points` : ''}?
@@ -2067,9 +2122,12 @@ function StudentDashboardInner({
                 </AlertDialogHeader>
                 {confirmingPrize?.aiFunReward === 'picker' ? (
                   <div className="py-2 space-y-2">
-                    <Label htmlFor="student-fun-kind">What do you want?</Label>
+                    <Label htmlFor="student-fun-kind" style={activeTheme ? { color: 'var(--theme-text)' } : undefined}>What do you want?</Label>
                     <Select value={confirmingFunKind} onValueChange={(v) => setConfirmingFunKind(v as PrizeAiFunReward)}>
-                      <SelectTrigger id="student-fun-kind">
+                      <SelectTrigger
+                        id="student-fun-kind"
+                        style={activeTheme ? { backgroundColor: 'var(--theme-bg)', borderColor: 'var(--theme-primary)', color: 'var(--theme-text)' } : undefined}
+                      >
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -2084,7 +2142,12 @@ function StudentDashboardInner({
                 ) : null}
                 <AlertDialogFooter>
                   <AlertDialogCancel disabled={isRedeemingPrize}>Cancel</AlertDialogCancel>
-                  <Button type="button" onClick={handleRedeemPrize} disabled={isRedeemingPrize}>
+                  <Button
+                    type="button"
+                    onClick={handleRedeemPrize}
+                    disabled={isRedeemingPrize}
+                    style={activeTheme ? { backgroundColor: 'var(--theme-primary)', color: primaryForeground } : undefined}
+                  >
                     {isRedeemingPrize ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
@@ -2101,10 +2164,16 @@ function StudentDashboardInner({
             <AlertDialog open={!!prizeTicketData} onOpenChange={(open) => {
               if (!open) setPrizeTicketData(null);
             }}>
-              <AlertDialogContent>
+              <AlertDialogContent
+                className={cn(activeTheme && 'student-theme-surface')}
+                style={themeSurfaceStyle}
+              >
                 <AlertDialogHeader>
                   <AlertDialogTitle>Print redeem voucher?</AlertDialogTitle>
-                  <AlertDialogDescription className="break-words [overflow-wrap:anywhere]">
+                  <AlertDialogDescription
+                    className="break-words [overflow-wrap:anywhere]"
+                    style={activeTheme ? { color: 'var(--theme-text)', opacity: 0.85 } : undefined}
+                  >
                     Print a voucher for{' '}
                     <span className="text-xl font-black sm:text-2xl">{prizeTicketData?.prizeName}</span>?
                   </AlertDialogDescription>
@@ -2116,7 +2185,11 @@ function StudentDashboardInner({
                 />
                 <AlertDialogFooter>
                   <AlertDialogCancel>No Thanks</AlertDialogCancel>
-                  <Button type="button" onClick={handlePrintPrizeTicket}>
+                  <Button
+                    type="button"
+                    onClick={handlePrintPrizeTicket}
+                    style={activeTheme ? { backgroundColor: 'var(--theme-primary)', color: primaryForeground } : undefined}
+                  >
                     Print Voucher
                   </Button>
                 </AlertDialogFooter>
@@ -2131,7 +2204,10 @@ function StudentDashboardInner({
                 }
               }}
             >
-              <DialogContent className="sm:max-w-md">
+              <DialogContent
+                className={cn("sm:max-w-md", activeTheme && 'student-theme-surface')}
+                style={themeSurfaceStyle}
+              >
                 <DialogHeader>
                   <DialogTitle>
                     {aiSurpriseLoading
@@ -2144,12 +2220,15 @@ function StudentDashboardInner({
                 </DialogHeader>
                 <div className="min-h-[100px] py-1">
                   {aiSurpriseLoading ? (
-                    <div className="flex flex-col items-center justify-center gap-3 py-8 text-muted-foreground">
+                    <div
+                      className={cn("flex flex-col items-center justify-center gap-3 py-8", !activeTheme && "text-muted-foreground")}
+                      style={activeTheme ? { color: 'var(--theme-text)', opacity: 0.7 } : undefined}
+                    >
                       <Loader2 className="h-10 w-10 animate-spin" aria-hidden />
                       <p className="text-sm font-medium">Cooking up something fun…</p>
                     </div>
                   ) : aiSurpriseBody ? (
-                    <div className="space-y-4 text-base leading-relaxed">
+                    <div className="space-y-4 text-base leading-relaxed" style={activeTheme ? { color: 'var(--theme-text)' } : undefined}>
                       <p
                         className={cn(
                           'font-medium',
@@ -2159,8 +2238,11 @@ function StudentDashboardInner({
                         {aiSurpriseBody.text}
                       </p>
                       {aiSurpriseBody.kind === 'riddle' && aiSurpriseBody.answer ? (
-                        <p className="rounded-lg border border-border bg-muted/80 px-3 py-2 text-sm">
-                          <span className="font-semibold text-muted-foreground">Answer: </span>
+                        <p
+                          className={cn("rounded-lg border px-3 py-2 text-sm", !activeTheme && "border-border bg-muted/80")}
+                          style={activeTheme ? { backgroundColor: 'var(--theme-bg)', borderColor: 'var(--theme-primary)', color: 'var(--theme-text)' } : undefined}
+                        >
+                          <span className={cn("font-semibold", !activeTheme && "text-muted-foreground")} style={activeTheme ? { color: 'var(--theme-text)', opacity: 0.7 } : undefined}>Answer: </span>
                           {aiSurpriseBody.answer}
                         </p>
                       ) : null}
@@ -2172,6 +2254,7 @@ function StudentDashboardInner({
                   className="w-full sm:w-auto sm:justify-self-end"
                   onClick={closeAiSurprise}
                   disabled={aiSurpriseLoading}
+                  style={activeTheme ? { backgroundColor: 'var(--theme-primary)', color: primaryForeground } : undefined}
                 >
                   {aiSurpriseLoading ? 'Please wait...' : 'Awesome'}
                 </Button>

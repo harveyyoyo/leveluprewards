@@ -355,7 +355,8 @@ export function SettingsModal() {
         if (
             key === 'adminSessionTimeoutMs' ||
             key === 'kioskSessionTimeoutSec' ||
-            key === 'kioskAiFunAndVoucherIdleOffMin'
+            key === 'kioskAiFunIdleOffSec' ||
+            key === 'kioskVoucherIdleOffSec'
         ) {
             updateSettings({ [key]: value } as Partial<AppSettings>);
         }
@@ -1214,6 +1215,30 @@ export function SettingsModal() {
                                             onCheckedChange={(checked) => handleToggle('enableStudentThemes', checked)}
                                         />
                                     </div>
+                                    <div className="flex items-center justify-between gap-4 col-span-2">
+                                        <div className="flex items-center gap-2 min-w-0 pr-2">
+                                            <Smartphone className="w-4 h-4 text-muted-foreground shrink-0" />
+                                            <div className="min-w-0">
+                                                <span className="text-sm font-bold">Portrait display layout</span>
+                                                <p className="text-[10px] text-muted-foreground font-medium leading-snug mt-0.5">
+                                                    Tall narrow layout for portrait-mounted kiosk screens.
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <Switch
+                                            checked={
+                                                local.kioskPortraitDisplay === true ||
+                                                local.studentPortalPortraitDisplay === true
+                                            }
+                                            onCheckedChange={(checked) => {
+                                                handleToggle('kioskPortraitDisplay', checked);
+                                                if (local.studentPortalPortraitDisplay) {
+                                                    handleToggle('studentPortalPortraitDisplay', false);
+                                                }
+                                            }}
+                                            disabled={!isAdmin}
+                                        />
+                                    </div>
                                 </div>
 
                                  {/* Display Mode */}
@@ -1285,28 +1310,6 @@ export function SettingsModal() {
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center justify-between gap-4">
-                                        <div className="flex flex-col min-w-0 flex-1">
-                                            <span className="text-sm font-bold">Portrait display layout</span>
-                                            <p className="text-[11px] text-muted-foreground">
-                                                Tall narrow layout for portrait-mounted kiosk screens (portal hub, sign-in, rewards shop).
-                                            </p>
-                                        </div>
-                                        <Switch
-                                            checked={
-                                                local.kioskPortraitDisplay === true ||
-                                                local.studentPortalPortraitDisplay === true
-                                            }
-                                            onCheckedChange={(checked) => {
-                                                handleToggle('kioskPortraitDisplay', checked);
-                                                if (local.studentPortalPortraitDisplay) {
-                                                    handleToggle('studentPortalPortraitDisplay', false);
-                                                }
-                                            }}
-                                            disabled={!isAdmin}
-                                        />
-                                    </div>
-
                                     <div className="flex items-center justify-between">
                                         <div className="flex flex-col">
                                             <span className="text-sm font-bold">Kiosk Auto-Logout</span>
@@ -1326,26 +1329,26 @@ export function SettingsModal() {
 
                                     <div className="flex items-center justify-between">
                                         <div className="flex flex-col max-w-[min(100%,18rem)]">
-                                            <span className="text-sm font-bold">AI Fun + print vouchers</span>
+                                            <span className="text-sm font-bold">Voucher timeout</span>
                                             <p className="text-[11px] text-muted-foreground">
-                                                Turn off after this many idle minutes (no taps or keys) on the student kiosk or rewards shop. Next touch turns them back on.
+                                                Hide print-voucher prompts after this many idle seconds on the student kiosk or rewards shop. Next touch turns them back on.
                                             </p>
                                         </div>
                                         <div className="flex items-center gap-2 shrink-0">
                                             <Input
                                                 type="number"
                                                 className="w-20 h-9 rounded-xl text-center font-bold bg-background/50 border-border/50"
-                                                value={local.kioskAiFunAndVoucherIdleOffMin ?? 6}
+                                                value={local.kioskVoucherIdleOffSec ?? 360}
                                                 onChange={(e) =>
                                                     handleToggle(
-                                                        'kioskAiFunAndVoucherIdleOffMin',
-                                                        Math.max(1, Math.min(240, parseInt(e.target.value, 10) || 6)),
+                                                        'kioskVoucherIdleOffSec',
+                                                        Math.max(1, Math.min(14400, parseInt(e.target.value, 10) || 360)),
                                                     )
                                                 }
                                                 min={1}
-                                                max={240}
+                                                max={14400}
                                             />
-                                            <span className="text-[10px] font-bold text-muted-foreground uppercase">min</span>
+                                            <span className="text-[10px] font-bold text-muted-foreground uppercase">sec</span>
                                         </div>
                                     </div>
 
@@ -1886,23 +1889,50 @@ export function SettingsModal() {
                                 />
                                 {local.enablePrizeAiSurprise ? (
                                     <div className="px-3 pb-4 pt-0 border-t border-slate-100 dark:border-slate-800/50 mt-1">
-                                        <Label htmlFor="prizeAiSurpriseDefaultPoints" className="text-xs font-bold text-foreground">
-                                            Default point cost for Fun (AI surprise)
-                                        </Label>
-                                        <p className="mt-1 text-xs text-muted-foreground">
-                                            Controls the point cost for the built-in Fun reward shown to students.
-                                        </p>
-                                        <Input
-                                            id="prizeAiSurpriseDefaultPoints"
-                                            type="number"
-                                            min={0}
-                                            className="mt-3 max-w-[8rem] rounded-xl"
-                          value={local.prizeAiSurpriseDefaultPoints ?? 1}
-                                            onChange={(e) => {
-                                                const n = parseInt(e.target.value, 10);
-                            handleToggle('prizeAiSurpriseDefaultPoints', Number.isFinite(n) ? Math.max(0, n) : 1);
-                                            }}
-                                        />
+                                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                            <div>
+                                                <Label htmlFor="prizeAiSurpriseDefaultPoints" className="text-xs font-bold text-foreground">
+                                                    Default point cost for Fun
+                                                </Label>
+                                                <p className="mt-1 text-xs text-muted-foreground">
+                                                    Point cost for the built-in AI Fun reward.
+                                                </p>
+                                                <Input
+                                                    id="prizeAiSurpriseDefaultPoints"
+                                                    type="number"
+                                                    min={0}
+                                                    className="mt-3 max-w-[8rem] rounded-xl"
+                                                    value={local.prizeAiSurpriseDefaultPoints ?? 1}
+                                                    onChange={(e) => {
+                                                        const n = parseInt(e.target.value, 10);
+                                                        handleToggle('prizeAiSurpriseDefaultPoints', Number.isFinite(n) ? Math.max(0, n) : 1);
+                                                    }}
+                                                />
+                                            </div>
+                                            <div>
+                                                <Label htmlFor="kioskAiFunIdleOffSec" className="text-xs font-bold text-foreground">
+                                                    AI Fun timeout
+                                                </Label>
+                                                <p className="mt-1 text-xs text-muted-foreground">
+                                                    Hide AI Fun after this many idle seconds.
+                                                </p>
+                                                <div className="mt-3 flex items-center gap-2">
+                                                    <Input
+                                                        id="kioskAiFunIdleOffSec"
+                                                        type="number"
+                                                        min={1}
+                                                        max={14400}
+                                                        className="max-w-[8rem] rounded-xl"
+                                                        value={local.kioskAiFunIdleOffSec ?? 360}
+                                                        onChange={(e) => {
+                                                            const n = parseInt(e.target.value, 10);
+                                                            handleToggle('kioskAiFunIdleOffSec', Number.isFinite(n) ? Math.min(14400, Math.max(1, n)) : 360);
+                                                        }}
+                                                    />
+                                                    <span className="text-[10px] font-bold uppercase text-muted-foreground">sec</span>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 ) : null}
                                 <FeatureRow

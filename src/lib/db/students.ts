@@ -35,6 +35,7 @@ export const addStudent = async (firestore: Firestore, schoolId: string, student
     id: newStudentId,
     nfcId: studentData.nfcId || newStudentId,
     createdAt: Date.now(),
+    updatedAt: Date.now(),
     points: 0,
     lifetimePoints: 0,
     categoryPoints: {},
@@ -72,7 +73,7 @@ export const updateStudent = async (firestore: Firestore, schoolId: string, stud
 
       const newLifetimePoints = (oldStudent.lifetimePoints || oldStudent.points) + (pointsDifference > 0 ? pointsDifference : 0);
 
-      const finalStudentData = { ...student, lifetimePoints: newLifetimePoints };
+      const finalStudentData = { ...student, lifetimePoints: newLifetimePoints, updatedAt: Date.now() };
 
       const payload = removeUndefined(finalStudentData as unknown as Record<string, unknown>) as Record<string, unknown>;
       // `theme: undefined` in the client object is stripped by removeUndefined; Firestore would otherwise keep the old theme.
@@ -170,10 +171,11 @@ export const awardPointsToStudent = async (
         categoryPointsByPeriod: categoryPointsByPeriodUpdate,
         earnedAchievements: result.earnedAchievements,
         earnedBadges: result.earnedBadges,
+        updatedAt: now,
       });
 
       const activityRef = doc(collection(firestore, 'schools', schoolId, 'students', studentId, 'activities'));
-      transaction.set(activityRef, { desc: description, amount: points, date: Date.now() });
+      transaction.set(activityRef, { desc: description, amount: points, date: now });
     });
 
     if (!options?.skipGoalSync) {
@@ -255,6 +257,7 @@ export const awardPointsToMultipleStudents = async (
             categoryPointsByPeriod: categoryPointsByPeriodUpdate,
             earnedAchievements: result.earnedAchievements,
             earnedBadges: result.earnedBadges,
+            updatedAt: now,
           });
 
           const mainActivityRef = doc(collection(studentDoc.ref, 'activities'));
@@ -310,10 +313,11 @@ export const deductPointsFromMultipleStudents = async (firestore: Firestore, sch
           const studentData = studentDoc.data() as Student;
           const newPoints = Math.max(0, studentData.points - points);
 
-          transaction.update(studentDoc.ref, { points: newPoints });
+          const now = Date.now();
+          transaction.update(studentDoc.ref, { points: newPoints, updatedAt: now });
 
           const activityRef = doc(collection(studentDoc.ref, 'activities'));
-          transaction.set(activityRef, { desc: reason, amount: -points, date: Date.now() });
+          transaction.set(activityRef, { desc: reason, amount: -points, date: now });
 
           processedCount++;
         }
@@ -348,6 +352,7 @@ export const purgeStudentProgress = async (firestore: Firestore, schoolId: strin
         throw new Error("Student not found");
       }
 
+      const now = Date.now();
       transaction.update(studentRef, {
         points: 0,
         lifetimePoints: 0,
@@ -356,13 +361,14 @@ export const purgeStudentProgress = async (firestore: Firestore, schoolId: strin
         categoryPointsByPeriod: {},
         earnedAchievements: [],
         earnedBadges: [],
+        updatedAt: now,
       });
 
       const activityRef = doc(collection(firestore, 'schools', schoolId, 'students', studentId, 'activities'));
       transaction.set(activityRef, {
         desc: 'Progress purged by admin',
         amount: 0,
-        date: Date.now(),
+        date: now,
       } as HistoryItem);
     });
   } catch (error) {
@@ -428,7 +434,10 @@ async function persistStudentUpdates(
       const batch = writeBatch(firestore);
       for (const u of chunk) {
         const ref = doc(firestore, 'schools', schoolId, 'students', u.id);
-        batch.update(ref, removeUndefined(u.patch as unknown as Record<string, unknown>));
+        batch.update(
+          ref,
+          removeUndefined({ ...u.patch, updatedAt: Date.now() } as unknown as Record<string, unknown>),
+        );
       }
       await batch.commit();
     }
@@ -554,6 +563,7 @@ export const importStudentsFromParsedRows = async (
       ...(studentEmail ? { studentEmail } : {}),
       ...(studentPhone ? { studentPhone } : {}),
       createdAt: Date.now(),
+      updatedAt: Date.now(),
       points: 0,
       lifetimePoints: 0,
       classId: classObj?.id || '',
@@ -655,6 +665,7 @@ export const uploadStudents = async (firestore: Firestore, schoolId: string, csv
       ...(studentEmail ? { studentEmail } : {}),
       ...(studentPhone ? { studentPhone } : {}),
       createdAt: Date.now(),
+      updatedAt: Date.now(),
       points: 0,
       lifetimePoints: 0,
       classId: classObj?.id || '',

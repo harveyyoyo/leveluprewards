@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import type { Student } from '@/lib/types';
+import { studentLastChangedAt } from '@/lib/db/helpers';
 
 export type StudentSortOption =
   | 'lastNameAsc'
@@ -11,7 +12,9 @@ export type StudentSortOption =
   | 'pointsAsc'
   | 'pointsDesc'
   | 'createdAtAsc'
-  | 'createdAtDesc';
+  | 'createdAtDesc'
+  | 'updatedAtAsc'
+  | 'updatedAtDesc';
 
 function sortStudents(list: Student[], option: string): Student[] {
   return [...list].sort((a, b) => {
@@ -32,8 +35,12 @@ function sortStudents(list: Student[], option: string): Student[] {
         return (b.createdAt || 0) - (a.createdAt || 0);
       case 'createdAtAsc':
         return (a.createdAt || 0) - (b.createdAt || 0);
+      case 'updatedAtDesc':
+        return studentLastChangedAt(b) - studentLastChangedAt(a);
+      case 'updatedAtAsc':
+        return studentLastChangedAt(a) - studentLastChangedAt(b);
       default:
-        return 0;
+        return studentLastChangedAt(b) - studentLastChangedAt(a);
     }
   });
 }
@@ -45,7 +52,7 @@ function sortStudents(list: Student[], option: string): Student[] {
  */
 export function useStudentRoster(students: Student[] | null | undefined) {
   const [studentSearchTerm, setStudentSearchTerm] = useState('');
-  const [studentSortOption, setStudentSortOption] = useState<string>('lastNameAsc');
+  const [studentSortOption, setStudentSortOption] = useState<string>('updatedAtDesc');
   const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
   const [selectionMode, setSelectionMode] = useState(true);
   const [studentFilterClass, setStudentFilterClass] = useState<string>('all');

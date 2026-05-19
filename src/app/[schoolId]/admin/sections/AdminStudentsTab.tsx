@@ -31,6 +31,7 @@ import { cn } from '@/lib/utils';
 import type { Class, Student, Teacher } from '@/lib/types';
 import { AutoCircularToggles, type ToggleDef } from '@/components/AutoCircularToggles';
 import { STUDENT_WELCOME_STYLES_LIVE } from '@/lib/studentWelcome';
+import { formatStudentPointTypes } from '@/lib/studentPointTypes';
 
 function buildStudentKioskWelcomeToggleDefs(settings: {
   enableStudentWelcome?: boolean;
@@ -304,7 +305,11 @@ export function AdminStudentsTab({
           </CardTitle>
         </Helper>
         <CardDescription>Manage your enrollments and view student activity.</CardDescription>
-        <div className="flex flex-wrap gap-2 w-full pb-1 sm:pb-0 justify-end sm:justify-end">
+        <div className="flex flex-wrap items-center gap-2 w-full pb-1 sm:pb-0 justify-between">
+          <Button onClick={() => handleOpenStudentModal?.(null)} className="rounded-xl">
+            <Plus className="mr-2 h-4 w-4" /> Add Student
+          </Button>
+          <div className="flex flex-wrap gap-2 justify-end">
           <TabWalkthroughHeaderAction />
           <Button onClick={handleStudentCsvUpload} variant="outline" className="rounded-xl px-4 border-ring/35 bg-background/70 hover:bg-secondary hover:text-secondary-foreground">
             <UploadCloud className="mr-2 h-4 w-4" /> Import CSV
@@ -338,9 +343,6 @@ export function AdminStudentsTab({
                 ? `Print class IDs (${filteredStudents.length})`
                 : 'Print visible IDs'}
           </Button>
-          <Button onClick={() => handleOpenStudentModal?.(null)} className="rounded-xl">
-            <Plus className="mr-2 h-4 w-4" /> Add Student
-          </Button>
           <input type="file" ref={studentCsvInputRef} onChange={onStudentCsvFileChange} className="hidden" accept=".csv" />
           {studentCsvMapInputRef && onStudentCsvMapFileChange ? (
             <input
@@ -351,6 +353,7 @@ export function AdminStudentsTab({
               accept=".csv"
             />
           ) : null}
+          </div>
         </div>
       </CardHeader>
       <CardContent className="p-6">
@@ -384,6 +387,8 @@ export function AdminStudentsTab({
                   <SelectValue placeholder="Sort By" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="updatedAtDesc">Recently changed</SelectItem>
+                  <SelectItem value="updatedAtAsc">Oldest changed</SelectItem>
                   <SelectItem value="lastNameAsc">Last Name (A-Z)</SelectItem>
                   <SelectItem value="lastNameDesc">Last Name (Z-A)</SelectItem>
                   <SelectItem value="firstNameAsc">First Name (A-Z)</SelectItem>
@@ -625,6 +630,7 @@ export function AdminStudentsTab({
               const hasParentContact = !!(s.parentEmail?.trim() || s.parentPhone?.trim());
               const hasStudentContact = !!(s.studentEmail?.trim() || s.studentPhone?.trim());
               const middle = s.middleName?.trim();
+              const pointTypeLine = formatStudentPointTypes(s, 4);
               return (
               <li
                 key={s.id}
@@ -718,6 +724,15 @@ export function AdminStudentsTab({
                           </span>
                         </>
                       ) : null}
+                    </p>
+                    <p
+                      className={cn(
+                        'mt-0.5 text-[11px] sm:text-xs leading-snug truncate',
+                        pointTypeLine === 'No point types yet' ? 'text-muted-foreground/75' : 'text-foreground/75',
+                      )}
+                      title={pointTypeLine}
+                    >
+                      <span className="font-semibold text-muted-foreground">Types:</span> {pointTypeLine}
                     </p>
                   </div>
                 </div>

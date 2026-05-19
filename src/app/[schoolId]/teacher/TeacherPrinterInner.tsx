@@ -80,6 +80,9 @@ import { homeworkRewardCategoryKey } from '@/lib/homeworkRewards';
 import { studentsInTeacherScope } from '@/lib/reportsScope';
 import { AdminRaffleTab } from '@/app/[schoolId]/admin/sections/AdminRaffleTab';
 import { ManualPointsAwardDialog } from '@/components/points/ManualPointsAwardDialog';
+import { AwardCategoriesPanel } from '@/components/points/AwardCategoriesPanel';
+import { PointsTabLayout } from '@/components/points/PointsTabLayout';
+import { formatStudentPointTypes } from '@/lib/studentPointTypes';
 
 /** Max sheets per run. Bounded for sensible printer jobs and UI. */
 const MAX_COUPON_PRINT_SHEETS = 100;
@@ -650,6 +653,56 @@ function TeacherRosterTab({
         return `${cls?.name || 'Unassigned'}${classOwned ? ' · class roster' : ''}`;
     };
 
+    const renderStudentInfo = (student: Student) => {
+        const hasParentContact = !!(student.parentEmail?.trim() || student.parentPhone?.trim());
+        const hasStudentContact = !!(student.studentEmail?.trim() || student.studentPhone?.trim());
+        const pointTypeLine = formatStudentPointTypes(student, 5);
+
+        return (
+            <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <p className="min-w-0 font-bold leading-tight sm:truncate">
+                        {getStudentNickname(student)} {student.lastName}
+                    </p>
+                    <Badge variant="secondary" className="shrink-0 font-black tabular-nums">
+                        {(student.points || 0).toLocaleString()} pts
+                    </Badge>
+                    {typeof student.lifetimePoints === 'number' ? (
+                        <span className="text-[11px] font-semibold text-muted-foreground">
+                            Lifetime {student.lifetimePoints.toLocaleString()}
+                        </span>
+                    ) : null}
+                </div>
+                <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                    {renderClassLabel(student)}
+                    <span className="mx-1.5 text-border">|</span>
+                    ID {student.nfcId || student.id}
+                    {student.birthday ? (
+                        <>
+                            <span className="mx-1.5 text-border">|</span>
+                            Birthday {student.birthday}
+                        </>
+                    ) : null}
+                    {hasParentContact || hasStudentContact ? (
+                        <>
+                            <span className="mx-1.5 text-border">|</span>
+                            Contact: {[hasParentContact ? 'parent' : '', hasStudentContact ? 'student' : ''].filter(Boolean).join(', ')}
+                        </>
+                    ) : null}
+                </p>
+                <p
+                    className={cn(
+                        'mt-0.5 truncate text-xs',
+                        pointTypeLine === 'No point types yet' ? 'text-muted-foreground/75' : 'text-foreground/75',
+                    )}
+                    title={pointTypeLine}
+                >
+                    <span className="font-semibold text-muted-foreground">Types:</span> {pointTypeLine}
+                </p>
+            </div>
+        );
+    };
+
     return (
         <div className="flex flex-col gap-6 items-center">
             <Card className={cn(
@@ -679,7 +732,7 @@ function TeacherRosterTab({
                         />
                     </div>
 
-                    <div className="grid gap-6 lg:grid-cols-2">
+                    <div className="grid gap-6">
                         <div className="space-y-2">
                             <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">On my roster ({roster.length})</Label>
                             <ScrollArea className={cn("h-[calc(100vh-24rem)] max-h-[420px] min-h-[300px] rounded-2xl border p-3", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-muted/20')}>
@@ -688,10 +741,7 @@ function TeacherRosterTab({
                                         const directlyLinked = (student.teacherIds || []).includes(teacherId);
                                         return (
                                             <div key={student.id} className="flex items-center justify-between gap-3 rounded-xl border bg-background/70 p-3">
-                                                <div className="min-w-0">
-                                                    <p className="truncate font-bold">{getStudentNickname(student)} {student.lastName}</p>
-                                                    <p className="text-xs text-muted-foreground">{renderClassLabel(student)}</p>
-                                                </div>
+                                                {renderStudentInfo(student)}
                                                 {directlyLinked ? (
                                                     <Button
                                                         type="button"
@@ -722,10 +772,7 @@ function TeacherRosterTab({
                                 <div className="space-y-2 pr-3">
                                     {addable.map((student) => (
                                         <div key={student.id} className="flex items-center justify-between gap-3 rounded-xl border bg-background/70 p-3">
-                                            <div className="min-w-0">
-                                                <p className="truncate font-bold">{getStudentNickname(student)} {student.lastName}</p>
-                                                <p className="text-xs text-muted-foreground">{renderClassLabel(student)}</p>
-                                            </div>
+                                            {renderStudentInfo(student)}
                                             <Button
                                                 type="button"
                                                 variant="outline"
@@ -2679,35 +2726,43 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                             <TabsContent value="coupons" className={teacherPortalTabContentClassName}>
                                 <div className={teacherPortalPanelClassName}>
                                 {!secretaryMode && (
-                                    <ManualPointsAwardDialog
-                                        className="w-full max-w-7xl mx-auto mb-4"
-                                        students={studentsForTeacherActions}
-                                        classes={classesForTeacherUi}
-                                        categories={filteredCategories}
-                                        accentColor={teacherAccent}
-                                        isGraphic={isGraphic}
-                                        description="Select students on your roster and apply points instantly—no printed coupon required."
-                                        budgetOptions={
-                                            isAdmin
-                                                ? undefined
-                                                : {
-                                                      isAdmin: false,
-                                                      currentTeacher: currentTeacher ?? null,
-                                                      onBudgetSpend: async (totalCost) => {
-                                                          if (!currentTeacher) return;
-                                                          const next =
-                                                              currentTeacher.monthlyBudget !== undefined
-                                                                  ? teacherWithBudgetAfterSpend(currentTeacher, totalCost)
-                                                                  : {
-                                                                        ...currentTeacher,
-                                                                        spentThisMonth: (currentTeacher.spentThisMonth || 0) + totalCost,
-                                                                    };
-                                                          await updateTeacher(next);
-                                                      },
-                                                  }
-                                        }
-                                    />
+                                    <Dialog open={isPrintCategoryDialogOpen} onOpenChange={setIsPrintCategoryDialogOpen}>
+                                        <DialogContent className={cn(isGraphic ? 'bg-card/90 backdrop-blur-2xl text-foreground border-white/10' : 'bg-white')}>
+                                            <DialogHeader>
+                                                <DialogTitle className="text-2xl font-black">Add Category</DialogTitle>
+                                                <DialogDescription>Create a new quick-selection category for rewards.</DialogDescription>
+                                            </DialogHeader>
+                                            <div className="grid gap-6 py-6">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="points-tab-cat-name" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">Name</Label>
+                                                    <Input id="points-tab-cat-name" value={newPrintCategoryName} onChange={e => setNewPrintCategoryName(e.target.value)} className={cn("h-12 rounded-xl", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-slate-50')} placeholder="e.g. Extra Recess" />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="points-tab-cat-pts" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">Default Points</Label>
+                                                    <Input id="points-tab-cat-pts" type="number" value={newPrintCategoryPoints} onChange={e => setNewPrintCategoryPoints(e.target.value)} className={cn("h-12 rounded-xl font-bold", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-slate-50')} />
+                                                </div>
+                                            </div>
+                                            <DialogFooter>
+                                                <Button onClick={handleCreatePrintCategory} className="rounded-2xl h-12 w-full font-black uppercase tracking-widest">Create Category</Button>
+                                            </DialogFooter>
+                                        </DialogContent>
+                                    </Dialog>
                                 )}
+                                <PointsTabLayout
+                                    className="w-full max-w-7xl mx-auto"
+                                    defaultSection={secretaryMode ? 'print' : 'categories'}
+                                    sections={secretaryMode ? ['print'] : ['categories', 'print', 'manual']}
+                                    isGraphic={isGraphic}
+                                    categoriesContent={
+                                        <AwardCategoriesPanel
+                                            mode="teacher"
+                                            categories={filteredCategories}
+                                            isGraphic={isGraphic}
+                                            showWalkthrough={false}
+                                            onAddCategory={!secretaryMode ? () => setIsPrintCategoryDialogOpen(true) : undefined}
+                                        />
+                                    }
+                                    printContent={
                         <Card className={cn(
                             "w-full max-w-7xl border-t-8 transition-all duration-500 hover:shadow-2xl",
                             isGraphic
@@ -2749,32 +2804,15 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                                             </SelectContent>
                                                         </Select>
                                                         {!secretaryMode && (
-                                                        <Dialog open={isPrintCategoryDialogOpen} onOpenChange={setIsPrintCategoryDialogOpen}>
-                                                            <DialogTrigger asChild>
-                                                                <Button variant="outline" size="icon" className={cn("h-12 w-12 rounded-xl shrink-0 transition-all", isGraphic ? 'bg-foreground/5 border-white/10 hover:bg-white/10 text-white' : 'bg-slate-50 border-slate-200')}>
-                                                                    <Plus className="h-4 w-4" />
-                                                                </Button>
-                                                            </DialogTrigger>
-                <DialogContent className={cn(isGraphic ? 'bg-card/90 backdrop-blur-2xl text-foreground border-white/10' : 'bg-white')}>
-                                                                <DialogHeader>
-                                                                    <DialogTitle className="text-2xl font-black">Add Category</DialogTitle>
-                                                                    <DialogDescription>Create a new quick-selection category for rewards.</DialogDescription>
-                                                                </DialogHeader>
-                                                                <div className="grid gap-6 py-6">
-                                                                    <div className="space-y-2">
-                                                                        <Label htmlFor="name" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">Name</Label>
-                                                                        <Input id="name" value={newPrintCategoryName} onChange={e => setNewPrintCategoryName(e.target.value)} className={cn("h-12 rounded-xl", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-slate-50')} placeholder="e.g. Extra Recess" />
-                                                                    </div>
-                                                                    <div className="space-y-2">
-                                                                        <Label htmlFor="pts" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">Default Points</Label>
-                                                                        <Input id="pts" type="number" value={newPrintCategoryPoints} onChange={e => setNewPrintCategoryPoints(e.target.value)} className={cn("h-12 rounded-xl font-bold", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-slate-50')} />
-                                                                    </div>
-                                                                </div>
-                                                                <DialogFooter>
-                                                                    <Button onClick={handleCreatePrintCategory} className="rounded-2xl h-12 w-full font-black uppercase tracking-widest">Create Category</Button>
-                                                                </DialogFooter>
-                                                            </DialogContent>
-                                                        </Dialog>
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="icon"
+                                                            onClick={() => setIsPrintCategoryDialogOpen(true)}
+                                                            className={cn("h-12 w-12 rounded-xl shrink-0 transition-all", isGraphic ? 'bg-foreground/5 border-white/10 hover:bg-white/10 text-white' : 'bg-slate-50 border-slate-200')}
+                                                        >
+                                                            <Plus className="h-4 w-4" />
+                                                        </Button>
                                                         )}
                                                     </div>
                                                 </div>
@@ -3037,6 +3075,41 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                     </div>
                             </CardContent>
                         </Card>
+                                    }
+                                    manualContent={
+                                        !secretaryMode ? (
+                                            <ManualPointsAwardDialog
+                                                variant="inline"
+                                                className="w-full"
+                                                students={studentsForTeacherActions}
+                                                classes={classesForTeacherUi}
+                                                categories={filteredCategories}
+                                                accentColor={teacherAccent}
+                                                isGraphic={isGraphic}
+                                                description="Select students on your roster and apply points instantly—no printed coupon required."
+                                                budgetOptions={
+                                                    isAdmin
+                                                        ? undefined
+                                                        : {
+                                                              isAdmin: false,
+                                                              currentTeacher: currentTeacher ?? null,
+                                                              onBudgetSpend: async (totalCost) => {
+                                                                  if (!currentTeacher) return;
+                                                                  const next =
+                                                                      currentTeacher.monthlyBudget !== undefined
+                                                                          ? teacherWithBudgetAfterSpend(currentTeacher, totalCost)
+                                                                          : {
+                                                                                ...currentTeacher,
+                                                                                spentThisMonth: (currentTeacher.spentThisMonth || 0) + totalCost,
+                                                                            };
+                                                                  await updateTeacher(next);
+                                                              },
+                                                          }
+                                                }
+                                            />
+                                        ) : null
+                                    }
+                                />
                                 </div>
                             </TabsContent>
 

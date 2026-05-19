@@ -33,10 +33,10 @@ export function Coupon({ coupon, schoolId, isNew = false }: { coupon: Coupon, sc
           NEW
         </div>
       )}
-      <div className={cn('font-bold uppercase tracking-[0.18em] mb-[0.08em] leading-tight', hasLimitLine ? 'text-[0.5em]' : 'text-[0.5625em]')}>
+      <div className={cn('coupon-title font-bold uppercase tracking-[0.18em] mb-[0.08em] leading-tight', hasLimitLine ? 'text-[0.5em]' : 'text-[0.5625em]')}>
         {title}
       </div>
-      <div className={cn("w-full flex items-center justify-center gap-[0.45em] border-y shrink-0", hasLimitLine ? 'py-[0.08em]' : 'py-[0.125em]', isColored ? 'border-[currentColor]/30' : 'border-slate-200')}>
+      <div className={cn("coupon-main w-full flex items-center justify-center gap-[0.45em] border-y shrink-0", hasLimitLine ? 'py-[0.08em]' : 'py-[0.125em]', isColored ? 'border-[currentColor]/30' : 'border-slate-200')}>
         <div className="flex flex-col items-center leading-none">
           <span className="text-[1.125em] font-black text-black leading-none">{coupon.value}</span>
           <span className="text-[0.4375em] font-bold uppercase tracking-[0.2em] mt-[0.125em]">

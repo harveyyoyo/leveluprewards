@@ -5,6 +5,7 @@ import { Award, Search, Undo2 } from 'lucide-react';
 import { useAppContext } from '@/components/AppProvider';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
@@ -50,6 +51,7 @@ type ManualPointsAwardDialogProps = {
   isGraphic?: boolean;
   className?: string;
   description?: string;
+  variant?: 'dialog' | 'inline';
   budgetOptions?: {
     isAdmin: boolean;
     currentTeacher: Teacher | null;
@@ -65,6 +67,7 @@ export function ManualPointsAwardDialog({
   isGraphic = false,
   className,
   description = 'Select students and apply points instantly—no printed coupon required.',
+  variant = 'dialog',
   budgetOptions,
 }: ManualPointsAwardDialogProps) {
   const { toast } = useToast();
@@ -368,40 +371,8 @@ export function ManualPointsAwardDialog({
       : `Last: −${lastAction.points} pts × ${lastAction.studentIds.length}`
     : null;
 
-  return (
-    <div className={cn('flex justify-end', className)}>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger asChild>
-          <Button
-            type="button"
-            className="rounded-xl h-11 font-bold gap-2"
-            style={{ backgroundColor: accentColor, color: '#fff' }}
-          >
-            <Award className="w-4 h-4 shrink-0" />
-            Manually Add or Deduct Points
-          </Button>
-        </DialogTrigger>
-        <DialogContent
-          className={cn(
-            'max-w-4xl w-[min(96vw,56rem)] max-h-[min(92vh,900px)] flex flex-col gap-0 overflow-hidden p-0',
-            isGraphic ? 'bg-card/95 backdrop-blur-2xl text-foreground border-white/10' : 'bg-white',
-          )}
-        >
-          <DialogHeader className="p-6 pb-2 shrink-0">
-            <DialogTitle className="flex items-center gap-3 text-xl font-black">
-              <div
-                className={cn(
-                  'p-2 rounded-xl',
-                  isGraphic ? 'bg-chart-2/20 text-chart-2' : 'bg-primary/10 text-primary',
-                )}
-              >
-                <Award className="w-5 h-5" />
-              </div>
-              Award / Deduct Points
-            </DialogTitle>
-            <DialogDescription>{description}</DialogDescription>
-          </DialogHeader>
-          <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-6 space-y-6">
+  const formContent = (
+    <div className={cn('space-y-6', variant === 'inline' ? 'p-0' : 'flex-1 min-h-0 overflow-y-auto px-6 pb-6')}>
             <div className="flex items-center justify-between gap-3">
               <div className="grid w-[260px] grid-cols-2 rounded-xl border bg-muted/20 p-1">
                 <Button
@@ -651,7 +622,71 @@ export function ManualPointsAwardDialog({
                 </ul>
               </ScrollArea>
             </div>
-          </div>
+    </div>
+  );
+
+  if (variant === 'inline') {
+    return (
+      <Card
+        className={cn(
+          'w-full border-t-4 border-primary shadow-md overflow-hidden',
+          isGraphic && 'bg-card/60 backdrop-blur-2xl border-chart-1',
+          className,
+        )}
+      >
+        <CardHeader className="p-4 md:p-6">
+          <CardTitle className="flex items-center gap-3 text-xl font-black">
+            <div
+              className={cn(
+                'p-2 rounded-xl',
+                isGraphic ? 'bg-chart-2/20 text-chart-2' : 'bg-primary/10 text-primary',
+              )}
+            >
+              <Award className="w-5 h-5" />
+            </div>
+            Manually Add or Deduct
+          </CardTitle>
+          <CardDescription>{description}</CardDescription>
+        </CardHeader>
+        <CardContent className="p-4 md:p-6 pt-0">{formContent}</CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className={cn('flex justify-end', className)}>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          <Button
+            type="button"
+            className="rounded-xl h-11 font-bold gap-2"
+            style={{ backgroundColor: accentColor, color: '#fff' }}
+          >
+            <Award className="w-4 h-4 shrink-0" />
+            Manually Add or Deduct Points
+          </Button>
+        </DialogTrigger>
+        <DialogContent
+          className={cn(
+            'max-w-4xl w-[min(96vw,56rem)] max-h-[min(92vh,900px)] flex flex-col gap-0 overflow-hidden p-0',
+            isGraphic ? 'bg-card/95 backdrop-blur-2xl text-foreground border-white/10' : 'bg-white',
+          )}
+        >
+          <DialogHeader className="p-6 pb-2 shrink-0">
+            <DialogTitle className="flex items-center gap-3 text-xl font-black">
+              <div
+                className={cn(
+                  'p-2 rounded-xl',
+                  isGraphic ? 'bg-chart-2/20 text-chart-2' : 'bg-primary/10 text-primary',
+                )}
+              >
+                <Award className="w-5 h-5" />
+              </div>
+              Award / Deduct Points
+            </DialogTitle>
+            <DialogDescription>{description}</DialogDescription>
+          </DialogHeader>
+          {formContent}
         </DialogContent>
       </Dialog>
     </div>

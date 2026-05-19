@@ -209,7 +209,7 @@ export const redeemPrize = async (
         teacherId: restrictionIds[0] ?? prizeData.teacherId,
       };
 
-      transaction.update(studentRef, { points: studentData.points - totalCost });
+      transaction.update(studentRef, { points: studentData.points - totalCost, updatedAt: redeemedAt });
       transaction.set(activityRef, removeUndefined(newHistoryItem as unknown as Record<string, unknown>));
 
       if (typeof prizeData.stockCount === 'number') {

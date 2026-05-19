@@ -51,7 +51,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import DynamicIcon from '@/components/DynamicIcon';
 import { cn, getStudentNickname, getContrastColor } from '@/lib/utils';
-import { resolveStudentThemeWithSchoolDefault, primaryForegroundFor } from '@/lib/themeContrast';
+import { ensureContrast, resolveStudentThemeWithSchoolDefault, primaryForegroundFor } from '@/lib/themeContrast';
 import { getReadableErrorMessage, OFFLINE_USER_MESSAGE } from '@/lib/errorMessage';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -268,7 +268,10 @@ function ConfirmRedemptionDialog({
 
     return (
         <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
-            <AlertDialogContent style={themeSurfaceStyle}>
+            <AlertDialogContent
+                className={cn(hasTheme && 'student-theme-surface')}
+                style={themeSurfaceStyle}
+            >
                 <AlertDialogHeader>
                     <AlertDialogTitle style={hasTheme ? { color: 'var(--theme-text)' } : undefined}>Confirm Purchase</AlertDialogTitle>
                     <AlertDialogDescription
@@ -544,11 +547,12 @@ export function PrizeDashboard({
     const { toast } = useToast();
     const playSound = useArcadeSound();
     const { settings } = useSettings();
-    const { kioskAiFunAndVoucherActive, markKioskRewardsActivity } = useKioskAiFunAndVoucherIdleActive(
-        settings.kioskAiFunAndVoucherIdleOffMin,
+    const { kioskAiFunActive, kioskVoucherActive, markKioskRewardsActivity } = useKioskAiFunAndVoucherIdleActive(
+        settings.kioskAiFunIdleOffSec,
+        settings.kioskVoucherIdleOffSec,
         isKioskLocked,
     );
-    const kioskAiFunInShop = settings.enablePrizeAiSurprise === true && kioskAiFunAndVoucherActive;
+    const kioskAiFunInShop = settings.enablePrizeAiSurprise === true && kioskAiFunActive;
     const animBackdrop = globalAnimatedBackdropActive(settings);
     const [confirmingPrize, setConfirmingPrize] = useState<Prize | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -632,7 +636,7 @@ export function PrizeDashboard({
     usePrizeAiFunAudienceCacheReset(schoolId, studentId, student);
 
     useEffect(() => {
-        if (!schoolId || settings.enablePrizeAiSurprise !== true || !kioskAiFunAndVoucherActive) return;
+        if (!schoolId || settings.enablePrizeAiSurprise !== true || !kioskAiFunActive) return;
         void refillAiSurpriseStock(authFetch, schoolId, 'joke', false, prizeAiFunAgeBand, prizeAiFunAgeYears);
         void refillAiSurpriseStock(authFetch, schoolId, 'riddle', false, prizeAiFunAgeBand, prizeAiFunAgeYears);
         void refillAiSurpriseStock(authFetch, schoolId, 'fortune', false, prizeAiFunAgeBand, prizeAiFunAgeYears);
@@ -640,7 +644,7 @@ export function PrizeDashboard({
         authFetch,
         schoolId,
         settings.enablePrizeAiSurprise,
-        kioskAiFunAndVoucherActive,
+        kioskAiFunActive,
         prizeAiFunAgeBand,
         prizeAiFunAgeYears,
     ]);
@@ -781,7 +785,7 @@ export function PrizeDashboard({
             let ticketPayload: NonNullable<typeof ticketData> | null = null;
             if (
                 prize.offerPrintTicketOnRedeem === true &&
-                kioskAiFunAndVoucherActive &&
+                kioskVoucherActive &&
                 activityId &&
                 redeemedAt &&
                 typeof totalCost === 'number'
@@ -816,7 +820,7 @@ export function PrizeDashboard({
                 };
             }
 
-            if (prize.aiFunReward && schoolId && settings.enablePrizeAiSurprise === true && kioskAiFunAndVoucherActive) {
+            if (prize.aiFunReward && schoolId && settings.enablePrizeAiSurprise === true && kioskAiFunActive) {
                 pendingTicketAfterAiRef.current = ticketPayload;
                 setAiSurpriseErr(null);
                 const apiMode = resolveAiFunApiMode(prize, aiFunUserPick);
@@ -1063,8 +1067,11 @@ export function PrizeDashboard({
     );
     const fontScale = activeTheme?.fontScale ?? 1.15;
     const themeBg = activeTheme?.background || '#020617';
+    const themeCard = activeTheme?.cardBackground || themeBg;
     const computedThemeText =
         activeTheme?.text || (getContrastColor(themeBg) === 'black' ? '#020617' : '#ffffff');
+    const computedThemePageText = activeTheme ? ensureContrast(computedThemeText, themeBg, 4.5) : computedThemeText;
+    const computedThemeCardText = activeTheme ? ensureContrast(computedThemeText, themeCard, 4.5) : computedThemeText;
     const primaryForeground = activeTheme ? primaryForegroundFor(activeTheme) : '#ffffff';
     const themedFieldStyle: CSSProperties | undefined = activeTheme
         ? { backgroundColor: 'var(--theme-bg)', borderColor: 'var(--theme-primary)', color: 'var(--theme-text)' }
@@ -1075,11 +1082,12 @@ export function PrizeDashboard({
     const themeSurfaceStyle: CSSProperties | undefined = activeTheme
         ? ({
             ['--theme-bg' as string]: themeBg,
-            ['--theme-text' as string]: computedThemeText,
-            ['--theme-text-muted' as string]: `${computedThemeText}b3`,
+            ['--theme-page-text' as string]: computedThemePageText,
+            ['--theme-text' as string]: computedThemeCardText,
+            ['--theme-text-muted' as string]: `${computedThemeCardText}b3`,
             ['--theme-primary' as string]: activeTheme.primary || 'hsl(var(--primary))',
             ['--theme-primary-foreground' as string]: primaryForeground,
-            ['--theme-card' as string]: activeTheme.cardBackground || 'hsl(var(--card))',
+            ['--theme-card' as string]: themeCard,
             ['--theme-accent' as string]: activeTheme.accent || 'hsl(var(--accent))',
             backgroundColor: 'var(--theme-card)',
             color: 'var(--theme-text)',
@@ -1105,11 +1113,12 @@ export function PrizeDashboard({
     const themeStyle: CSSProperties = activeTheme
         ? ({
             ['--theme-bg' as string]: themeBg,
-            ['--theme-text' as string]: computedThemeText,
-            ['--theme-text-muted' as string]: `${computedThemeText}b3`,
+            ['--theme-page-text' as string]: computedThemePageText,
+            ['--theme-text' as string]: computedThemeCardText,
+            ['--theme-text-muted' as string]: `${computedThemeCardText}b3`,
             ['--theme-primary' as string]: activeTheme.primary || 'hsl(var(--primary))',
             ['--theme-primary-foreground' as string]: primaryForeground,
-            ['--theme-card' as string]: activeTheme.cardBackground || 'hsl(var(--card))',
+            ['--theme-card' as string]: themeCard,
             ['--theme-accent' as string]: activeTheme.accent || 'hsl(var(--accent))',
             ...(activeTheme.backgroundStyle
                 ? { background: activeTheme.backgroundStyle }
@@ -1117,7 +1126,7 @@ export function PrizeDashboard({
                     backgroundColor: themeBg,
                     backgroundImage: `radial-gradient(circle at top left, ${activeTheme.primary || 'hsl(var(--primary))'}22 0, transparent 45%), radial-gradient(circle at bottom right, ${activeTheme.accent || 'hsl(var(--accent))'}22 0, transparent 55%)`,
                 }),
-            color: 'var(--theme-text)',
+            color: 'var(--theme-page-text)',
             fontFamily: activeTheme.fontFamily || 'inherit',
             fontSize: fontScale !== 1 ? `${fontScale}em` : undefined,
         } as CSSProperties)
@@ -1129,6 +1138,7 @@ export function PrizeDashboard({
                 className={cn(
                     "min-h-screen relative overflow-x-hidden font-sans flex flex-col items-center",
                     settings.enableThemeAnimations && !!activeTheme && "theme-theme-elements-animated theme-motion-override",
+                    activeTheme && 'student-theme-surface',
                     settings.displayMode === 'app' && 'pb-24',
                     (!student || !activeTheme) && (animBackdrop ? "bg-transparent text-foreground" : "bg-background text-foreground"),
                 )}
@@ -1621,10 +1631,13 @@ export function PrizeDashboard({
                     }}
                 />
                 <AlertDialog open={!!ticketData} onOpenChange={(open) => { if (!open) setTicketData(null); }}>
-                    <AlertDialogContent className="no-print" style={themeSurfaceStyle}>
+                    <AlertDialogContent
+                        className={cn("no-print", activeTheme && 'student-theme-surface')}
+                        style={themeSurfaceStyle}
+                    >
                         <AlertDialogHeader>
                             <AlertDialogTitle>Print redeem voucher?</AlertDialogTitle>
-                            <AlertDialogDescription>
+                            <AlertDialogDescription style={activeTheme ? { color: 'var(--theme-text)', opacity: 0.85 } : undefined}>
                                 Print a voucher for{' '}
                                 <span className="text-xl font-black sm:text-2xl">{ticketData?.prizeName}</span>
                                 {ticketData && ticketData.quantity > 1 ? ` (x${ticketData.quantity})` : ''}.
@@ -1637,7 +1650,13 @@ export function PrizeDashboard({
                         />
                         <AlertDialogFooter className="flex-col gap-2 sm:flex-col sm:justify-end sm:space-x-0">
                             <AlertDialogCancel onClick={() => setTicketData(null)}>No Thanks</AlertDialogCancel>
-                            <AlertDialogAction className="w-full sm:w-auto" onClick={handlePrintTicket}>Print Voucher</AlertDialogAction>
+                            <AlertDialogAction
+                                className="w-full sm:w-auto"
+                                onClick={handlePrintTicket}
+                                style={activeTheme ? { backgroundColor: 'var(--theme-primary)', color: primaryForeground } : undefined}
+                            >
+                                Print Voucher
+                            </AlertDialogAction>
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>
@@ -1651,7 +1670,10 @@ export function PrizeDashboard({
                         }
                     }}
                 >
-                    <DialogContent className="no-print sm:max-w-md" style={themeSurfaceStyle}>
+                    <DialogContent
+                        className={cn("no-print sm:max-w-md", activeTheme && 'student-theme-surface')}
+                        style={themeSurfaceStyle}
+                    >
                         <DialogHeader>
                             <DialogTitle
                                 className="flex items-center gap-2 text-left"

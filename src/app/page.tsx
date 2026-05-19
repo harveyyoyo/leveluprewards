@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { HomeLandingLogo } from '@/components/HomeLandingLogo';
 import { Button } from '@/components/ui/button';
-import { getScheduleDemoHref } from '@/lib/appBranding';
+import { getLevelUpLogoHref, getScheduleDemoHref } from '@/lib/appBranding';
 import { MARKETING_LANDING_PAGES } from '@/lib/marketingLandings';
 
 export default function RootPage() {
@@ -13,7 +13,7 @@ export default function RootPage() {
       <HomeLandingLogo />
       <div className="flex w-full max-w-xs flex-col gap-3">
         <Button asChild className="h-12 w-full rounded-xl font-bold">
-          <Link href="/portal">School Login</Link>
+          <Link href={getLevelUpLogoHref()}>School Login</Link>
         </Button>
         <Button
           asChild

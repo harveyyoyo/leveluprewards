@@ -122,6 +122,7 @@ export const approveHomework = async (
         categoryPointsByPeriod: categoryPointsByPeriodUpdate,
         earnedAchievements: result.earnedAchievements,
         earnedBadges: result.earnedBadges,
+        updatedAt: now,
       });
 
       transaction.set(submissionRef, {

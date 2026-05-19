@@ -216,7 +216,11 @@ interface Settings {
     // Security & Session
     adminSessionTimeoutMs?: number;
     kioskSessionTimeoutSec?: number;
-    /** Minutes of kiosk inactivity before AI Fun and redeem print vouchers are hidden until the next interaction. */
+    /** Seconds of kiosk inactivity before AI Fun is hidden until the next interaction. */
+    kioskAiFunIdleOffSec?: number;
+    /** Seconds of kiosk inactivity before redeem print-voucher offers are hidden until the next interaction. */
+    kioskVoucherIdleOffSec?: number;
+    /** @deprecated Use kioskAiFunIdleOffSec and kioskVoucherIdleOffSec. */
     kioskAiFunAndVoucherIdleOffMin?: number;
     /**
      * When on, the kiosk freezes a student that has signed in too many times in a row.
@@ -498,7 +502,8 @@ const defaultSettings: Settings = {
     },
     adminSessionTimeoutMs: 5 * 60 * 1000,
     kioskSessionTimeoutSec: 10,
-    kioskAiFunAndVoucherIdleOffMin: 6,
+    kioskAiFunIdleOffSec: 360,
+    kioskVoucherIdleOffSec: 360,
     studentSignInThrottleEnabled: false,
     studentSignInThrottleMaxAttempts: 10,
     studentSignInThrottleWindowMin: 2,
@@ -823,15 +828,29 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                 if (typeof psp !== 'number' || !Number.isFinite(psp) || psp < 0) {
                     delete (parsed as Partial<Settings>).prizeAiSurpriseDefaultPoints;
                 }
-                const kioskIdle = parsed.kioskAiFunAndVoucherIdleOffMin;
-                if (
-                    typeof kioskIdle !== 'number' ||
-                    !Number.isFinite(kioskIdle) ||
-                    kioskIdle < 1 ||
-                    kioskIdle > 240
-                ) {
-                    delete (parsed as Partial<Settings>).kioskAiFunAndVoucherIdleOffMin;
-                }
+                const normalizeIdleSeconds = (value: unknown, fallback: number): number | undefined => {
+                    if (typeof value !== 'number' || !Number.isFinite(value) || value < 1 || value > 14400) {
+                        return fallback;
+                    }
+                    return Math.round(value);
+                };
+                const legacyKioskIdleMin = parsed.kioskAiFunAndVoucherIdleOffMin;
+                const legacyKioskIdleSec =
+                    typeof legacyKioskIdleMin === 'number' &&
+                    Number.isFinite(legacyKioskIdleMin) &&
+                    legacyKioskIdleMin >= 1 &&
+                    legacyKioskIdleMin <= 240
+                        ? Math.round(legacyKioskIdleMin * 60)
+                        : undefined;
+                parsed.kioskAiFunIdleOffSec = normalizeIdleSeconds(
+                    parsed.kioskAiFunIdleOffSec,
+                    legacyKioskIdleSec ?? defaultSettings.kioskAiFunIdleOffSec ?? 360,
+                );
+                parsed.kioskVoucherIdleOffSec = normalizeIdleSeconds(
+                    parsed.kioskVoucherIdleOffSec,
+                    legacyKioskIdleSec ?? defaultSettings.kioskVoucherIdleOffSec ?? 360,
+                );
+                delete (parsed as Partial<Settings>).kioskAiFunAndVoucherIdleOffMin;
                 const throttleMax = parsed.studentSignInThrottleMaxAttempts;
                 if (
                     typeof throttleMax !== 'number' ||

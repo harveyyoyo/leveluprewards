@@ -2,21 +2,26 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-/** Minutes → ms; clamps 1–240; invalid input defaults to 6 minutes. */
-export function kioskAiFunVoucherIdleThresholdMs(idleOffMin: unknown): number {
-  const raw = typeof idleOffMin === 'number' && Number.isFinite(idleOffMin) ? idleOffMin : 6;
-  return Math.max(1, Math.min(240, Math.floor(raw))) * 60_000;
+/** Seconds to ms; clamps 1-14400; invalid input defaults to 360 seconds. */
+export function kioskRewardsIdleThresholdMs(idleOffSec: unknown): number {
+  const raw = typeof idleOffSec === 'number' && Number.isFinite(idleOffSec) ? idleOffSec : 360;
+  return Math.max(1, Math.min(14400, Math.floor(raw))) * 1000;
 }
 
 /**
- * After this many minutes without pointer/keyboard activity on the kiosk, AI Fun and
- * redeem print-voucher offers are treated as off until the user interacts again.
+ * After the configured idle windows without pointer/keyboard activity on the kiosk,
+ * AI Fun and redeem print-voucher offers are treated as off until the user interacts again.
  * When the kiosk is locked (stays signed in), extras stay available.
  */
 export function useKioskAiFunAndVoucherIdleActive(
-  idleOffMinutesSetting: number | undefined,
+  aiFunIdleOffSecSetting: number | undefined,
+  voucherIdleOffSecSetting: number | undefined,
   isKioskLocked: boolean,
-): { kioskAiFunAndVoucherActive: boolean; markKioskRewardsActivity: () => void } {
+): {
+  kioskAiFunActive: boolean;
+  kioskVoucherActive: boolean;
+  markKioskRewardsActivity: () => void;
+} {
   const [activityAt, setActivityAt] = useState(() => Date.now());
   const [idleCheckSeq, setIdleCheckSeq] = useState(0);
 
@@ -33,10 +38,14 @@ export function useKioskAiFunAndVoucherIdleActive(
     return () => window.clearInterval(id);
   }, [isKioskLocked]);
 
-  const thresholdMs = kioskAiFunVoucherIdleThresholdMs(idleOffMinutesSetting);
+  const now = Date.now();
+  const aiFunThresholdMs = kioskRewardsIdleThresholdMs(aiFunIdleOffSecSetting);
+  const voucherThresholdMs = kioskRewardsIdleThresholdMs(voucherIdleOffSecSetting);
   void idleCheckSeq;
-  const kioskAiFunAndVoucherActive =
-    isKioskLocked || Date.now() - activityAt < thresholdMs;
 
-  return { kioskAiFunAndVoucherActive, markKioskRewardsActivity };
+  return {
+    kioskAiFunActive: isKioskLocked || now - activityAt < aiFunThresholdMs,
+    kioskVoucherActive: isKioskLocked || now - activityAt < voucherThresholdMs,
+    markKioskRewardsActivity,
+  };
 }

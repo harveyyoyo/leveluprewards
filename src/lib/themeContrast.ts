@@ -161,6 +161,69 @@ export function ensureContrast(fg: string, bg: string, minRatio = 4.5): string {
   return pickReadableOn(bg);
 }
 
+function minContrastAgainstSurfaces(fg: string, surfaces: string[]): number {
+  return surfaces.reduce((min, s) => Math.min(min, contrastRatio(fg, s)), Infinity);
+}
+
+/**
+ * Adjust `fg` so it reads against every provided surface when possible. This is stricter
+ * than `ensureContrast`, and is needed for student themes because the same
+ * text token can appear on a page background, a card background, and sampled
+ * gradient stops. Some surface sets are mathematically impossible for one
+ * color, so this returns the best worst-case candidate rather than a
+ * dark-on-dark or light-on-light color.
+ */
+export function ensureContrastAcrossSurfaces(
+  fg: string,
+  surfaces: string[],
+  minRatio = 4.5,
+): string {
+  const validSurfaces = surfaces.map((s) => clampHex(s)).filter((s): s is string => !!s);
+  if (validSurfaces.length === 0) return clampHex(fg) || fg;
+
+  const start = clampHex(fg) || pickReadableOn(validSurfaces[0]);
+  if (minContrastAgainstSurfaces(start, validSurfaces) >= minRatio) return start;
+
+  const rgb = hexToRgb(start);
+  let best = start;
+  let bestRatio = minContrastAgainstSurfaces(start, validSurfaces);
+  let passingColor: string | null = null;
+  let passingDistance = Number.POSITIVE_INFINITY;
+
+  const remember = (color: string, distance: number) => {
+    const ratio = minContrastAgainstSurfaces(color, validSurfaces);
+    if (ratio > bestRatio) {
+      bestRatio = ratio;
+      best = color;
+    }
+    if (ratio >= minRatio && distance < passingDistance) {
+      passingColor = color;
+      passingDistance = distance;
+    }
+  };
+
+  if (rgb) {
+    const { h, s, l: originalL } = rgbToHsl(rgb.r, rgb.g, rgb.b);
+    for (let i = 0; i <= 100; i++) {
+      const l = i / 100;
+      const { r, g, b } = hslToRgb(h, s, l);
+      remember(rgbToHex(r, g, b), Math.abs(l - originalL));
+    }
+  }
+
+  if (passingColor) return passingColor;
+
+  // Hue-preserving lightness may be unable to satisfy mixed surfaces. Scan
+  // grayscale as a final readable-text fallback; mid grays are the only colors
+  // that can meet AA against both near-black and near-white surfaces.
+  for (let i = 0; i <= 255; i++) {
+    const color = rgbToHex(i, i, i);
+    remember(color, 0);
+  }
+
+  return passingColor ?? best;
+}
+
 /**
  * Extract any `#rrggbb` / `#rgb` hex colors present in a CSS
  * background value (`linear-gradient(...)`, `radial-gradient(...)`,
@@ -174,13 +237,13 @@ function sampleHexesFromBackground(style: string | null | undefined): string[] {
 }
 
 /**
- * Returns a StudentTheme with guaranteed-readable colors.
+ * Returns a StudentTheme with safer readable colors.
  *
- *  - `text` ≥ 4.5:1 against the worst of {background, cardBackground,
- *    and any hex colors sampled from backgroundStyle}.
- *  - `primary` ≥ 3:1 against cardBackground (for colored titles/icons
- *    that sit on the card).
- *  - `accent`  ≥ 3:1 against cardBackground.
+ *  - `text` is optimized against the worst of {background, cardBackground,
+ *    and any hex colors sampled from backgroundStyle}. If one color cannot
+ *    satisfy every surface, renderers should still use per-surface foregrounds.
+ *  - `primary` is optimized for readable title/icon use on theme surfaces.
+ *  - `accent` is optimized for readable title/icon use on theme surfaces.
  *
  * Missing / invalid hex values are left alone (the consumer already
  * falls back to the site theme); this function only *tightens* the
@@ -196,8 +259,7 @@ export function normalizeStudentTheme(
   const bgSamples = sampleHexesFromBackground(theme.backgroundStyle);
   const surfaces = [bg, card, ...bgSamples];
 
-  const worstContrast = (fg: string) =>
-    surfaces.reduce((min, s) => Math.min(min, contrastRatio(fg, s)), Infinity);
+  const worstContrast = (fg: string) => minContrastAgainstSurfaces(fg, surfaces);
 
   const out: StudentTheme = { ...theme };
 
@@ -214,26 +276,22 @@ export function normalizeStudentTheme(
       card,
     );
     let candidate = ensureContrast(startingHex, bindingSurface, 4.5);
-    // If that candidate still fails against some other surface, fall back
-    // to a black/white that maximizes the worst-case ratio.
     if (worstContrast(candidate) < 4.5) {
-      const whiteMin = Math.min(...surfaces.map((s) => contrastRatio(WHITE, s)));
-      const blackMin = Math.min(...surfaces.map((s) => contrastRatio(BLACK, s)));
-      candidate = whiteMin >= blackMin ? WHITE : BLACK;
+      candidate = ensureContrastAcrossSurfaces(startingHex, surfaces, 4.5);
     }
     out.text = candidate;
   }
 
   // --- primary: used for titles/icons on the card & as button bg ---
   const primary = clampHex(theme.primary);
-  if (primary && contrastRatio(primary, card) < 3.0) {
-    out.primary = ensureContrast(primary, card, 3.0);
+  if (primary && worstContrast(primary) < 4.5) {
+    out.primary = ensureContrastAcrossSurfaces(primary, surfaces, 4.5);
   }
 
   // --- accent: same constraint as primary ---
   const accent = clampHex(theme.accent);
-  if (accent && contrastRatio(accent, card) < 3.0) {
-    out.accent = ensureContrast(accent, card, 3.0);
+  if (accent && worstContrast(accent) < 4.5) {
+    out.accent = ensureContrastAcrossSurfaces(accent, surfaces, 4.5);
   }
 
   return out;

@@ -4,12 +4,16 @@ import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { SchoolDeveloperLoginForm } from '@/components/SchoolDeveloperLoginForm';
 
-function readSchoolFromUrl(): string {
-  if (typeof window === 'undefined') return '';
+function readLoginUrlState(): { school: string; changeSchool: boolean } {
+  if (typeof window === 'undefined') return { school: '', changeSchool: false };
   try {
-    return (new URLSearchParams(window.location.search).get('school') || '').trim();
+    const params = new URLSearchParams(window.location.search);
+    return {
+      school: (params.get('school') || '').trim(),
+      changeSchool: params.get('changeSchool') === '1',
+    };
   } catch {
-    return '';
+    return { school: '', changeSchool: false };
   }
 }
 
@@ -20,16 +24,34 @@ function readSchoolFromUrl(): string {
 export default function LoginPage() {
   const pathname = usePathname();
   const [schoolFromQuery, setSchoolFromQuery] = useState('');
+  const [changeSchool, setChangeSchool] = useState(false);
   const [initialSchoolId, setInitialSchoolId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
-    const read = () => setSchoolFromQuery(readSchoolFromUrl());
+    const read = () => {
+      const state = readLoginUrlState();
+      setSchoolFromQuery(state.school);
+      setChangeSchool(state.changeSchool);
+    };
     read();
     window.addEventListener('popstate', read);
     return () => window.removeEventListener('popstate', read);
   }, [pathname]);
 
   useEffect(() => {
+    if (changeSchool) {
+      try {
+        localStorage.removeItem('loginState');
+        localStorage.removeItem('schoolId');
+        localStorage.removeItem('userName');
+        localStorage.removeItem('teacherDocId');
+      } catch {
+        // Ignore storage errors; the visible form still lets the user choose a school.
+      }
+      setInitialSchoolId(undefined);
+      return;
+    }
+
     if (schoolFromQuery) {
       setInitialSchoolId(schoolFromQuery);
       return;
@@ -58,7 +80,13 @@ export default function LoginPage() {
 
     const inferred = (fromReferrer || fromStorage).trim().toLowerCase();
     if (inferred) setInitialSchoolId(inferred);
-  }, [schoolFromQuery]);
+  }, [changeSchool, schoolFromQuery]);
 
-  return <SchoolDeveloperLoginForm mode="full" initialSchoolId={initialSchoolId} />;
+  return (
+    <SchoolDeveloperLoginForm
+      key={changeSchool ? 'change-school' : initialSchoolId ?? 'login'}
+      mode="full"
+      initialSchoolId={initialSchoolId}
+    />
+  );
 }

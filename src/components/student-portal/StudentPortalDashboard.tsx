@@ -13,6 +13,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn, getStudentNickname } from '@/lib/utils';
 import { EarnedBadgesShowcase } from '@/components/EarnedBadgesShowcase';
 import { StudentGoalsCard } from '@/components/goals/StudentGoalsCard';
+import { getStudentPointTypeTotals } from '@/lib/studentPointTypes';
 
 type Props = {
   schoolId: string;
@@ -62,6 +63,10 @@ export function StudentPortalDashboard({ schoolId, studentId, onSignOut, signing
   }, [prizes]);
 
   const displayName = student ? getStudentNickname(student) : 'Student';
+  const pointTypeTotals = useMemo(
+    () => (student ? getStudentPointTypeTotals(student) : []),
+    [student?.categoryPoints, student?.lifetimePoints, student?.points],
+  );
 
   if (studentLoading && !student) {
     return (
@@ -113,6 +118,21 @@ export function StudentPortalDashboard({ schoolId, studentId, onSignOut, signing
           {typeof student.lifetimePoints === 'number' ? (
             <p className="text-sm text-muted-foreground mt-2">Lifetime: {student.lifetimePoints}</p>
           ) : null}
+          <div className="mt-4">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Point types</p>
+            {pointTypeTotals.length > 0 ? (
+              <ul className="mt-2 grid gap-2 sm:grid-cols-2">
+                {pointTypeTotals.map((row) => (
+                  <li key={row.label} className="flex items-center justify-between gap-3 rounded-xl border bg-muted/30 px-3 py-2 text-sm">
+                    <span className="font-semibold">{row.label}</span>
+                    <span className="font-black tabular-nums text-primary">{row.points.toLocaleString()}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-2 text-sm text-muted-foreground">No point types yet.</p>
+            )}
+          </div>
         </CardContent>
       </Card>
 

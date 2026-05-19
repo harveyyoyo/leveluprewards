@@ -1,6 +1,6 @@
 'use client';
 
-import { Cog, Edit3, Gift, Plus, Printer, Trash2, HelpCircle, GraduationCap, ShoppingBag, Wand2, UserMinus, X } from 'lucide-react';
+import { CheckSquare, Cog, Edit3, Gift, Plus, Printer, Trash2, HelpCircle, GraduationCap, ShoppingBag, Wand2, UserMinus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
@@ -71,8 +71,12 @@ export function AdminPrizesTab({
   const [helpOpen, setHelpOpen] = useState(false);
   const cardColorBackfillStarted = useRef(false);
   const [prizeIdPrintJob, setPrizeIdPrintJob] = useState<Prize[] | null>(null);
+  const [selectedPrizeIds, setSelectedPrizeIds] = useState<Set<string>>(new Set());
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardStep, setWizardStep] = useState(0);
+
+  const PRIZE_LIST_GRID =
+    'grid-cols-[40px_minmax(148px,168px)_minmax(140px,240px)_56px_72px_200px_44px_72px_72px_64px_96px]';
 
   const tablePrizes = useMemo(
     () => (prizes || []).filter((p) => !isAiSurpriseHiddenFromAdminGrid(p)),
@@ -88,6 +92,47 @@ export function AdminPrizesTab({
       .sort((a, b) => a.points - b.points)
       .map((prize) => ({ kind: 'prize' as const, prize }));
   }, [mode, teacherId, tablePrizes]);
+
+  const selectablePrizes = useMemo(
+    () => prizeListItems.filter((item) => item.kind === 'prize').map((item) => item.prize),
+    [prizeListItems],
+  );
+
+  const selectedPrizes = useMemo(
+    () => selectablePrizes.filter((p) => selectedPrizeIds.has(p.id)),
+    [selectablePrizes, selectedPrizeIds],
+  );
+
+  const isAllListedSelected =
+    selectablePrizes.length > 0 && selectablePrizes.every((p) => selectedPrizeIds.has(p.id));
+
+  const togglePrizeSelected = useCallback((prizeId: string) => {
+    setSelectedPrizeIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(prizeId)) next.delete(prizeId);
+      else next.add(prizeId);
+      return next;
+    });
+  }, []);
+
+  const toggleSelectAllListed = useCallback(() => {
+    if (selectablePrizes.length === 0) return;
+    setSelectedPrizeIds((prev) => {
+      const next = new Set(prev);
+      const allSelected = selectablePrizes.every((p) => next.has(p.id));
+      if (allSelected) {
+        for (const p of selectablePrizes) next.delete(p.id);
+      } else {
+        for (const p of selectablePrizes) next.add(p.id);
+      }
+      return next;
+    });
+  }, [selectablePrizes]);
+
+  const clearPrizeSelection = useCallback(() => {
+    setSelectedPrizeIds(new Set());
+  }, []);
+
   // --- REAL prize creation wizard state ---
   const [wName, setWName] = useState('');
   const [wIcon, setWIcon] = useState('Gift');
@@ -152,8 +197,9 @@ export function AdminPrizesTab({
   );
 
   const handlePrintPrizeCards = useCallback(() => {
-    void printPrizeCards(tablePrizes);
-  }, [printPrizeCards, tablePrizes]);
+    const list = selectedPrizes.length > 0 ? selectedPrizes : selectablePrizes;
+    void printPrizeCards(list);
+  }, [printPrizeCards, selectedPrizes, selectablePrizes]);
 
   const handlePrintOnePrizeCard = useCallback(
     (prize: Prize) => {
@@ -203,8 +249,16 @@ export function AdminPrizesTab({
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
           <TabWalkthroughHeaderAction />
-          <Button variant="outline" className="rounded-xl" onClick={handlePrintPrizeCards}>
-            <Printer className="mr-2 h-4 w-4" /> Print all prize cards
+          <Button
+            variant="outline"
+            className="rounded-xl"
+            onClick={handlePrintPrizeCards}
+            disabled={selectablePrizes.length === 0}
+          >
+            <Printer className="mr-2 h-4 w-4" />
+            {selectedPrizeIds.size > 0
+              ? `Print selected (${selectedPrizeIds.size})`
+              : `Print all prize cards (${selectablePrizes.length})`}
           </Button>
           <Button
             variant="outline"
@@ -233,10 +287,49 @@ export function AdminPrizesTab({
         </div>
       </CardHeader>
       <CardContent className="min-w-0">
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            className="h-10 rounded-xl px-4 font-semibold border-ring/35"
+            disabled={selectablePrizes.length === 0}
+            onClick={toggleSelectAllListed}
+          >
+            {isAllListedSelected
+              ? `Deselect all (${selectablePrizes.length})`
+              : `Select all (${selectablePrizes.length})`}
+          </Button>
+        </div>
+        {selectedPrizeIds.size > 0 ? (
+          <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-ring/35 bg-secondary px-3 py-2">
+            <div className="flex items-center gap-2 pr-1 text-sm font-semibold text-secondary-foreground">
+              <CheckSquare className="h-4 w-4" />
+              <span>{selectedPrizeIds.size} selected</span>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              className="h-8 rounded-lg px-3 text-xs font-semibold border-ring/35"
+              onClick={handlePrintPrizeCards}
+            >
+              <Printer className="mr-1.5 h-3.5 w-3.5" />
+              Print selected
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              className="h-8 rounded-lg px-3 text-xs font-semibold"
+              onClick={clearPrizeSelection}
+            >
+              Clear
+            </Button>
+          </div>
+        ) : null}
         <ul className="grid grid-cols-1 gap-4 min-w-0 overflow-x-hidden pr-2">
           <AdminRecordListHeader
-            gridClassName="grid-cols-[minmax(148px,168px)_minmax(140px,240px)_56px_72px_200px_44px_72px_72px_64px_96px]"
+            gridClassName={PRIZE_LIST_GRID}
             columns={[
+              { label: 'Select', className: 'text-center' },
               { label: 'Actions' },
               { label: 'Item Name' },
               { label: 'Cost', className: 'text-center' },
@@ -304,11 +397,21 @@ export function AdminPrizesTab({
                   <li
                     key={p.id}
                     className={cn(
-                      "grid grid-cols-[minmax(148px,168px)_minmax(140px,240px)_56px_72px_200px_44px_72px_72px_64px_96px] items-center gap-x-2 rounded-2xl border bg-secondary/30 p-1.5 transition-all hover:bg-background group min-w-0",
-                      rowDimmed && "opacity-60"
+                      'grid items-center gap-x-2 rounded-2xl border bg-secondary/30 p-1.5 transition-all hover:bg-background group min-w-0',
+                      PRIZE_LIST_GRID,
+                      selectedPrizeIds.has(p.id) && 'border-ring/45 bg-secondary',
+                      rowDimmed && 'opacity-60',
                     )}
                   >
-                    {/* 1. Edit + print */}
+                    <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={selectedPrizeIds.has(p.id)}
+                        onCheckedChange={() => togglePrizeSelected(p.id)}
+                        aria-label={`Select ${p.name}`}
+                        className="h-5 w-5 rounded-md"
+                      />
+                    </div>
+                    {/* Edit + print */}
                     <div className="flex flex-col gap-1 sm:flex-row sm:items-center">
                       {onEditPrize ? (
                         <Button
@@ -645,7 +748,7 @@ export function AdminPrizesTab({
               <li><span className="font-bold">Teachers</span>: pick multiple teachers or school-wide.</li>
               <li><span className="font-bold">Class</span>: optionally restrict by class.</li>
               <li><span className="font-bold">Vending motor</span>: enable the Vending Machine feature in settings, then use the prize motor button to pick axis X/Y/Z/E.</li>
-              <li><span className="font-bold">Print card</span>: use the printer icon on a row for one shelf card, or Print all prize cards for the full set.</li>
+              <li><span className="font-bold">Print card</span>: check rows to print a subset, use Select all, or Print all prize cards for every item in the list. The row printer icon still prints one card.</li>
               <li><span className="font-bold">Card color</span>: set per item in Edit → Shelf card color (requires color printing in settings).</li>
             </ul>
           </div>

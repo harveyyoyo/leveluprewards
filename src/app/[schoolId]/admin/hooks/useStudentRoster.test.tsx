@@ -16,15 +16,15 @@ function makeStudent(overrides: Partial<Student> & { id: string; firstName: stri
   } as Student;
 }
 
-const alice = makeStudent({ id: '1', firstName: 'Alice', lastName: 'Adams', classId: 'a', lifetimePoints: 10, createdAt: 1 });
-const bob = makeStudent({ id: '2', firstName: 'Bob', lastName: 'Baker', classId: 'b', lifetimePoints: 30, nickname: 'Bobby', createdAt: 3 });
-const carol = makeStudent({ id: '3', firstName: 'Carol', lastName: 'Clark', classId: 'a', lifetimePoints: 20, nfcId: 'NFC-CLR', createdAt: 2 });
+const alice = makeStudent({ id: '1', firstName: 'Alice', lastName: 'Adams', classId: 'a', lifetimePoints: 10, createdAt: 1, updatedAt: 10 });
+const bob = makeStudent({ id: '2', firstName: 'Bob', lastName: 'Baker', classId: 'b', lifetimePoints: 30, nickname: 'Bobby', createdAt: 3, updatedAt: 30 });
+const carol = makeStudent({ id: '3', firstName: 'Carol', lastName: 'Clark', classId: 'a', lifetimePoints: 20, nfcId: 'NFC-CLR', createdAt: 2, updatedAt: 20 });
 const ALL = [alice, bob, carol];
 
 describe('useStudentRoster', () => {
-  it('returns students sorted by last name ascending by default', () => {
+  it('returns students sorted by most recently changed by default', () => {
     const { result } = renderHook(() => useStudentRoster(ALL));
-    expect(result.current.filteredStudents.map((s) => s.id)).toEqual(['1', '2', '3']);
+    expect(result.current.filteredStudents.map((s) => s.id)).toEqual(['2', '3', '1']);
   });
 
   it('handles a null/undefined input gracefully', () => {
@@ -53,7 +53,7 @@ describe('useStudentRoster', () => {
     const { result } = renderHook(() => useStudentRoster(ALL));
 
     act(() => result.current.setStudentFilterClass('a'));
-    expect(result.current.filteredStudents.map((s) => s.id)).toEqual(['1', '3']);
+    expect(result.current.filteredStudents.map((s) => s.id)).toEqual(['3', '1']);
 
     act(() => result.current.setStudentFilterClass('b'));
     expect(result.current.filteredStudents.map((s) => s.id)).toEqual(['2']);
@@ -72,6 +72,12 @@ describe('useStudentRoster', () => {
     expect(result.current.filteredStudents.map((s) => s.id)).toEqual(['3', '2', '1']);
 
     act(() => result.current.setStudentSortOption('createdAtAsc'));
+    expect(result.current.filteredStudents.map((s) => s.id)).toEqual(['1', '3', '2']);
+
+    act(() => result.current.setStudentSortOption('lastNameAsc'));
+    expect(result.current.filteredStudents.map((s) => s.id)).toEqual(['1', '2', '3']);
+
+    act(() => result.current.setStudentSortOption('updatedAtAsc'));
     expect(result.current.filteredStudents.map((s) => s.id)).toEqual(['1', '3', '2']);
   });
 

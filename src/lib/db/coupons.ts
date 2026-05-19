@@ -141,6 +141,7 @@ export const redeemCoupon = async (
         categoryPointsByPeriod,
         earnedAchievements: evalResult.earnedAchievements,
         earnedBadges: evalResult.earnedBadges,
+        updatedAt: now,
       });
 
       // Simplified activity log.

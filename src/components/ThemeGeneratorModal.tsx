@@ -601,7 +601,7 @@ export function ThemeGeneratorModal({
                                 <div className="flex items-end gap-2">
                                     <Input
                                         id="prompt"
-                                        placeholder="e.g., Cyberpunk neon greens and purples"
+                                        placeholder="e.g., Ocean blues and warm sand tones"
                                         value={prompt}
                                         onChange={(e) => setPrompt(e.target.value)}
                                         onKeyDown={(e) => {

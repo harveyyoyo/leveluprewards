@@ -227,9 +227,11 @@ export const recordClassSignIn = async (
     if (!studentSnap.exists()) throw new Error('Student not found');
     const data = studentSnap.data() as Student;
 
+    const now = Date.now();
     transaction.update(studentRef, {
       points: (data.points || 0) + computedPoints,
       lifetimePoints: (data.lifetimePoints ?? 0) + computedPoints,
+      updatedAt: now,
     });
 
     const desc = onTime && periodLabel
