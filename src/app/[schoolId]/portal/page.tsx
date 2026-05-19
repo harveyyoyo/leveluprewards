@@ -249,7 +249,7 @@ export default function PortalPage() {
                 ? [
                       {
                           id: 'admin',
-                          href: `/${schoolId}/admin-sign-in`,
+                          href: `/${schoolId}/portal`,
                           title: 'Admin Portal',
                           description: 'Manage students, classes, prizes, and system settings.',
                           icon: UserCog,
@@ -324,20 +324,20 @@ export default function PortalPage() {
             </div>
 
             {/* Positioning on a plain div so Framer does not override translate-based centering */}
-            {/* Main scrolling layout for Title and Grid */}
-            {/* Main layout: locked on mobile, scrollable on desktop */}
+            {/* Main layout: viewport-locked — no page or inner scrollbars */}
             <div
                 className={cn(
+                    'relative z-[10] flex h-full min-h-0 w-full flex-col overflow-hidden',
                     isAppDisplay
-                        ? 'fixed inset-0 z-[10] flex flex-col overflow-hidden max-md:overflow-x-hidden md:overflow-y-auto px-4 pb-24 pt-[max(6.25rem,calc(env(safe-area-inset-top,0px)+4.5rem))] md:py-24'
-                        : 'relative z-[10] flex w-full flex-col px-4 pb-8 pt-12 sm:pt-16 md:pb-12 md:pt-20',
+                        ? 'px-4 pb-24 pt-[max(6.25rem,calc(env(safe-area-inset-top,0px)+4.5rem))] md:py-24'
+                        : 'px-4 pb-4 pt-10 sm:pt-12 md:pb-6 md:pt-16',
                     portalChoosePageShellClass(kioskPortrait, isAppDisplay),
                 )}
             >
-                <div className="flex h-full min-h-0 w-full flex-1 flex-col items-center justify-between md:my-auto md:min-h-0 md:justify-center">
+                <div className="flex h-full min-h-0 w-full flex-1 flex-col items-center justify-center gap-6 sm:gap-8 md:gap-12">
                     
                     {/* Title: on mobile avoid flex-1+min-h-0 (clips large headline under overflow-hidden). */}
-                    <div className="flex w-full shrink-0 flex-col items-center justify-center px-1 pb-3 pt-1 text-center md:mb-12 md:min-h-0 md:flex-1 md:pb-0">
+                    <div className="flex w-full shrink-0 flex-col items-center justify-center px-1 pb-3 pt-1 text-center md:min-h-0 md:pb-0">
                         <div className="pointer-events-none w-full max-w-6xl text-center shrink-0 overflow-visible">
                             {reduceWhereToMotion ? (
                                 <h2
@@ -371,7 +371,12 @@ export default function PortalPage() {
                     {/* Grid: narrower cards on phone; full width from md up */}
                     <div
                         className={cn(
-                            'mx-auto w-full max-w-[min(22rem,calc(100%-0.5rem))] shrink-0 pb-safe sm:max-w-md md:mt-0 md:max-w-6xl',
+                            'mx-auto w-full shrink-0 pb-safe md:mt-0',
+                            kioskPortrait
+                                ? ''
+                                : isAppDisplay
+                                  ? 'max-w-[min(24rem,calc(100%-0.5rem))] sm:max-w-xl'
+                                  : 'max-w-[min(22rem,calc(100%-0.5rem))] sm:max-w-md md:max-w-6xl',
                             portalChooseGridClass(kioskPortrait),
                         )}
                     >
@@ -382,7 +387,7 @@ export default function PortalPage() {
                             animate="show"
                             className={cn(
                                 'pointer-events-auto grid w-full gap-3 overflow-visible md:gap-5',
-                                kioskPortrait ? 'grid-cols-1 md:grid-cols-1' : 'grid-cols-1 md:grid-cols-3',
+                                kioskPortrait || isAppDisplay ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-3',
                             )}
                         >
                     {portals.map((area, index) => {
@@ -854,18 +859,11 @@ export default function PortalPage() {
                         )}
                     >
                         <p className="text-sm text-muted-foreground mb-3">Need faculty access?</p>
-                        <div className="flex flex-wrap justify-center gap-2">
-                            <Button variant="outline" size="sm" asChild className="font-bold">
-                                <Link href={`/${schoolId}/teacher`} onClick={() => playSound('click')}>
-                                    Teacher & Faculty Portal
-                                </Link>
-                            </Button>
-                            <Button variant="ghost" size="sm" asChild className="font-bold">
-                                <Link href={`/${schoolId}/admin-sign-in`} onClick={() => playSound('click')}>
-                                    Admin sign-in
-                                </Link>
-                            </Button>
-                        </div>
+                        <Button variant="outline" size="sm" asChild className="font-bold">
+                            <Link href={`/${schoolId}/portal`} onClick={() => playSound('click')}>
+                                Open faculty hub
+                            </Link>
+                        </Button>
                     </div>
                 )}
         </div>

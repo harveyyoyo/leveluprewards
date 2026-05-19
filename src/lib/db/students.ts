@@ -24,6 +24,7 @@ import {
   applyPointsByPeriod,
   applyAchievementsAndBadges,
 } from './helpers';
+import { applyHousePointsRollupInTransaction } from './housePoints';
 
 export { lookupStudentId } from './lookup';
 
@@ -108,6 +109,8 @@ export const deleteStudent = async (firestore: Firestore, schoolId: string, stud
 export type AwardPointsOptions = {
   /** When true, skip syncing student goals after this award (avoids loops for goal-completion bonuses). */
   skipGoalSync?: boolean;
+  /** When true, increment the student's house cached totals (requires `houseId` on student). */
+  rollupHousePoints?: boolean;
 };
 
 export const awardPointsToStudent = async (
@@ -176,6 +179,17 @@ export const awardPointsToStudent = async (
 
       const activityRef = doc(collection(firestore, 'schools', schoolId, 'students', studentId, 'activities'));
       transaction.set(activityRef, { desc: description, amount: points, date: now });
+
+      if (options?.rollupHousePoints && studentData.houseId) {
+        await applyHousePointsRollupInTransaction(
+          transaction,
+          firestore,
+          schoolId,
+          studentData.houseId,
+          points + bonusTotal,
+          true,
+        );
+      }
     });
 
     if (!options?.skipGoalSync) {
@@ -227,7 +241,8 @@ export const awardPointsToMultipleStudents = async (
       await runTransaction(firestore, async (transaction) => {
         const studentRefs = chunkIds.map(id => doc(firestore, 'schools', schoolId, 'students', id));
         const studentDocs = await Promise.all(studentRefs.map(ref => transaction.get(ref)));
-        
+        const houseDeltas = new Map<string, number>();
+
         for (const studentDoc of studentDocs) {
           if (!studentDoc.exists()) continue;
 
@@ -249,6 +264,7 @@ export const awardPointsToMultipleStudents = async (
             schoolId, studentDoc.id, firestore,
           );
 
+          const totalAward = points + result.bonusTotal;
           transaction.update(studentDoc.ref, {
             points: newPoints + result.bonusTotal,
             lifetimePoints: newLifetimePoints + result.bonusTotal,
@@ -262,8 +278,28 @@ export const awardPointsToMultipleStudents = async (
 
           const mainActivityRef = doc(collection(studentDoc.ref, 'activities'));
           transaction.set(mainActivityRef, { desc: description, amount: points, date: now });
+
+          if (options?.rollupHousePoints && studentData.houseId) {
+            houseDeltas.set(
+              studentData.houseId,
+              (houseDeltas.get(studentData.houseId) ?? 0) + totalAward,
+            );
+          }
           
           processedCount++;
+        }
+
+        if (options?.rollupHousePoints) {
+          for (const [houseId, delta] of houseDeltas) {
+            await applyHousePointsRollupInTransaction(
+              transaction,
+              firestore,
+              schoolId,
+              houseId,
+              delta,
+              true,
+            );
+          }
         }
       });
     }
@@ -287,7 +323,14 @@ export const awardPointsToMultipleStudents = async (
   }
 };
 
-export const deductPointsFromMultipleStudents = async (firestore: Firestore, schoolId: string, studentIds: string[], points: number, reason: string): Promise<{ success: boolean; message: string; count: number; }> => {
+export const deductPointsFromMultipleStudents = async (
+  firestore: Firestore,
+  schoolId: string,
+  studentIds: string[],
+  points: number,
+  reason: string,
+  options?: Pick<AwardPointsOptions, 'rollupHousePoints'>,
+): Promise<{ success: boolean; message: string; count: number; }> => {
   if (points <= 0) {
     return { success: false, message: "Points to deduct must be a positive number.", count: 0 };
   }
@@ -306,7 +349,8 @@ export const deductPointsFromMultipleStudents = async (firestore: Firestore, sch
       await runTransaction(firestore, async (transaction) => {
         const studentRefs = chunkIds.map(id => doc(firestore, 'schools', schoolId, 'students', id));
         const studentDocs = await Promise.all(studentRefs.map(ref => transaction.get(ref)));
-        
+        const houseDeltas = new Map<string, number>();
+
         for (const studentDoc of studentDocs) {
           if (!studentDoc.exists()) continue;
 
@@ -319,7 +363,27 @@ export const deductPointsFromMultipleStudents = async (firestore: Firestore, sch
           const activityRef = doc(collection(studentDoc.ref, 'activities'));
           transaction.set(activityRef, { desc: reason, amount: -points, date: now });
 
+          if (options?.rollupHousePoints && studentData.houseId) {
+            houseDeltas.set(
+              studentData.houseId,
+              (houseDeltas.get(studentData.houseId) ?? 0) - points,
+            );
+          }
+
           processedCount++;
+        }
+
+        if (options?.rollupHousePoints) {
+          for (const [houseId, delta] of houseDeltas) {
+            await applyHousePointsRollupInTransaction(
+              transaction,
+              firestore,
+              schoolId,
+              houseId,
+              delta,
+              true,
+            );
+          }
         }
       });
     }

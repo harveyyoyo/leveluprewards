@@ -29,6 +29,18 @@ export { lookupStudentId } from './lookup';
 // Classes
 export { addClass, updateClass, deleteClass, uploadClassesFromCsv, importClassNames } from './classes';
 
+// Houses
+export {
+  addHouse,
+  updateHouse,
+  deleteHouse,
+  seedRcaHousePresets,
+  syncHousePointsFromStudents,
+  assignStudentsToHousesBalanced,
+  assignStudentsToHousesRandom,
+  listHouses,
+} from './houses';
+
 // Teachers
 export { addTeacher, updateTeacher, deleteTeacher, uploadTeachersFromCsv, importTeachersFromParsedRows } from './teachers';
 

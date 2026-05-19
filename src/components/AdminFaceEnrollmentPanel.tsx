@@ -29,6 +29,10 @@ interface AdminFaceEnrollmentPanelProps {
   studentLabel?: string;
   /** When true (e.g. after opening student edit from a “Face train” shortcut), opens the camera training dialog once. */
   autoOpenTrainingDialog?: boolean;
+  /** Render only the training dialog (no inline panel). Used from the admin student list face shortcut. */
+  trainingOnly?: boolean;
+  /** Called when the training dialog closes in `trainingOnly` mode. */
+  onTrainingOnlyClose?: () => void;
 }
 
 type FaceAuthStatus = {
@@ -46,7 +50,13 @@ type FaceAuthStatus = {
  *  - Opens a dedicated dialog for camera capture, Train/Retrain, and Remove —
  *    so face training does not stay embedded in the student edit dialog.
  */
-export function AdminFaceEnrollmentPanel({ studentId, studentLabel, autoOpenTrainingDialog }: AdminFaceEnrollmentPanelProps) {
+export function AdminFaceEnrollmentPanel({
+  studentId,
+  studentLabel,
+  autoOpenTrainingDialog,
+  trainingOnly = false,
+  onTrainingOnlyClose,
+}: AdminFaceEnrollmentPanelProps) {
   const { schoolId } = useAppContext();
   const { functions, user, isUserLoading, userError } = useFirebase();
   const confirm = useConfirm();
@@ -96,14 +106,14 @@ export function AdminFaceEnrollmentPanel({ studentId, studentLabel, autoOpenTrai
   }, [refreshStatus]);
 
   useEffect(() => {
-    if (!autoOpenTrainingDialog) {
+    if (!autoOpenTrainingDialog && !trainingOnly) {
       autoFaceOpenDoneRef.current = false;
       return;
     }
     if (autoFaceOpenDoneRef.current) return;
     autoFaceOpenDoneRef.current = true;
     setTrainingDialogOpen(true);
-  }, [autoOpenTrainingDialog]);
+  }, [autoOpenTrainingDialog, trainingOnly]);
 
   const enrolled = faceStatus.enrolled;
   const scanCount = faceStatus.scanCount;
@@ -142,9 +152,12 @@ export function AdminFaceEnrollmentPanel({ studentId, studentLabel, autoOpenTrai
       if (!open) {
         stopCamera();
         setTrainSuccessMessage(null);
+        if (trainingOnly) {
+          onTrainingOnlyClose?.();
+        }
       }
     },
-    [stopCamera],
+    [stopCamera, trainingOnly, onTrainingOnlyClose],
   );
 
   const startCamera = useCallback(async (): Promise<HTMLVideoElement | null> => {
@@ -415,6 +428,107 @@ export function AdminFaceEnrollmentPanel({ studentId, studentLabel, autoOpenTrai
 
   if (!schoolId || !studentId) return null;
 
+  const trainingDialog = (
+    <Dialog open={trainingDialogOpen} onOpenChange={handleTrainingDialogOpenChange}>
+      <DialogContent
+        className="gap-0 z-[130]"
+        overlayClassName="z-[120]"
+        onInteractOutside={(e) => {
+          if (busy) e.preventDefault();
+        }}
+      >
+        <DialogHeader className="pb-4">
+          <DialogTitle>
+            Face login training
+            {studentLabel ? (
+              <span className="block text-sm font-normal text-muted-foreground mt-1">
+                {studentLabel}
+              </span>
+            ) : null}
+          </DialogTitle>
+          <DialogDescription>
+            Capture the student&apos;s face for kiosk sign-in. Grant camera permission when prompted.
+            Close this window when you are finished.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-3 pb-2">
+          <div
+            className={cn(
+              'relative w-full overflow-hidden rounded-lg border bg-black aspect-video',
+              cameraOn ? 'opacity-100' : 'opacity-0 h-0 border-0',
+            )}
+            style={cameraOn ? undefined : { height: 0 }}
+          >
+            <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
+            {busy && (
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                <Loader2 className="w-8 h-8 text-white animate-spin" />
+              </div>
+            )}
+          </div>
+
+          {trainSuccessMessage ? (
+            <p className="text-center text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+              {trainSuccessMessage}
+            </p>
+          ) : status ? (
+            <p className="text-center text-xs font-bold text-muted-foreground uppercase tracking-wider">
+              {status}
+            </p>
+          ) : null}
+
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="default"
+              size="sm"
+              onClick={() => void handleTrain()}
+              disabled={busy || !firebaseAuthReadyForCallables}
+              className="flex-1"
+            >
+              <Camera className="w-4 h-4 mr-2" />
+              {enrolled ? 'Retrain' : 'Train'}
+            </Button>
+            {enrolled && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => void handleRemove()}
+                disabled={busy || !firebaseAuthReadyForCallables}
+                className="text-muted-foreground hover:text-destructive hover:border-destructive/60"
+              >
+                <Trash2 className="w-4 h-4 mr-1" />
+                Remove
+              </Button>
+            )}
+          </div>
+
+          <p className="text-[11px] text-muted-foreground leading-snug">
+            Have the student face the camera, then click Train. You can retrain any time if
+            the kiosk starts recognizing the wrong person.
+          </p>
+        </div>
+
+        <DialogFooter className="pt-4 sm:justify-center border-t mt-4">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => handleTrainingDialogOpenChange(false)}
+            disabled={busy}
+          >
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+
+  if (trainingOnly) {
+    return trainingDialog;
+  }
+
   return (
     <div className="space-y-2 rounded-xl border border-border/60 p-3">
       <div className="flex items-center justify-between gap-2">
@@ -477,99 +591,7 @@ export function AdminFaceEnrollmentPanel({ studentId, studentLabel, autoOpenTrai
         {enrolled ? 'Retrain face login…' : 'Train face login…'}
       </Button>
 
-      <Dialog open={trainingDialogOpen} onOpenChange={handleTrainingDialogOpenChange}>
-        <DialogContent
-          className="gap-0 z-[60]"
-          onInteractOutside={(e) => {
-            if (busy) e.preventDefault();
-          }}
-        >
-          <DialogHeader className="pb-4">
-            <DialogTitle>
-              Face login training
-              {studentLabel ? (
-                <span className="block text-sm font-normal text-muted-foreground mt-1">
-                  {studentLabel}
-                </span>
-              ) : null}
-            </DialogTitle>
-            <DialogDescription>
-              Capture the student&apos;s face for kiosk sign-in. Grant camera permission when prompted.
-              Close this window when you are finished.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-3 pb-2">
-            <div
-              className={cn(
-                'relative w-full overflow-hidden rounded-lg border bg-black aspect-video',
-                cameraOn ? 'opacity-100' : 'opacity-0 h-0 border-0',
-              )}
-              style={cameraOn ? undefined : { height: 0 }}
-            >
-              <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
-              {busy && (
-                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                  <Loader2 className="w-8 h-8 text-white animate-spin" />
-                </div>
-              )}
-            </div>
-
-            {trainSuccessMessage ? (
-              <p className="text-center text-sm font-semibold text-emerald-600 dark:text-emerald-400">
-                {trainSuccessMessage}
-              </p>
-            ) : status ? (
-              <p className="text-center text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                {status}
-              </p>
-            ) : null}
-
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="default"
-                size="sm"
-                onClick={() => void handleTrain()}
-                disabled={busy || !firebaseAuthReadyForCallables}
-                className="flex-1"
-              >
-                <Camera className="w-4 h-4 mr-2" />
-                {enrolled ? 'Retrain' : 'Train'}
-              </Button>
-              {enrolled && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => void handleRemove()}
-                  disabled={busy || !firebaseAuthReadyForCallables}
-                  className="text-muted-foreground hover:text-destructive hover:border-destructive/60"
-                >
-                  <Trash2 className="w-4 h-4 mr-1" />
-                  Remove
-                </Button>
-              )}
-            </div>
-
-            <p className="text-[11px] text-muted-foreground leading-snug">
-              Have the student face the camera, then click Train. You can retrain any time if
-              the kiosk starts recognizing the wrong person.
-            </p>
-          </div>
-
-          <DialogFooter className="pt-4 sm:justify-center border-t mt-4">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => handleTrainingDialogOpenChange(false)}
-              disabled={busy}
-            >
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {trainingDialog}
     </div>
   );
 }

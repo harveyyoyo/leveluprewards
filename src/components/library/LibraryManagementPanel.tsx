@@ -13,7 +13,10 @@ import { usePrint } from '@/components/providers/PrintProvider';
 import { useToast } from '@/hooks/use-toast';
 import type { LibraryItem, LibraryItemInput } from '@/lib/types';
 import type { LibraryLabelFormat } from '@/lib/libraryScanCode';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { LibraryBookBulkIntakeScanner } from './LibraryBookBulkIntakeScanner';
 import { LibraryBookIntakeScanner } from './LibraryBookIntakeScanner';
+import { LibraryCheckoutDesk } from './LibraryCheckoutDesk';
 import { LibraryPolicySettingsCard } from './LibraryPolicySettingsCard';
 import type { Category } from '@/lib/types';
 
@@ -123,7 +126,7 @@ export function LibraryManagementPanel({
             </CardTitle>
           </Helper>
           <CardDescription>
-            Register books, print labels, and manage checkouts.
+            Scan ISBNs with a barcode reader to add books, print LIB labels, and manage checkouts.
             {overdueCount > 0 ? ` ${overdueCount} overdue.` : ''}
           </CardDescription>
         </div>
@@ -165,9 +168,33 @@ export function LibraryManagementPanel({
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
-        <LibraryPolicySettingsCard categories={categories} />
+        <LibraryCheckoutDesk getStudentName={getStudentName} categories={categories} />
+
         {showIntakeScanner && onRegisterFromScan && upcTaken ? (
-          <LibraryBookIntakeScanner onRegister={onRegisterFromScan} upcTaken={upcTaken} />
+          <Tabs defaultValue="bulk" className="w-full">
+            <TabsList className="grid w-full max-w-md grid-cols-2 rounded-xl">
+              <TabsTrigger value="bulk" className="rounded-lg">
+                Bulk register
+              </TabsTrigger>
+              <TabsTrigger value="single" className="rounded-lg">
+                Single register
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="bulk" className="mt-4">
+              <LibraryBookBulkIntakeScanner
+                onRegister={onRegisterFromScan}
+                upcTaken={upcTaken}
+                libraryItems={libraryItems}
+              />
+            </TabsContent>
+            <TabsContent value="single" className="mt-4">
+              <LibraryBookIntakeScanner
+                onRegister={onRegisterFromScan}
+                upcTaken={upcTaken}
+                libraryItems={libraryItems}
+              />
+            </TabsContent>
+          </Tabs>
         ) : null}
 
         <div className="rounded-lg border bg-background/50 p-3">
@@ -175,7 +202,7 @@ export function LibraryManagementPanel({
             <EmptyState
               icon={Book}
               title="No library items yet"
-              description="Scan a book ISBN to register it, or add an item manually."
+              description="Use a barcode reader to scan ISBNs (bulk or single), or add an item manually."
               action={{ label: 'Add your first item', icon: Plus, onClick: onAddLibraryItem }}
             />
           ) : (
@@ -272,6 +299,8 @@ export function LibraryManagementPanel({
             </ul>
           )}
         </div>
+
+        <LibraryPolicySettingsCard categories={categories} />
       </CardContent>
     </Card>
   );

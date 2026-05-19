@@ -69,6 +69,12 @@ interface Settings {
     enableLevels: boolean;
     enableStreaks: boolean;
     enableGoals: boolean;
+    /** RCA-style house system: rosters, house totals, sorting ceremony, Hall of Fame. */
+    enableHouses: boolean;
+    /** When on, teacher point awards also update each house's cached totals. */
+    housesRollupPoints: boolean;
+    /** Show house name/color on the student kiosk header. */
+    showHouseOnStudentKiosk: boolean;
     enableChallenges: boolean;
     // Analytics
     enableTeacherCharts: boolean;
@@ -336,7 +342,7 @@ interface Settings {
     teacherHiddenAddOnTabs?: string[];
 
     // Hall of Fame (big screen defaults)
-    hallOfFameRankType?: 'students' | 'classes' | 'goals';
+    hallOfFameRankType?: 'students' | 'classes' | 'houses' | 'goals';
     hallOfFameSortBy?: string;
     hallOfFameScope?: 'all' | string;
     hallOfFameLimit?: number;
@@ -423,6 +429,9 @@ const defaultSettings: Settings = {
     enableLevels: false,
     enableStreaks: false,
     enableGoals: false,
+    enableHouses: false,
+    housesRollupPoints: true,
+    showHouseOnStudentKiosk: true,
     enableChallenges: false,
     enableTeacherCharts: false,
     enableAdminAnalytics: false,

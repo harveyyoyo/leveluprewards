@@ -11,8 +11,9 @@
     "dev": "node scripts/dev-webpack.cjs",
     "dev:stable": "node scripts/dev-webpack.cjs",
     "dev:webpack": "node scripts/dev-webpack.cjs",
-    "dev:plain": "next dev -p 3000",
-    "dev:reset": "npm run clean:next && cross-env SKIP_CLEAN_NEXT=1 npm run dev",
+    "dev:plain": "next dev -H 127.0.0.1 -p 3000",
+    "dev:reset": "npm run clean:next && npm run dev",
+    "dev:doctor": "node scripts/dev-doctor.mjs",
     "clean:next": "node scripts/clean-next.cjs",
     "dev:turbo": "node scripts/dev-turbo.cjs",
     "prebuild": "node scripts/copy-face-models.mjs",
@@ -34,6 +35,7 @@
     "generate:legal-pdfs:text": "node scripts/generate-legal-pdfs-from-text.mjs",
     "generate:flyer-pdf": "node scripts/generate-flyer-pdf.mjs",
     "capture:walkthrough": "node scripts/capture-walkthrough-videos.mjs",
+    "dev:tunnel": "node scripts/dev-public-tunnel.mjs",
     "nanobanana:ppt": "cd tools/NanoBanana-PPT-Skills && venv\\Scripts\\python.exe generate_ppt.py"
   },
   "dependencies": {
@@ -109,7 +111,7 @@
     "pdfkit": "^0.18.0",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
-    "typescript": "^5",
+    "typescript": "5.9.3",
     "vitest": "^4.0.18"
   }
 }

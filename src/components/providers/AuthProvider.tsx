@@ -628,7 +628,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         ): Promise<LoginResult> => {
             if (type === 'developer') {
                 try {
-                    if (!isAllowedDeveloperGoogleUser(auth.currentUser)) {
+                    let devPasscodeOk = false;
+                    if (process.env.NODE_ENV === 'development' && credentials.passcode?.trim()) {
+                        try {
+                            const res = await fetch('/api/auth/dev-developer', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: 'same-origin',
+                                body: JSON.stringify({ passcode: credentials.passcode.trim() }),
+                            });
+                            devPasscodeOk = res.ok;
+                        } catch (e) {
+                            console.error('Dev developer passcode check failed:', e);
+                        }
+                        if (!devPasscodeOk) {
+                            return loginErr('Invalid developer passcode.');
+                        }
+                    } else if (!isAllowedDeveloperGoogleUser(auth.currentUser)) {
                         return loginErr(
                             'Sign in with an allowed Google account to access developer tools.',
                         );

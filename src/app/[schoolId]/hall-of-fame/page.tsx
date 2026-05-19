@@ -8,7 +8,7 @@ import { useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase
 import { collection, query, orderBy, limit as firestoreLimit } from 'firebase/firestore';
 import { Trophy, Crown, Target } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import type { Student, Class, Category, Goal } from '@/lib/types';
+import type { Student, Class, House, Category, Goal } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { cn, displayStudentNameOnSharedBoard } from '@/lib/utils';
@@ -56,7 +56,9 @@ export default function HallOfFamePage() {
 
     const isFullscreen = (searchParams?.get('fullscreen') || '').trim() === '1';
 
-    const [rankType, setRankType] = useState<'students' | 'classes' | 'goals'>(settings.hallOfFameRankType ?? 'students');
+    const [rankType, setRankType] = useState<'students' | 'classes' | 'houses' | 'goals'>(
+        settings.hallOfFameRankType ?? 'students',
+    );
     const [sortBy, setSortBy] = useState<string>(settings.hallOfFameSortBy ?? 'lifetimePoints');
     const [scope, setScope] = useState<'all' | string>(settings.hallOfFameScope ?? 'all');
     const [limit, setLimit] = useState<number>(settings.hallOfFameLimit ?? 50);
@@ -88,6 +90,7 @@ export default function HallOfFamePage() {
             if (hasUrlConfig) setIsLockedToUrlConfig(true);
 
             if (rank === 'classes' || rank === 'class-standings' || rank === 'class_standings') setRankType('classes');
+            else if (rank === 'houses' || rank === 'house-standings' || rank === 'house_standings') setRankType('houses');
             else if (rank === 'goals' || rank === 'school-goals' || rank === 'school_goals') setRankType('goals');
             else if (rank) setRankType('students');
 
@@ -167,6 +170,12 @@ export default function HallOfFamePage() {
 
     const classesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'classes') : null, [firestore, schoolId]);
     const { data: classes, isLoading: classesLoading } = useCollection<Class>(classesQuery);
+
+    const housesQuery = useMemoFirebase(
+        () => (schoolId && settings.enableHouses ? collection(firestore, 'schools', schoolId, 'houses') : null),
+        [firestore, schoolId, settings.enableHouses],
+    );
+    const { data: houses, isLoading: housesLoading } = useCollection<House>(housesQuery);
 
     const categoriesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'categories') : null, [firestore, schoolId]);
     const { data: categories, isLoading: categoriesLoading } = useCollection<Category>(categoriesQuery);
@@ -301,6 +310,43 @@ export default function HallOfFamePage() {
             }));
             rows.sort((a, b) => b.points - a.points);
             return rows.slice(0, limit);
+        } else if (rankType === 'houses') {
+            if (!houses) return [];
+            const rollup = settings.housesRollupPoints !== false;
+            if (rollup) {
+                const rows = houses.map((h) => ({
+                    id: h.id,
+                    type: 'house' as const,
+                    name: h.name,
+                    photoUrl: h.crestUrl ?? null,
+                    points:
+                        sortBy === 'lifetimePoints' ? h.lifetimePoints ?? 0 : h.points ?? 0,
+                    classId: h.id,
+                    className: h.value || h.name,
+                    initials: (h.emoji || h.name).slice(0, 2),
+                }));
+                rows.sort((a, b) => b.points - a.points);
+                return rows.slice(0, limit);
+            }
+            if (!allTopStudents) return [];
+            const totals = new Map<string, number>();
+            for (const s of allTopStudents) {
+                const hid = s.houseId;
+                if (!hid) continue;
+                totals.set(hid, (totals.get(hid) ?? 0) + getPointsForStudent(s));
+            }
+            const rows = houses.map((h) => ({
+                id: h.id,
+                type: 'house' as const,
+                name: h.name,
+                photoUrl: h.crestUrl ?? null,
+                points: totals.get(h.id) ?? 0,
+                classId: h.id,
+                className: h.value || h.name,
+                initials: (h.emoji || h.name).slice(0, 2),
+            }));
+            rows.sort((a, b) => b.points - a.points);
+            return rows.slice(0, limit);
         } else {
             // rankType === 'goals'
             if (!allGoals) return [];
@@ -324,7 +370,21 @@ export default function HallOfFamePage() {
                 bonusReward: g.bonusPointsReward
             }));
         }
-    }, [rankType, allTopStudents, classes, allGoals, goalsProgressMap, scope, sortBy, limit, getClassName, getPointsForStudent, settings.privacyStudentNameDisplayMode]);
+    }, [
+        rankType,
+        allTopStudents,
+        classes,
+        houses,
+        allGoals,
+        goalsProgressMap,
+        scope,
+        sortBy,
+        limit,
+        getClassName,
+        getPointsForStudent,
+        settings.privacyStudentNameDisplayMode,
+        settings.housesRollupPoints,
+    ]);
 
     // Auto-scroll logic
     useEffect(() => {
@@ -394,6 +454,7 @@ export default function HallOfFamePage() {
         !canAccessHallOfFameRoute(loginState) ||
         studentsLoading ||
         classesLoading ||
+        (settings.enableHouses && housesLoading) ||
         categoriesLoading
     ) {
         return <HallOfFameSkeleton animBackdrop={animBackdrop} />;

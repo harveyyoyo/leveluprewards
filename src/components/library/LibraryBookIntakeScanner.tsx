@@ -1,22 +1,34 @@
 'use client';
 
-import React, { useCallback, useState } from 'react';
-import { Camera, Loader2, ScanLine } from 'lucide-react';
+import { useCallback, useMemo, useState } from 'react';
+import { Barcode, Loader2, ScanLine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
 import { useToast } from '@/hooks/use-toast';
-import { lookupBookByIsbn } from '@/lib/libraryCatalogLookup';
-import { generateLibraryBarcode } from '@/lib/libraryScanCode';
-import type { LibraryItemInput } from '@/lib/types';
+import { useBarcodeReaderWedge } from '@/hooks/useBarcodeReaderWedge';
+import {
+  catalogIsbnSet,
+  isRetailIsbnBarcode,
+  normalizeIsbnDigits,
+  primaryIsbnVariant,
+} from '@/lib/libraryCatalogLookup';
+import {
+  createScanDeduper,
+  fetchCatalogHitByIsbn,
+  generateUniqueLibraryUpc,
+} from '@/lib/libraryIntakeHelpers';
+import type { LibraryItem, LibraryItemInput } from '@/lib/types';
+import { LibraryBarcodeReaderField } from './LibraryBarcodeReaderField';
 
 export function LibraryBookIntakeScanner({
   onRegister,
   upcTaken,
+  libraryItems,
 }: {
   onRegister: (data: LibraryItemInput) => Promise<void>;
   upcTaken: (upc: string) => Promise<boolean>;
+  libraryItems?: LibraryItem[] | null;
 }) {
   const { toast } = useToast();
   const [scanning, setScanning] = useState(false);
@@ -26,6 +38,9 @@ export function LibraryBookIntakeScanner({
   const [isbn, setIsbn] = useState('');
   const [category, setCategory] = useState('');
   const [shelfLocation, setShelfLocation] = useState('');
+
+  const existingIsbns = useMemo(() => catalogIsbnSet(libraryItems), [libraryItems]);
+  const shouldAcceptScan = useMemo(() => createScanDeduper(2500), []);
 
   const resetForm = () => {
     setTitle('');
@@ -37,50 +52,70 @@ export function LibraryBookIntakeScanner({
 
   const applyCatalogHit = useCallback(
     async (rawIsbn: string) => {
-      const digits = rawIsbn.replace(/\D/g, '');
-      if (digits.length < 10) return;
+      if (!isRetailIsbnBarcode(rawIsbn)) return;
+      const digits = primaryIsbnVariant(rawIsbn);
+      if (existingIsbns.has(digits)) {
+        toast({
+          variant: 'destructive',
+          title: 'Already in catalog',
+          description: 'This ISBN is already registered in your library.',
+        });
+        return;
+      }
       setBusy(true);
       try {
-        const hit = await lookupBookByIsbn(digits);
+        const hit = await fetchCatalogHitByIsbn(digits);
         if (hit) {
           setTitle(hit.title);
           if (hit.author) setAuthor(hit.author);
           if (hit.isbn) setIsbn(hit.isbn);
           if (hit.category) setCategory(hit.category);
-          toast({ title: 'Book found', description: hit.title });
+          toast({ title: 'Book identified', description: hit.title });
         } else {
           setIsbn(digits);
-          toast({ title: 'ISBN scanned', description: 'Enter title and author manually if needed.' });
+          toast({
+            title: 'ISBN scanned',
+            description: `No online match for ${digits}. You can still enter the title and register, or tap Lookup after fixing the number.`,
+          });
         }
       } finally {
         setBusy(false);
       }
     },
-    [toast],
+    [existingIsbns, toast],
   );
 
   const handleScan = useCallback(
     (code: string) => {
-      const trimmed = code.trim();
-      if (!trimmed) return;
-      const digits = trimmed.replace(/\D/g, '');
-      if (digits.length >= 10) {
+      if (!shouldAcceptScan(code)) return;
+      const digits = normalizeIsbnDigits(code.trim());
+      if (isRetailIsbnBarcode(digits)) {
         void applyCatalogHit(digits);
       } else {
         toast({
           variant: 'destructive',
-          title: 'Not an ISBN',
-          description: 'Scan the ISBN barcode on the back of the book, or add the item manually.',
+          title: 'Not an ISBN barcode',
+          description: 'Scan the ISBN on the book (10 or 13 digits), not the school LIB checkout sticker.',
         });
       }
     },
-    [applyCatalogHit, toast],
+    [applyCatalogHit, shouldAcceptScan, toast],
   );
 
-  const { videoRef, hasCameraPermission } = useBarcodeScanner(scanning, handleScan, (err) => {
-    setScanning(false);
-    toast({ variant: 'destructive', title: 'Camera error', description: err });
+  const { inputRef, scanBuffer, setScanBuffer, submitScan, focusReader } = useBarcodeReaderWedge({
+    active: scanning,
+    onScan: handleScan,
+    disabled: busy,
   });
+
+  const handleLookupManual = () => {
+    const digits = normalizeIsbnDigits(isbn);
+    if (!isRetailIsbnBarcode(digits)) {
+      toast({ variant: 'destructive', title: 'Enter a valid ISBN (10 or 13 digits)' });
+      return;
+    }
+    void applyCatalogHit(digits);
+  };
 
   const handleSave = async () => {
     const trimmedTitle = title.trim();
@@ -88,14 +123,7 @@ export function LibraryBookIntakeScanner({
       toast({ variant: 'destructive', title: 'Title is required' });
       return;
     }
-    let upc = '';
-    for (let attempt = 0; attempt < 8; attempt++) {
-      const candidate = generateLibraryBarcode();
-      if (!(await upcTaken(candidate))) {
-        upc = candidate;
-        break;
-      }
-    }
+    const upc = await generateUniqueLibraryUpc(upcTaken);
     if (!upc) {
       toast({ variant: 'destructive', title: 'Could not generate a unique barcode' });
       return;
@@ -110,8 +138,9 @@ export function LibraryBookIntakeScanner({
         category: category.trim() || undefined,
         shelfLocation: shelfLocation.trim() || undefined,
       });
-      toast({ title: 'Book registered', description: `Barcode: ${upc}` });
+      toast({ title: 'Book registered', description: `School barcode: ${upc}` });
       resetForm();
+      focusReader();
     } catch (e) {
       toast({
         variant: 'destructive',
@@ -129,39 +158,52 @@ export function LibraryBookIntakeScanner({
         <div>
           <h3 className="font-bold text-sm flex items-center gap-2">
             <ScanLine className="h-4 w-4 text-primary" />
-            Scan to register
+            Register one book
           </h3>
           <p className="text-xs text-muted-foreground">
-            Scan the book ISBN with the camera. A unique LIB barcode is generated for checkout.
+            Scan the ISBN with a barcode reader. Title and author are filled from the internet when possible, then a
+            unique LIB sticker barcode is generated.
           </p>
         </div>
         <Button
           type="button"
-          variant={scanning ? 'secondary' : 'outline'}
+          variant={scanning ? 'secondary' : 'default'}
           size="sm"
           className="rounded-xl"
-          onClick={() => setScanning((v) => !v)}
+          disabled={busy}
+          onClick={() => {
+            setScanning((on) => {
+              const next = !on;
+              if (next) setTimeout(() => focusReader(), 0);
+              return next;
+            });
+          }}
         >
-          <Camera className="mr-2 h-4 w-4" />
-          {scanning ? 'Stop camera' : 'Start camera'}
+          <Barcode className="mr-2 h-4 w-4" />
+          {scanning ? 'Stop scanning' : 'Start scanning'}
         </Button>
       </div>
 
       {scanning ? (
-        <div className="relative aspect-video max-h-48 overflow-hidden rounded-lg border bg-black">
-          <video ref={videoRef as React.RefObject<HTMLVideoElement>} className="h-full w-full object-cover" playsInline muted />
-          {!hasCameraPermission ? (
-            <div className="absolute inset-0 flex items-center justify-center text-white text-sm">
-              Allow camera access to scan ISBN
-            </div>
-          ) : null}
-        </div>
-      ) : null}
+        <LibraryBarcodeReaderField
+          inputId="library-single-register-reader"
+          inputRef={inputRef}
+          scanBuffer={scanBuffer}
+          onScanBufferChange={setScanBuffer}
+          onSubmit={submitScan}
+          active={!busy}
+          hint="Scan the ISBN on the book cover (not the LIB sticker)."
+        />
+      ) : (
+        <p className="text-sm text-muted-foreground rounded-lg border border-dashed bg-background/60 px-4 py-5 text-center">
+          Press <strong className="text-foreground">Start scanning</strong> to register books with the barcode reader.
+        </p>
+      )}
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1 sm:col-span-2">
           <Label>Title</Label>
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Book title" />
+          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Filled from ISBN lookup" />
         </div>
         <div className="space-y-1">
           <Label>Author</Label>
@@ -169,12 +211,24 @@ export function LibraryBookIntakeScanner({
         </div>
         <div className="space-y-1">
           <Label>ISBN</Label>
-          <Input
-            value={isbn}
-            onChange={(e) => setIsbn(e.target.value)}
-            className="font-mono"
-            placeholder="Scan or type"
-          />
+          <div className="flex gap-2">
+            <Input
+              value={isbn}
+              onChange={(e) => setIsbn(e.target.value)}
+              className="font-mono"
+              placeholder="From reader or type"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="shrink-0 rounded-lg"
+              disabled={busy}
+              onClick={handleLookupManual}
+            >
+              Lookup
+            </Button>
+          </div>
         </div>
         <div className="space-y-1">
           <Label>Category</Label>
@@ -188,7 +242,7 @@ export function LibraryBookIntakeScanner({
 
       <Button type="button" className="rounded-xl w-full sm:w-auto" disabled={busy} onClick={() => void handleSave()}>
         {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-        Register book &amp; generate barcode
+        Register book &amp; generate LIB barcode
       </Button>
     </div>
   );

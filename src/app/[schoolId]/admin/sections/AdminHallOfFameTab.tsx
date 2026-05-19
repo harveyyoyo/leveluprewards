@@ -21,7 +21,9 @@ import { LiveScreenPreview } from '@/components/admin/LiveScreenPreview';
 export function AdminHallOfFameTab({ schoolId }: { schoolId: string }) {
   const firestore = useFirestore();
   const { settings, updateSettings } = useSettings();
-  const [rankType, setRankType] = useState<'students' | 'classes' | 'goals'>(settings.hallOfFameRankType ?? 'students');
+  const [rankType, setRankType] = useState<'students' | 'classes' | 'houses' | 'goals'>(
+    settings.hallOfFameRankType ?? 'students',
+  );
   const [sortBy, setSortBy] = useState<string>(settings.hallOfFameSortBy ?? 'lifetimePoints');
   const [scope, setScope] = useState<'all' | string>(settings.hallOfFameScope ?? 'all');
   const [limitCount, setLimitCount] = useState<number>(settings.hallOfFameLimit ?? 50);
@@ -109,6 +111,7 @@ export function AdminHallOfFameTab({ schoolId }: { schoolId: string }) {
                   <SelectContent>
                     <SelectItem value="students">Students</SelectItem>
                     <SelectItem value="classes">Class standings</SelectItem>
+                    {settings.enableHouses ? <SelectItem value="houses">House standings</SelectItem> : null}
                     <SelectItem value="goals">School goals</SelectItem>
                   </SelectContent>
                 </Select>

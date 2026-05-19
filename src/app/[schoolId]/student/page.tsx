@@ -40,7 +40,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import type { Student, Prize, HistoryItem, Class, LibraryItem, PrizeAiFunReward, Category } from '@/lib/types';
+import type { Student, Prize, HistoryItem, Class, House, LibraryItem, PrizeAiFunReward, Category } from '@/lib/types';
+import { HouseBadge } from '@/components/houses/HouseBadge';
 import { getLibraryPolicyFromSettings } from '@/lib/libraryPolicy';
 import { StudentLibraryCheckoutsCard } from '@/components/student-kiosk/StudentLibraryCheckoutsCard';
 import { performKioskAttendanceSignIn, describeAttendanceKioskOutcome } from '@/lib/attendance/kioskSignIn';
@@ -543,6 +544,18 @@ function StudentDashboardInner({
 
   const studentDocRef = useMemoFirebase(() => schoolId ? doc(firestore, 'schools', schoolId, 'students', studentId) : null, [firestore, schoolId, studentId]);
   const { data: student, isLoading: studentLoading } = useDoc<Student>(studentDocRef);
+
+  const houseDocRef = useMemoFirebase(
+    () =>
+      schoolId &&
+      student?.houseId &&
+      settings.enableHouses &&
+      settings.showHouseOnStudentKiosk !== false
+        ? doc(firestore, 'schools', schoolId, 'houses', student.houseId)
+        : null,
+    [firestore, schoolId, student?.houseId, settings.enableHouses, settings.showHouseOnStudentKiosk],
+  );
+  const { data: studentHouse } = useDoc<House>(houseDocRef);
 
   usePrizeAiFunAudienceCacheReset(schoolId, studentId, student);
 
@@ -1548,6 +1561,7 @@ function StudentDashboardInner({
                     🎂 Birthday
                   </span>
                 ) : null}
+                {studentHouse ? <HouseBadge house={studentHouse} size="sm" /> : null}
                 {(student.customEmojiUrl || effectiveTheme?.emoji) &&
                   (student.customEmojiUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element

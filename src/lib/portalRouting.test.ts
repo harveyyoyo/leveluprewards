@@ -37,8 +37,17 @@ describe('portal routing', () => {
       expect(isLocalDevHost('localhost:3000')).toBe(true);
       expect(isLocalDevHost('127.0.0.1:3000')).toBe(true);
       expect(isLocalDevHost('portal.localhost:3000')).toBe(true);
+      expect(isLocalDevHost('moier-leady-susanne.ngrok-free.dev')).toBe(true);
       expect(
         canonicalPortalRedirectUrl('/login', '', 'localhost:3000', 'http:'),
+      ).toBeNull();
+      expect(
+        canonicalPortalRedirectUrl(
+          '/login',
+          '',
+          'moier-leady-susanne.ngrok-free.dev',
+          'https:',
+        ),
       ).toBeNull();
       expect(
         canonicalPortalRedirectUrl('/portal', '', '127.0.0.1:3000', 'http:'),

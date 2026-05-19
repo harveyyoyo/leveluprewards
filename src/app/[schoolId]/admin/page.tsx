@@ -15,7 +15,7 @@ import {
    Users, Gift, BookOpen, Trash2, Edit, UploadCloud, Printer, LayoutDashboard, Database,
    Settings, History, Award, CheckCircle, Tag, Trophy, ArrowRight, Loader2, Play, ShieldCheck,
    User, Upload, Download, Activity, Zap, Clock, Palette, Wand2, TableProperties,
-   FileText, Bell, Target, Megaphone, ChevronDown, X, Plug, GraduationCap,
+   FileText, Bell, Target, Megaphone, ChevronDown, X, Plug, GraduationCap, Home,
  } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -23,7 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import type { Student, Prize, Coupon, Category, Class, Teacher, BackupInfo, Achievement, Badge, AttendanceScheduleSlot, TeacherBudgetPeriod, StaffAccount, LibraryItem, LibraryItemInput } from '@/lib/types';
+import type { Student, Prize, Coupon, Category, Class, House, Teacher, BackupInfo, Achievement, Badge, AttendanceScheduleSlot, TeacherBudgetPeriod, StaffAccount, LibraryItem, LibraryItemInput } from '@/lib/types';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StudentModal } from '@/components/StudentModal';
@@ -204,6 +204,10 @@ const AdminStudentPortalTab = dynamic(
   importAdminTabSection(() => import('./sections/AdminStudentPortalTab'), 'AdminStudentPortalTab'),
   { loading: tabLoader, ssr: false },
 );
+const AdminHousesTab = dynamic(
+  importAdminTabSection(() => import('./sections/AdminHousesTab'), 'AdminHousesTab'),
+  { loading: tabLoader, ssr: false },
+);
 import { getReadableErrorMessage } from '@/lib/errorMessage';
 import { BulkRosterSetupDialog } from '@/components/BulkRosterSetupDialog';
 import { StudentCsvColumnMapDialog } from '@/components/StudentCsvColumnMapDialog';
@@ -307,7 +311,9 @@ function AdminDashboardInner() {
   const {
     loginState,
     schoolId, setCouponsToPrint, deleteStudent,
-    addClass, updateClass, deleteClass, deleteCategory, addCategory, updateCategory,
+    addClass, updateClass, deleteClass,
+    addHouse, updateHouse, deleteHouse,
+    deleteCategory, addCategory, updateCategory,
     addTeacher, updateTeacher, deleteTeacher,
     addPrize, updatePrize, deletePrize, uploadStudents, uploadClassesFromCsv, uploadTeachersFromCsv, setStudentsToPrint,
     updateStudent,
@@ -363,6 +369,7 @@ function AdminDashboardInner() {
     firestore,
     students, studentsLoading, studentsError,
     classes, classesLoading, classesError,
+    houses, housesLoading, housesError,
     teachers, teachersLoading, teachersError,
     staffAccounts, staffAccountsLoading, staffAccountsError,
     categories, categoriesLoading, categoriesError,
@@ -585,6 +592,19 @@ function AdminDashboardInner() {
         isOn: (s) => !!s.enableGoals,
         enable: () => updateSettings({ enableGoals: true, adminHiddenAddOnTabs: removeHidden('goals') }),
         disable: () => updateSettings({ enableGoals: false, adminHiddenAddOnTabs: removeHidden('goals'), adminPinnedAddOnTabs: removePinned('goals') }),
+      },
+      {
+        value: 'houses',
+        label: 'Houses',
+        icon: Home,
+        isOn: (s) => !!s.enableHouses,
+        enable: () => updateSettings({ enableHouses: true, adminHiddenAddOnTabs: removeHidden('houses') }),
+        disable: () =>
+          updateSettings({
+            enableHouses: false,
+            adminHiddenAddOnTabs: removeHidden('houses'),
+            adminPinnedAddOnTabs: removePinned('houses'),
+          }),
       },
       {
         value: 'notifications',
@@ -2005,6 +2025,33 @@ function AdminDashboardInner() {
             />
           </TabsContent>
 
+          <TabsContent value="houses" className={scrollingAdminTabClassName}>
+            <AdminHousesTab
+              schoolId={schoolId!}
+              houses={houses}
+              students={students}
+              teachers={teachers}
+              onAddHouse={addHouse}
+              onUpdateHouse={updateHouse}
+              onDeleteHouse={async (id, houseStudents) => {
+                const house = (houses || []).find((h: House) => h.id === id);
+                const ok = await confirm({
+                  title: house ? `Delete house "${house.name}"?` : 'Delete this house?',
+                  description:
+                    houseStudents.length > 0
+                      ? `${houseStudents.length} student(s) will be unassigned from this house.`
+                      : 'No students are assigned to this house.',
+                  confirmLabel: 'Delete house',
+                  destructive: true,
+                });
+                if (!ok) return;
+                await deleteHouse(id, houseStudents);
+              }}
+              onUpdateStudent={updateStudent}
+              onUpdateTeacher={updateTeacher}
+            />
+          </TabsContent>
+
           <TabsContent value="notifications" className={scrollingAdminTabClassName}>
             <AdminNotificationsTab />
           </TabsContent>
@@ -2190,40 +2237,23 @@ function AdminDashboardInner() {
           student={editingStudent}
           allStudents={students || []}
           allClasses={classes || []}
+          allHouses={houses || []}
           allTeachers={teachers || []}
         />
-        {settings.enableFaceLogin && (
-          <Dialog
-            open={!!faceTrainingOnlyStudent}
-            onOpenChange={(open) => {
-              if (!open) setFaceTrainingOnlyStudent(null);
-            }}
-          >
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>Face login</DialogTitle>
-                <DialogDescription>
-                  {faceTrainingOnlyStudent
-                    ? `${getStudentNickname(faceTrainingOnlyStudent)} ${faceTrainingOnlyStudent.lastName}`.trim()
-                    : ''}
-                </DialogDescription>
-              </DialogHeader>
-              {faceTrainingOnlyStudent ? (
-                <AdminFaceEnrollmentPanel
-                  key={faceTrainingOnlyStudent.id}
-                  studentId={faceTrainingOnlyStudent.id}
-                  studentLabel={
-                    [getStudentNickname(faceTrainingOnlyStudent), faceTrainingOnlyStudent.lastName]
-                      .filter(Boolean)
-                      .join(' ')
-                      .trim() || undefined
-                  }
-                  autoOpenTrainingDialog
-                />
-              ) : null}
-            </DialogContent>
-          </Dialog>
-        )}
+        {settings.enableFaceLogin && faceTrainingOnlyStudent ? (
+          <AdminFaceEnrollmentPanel
+            key={faceTrainingOnlyStudent.id}
+            studentId={faceTrainingOnlyStudent.id}
+            studentLabel={
+              [getStudentNickname(faceTrainingOnlyStudent), faceTrainingOnlyStudent.lastName]
+                .filter(Boolean)
+                .join(' ')
+                .trim() || undefined
+            }
+            trainingOnly
+            onTrainingOnlyClose={() => setFaceTrainingOnlyStudent(null)}
+          />
+        ) : null}
         <PrizeModal
           isOpen={isPrizeModalOpen}
           setIsOpen={setIsPrizeModalOpen}

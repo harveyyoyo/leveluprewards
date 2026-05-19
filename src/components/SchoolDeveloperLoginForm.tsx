@@ -37,6 +37,7 @@ export type SchoolDeveloperLoginFormProps = {
 export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: SchoolDeveloperLoginFormProps) {
   const [schoolId, setSchoolId] = useState('');
   const [schoolPasscode, setSchoolPasscode] = useState('');
+  const [developerPasscode, setDeveloperPasscode] = useState('');
   const [isDeveloper, setIsDeveloper] = useState(false);
   const [isShaking, setIsShaking] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -315,6 +316,43 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
     }
   };
 
+  const allowDevPasscodeLogin = process.env.NODE_ENV === 'development';
+
+  const handleDeveloperPasscodeLogin = async () => {
+    if (isSubmitting) return;
+    if (!developerPasscode.trim()) {
+      playSound('error');
+      triggerShake();
+      toast({
+        variant: 'destructive',
+        title: 'Login failed',
+        description: 'Enter the local developer passcode (DEV_DEVELOPER_PASSCODE in .env.local).',
+      });
+      return;
+    }
+    playSound('click');
+    setIsSubmitting(true);
+    try {
+      const result = await login('developer', { passcode: developerPasscode.trim() });
+      if (!result.ok) {
+        playSound('error');
+        triggerShake();
+        toast({
+          variant: 'destructive',
+          title: 'Developer sign-in failed',
+          description: result.message,
+        });
+        return;
+      }
+      playSound('login');
+      if (pathname !== '/developer') {
+        router.push('/developer');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleSchoolEntry = async () => {
     if (isSubmitting) return;
     const sid = schoolId.trim().toLowerCase();
@@ -421,7 +459,16 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
             <p className="mt-4 text-sm text-muted-foreground leading-relaxed">
               {isDeveloperOnly ? (
                 <>
-                  Sign in with your allowed Google account for system-wide tools. School staff should use{' '}
+                  {allowDevPasscodeLogin ? (
+                    <>
+                      Sign in with a local developer passcode (no Google) or your allowed Google account.
+                      School staff should use{' '}
+                    </>
+                  ) : (
+                    <>
+                      Sign in with your allowed Google account for system-wide tools. School staff should use{' '}
+                    </>
+                  )}
                   <a href="/login" className="font-medium text-foreground underline underline-offset-2">
                     /login
                   </a>
@@ -438,6 +485,10 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
             onSubmit={(e) => {
               e.preventDefault();
               if (isDeveloperOnly || isDeveloper) {
+                if (allowDevPasscodeLogin && developerPasscode.trim()) {
+                  void handleDeveloperPasscodeLogin();
+                  return;
+                }
                 if (!isAllowedGoogleEmail) void handleGoogleSignIn();
                 return;
               }
@@ -457,6 +508,22 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
                   value={schoolId}
                   onChange={(e) => setSchoolId(e.target.value.trim().toLowerCase())}
                   autoComplete="username"
+                />
+              </div>
+            )}
+            {(isDeveloperOnly || isDeveloper) && allowDevPasscodeLogin && (
+              <div className="space-y-2">
+                <Label htmlFor="developerPasscode" className="text-xs font-semibold text-muted-foreground">
+                  Local developer passcode
+                </Label>
+                <input
+                  id="developerPasscode"
+                  type="password"
+                  className="w-full h-12 rounded-xl px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-all font-mono tracking-[0.2em] text-center bg-background border border-border text-foreground"
+                  value={developerPasscode}
+                  onChange={(e) => setDeveloperPasscode(e.target.value)}
+                  autoComplete="off"
+                  placeholder="No Google account needed"
                 />
               </div>
             )}
@@ -485,7 +552,13 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
               ) : (isDeveloperOnly || isDeveloper) && hasGoogleUser && !isAllowedGoogleEmail ? null : (
                 <button
                   type="submit"
-                  aria-label={isDeveloperOnly || isDeveloper ? 'Sign in with Google' : 'Sign in to school'}
+                  aria-label={
+                    isDeveloperOnly || isDeveloper
+                      ? allowDevPasscodeLogin && developerPasscode.trim()
+                        ? 'Sign in with developer passcode'
+                        : 'Sign in with Google'
+                      : 'Sign in to school'
+                  }
                   disabled={isSubmitting || isGoogleSigningIn}
                   className="w-full h-12 font-bold rounded-xl transition-all active:scale-[0.99] bg-primary hover:bg-primary/90 text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-70 inline-flex items-center justify-center gap-2"
                 >
@@ -493,7 +566,9 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
                   {isSubmitting || isGoogleSigningIn
                     ? 'Signing in...'
                     : isDeveloperOnly || isDeveloper
-                      ? 'Sign in with Google'
+                      ? allowDevPasscodeLogin && developerPasscode.trim()
+                        ? 'Sign in with passcode'
+                        : 'Sign in with Google'
                       : 'Continue'}
                 </button>
               )}

@@ -417,6 +417,24 @@
     0 1px 3px hsl(222 47% 11% / 0.14);
 }
 
+/* Portal hub: fit header + cards + footer inside viewport (no scrollbars) */
+@media (max-height: 820px) {
+  .portal-choose-title-depth {
+    font-size: clamp(2rem, 7vh, 3.25rem) !important;
+    line-height: 1.05;
+  }
+
+  .portal-choose-card:not([class*='min-h-']) {
+    min-height: 0 !important;
+  }
+}
+
+@media (max-height: 680px) {
+  .portal-choose-title-depth {
+    font-size: clamp(1.75rem, 6vh, 2.5rem) !important;
+  }
+}
+
 /* Color Schemes for both Light & Dark Mode */
 [data-color-scheme="default"] {
   --primary: 211 62% 17%;

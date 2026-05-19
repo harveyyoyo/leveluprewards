@@ -7,7 +7,7 @@ import React, {
   useMemo,
   useEffect,
 } from 'react';
-import type { Student, Class, Coupon, Teacher, Prize, Category, CategoryRubricLevel, HistoryItem, Achievement, Badge, AttendanceSettings, AttendanceLogEntry, RecordClassSignInResult, HomeworkAssignment, HomeworkSubmission } from '@/lib/types';
+import type { Student, Class, House, Coupon, Teacher, Prize, Category, CategoryRubricLevel, HistoryItem, Achievement, Badge, AttendanceSettings, AttendanceLogEntry, RecordClassSignInResult, HomeworkAssignment, HomeworkSubmission } from '@/lib/types';
 import type { CouponPrintPageSize } from '@/lib/couponPrint';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { reportFirestorePermissionError } from '@/firebase/error-emitter';
@@ -68,6 +68,9 @@ interface AppContextType {
   addClass: (newClass: Omit<Class, 'id'>) => Promise<void>;
   updateClass: (updatedClass: Class) => Promise<void>;
   deleteClass: (classId: string, students: Student[]) => Promise<void>;
+  addHouse: (newHouse: Omit<House, 'id' | 'points' | 'lifetimePoints'>) => Promise<House>;
+  updateHouse: (updatedHouse: House) => Promise<void>;
+  deleteHouse: (houseId: string, students: Student[]) => Promise<void>;
   addTeacher: (newTeacher: Omit<Teacher, 'id'>) => Promise<void>;
   updateTeacher: (teacher: Teacher, options?: { clearTeacherBudget?: boolean }) => Promise<void>;
   deleteTeacher: (teacherId: string) => Promise<void>;
@@ -424,6 +427,23 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     return getDb().then((db) => db.deleteClass(firestore, schoolId, id, students));
   }, [firestore, schoolId]);
 
+  const houseRollup = settings.enableHouses && settings.housesRollupPoints !== false;
+
+  const addHouse_ = useCallback((h: Omit<House, 'id' | 'points' | 'lifetimePoints'>) => {
+    if (!firestore || !schoolId) return Promise.reject('Not logged into a school.');
+    return getDb().then((db) => db.addHouse(firestore, schoolId, h));
+  }, [firestore, schoolId]);
+
+  const updateHouse_ = useCallback((h: House) => {
+    if (!firestore || !schoolId) return Promise.reject('Not logged into a school.');
+    return getDb().then((db) => db.updateHouse(firestore, schoolId, h));
+  }, [firestore, schoolId]);
+
+  const deleteHouse_ = useCallback((id: string, students: Student[]) => {
+    if (!firestore || !schoolId) return Promise.reject('Not logged into a school.');
+    return getDb().then((db) => db.deleteHouse(firestore, schoolId, id, students));
+  }, [firestore, schoolId]);
+
   const addTeacher_ = useCallback((t: Omit<Teacher, 'id'>) => {
     if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
     return getDb().then((db) => db.addTeacher(firestore, schoolId, t));
@@ -522,13 +542,26 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     }
     const allAchievements = settings.enableAchievements ? (achievements || []) : [];
     const allBadges = settings.enableBadges ? (badges || []) : [];
-    return getDb().then((db) => db.awardPointsToStudent(firestore, schoolId, studentId, points, description, allAchievements, categories || [], allBadges));
+    return getDb().then((db) =>
+      db.awardPointsToStudent(
+        firestore,
+        schoolId,
+        studentId,
+        points,
+        description,
+        allAchievements,
+        categories || [],
+        allBadges,
+        { rollupHousePoints: houseRollup },
+      ),
+    );
   }, [
     firestore,
     schoolId,
     categories,
     achievements,
     badges,
+    houseRollup,
     settings.enableAchievements,
     settings.enableBadges,
     settings.enableTeacherOfflineAwardQueue,
@@ -570,13 +603,26 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     }
     const allAchievements = settings.enableAchievements ? (achievements || []) : [];
     const allBadges = settings.enableBadges ? (badges || []) : [];
-    return getDb().then((db) => db.awardPointsToMultipleStudents(firestore, schoolId, studentIds, points, description, allAchievements, categories || [], allBadges));
+    return getDb().then((db) =>
+      db.awardPointsToMultipleStudents(
+        firestore,
+        schoolId,
+        studentIds,
+        points,
+        description,
+        allAchievements,
+        categories || [],
+        allBadges,
+        { rollupHousePoints: houseRollup },
+      ),
+    );
   }, [
     firestore,
     schoolId,
     categories,
     achievements,
     badges,
+    houseRollup,
     settings.enableAchievements,
     settings.enableBadges,
     settings.enableTeacherOfflineAwardQueue,
@@ -588,8 +634,12 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
 
   const deductPointsFromMultipleStudents_ = useCallback(async (studentIds: string[], points: number, reason: string) => {
     if (!firestore || !schoolId) return { success: false, message: 'Not logged in.', count: 0 };
-    return getDb().then((db) => db.deductPointsFromMultipleStudents(firestore, schoolId, studentIds, points, reason));
-  }, [firestore, schoolId]);
+    return getDb().then((db) =>
+      db.deductPointsFromMultipleStudents(firestore, schoolId, studentIds, points, reason, {
+        rollupHousePoints: houseRollup,
+      }),
+    );
+  }, [firestore, schoolId, houseRollup]);
 
   const redeemPrize_ = useCallback(async (studentId: string, prize: Prize, quantity: number, pointsOverride?: number, options?: { markFulfilled?: boolean }) => {
     if (!schoolId) return Promise.reject("Not logged into a school.");
@@ -823,6 +873,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     // CRUD
     addStudent: addStudent_, updateStudent: updateStudent_, deleteStudent: deleteStudent_,
     addClass: addClass_, updateClass: updateClass_, deleteClass: deleteClass_,
+    addHouse: addHouse_, updateHouse: updateHouse_, deleteHouse: deleteHouse_,
     addTeacher: addTeacher_, updateTeacher: updateTeacher_, deleteTeacher: deleteTeacher_,
     addCategory: addCategory_, updateCategory: updateCategory_, deleteCategory: deleteCategory_,
     addCoupons: addCoupons_, redeemCoupon: redeemCoupon_, deleteCoupon: deleteCoupon_, deleteCoupons: deleteCoupons_, awardPoints: awardPoints_,
@@ -859,7 +910,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
   }), [
     authCtx, printCtx, backupCtx,
     addStudent_, updateStudent_, deleteStudent_,
-    addClass_, updateClass_, deleteClass_, addTeacher_, updateTeacher_, deleteTeacher_,
+    addClass_, updateClass_, deleteClass_, addHouse_, updateHouse_, deleteHouse_, addTeacher_, updateTeacher_, deleteTeacher_,
     addCategory_, updateCategory_, deleteCategory_, addCoupons_,
     redeemCoupon_, deleteCoupon_, deleteCoupons_, awardPoints_, awardPointsToMultipleStudents_, deductPointsFromMultipleStudents_,
     redeemPrize_, addPrize_, updatePrize_, deletePrize_,

@@ -13,6 +13,7 @@ import type {
   BackupInfo,
   Category,
   Class,
+  House,
   Coupon,
   Prize,
   StaffAccount,
@@ -48,6 +49,10 @@ export function useAdminDashboardData(schoolId: string | null, payLibrary?: bool
   );
   const classesQuery = useMemoFirebase(
     () => (schoolId ? collection(firestore, 'schools', schoolId, 'classes') : null),
+    [firestore, schoolId],
+  );
+  const housesQuery = useMemoFirebase(
+    () => (schoolId ? collection(firestore, 'schools', schoolId, 'houses') : null),
     [firestore, schoolId],
   );
   const teachersQuery = useMemoFirebase(
@@ -96,6 +101,7 @@ export function useAdminDashboardData(schoolId: string | null, payLibrary?: bool
   // --- Subscriptions ---------------------------------------------------
   const students = useCollection<Student>(studentsQuery);
   const classes = useCollection<Class>(classesQuery);
+  const houses = useCollection<House>(housesQuery);
   const teachers = useCollection<Teacher>(teachersQuery);
   const staffAccounts = useCollection<StaffAccount>(staffAccountsQuery);
   const categories = useCollection<Category>(categoriesQuery);
@@ -115,6 +121,9 @@ export function useAdminDashboardData(schoolId: string | null, payLibrary?: bool
     classes: classes.data,
     classesLoading: classes.isLoading,
     classesError: classes.error,
+    houses: houses.data,
+    housesLoading: houses.isLoading,
+    housesError: houses.error,
     teachers: teachers.data,
     teachersLoading: teachers.isLoading,
     teachersError: teachers.error,

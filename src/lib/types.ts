@@ -39,6 +39,27 @@ export interface Class {
   primaryTeacherId?: string;
 }
 
+/** School house (RCA-style house system). */
+export interface House {
+  id: string;
+  name: string;
+  /** Core value label (e.g. Friendship, Courage). */
+  value?: string;
+  /** Brand color (hex). */
+  color: string;
+  emoji?: string;
+  motto?: string;
+  crestUrl?: string;
+  /** Cached totals (rollup from member awards when enabled). */
+  points?: number;
+  lifetimePoints?: number;
+  /** Teachers serving as house parents for this house. */
+  houseParentTeacherIds?: string[];
+  sortOrder?: number;
+  /** When seeded from the RCA preset pack. */
+  rcaPresetKey?: string;
+}
+
 /** How often a teacher’s point budget resets (local date on this device). */
 export type TeacherBudgetPeriod = 'day' | 'week' | 'month';
 
@@ -71,6 +92,8 @@ export interface Teacher {
   /** Identifies the active budget window (format depends on `budgetPeriod`). */
   budgetWindowKey?: string;
   spentThisMonth?: number;
+  /** House ids where this teacher is a house parent. */
+  houseParentHouseIds?: string[];
 }
 
 /** One row in an optional category rubric (teacher quick-award). */
@@ -176,6 +199,7 @@ export interface Student {
   points: number;
   lifetimePoints?: number;
   classId?: string;
+  houseId?: string;
   nfcId: string;
   categoryPoints?: { [key: string]: number };
   /** Total points within time periods (e.g. "2025-03-15" for day, "2025-W12" for week). */

@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/select';
 import { useAppContext } from '@/components/AppProvider';
 import { useToast } from '@/hooks/use-toast';
-import type { Student, Class, Teacher, StudentTheme } from '@/lib/types';
+import type { Student, Class, House, Teacher, StudentTheme } from '@/lib/types';
 import { useFirestore, useFunctions } from '@/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
@@ -44,6 +44,7 @@ interface StudentModalProps {
   student: Student | null;
   allStudents: Student[];
   allClasses: Class[];
+  allHouses?: House[];
   allTeachers: Teacher[];
 }
 
@@ -53,6 +54,7 @@ export function StudentModal({
   student,
   allStudents,
   allClasses,
+  allHouses,
   allTeachers,
 }: StudentModalProps) {
   const { addStudent, updateStudent, schoolId } = useAppContext();
@@ -66,6 +68,7 @@ export function StudentModal({
   const [points, setPoints] = useState('0');
   const [nfcId, setNfcId] = useState('');
   const [classId, setClassId] = useState('none');
+  const [houseId, setHouseId] = useState('none');
   const [parentEmail, setParentEmail] = useState('');
   const [parentPhone, setParentPhone] = useState('');
   const [studentEmail, setStudentEmail] = useState('');
@@ -100,6 +103,7 @@ export function StudentModal({
         setPoints(student.points.toString());
         setNfcId(student.nfcId || student.id);
         setClassId(student.classId || 'none');
+        setHouseId(student.houseId || 'none');
         setParentEmail(decryptField(student.parentEmail) || '');
         setParentPhone(decryptField(student.parentPhone) || '');
         setStudentEmail(decryptField(student.studentEmail) || '');
@@ -121,6 +125,7 @@ export function StudentModal({
         setPoints('0');
         setNfcId(Math.floor(10000000 + Math.random() * 90000000).toString());
         setClassId('none');
+        setHouseId('none');
         setParentEmail('');
         setParentPhone('');
         setStudentEmail('');
@@ -374,6 +379,7 @@ export function StudentModal({
     }
 
     const finalClassId = classId === 'none' ? '' : classId;
+    const finalHouseId = houseId === 'none' ? '' : houseId;
     const normalizedNickname = nickname.trim();
     const normalizedTheme = theme ? (normalizeStudentTheme(theme) ?? theme) : undefined;
 
@@ -387,6 +393,7 @@ export function StudentModal({
         nickname: normalizedNickname ? normalizedNickname : '',
         points: parseInt(points) || 0,
         classId: finalClassId,
+        houseId: finalHouseId || undefined,
         nfcId,
         teacherIds: selectedTeacherIds,
         theme: normalizedTheme,
@@ -416,6 +423,7 @@ export function StudentModal({
         nickname: normalizedNickname || undefined,
         points: parseInt(points) || 0,
         classId: finalClassId,
+        houseId: finalHouseId || undefined,
         teacherIds: selectedTeacherIds,
         ...(normalizedTheme ? { theme: normalizedTheme } : {}),
         parentEmail: encryptField(parentEmail.trim()) || undefined,
@@ -724,6 +732,25 @@ export function StudentModal({
               </SelectContent>
             </Select>
           </div>
+          {settings.enableHouses && (allHouses?.length ?? 0) > 0 ? (
+            <div className="space-y-1">
+              <Label htmlFor="house">Assign to House</Label>
+              <Select value={houseId} onValueChange={setHouseId}>
+                <SelectTrigger id="house"><SelectValue placeholder="Select a house..." /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Unassigned</SelectItem>
+                  {allHouses
+                    ?.slice()
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .map((h) => (
+                      <SelectItem key={h.id} value={h.id}>
+                        {h.emoji ? `${h.emoji} ` : ''}{h.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null}
           <div className="space-y-1">
             <Label>Student Theme (optional)</Label>
             <p className="text-xs text-muted-foreground">

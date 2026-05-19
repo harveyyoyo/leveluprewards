@@ -69,6 +69,16 @@ function isSchoolIdSegment(segment: string): boolean {
   return SCHOOL_ID_RE.test(segment) && !RESERVED_PORTAL_SEGMENTS.has(lower);
 }
 
+/** Hostnames used for local / tunneled dev — never canonicalize these to production portal URLs. */
+function isTunnelDevHost(host: string): boolean {
+  return (
+    host.endsWith('.ngrok-free.dev') ||
+    host.endsWith('.ngrok-free.app') ||
+    host.endsWith('.ngrok.io') ||
+    host.endsWith('.ngrok.app')
+  );
+}
+
 /** Local dev hosts should never be canonicalized away to production portal URLs. */
 export function isLocalDevHost(rawHost: string | null | undefined): boolean {
   const host = normalizeHost(rawHost);
@@ -77,7 +87,8 @@ export function isLocalDevHost(rawHost: string | null | undefined): boolean {
     host === 'localhost' ||
     host.endsWith('.localhost') ||
     host === '[::1]' ||
-    host.startsWith('127.')
+    host.startsWith('127.') ||
+    isTunnelDevHost(host)
   );
 }
 

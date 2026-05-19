@@ -228,6 +228,11 @@ service cloud.firestore {
         allow read: if isSchoolMember(schoolId);
         allow write: if isAdmin(schoolId) || isTeacher(schoolId);
       }
+
+      match /houses/{houseId} {
+        allow read: if isSchoolMember(schoolId) || hasStudentPortalSession(schoolId);
+        allow write: if isAdmin(schoolId) || isTeacher(schoolId);
+      }
       
       match /categories/{categoryId} {
         // Categories are used by teachers in the UI.
