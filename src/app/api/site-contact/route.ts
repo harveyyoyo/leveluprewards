@@ -1,17 +1,11 @@
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getFirebaseAdminAuth } from '@/lib/server/firebaseAdminAuth';
 import { clientIp, jsonError, rateLimit, sameOrigin } from '@/lib/server/apiSecurity';
+import { persistSiteContactSubmission } from '@/lib/server/persistSiteContactSubmission';
 import { validateSiteContactBody } from '@/lib/siteContact';
 
 const MAX_BODY_BYTES = 12 * 1024;
-
-async function getDb() {
-  await getFirebaseAdminAuth();
-  const admin = (await import('firebase-admin')).default;
-  return admin.firestore();
-}
 
 export async function POST(req: NextRequest) {
   try {
@@ -27,10 +21,9 @@ export async function POST(req: NextRequest) {
     const validated = validateSiteContactBody(body);
     if (!validated.ok) return jsonError(400, validated.error);
 
-    const db = await getDb();
     const referer = req.headers.get('referer')?.trim().slice(0, 500) ?? '';
 
-    await db.collection('siteContactSubmissions').add({
+    await persistSiteContactSubmission({
       ...validated.data,
       referer: referer || null,
       createdAt: new Date(),

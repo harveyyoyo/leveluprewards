@@ -1,3 +1,5 @@
+import { existsSync, readFileSync } from 'fs';
+import { join } from 'path';
 import type { Auth } from 'firebase-admin/auth';
 import type { ServiceAccount } from 'firebase-admin/app';
 import { firebaseConfig } from '@/firebase/config';
@@ -23,6 +25,21 @@ function serviceAccountFromEnv(): ServiceAccount | null {
   }
 }
 
+/** Optional local dev file (gitignored as `serviceAccountKey.json`). */
+function serviceAccountFromKeyFile(): ServiceAccount | null {
+  const path = join(process.cwd(), 'serviceAccountKey.json');
+  if (!existsSync(path)) return null;
+  try {
+    return JSON.parse(readFileSync(path, 'utf8')) as ServiceAccount;
+  } catch {
+    return null;
+  }
+}
+
+function resolveServiceAccount(): ServiceAccount | null {
+  return serviceAccountFromEnv() || serviceAccountFromKeyFile();
+}
+
 /**
  * Lazily initializes firebase-admin for Auth operations (session cookies).
  * Mirrors the lightweight init used elsewhere in this repo (project id + ADC when available).
@@ -37,7 +54,7 @@ export async function getFirebaseAdminAuth(): Promise<Auth> {
     getApp();
   } catch {
     const projectId = resolveAdminProjectId();
-    const serviceAccount = serviceAccountFromEnv();
+    const serviceAccount = resolveServiceAccount();
     const clientEmail = process.env.FIREBASE_ADMIN_CLIENT_EMAIL?.trim();
     const privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, '\n');
 

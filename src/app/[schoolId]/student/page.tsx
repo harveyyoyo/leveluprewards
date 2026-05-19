@@ -1195,7 +1195,7 @@ function StudentDashboardInner({
 
   const pointTypeTotals = useMemo(
     () => (student ? getStudentPointTypeTotals(student) : []),
-    [student?.categoryPoints, student?.lifetimePoints, student?.points],
+    [student],
   );
 
   if (studentLoading || !student || !schoolId) {

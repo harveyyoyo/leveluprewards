@@ -65,7 +65,7 @@ export function StudentPortalDashboard({ schoolId, studentId, onSignOut, signing
   const displayName = student ? getStudentNickname(student) : 'Student';
   const pointTypeTotals = useMemo(
     () => (student ? getStudentPointTypeTotals(student) : []),
-    [student?.categoryPoints, student?.lifetimePoints, student?.points],
+    [student],
   );
 
   if (studentLoading && !student) {
