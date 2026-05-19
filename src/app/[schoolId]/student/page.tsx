@@ -1876,7 +1876,7 @@ function StudentDashboardInner({
                 More prizes
               </Link>
             </Button>
-          </motion.div>
+          </div>
           </div>
 
           {settings.enableGoals ? (

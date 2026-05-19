@@ -40,8 +40,6 @@ export function PointsTabLayout({
   isGraphic = false,
 }: PointsTabLayoutProps) {
   const activeDefault = sections.includes(defaultSection) ? defaultSection : sections[0];
-  const gridCols =
-    sections.length === 1 ? 'grid-cols-1' : sections.length === 2 ? 'grid-cols-2' : 'grid-cols-1 sm:grid-cols-3';
 
   const contentBySection: Record<PointsTabSection, React.ReactNode> = {
     categories: categoriesContent,
@@ -54,8 +52,7 @@ export function PointsTabLayout({
       <Tabs defaultValue={activeDefault} className="w-full">
         <TabsList
           className={cn(
-            'grid h-auto w-full gap-1 rounded-2xl border p-1.5 shadow-sm',
-            gridCols,
+            'inline-flex h-auto w-fit max-w-full flex-wrap gap-1 rounded-2xl border p-1.5 shadow-sm',
             isGraphic ? 'border-white/10 bg-muted/30' : 'bg-muted/50',
           )}
           aria-label="Points tab sections"

@@ -19,9 +19,12 @@ import { LibraryItemModal } from '@/components/LibraryItemModal';
 import { useCollection } from '@/firebase';
 import type { LibraryItem, LibraryItemInput, Student } from '@/lib/types';
 import { normalizeLibraryUpc } from '@/lib/libraryScanCode';
+import { forceReturnLibraryItem } from '@/lib/libraryOperations';
+import { getLibraryPolicyFromSettings } from '@/lib/libraryPolicy';
 
 export default function LibrarianPage() {
-  const { loginState, isInitialized, schoolId, login, logout, userName, isLibrarian, isAdmin } = useAppContext();
+  const { loginState, isInitialized, schoolId, login, logout, userName, isLibrarian, isAdmin, categories } =
+    useAppContext();
   const router = useRouter();
   const firestore = useFirestore();
   const functions = useFunctions();
@@ -53,6 +56,11 @@ export default function LibrarianPage() {
     }
     return map;
   }, [students]);
+
+  const libraryPolicy = useMemo(
+    () => getLibraryPolicyFromSettings(settings, categories),
+    [settings, categories],
+  );
 
   useEffect(() => {
     if (!isInitialized || !schoolId) return;
