@@ -5,7 +5,19 @@ import { useRouter, useParams } from "next/navigation";
 import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
 
-const ALLOWED = ['student', 'teacher', 'admin', 'school', 'developer', 'secretary', 'prizeClerk', 'reports'] as const;
+const ALLOWED = [
+  'student',
+  'teacher',
+  'admin',
+  'school',
+  'developer',
+  'secretary',
+  'prizeClerk',
+  'reports',
+  'librarian',
+  'office',
+  'houseCoordinator',
+] as const;
 
 export function SchoolGate({ children }: { children: React.ReactNode }) {
   const { schoolId, isInitialized, loginState, login } = useAppContext();

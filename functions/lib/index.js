@@ -101,6 +101,7 @@ async function hasSchoolRole(schoolId, uid, roles) {
         prizeClerk: "roles_prizeClerk",
         reports: "roles_reports",
         librarian: "roles_librarian",
+        houseCoordinator: "roles_houseCoordinator",
     };
     const snaps = await Promise.all(roles.map((role) => db.collection("schools").doc(schoolId).collection(roleCollections[role]).doc(uid).get()));
     return snaps.some((snap, index) => { var _a; return snap.exists && ((_a = snap.data()) === null || _a === void 0 ? void 0 : _a.role) === roles[index]; });
@@ -2079,8 +2080,8 @@ exports.verifyStaffAccountPasscode = functions.https.onCall(async (data, context
     requireString(data.username, "username");
     requireString(data.passcode, "passcode");
     const role = data.role;
-    if (role !== "secretary" && role !== "prizeClerk" && role !== "reports" && role !== "librarian" && role !== "office") {
-        throw new functions.https.HttpsError("invalid-argument", "role must be 'secretary', 'prizeClerk', 'reports', 'librarian', or 'office'.");
+    if (role !== "secretary" && role !== "prizeClerk" && role !== "reports" && role !== "librarian" && role !== "office" && role !== "houseCoordinator") {
+        throw new functions.https.HttpsError("invalid-argument", "role must be 'secretary', 'prizeClerk', 'reports', 'librarian', 'office', or 'houseCoordinator'.");
     }
     const db = admin.firestore();
     const schoolId = String(data.schoolId).trim().toLowerCase();
@@ -2102,7 +2103,7 @@ exports.verifyStaffAccountPasscode = functions.https.onCall(async (data, context
     }
     const row = match.data();
     const roles = (Array.isArray(row.roles) && row.roles.length > 0 ? row.roles : [row.role])
-        .filter((item) => item === "secretary" || item === "prizeClerk" || item === "reports" || item === "librarian" || item === "office");
+        .filter((item) => item === "secretary" || item === "prizeClerk" || item === "reports" || item === "librarian" || item === "office" || item === "houseCoordinator");
     const writes = roles.map((staffRole) => {
         const roleCollection = staffRole === "secretary"
             ? "roles_secretary"
@@ -2112,7 +2113,9 @@ exports.verifyStaffAccountPasscode = functions.https.onCall(async (data, context
                     ? "roles_librarian"
                     : staffRole === "office"
                         ? "roles_office"
-                        : "roles_reports";
+                        : staffRole === "houseCoordinator"
+                            ? "roles_houseCoordinator"
+                            : "roles_reports";
         return db
             .collection("schools")
             .doc(schoolId)

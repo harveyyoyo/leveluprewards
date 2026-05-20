@@ -101,7 +101,7 @@ Entity types (all optional arrays):
 
   6) "prizes" — rewards shop items with point costs. [{ "name": "string", "points"?: number }]
 
-7) "staffAccounts" — front office / prize desk logins (NOT teachers). [{ "displayName": "string", "username": "string", "passcode": "string", "role"?: "secretary" | "prizeClerk" }]
+7) "staffAccounts" — limited staff logins (NOT teachers). [{ "displayName": "string", "username": "string", "passcode": "string", "role"?: "secretary" | "prizeClerk" | "reports" | "librarian" | "office" | "houseCoordinator" }]
 
 Rules:
 - If the same person appears as both teacher and staff, prefer "teachers" unless the text clearly labels them as secretary/front desk only.
@@ -318,10 +318,14 @@ function normalizeAutoSnapshot(parsed: Record<string, unknown>): ParsedSchoolSna
       const username = typeof o.username === 'string' ? o.username.trim() : '';
       const passcode = typeof o.passcode === 'string' ? o.passcode.trim() : '';
       if (!displayName || !username || !passcode) return null;
-      let role: 'secretary' | 'prizeClerk' | undefined;
+      let role: 'secretary' | 'prizeClerk' | 'reports' | 'librarian' | 'office' | 'houseCoordinator' | undefined;
       const r = String(o.role || '').toLowerCase();
       if (r.includes('prize') || r.includes('clerk')) role = 'prizeClerk';
-      else if (r.includes('secretary') || r.includes('office') || r.includes('desk')) role = 'secretary';
+      else if (r.includes('house')) role = 'houseCoordinator';
+      else if (r.includes('librar')) role = 'librarian';
+      else if (r.includes('report')) role = 'reports';
+      else if (r.includes('office')) role = 'office';
+      else if (r.includes('secretary') || r.includes('desk')) role = 'secretary';
       return { displayName, username, passcode, ...(role ? { role } : {}) };
     })
     .filter(Boolean) as NonNullable<ParsedSchoolSnapshot['staffAccounts']>;

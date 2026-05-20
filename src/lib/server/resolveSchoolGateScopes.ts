@@ -28,6 +28,7 @@ export async function resolveSchoolGateScopes(uid: string, schoolId: string): Pr
     reportsSnap,
     librarianSnap,
     officeSnap,
+    houseCoordinatorSnap,
     kioskSnap,
     portalSnap,
     studentPortalLobbySnap,
@@ -40,6 +41,7 @@ export async function resolveSchoolGateScopes(uid: string, schoolId: string): Pr
     schoolRef.collection('roles_reports').doc(uid).get(),
     schoolRef.collection('roles_librarian').doc(uid).get(),
     schoolRef.collection('roles_office').doc(uid).get(),
+    schoolRef.collection('roles_houseCoordinator').doc(uid).get(),
     schoolRef.collection('kioskMembers').doc(uid).get(),
     schoolRef.collection('anonymousPortalSessions').doc(uid).get(),
     schoolRef.collection('studentPortalMembers').doc(uid).get(),
@@ -53,6 +55,9 @@ export async function resolveSchoolGateScopes(uid: string, schoolId: string): Pr
   if (reportsSnap.exists && reportsSnap.data()?.role === 'reports') scopes.add('reports');
   if (librarianSnap.exists && librarianSnap.data()?.role === 'librarian') scopes.add('librarian');
   if (officeSnap.exists && officeSnap.data()?.role === 'office') scopes.add('office');
+  if (houseCoordinatorSnap.exists && houseCoordinatorSnap.data()?.role === 'houseCoordinator') {
+    scopes.add('houseCoordinator');
+  }
   if (kioskSnap.exists) scopes.add('kiosk');
   if (portalSnap.exists) scopes.add('portal');
   if (studentPortalLobbySnap.exists || studentPortalSessionSnap.exists) {

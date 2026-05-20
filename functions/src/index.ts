@@ -104,7 +104,7 @@ function adminPasscodeFrom(data: Record<string, any>): string {
 async function hasSchoolRole(
   schoolId: string,
   uid: string,
-  roles: Array<"admin" | "teacher" | "secretary" | "prizeClerk" | "reports" | "librarian">
+  roles: Array<"admin" | "teacher" | "secretary" | "prizeClerk" | "reports" | "librarian" | "houseCoordinator">
 ): Promise<boolean> {
   const db = admin.firestore();
   const roleCollections: Record<string, string> = {
@@ -114,6 +114,7 @@ async function hasSchoolRole(
     prizeClerk: "roles_prizeClerk",
     reports: "roles_reports",
     librarian: "roles_librarian",
+    houseCoordinator: "roles_houseCoordinator",
   };
   const snaps = await Promise.all(
     roles.map((role) =>
@@ -126,7 +127,7 @@ async function hasSchoolRole(
 async function hasKioskMembershipOrStaff(
   schoolId: string,
   context: functions.https.CallableContext,
-  roles: Array<"admin" | "teacher" | "secretary" | "prizeClerk" | "reports" | "librarian"> = ["admin", "teacher", "secretary", "prizeClerk", "librarian"]
+  roles: Array<"admin" | "teacher" | "secretary" | "prizeClerk" | "reports" | "librarian" | "houseCoordinator"> = ["admin", "teacher", "secretary", "prizeClerk", "librarian"]
 ): Promise<boolean> {
   requireAuth(context);
   const uid = context.auth!.uid;
@@ -2540,10 +2541,10 @@ exports.verifyStaffAccountPasscode = functions.https.onCall(
     requireString(data.username, "username");
     requireString(data.passcode, "passcode");
     const role = data.role as string;
-    if (role !== "secretary" && role !== "prizeClerk" && role !== "reports" && role !== "librarian" && role !== "office") {
+    if (role !== "secretary" && role !== "prizeClerk" && role !== "reports" && role !== "librarian" && role !== "office" && role !== "houseCoordinator") {
       throw new functions.https.HttpsError(
         "invalid-argument",
-        "role must be 'secretary', 'prizeClerk', 'reports', 'librarian', or 'office'."
+        "role must be 'secretary', 'prizeClerk', 'reports', 'librarian', 'office', or 'houseCoordinator'."
       );
     }
 
@@ -2571,7 +2572,7 @@ exports.verifyStaffAccountPasscode = functions.https.onCall(
 
     const row = match.data() as { displayName?: string; role?: string; roles?: string[] };
     const roles = (Array.isArray(row.roles) && row.roles.length > 0 ? row.roles : [row.role])
-      .filter((item): item is string => item === "secretary" || item === "prizeClerk" || item === "reports" || item === "librarian" || item === "office");
+      .filter((item): item is string => item === "secretary" || item === "prizeClerk" || item === "reports" || item === "librarian" || item === "office" || item === "houseCoordinator");
     const writes = roles.map((staffRole) => {
       const roleCollection =
         staffRole === "secretary"
@@ -2582,6 +2583,8 @@ exports.verifyStaffAccountPasscode = functions.https.onCall(
               ? "roles_librarian"
               : staffRole === "office"
                 ? "roles_office"
+              : staffRole === "houseCoordinator"
+                ? "roles_houseCoordinator"
                 : "roles_reports";
       return db
         .collection("schools")

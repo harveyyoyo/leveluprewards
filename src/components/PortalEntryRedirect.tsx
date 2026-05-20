@@ -14,6 +14,9 @@ const SCHOOL_SESSION_STATES = new Set([
   'secretary',
   'prizeClerk',
   'reports',
+  'librarian',
+  'office',
+  'houseCoordinator',
 ]);
 
 export function PortalEntryRedirect() {

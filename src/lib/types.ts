@@ -67,8 +67,8 @@ export interface House {
 /** How often a teacher’s point budget resets (local date on this device). */
 export type TeacherBudgetPeriod = 'day' | 'week' | 'month';
 
-/** Desk staff logins managed in Admin (not full teachers). */
-export type StaffAccountRole = 'secretary' | 'prizeClerk' | 'reports' | 'librarian' | 'office';
+/** Staff logins managed in Admin (not full teachers). */
+export type StaffAccountRole = 'secretary' | 'prizeClerk' | 'reports' | 'librarian' | 'office' | 'houseCoordinator';
 
 export interface StaffAccount {
   id: string;

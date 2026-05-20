@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Book, Building2, ChevronDown, Copy, Edit, FileText, Gift, Minus, Plus, Printer, Trash2, User, UserMinus, UserPlus } from 'lucide-react';
+import { Book, Building2, ChevronDown, Copy, Edit, FileText, Gift, Home, Minus, Plus, Printer, Trash2, User, UserMinus, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Helper } from '@/components/ui/helper';
@@ -30,6 +30,7 @@ function staffRoleLabel(role: StaffAccountRole) {
   if (role === 'prizeClerk') return 'Prize desk';
   if (role === 'librarian') return 'Library only';
   if (role === 'office') return 'School Office';
+  if (role === 'houseCoordinator') return 'Houses only';
   return 'Reports';
 }
 
@@ -38,6 +39,7 @@ function StaffRoleIcon({ role }: { role: StaffAccountRole }) {
   if (role === 'prizeClerk') return <Gift className="w-5 h-5" />;
   if (role === 'librarian') return <Book className="w-5 h-5" />;
   if (role === 'office') return <Building2 className="w-5 h-5" />;
+  if (role === 'houseCoordinator') return <Home className="w-5 h-5" />;
   return <FileText className="w-5 h-5" />;
 }
 
@@ -244,7 +246,7 @@ export function AdminTeachersTab({
               <User className="w-5 h-5 text-primary" /> Teachers
             </CardTitle>
           </Helper>
-          <CardDescription>Teachers can issue rewards. Desk staff get limited coupon, prize, library, or reports access.</CardDescription>
+          <CardDescription>Teachers can issue rewards. Staff accounts get limited coupon, prize, library, houses, office, or reports access.</CardDescription>
         </div>
         <div className="flex flex-wrap gap-2">
           <TabWalkthroughHeaderAction />
@@ -575,7 +577,7 @@ export function AdminTeachersTab({
         <section className="space-y-3">
           <div>
             <h3 className="font-bold">Desk staff</h3>
-            <p className="text-sm text-muted-foreground">Limited accounts for coupon sheets, prize redemption, or reports.</p>
+            <p className="text-sm text-muted-foreground">Limited accounts for coupon sheets, prize redemption, houses, office, library, or reports.</p>
           </div>
           <ul className="space-y-2 pr-1">
             {staffAccounts && staffAccounts.length > 0 ? (
@@ -661,6 +663,7 @@ export function AdminTeachersTab({
                     ['secretary', 'Coupon printing'],
                     ['prizeClerk', 'Prize desk redemption'],
                     ['librarian', 'Library catalog & checkouts'],
+                    ['houseCoordinator', 'Houses only'],
                     ['reports', 'Reports'],
                     ['office', 'School Office (grades & billing)'],
                   ] as const).map(([value, label]) => (
