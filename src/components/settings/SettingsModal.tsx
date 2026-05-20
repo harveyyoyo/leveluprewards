@@ -78,6 +78,7 @@ const ADD_ON_TAB_FOR_SETTINGS_KEY: Record<string, string> = {
     enableAchievements: 'bonuspoints',
     enableBadges: 'category-badges',
     enableGoals: 'goals',
+    enableHouses: 'houses',
     enableNotifications: 'notifications',
     bulletinEnabled: 'bulletinboard',
 };
@@ -261,6 +262,11 @@ export function SettingsModal() {
     const [featureQuery, setFeatureQuery] = useState('');
     const [featuresEnabledOnly, setFeaturesEnabledOnly] = useState(false);
     const local = draft ?? settings;
+    const officeUrl = useMemo(() => {
+        if (!schoolId) return '';
+        if (typeof window === 'undefined') return `/${schoolId}/office`;
+        return `${window.location.origin}/${schoolId}/office`;
+    }, [schoolId]);
     const pathname = usePathname();
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -649,7 +655,7 @@ export function SettingsModal() {
       <DialogContent
                 size="lg"
                 overlayClassName="z-[110]"
-                className="z-[110] p-0 overflow-hidden border border-border bg-background flex flex-col shadow-2xl"
+                className="z-[120] p-0 overflow-hidden border border-border bg-background flex flex-col shadow-2xl"
                 data-settings-open="true"
             >
                 {/* Header */}
@@ -1630,6 +1636,7 @@ export function SettingsModal() {
                                             local.payAttendance ?? true,
                                             local.payHomework ?? true,
                                             local.payLibrary ?? true,
+                                            local.payOffice ?? false,
                                         ].filter(Boolean).length;
                                         return (
                                             <>
@@ -1676,6 +1683,30 @@ export function SettingsModal() {
                                                         onCheckedChange={(val) => handleToggle('payLibrary', val)}
                                                         disabled={enabledCount === 1 && (local.payLibrary ?? true)}
                                                     />
+                                                </div>
+                                                <div className="p-3 bg-background/50 border border-teal-200/50 rounded-xl hover:bg-muted/40 transition-colors sm:col-span-2 space-y-3">
+                                                    <div className="flex items-center justify-between">
+                                                        <div>
+                                                            <h4 className="font-bold text-sm text-foreground uppercase tracking-tight">School Office</h4>
+                                                            <p className="text-[10px] text-muted-foreground">Grades and billing at a dedicated URL</p>
+                                                        </div>
+                                                        <Switch
+                                                            checked={local.payOffice ?? false}
+                                                            onCheckedChange={(val) => handleToggle('payOffice', val)}
+                                                        />
+                                                    </div>
+                                                    {(local.payOffice ?? false) && officeUrl ? (
+                                                        <p className="text-[11px] font-mono text-teal-800/90 dark:text-teal-200/90 break-all border-t border-teal-200/40 dark:border-teal-800/40 pt-3">
+                                                            <a
+                                                                href={officeUrl}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="hover:underline"
+                                                            >
+                                                                {officeUrl}
+                                                            </a>
+                                                        </p>
+                                                    ) : null}
                                                 </div>
                                             </>
                                         );
@@ -2156,7 +2187,7 @@ export function SettingsModal() {
         </Dialog>
 
         <Dialog open={vendingSettingsOpen} onOpenChange={setVendingSettingsOpen}>
-            <DialogContent size="lg" overlayClassName="z-[120]" className="z-[120]">
+            <DialogContent size="lg" overlayClassName="z-[130]" className="z-[140]">
                 <DialogHeader>
                     <DialogTitle>Vending Machine Settings</DialogTitle>
                 </DialogHeader>
