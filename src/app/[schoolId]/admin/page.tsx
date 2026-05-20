@@ -25,7 +25,16 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import type { Student, Prize, Coupon, Category, Class, House, Teacher, BackupInfo, Achievement, Badge, AttendanceScheduleSlot, TeacherBudgetPeriod, StaffAccount, LibraryItem, LibraryItemInput } from '@/lib/types';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { StudentModal } from '@/components/StudentModal';
 import { AdminFaceEnrollmentPanel } from '@/components/AdminFaceEnrollmentPanel';
 import { AttendanceTimeZoneField } from '@/components/attendance/AttendanceTimeZoneField';
@@ -1054,10 +1063,10 @@ function AdminDashboardInner() {
   useLayoutEffect(() => {
     const basicTabs = ['students', 'classes', 'teachers', 'prizes', 'categories', 'reports'];
     if (loginState === 'developer') basicTabs.push('backups');
-    const pinnedExtras = pinnedAddOnTabs.map((t) => t.value);
-    const allowedTabs = new Set<string>([...basicTabs, ...pinnedExtras]);
+    const enabledExtras = visibleAddOnTabs.map((t) => t.value);
+    const allowedTabs = new Set<string>([...basicTabs, ...enabledExtras]);
     if (!allowedTabs.has(activeMainTab)) setActiveMainTab('students');
-  }, [activeMainTab, pinnedAddOnTabs, loginState]);
+  }, [activeMainTab, visibleAddOnTabs, loginState]);
 
   const [bulkRosterOpen, setBulkRosterOpen] = useState(false);
   const [isPreviousLogosOpen, setIsPreviousLogosOpen] = useState(false);
