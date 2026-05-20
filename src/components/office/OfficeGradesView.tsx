@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { collection, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
@@ -102,7 +102,7 @@ export function OfficeGradesView({
     });
   }, [filtered, studentLabelById]);
 
-  const openAdd = (presetStudentId?: string, presetTerm?: string) => {
+  const openAdd = useCallback((presetStudentId?: string, presetTerm?: string) => {
     setEditingId(null);
     setForm({
       studentId: presetStudentId ?? '',
@@ -113,7 +113,7 @@ export function OfficeGradesView({
       notes: '',
     });
     setDialogOpen(true);
-  };
+  }, [activeTerm]);
 
   const openedFromQuery = useRef(false);
   useEffect(() => {
@@ -122,7 +122,7 @@ export function OfficeGradesView({
     if (!studentId || !students.some((s) => s.id === studentId)) return;
     openedFromQuery.current = true;
     openAdd(studentId, searchParams.get('term')?.trim() || activeTerm);
-  }, [searchParams, students, isLoading, activeTerm]);
+  }, [searchParams, students, isLoading, activeTerm, openAdd]);
 
   const openEdit = (row: OfficeGradeEntry) => {
     setEditingId(row.id);

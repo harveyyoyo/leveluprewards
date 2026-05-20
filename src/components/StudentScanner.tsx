@@ -568,6 +568,7 @@ export function StudentScanner({
         onStudentFound,
         toast,
         loginState,
+        pathname,
         studentKioskSessionEstablished,
         settings.payLibrary,
         router,

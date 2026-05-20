@@ -1069,7 +1069,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             return settings.teacherDarkMode;
         }
         return settings.darkMode;
-    }, [studentKioskUi, settings.darkMode, settings.studentDarkMode, settings.teacherDarkMode]);
+    }, [studentKioskUi, loginState, settings.darkMode, settings.studentDarkMode, settings.teacherDarkMode]);
 
     const effectiveDomDarkColorized = useMemo(() => {
         let c = settings.darkModeColorized ?? false;
@@ -1147,6 +1147,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     }, [
         isLoaded,
         loginState,
+        studentKioskUi,
         settings.colorScheme,
         settings.customAppearanceColors,
         effectiveDomDarkMode,

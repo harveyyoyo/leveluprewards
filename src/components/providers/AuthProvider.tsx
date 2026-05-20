@@ -941,7 +941,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
             return loginErr('Could not complete sign-in. Please try again.');
         },
-        [functions, firestore, auth, establishStudentKioskSession, loginState, returnToSchoolSession, schoolId]
+        [functions, firestore, auth, establishStudentKioskSession, returnToSchoolSession]
     );
 
     const startDeveloperSupportSession = useCallback(async (rawSchoolId: string): Promise<boolean> => {

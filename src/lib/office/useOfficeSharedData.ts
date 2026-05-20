@@ -27,8 +27,8 @@ export function useOfficeSharedData(schoolId: string | null, enabled: boolean) {
   const { data: studentsRaw, isLoading: studentsLoading } = useCollection<OfficeStudent>(studentsQuery);
   const { data: classesRaw, isLoading: classesLoading } = useCollection<OfficeClass>(classesQuery);
 
-  const students = studentsRaw ?? [];
-  const classes = classesRaw ?? [];
+  const students = useMemo(() => studentsRaw ?? [], [studentsRaw]);
+  const classes = useMemo(() => classesRaw ?? [], [classesRaw]);
 
   const classNameById = useMemo(() => {
     const map = new Map<string, string>();

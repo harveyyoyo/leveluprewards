@@ -2353,7 +2353,7 @@ export default function StudentLoginPage() {
     } else {
       router.push(schoolId ? `/${schoolId}/portal` : '/login');
     }
-  }, [finishStudentSession, loginState, logout, playSound, router, schoolId, toast]);
+  }, [finishStudentSession, playSound, router, schoolId, toast]);
 
   useEffect(() => {
     window.addEventListener(STUDENT_KIOSK_REQUEST_EXIT_EVENT, handleStudentLogout);
