@@ -9,9 +9,10 @@ describe('schoolPathAllowedByGate', () => {
     expect(schoolPathAllowedByGate(`/${sid}/hall-of-fame`, sid, new Set(['dev']))).toBe(true);
   });
 
-  it('admin section: school portal or prize clerk or admin', () => {
+  it('admin section: school portal, prize clerk, house coordinator, or admin', () => {
     expect(schoolPathAllowedByGate(`/${sid}/admin`, sid, new Set(['portal']))).toBe(true);
     expect(schoolPathAllowedByGate(`/${sid}/admin`, sid, new Set(['prizeClerk']))).toBe(true);
+    expect(schoolPathAllowedByGate(`/${sid}/admin`, sid, new Set(['houseCoordinator']))).toBe(true);
     expect(schoolPathAllowedByGate(`/${sid}/admin`, sid, new Set(['admin']))).toBe(true);
     expect(schoolPathAllowedByGate(`/${sid}/admin`, sid, new Set(['teacher']))).toBe(false);
   });
@@ -25,6 +26,7 @@ describe('schoolPathAllowedByGate', () => {
   it('hall of fame is staff-only', () => {
     expect(schoolPathAllowedByGate(`/${sid}/hall-of-fame`, sid, new Set(['kiosk']))).toBe(false);
     expect(schoolPathAllowedByGate(`/${sid}/hall-of-fame`, sid, new Set(['teacher']))).toBe(true);
+    expect(schoolPathAllowedByGate(`/${sid}/hall-of-fame`, sid, new Set(['houseCoordinator']))).toBe(true);
   });
 
   it('default hub routes for kiosk', () => {

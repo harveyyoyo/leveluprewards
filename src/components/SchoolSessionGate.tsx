@@ -6,7 +6,19 @@ import { Loader2 } from 'lucide-react';
 import { useAppContext } from '@/components/AppProvider';
 import { canAccessHallOfFameRoute } from '@/lib/hallOfFameAccess';
 
-const ALLOWED = new Set(['school', 'student', 'teacher', 'admin', 'developer', 'secretary', 'prizeClerk', 'reports', 'librarian', 'office']);
+const ALLOWED = new Set([
+  'school',
+  'student',
+  'teacher',
+  'admin',
+  'developer',
+  'secretary',
+  'prizeClerk',
+  'reports',
+  'librarian',
+  'office',
+  'houseCoordinator',
+]);
 
 function SessionGateLoading({ label }: { label?: string }) {
   return (
@@ -33,13 +45,16 @@ function canUseRoute(pathname: string, routeSchoolId: string, loginState: string
       loginState === 'prizeClerk' ||
       loginState === 'reports' ||
       loginState === 'librarian' ||
-      loginState === 'office'
+      loginState === 'office' ||
+      loginState === 'houseCoordinator'
     );
   }
 
   // Allow school chooser through: Admin page shows the passcode gate until role is granted (same idea as /teacher).
   // Prize desk staff use Admin → Prizes (same URL, no full admin passcode).
-  if (section === 'admin') return loginState === 'admin' || loginState === 'school' || loginState === 'prizeClerk';
+  if (section === 'admin') {
+    return loginState === 'admin' || loginState === 'school' || loginState === 'prizeClerk' || loginState === 'houseCoordinator';
+  }
   if (section === 'teacher') {
     // Allow reaching the staff sign-in screen while in a student/public session.
     // The page itself will show a login form unless you already have a staff role.

@@ -40,7 +40,7 @@ interface AppContextType {
   // Auth
   isInitialized: boolean;
   isUserLoading: boolean;
-  loginState: 'loggedOut' | 'school' | 'developer' | 'student' | 'teacher' | 'admin' | 'secretary' | 'prizeClerk' | 'reports' | 'librarian' | 'office';
+  loginState: 'loggedOut' | 'school' | 'developer' | 'student' | 'teacher' | 'admin' | 'secretary' | 'prizeClerk' | 'reports' | 'librarian' | 'office' | 'houseCoordinator';
   isAdmin: boolean;
   isTeacher: boolean;
   isSecretary: boolean;
@@ -48,12 +48,13 @@ interface AppContextType {
   isReports: boolean;
   isLibrarian: boolean;
   isOffice: boolean;
+  isHouseCoordinator: boolean;
   userName: string | null;
   userId: string | null;
   teacherDocId: string | null;
   schoolId: string | null;
   syncStatus: 'synced' | 'syncing' | 'offline' | 'error';
-  login: (type: 'school' | 'developer' | 'student' | 'teacher' | 'admin' | 'secretary' | 'prizeClerk' | 'reports' | 'librarian' | 'office', credentials: { schoolId?: string; passcode?: string; username?: string; teacherName?: string; teacherDocId?: string; staffRole?: 'secretary' | 'prizeClerk' | 'reports' | 'librarian' | 'office'; }) => Promise<LoginResult>;
+  login: (type: 'school' | 'developer' | 'student' | 'teacher' | 'admin' | 'secretary' | 'prizeClerk' | 'reports' | 'librarian' | 'office' | 'houseCoordinator', credentials: { schoolId?: string; passcode?: string; username?: string; teacherName?: string; teacherDocId?: string; staffRole?: 'secretary' | 'prizeClerk' | 'reports' | 'librarian' | 'office' | 'houseCoordinator'; }) => Promise<LoginResult>;
   startDeveloperSupportSession: (schoolId: string) => Promise<boolean>;
   logout: (options?: LogoutOptions) => void;
   setUserName: (name: string | null) => void;
@@ -216,7 +217,8 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
       loginState !== 'teacher' &&
       loginState !== 'secretary' &&
       loginState !== 'prizeClerk' &&
-      loginState !== 'reports'
+      loginState !== 'reports' &&
+      loginState !== 'houseCoordinator'
     ) {
       return;
     }
@@ -877,6 +879,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     isReports: authCtx.isReports,
     isLibrarian: authCtx.isLibrarian,
     isOffice: authCtx.isOffice,
+    isHouseCoordinator: authCtx.isHouseCoordinator,
     // Print
     ...printCtx,
     printPrizeTickets: printCtx.printPrizeTickets,

@@ -25,7 +25,16 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import type { Student, Prize, Coupon, Category, Class, House, Teacher, BackupInfo, Achievement, Badge, AttendanceScheduleSlot, TeacherBudgetPeriod, StaffAccount, LibraryItem, LibraryItemInput } from '@/lib/types';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { StudentModal } from '@/components/StudentModal';
 import { AdminFaceEnrollmentPanel } from '@/components/AdminFaceEnrollmentPanel';
 import { AttendanceTimeZoneField } from '@/components/attendance/AttendanceTimeZoneField';
@@ -748,6 +757,25 @@ function AdminDashboardInner() {
     return out;
   }, [loginState, pinnedAddOnTabs, settings.adminMainTabOrder]);
 
+  const mobileMoreTabOptions = useMemo(() => {
+    const mainTabValues = new Set(orderedMainTabs.map((t) => t.value));
+    return addOnTabDefs.filter((t) => !mainTabValues.has(t.value));
+  }, [addOnTabDefs, orderedMainTabs]);
+
+  const handleMobileMainTabChange = (value: string) => {
+    if (orderedMainTabs.some((t) => t.value === value)) {
+      setActiveMainTab(value);
+      return;
+    }
+
+    if (addOnTabDefs.some((t) => t.value === value)) {
+      toggleAddOnTab(value, true);
+      return;
+    }
+
+    setActiveMainTab(value);
+  };
+
   const persistMainTabOrder = (next: string[]) => {
     // Keep storage small + resilient (no unknown values / no duplicates).
     const available = new Set(orderedMainTabs.map((t) => t.value));
@@ -1035,10 +1063,10 @@ function AdminDashboardInner() {
   useLayoutEffect(() => {
     const basicTabs = ['students', 'classes', 'teachers', 'prizes', 'categories', 'reports'];
     if (loginState === 'developer') basicTabs.push('backups');
-    const pinnedExtras = pinnedAddOnTabs.map((t) => t.value);
-    const allowedTabs = new Set<string>([...basicTabs, ...pinnedExtras]);
+    const enabledExtras = visibleAddOnTabs.map((t) => t.value);
+    const allowedTabs = new Set<string>([...basicTabs, ...enabledExtras]);
     if (!allowedTabs.has(activeMainTab)) setActiveMainTab('students');
-  }, [activeMainTab, pinnedAddOnTabs, loginState]);
+  }, [activeMainTab, visibleAddOnTabs, loginState]);
 
   const [bulkRosterOpen, setBulkRosterOpen] = useState(false);
   const [isPreviousLogosOpen, setIsPreviousLogosOpen] = useState(false);
@@ -1590,7 +1618,7 @@ function AdminDashboardInner() {
                 <Label htmlFor="admin-portal-section" className="sr-only">
                   Admin portal section
                 </Label>
-                <Select value={activeMainTab} onValueChange={setActiveMainTab}>
+                <Select value={activeMainTab} onValueChange={handleMobileMainTabChange}>
                   <SelectTrigger
                     id="admin-portal-section"
                     className="h-12 w-full rounded-xl font-bold"
@@ -1599,11 +1627,31 @@ function AdminDashboardInner() {
                     <SelectValue placeholder="Choose a section" />
                   </SelectTrigger>
                   <SelectContent position="popper" className="max-h-[min(70vh,440px)]">
-                    {orderedMainTabs.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>
-                        {t.label}
-                      </SelectItem>
-                    ))}
+                    <SelectGroup>
+                      <SelectLabel className="pl-8 text-[10px] font-black uppercase tracking-wider text-muted-foreground">
+                        Current tabs
+                      </SelectLabel>
+                      {orderedMainTabs.map((t) => (
+                        <SelectItem key={t.value} value={t.value}>
+                          {t.label}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                    {mobileMoreTabOptions.length > 0 ? (
+                      <>
+                        <SelectSeparator />
+                        <SelectGroup>
+                          <SelectLabel className="pl-8 text-[10px] font-black uppercase tracking-wider text-muted-foreground">
+                            Add more tabs
+                          </SelectLabel>
+                          {mobileMoreTabOptions.map((t) => (
+                            <SelectItem key={t.value} value={t.value}>
+                              {t.label}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </>
+                    ) : null}
                   </SelectContent>
                 </Select>
               </div>
@@ -3223,16 +3271,117 @@ function AdminLogin({ onLogin }: { onLogin: (passcode: string) => Promise<boolea
   );
 }
 
+function HouseCoordinatorDashboard() {
+  const { schoolId, addHouse, updateHouse, deleteHouse } = useAppContext();
+  const firestore = useFirestore();
+  const { toast } = useToast();
+
+  const studentsQuery = useMemoFirebase(
+    () => (firestore && schoolId ? collection(firestore, 'schools', schoolId, 'students') : null),
+    [firestore, schoolId],
+  );
+  const housesQuery = useMemoFirebase(
+    () => (firestore && schoolId ? collection(firestore, 'schools', schoolId, 'houses') : null),
+    [firestore, schoolId],
+  );
+  const teachersQuery = useMemoFirebase(
+    () => (firestore && schoolId ? collection(firestore, 'schools', schoolId, 'teachers') : null),
+    [firestore, schoolId],
+  );
+
+  const students = useCollection<Student>(studentsQuery);
+  const houses = useCollection<House>(housesQuery);
+  const teachers = useCollection<Teacher>(teachersQuery);
+
+  const updateStudentHouse = async (student: Student) => {
+    if (!firestore || !schoolId) return;
+    await updateDoc(doc(firestore, 'schools', schoolId, 'students', student.id), {
+      houseId: student.houseId || '',
+      updatedAt: Date.now(),
+    });
+  };
+
+  const updateTeacherHouseParents = async (teacher: Teacher) => {
+    if (!firestore || !schoolId) return;
+    await updateDoc(doc(firestore, 'schools', schoolId, 'teachers', teacher.id), {
+      houseParentHouseIds: teacher.houseParentHouseIds || [],
+    });
+  };
+
+  const collectionErrors = [
+    { name: 'Students', error: students.error },
+    { name: 'Houses', error: houses.error },
+    { name: 'Teachers', error: teachers.error },
+  ].filter((c) => c.error);
+
+  if (!schoolId || students.isLoading || houses.isLoading || teachers.isLoading) {
+    return <AdminDashboardSkeleton />;
+  }
+
+  if (collectionErrors.length > 0) {
+    return (
+      <div className="p-8 max-w-4xl mx-auto space-y-4">
+        <Alert variant="destructive">
+          <ShieldCheck className="h-4 w-4" />
+          <AlertTitle>Data Fetch Error</AlertTitle>
+          <AlertDescription>
+            Some house data could not be loaded. This may be due to temporary network issues or missing permissions.
+            <ul className="mt-2 text-xs font-code list-disc pl-4">
+              {collectionErrors.map((c) => (
+                <li key={c.name}>{c.name}: {c.error?.message}</li>
+              ))}
+            </ul>
+          </AlertDescription>
+        </Alert>
+        <Button onClick={() => window.location.reload()} className="rounded-full">
+          <History className="mr-2 h-4 w-4" /> Retry Loading
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto flex h-full min-h-0 min-w-0 w-full max-w-7xl flex-col gap-6 p-4 md:p-8">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="font-headline text-3xl font-bold tracking-tight text-primary">Houses</h1>
+          <p className="text-sm text-muted-foreground">
+            Houses-only access for rosters, house parents, sorting, and point totals.
+          </p>
+        </div>
+        <Button variant="outline" className="rounded-xl" asChild>
+          <Link href={`/${schoolId}/portal`}>Back to portal</Link>
+        </Button>
+      </div>
+
+      <TabWalkthroughProvider scope="admin" tabId="houses">
+        <AdminHousesTab
+          schoolId={schoolId}
+          houses={houses.data}
+          students={students.data}
+          teachers={teachers.data}
+          onAddHouse={addHouse}
+          onUpdateHouse={updateHouse}
+          onDeleteHouse={deleteHouse}
+          onUpdateStudent={updateStudentHouse}
+          onUpdateTeacher={updateTeacherHouseParents}
+        />
+      </TabWalkthroughProvider>
+    </div>
+  );
+}
+
 export default function AdminPage() {
-  const { loginState, isInitialized, isAdmin, isPrizeClerk, login, schoolId } = useAppContext();
+  const { loginState, isInitialized, isAdmin, isPrizeClerk, isHouseCoordinator, login, schoolId } = useAppContext();
   const router = useRouter();
 
   const prizeDeskSession = loginState === 'prizeClerk' && isPrizeClerk;
+  const houseCoordinatorSession = loginState === 'houseCoordinator' && isHouseCoordinator;
 
   useEffect(() => {
     if (
       isInitialized &&
-      !['student', 'teacher', 'admin', 'school', 'developer', 'prizeClerk'].includes(loginState)
+      !['student', 'teacher', 'admin', 'school', 'developer', 'prizeClerk', 'houseCoordinator'].includes(loginState)
     ) {
       router.replace('/login');
     }
@@ -3243,11 +3392,11 @@ export default function AdminPage() {
     return login('admin', { schoolId, passcode }).then((r) => r.ok);
   };
 
-  if (!isInitialized || !['student', 'teacher', 'admin', 'school', 'developer', 'prizeClerk'].includes(loginState)) {
+  if (!isInitialized || !['student', 'teacher', 'admin', 'school', 'developer', 'prizeClerk', 'houseCoordinator'].includes(loginState)) {
     return <AdminDashboardSkeleton />;
   }
 
-  if (!isAdmin && !prizeDeskSession) {
+  if (!isAdmin && !prizeDeskSession && !houseCoordinatorSession) {
     return <AdminLogin onLogin={handleAdminLogin} />;
   }
 
@@ -3255,6 +3404,14 @@ export default function AdminPage() {
     return (
       <ErrorBoundary name="AdminPrizeDesk">
         <AdminPrizeDeskDashboard />
+      </ErrorBoundary>
+    );
+  }
+
+  if (houseCoordinatorSession) {
+    return (
+      <ErrorBoundary name="HouseCoordinatorDashboard">
+        <HouseCoordinatorDashboard />
       </ErrorBoundary>
     );
   }

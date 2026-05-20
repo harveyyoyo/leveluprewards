@@ -31,11 +31,13 @@
     "firebase:ssr:prepare": "node scripts/prepare-firebase-framework-deploy.mjs",
     "test:themes": "node scripts/validate-themes.mjs",
     "backup:code": "node scripts/backup-code.mjs",
+    "seed:demo-office": "node scripts/seed-demo-office-data.mjs",
     "generate:legal-pdfs": "node scripts/generate-legal-pdfs.mjs",
     "generate:legal-pdfs:text": "node scripts/generate-legal-pdfs-from-text.mjs",
     "generate:flyer-pdf": "node scripts/generate-flyer-pdf.mjs",
     "capture:walkthrough": "node scripts/capture-walkthrough-videos.mjs",
     "dev:tunnel": "node scripts/dev-public-tunnel.mjs",
+    "dev:tunnel:cloudflare": "cross-env TUNNEL_PROVIDER=cloudflare node scripts/dev-public-tunnel.mjs",
     "nanobanana:ppt": "cd tools/NanoBanana-PPT-Skills && venv\\Scripts\\python.exe generate_ppt.py"
   },
   "dependencies": {

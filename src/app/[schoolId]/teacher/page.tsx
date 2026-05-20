@@ -36,7 +36,7 @@ const TeacherPrinterInner = dynamic(
 type StaffPortalLoginOption = {
     id: string;
     sourceId?: string;
-    type: 'teacher' | 'secretary' | 'prizeClerk' | 'reports' | 'librarian' | 'office';
+    type: 'teacher' | 'secretary' | 'prizeClerk' | 'reports' | 'librarian' | 'office' | 'houseCoordinator';
     label: string;
     username: string;
 };
@@ -55,6 +55,7 @@ function roleLabel(type: StaffPortalLoginOption['type']) {
     if (type === 'prizeClerk') return 'Prize desk';
     if (type === 'librarian') return 'Library';
     if (type === 'office') return 'School Office';
+    if (type === 'houseCoordinator') return 'Houses';
     return 'Reports';
 }
 
@@ -64,6 +65,7 @@ function staffLandingPath(schoolId: string, type: StaffPortalLoginOption['type']
     if (type === 'reports') return `/${schoolId}/reports`;
     if (type === 'librarian') return `/${schoolId}/librarian`;
     if (type === 'office') return `/${schoolId}/office`;
+    if (type === 'houseCoordinator') return `/${schoolId}/admin`;
     return `/${schoolId}/teacher`;
 }
 
@@ -149,7 +151,8 @@ export default function TeacherPage() {
                         option.type === 'prizeClerk' ||
                         option.type === 'reports' ||
                         option.type === 'librarian' ||
-                        option.type === 'office'),
+                        option.type === 'office' ||
+                        option.type === 'houseCoordinator'),
             ),
         [schoolPublic],
     );
@@ -167,11 +170,17 @@ export default function TeacherPage() {
             router.replace(`/${schoolId}/librarian`);
         } else if (loginState === 'office') {
             router.replace(`/${schoolId}/office`);
+        } else if (loginState === 'houseCoordinator') {
+            router.replace(`/${schoolId}/admin`);
         }
     }, [directAccountKey, isInitialized, loginState, schoolId, router]);
 
     useEffect(() => {
-        if (isInitialized && !schoolId && !['student', 'teacher', 'admin', 'school', 'developer', 'secretary', 'prizeClerk', 'reports'].includes(loginState)) {
+        if (
+            isInitialized &&
+            !schoolId &&
+            !['student', 'teacher', 'admin', 'school', 'developer', 'secretary', 'prizeClerk', 'reports', 'librarian', 'office', 'houseCoordinator'].includes(loginState)
+        ) {
             router.replace('/');
         }
     }, [isInitialized, loginState, router, schoolId]);

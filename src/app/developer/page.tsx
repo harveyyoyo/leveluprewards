@@ -39,6 +39,7 @@ import {
   PRODUCT_PILLAR_LABELS,
   type ProductPillarKey,
 } from '@/lib/productPillars';
+import { officePortalEntryHref } from '@/lib/officePublicUrl';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { Helper } from '@/components/ui/helper';
@@ -1398,7 +1399,7 @@ export default function DeveloperPage() {
                 <div className="space-y-4 py-2">
                   {PRODUCT_PILLAR_KEYS.map((key) => (
                     <div key={key} className="rounded-xl border p-4 space-y-2">
-                      <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-start justify-between gap-4">
                         <div>
                           <Label className="text-sm font-bold">{PRODUCT_PILLAR_LABELS[key]}</Label>
                           <p className="text-xs text-muted-foreground mt-1">
@@ -1408,13 +1409,25 @@ export default function DeveloperPage() {
                             {key === 'payOffice' && 'Grades, billing, and office-only student roster (not shared with rewards).'}
                           </p>
                         </div>
-                        <Switch
-                          checked={editingPillars[key]}
-                          onCheckedChange={(checked) =>
-                            setEditingPillars((prev) => ({ ...prev, [key]: checked }))
-                          }
-                          aria-label={PRODUCT_PILLAR_LABELS[key]}
-                        />
+                        <div className="flex shrink-0 flex-col items-end gap-2">
+                          <Switch
+                            checked={editingPillars[key]}
+                            onCheckedChange={(checked) =>
+                              setEditingPillars((prev) => ({ ...prev, [key]: checked }))
+                            }
+                            aria-label={PRODUCT_PILLAR_LABELS[key]}
+                          />
+                          {key === 'payOffice' && editingPillars[key] ? (
+                            <a
+                              href={officePortalEntryHref(pillarSchool.id)}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-xs font-bold text-teal-700 underline underline-offset-4 hover:text-teal-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:text-teal-300 dark:hover:text-teal-100"
+                            >
+                              Open School Office
+                            </a>
+                          ) : null}
+                        </div>
                       </div>
                     </div>
                   ))}

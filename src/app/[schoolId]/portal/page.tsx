@@ -39,7 +39,7 @@ type PortalArea = {
 type StaffPortalLoginOption = {
     id: string;
     sourceId?: string;
-    type: 'teacher' | 'secretary' | 'prizeClerk' | 'reports' | 'librarian' | 'office';
+    type: 'teacher' | 'secretary' | 'prizeClerk' | 'reports' | 'librarian' | 'office' | 'houseCoordinator';
     label: string;
     username: string;
 };
@@ -58,6 +58,7 @@ function roleLabel(type: StaffPortalLoginOption['type']) {
     if (type === 'prizeClerk') return 'Prize desk';
     if (type === 'librarian') return 'Library';
     if (type === 'office') return 'School Office';
+    if (type === 'houseCoordinator') return 'Houses';
     return 'Reports';
 }
 
@@ -67,6 +68,7 @@ function staffLandingPath(schoolId: string, type: StaffPortalLoginOption['type']
     if (type === 'reports') return `/${schoolId}/reports`;
     if (type === 'librarian') return `/${schoolId}/librarian`;
     if (type === 'office') return `/${schoolId}/office`;
+    if (type === 'houseCoordinator') return `/${schoolId}/admin`;
     return `/${schoolId}/teacher`;
 }
 
@@ -195,7 +197,10 @@ export default function PortalPage() {
         loginState === 'developer' ||
         loginState === 'secretary' ||
         loginState === 'prizeClerk' ||
-        loginState === 'reports';
+        loginState === 'reports' ||
+        loginState === 'librarian' ||
+        loginState === 'office' ||
+        loginState === 'houseCoordinator';
 
     const firestore = useFirestore();
     const schoolPublicRef = useMemoFirebase(
@@ -215,7 +220,8 @@ export default function PortalPage() {
                         option.type === 'prizeClerk' ||
                         option.type === 'reports' ||
                         option.type === 'librarian' ||
-                        option.type === 'office'),
+                        option.type === 'office' ||
+                        option.type === 'houseCoordinator'),
             ),
         [schoolPublic],
     );
@@ -328,20 +334,33 @@ export default function PortalPage() {
             </div>
 
             {/* Positioning on a plain div so Framer does not override translate-based centering */}
-            {/* Main layout: viewport-locked — no page or inner scrollbars */}
+            {/* Main layout: app mode can scroll within the shell when browser chrome leaves little height. */}
             <div
                 className={cn(
-                    'relative z-[10] flex h-full min-h-0 w-full flex-col overflow-hidden',
+                    'relative z-[10] flex h-full min-h-0 w-full flex-col',
+                    isAppDisplay ? 'overflow-x-hidden overflow-y-auto overscroll-contain' : 'overflow-hidden',
                     isAppDisplay
-                        ? 'px-4 pb-24 pt-[max(6.25rem,calc(env(safe-area-inset-top,0px)+4.5rem))] md:py-24'
+                        ? 'px-4 pb-3 pt-2 sm:pb-4 sm:pt-4 md:py-10'
                         : 'px-4 pb-4 pt-10 sm:pt-12 md:pb-6 md:pt-16',
                     portalChoosePageShellClass(kioskPortrait, isAppDisplay),
                 )}
             >
-                <div className="flex h-full min-h-0 w-full flex-1 flex-col items-center justify-center gap-6 sm:gap-8 md:gap-12">
-                    
+                <div
+                    className={cn(
+                        'flex min-h-full w-full flex-1 flex-col items-center',
+                        isAppDisplay
+                            ? 'justify-start gap-3 sm:gap-4 md:justify-center md:gap-8'
+                            : 'justify-center gap-6 sm:gap-8 md:gap-12',
+                    )}
+                >
+
                     {/* Title: on mobile avoid flex-1+min-h-0 (clips large headline under overflow-hidden). */}
-                    <div className="flex w-full shrink-0 flex-col items-center justify-center px-1 pb-3 pt-1 text-center md:min-h-0 md:pb-0">
+                    <div
+                        className={cn(
+                            'flex w-full shrink-0 flex-col items-center justify-center px-1 text-center md:min-h-0',
+                            isAppDisplay ? 'pb-1 pt-0 md:pb-0' : 'pb-3 pt-1 md:pb-0',
+                        )}
+                    >
                         <div className="pointer-events-none w-full max-w-6xl text-center shrink-0 overflow-visible">
                             {reduceWhereToMotion ? (
                                 <h2

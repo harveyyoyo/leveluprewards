@@ -15,7 +15,10 @@ export function useSchoolMetadataDocRef() {
     loginState === 'teacher' ||
     loginState === 'secretary' ||
     loginState === 'prizeClerk' ||
-    loginState === 'reports';
+    loginState === 'reports' ||
+    loginState === 'librarian' ||
+    loginState === 'office' ||
+    loginState === 'houseCoordinator';
   return useMemoFirebase(() => {
     if (!firestore || !schoolId) return null;
     const sid = schoolId.trim().toLowerCase();

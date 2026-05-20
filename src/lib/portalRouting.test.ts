@@ -38,6 +38,7 @@ describe('portal routing', () => {
       expect(isLocalDevHost('127.0.0.1:3000')).toBe(true);
       expect(isLocalDevHost('portal.localhost:3000')).toBe(true);
       expect(isLocalDevHost('moier-leady-susanne.ngrok-free.dev')).toBe(true);
+      expect(isLocalDevHost('supervisors-innovations-sperm-shares.trycloudflare.com')).toBe(true);
       expect(
         canonicalPortalRedirectUrl('/login', '', 'localhost:3000', 'http:'),
       ).toBeNull();
@@ -46,6 +47,14 @@ describe('portal routing', () => {
           '/login',
           '',
           'moier-leady-susanne.ngrok-free.dev',
+          'https:',
+        ),
+      ).toBeNull();
+      expect(
+        canonicalPortalRedirectUrl(
+          '/login',
+          '',
+          'supervisors-innovations-sperm-shares.trycloudflare.com',
           'https:',
         ),
       ).toBeNull();

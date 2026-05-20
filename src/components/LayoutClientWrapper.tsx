@@ -128,6 +128,7 @@ function LayoutClientWrapperInner({ children }: LayoutClientWrapperProps) {
       !hideAppChrome &&
       !isStudentKioskPage &&
       !isFullscreenSpecialPage;
+    const useCompactSiteFooter = settings.displayMode === 'app' && isPortalChoosePage;
 
     useEffect(() => {
         const runWhenIdle = (cb: () => void, timeout = 1200) => {
@@ -398,7 +399,7 @@ function LayoutClientWrapperInner({ children }: LayoutClientWrapperProps) {
                     </main>
                     {showSiteFooter && (
                         <div className="relative z-10 mt-auto shrink-0 no-print">
-                            <SiteFooter />
+                            <SiteFooter compact={useCompactSiteFooter} />
                         </div>
                     )}
                     {nonCriticalUiReady && settings.showIntroWizard && <IntroWizard />}

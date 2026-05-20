@@ -42,3 +42,13 @@ Optional for production-parity auth work (see `.agent/knowledge/deployment.md`):
 ### Privacy
 
 Cloud agents require **Privacy Mode** (not Legacy) on the Cursor account.
+
+### Local development notes
+
+- The dev server uses Webpack by default (`scripts/dev-webpack.cjs`). Turbopack is also available via `npm run dev:turbo`.
+- If pages are blank or you see "Cannot find module ./*.js" errors, run `npm run dev:reset` to clean the `.next` cache.
+- The Firebase config (API key, project ID) is hardcoded in `src/firebase/config.ts`; no Firebase secrets are needed for the dev server to start and render pages.
+- The `/developer` login page is always available in dev mode (`next dev`). In production builds it requires `NEXT_PUBLIC_ENABLE_DEV_LOGIN=true`.
+- For offline/isolated Firebase development, use `firebase emulators:start` with `NEXT_PUBLIC_FIREBASE_EMULATORS=1`.
+- E2E tests use Playwright (`@playwright/test`). Install browsers first with `npx playwright install --with-deps chromium`.
+- The project requires Node.js 22 (see `.nvmrc`) and npm (lockfile: `package-lock.json`).

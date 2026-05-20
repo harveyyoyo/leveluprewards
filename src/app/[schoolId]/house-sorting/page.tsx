@@ -146,7 +146,7 @@ export default function HouseSortingPage() {
   };
 
   const staffOk =
-    loginState === 'admin' || loginState === 'developer' || loginState === 'teacher';
+    loginState === 'admin' || loginState === 'developer' || loginState === 'teacher' || loginState === 'houseCoordinator';
 
   if (!settings.enableHouses) {
     return (

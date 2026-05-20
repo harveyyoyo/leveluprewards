@@ -5,8 +5,14 @@ const path = require('path');
 const projectRoot = __dirname;
 
 const nextConfig = {
-  /** Allow HMR / _next assets when visiting dev via ngrok (see Next.js allowedDevOrigins). */
-  allowedDevOrigins: ['*.ngrok-free.dev', '*.ngrok-free.app', '*.ngrok.io', '*.ngrok.app'],
+  /** Allow HMR / _next assets when visiting dev via public tunnels (see Next.js allowedDevOrigins). */
+  allowedDevOrigins: [
+    '*.ngrok-free.dev',
+    '*.ngrok-free.app',
+    '*.ngrok.io',
+    '*.ngrok.app',
+    '*.trycloudflare.com',
+  ],
   async rewrites() {
     // Browsers and tools often request /favicon.ico; serve the same asset as app/icon.png.
     return [{ source: '/favicon.ico', destination: '/icon.png' }];
