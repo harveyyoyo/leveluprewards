@@ -54,6 +54,12 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/schools/$(schoolId)/roles_office/$(request.auth.uid)).data.role == 'office';
     }
 
+    function isHouseCoordinator(schoolId) {
+      return isAuth()
+        && exists(/databases/$(database)/documents/schools/$(schoolId)/roles_houseCoordinator/$(request.auth.uid))
+        && get(/databases/$(database)/documents/schools/$(schoolId)/roles_houseCoordinator/$(request.auth.uid)).data.role == 'houseCoordinator';
+    }
+
     function canAccessOffice(schoolId) {
       return isDeveloper() || isAdmin(schoolId) || isOffice(schoolId);
     }
@@ -80,7 +86,7 @@ service cloud.firestore {
     // Rewards / kiosk / portal hub — office staff use separate office* collections only.
     function isSchoolMember(schoolId) {
       return isAdmin(schoolId) || isTeacher(schoolId) || isSecretary(schoolId)
-        || isPrizeClerk(schoolId) || isReports(schoolId) || isLibrarian(schoolId) || isDeveloper()
+        || isPrizeClerk(schoolId) || isReports(schoolId) || isLibrarian(schoolId) || isHouseCoordinator(schoolId) || isDeveloper()
         || hasKioskSession(schoolId) || hasAnonymousPortalSession(schoolId);
     }
 
@@ -181,7 +187,7 @@ service cloud.firestore {
     }
     
     match /schools/{schoolId} {
-      allow read: if isDeveloper() || isAdmin(schoolId) || isTeacher(schoolId) || isSecretary(schoolId) || isPrizeClerk(schoolId) || isReports(schoolId) || isLibrarian(schoolId) || isOffice(schoolId);
+      allow read: if isDeveloper() || isAdmin(schoolId) || isTeacher(schoolId) || isSecretary(schoolId) || isPrizeClerk(schoolId) || isReports(schoolId) || isLibrarian(schoolId) || isOffice(schoolId) || isHouseCoordinator(schoolId);
       allow create: if isDeveloper();
       allow delete: if isAdmin(schoolId) || isDeveloper();
       // Teachers may adjust raffle knobs (stored in appSettings) without full admin rights.
@@ -198,7 +204,11 @@ service cloud.firestore {
         allow read: if isSchoolMember(schoolId)
           || (isAuth() && request.auth.uid == studentId && hasStudentPortalSession(schoolId));
         allow create, delete: if isAdmin(schoolId);
-        allow update: if isAdmin(schoolId) || isTeacher(schoolId) || isPrizeClerk(schoolId);
+        allow update: if isAdmin(schoolId) || isTeacher(schoolId) || isPrizeClerk(schoolId)
+          || (
+            isHouseCoordinator(schoolId)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['houseId', 'updatedAt'])
+          );
 
         match /activities/{activityId} {
           allow read: if isSchoolMember(schoolId)
@@ -214,9 +224,13 @@ service cloud.firestore {
       }
       
       match /teachers/{teacherId} {
-        allow read: if isAdmin(schoolId) || isTeacher(schoolId) || isPrizeClerk(schoolId) || isReports(schoolId) || isOffice(schoolId) || isDeveloper();
+        allow read: if isAdmin(schoolId) || isTeacher(schoolId) || isPrizeClerk(schoolId) || isReports(schoolId) || isOffice(schoolId) || isHouseCoordinator(schoolId) || isDeveloper();
         allow create, delete: if isAdmin(schoolId);
         allow update: if isAdmin(schoolId)
+          || (
+            isHouseCoordinator(schoolId)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['houseParentHouseIds'])
+          )
           || (
             isTeacherSelf(schoolId, teacherId)
             && (
@@ -248,7 +262,7 @@ service cloud.firestore {
 
       match /houses/{houseId} {
         allow read: if isSchoolMember(schoolId) || hasStudentPortalSession(schoolId);
-        allow write: if isAdmin(schoolId) || isTeacher(schoolId) || isDeveloper();
+        allow write: if isAdmin(schoolId) || isTeacher(schoolId) || isHouseCoordinator(schoolId) || isDeveloper();
       }
       
       match /categories/{categoryId} {
@@ -368,6 +382,11 @@ service cloud.firestore {
       }
 
       match /roles_office/{uid} {
+        allow read: if isAuth() && request.auth.uid == uid;
+        allow write: if false;
+      }
+
+      match /roles_houseCoordinator/{uid} {
         allow read: if isAuth() && request.auth.uid == uid;
         allow write: if false;
       }

@@ -16,7 +16,7 @@ export function schoolPathAllowedByGate(
   const section = (rest.split('/')[0] || '').toLowerCase();
 
   if (section === 'admin') {
-    return scopes.has('admin') || scopes.has('portal') || scopes.has('prizeClerk');
+    return scopes.has('admin') || scopes.has('portal') || scopes.has('prizeClerk') || scopes.has('houseCoordinator');
   }
   if (section === 'portal') {
     return (
@@ -29,7 +29,8 @@ export function schoolPathAllowedByGate(
       scopes.has('prizeClerk') ||
       scopes.has('reports') ||
       scopes.has('librarian') ||
-      scopes.has('office')
+      scopes.has('office') ||
+      scopes.has('houseCoordinator')
     );
   }
   if (section === 'teacher') {
@@ -63,7 +64,8 @@ export function schoolPathAllowedByGate(
       scopes.has('secretary') ||
       scopes.has('prizeClerk') ||
       scopes.has('reports') ||
-      scopes.has('librarian')
+      scopes.has('librarian') ||
+      scopes.has('houseCoordinator')
     );
   }
 
@@ -77,7 +79,8 @@ export function schoolPathAllowedByGate(
       scopes.has('secretary') ||
       scopes.has('prizeClerk') ||
       scopes.has('reports') ||
-      scopes.has('librarian')
+      scopes.has('librarian') ||
+      scopes.has('houseCoordinator')
     );
   }
 
@@ -89,7 +92,8 @@ export function schoolPathAllowedByGate(
       scopes.has('secretary') ||
       scopes.has('prizeClerk') ||
       scopes.has('reports') ||
-      scopes.has('librarian')
+      scopes.has('librarian') ||
+      scopes.has('houseCoordinator')
     );
   }
 
@@ -101,6 +105,7 @@ export function schoolPathAllowedByGate(
     scopes.has('secretary') ||
     scopes.has('prizeClerk') ||
     scopes.has('reports') ||
-    scopes.has('librarian')
+    scopes.has('librarian') ||
+    scopes.has('houseCoordinator')
   );
 }

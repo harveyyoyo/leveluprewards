@@ -36,6 +36,9 @@ const STAFF_OR_ADMIN_LOGIN = new Set([
   'secretary',
   'prizeClerk',
   'reports',
+  'librarian',
+  'office',
+  'houseCoordinator',
   'school',
 ]);
 

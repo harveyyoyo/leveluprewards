@@ -5,14 +5,15 @@ import { authFetch } from '@/lib/authFetch';
 import { functionsEmulatorEnabledByEnv } from '@/firebase/emulatorConfig';
 
 /** Roles added after some production function deployments; stale callables reject these. */
-export const ROLES_NEEDING_UPDATED_VERIFY = ['librarian', 'office'] as const;
+export const ROLES_NEEDING_UPDATED_VERIFY = ['librarian', 'office', 'houseCoordinator'] as const;
 
 export type StaffDeskLoginRole =
   | 'secretary'
   | 'prizeClerk'
   | 'reports'
   | 'librarian'
-  | 'office';
+  | 'office'
+  | 'houseCoordinator';
 
 export type StaffDeskVerifyResult = {
   displayName?: string;
@@ -24,9 +25,9 @@ function isStaleCallableRole(role: string): boolean {
 }
 
 export function staffDeskLoginSetupMessage(role: StaffDeskLoginRole): string {
-  if (role === 'librarian' || role === 'office') {
+  if (role === 'librarian' || role === 'office' || role === 'houseCoordinator') {
     return (
-      'Librarian sign-in needs an updated server. On localhost: set NEXT_PUBLIC_FIREBASE_FUNCTIONS_EMULATOR=true in .env.local, run `firebase emulators:start --only functions`, then restart `npm run dev`. ' +
+      'This staff sign-in needs an updated server. On localhost: set NEXT_PUBLIC_FIREBASE_FUNCTIONS_EMULATOR=true in .env.local, run `firebase emulators:start --only functions`, then restart `npm run dev`. ' +
       'For production: deploy Cloud Functions (`firebase deploy --only functions:verifyStaffAccountPasscode`).'
     );
   }

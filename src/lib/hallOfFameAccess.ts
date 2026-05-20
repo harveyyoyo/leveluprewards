@@ -10,6 +10,7 @@ const HALL_OF_FAME_STAFF_LOGIN_STATES = [
   'reports',
   'librarian',
   'office',
+  'houseCoordinator',
 ] as const;
 
 export function canAccessHallOfFameRoute(loginState: string): boolean {

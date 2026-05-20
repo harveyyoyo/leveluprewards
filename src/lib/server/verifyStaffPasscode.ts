@@ -1,6 +1,6 @@
 import type { Firestore } from 'firebase-admin/firestore';
 
-export const STAFF_LOGIN_ROLES = ['secretary', 'prizeClerk', 'reports', 'librarian', 'office'] as const;
+export const STAFF_LOGIN_ROLES = ['secretary', 'prizeClerk', 'reports', 'librarian', 'office', 'houseCoordinator'] as const;
 export type StaffLoginRole = (typeof STAFF_LOGIN_ROLES)[number];
 
 export function isStaffLoginRole(value: string): value is StaffLoginRole {
@@ -17,6 +17,8 @@ export function roleCollectionForStaffRole(staffRole: StaffLoginRole): string {
       return 'roles_librarian';
     case 'office':
       return 'roles_office';
+    case 'houseCoordinator':
+      return 'roles_houseCoordinator';
     default:
       return 'roles_reports';
   }

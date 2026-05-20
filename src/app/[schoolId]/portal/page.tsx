@@ -39,7 +39,7 @@ type PortalArea = {
 type StaffPortalLoginOption = {
     id: string;
     sourceId?: string;
-    type: 'teacher' | 'secretary' | 'prizeClerk' | 'reports' | 'librarian' | 'office';
+    type: 'teacher' | 'secretary' | 'prizeClerk' | 'reports' | 'librarian' | 'office' | 'houseCoordinator';
     label: string;
     username: string;
 };
@@ -58,6 +58,7 @@ function roleLabel(type: StaffPortalLoginOption['type']) {
     if (type === 'prizeClerk') return 'Prize desk';
     if (type === 'librarian') return 'Library';
     if (type === 'office') return 'School Office';
+    if (type === 'houseCoordinator') return 'Houses';
     return 'Reports';
 }
 
@@ -67,6 +68,7 @@ function staffLandingPath(schoolId: string, type: StaffPortalLoginOption['type']
     if (type === 'reports') return `/${schoolId}/reports`;
     if (type === 'librarian') return `/${schoolId}/librarian`;
     if (type === 'office') return `/${schoolId}/office`;
+    if (type === 'houseCoordinator') return `/${schoolId}/admin`;
     return `/${schoolId}/teacher`;
 }
 
@@ -195,7 +197,10 @@ export default function PortalPage() {
         loginState === 'developer' ||
         loginState === 'secretary' ||
         loginState === 'prizeClerk' ||
-        loginState === 'reports';
+        loginState === 'reports' ||
+        loginState === 'librarian' ||
+        loginState === 'office' ||
+        loginState === 'houseCoordinator';
 
     const firestore = useFirestore();
     const schoolPublicRef = useMemoFirebase(
@@ -215,7 +220,8 @@ export default function PortalPage() {
                         option.type === 'prizeClerk' ||
                         option.type === 'reports' ||
                         option.type === 'librarian' ||
-                        option.type === 'office'),
+                        option.type === 'office' ||
+                        option.type === 'houseCoordinator'),
             ),
         [schoolPublic],
     );

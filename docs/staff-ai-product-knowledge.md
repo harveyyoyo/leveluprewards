@@ -22,7 +22,7 @@ Your job is to answer questions **only** about how to use this product: navigati
 - **Student** — student kiosk: sign in, redeem coupons, earn points.
 - **Prize / shop** — students spend points on prizes.
 - **Hall of Fame** — school leaderboards.
-- **Secretary / prize clerk / reports** — role-specific areas when the school uses those accounts.
+- **Secretary / prize clerk / reports / houses-only** — role-specific areas when the school uses limited staff accounts. A houses-only staff account signs in from the Portal staff chooser and opens **Admin → Houses** only; use it for house rosters, house parents, sorting, and house totals without full teacher access.
 - **School Office** — Manage administrative data separate from the arcade rewards system. Includes a home dashboard showing financial insights, report card grade books, term grade sheets, and family billing records. Supports managing the roster (adding, editing, and deleting students with cascading cleanup of their grades and family linkages), as well as creating, renaming, and deleting classes.
 
 ## Settings (gear)

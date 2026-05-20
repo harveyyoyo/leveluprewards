@@ -689,7 +689,16 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         () => isStudentKioskUiContext(loginState, pathname, schoolId),
         [loginState, pathname, schoolId],
     );
-    const isStaff = loginState === 'admin' || loginState === 'developer' || loginState === 'teacher' || loginState === 'secretary' || loginState === 'prizeClerk' || loginState === 'reports' || loginState === 'librarian' || loginState === 'office';
+    const isStaff =
+        loginState === 'admin' ||
+        loginState === 'developer' ||
+        loginState === 'teacher' ||
+        loginState === 'secretary' ||
+        loginState === 'prizeClerk' ||
+        loginState === 'reports' ||
+        loginState === 'librarian' ||
+        loginState === 'office' ||
+        loginState === 'houseCoordinator';
     const schoolDocRef = useMemoFirebase(() => {
         if (!firestore || !schoolId) return null;
         const sid = schoolId.trim().toLowerCase();

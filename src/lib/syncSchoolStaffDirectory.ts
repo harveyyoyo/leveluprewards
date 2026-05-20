@@ -11,7 +11,14 @@ export type StaffPortalLoginOption = {
   updatedAt?: number;
 };
 
-const PORTAL_STAFF_ROLES: StaffAccountRole[] = ['secretary', 'prizeClerk', 'reports', 'librarian', 'office'];
+const PORTAL_STAFF_ROLES: StaffAccountRole[] = [
+  'secretary',
+  'prizeClerk',
+  'reports',
+  'librarian',
+  'office',
+  'houseCoordinator',
+];
 
 function normalizePortalKeyPart(value: string) {
   return value.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '');
