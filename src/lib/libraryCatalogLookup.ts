@@ -134,7 +134,7 @@ async function lookupOpenLibrary(variants: string[]): Promise<LibraryCatalogHit 
   if (!variants.length) return null;
   const bibkeys = variants.map((v) => `ISBN:${v}`).join(',');
   const url = `https://openlibrary.org/api/books?bibkeys=${encodeURIComponent(bibkeys)}&format=json&jscmd=data`;
-  const res = await fetch(url, { next: { revalidate: 86400 } } });
+  const res = await fetch(url, { next: { revalidate: 86400 } });
   if (!res.ok) return null;
   const data = (await res.json()) as Record<string, OpenLibraryDataBook>;
   for (const key of Object.keys(data)) {
@@ -147,7 +147,7 @@ async function lookupOpenLibrary(variants: string[]): Promise<LibraryCatalogHit 
 async function lookupOpenLibrarySearch(variants: string[]): Promise<LibraryCatalogHit | null> {
   for (const isbn of variants) {
     const url = `https://openlibrary.org/search.json?isbn=${encodeURIComponent(isbn)}&limit=1&fields=title,author_name,isbn,subject`;
-    const res = await fetch(url, { next: { revalidate: 86400 } } });
+    const res = await fetch(url, { next: { revalidate: 86400 } });
     if (!res.ok) continue;
     const data = (await res.json()) as {
       docs?: { title?: string; author_name?: string[]; isbn?: string[]; subject?: string[] }[];
@@ -167,7 +167,7 @@ async function lookupOpenLibrarySearch(variants: string[]): Promise<LibraryCatal
 async function lookupGoogleBooks(variants: string[]): Promise<LibraryCatalogHit | null> {
   for (const isbn of variants) {
     const url = `https://www.googleapis.com/books/v1/volumes?q=isbn:${encodeURIComponent(isbn)}&maxResults=1`;
-    const res = await fetch(url, { next: { revalidate: 86400 } } });
+    const res = await fetch(url, { next: { revalidate: 86400 } });
     if (!res.ok) continue;
     const data = (await res.json()) as {
       items?: {
