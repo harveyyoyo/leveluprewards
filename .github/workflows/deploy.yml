@@ -49,8 +49,8 @@ jobs:
               firestore.rules) firestore_rules_changed=true ;;
               functions/*) functions_changed=true ;;
               .github/workflows/deploy.yml)
-                # A deploy-workflow change should publish backend updates as a safety net.
-                firestore_rules_changed=true
+                # A deploy-workflow change can force a Functions redeploy without
+                # requiring Firestore Rules IAM on every workflow-only patch.
                 functions_changed=true
                 ;;
             esac
