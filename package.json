@@ -36,6 +36,7 @@
     "generate:flyer-pdf": "node scripts/generate-flyer-pdf.mjs",
     "capture:walkthrough": "node scripts/capture-walkthrough-videos.mjs",
     "dev:tunnel": "node scripts/dev-public-tunnel.mjs",
+    "dev:tunnel:cloudflare": "cross-env TUNNEL_PROVIDER=cloudflare node scripts/dev-public-tunnel.mjs",
     "nanobanana:ppt": "cd tools/NanoBanana-PPT-Skills && venv\\Scripts\\python.exe generate_ppt.py"
   },
   "dependencies": {
