@@ -124,6 +124,8 @@ interface Settings {
     // Prize/Rewards shop
     enablePrizeImages: boolean;
     enablePrizeAiSurprise: boolean;
+    /** When on, the student kiosk adds an AI compliment (by coupon category) when a coupon is redeemed. */
+    enableCouponRedeemCompliments?: boolean;
     /** Point cost for the built-in Fun AI reward shown when AI surprise is enabled. */
     prizeAiSurpriseDefaultPoints: number;
     enablePrizeCategories: boolean;
@@ -305,13 +307,20 @@ interface Settings {
     payOffice?: boolean;
     /** Default checkout loan length before a book is overdue. */
     libraryLoanPeriodDays?: number;
+    /**
+     * How returns affect balances: none | fines | app_points | isolated_points.
+     * Legacy schools without this field infer from category + late/bonus settings.
+     */
+    libraryRewardMode?: 'none' | 'fines' | 'app_points' | 'isolated_points';
+    /** When true, show the standalone student self-checkout portal at /library/self-checkout. */
+    libraryAutoStudentPortalEnabled?: boolean;
     /** When true, overdue returns deduct points via the library category. */
     libraryLateFeesEnabled?: boolean;
     /** Points removed per calendar day late (applied on return). */
     libraryLatePointsPerDay?: number;
     /** Optional points added when returned on or before due date. */
     libraryOnTimeReturnPoints?: number;
-    /** Category used for library late fees and on-time bonuses. */
+    /** Category used for library late fees and on-time bonuses (app_points mode). */
     libraryPointsCategoryId?: string;
 
     // Student Portal Interface overrides (set by admin)
@@ -459,6 +468,7 @@ const defaultSettings: Settings = {
     enableShoutouts: false,
     enablePrizeImages: false,
     enablePrizeAiSurprise: false,
+    enableCouponRedeemCompliments: true,
     prizeAiSurpriseDefaultPoints: 1,
     enablePrizeCategories: false,
     enableWishlist: false,
@@ -835,6 +845,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                 }
                 if (typeof parsed.kioskCouponRedemptionManualEnabled !== 'boolean') parsed.kioskCouponRedemptionManualEnabled = true;
                 if (typeof parsed.kioskCouponRedemptionCameraEnabled !== 'boolean') parsed.kioskCouponRedemptionCameraEnabled = true;
+                if (typeof parsed.enableCouponRedeemCompliments !== 'boolean') {
+                    parsed.enableCouponRedeemCompliments = true;
+                }
                 // Keep legacy mode aligned for any old reads.
                 if (!parsed.kioskCouponRedemptionManualEnabled && !parsed.kioskCouponRedemptionCameraEnabled) {
                     parsed.kioskCouponRedemptionInput = 'off';

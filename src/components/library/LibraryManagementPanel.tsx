@@ -35,8 +35,13 @@ import type { LibraryLabelFormat } from '@/lib/libraryScanCode';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LibraryBookBulkIntakeScanner } from './LibraryBookBulkIntakeScanner';
 import { LibraryBookIntakeScanner } from './LibraryBookIntakeScanner';
+import Link from 'next/link';
+import { ExternalLink } from 'lucide-react';
+import { useSettings } from '@/components/providers/SettingsProvider';
+import { useAppContext } from '@/components/AppProvider';
 import { LibraryCheckoutDesk } from './LibraryCheckoutDesk';
 import { LibraryPolicySettingsCard } from './LibraryPolicySettingsCard';
+import { Switch } from '@/components/ui/switch';
 import type { Category, Student } from '@/lib/types';
 
 export type LibrarySortKey = 'title' | 'author' | 'shelf' | 'status' | 'barcode' | 'checkedOut';
@@ -70,6 +75,8 @@ export function LibraryManagementPanel({
   const { setLibraryStickersToPrint } = usePrint();
   const { toast } = useToast();
   const confirm = useConfirm();
+  const { settings, updateSettings } = useSettings();
+  const { schoolId } = useAppContext();
   const [sortKey, setSortKey] = useState<LibrarySortKey>('title');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [labelFormat, setLabelFormat] = useState<LibraryLabelFormat>('sticker');
@@ -623,6 +630,28 @@ export function LibraryManagementPanel({
 
           {/* Student Checkout Tab */}
           <TabsContent value="desk" className="space-y-6 outline-none mt-4">
+            <div className="rounded-xl border border-dashed bg-muted/20 p-4 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-bold">Auto library student portal</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Full-screen kiosk: scan student card, then book. Staff passcode required to exit.
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.libraryAutoStudentPortalEnabled === true}
+                  onCheckedChange={(v) => updateSettings({ libraryAutoStudentPortalEnabled: v })}
+                />
+              </div>
+              {settings.libraryAutoStudentPortalEnabled && schoolId ? (
+                <Button variant="outline" size="sm" className="rounded-xl" asChild>
+                  <Link href={`/${schoolId}/library/self-checkout`} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    Open self-checkout portal
+                  </Link>
+                </Button>
+              ) : null}
+            </div>
             <div className="grid grid-cols-1 gap-6">
               <LibraryCheckoutDesk
                 getStudentName={getStudentName}

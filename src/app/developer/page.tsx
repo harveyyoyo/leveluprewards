@@ -184,12 +184,12 @@ export default function DeveloperPage() {
   } = useAppContext();
   const firestore = useFirestore();
   const functions = useFunctions();
-  const { auth } = useFirebase();
+  const { user: firebaseUser } = useFirebase();
   const { toast } = useToast();
   const playSound = useArcadeSound();
   const { settings, updateSettings } = useSettings();
 
-  const allowedDeveloper = isAllowedDeveloperGoogleUser(auth?.currentUser);
+  const allowedDeveloper = isAllowedDeveloperGoogleUser(firebaseUser);
 
   const [isCreateSchoolDialogOpen, setIsCreateSchoolDialogOpen] = useState(false);
   const [newSchoolId, setNewSchoolId] = useState('');
@@ -745,8 +745,8 @@ export default function DeveloperPage() {
                     <code className="rounded bg-background px-1 py-0.5 text-xs">addDeveloperMe</code> can run.
                     You can also add your UID manually in the Firebase console under that document.
                   </p>
-                  {auth.currentUser?.uid ? (
-                    <p className="font-mono text-xs opacity-90 pt-1">Your UID: {auth.currentUser.uid}</p>
+                  {firebaseUser?.uid ? (
+                    <p className="font-mono text-xs opacity-90 pt-1">Your UID: {firebaseUser.uid}</p>
                   ) : null}
                 </AlertDescription>
               </Alert>

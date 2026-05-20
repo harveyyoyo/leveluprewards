@@ -4,6 +4,21 @@ const path = require('path');
 
 const projectRoot = __dirname;
 
+/** Footer build stamp — always US Eastern (EST/EDT via America/New_York). */
+function formatBuildTimeEastern() {
+  return new Date().toLocaleString('en-US', {
+    timeZone: 'America/New_York',
+    month: 'numeric',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true,
+    timeZoneName: 'short',
+  });
+}
+
 const nextConfig = {
   /** Allow HMR / _next assets when visiting dev via public tunnels (see Next.js allowedDevOrigins). */
   allowedDevOrigins: [
@@ -133,7 +148,7 @@ const nextConfig = {
   },
   env: {
     NEXT_PUBLIC_VERSION: `beta-1.1.0`,
-    NEXT_PUBLIC_BUILD_TIME: new Date().toLocaleString(),
+    NEXT_PUBLIC_BUILD_TIME: formatBuildTimeEastern(),
   },
 };
 

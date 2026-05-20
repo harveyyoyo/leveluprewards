@@ -24,7 +24,7 @@ import {
   listPendingTeacherAwards,
   updatePendingTeacherAwards,
 } from '@/lib/pendingTeacherAwards';
-import { couponIsKnownAndValidOffline, saveCouponSnapshot } from '@/lib/couponCache';
+import { couponIsKnownAndValidOffline, loadCouponSnapshot, saveCouponSnapshot } from '@/lib/couponCache';
 import type { LoginResult } from '@/lib/loginResult';
 import { AI_FUN_UNIFIED_PRIZE_ID } from '@/lib/aiJokePrize';
 import { isStudentKioskRoute, isStudentKioskUiContext } from '@/lib/studentKioskRoute';
@@ -81,7 +81,7 @@ interface AppContextType {
   updateCategory: (category: Category) => Promise<void>;
   deleteCategory: (categoryId: string) => Promise<void>;
   addCoupons: (coupons: Coupon[]) => Promise<void>;
-  redeemCoupon: (studentId: string, couponCode: string) => Promise<{ success: boolean; message: string; value?: number; bonusTotal?: number }>;
+  redeemCoupon: (studentId: string, couponCode: string) => Promise<{ success: boolean; message: string; value?: number; bonusTotal?: number; category?: string }>;
   deleteCoupon: (couponId: string) => Promise<void>;
   deleteCoupons: (couponIds: string[]) => Promise<void>;
   awardPoints: (studentId: string, points: number, description: string) => Promise<{ success: boolean; message: string; bonusTotal?: number; queued?: boolean }>;
@@ -499,7 +499,13 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
       const ok = couponIsKnownAndValidOffline(schoolId, couponCode);
       if (!ok.ok) return { success: false, message: ok.reason || 'Coupon not valid offline.' };
       addPendingCouponRedemption({ schoolId, studentId, couponCode, createdAt: Date.now() });
-      return { success: true, message: 'Saved offline (pending sync).' };
+      const cached = loadCouponSnapshot(schoolId)?.couponsByCode[couponCode];
+      return {
+        success: true,
+        message: 'Saved offline (pending sync).',
+        value: cached?.value,
+        category: cached?.category,
+      };
     }
 
     // Online: kiosk-safe server redemption.
@@ -507,7 +513,13 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
       const fn = httpsCallable(functions, 'redeemCouponServer');
       const res = await fn({ schoolId, studentId, couponCode });
       const data = res.data as any;
-      return { success: !!data?.success, message: String(data?.message || 'Redeemed.'), value: data?.value };
+      return {
+        success: !!data?.success,
+        message: String(data?.message || 'Redeemed.'),
+        value: data?.value,
+        bonusTotal: data?.bonusTotal,
+        category: typeof data?.category === 'string' ? data.category : undefined,
+      };
     } catch (e: any) {
       return { success: false, message: e?.message || 'Could not redeem this coupon.' };
     }

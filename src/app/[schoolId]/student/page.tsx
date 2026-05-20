@@ -138,12 +138,16 @@ import {
   StudentKioskMobileRewardsGrid,
 } from '@/components/student-kiosk/StudentKioskRedeemUI';
 import { getStudentPointTypeTotals } from '@/lib/studentPointTypes';
+import {
+  COUPON_TRASH_REMINDER,
+  couponRedeemStudentMessage,
+  requestCouponRedeemCompliment,
+} from '@/lib/couponRedeemCompliment';
 
 const STUDENT_TRANSITION_MIN_VISIBLE_MS = 650;
 const STUDENT_TRANSITION_EXIT_MS = 320;
 /** If the dashboard never signals ready (e.g. Firestore error), do not leave the full-screen transition layer up indefinitely. */
 const STUDENT_TRANSITION_FAILSAFE_MS = 30_000;
-const COUPON_TRASH_REMINDER = '🗑️ Toss your coupon in the trash — thanks!';
 
 const AI_SURPRISE_KIND_LABEL: Record<string, string> = {
   joke: 'Your joke',
@@ -628,6 +632,8 @@ function StudentDashboardInner({
 
   const [couponCode, setCouponCode] = useState('');
   const [flyPointsValue, setFlyPointsValue] = useState<number | null>(null);
+  const [flyCompliment, setFlyCompliment] = useState<string | null>(null);
+  const flyDismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [celebrationMessage, setCelebrationMessage] = useState<string | null>(null);
   const celebrationQueueRef = useRef<string[]>([]);
   const celebrationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -656,10 +662,20 @@ function StudentDashboardInner({
   useEffect(() => {
     return () => {
       if (celebrationTimerRef.current) clearTimeout(celebrationTimerRef.current);
+      if (flyDismissTimerRef.current) clearTimeout(flyDismissTimerRef.current);
     };
   }, []);
 
   const [showRedeem, setShowRedeem] = useState(true);
+  const scheduleFlyDismiss = useCallback((ms: number) => {
+    if (flyDismissTimerRef.current) clearTimeout(flyDismissTimerRef.current);
+    flyDismissTimerRef.current = setTimeout(() => {
+      setFlyPointsValue(null);
+      setFlyCompliment(null);
+      setShowRedeem(false);
+      flyDismissTimerRef.current = null;
+    }, ms);
+  }, []);
   const [confirmingPrize, setConfirmingPrize] = useState<Prize | null>(null);
   const [confirmingFunKind, setConfirmingFunKind] = useState<PrizeAiFunReward>('joke');
   const [isRedeemingPrize, setIsRedeemingPrize] = useState(false);
@@ -988,13 +1004,35 @@ function StudentDashboardInner({
 
       if (result.success) {
         playSound('redeem');
+        const points = result.value || 0;
+        const category = result.category || 'Coupon';
+        const complimentsOn = settings.enableCouponRedeemCompliments !== false;
+        let compliment: string | null = null;
+
+        if (complimentsOn && schoolId) {
+          compliment = await requestCouponRedeemCompliment(authFetch, {
+            schoolId,
+            category,
+            points,
+            firstName: getStudentNickname(student),
+            birthday: student.birthday,
+          });
+        }
+
+        const studentMessage = couponRedeemStudentMessage({
+          points,
+          compliment,
+          includeTrashReminder: true,
+        });
+
         toast({
           title: 'Coupon Redeemed!',
-          description: `You gained ${result.value} points. ${COUPON_TRASH_REMINDER}`,
+          description: studentMessage,
         });
         animationKey.current += 1;
-        setFlyPointsValue(result.value || null);
-        setTimeout(() => { setFlyPointsValue(null); setShowRedeem(false); }, 1500);
+        setFlyCompliment(compliment);
+        setFlyPointsValue(points);
+        scheduleFlyDismiss(complimentsOn && compliment ? 3200 : 1800);
         if (settings.enableGoals && schoolId && firestore) {
           void import('@/lib/goalsProgress').then((m) =>
             m.syncGoalsForStudent(firestore, schoolId, student.id).catch(() => {}),
@@ -1025,6 +1063,8 @@ function StudentDashboardInner({
     activeTab,
     settings.payLibrary,
     settings.enableGoals,
+    settings.enableCouponRedeemCompliments,
+    authFetch,
     firestore,
     schoolId,
     libraryPolicy,
@@ -1464,7 +1504,11 @@ function StudentDashboardInner({
         <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
           {celebrationMessage ||
             (flyPointsValue !== null
-              ? `You earned ${flyPointsValue} points. ${COUPON_TRASH_REMINDER}`
+              ? couponRedeemStudentMessage({
+                  points: flyPointsValue,
+                  compliment: flyCompliment,
+                  includeTrashReminder: true,
+                })
               : '')}
         </div>
 
@@ -1491,6 +1535,11 @@ function StudentDashboardInner({
               <div className="animate-fly-up text-4xl md:text-6xl font-black tracking-widest text-emerald-400 drop-shadow-[0_0_14px_rgba(52,211,153,0.75)]">
                 +{flyPointsValue} PTS
               </div>
+              {flyCompliment ? (
+                <p className="animate-in fade-in slide-in-from-bottom-2 duration-500 text-sm md:text-base font-bold text-amber-100 drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)] max-w-sm leading-snug">
+                  {flyCompliment}
+                </p>
+              ) : null}
               <p className="animate-in fade-in slide-in-from-bottom-2 duration-500 text-sm md:text-base font-bold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)] max-w-xs leading-snug">
                 {COUPON_TRASH_REMINDER}
               </p>

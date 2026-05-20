@@ -17,11 +17,11 @@ import { useFirestore, useMemoFirebase, useDoc, useFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import {
   GoogleAuthProvider,
-  getRedirectResult,
   linkWithPopup,
   linkWithRedirect,
   signInWithPopup,
   signInWithRedirect,
+  signOut,
 } from 'firebase/auth';
 import { Loader2 } from 'lucide-react';
 
@@ -52,6 +52,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
   const passcodeRef = useRef<HTMLInputElement | null>(null);
   const lastAutoFocusedRef = useRef<null | 'schoolId' | 'passcode'>(null);
   const developerAutoLoginAttemptedRef = useRef(false);
+  const developerLoginCompletedUidRef = useRef<string | null>(null);
   const schoolLoginIntentRef = useRef(false);
   const { login, isInitialized, isUserLoading, loginState } = useAppContext();
   const { toast } = useToast();
@@ -60,7 +61,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
   const playSound = useArcadeSound();
   const { settings } = useSettings();
   const [mounted, setMounted] = useState(false);
-  const { auth } = useFirebase();
+  const { auth, user: firebaseUser } = useFirebase();
 
   const triggerShake = () => {
     setIsShaking(true);
@@ -99,48 +100,6 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
       // ignore
     }
   };
-
-  // If we had to fall back to redirect-based sign-in (popup blocked),
-  // complete the flow when we return to this page — only for explicit developer intent.
-  useEffect(() => {
-    if (!mounted || !auth) return;
-    void (async () => {
-      try {
-        const res = await getRedirectResult(auth);
-        if (!res?.user) return;
-        const allowed = isAllowedDeveloperGoogleUser(res.user);
-        const pendingDeveloper = shouldCompleteDeveloperLogin();
-        toast({
-          title: allowed ? 'Google sign-in complete' : 'Google sign-in complete (no dev access)',
-          description: allowed
-            ? pendingDeveloper
-              ? 'Finishing developer sign-in…'
-              : 'Developer mode is available if you switch to developer login.'
-            : 'This Google account is not on the developer allowlist.',
-        });
-        if (allowed && pendingDeveloper) {
-          clearPendingDeveloperLogin();
-          setIsSubmitting(true);
-          try {
-            const loginRes = await login('developer', {});
-            if (loginRes.ok) {
-              playSound('login');
-              if (pathname !== '/developer') {
-                router.push('/developer');
-              }
-            }
-          } finally {
-            setIsSubmitting(false);
-          }
-        } else {
-          clearPendingDeveloperLogin();
-        }
-      } catch (e) {
-        // getRedirectResult throws if there was no pending redirect in some environments.
-      }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [auth, mounted]);
 
   useEffect(() => {
     if (!mounted || typeof window === 'undefined') return;
@@ -196,12 +155,12 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
     (process.env.NEXT_PUBLIC_ENABLE_DEV_LOGIN === 'true' || process.env.NODE_ENV === 'development');
 
   const hasGoogleUser =
-    !!auth.currentUser &&
-    !auth.currentUser.isAnonymous &&
-    auth.currentUser.providerData.some((p) => p.providerId === 'google.com');
+    !!firebaseUser &&
+    !firebaseUser.isAnonymous &&
+    firebaseUser.providerData.some((p) => p.providerId === 'google.com');
 
-  const googleEmail = (auth.currentUser?.email ?? '').trim().toLowerCase();
-  const isAllowedGoogleEmail = isAllowedDeveloperGoogleUser(auth.currentUser);
+  const googleEmail = (firebaseUser?.email ?? '').trim().toLowerCase();
+  const isAllowedGoogleEmail = isAllowedDeveloperGoogleUser(firebaseUser);
 
   const allowDeveloperToggle = allowDeveloperLogin && isAllowedGoogleEmail;
 
@@ -212,46 +171,61 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
     }
     if (!allowDeveloperToggle && isDeveloper) setIsDeveloper(false);
   }, [allowDeveloperToggle, isDeveloper, isDeveloperOnly]);
-  // Auto-log into developer mode only when the user explicitly chose developer login
-  // (`/developer` or the "Developer? Click here" toggle). Never hijack school sign-in.
-  useEffect(() => {
-    if (!mounted || !isInitialized || isUserLoading) return;
-    if (loginState === 'developer' || loginState === 'school') return;
-    if (schoolLoginIntentRef.current) return;
+  const completeDeveloperLogin = async (options?: { force?: boolean }) => {
+    if (!firebaseUser || !allowDeveloperLogin || !isAllowedGoogleEmail) return;
     if (!isDeveloperOnly && !isDeveloper) return;
-    if (!allowDeveloperLogin || !isAllowedGoogleEmail) return;
-    if (isSubmitting || developerAutoLoginAttemptedRef.current) return;
+    if (
+      !options?.force &&
+      loginState === 'developer' &&
+      developerLoginCompletedUidRef.current === firebaseUser.uid
+    ) {
+      return;
+    }
+    if (!options?.force && (isSubmitting || developerAutoLoginAttemptedRef.current)) return;
 
     developerAutoLoginAttemptedRef.current = true;
     setIsSubmitting(true);
-    void (async () => {
+    try {
+      const result = await login('developer', {});
+      if (schoolLoginIntentRef.current) return;
       try {
-        const result = await login('developer', {});
-        if (schoolLoginIntentRef.current) return;
-        try {
-          if (localStorage.getItem('loginState') === 'school') return;
-        } catch {
-          // ignore
-        }
-        if (result.ok) {
-          playSound('login');
-          if (pathname !== '/developer') {
-            router.push('/developer');
-          }
-        } else {
-          developerAutoLoginAttemptedRef.current = false;
-          playSound('error');
-          triggerShake();
-          toast({
-            variant: 'destructive',
-            title: 'Developer sign-in failed',
-            description: result.message,
-          });
-        }
-      } finally {
-        setIsSubmitting(false);
+        if (localStorage.getItem('loginState') === 'school') return;
+      } catch {
+        // ignore
       }
-    })();
+      if (result.ok) {
+        developerLoginCompletedUidRef.current = firebaseUser.uid;
+        clearPendingDeveloperLogin();
+        playSound('login');
+        if (pathname !== '/developer') {
+          router.push('/developer');
+        }
+      } else {
+        developerAutoLoginAttemptedRef.current = false;
+        playSound('error');
+        triggerShake();
+        toast({
+          variant: 'destructive',
+          title: 'Developer sign-in failed',
+          description: result.message,
+        });
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Finish developer login when Google auth is ready (popup or redirect).
+  // FirebaseProvider consumes getRedirectResult first; we watch `firebaseUser` instead.
+  useEffect(() => {
+    if (!mounted || !isInitialized || isUserLoading || !firebaseUser) return;
+    if (loginState === 'school') return;
+    if (schoolLoginIntentRef.current) return;
+    if (!isDeveloperOnly && !isDeveloper) return;
+    if (!allowDeveloperLogin || !isAllowedGoogleEmail) return;
+    const pendingDeveloper = shouldCompleteDeveloperLogin();
+    if (!isDeveloperOnly && !pendingDeveloper) return;
+    void completeDeveloperLogin();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     mounted,
@@ -262,15 +236,41 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
     isAllowedGoogleEmail,
     isDeveloperOnly,
     isDeveloper,
+    firebaseUser,
   ]);
 
+  const handleDeveloperPrimaryAction = () => {
+    if (allowDevPasscodeLogin && developerPasscode.trim()) {
+      void handleDeveloperPasscodeLogin();
+      return;
+    }
+    if (isAllowedGoogleEmail) {
+      void completeDeveloperLogin({ force: true });
+      return;
+    }
+    void handleGoogleSignIn();
+  };
 
   const handleGoogleSignIn = async () => {
-    if (!auth) return;
+    if (!auth) {
+      toast({
+        variant: 'destructive',
+        title: 'Google sign-in unavailable',
+        description: 'Firebase auth is still loading. Wait a moment and try again.',
+      });
+      return;
+    }
+    developerAutoLoginAttemptedRef.current = false;
     setIsGoogleSigningIn(true);
     try {
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
+
+      // Wrong Google account linked — sign out so the user can pick another.
+      if (hasGoogleUser && !isAllowedGoogleEmail) {
+        await signOut(auth);
+      }
+
       // If the app started an anonymous session (normal for this app),
       // link it to Google so the UID stays stable for role provisioning.
       const result = auth.currentUser?.isAnonymous
@@ -291,28 +291,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
           : 'This Google account is not on the developer allowlist.',
       });
       if (allowed && (isDeveloperOnly || isDeveloper)) {
-        developerAutoLoginAttemptedRef.current = true;
-        setIsSubmitting(true);
-        try {
-          const loginRes = await login('developer', {});
-          if (loginRes.ok) {
-            playSound('login');
-            if (pathname !== '/developer') {
-              router.push('/developer');
-            }
-          } else {
-            developerAutoLoginAttemptedRef.current = false;
-            playSound('error');
-            triggerShake();
-            toast({
-              variant: 'destructive',
-              title: 'Developer sign-in failed',
-              description: loginRes.message,
-            });
-          }
-        } finally {
-          setIsSubmitting(false);
-        }
+        await completeDeveloperLogin({ force: true });
       }
     } catch (err) {
       const e = err as { code?: string; message?: string };
@@ -540,11 +519,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
             onSubmit={(e) => {
               e.preventDefault();
               if (isDeveloperOnly || isDeveloper) {
-                if (allowDevPasscodeLogin && developerPasscode.trim()) {
-                  void handleDeveloperPasscodeLogin();
-                  return;
-                }
-                if (!isAllowedGoogleEmail) void handleGoogleSignIn();
+                handleDeveloperPrimaryAction();
                 return;
               }
               void handleSchoolEntry();
@@ -606,12 +581,19 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
                 </div>
               ) : (isDeveloperOnly || isDeveloper) && hasGoogleUser && !isAllowedGoogleEmail ? null : (
                 <button
-                  type="submit"
+                  type={isDeveloperOnly || isDeveloper ? 'button' : 'submit'}
+                  onClick={
+                    isDeveloperOnly || isDeveloper
+                      ? () => handleDeveloperPrimaryAction()
+                      : undefined
+                  }
                   aria-label={
                     isDeveloperOnly || isDeveloper
                       ? allowDevPasscodeLogin && developerPasscode.trim()
                         ? 'Sign in with developer passcode'
-                        : 'Sign in with Google'
+                        : isAllowedGoogleEmail
+                          ? 'Continue to developer portal'
+                          : 'Sign in with Google'
                       : 'Sign in to school'
                   }
                   disabled={isSubmitting || isGoogleSigningIn}
@@ -623,7 +605,9 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
                     : isDeveloperOnly || isDeveloper
                       ? allowDevPasscodeLogin && developerPasscode.trim()
                         ? 'Sign in with passcode'
-                        : 'Sign in with Google'
+                        : isAllowedGoogleEmail
+                          ? 'Continue to developer portal'
+                          : 'Sign in with Google'
                       : 'Continue'}
                 </button>
               )}
@@ -660,11 +644,28 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
               )}
 
               {allowDeveloperLogin && hasGoogleUser && !isAllowedGoogleEmail && (
-                <div className="rounded-xl border border-border/70 bg-background/60 p-3">
-                  <p className="text-xs font-semibold text-muted-foreground">Developer mode locked</p>
-                  <p className="mt-1 text-xs text-muted-foreground/80 leading-relaxed">
-                    Signed in as <span className="font-mono text-foreground">{googleEmail || '(unknown)'}</span>. This Google account is not allowed for developer access.
-                  </p>
+                <div className="rounded-xl border border-border/70 bg-background/60 p-3 space-y-3">
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground">Developer mode locked</p>
+                    <p className="mt-1 text-xs text-muted-foreground/80 leading-relaxed">
+                      Signed in as <span className="font-mono text-foreground">{googleEmail || '(unknown)'}</span>. This Google account is not allowed for developer access.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void handleGoogleSignIn()}
+                    disabled={isGoogleSigningIn}
+                    className="w-full h-10 rounded-lg border border-border bg-card hover:bg-muted transition-colors text-xs font-semibold inline-flex items-center justify-center gap-2 disabled:opacity-60"
+                  >
+                    {isGoogleSigningIn ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                        Opening Google…
+                      </>
+                    ) : (
+                      'Use a different Google account'
+                    )}
+                  </button>
                 </div>
               )}
 

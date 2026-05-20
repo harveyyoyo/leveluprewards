@@ -202,6 +202,10 @@ export interface Student {
   updatedAt?: number;
   points: number;
   lifetimePoints?: number;
+  /** Library-only point balance (not used for prizes or teacher awards). */
+  libraryPoints?: number;
+  /** Accumulated library fine balance (abstract units, not school reward points). */
+  libraryFineBalance?: number;
   classId?: string;
   houseId?: string;
   nfcId: string;

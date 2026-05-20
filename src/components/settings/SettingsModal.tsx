@@ -1480,6 +1480,20 @@ export function SettingsModal() {
                                         ) : null}
                                     </div>
 
+                                    <div className="flex items-center justify-between border-t border-slate-200/60 dark:border-slate-700/50 pt-4">
+                                        <div className="flex flex-col pr-4">
+                                            <span className="text-sm font-bold">Coupon redeem compliments</span>
+                                            <p className="text-[11px] text-muted-foreground">
+                                                After a student scans a coupon, show an AI praise line tied to the coupon category, plus the toss-in-trash reminder.
+                                            </p>
+                                        </div>
+                                        <Switch
+                                            checked={local.enableCouponRedeemCompliments !== false}
+                                            onCheckedChange={(checked) => handleToggle('enableCouponRedeemCompliments', checked)}
+                                            disabled={!isAdmin}
+                                        />
+                                    </div>
+
                                     <div className="flex items-center justify-between">
                                         <div className="flex flex-col">
                                             <span className="text-sm font-bold">Welcome splash duration</span>

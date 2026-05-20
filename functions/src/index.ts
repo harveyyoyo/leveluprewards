@@ -1383,7 +1383,7 @@ async function redeemCouponForStudent(
   schoolId: string,
   studentId: string,
   couponCode: string
-): Promise<{ value: number; bonusTotal: number }> {
+): Promise<{ value: number; bonusTotal: number; category: string }> {
   const schoolRef = db.collection("schools").doc(schoolId);
   const couponRef = schoolRef.collection("coupons").doc(couponCode);
   const studentRef = schoolRef.collection("students").doc(studentId);
@@ -1499,7 +1499,7 @@ async function redeemCouponForStudent(
     const code = String(coupon.code || couponCode);
     tx.set(studentRef.collection("activities").doc(), { desc: `Redeemed coupon: ${code} (${cat})`, amount: value, date: now });
     tx.update(couponRef, { used: true, usedAt: now, usedBy: studentId });
-    return { value, bonusTotal };
+    return { value, bonusTotal, category: categoryName };
   });
 }
 
@@ -1537,6 +1537,7 @@ exports.redeemCouponServer = functions
       message: "Redeemed successfully",
       value: result.value,
       bonusTotal: result.bonusTotal,
+      category: result.category,
     };
   }
 );
@@ -1624,6 +1625,20 @@ exports.libraryReturnServer = functions
       }
     }
 
+    const rawRewardMode =
+      typeof appSettings.libraryRewardMode === "string" ? appSettings.libraryRewardMode.trim() : "";
+    let rewardMode: "none" | "fines" | "app_points" | "isolated_points" = "none";
+    if (
+      rawRewardMode === "none" ||
+      rawRewardMode === "fines" ||
+      rawRewardMode === "app_points" ||
+      rawRewardMode === "isolated_points"
+    ) {
+      rewardMode = rawRewardMode;
+    } else if (categoryName && (lateFeesEnabled || onTimeReturnPoints > 0)) {
+      rewardMode = "app_points";
+    }
+
     const itemName = typeof itemData.name === "string" ? itemData.name.trim() : "Book";
     const now = Date.now();
     const daysOverdue = libraryDaysOverdue(itemData.dueAt, now);
@@ -1631,13 +1646,24 @@ exports.libraryReturnServer = functions
     let pointsDelta = 0;
     let pointsMessage = "";
 
-    if (categoryName) {
+    if (rewardMode === "fines" && daysOverdue > 0 && lateFeesEnabled && latePointsPerDay > 0) {
+      pointsDelta = daysOverdue * latePointsPerDay;
+      pointsMessage = `Late return: ${pointsDelta} library fine${pointsDelta === 1 ? "" : "s"} added.`;
+    } else if (rewardMode === "app_points" && categoryName) {
       if (daysOverdue > 0 && lateFeesEnabled && latePointsPerDay > 0) {
         pointsDelta = -(daysOverdue * latePointsPerDay);
         pointsMessage = `Late return: ${Math.abs(pointsDelta)} point(s) deducted (${categoryName}).`;
       } else if (daysOverdue === 0 && onTimeReturnPoints > 0) {
         pointsDelta = onTimeReturnPoints;
         pointsMessage = `On-time return: +${pointsDelta} point(s) (${categoryName}).`;
+      }
+    } else if (rewardMode === "isolated_points") {
+      if (daysOverdue > 0 && lateFeesEnabled && latePointsPerDay > 0) {
+        pointsDelta = -(daysOverdue * latePointsPerDay);
+        pointsMessage = `Late return: ${Math.abs(pointsDelta)} library point(s) deducted.`;
+      } else if (daysOverdue === 0 && onTimeReturnPoints > 0) {
+        pointsDelta = onTimeReturnPoints;
+        pointsMessage = `On-time return: +${pointsDelta} library point(s).`;
       }
     }
 
@@ -1652,31 +1678,52 @@ exports.libraryReturnServer = functions
         dueAt: null,
       });
 
-      if (pointsDelta !== 0 && studentSnap.exists) {
+      if (studentSnap.exists) {
         const studentData = studentSnap.data() as {
           points?: number;
           categoryPoints?: Record<string, number>;
+          libraryPoints?: number;
+          libraryFineBalance?: number;
         };
-        const currentPoints = typeof studentData.points === "number" ? studentData.points : 0;
-        const newPoints = Math.max(0, currentPoints + pointsDelta);
-        const categoryPoints = { ...(studentData.categoryPoints ?? {}) };
-        categoryPoints[categoryName] = (categoryPoints[categoryName] || 0) + pointsDelta;
 
-        tx.update(studentRef, {
-          points: newPoints,
-          categoryPoints,
-          updatedAt: now,
-        });
+        const studentUpdates: Record<string, unknown> = { updatedAt: now };
 
-        const activityRef = studentRef.collection("activities").doc();
-        tx.set(activityRef, {
-          desc:
-            pointsDelta < 0
-              ? `Library late fee (${daysOverdue} day${daysOverdue === 1 ? "" : "s"}): ${itemName}`
-              : `Library on-time bonus: ${itemName}`,
-          amount: pointsDelta,
-          date: now,
-        });
+        if (rewardMode === "fines" && pointsDelta > 0) {
+          const currentFines =
+            typeof studentData.libraryFineBalance === "number" ? studentData.libraryFineBalance : 0;
+          studentUpdates.libraryFineBalance = currentFines + pointsDelta;
+        } else if (rewardMode === "isolated_points" && pointsDelta !== 0) {
+          const currentLib =
+            typeof studentData.libraryPoints === "number" ? studentData.libraryPoints : 0;
+          studentUpdates.libraryPoints = Math.max(0, currentLib + pointsDelta);
+        } else if (rewardMode === "app_points" && pointsDelta !== 0 && categoryName) {
+          const currentPoints = typeof studentData.points === "number" ? studentData.points : 0;
+          const newPoints = Math.max(0, currentPoints + pointsDelta);
+          const categoryPoints = { ...(studentData.categoryPoints ?? {}) };
+          categoryPoints[categoryName] = (categoryPoints[categoryName] || 0) + pointsDelta;
+          studentUpdates.points = newPoints;
+          studentUpdates.categoryPoints = categoryPoints;
+        }
+
+        if (Object.keys(studentUpdates).length > 1) {
+          tx.update(studentRef, studentUpdates);
+        }
+
+        if (pointsDelta !== 0 && rewardMode !== "none") {
+          const activityRef = studentRef.collection("activities").doc();
+          const amountForActivity =
+            rewardMode === "fines" ? 0 : rewardMode === "app_points" ? pointsDelta : pointsDelta;
+          tx.set(activityRef, {
+            desc:
+              rewardMode === "fines"
+                ? `Library late fine (${daysOverdue} day${daysOverdue === 1 ? "" : "s"}): ${itemName}`
+                : pointsDelta < 0
+                  ? `Library late fee (${daysOverdue} day${daysOverdue === 1 ? "" : "s"}): ${itemName}`
+                  : `Library on-time bonus: ${itemName}`,
+            amount: amountForActivity,
+            date: now,
+          });
+        }
       }
 
       const returnActivityRef = studentRef.collection("activities").doc();

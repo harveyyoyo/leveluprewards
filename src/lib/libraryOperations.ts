@@ -12,7 +12,7 @@ import {
 import { httpsCallable, type Functions } from 'firebase/functions';
 import type { LibraryItem } from '@/lib/types';
 import { normalizeLibraryUpc } from '@/lib/libraryScanCode';
-import { computeDueAt, type LibraryPolicySettings } from '@/lib/libraryPolicy';
+import { computeDueAt, libraryReturnUsesServer, type LibraryPolicySettings } from '@/lib/libraryPolicy';
 
 export type LibraryCheckoutResult =
   | { action: 'checkout'; item: LibraryItem; itemId: string; dueAt?: number | null }
@@ -43,8 +43,7 @@ export async function findLibraryItemByUpc(
 }
 
 function shouldUseServerReturn(policy?: LibraryPolicySettings): boolean {
-  if (!policy?.pointsCategoryName) return false;
-  return policy.lateFeesEnabled || policy.onTimeReturnPoints > 0;
+  return libraryReturnUsesServer(policy);
 }
 
 async function clientCheckout(
