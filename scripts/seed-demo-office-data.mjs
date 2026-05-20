@@ -75,7 +75,7 @@ async function loadSeedFactory() {
       {
         name: 'workspace-alias',
         setup(builder) {
-          builder.onResolve({ filter: /^@\\// }, (args) => ({
+          builder.onResolve({ filter: /^@\// }, (args) => ({
             path: path.join(srcRoot, args.path.slice(2)),
           }));
         },
