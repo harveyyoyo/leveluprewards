@@ -1069,6 +1069,7 @@ function StudentDashboardInner({
     schoolId,
     libraryPolicy,
     functions,
+    scheduleFlyDismiss,
   ]);
 
   const handleRedeemPrize = useCallback(async () => {
