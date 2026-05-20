@@ -3,7 +3,7 @@
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
 import { FirebaseApp } from 'firebase/app';
 import { Firestore } from 'firebase/firestore';
-import { Auth, User, onAuthStateChanged, signInAnonymously } from 'firebase/auth';
+import { Auth, User, getRedirectResult, onAuthStateChanged, signInAnonymously } from 'firebase/auth';
 import { Functions } from 'firebase/functions';
 import { FirebaseStorage } from 'firebase/storage';
 import { FirebaseErrorListener } from '@/firebase/FirebaseErrorListener'
@@ -80,39 +80,63 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       return;
     }
 
-    let isInitialCheck = true;
+    let cancelled = false;
+    let bootstrapComplete = false;
 
     const unsubscribe = onAuthStateChanged(
       auth,
       (firebaseUser) => {
+        if (cancelled) return;
         console.log("FirebaseProvider: onAuthStateChanged fired", firebaseUser ? "User found" : "No user");
         if (firebaseUser) {
-          // A user is found (from cache or new anonymous session)
           setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
-          isInitialCheck = false;
-        } else {
-          // No user found
-          if (isInitialCheck) {
-            // First time running, no cached user. Try to sign in anonymously.
-            // isUserLoading remains true until the listener fires again.
-            isInitialCheck = false;
-            console.log("FirebaseProvider: No user found. Attempting anonymous sign-in...");
-            signInAnonymously(auth).catch((error) => {
-              // This is a critical failure.
-              console.error("FirebaseProvider: Anonymous sign-in failed:", error);
-              setUserAuthState({ user: null, isUserLoading: false, userError: error });
-            });
-          } else {
-            // This means a user was previously logged in and has now signed out.
-            setUserAuthState({ user: null, isUserLoading: false, userError: null });
-          }
+        } else if (bootstrapComplete) {
+          // User signed out after initial bootstrap finished.
+          setUserAuthState({ user: null, isUserLoading: false, userError: null });
         }
       },
       (error) => {
+        if (cancelled) return;
         console.error("FirebaseProvider: onAuthStateChanged error:", error);
         setUserAuthState({ user: null, isUserLoading: false, userError: error });
       }
     );
+
+    void (async () => {
+      try {
+        // Must finish pending Google/OAuth redirects before anonymous sign-in.
+        // Otherwise redirect credentials are lost and /developer Google login loops forever.
+        await getRedirectResult(auth);
+      } catch (error) {
+        console.error("FirebaseProvider: getRedirectResult failed:", error);
+        if (!cancelled) {
+          setUserAuthState((prev) => ({
+            ...prev,
+            userError: error instanceof Error ? error : new Error(String(error)),
+            isUserLoading: false,
+          }));
+        }
+      }
+
+      if (cancelled) return;
+      bootstrapComplete = true;
+
+      if (!auth.currentUser) {
+        console.log("FirebaseProvider: No user found. Attempting anonymous sign-in...");
+        try {
+          await signInAnonymously(auth);
+        } catch (error) {
+          console.error("FirebaseProvider: Anonymous sign-in failed:", error);
+          if (!cancelled) {
+            setUserAuthState({
+              user: null,
+              isUserLoading: false,
+              userError: error instanceof Error ? error : new Error(String(error)),
+            });
+          }
+        }
+      }
+    })();
 
     // Fail-safe timeout: Force isUserLoading to false if Firebase takes too long (> 10s)
     const timeoutId = setTimeout(() => {
@@ -126,6 +150,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     }, 10000);
 
     return () => {
+      cancelled = true;
       unsubscribe();
       clearTimeout(timeoutId);
     };
