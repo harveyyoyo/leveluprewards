@@ -97,7 +97,7 @@ export default function Header() {
       { id: 'print' as const, href: `/${schoolId}/teacher`, icon: Printer, label: 'Teacher', color: 'chart-2' as const },
       { id: 'redeem' as const, href: `/${schoolId}/student`, icon: GraduationCap, label: 'Student', color: 'chart-1' as const },
     ];
-  }, [schoolId, isAdmin, pathname]);
+  }, [schoolId, isAdmin]);
 
   const showPortalDock =
     !!schoolId && loginState !== 'loggedOut' && loginState !== 'student' && !isKioskLocked;

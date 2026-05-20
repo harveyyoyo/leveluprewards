@@ -38,6 +38,7 @@
     "node_modules",
     "functions",
     "leveluphello-main",
-    "my-video"
+    "my-video",
+    "promo-video"
   ]
 }
