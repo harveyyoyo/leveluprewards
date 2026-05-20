@@ -59,9 +59,8 @@ async function loadSeedFactory() {
     entry,
     `
       import { buildOfficeDemoSeed } from ${JSON.stringify(path.resolve('src/lib/office/officeDemoSeedFactory.ts'))};
-      import { buildStaffDirectory } from ${JSON.stringify(path.resolve('src/lib/syncSchoolStaffDirectory.ts'))};
 
-      export { buildOfficeDemoSeed, buildStaffDirectory };
+      export { buildOfficeDemoSeed };
     `,
   );
 
@@ -98,7 +97,6 @@ async function loadSeedFactory() {
   const mod = await import(pathToFileURL(outfile).href);
   return {
     buildOfficeDemoSeed: mod.buildOfficeDemoSeed,
-    buildStaffDirectory: mod.buildStaffDirectory,
     cleanup: () => rm(tempDir, { recursive: true, force: true }),
   };
 }
@@ -158,6 +156,53 @@ async function readCollectionWithIds(schoolRef, collectionName) {
   return snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
 }
 
+function normalizePortalKeyPart(value) {
+  return String(value || '').trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '');
+}
+
+function buildStaffDirectory(teachers, staffAccounts) {
+  const rows = new Map();
+  const now = Date.now();
+  const portalRoles = new Set(['secretary', 'prizeClerk', 'reports', 'librarian', 'office']);
+
+  for (const teacher of teachers ?? []) {
+    const name = String(teacher.name || '').trim();
+    const username = String(teacher.username || teacher.id || '').trim();
+    if (!name || !username) continue;
+    const id = `teacher:${normalizePortalKeyPart(username) || teacher.id}`;
+    rows.set(id, {
+      id,
+      sourceId: teacher.id,
+      type: 'teacher',
+      label: name,
+      username,
+      updatedAt: now,
+    });
+  }
+
+  for (const account of staffAccounts ?? []) {
+    const username = String(account.username || '').trim().toLowerCase();
+    const label = String(account.displayName || '').trim();
+    if (!username || !label) continue;
+
+    const roles = Array.isArray(account.roles) && account.roles.length ? account.roles : [account.role];
+    for (const role of roles) {
+      if (!portalRoles.has(role)) continue;
+      const id = `${role}:${account.id}`;
+      rows.set(id, {
+        id,
+        sourceId: account.id,
+        type: role,
+        label,
+        username,
+        updatedAt: now,
+      });
+    }
+  }
+
+  return Array.from(rows.values());
+}
+
 async function seedSchool(db, schoolId, factory) {
   const schoolRef = db.collection('schools').doc(schoolId);
   const schoolSnap = await schoolRef.get();
@@ -188,7 +233,7 @@ async function seedSchool(db, schoolId, factory) {
   await schoolRef.set({ appSettings, updatedAt: now }, { merge: true });
 
   const currentStaffAccounts = await readCollectionWithIds(schoolRef, 'staffAccounts');
-  const staffDirectory = factory.buildStaffDirectory(
+  const staffDirectory = buildStaffDirectory(
     teachers,
     currentStaffAccounts,
   );
