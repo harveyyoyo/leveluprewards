@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { AlertCircle, ArrowRight, CreditCard, GraduationCap, LayoutGrid, Users, FileText } from 'lucide-react';
+import { AlertCircle, ArrowRight, CreditCard, FileText, GraduationCap, LayoutGrid, RefreshCw, Users } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { formatCents } from '@/lib/office/officeNav';
@@ -17,6 +17,9 @@ type OfficeDashboardProps = {
   insights: OfficeDashboardInsights;
   studentLabelById: Map<string, string>;
   accountNameById: Map<string, string>;
+  canPopulateDemoData?: boolean;
+  isPopulatingDemoData?: boolean;
+  onPopulateDemoData?: () => void;
 };
 
 export function OfficeDashboard({
@@ -26,6 +29,9 @@ export function OfficeDashboard({
   insights,
   studentLabelById,
   accountNameById,
+  canPopulateDemoData = false,
+  isPopulatingDemoData = false,
+  onPopulateDemoData,
 }: OfficeDashboardProps) {
   const quickLinks = [
     {
@@ -78,17 +84,31 @@ export function OfficeDashboard({
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground leading-relaxed">
           Grades and billing in one calm workspace. Office roster is separate from rewards arcade data.
         </p>
-        <div className="mt-5 flex flex-wrap gap-3">
-          <div className="rounded-xl bg-white/80 px-4 py-2 text-sm font-semibold shadow-sm dark:bg-slate-800/80">
-            {studentCount} students
-          </div>
-          <div className="rounded-xl bg-white/80 px-4 py-2 text-sm font-semibold shadow-sm dark:bg-slate-800/80">
-            Term: {insights.activeTerm}
-          </div>
-          {insights.overdueInvoiceCount > 0 ? (
-            <div className="rounded-xl bg-amber-100 px-4 py-2 text-sm font-semibold text-amber-900 dark:bg-amber-950/50 dark:text-amber-200">
-              {insights.overdueInvoiceCount} overdue invoice{insights.overdueInvoiceCount === 1 ? '' : 's'}
+        <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+          <div className="flex flex-wrap gap-3">
+            <div className="rounded-xl bg-white/80 px-4 py-2 text-sm font-semibold shadow-sm dark:bg-slate-800/80">
+              {studentCount} students
             </div>
+            <div className="rounded-xl bg-white/80 px-4 py-2 text-sm font-semibold shadow-sm dark:bg-slate-800/80">
+              Term: {insights.activeTerm}
+            </div>
+            {insights.overdueInvoiceCount > 0 ? (
+              <div className="rounded-xl bg-amber-100 px-4 py-2 text-sm font-semibold text-amber-900 dark:bg-amber-950/50 dark:text-amber-200">
+                {insights.overdueInvoiceCount} overdue invoice{insights.overdueInvoiceCount === 1 ? '' : 's'}
+              </div>
+            ) : null}
+          </div>
+          {canPopulateDemoData && onPopulateDemoData ? (
+            <Button
+              type="button"
+              variant="secondary"
+              className="w-fit rounded-xl gap-2 bg-white/90 text-teal-900 shadow-sm hover:bg-white dark:bg-slate-800 dark:text-teal-100 dark:hover:bg-slate-700"
+              disabled={isPopulatingDemoData}
+              onClick={onPopulateDemoData}
+            >
+              <RefreshCw className={`h-4 w-4 ${isPopulatingDemoData ? 'animate-spin' : ''}`} />
+              {isPopulatingDemoData ? 'Populating...' : 'Populate demo data'}
+            </Button>
           ) : null}
         </div>
       </section>
