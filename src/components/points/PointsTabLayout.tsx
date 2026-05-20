@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { Award, Ticket, Coins } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { ContentSectionTreeNav } from '@/components/ui/content-section-tree-nav';
 import { cn } from '@/lib/utils';
 
 export type PointsTabSection = 'categories' | 'print' | 'manual';
@@ -41,6 +42,7 @@ export function PointsTabLayout({
   manualContent,
   className,
 }: PointsTabLayoutProps) {
+  const reduceMotion = useReducedMotion();
   const activeDefault = sections.includes(defaultSection) ? defaultSection : sections[0];
   const [section, setSection] = useState<PointsTabSection>(activeDefault);
 
@@ -51,61 +53,56 @@ export function PointsTabLayout({
   };
 
   const resolvedSection = sections.includes(section) ? section : sections[0];
-  const colsClass =
-    sections.length === 3
-      ? 'grid-cols-3'
-      : sections.length === 2
-        ? 'grid-cols-2'
-        : 'grid-cols-1';
-
   const hasMultiple = sections.length >= 2;
-
-  const tabList = (
-    <TabsList className={cn('grid w-full max-w-2xl rounded-2xl bg-secondary/80 p-1 border border-border/40', colsClass)}>
-      {sections.map((id) => {
-        const Icon = SECTION_ICONS[id];
-        return (
-          <TabsTrigger
-            key={id}
-            value={id}
-            className="rounded-xl py-2 font-bold flex items-center justify-center gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all"
-          >
-            <Icon className="h-4 w-4 shrink-0" />
-            {SECTION_LABELS[id]}
-          </TabsTrigger>
-        );
-      })}
-    </TabsList>
-  );
+  const sectionItems = sections.map((id) => ({
+    id,
+    label: SECTION_LABELS[id],
+    icon: SECTION_ICONS[id],
+  }));
 
   if (hasMultiple) {
     return (
       <Card className={cn("w-full border-t-4 border-primary shadow-md overflow-hidden bg-background/95 backdrop-blur-md", className)}>
-        <CardHeader className="py-6 bg-secondary/35 border-b border-border/40">
+        <CardHeader className="bg-secondary/35 border-b border-border/40 p-4 sm:p-6">
           <div>
-            <CardTitle className="flex items-center gap-2 text-2xl font-black tracking-tight text-foreground">
-              <Coins className="w-6 h-6 text-primary" /> Points &amp; Rewards
+            <CardTitle className="flex items-center gap-2 text-xl font-black leading-tight tracking-tight text-foreground sm:text-2xl">
+              <Coins className="w-5 h-5 shrink-0 text-primary sm:w-6 sm:h-6" /> Points &amp; Rewards
             </CardTitle>
-            <CardDescription className="mt-1 text-sm font-medium">
+            <CardDescription className="mt-1 max-w-3xl text-sm font-medium leading-relaxed">
               Configure reward categories, print point coupons, and apply direct points additions or deductions.
             </CardDescription>
           </div>
         </CardHeader>
 
-        <CardContent className="p-6 space-y-6">
-          <Tabs
+        <CardContent className="space-y-5 p-4 sm:space-y-6 sm:p-6">
+          <ContentSectionTreeNav
+            branchLabel="Points & Rewards"
+            items={sectionItems}
             value={resolvedSection}
             onValueChange={(val) => setSection(val as PointsTabSection)}
-            className="w-full space-y-6"
-          >
-            {tabList}
+            className="rounded-2xl border bg-muted/30 p-1.5"
+            aria-label="Points and rewards sections"
+          />
 
-            {sections.map((id) => (
-              <TabsContent key={id} value={id} className="focus-visible:outline-none mt-4 animate-in fade-in-50 duration-200">
-                {contentBySection[id]}
-              </TabsContent>
-            ))}
-          </Tabs>
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={resolvedSection}
+              layout
+              initial={reduceMotion ? false : { opacity: 0, y: 12 }}
+              animate={{
+                opacity: 1,
+                y: 0,
+                transition: reduceMotion
+                  ? { duration: 0 }
+                  : { type: 'spring', stiffness: 420, damping: 34, mass: 0.8, staggerChildren: 0.04 },
+              }}
+              exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -8 }}
+              transition={reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 420, damping: 34, mass: 0.8 }}
+              className="focus-visible:outline-none"
+            >
+              {contentBySection[resolvedSection]}
+            </motion.div>
+          </AnimatePresence>
         </CardContent>
       </Card>
     );

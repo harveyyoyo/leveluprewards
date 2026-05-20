@@ -49,37 +49,42 @@ export function AwardCategoriesPanel({
         className,
       )}
     >
-      <CardHeader className="flex flex-row justify-between items-center py-6">
-        <div>
+      <CardHeader className="flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:justify-between sm:p-6">
+        <div className="min-w-0">
           <Helper content="Categories set default point values for printed coupons and manual awards. Use Print Coupons to generate scannable sheets, or Manually Add or Deduct for direct point changes.">
-            <CardTitle className="flex items-center gap-2">
-              <Tag className="w-5 h-5 text-destructive" /> Award Categories
+            <CardTitle className="flex items-center gap-2 text-xl font-black leading-tight sm:text-2xl">
+              <Tag className="w-5 h-5 shrink-0 text-destructive" /> Award Categories
             </CardTitle>
           </Helper>
-          <CardDescription>
+          <CardDescription className="mt-1 max-w-2xl leading-relaxed">
             {isAdmin
               ? 'Set incentive categories and default point values used when printing coupons or awarding points manually.'
               : 'School and personal categories available for printing coupons and manual awards.'}
           </CardDescription>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          {showWalkthrough ? <TabWalkthroughHeaderAction /> : null}
+        <div className="flex w-full shrink-0 flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
+          {showWalkthrough ? <TabWalkthroughHeaderAction className="shrink-0" /> : null}
           {isAdmin && onRandomizeColors ? (
-            <Button variant="outline" className="rounded-xl" onClick={() => void onRandomizeColors()}>
+            <Button
+              variant="outline"
+              className="min-w-[11rem] flex-1 rounded-xl sm:flex-none"
+              onClick={() => void onRandomizeColors()}
+            >
               <Palette className="mr-2 h-4 w-4" /> Randomize Colors
             </Button>
           ) : null}
           {canAdd ? (
-            <Button onClick={onAddCategory} className="rounded-xl">
+            <Button onClick={onAddCategory} className="min-w-[9rem] flex-1 rounded-xl sm:flex-none">
               <Plus className="mr-2 h-4 w-4" /> Add Category
             </Button>
           ) : null}
         </div>
       </CardHeader>
-      <CardContent>
-        <ul className="space-y-2 pr-1">
+      <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
+        <ul className="space-y-2 pr-0 sm:pr-1">
           {categories && categories.length > 0 ? (
             <AdminRecordListHeader
+              className={showCreatedBy ? 'hidden md:block' : undefined}
               gridClassName={
                 showCreatedBy
                   ? 'grid-cols-[76px_minmax(160px,1fr)_76px_minmax(120px,180px)_44px]'
@@ -105,14 +110,14 @@ export function AwardCategoriesPanel({
             <li
               key={c.id}
               className={cn(
-                'grid items-center gap-3 rounded-xl border bg-secondary/20 px-3 py-2 transition-colors hover:border-primary/20 hover:bg-background',
+                'grid items-center gap-2 rounded-xl border bg-secondary/20 px-3 py-3 transition-colors hover:border-primary/20 hover:bg-background sm:gap-3 sm:py-2',
                 showCreatedBy
-                  ? 'grid-cols-[76px_minmax(160px,1fr)_76px_minmax(120px,180px)_44px]'
-                  : 'grid-cols-[minmax(160px,1fr)_76px]',
+                  ? 'grid-cols-[minmax(0,1fr)_auto] md:grid-cols-[76px_minmax(160px,1fr)_76px_minmax(120px,180px)_44px]'
+                  : 'grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[minmax(160px,1fr)_76px]',
               )}
             >
               {canEdit ? (
-                <div className="flex items-center">
+                <div className="order-3 flex items-center md:order-none">
                   <Button
                     variant="outline"
                     size="sm"
@@ -124,20 +129,20 @@ export function AwardCategoriesPanel({
                   </Button>
                 </div>
               ) : null}
-              <div className="flex min-w-0 items-center gap-3">
-                <div className="size-8 rounded-lg flex items-center justify-center border shrink-0 bg-background">
+              <div className="order-1 flex min-w-0 items-center gap-3 md:order-none">
+                <div className="size-8 rounded-lg flex shrink-0 items-center justify-center border bg-background">
                   <div className="size-4 rounded-full border shadow-sm" style={{ backgroundColor: c.color || '#cccccc' }} />
                 </div>
                 <span className="truncate text-sm font-bold">{c.name}</span>
               </div>
-              <div className="text-center text-sm font-bold text-primary">{c.points} pts</div>
+              <div className="order-2 whitespace-nowrap text-right text-sm font-bold text-primary md:order-none md:text-center">{c.points} pts</div>
               {showCreatedBy ? (
-                <div className="truncate text-sm font-medium text-muted-foreground">
+                <div className="order-4 col-span-2 min-w-0 truncate text-xs font-medium text-muted-foreground md:order-none md:col-span-1 md:text-sm">
                   {c.teacherId ? teachers?.find((t) => t.id === c.teacherId)?.name || 'Unknown' : 'Admin'}
                 </div>
               ) : null}
               {canDelete ? (
-                <div className="flex items-center justify-end">
+                <div className="order-3 flex items-center justify-end md:order-none">
                   <Button
                     variant="ghost"
                     size="icon"

@@ -1,11 +1,13 @@
 'use client';
 
+import type { ComponentType } from 'react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 
 export type ContentSectionTreeItem = {
   id: string;
   label: string;
+  icon?: ComponentType<{ className?: string }>;
   /** Shown in parentheses when provided (e.g. list count). */
   badge?: string | number;
 };
@@ -34,13 +36,13 @@ export function ContentSectionTreeNav({
 
   const colsClass =
     items.length === 5
-      ? 'grid-cols-5'
+      ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-5'
       : items.length === 4
-        ? 'grid-cols-4'
+        ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'
         : items.length === 3
-          ? 'grid-cols-3'
+          ? 'grid-cols-1 sm:grid-cols-3'
           : items.length === 2
-            ? 'grid-cols-2'
+            ? 'grid-cols-1 sm:grid-cols-2'
             : 'grid-cols-1';
 
   return (
@@ -54,24 +56,28 @@ export function ContentSectionTreeNav({
       <Tabs value={value} onValueChange={onValueChange} className="w-full">
         <TabsList
           className={cn(
-            'grid w-full max-w-2xl rounded-2xl bg-secondary/80 p-1 border border-border/40',
+            'grid h-auto w-full max-w-2xl rounded-2xl bg-secondary/80 p-1 border border-border/40',
             colsClass
           )}
         >
-          {items.map((item) => (
-            <TabsTrigger
-              key={item.id}
-              value={item.id}
-              className="group rounded-xl py-2 font-bold flex items-center justify-center gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all text-xs sm:text-sm"
-            >
-              {item.label}
-              {item.badge !== undefined && item.badge !== '' && (
-                <span className="ml-1 px-1.5 py-0.5 text-[9px] font-black rounded-lg bg-muted text-muted-foreground group-data-[state=active]:bg-primary group-data-[state=active]:text-primary-foreground transition-all">
-                  {item.badge}
-                </span>
-              )}
-            </TabsTrigger>
-          ))}
+          {items.map((item) => {
+            const Icon = item.icon;
+            return (
+              <TabsTrigger
+                key={item.id}
+                value={item.id}
+                className="group flex min-h-10 w-full min-w-0 items-center justify-start gap-1.5 whitespace-normal rounded-xl px-2 py-2 text-left text-xs font-bold leading-tight data-[state=active]:bg-background data-[state=active]:shadow-sm sm:justify-center sm:text-center sm:text-sm"
+              >
+                {Icon ? <Icon className="h-4 w-4 shrink-0" /> : null}
+                <span className="min-w-0">{item.label}</span>
+                {item.badge !== undefined && item.badge !== '' && (
+                  <span className="ml-auto shrink-0 px-1.5 py-0.5 text-[9px] font-black rounded-lg bg-muted text-muted-foreground group-data-[state=active]:bg-primary group-data-[state=active]:text-primary-foreground sm:ml-1">
+                    {item.badge}
+                  </span>
+                )}
+              </TabsTrigger>
+            );
+          })}
         </TabsList>
       </Tabs>
     </div>
