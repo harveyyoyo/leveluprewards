@@ -25,7 +25,16 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import type { Student, Prize, Coupon, Category, Class, House, Teacher, BackupInfo, Achievement, Badge, AttendanceScheduleSlot, TeacherBudgetPeriod, StaffAccount, LibraryItem, LibraryItemInput } from '@/lib/types';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { StudentModal } from '@/components/StudentModal';
 import { AdminFaceEnrollmentPanel } from '@/components/AdminFaceEnrollmentPanel';
 import { AttendanceTimeZoneField } from '@/components/attendance/AttendanceTimeZoneField';
@@ -748,6 +757,18 @@ function AdminDashboardInner() {
     return out;
   }, [loginState, pinnedAddOnTabs, settings.adminMainTabOrder]);
 
+  const appModeExtraSelectTabs = useMemo<AdminMainTabDef[]>(() => {
+    const mainTabValues = new Set(orderedMainTabs.map((t) => t.value));
+    return visibleAddOnTabs
+      .filter((t) => !mainTabValues.has(t.value))
+      .map((t) => ({
+        value: t.value,
+        label: t.label,
+        icon: t.icon,
+        title: `${t.label} feature tab`,
+      }));
+  }, [orderedMainTabs, visibleAddOnTabs]);
+
   const persistMainTabOrder = (next: string[]) => {
     // Keep storage small + resilient (no unknown values / no duplicates).
     const available = new Set(orderedMainTabs.map((t) => t.value));
@@ -1035,10 +1056,10 @@ function AdminDashboardInner() {
   useLayoutEffect(() => {
     const basicTabs = ['students', 'classes', 'teachers', 'prizes', 'categories', 'reports'];
     if (loginState === 'developer') basicTabs.push('backups');
-    const pinnedExtras = pinnedAddOnTabs.map((t) => t.value);
-    const allowedTabs = new Set<string>([...basicTabs, ...pinnedExtras]);
+    const enabledExtras = visibleAddOnTabs.map((t) => t.value);
+    const allowedTabs = new Set<string>([...basicTabs, ...enabledExtras]);
     if (!allowedTabs.has(activeMainTab)) setActiveMainTab('students');
-  }, [activeMainTab, pinnedAddOnTabs, loginState]);
+  }, [activeMainTab, visibleAddOnTabs, loginState]);
 
   const [bulkRosterOpen, setBulkRosterOpen] = useState(false);
   const [isPreviousLogosOpen, setIsPreviousLogosOpen] = useState(false);
@@ -1599,11 +1620,28 @@ function AdminDashboardInner() {
                     <SelectValue placeholder="Choose a section" />
                   </SelectTrigger>
                   <SelectContent position="popper" className="max-h-[min(70vh,440px)]">
-                    {orderedMainTabs.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>
-                        {t.label}
-                      </SelectItem>
-                    ))}
+                    <SelectGroup>
+                      {orderedMainTabs.map((t) => (
+                        <SelectItem key={t.value} value={t.value}>
+                          {t.label}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                    {appModeExtraSelectTabs.length > 0 ? (
+                      <>
+                        <SelectSeparator />
+                        <SelectGroup>
+                          <SelectLabel className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
+                            Feature tabs
+                          </SelectLabel>
+                          {appModeExtraSelectTabs.map((t) => (
+                            <SelectItem key={t.value} value={t.value}>
+                              {t.label}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </>
+                    ) : null}
                   </SelectContent>
                 </Select>
               </div>
