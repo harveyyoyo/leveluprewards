@@ -19,6 +19,15 @@ describe('buildOfficeDemoSeed', () => {
     expect(payload.gradeEntries.length).toBeGreaterThan(0);
     expect(payload.billingAccounts.length).toBeGreaterThan(0);
     expect(payload.invoices.length).toBeGreaterThan(payload.billingAccounts.length);
+    expect(payload.staffAccounts).toEqual([
+      expect.objectContaining({
+        id: 'demo_office_staff',
+        username: 'office',
+        passcode: '1234',
+        role: 'office',
+        roles: ['office'],
+      }),
+    ]);
   });
 
   it('uses yeshiva subjects for yeshiva variant', () => {

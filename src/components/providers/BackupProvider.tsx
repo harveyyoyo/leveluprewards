@@ -26,9 +26,10 @@ import {
 import { httpsCallable } from "firebase/functions";
 import { useToast } from '@/hooks/use-toast';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
-import type { HistoryItem, Student } from '@/lib/types';
+import type { HistoryItem, StaffAccount, Student, Teacher } from '@/lib/types';
 import { DEFAULT_PLAN } from '@/lib/plans';
 import { isPublicSampleSchoolId, SAMPLE_SCHOOL_ACCESS_PASSCODE } from '@/lib/sampleSchools';
+import { syncSchoolStaffDirectory } from '@/lib/syncSchoolStaffDirectory';
 import {
     seedOfficeDemoDataForSchool,
     type OfficeDemoVariant,
@@ -193,7 +194,12 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
         }
     }, [functions]);
 
-    const seedOfficeForSampleSchool = useCallback(async (cleanId: OfficeDemoVariant, students: any[], classes: any[]) => {
+    const seedOfficeForSampleSchool = useCallback(async (
+        cleanId: OfficeDemoVariant,
+        students: any[],
+        classes: any[],
+        teachers: Teacher[] = [],
+    ) => {
         if (!firestore) return;
         await seedOfficeDemoDataForSchool(firestore, cleanId, {
             variant: cleanId,
@@ -203,9 +209,19 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
         const schoolRef = doc(firestore, 'schools', cleanId);
         const schoolSnap = await getDoc(schoolRef);
         const existingAppSettings = (schoolSnap.data()?.appSettings as Record<string, unknown> | undefined) ?? {};
+        const nextAppSettings = { ...existingAppSettings, payOffice: true };
         await updateDoc(schoolRef, {
-            appSettings: { ...existingAppSettings, payOffice: true },
+            appSettings: nextAppSettings,
         });
+        await setDoc(
+            schoolPublicDocRef(firestore, cleanId),
+            { active: true, appSettings: nextAppSettings, updatedAt: Date.now() },
+            { merge: true },
+        );
+
+        const staffSnap = await getDocs(collection(firestore, 'schools', cleanId, 'staffAccounts'));
+        const staffAccounts = staffSnap.docs.map((d) => ({ id: d.id, ...d.data() })) as StaffAccount[];
+        await syncSchoolStaffDirectory(firestore, cleanId, teachers, staffAccounts);
     }, [firestore]);
 
     const devSeedOfficeDemoData = useCallback(async (schoolId: string) => {
@@ -226,17 +242,20 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
         try {
             let students: any[];
             let classes: any[];
+            let teachers: Teacher[];
             if (cleanId === 'yeshiva') {
                 const { YESHIVA_DATA } = await import('@/lib/yeshivaData');
                 students = YESHIVA_DATA.students ?? [];
                 classes = YESHIVA_DATA.classes ?? [];
+                teachers = YESHIVA_DATA.teachers ?? [];
             } else {
                 const { SCHOOL_DATA } = await import('@/lib/schoolData');
                 students = SCHOOL_DATA.students ?? [];
                 classes = SCHOOL_DATA.classes ?? [];
+                teachers = SCHOOL_DATA.teachers ?? [];
             }
 
-            await seedOfficeForSampleSchool(cleanId as OfficeDemoVariant, students, classes);
+            await seedOfficeForSampleSchool(cleanId as OfficeDemoVariant, students, classes, teachers);
             playSound('success');
             toast({
                 title: `Office demo data ready for "${cleanId}"`,
@@ -370,7 +389,7 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
             await batch.commit();
         }
 
-        await seedOfficeForSampleSchool(cleanId as OfficeDemoVariant, students ?? [], classes ?? []);
+        await seedOfficeForSampleSchool(cleanId as OfficeDemoVariant, students ?? [], classes ?? [], teachers ?? []);
 
         playSound('success');
         toast({
