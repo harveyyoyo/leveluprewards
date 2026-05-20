@@ -39,6 +39,7 @@ async function verifyLiveSite() {
 }
 
 run('node', ['scripts/prepare-firebase-framework-deploy.mjs']);
+run('npm', ['ci', '--prefix', 'functions']);
 run('npm', ['run', 'build']);
 run('npx', ['firebase-tools', 'deploy', '--only', 'hosting', '--project', PROJECT_ID], {
   env: {
