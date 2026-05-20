@@ -20,11 +20,39 @@ jobs:
       FIREBASE_CLI_EXPERIMENTS: webframeworks
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: 'npm'
+
+      - name: Detect Firebase backend changes
+        id: firebase_changes
+        shell: bash
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+          AFTER_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          base="$BEFORE_SHA"
+          if ! git cat-file -e "${base}^{commit}" 2>/dev/null; then
+            base="HEAD^"
+          fi
+
+          changed_files="$(git diff --name-only "$base" "$AFTER_SHA" -- firestore.rules functions || true)"
+          firestore_rules_changed=false
+          functions_changed=false
+          while IFS= read -r file; do
+            case "$file" in
+              firestore.rules) firestore_rules_changed=true ;;
+              functions/*) functions_changed=true ;;
+            esac
+          done <<< "$changed_files"
+
+          echo "firestore_rules=$firestore_rules_changed" >> "$GITHUB_OUTPUT"
+          echo "functions=$functions_changed" >> "$GITHUB_OUTPUT"
 
       # Use Application Default Credentials (same JSON secret as before). Avoids
       # FirebaseExtended/action-hosting-deploy swallowing real errors behind --json parsing.
@@ -66,6 +94,27 @@ jobs:
           NEXT_PUBLIC_ENABLE_DEV_LOGIN: 'false'
           NODE_ENV: production
 
+      - name: Deploy Firestore rules
+        if: steps.firebase_changes.outputs.firestore_rules == 'true'
+        shell: bash
+        run: |
+          set -o pipefail
+          npx firebase-tools@14.27.0 deploy \
+            --only firestore:rules \
+            --project studio-1273073612-71183 \
+            --non-interactive 2>&1 | tee firebase-firestore-debug.log
+
+      - name: Deploy Cloud Functions
+        if: steps.firebase_changes.outputs.functions == 'true'
+        shell: bash
+        run: |
+          set -o pipefail
+          npx firebase-tools@14.27.0 deploy \
+            --only functions \
+            --project studio-1273073612-71183 \
+            --non-interactive \
+            --force 2>&1 | tee firebase-functions-debug.log
+
       # Next.js + firebase.json "hosting.source" uses Web Frameworks (SSR → Cloud Functions).
       # If deploy fails with IAM errors, grant the CI service account "Service Account User" on the
       # default compute SA: <PROJECT_NUMBER>-compute@developer.gserviceaccount.com (see Firebase docs).
@@ -105,5 +154,7 @@ jobs:
           name: firebase-debug-log
           path: |
             firebase-debug.log
+            firebase-firestore-debug.log
+            firebase-functions-debug.log
             .firebase/*.log
           if-no-files-found: ignore
