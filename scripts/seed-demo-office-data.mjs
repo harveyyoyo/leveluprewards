@@ -44,7 +44,7 @@ async function loadSeedFactory() {
   await writeFile(
     entry,
     `
-      import { buildOfficeDemoSeed } from ${JSON.stringify(path.resolve('src/lib/office/seedOfficeDemoData.ts'))};
+      import { buildOfficeDemoSeed } from ${JSON.stringify(path.resolve('src/lib/office/officeDemoSeedFactory.ts'))};
       import { SCHOOL_DATA } from ${JSON.stringify(path.resolve('src/lib/schoolData.ts'))};
       import { YESHIVA_DATA } from ${JSON.stringify(path.resolve('src/lib/yeshivaData.ts'))};
       import { buildStaffDirectory } from ${JSON.stringify(path.resolve('src/lib/syncSchoolStaffDirectory.ts'))};
