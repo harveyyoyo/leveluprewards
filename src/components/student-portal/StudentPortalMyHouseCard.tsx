@@ -6,6 +6,7 @@ import { Home, Trophy } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { HouseBadge } from '@/components/houses/HouseBadge';
+import { HouseHallOfFameCard } from '@/components/houses/HouseHallOfFameCard';
 import type { House, Student } from '@/lib/types';
 
 /**
@@ -91,35 +92,7 @@ export function StudentPortalMyHouseCard({
           ) : null}
         </div>
 
-        {/* House standings mini-table */}
-        {standings.length > 1 ? (
-          <div className="space-y-1.5">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-              Standings
-            </p>
-            <ul className="space-y-1">
-              {standings.map((h) => {
-                const isMe = h.id === student.houseId;
-                return (
-                  <li
-                    key={h.id}
-                    className={`flex items-center justify-between rounded-xl border px-3 py-1.5 text-sm ${
-                      isMe ? 'border-primary/30 bg-primary/5 font-bold' : 'border-border/40 bg-muted/10'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="w-5 text-xs font-black text-muted-foreground tabular-nums">{h.rank}</span>
-                      <HouseBadge house={h} size="sm" />
-                    </div>
-                    <span className="tabular-nums text-xs font-bold" style={{ color: isMe ? myHouse.color : undefined }}>
-                      {(h.points ?? 0).toLocaleString()} pts
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ) : null}
+        <HouseHallOfFameCard houses={houses ?? []} currentHouseId={student.houseId} compact />
       </CardContent>
     </Card>
   );

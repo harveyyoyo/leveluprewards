@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, orderBy, limit as firestoreLimit } from 'firebase/firestore';
-import { Trophy, Crown, Target } from 'lucide-react';
+import { Trophy, Crown, Target, Shield } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import type { Student, Class, House, Category, Goal } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -232,6 +232,14 @@ export default function HallOfFamePage() {
 
     const getSortByLabel = () => {
         if (rankType === 'goals') return 'All Active & Completed Goals';
+        if (rankType === 'houses') {
+            if (sortBy === 'points') return 'House Hall of Fame · Current house points';
+            if (sortBy === 'lifetimePoints') return 'House Hall of Fame · Lifetime house points';
+            if (sortBy === 'period_day') return 'House Hall of Fame · Points earned today';
+            if (sortBy === 'period_week') return 'House Hall of Fame · Points earned this week';
+            if (sortBy === 'period_month') return 'House Hall of Fame · Points earned this month';
+            return `House Hall of Fame · ${sortBy} points`;
+        }
         if (rankType === 'classes') {
             if (sortBy === 'points') return 'Class totals (current balances)';
             if (sortBy === 'lifetimePoints') return 'Class totals (lifetime points)';
@@ -313,18 +321,32 @@ export default function HallOfFamePage() {
         } else if (rankType === 'houses') {
             if (!houses) return [];
             const rollup = settings.housesRollupPoints !== false;
-            if (rollup) {
-                const rows = houses.map((h) => ({
-                    id: h.id,
-                    type: 'house' as const,
-                    name: h.name,
-                    photoUrl: h.crestUrl ?? null,
-                    points:
+            const memberCounts = new Map<string, number>();
+            for (const s of allTopStudents ?? []) {
+                if (!s.houseId) continue;
+                memberCounts.set(s.houseId, (memberCounts.get(s.houseId) ?? 0) + 1);
+            }
+            const makeHouseRow = (h: House, points: number) => ({
+                id: h.id,
+                type: 'house' as const,
+                name: h.name,
+                photoUrl: h.crestUrl ?? null,
+                points,
+                classId: h.id,
+                className: h.value || h.motto || 'House team',
+                initials: (h.emoji || h.name).slice(0, 2),
+                accentColor: h.color,
+                motto: h.motto,
+                memberCount: memberCounts.get(h.id),
+            });
+
+            if (rollup && (sortBy === 'points' || sortBy === 'lifetimePoints')) {
+                const rows = houses.map((h) =>
+                    makeHouseRow(
+                        h,
                         sortBy === 'lifetimePoints' ? h.lifetimePoints ?? 0 : h.points ?? 0,
-                    classId: h.id,
-                    className: h.value || h.name,
-                    initials: (h.emoji || h.name).slice(0, 2),
-                }));
+                    ),
+                );
                 rows.sort((a, b) => b.points - a.points);
                 return rows.slice(0, limit);
             }
@@ -335,16 +357,7 @@ export default function HallOfFamePage() {
                 if (!hid) continue;
                 totals.set(hid, (totals.get(hid) ?? 0) + getPointsForStudent(s));
             }
-            const rows = houses.map((h) => ({
-                id: h.id,
-                type: 'house' as const,
-                name: h.name,
-                photoUrl: h.crestUrl ?? null,
-                points: totals.get(h.id) ?? 0,
-                classId: h.id,
-                className: h.value || h.name,
-                initials: (h.emoji || h.name).slice(0, 2),
-            }));
+            const rows = houses.map((h) => makeHouseRow(h, totals.get(h.id) ?? 0));
             rows.sort((a, b) => b.points - a.points);
             return rows.slice(0, limit);
         } else {
@@ -463,6 +476,22 @@ export default function HallOfFamePage() {
     const podium = topItems?.slice(0, podiumSize) || [];
     const others = topItems?.slice(podiumSize) || [];
     const showHallLocalDecor = !animBackdrop;
+    const hallLabel = rankType === 'houses' ? 'House Hall of Fame' : 'Hall of Fame';
+    const scopeLabel = rankType === 'houses' ? 'All Houses' : getScopeName();
+    const getAccentColor = (item: any): string | undefined =>
+        item?.type === 'house' && item.accentColor ? item.accentColor : undefined;
+    const getMetaLine = (item: any): string | null => {
+        if (item?.type === 'house') {
+            const parts = [
+                item.className,
+                typeof item.memberCount === 'number' ? `${item.memberCount} members` : null,
+            ].filter(Boolean);
+            return parts.length > 0 ? parts.join(' · ') : 'House team';
+        }
+        if (item?.type === 'class') return 'Class standing';
+        if (item?.type === 'student') return item.className;
+        return null;
+    };
 
     return (
         <div
@@ -536,12 +565,13 @@ export default function HallOfFamePage() {
                                 </p>
                               </div>
 
-                              <div className="justify-self-end shrink-0 rounded-xl border bg-muted/20 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                                Hall of Fame
+                              <div className="justify-self-end shrink-0 rounded-xl border bg-muted/20 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground inline-flex items-center gap-1.5">
+                                {rankType === 'houses' ? <Shield className="h-3 w-3 text-primary" aria-hidden /> : null}
+                                {hallLabel}
                               </div>
                             </div>
                             <div className="mt-3 text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground text-center">
-                              {getScopeName()} &bull; {getSortByLabel()}
+                              {scopeLabel} &bull; {getSortByLabel()}
                             </div>
                           </div>
                         </div>
@@ -562,15 +592,28 @@ export default function HallOfFamePage() {
                                     transition={{ ...springCinematic, delay: 0.2 }}
                                     className="text-center md:order-2 order-1"
                                 >
-                                    <div className="bg-primary/5 backdrop-blur-md border-4 border-primary/20 rounded-t-[4rem] rounded-b-3xl p-6 md:p-8 relative shadow-2xl h-72 md:h-80 flex flex-col justify-end transition-all">
+                                    <div
+                                        className="bg-primary/5 backdrop-blur-md border-4 border-primary/20 rounded-t-[4rem] rounded-b-3xl p-6 md:p-8 relative shadow-2xl h-72 md:h-80 flex flex-col justify-end transition-all"
+                                        style={getAccentColor(podium[0]) ? { borderColor: `${getAccentColor(podium[0])}55` } : undefined}
+                                    >
                                         <div className="absolute -top-10 left-1/2 -translate-x-1/2 flex flex-col items-center">
                                             <Crown className="w-12 h-12 sm:w-16 sm:h-16 text-chart-5 animate-float drop-shadow-lg" />
                                         </div>
                                         <Avatar className="w-24 h-24 md:w-28 md:h-28 mx-auto mb-4 border-4 border-primary/30 shadow-xl overflow-hidden">
                                             {podium[0].photoUrl && <img src={podium[0].photoUrl} alt="Photo" className={settings.photoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />}
-                                            <AvatarFallback className="bg-primary text-primary-foreground text-3xl font-black">{podium[0].initials}</AvatarFallback>
+                                            <AvatarFallback
+                                                className="bg-primary text-primary-foreground text-3xl font-black"
+                                                style={getAccentColor(podium[0]) ? { backgroundColor: `${getAccentColor(podium[0])}22`, color: getAccentColor(podium[0]) } : undefined}
+                                            >
+                                                {podium[0].initials}
+                                            </AvatarFallback>
                                         </Avatar>
                                         <p className="font-black text-foreground text-xl md:text-2xl truncate tracking-tighter">{podium[0].name}</p>
+                                        {getMetaLine(podium[0]) ? (
+                                            <p className="mt-1 truncate text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">
+                                                {getMetaLine(podium[0])}
+                                            </p>
+                                        ) : null}
                                         <p className="text-primary font-black text-2xl md:text-3xl mt-1 tracking-tighter">{podium[0].points.toLocaleString()} pts</p>
                                     </div>
                                 </motion.div>
@@ -583,15 +626,28 @@ export default function HallOfFamePage() {
                                         transition={{ ...springCinematic, delay: 0.4 }}
                                         className="text-center md:order-1 order-2"
                                     >
-                                        <div className="bg-card/40 backdrop-blur-sm border-2 border-border rounded-3xl p-6 md:p-8 relative h-56 md:h-64 flex flex-col justify-end shadow-lg transition-all hover:shadow-xl">
+                                        <div
+                                            className="bg-card/40 backdrop-blur-sm border-2 border-border rounded-3xl p-6 md:p-8 relative h-56 md:h-64 flex flex-col justify-end shadow-lg transition-all hover:shadow-xl"
+                                            style={getAccentColor(podium[1]) ? { borderColor: `${getAccentColor(podium[1])}44` } : undefined}
+                                        >
                                             <div className="absolute -top-6 left-1/2 -translate-x-1/2 flex flex-col items-center">
                                                 <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-muted-foreground font-black text-xl border-4 border-background">2</div>
                                             </div>
                                             <Avatar className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-4 border-4 border-border shadow-md">
                                                 {podium[1].photoUrl && <img src={podium[1].photoUrl} alt="Photo" className={settings.photoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />}
-                                                <AvatarFallback className="bg-muted text-muted-foreground text-2xl font-black">{podium[1].initials}</AvatarFallback>
+                                                <AvatarFallback
+                                                    className="bg-muted text-muted-foreground text-2xl font-black"
+                                                    style={getAccentColor(podium[1]) ? { backgroundColor: `${getAccentColor(podium[1])}20`, color: getAccentColor(podium[1]) } : undefined}
+                                                >
+                                                    {podium[1].initials}
+                                                </AvatarFallback>
                                             </Avatar>
                                             <p className="font-black text-foreground text-lg md:text-xl truncate tracking-tight">{podium[1].name}</p>
+                                            {getMetaLine(podium[1]) ? (
+                                                <p className="mt-1 truncate text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">
+                                                    {getMetaLine(podium[1])}
+                                                </p>
+                                            ) : null}
                                             <p className="text-primary font-bold text-lg mt-1 tracking-tight">{podium[1].points.toLocaleString()} pts</p>
                                         </div>
                                     </motion.div>
@@ -605,15 +661,28 @@ export default function HallOfFamePage() {
                                         transition={{ ...springCinematic, delay: 0.6 }}
                                         className="text-center md:order-3 order-3"
                                     >
-                                        <div className="bg-card/40 backdrop-blur-sm border-2 border-border/50 rounded-3xl p-6 md:p-8 relative h-52 md:h-56 flex flex-col justify-end shadow-lg transition-all hover:shadow-xl">
+                                        <div
+                                            className="bg-card/40 backdrop-blur-sm border-2 border-border/50 rounded-3xl p-6 md:p-8 relative h-52 md:h-56 flex flex-col justify-end shadow-lg transition-all hover:shadow-xl"
+                                            style={getAccentColor(podium[2]) ? { borderColor: `${getAccentColor(podium[2])}44` } : undefined}
+                                        >
                                             <div className="absolute -top-6 left-1/2 -translate-x-1/2 flex flex-col items-center">
                                                 <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-muted-foreground font-black text-xl border-4 border-background">3</div>
                                             </div>
                                             <Avatar className="w-14 h-14 md:w-16 md:h-16 mx-auto mb-4 border-4 border-border shadow-md">
                                                 {podium[2].photoUrl && <img src={podium[2].photoUrl} alt="Photo" className={settings.photoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />}
-                                                <AvatarFallback className="bg-muted text-muted-foreground text-xl font-black">{podium[2].initials}</AvatarFallback>
+                                                <AvatarFallback
+                                                    className="bg-muted text-muted-foreground text-xl font-black"
+                                                    style={getAccentColor(podium[2]) ? { backgroundColor: `${getAccentColor(podium[2])}20`, color: getAccentColor(podium[2]) } : undefined}
+                                                >
+                                                    {podium[2].initials}
+                                                </AvatarFallback>
                                             </Avatar>
                                             <p className="font-black text-foreground text-base md:text-lg truncate tracking-tight">{podium[2].name}</p>
+                                            {getMetaLine(podium[2]) ? (
+                                                <p className="mt-1 truncate text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">
+                                                    {getMetaLine(podium[2])}
+                                                </p>
+                                            ) : null}
                                             <p className="text-primary font-bold text-lg mt-1 tracking-tight">{podium[2].points.toLocaleString()} pts</p>
                                         </div>
                                     </motion.div>
@@ -702,13 +771,15 @@ export default function HallOfFamePage() {
                             )}>
                                 {!gridLayout && (
                                     <div className="lg:col-span-2 px-6 pb-2 text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 flex justify-between w-full">
-                                        <span>Top Items</span>
+                                        <span>{rankType === 'houses' ? 'More Houses' : 'Top Items'}</span>
                                         <span>Points</span>
                                     </div>
                                 )}
                                 {others.map((item, index) => {
                                     const prevItem = index === 0 ? podium[podiumSize - 1] : others[index - 1];
                                     const pointsToNext = prevItem ? prevItem.points - item.points : 0;
+                                    const accentColor = getAccentColor(item);
+                                    const metaLine = getMetaLine(item);
                                     
                                     return (
                                         <motion.div
@@ -729,15 +800,20 @@ export default function HallOfFamePage() {
                                             <span className="w-6 shrink-0 text-sm font-black text-muted-foreground/30">{index + podiumSize + 1}</span>
                                             <Avatar className="w-10 h-10 border-2 border-background overflow-hidden">
                                                 {item.photoUrl && <img src={item.photoUrl} alt="Photo" className={settings.photoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />}
-                                                <AvatarFallback className="bg-secondary text-xs font-bold">{item.initials}</AvatarFallback>
+                                                <AvatarFallback
+                                                    className="bg-secondary text-xs font-bold"
+                                                    style={accentColor ? { backgroundColor: `${accentColor}20`, color: accentColor } : undefined}
+                                                >
+                                                    {item.initials}
+                                                </AvatarFallback>
                                             </Avatar>
                                             <div className="min-w-0">
                                                 <div className="flex min-w-0 items-center gap-2">
                                                     <p className="truncate font-black text-foreground tracking-tight">{item.name}</p>
                                                 </div>
-                                                {item.type === 'student' && (
-                                                    <p className="truncate text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{item.className}</p>
-                                                )}
+                                                {metaLine ? (
+                                                    <p className="truncate text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{metaLine}</p>
+                                                ) : null}
                                             </div>
                                         </div>
                                         <div className="shrink-0 pl-3 text-lg font-black text-primary tracking-tighter">
@@ -752,6 +828,7 @@ export default function HallOfFamePage() {
                                                 scaleY: hoveredIndex === item.id ? 1 : 0.6
                                             }}
                                             className="absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl bg-primary transition-opacity"
+                                            style={accentColor ? { backgroundColor: accentColor } : undefined}
                                         />
                                         </motion.div>
                                     );
@@ -761,7 +838,9 @@ export default function HallOfFamePage() {
 
                         {(!topItems || topItems.length === 0) && (
                             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-20 text-muted-foreground font-medium">
-                                No items have earned points yet for this view.
+                                {rankType === 'houses'
+                                    ? 'No houses have earned points yet for this view.'
+                                    : 'No items have earned points yet for this view.'}
                             </motion.div>
                         )}
                         </div>
