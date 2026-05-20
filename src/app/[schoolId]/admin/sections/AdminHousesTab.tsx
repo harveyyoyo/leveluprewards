@@ -17,6 +17,7 @@ import {
   FlaskConical,
   Search,
   ArrowRightLeft,
+  Trophy,
 } from 'lucide-react';
 import { useConfirm } from '@/components/providers/ConfirmProvider';
 import { Button } from '@/components/ui/button';
@@ -283,6 +284,16 @@ export function AdminHousesTab({
     return `/${schoolId}/house-sorting?${params.toString()}`;
   }, [schoolId, unassignedStudents]);
 
+  const houseHallOfFameHref = useMemo(() => {
+    const params = new URLSearchParams();
+    params.set('fullscreen', '1');
+    params.set('rankType', 'houses');
+    params.set('sortBy', 'lifetimePoints');
+    params.set('scope', 'all');
+    params.set('podiumSize', '3');
+    return `/${schoolId}/hall-of-fame?${params.toString()}`;
+  }, [schoolId]);
+
   return (
     <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden">
       <CardHeader className="flex flex-col gap-4 py-6 bg-secondary sm:flex-row sm:items-start sm:justify-between">
@@ -298,6 +309,12 @@ export function AdminHousesTab({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <TabWalkthroughHeaderAction />
+          <Button variant="outline" className="rounded-xl" asChild>
+            <Link href={houseHallOfFameHref} target="_blank" rel="noopener noreferrer">
+              <Trophy className="mr-2 h-4 w-4" /> House Hall of Fame
+              <ExternalLink className="ml-1.5 h-3.5 w-3.5 opacity-60" />
+            </Link>
+          </Button>
           <Button variant="outline" className="rounded-xl" asChild>
             <Link href={sortingHref} target="_blank" rel="noopener noreferrer">
               <Wand2 className="mr-2 h-4 w-4" /> Sorting ceremony
