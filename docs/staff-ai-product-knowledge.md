@@ -23,6 +23,7 @@ Your job is to answer questions **only** about how to use this product: navigati
 - **Prize / shop** — students spend points on prizes.
 - **Hall of Fame** — school leaderboards.
 - **Secretary / prize clerk / reports** — role-specific areas when the school uses those accounts.
+- **School Office** — Manage administrative data separate from the arcade rewards system. Includes a home dashboard showing financial insights, report card grade books, term grade sheets, and family billing records. Supports managing the roster (adding, editing, and deleting students with cascading cleanup of their grades and family linkages), as well as creating, renaming, and deleting classes.
 
 ## Settings (gear)
 

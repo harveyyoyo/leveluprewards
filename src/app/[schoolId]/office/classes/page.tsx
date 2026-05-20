@@ -21,6 +21,7 @@ export default function OfficeClassesPage() {
   return (
     <>
       <OfficeClassesView
+        schoolId={schoolId}
         students={shared.students}
         classes={shared.classes}
         isLoading={shared.isLoading}
@@ -35,6 +36,7 @@ export default function OfficeClassesPage() {
         gradeEntries={gradeEntries}
         billingAccounts={billingAccounts}
         activeTerm={term}
+        classes={shared.classes}
       />
     </>
   );

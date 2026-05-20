@@ -128,6 +128,7 @@ export function OfficeStudentsView({
         gradeEntries={gradeEntries}
         billingAccounts={billingAccounts}
         activeTerm={activeTerm}
+        classes={classes}
       />
     </div>
   );
