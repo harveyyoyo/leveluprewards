@@ -48,6 +48,7 @@ import { WELCOME_GREETING_STYLES } from '@/components/WelcomeGreeting';
 import { AdminBackupsTab } from '@/app/[schoolId]/admin/sections/AdminBackupsTab';
 import { IdCardPrinterSettingsSection } from '@/components/settings/IdCardPrinterSettingsSection';
 import { PRODUCT_PILLAR_LABELS } from '@/lib/productPillars';
+import { officePortalEntryHref } from '@/lib/officePublicUrl';
 
 type SettingsView = 'hub' | 'interface' | 'security' | 'features' | 'pillars' | 'developer';
 type RoleView = 'global' | 'student' | 'teacher';
@@ -1683,7 +1684,7 @@ export function SettingsModal() {
                                                     />
                                                 </div>
                                                 <div className="sm:col-span-2 p-3 bg-background/50 border border-border/40 rounded-xl space-y-2">
-                                                    <div className="flex items-center justify-between gap-4">
+                                                    <div className="flex items-start justify-between gap-4">
                                                         <div>
                                                             <h4 className="font-bold text-sm text-foreground uppercase tracking-tight">
                                                                 {PRODUCT_PILLAR_LABELS.payOffice}
@@ -1692,11 +1693,23 @@ export function SettingsModal() {
                                                                 Grades &amp; billing · separate office roster (no rewards portal link)
                                                             </p>
                                                         </div>
-                                                        <Switch
-                                                            checked={local.payOffice === true}
-                                                            onCheckedChange={(val) => handleToggle('payOffice', val)}
-                                                            aria-label={PRODUCT_PILLAR_LABELS.payOffice}
-                                                        />
+                                                        <div className="flex shrink-0 flex-col items-end gap-2">
+                                                            <Switch
+                                                                checked={local.payOffice === true}
+                                                                onCheckedChange={(val) => handleToggle('payOffice', val)}
+                                                                aria-label={PRODUCT_PILLAR_LABELS.payOffice}
+                                                            />
+                                                            {local.payOffice === true && schoolId ? (
+                                                                <a
+                                                                    href={officePortalEntryHref(schoolId)}
+                                                                    target="_blank"
+                                                                    rel="noreferrer"
+                                                                    className="text-[11px] font-bold text-teal-700 underline underline-offset-4 hover:text-teal-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:text-teal-300 dark:hover:text-teal-100"
+                                                                >
+                                                                    Open School Office
+                                                                </a>
+                                                            ) : null}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </>
