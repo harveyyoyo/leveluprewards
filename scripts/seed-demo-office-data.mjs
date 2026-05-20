@@ -15,6 +15,20 @@ const OFFICE_COLLECTIONS = [
   'officeInvoices',
 ];
 const BATCH_LIMIT = 450;
+const DRY_RUN_FIXTURES = {
+  students: [
+    { id: '100', firstName: 'Demo', lastName: 'Student', classId: 'demo-class-1' },
+    { id: '101', firstName: 'Sample', lastName: 'Family', classId: 'demo-class-1' },
+    { id: '102', firstName: 'Office', lastName: 'Family', classId: 'demo-class-2' },
+  ],
+  classes: [
+    { id: 'demo-class-1', name: 'Demo Class 1' },
+    { id: 'demo-class-2', name: 'Demo Class 2' },
+  ],
+  teachers: [
+    { id: 'demo-teacher-1', name: 'Demo Teacher', username: 'teacher' },
+  ],
+};
 
 function initializeFirebaseAdmin() {
   if (admin.apps.length) return;
@@ -45,23 +59,9 @@ async function loadSeedFactory() {
     entry,
     `
       import { buildOfficeDemoSeed } from ${JSON.stringify(path.resolve('src/lib/office/officeDemoSeedFactory.ts'))};
-      import { SCHOOL_DATA } from ${JSON.stringify(path.resolve('src/lib/schoolData.ts'))};
-      import { YESHIVA_DATA } from ${JSON.stringify(path.resolve('src/lib/yeshivaData.ts'))};
       import { buildStaffDirectory } from ${JSON.stringify(path.resolve('src/lib/syncSchoolStaffDirectory.ts'))};
 
-      export function buildDemoOfficeSeedForSchool(schoolId) {
-        const data = schoolId === 'yeshiva' ? YESHIVA_DATA : SCHOOL_DATA;
-        return {
-          payload: buildOfficeDemoSeed({
-            variant: schoolId,
-            students: data.students ?? [],
-            classes: data.classes ?? [],
-          }),
-          teachers: data.teachers ?? [],
-        };
-      }
-
-      export { buildStaffDirectory };
+      export { buildOfficeDemoSeed, buildStaffDirectory };
     `,
   );
 
@@ -97,7 +97,7 @@ async function loadSeedFactory() {
 
   const mod = await import(pathToFileURL(outfile).href);
   return {
-    buildDemoOfficeSeedForSchool: mod.buildDemoOfficeSeedForSchool,
+    buildOfficeDemoSeed: mod.buildOfficeDemoSeed,
     buildStaffDirectory: mod.buildStaffDirectory,
     cleanup: () => rm(tempDir, { recursive: true, force: true }),
   };
@@ -165,7 +165,16 @@ async function seedSchool(db, schoolId, factory) {
     throw new Error(`School "${schoolId}" does not exist. Create/reset the sample school first.`);
   }
 
-  const { payload, teachers } = factory.buildDemoOfficeSeedForSchool(schoolId);
+  const [students, classes, teachers] = await Promise.all([
+    readCollectionWithIds(schoolRef, 'students'),
+    readCollectionWithIds(schoolRef, 'classes'),
+    readCollectionWithIds(schoolRef, 'teachers'),
+  ]);
+  const payload = factory.buildOfficeDemoSeed({
+    variant: schoolId,
+    students,
+    classes,
+  });
   const removed = {};
   for (const collectionName of OFFICE_COLLECTIONS) {
     removed[collectionName] = await clearCollection(schoolRef, collectionName);
@@ -178,12 +187,9 @@ async function seedSchool(db, schoolId, factory) {
   const now = Date.now();
   await schoolRef.set({ appSettings, updatedAt: now }, { merge: true });
 
-  const [currentTeachers, currentStaffAccounts] = await Promise.all([
-    readCollectionWithIds(schoolRef, 'teachers'),
-    readCollectionWithIds(schoolRef, 'staffAccounts'),
-  ]);
+  const currentStaffAccounts = await readCollectionWithIds(schoolRef, 'staffAccounts');
   const staffDirectory = factory.buildStaffDirectory(
-    currentTeachers.length ? currentTeachers : teachers,
+    teachers,
     currentStaffAccounts,
   );
 
@@ -219,7 +225,11 @@ async function main() {
   try {
     if (dryRun) {
       for (const schoolId of schools) {
-        const { payload, teachers } = factory.buildDemoOfficeSeedForSchool(schoolId);
+        const payload = factory.buildOfficeDemoSeed({
+          variant: schoolId,
+          students: DRY_RUN_FIXTURES.students,
+          classes: DRY_RUN_FIXTURES.classes,
+        });
         console.log(
           [
             `Dry run ${schoolId}:`,
@@ -229,7 +239,7 @@ async function main() {
             `${payload.billingAccounts.length} billing accounts`,
             `${payload.invoices.length} invoices`,
             `${payload.staffAccounts.length} office staff login`,
-            `${teachers.length} teachers for staff directory sync`,
+            `${DRY_RUN_FIXTURES.teachers.length} teachers for staff directory sync`,
           ].join(' '),
         );
       }
