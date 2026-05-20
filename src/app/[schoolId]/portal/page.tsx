@@ -38,7 +38,7 @@ type PortalArea = {
 type StaffPortalLoginOption = {
     id: string;
     sourceId?: string;
-    type: 'teacher' | 'secretary' | 'prizeClerk' | 'reports' | 'librarian' | 'office';
+    type: 'teacher' | 'secretary' | 'prizeClerk' | 'reports' | 'librarian';
     label: string;
     username: string;
 };
@@ -56,7 +56,6 @@ function roleLabel(type: StaffPortalLoginOption['type']) {
     if (type === 'secretary') return 'Coupon printing';
     if (type === 'prizeClerk') return 'Prize desk';
     if (type === 'librarian') return 'Library';
-    if (type === 'office') return 'School Office';
     return 'Reports';
 }
 
@@ -65,7 +64,6 @@ function staffLandingPath(schoolId: string, type: StaffPortalLoginOption['type']
     if (type === 'prizeClerk') return `/${schoolId}/admin`;
     if (type === 'reports') return `/${schoolId}/reports`;
     if (type === 'librarian') return `/${schoolId}/librarian`;
-    if (type === 'office') return `/${schoolId}/office`;
     return `/${schoolId}/teacher`;
 }
 
@@ -81,7 +79,7 @@ function WhereToDrawnTitle({
     const titleClassName = cn(
         'font-headline portal-choose-title-depth relative inline-block overflow-visible pb-[0.2em] font-black tracking-tight',
         displayMode === 'app'
-            ? 'px-2 py-1 text-4xl sm:text-5xl'
+            ? 'px-2 py-2 text-5xl sm:text-6xl md:text-7xl'
             : 'px-2 py-3 text-6xl sm:text-7xl md:text-8xl',
     );
 
@@ -185,7 +183,7 @@ export default function PortalPage() {
         !settings.legacyMode &&
         (isDefaultScheme ||
             (settings.graphicMode === 'graphics' && !!settings.enableAnimatedBackground));
-    /** Card lift + icon pop on hover (disabled for legacy / reduced motion). */
+    /** Pop-out via lift + neutral shadow only (no glow, gradient, or icon scale). */
     const portalCardHoverEffects = !prefersReducedMotion && !settings.legacyMode;
     const isSchoolChooser = loginState === 'school';
     const isStaff =
@@ -213,8 +211,7 @@ export default function PortalPage() {
                         option.type === 'secretary' ||
                         option.type === 'prizeClerk' ||
                         option.type === 'reports' ||
-                        option.type === 'librarian' ||
-                        option.type === 'office'),
+                        option.type === 'librarian'),
             ),
         [schoolPublic],
     );
@@ -337,20 +334,10 @@ export default function PortalPage() {
                     portalChoosePageShellClass(kioskPortrait, isAppDisplay),
                 )}
             >
-                <div
-                    className={cn(
-                        'flex h-full min-h-0 w-full flex-1 flex-col items-center justify-center',
-                        isAppDisplay ? 'gap-4 sm:gap-5' : 'gap-6 sm:gap-8 md:gap-12',
-                    )}
-                >
+                <div className="flex h-full min-h-0 w-full flex-1 flex-col items-center justify-center gap-6 sm:gap-8 md:gap-12">
                     
                     {/* Title: on mobile avoid flex-1+min-h-0 (clips large headline under overflow-hidden). */}
-                    <div
-                        className={cn(
-                            'flex w-full shrink-0 flex-col items-center justify-center px-1 pt-1 text-center md:min-h-0 md:pb-0',
-                            isAppDisplay ? 'pb-4 mb-1' : 'pb-3',
-                        )}
-                    >
+                    <div className="flex w-full shrink-0 flex-col items-center justify-center px-1 pb-3 pt-1 text-center md:min-h-0 md:pb-0">
                         <div className="pointer-events-none w-full max-w-6xl text-center shrink-0 overflow-visible">
                             {reduceWhereToMotion ? (
                                 <h2
@@ -359,7 +346,7 @@ export default function PortalPage() {
                                         kioskPortrait
                                             ? portalChooseTitleClass(true, isAppDisplay)
                                             : isAppDisplay
-                                              ? 'px-2 py-1 text-4xl sm:text-5xl'
+                                              ? 'px-2 py-2 text-5xl sm:text-6xl md:text-7xl'
                                               : 'px-2 py-3 text-6xl sm:text-7xl md:text-8xl',
                                     )}
                                     style={{
@@ -399,11 +386,8 @@ export default function PortalPage() {
                             initial={prefersReducedMotion ? false : 'hidden'}
                             animate="show"
                             className={cn(
-                                'pointer-events-auto grid w-full overflow-visible',
-                                isAppDisplay
-                                    ? 'grid-cols-1 auto-rows-[7.75rem] gap-3 sm:auto-rows-[8.25rem] sm:gap-3.5'
-                                    : 'grid-cols-1 gap-3 md:grid-cols-3 md:gap-5',
-                                kioskPortrait && !isAppDisplay && 'grid-cols-1',
+                                'pointer-events-auto grid w-full gap-3 overflow-visible md:gap-5',
+                                kioskPortrait || isAppDisplay ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-3',
                             )}
                         >
                     {portals.map((area, index) => {
@@ -415,17 +399,18 @@ export default function PortalPage() {
                         // session — send them straight to `/teacher` like an already-signed-in teacher.
                         // Otherwise opening the dialog here often led to picking "Prize desk" and landing on `/admin`.
                         const needsTeacherLogin = area.id === 'print' && loginState === 'school';
+                        const isAppDisplay = settings.displayMode === 'app';
                         const portalCard = (
                                 <motion.div
                                     variants={prefersReducedMotion ? undefined : staggerItem}
                                     className={cn(
-                                        'portal-choose-card relative rounded-2xl border-2 bg-card',
-                                        isAppDisplay ? 'overflow-visible text-left' : 'overflow-hidden text-center',
+                                        'portal-choose-card relative overflow-hidden rounded-2xl border-2 bg-card',
+                                        isAppDisplay ? 'text-left' : 'text-center',
                                         portalCardHoverEffects &&
                                             'transition-[transform,box-shadow,border-color] duration-200 ease-out group-hover:-translate-y-1 group-hover:border-foreground/25 group-active:translate-y-0',
                                         'flex h-full min-h-0 w-full flex-col justify-center',
                                         isAppDisplay
-                                            ? 'px-3.5 py-3 sm:px-4 sm:py-3.5'
+                                            ? 'px-4 py-4 sm:px-5 sm:py-5'
                                             : 'min-h-[12rem] px-3 py-3.5 sm:min-h-[clamp(200px,24vw,300px)] sm:px-5 sm:py-5 md:min-h-[clamp(220px,24vw,300px)]',
                                     )}
                                     style={{
@@ -433,24 +418,21 @@ export default function PortalPage() {
                                     }}
                                 >
                                     {isAppDisplay ? (
-                                    <div className="relative z-10 flex h-full w-full items-center gap-3 sm:gap-3.5">
+                                    <div className="relative z-10 flex w-full items-center gap-3 sm:gap-4">
                                         <div
-                                            className={cn(
-                                                'portal-choose-icon flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl sm:h-14 sm:w-14',
-                                                portalCardHoverEffects && 'portal-choose-icon--hoverable',
-                                            )}
+                                            className="portal-choose-icon flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl sm:h-16 sm:w-16"
                                             style={{
                                                 backgroundColor: rainbowColor,
                                             }}
                                             aria-hidden
                                         >
-                                            <Icon className="h-6 w-6 text-white sm:h-7 sm:w-7" />
+                                            <Icon className="h-7 w-7 text-white sm:h-8 sm:w-8" />
                                         </div>
                                         <div className="min-w-0 flex-1 space-y-1 pr-1">
-                                            <h3 className="line-clamp-1 text-lg font-black leading-snug tracking-tight text-foreground sm:text-xl">
+                                            <h3 className="text-lg font-black leading-snug tracking-tight text-foreground sm:text-xl">
                                                 {area.title}
                                             </h3>
-                                            <p className="line-clamp-2 text-sm font-medium leading-snug text-muted-foreground">
+                                            <p className="text-sm font-medium leading-snug text-muted-foreground sm:text-base">
                                                 {area.description}
                                             </p>
                                         </div>
@@ -468,10 +450,7 @@ export default function PortalPage() {
                                     <div className="relative z-10 flex h-full min-h-0 flex-1 flex-col">
                                         <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2.5 text-center md:gap-4">
                                             <motion.div
-                                                className={cn(
-                                                    'portal-choose-icon shrink-0 rounded-xl p-3 md:p-4',
-                                                    portalCardHoverEffects && 'portal-choose-icon--hoverable',
-                                                )}
+                                                className="portal-choose-icon shrink-0 rounded-xl p-3 md:p-4"
                                                 style={{
                                                     backgroundColor: rainbowColor,
                                                 }}
