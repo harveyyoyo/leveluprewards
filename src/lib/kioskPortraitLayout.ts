@@ -18,7 +18,7 @@ export function portalChoosePageShellClass(portrait: boolean, isAppDisplay: bool
   if (!portrait) return '';
   return cn(
     isAppDisplay
-      ? 'px-3 pb-20 pt-[max(5rem,calc(env(safe-area-inset-top,0px)+3.5rem))]'
+      ? 'px-3 pb-3 pt-2 sm:pb-4 sm:pt-4'
       : 'px-3 pb-6 pt-10 sm:pt-12',
   );
 }
