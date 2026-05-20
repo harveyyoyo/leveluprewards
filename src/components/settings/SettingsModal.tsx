@@ -287,6 +287,11 @@ export function SettingsModal() {
         if (open) setInterfaceRole('global');
     }, [open]);
 
+    useLayoutEffect(() => {
+        if (!open || isAdmin || view !== 'security') return;
+        setView('features');
+    }, [open, isAdmin, view]);
+
     // In-app opener (avoids route transitions / layout jank).
     useEffect(() => {
         if (!canOpenSettings) return;
@@ -407,11 +412,19 @@ export function SettingsModal() {
     const viewTitle: Record<SettingsView, string> = {
         hub: 'Settings',
         interface: 'Interface & display',
-        security: 'Basic settings',
-        features: 'Advanced settings',
+        security: 'Settings',
+        features: 'Settings',
         pillars: 'Product Pillars',
         developer: 'Developer tools',
     };
+
+    const openSettingsView = useCallback(
+        (target: 'general' | 'advanced') => {
+            setView(target === 'advanced' ? 'features' : 'security');
+            if (local.soundEnabled) playSound('click');
+        },
+        [local.soundEnabled, playSound],
+    );
 
     const backupsQuery = useMemoFirebase(
         () => (firestore && schoolId && loginState === 'developer' ? collection(firestore, 'schools', schoolId, 'backups') : null),
@@ -462,7 +475,7 @@ export function SettingsModal() {
     };
 
     // Allow deep-linking into the settings modal via query param.
-    // Example: `?settings=features` opens the modal on "Advanced settings".
+    // Example: `?settings=features` opens Settings on the Advanced section.
     useEffect(() => {
         if (!canOpenSettings) return;
         if (!searchParams) return;
@@ -661,12 +674,30 @@ export function SettingsModal() {
                     <DialogHeader>
                         <div className="flex items-center gap-2">
                             {view !== 'hub' && (
-                                <Button variant="ghost" size="icon" onClick={() => setView('hub')} className="h-8 w-8 -ml-2 rounded-full hover:bg-muted" aria-label="Back to settings menu">
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => {
+                                        if (view === 'features' && isAdmin) {
+                                            openSettingsView('general');
+                                            return;
+                                        }
+                                        setView('hub');
+                                        if (local.soundEnabled) playSound('click');
+                                    }}
+                                    className="h-8 w-8 -ml-2 rounded-full hover:bg-muted"
+                                    aria-label={view === 'features' && isAdmin ? 'Back to general settings' : 'Back to settings menu'}
+                                >
                                     <ArrowLeft className="h-4 w-4" />
                                 </Button>
                             )}
                             <DialogTitle className="text-xl font-black tracking-tight text-foreground">
                                 {viewTitle[view]}
+                                {view === 'features' ? (
+                                    <span className="ml-2 text-sm font-bold text-amber-600 dark:text-amber-400">· Advanced</span>
+                                ) : view === 'security' ? (
+                                    <span className="ml-2 text-sm font-bold text-muted-foreground">· General</span>
+                                ) : null}
                             </DialogTitle>
                         </div>
                     </DialogHeader>
@@ -696,49 +727,25 @@ export function SettingsModal() {
                                 <span className="font-black text-sky-900 dark:text-sky-100">Interface &amp; display</span>
                                 <span className="text-xs leading-snug text-sky-800/90 dark:text-sky-200/80">Accent colors, dark mode, motion, sound, and Auto / Web / App layout</span>
                             </button>
-                            {isAdmin && (
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setView('security');
-                                        if (local.soundEnabled) playSound('click');
-                                    }}
-                                    className={cn(
-                                        'flex flex-col items-start gap-2 rounded-2xl border-2 p-4 text-left transition-all',
-                                        'border-indigo-200 dark:border-indigo-900/50 bg-indigo-50/80 dark:bg-indigo-950/20',
-                                        'hover:bg-indigo-100/80 dark:hover:bg-indigo-950/35',
-                                    )}
-                                >
-                                    <div className="flex w-full items-start justify-between gap-2">
-                                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-500 text-white shadow-inner">
-                                            <Shield className="h-5 w-5" />
-                                        </span>
-                                        <ChevronRight className="h-5 w-5 shrink-0 text-indigo-700/50 dark:text-indigo-400/50" aria-hidden />
-                                    </div>
-                                    <span className="font-black text-indigo-900 dark:text-indigo-100">Basic settings</span>
-                                    <span className="text-xs leading-snug text-indigo-800/90 dark:text-indigo-200/80">Session timeouts, printing, and guidance</span>
-                                </button>
-                            )}
                             <button
                                 type="button"
-                                onClick={() => {
-                                    setView('features');
-                                    if (local.soundEnabled) playSound('click');
-                                }}
+                                onClick={() => openSettingsView(isAdmin ? 'general' : 'advanced')}
                                 className={cn(
                                     'flex flex-col items-start gap-2 rounded-2xl border-2 p-4 text-left transition-all',
-                                    'border-amber-200 dark:border-amber-900/50 bg-amber-50/80 dark:bg-amber-950/20',
-                                    'hover:bg-amber-100/80 dark:hover:bg-amber-950/35',
+                                    'border-indigo-200 dark:border-indigo-900/50 bg-indigo-50/80 dark:bg-indigo-950/20',
+                                    'hover:bg-indigo-100/80 dark:hover:bg-indigo-950/35',
                                 )}
                             >
                                 <div className="flex w-full items-start justify-between gap-2">
-                                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white shadow-inner">
-                                        <Zap className="h-5 w-5" />
+                                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-500 text-white shadow-inner">
+                                        <Cog className="h-5 w-5" />
                                     </span>
-                                    <ChevronRight className="h-5 w-5 shrink-0 text-amber-700/50 dark:text-amber-400/50" aria-hidden />
+                                    <ChevronRight className="h-5 w-5 shrink-0 text-indigo-700/50 dark:text-indigo-400/50" aria-hidden />
                                 </div>
-                            <span className="font-black text-amber-900 dark:text-amber-100">Advanced settings</span>
-                                <span className="text-xs leading-snug text-amber-800/90 dark:text-amber-200/80">Kiosk experience, shop options, teacher tools, and more</span>
+                                <span className="font-black text-indigo-900 dark:text-indigo-100">School settings</span>
+                                <span className="text-xs leading-snug text-indigo-800/90 dark:text-indigo-200/80">
+                                    Sessions, printing, kiosk options, shop features, and more
+                                </span>
                             </button>
                             {loginState === 'developer' && (
                                 <button
@@ -1291,9 +1298,21 @@ export function SettingsModal() {
 
                     {view === 'security' && (
                         <div className="space-y-4">
+                            <div className="flex items-center justify-end">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="h-9 rounded-xl text-[10px] font-black uppercase tracking-widest border-amber-200/80 text-amber-800 hover:bg-amber-50 dark:border-amber-900/50 dark:text-amber-200 dark:hover:bg-amber-950/30"
+                                    onClick={() => openSettingsView('advanced')}
+                                >
+                                    <Zap className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+                                    Advanced
+                                    <ChevronRight className="ml-1 h-3.5 w-3.5" aria-hidden />
+                                </Button>
+                            </div>
                             <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 border border-slate-100 dark:border-slate-800/50">
                                 <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 pb-3 flex items-center gap-2">
-                                    <Shield className="w-3.5 h-3.5" /> Basic settings
+                                    <Shield className="w-3.5 h-3.5" /> General
                                 </p>
 
                                 <div className="space-y-4 mt-1">
@@ -1517,7 +1536,7 @@ export function SettingsModal() {
                                     </div>
                                     {!local.enableStudentWelcomeBackScreen ? (
                                         <p className="text-[11px] text-muted-foreground">
-                                            Turn on <span className="font-semibold">Welcome back splash</span> in Advanced settings to use this.
+                                            Turn on <span className="font-semibold">Welcome back splash</span> in Advanced to use this.
                                         </p>
                                     ) : null}
                                 </div>
@@ -1774,7 +1793,7 @@ export function SettingsModal() {
                             </div>
 
                             <div className="flex items-center justify-between mb-3 border-b border-border/40 pb-3 mt-1">
-                                <h3 className="text-sm font-bold text-muted-foreground">Manage Advanced Settings</h3>
+                                <h3 className="text-sm font-bold text-muted-foreground">Feature toggles</h3>
                                 <div className="flex items-center gap-2 shrink-0">
                                     <Button variant="outline" size="sm" className="h-8 rounded-xl text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-700 dark:hover:text-emerald-300" onClick={() => {
                                         if (local.soundEnabled) playSound('click');
@@ -2013,7 +2032,7 @@ export function SettingsModal() {
                                 <FeatureRow
                                     id="enableStudentWelcomeBackScreen"
                                     label="Welcome back splash"
-                                    desc="Shows a short full-screen greeting when a student opens the kiosk. Default 2 seconds (adjustable in Basic settings). Can be turned off per student in Admin → Students."
+                                    desc="Shows a short full-screen greeting when a student opens the kiosk. Default 2 seconds (adjustable in General). Can be turned off per student in Admin → Students."
                                     icon={<Tv className="w-5 h-5" />}
                                     settings={local}
                                     onToggle={handleToggle}
@@ -2077,7 +2096,7 @@ export function SettingsModal() {
                                         </div>
                                     </div>
                                 ) : null}
-                                {/* Student kiosk login/coupon method controls moved to Security → Basic settings. */}
+                                {/* Student kiosk login/coupon method controls live in Settings → General. */}
 
                                   <FeatureRow
                                     id="enablePrizeImages"

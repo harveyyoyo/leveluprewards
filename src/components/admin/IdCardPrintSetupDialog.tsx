@@ -91,7 +91,7 @@ export function IdCardPrintSetupDialog(props: IdCardPrintSetupDialogProps) {
             {title}
           </DialogTitle>
           <DialogDescription>
-            These {cardLabel} use the printer profile and stock selected under Settings → Basic settings → Printing &amp;
+            These {cardLabel} use the printer profile and stock selected under Settings → Printing &amp;
             guidance. {summaryLine}
           </DialogDescription>
         </DialogHeader>
