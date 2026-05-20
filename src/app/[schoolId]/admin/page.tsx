@@ -25,7 +25,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import type { Student, Prize, Coupon, Category, Class, House, Teacher, BackupInfo, Achievement, Badge, AttendanceScheduleSlot, TeacherBudgetPeriod, StaffAccount, LibraryItem, LibraryItemInput } from '@/lib/types';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StudentModal } from '@/components/StudentModal';
 import { AdminFaceEnrollmentPanel } from '@/components/AdminFaceEnrollmentPanel';
 import { AttendanceTimeZoneField } from '@/components/attendance/AttendanceTimeZoneField';
@@ -747,6 +747,25 @@ function AdminDashboardInner() {
 
     return out;
   }, [loginState, pinnedAddOnTabs, settings.adminMainTabOrder]);
+
+  const mobileMoreTabOptions = useMemo(() => {
+    const mainTabValues = new Set(orderedMainTabs.map((t) => t.value));
+    return addOnTabDefs.filter((t) => !mainTabValues.has(t.value));
+  }, [addOnTabDefs, orderedMainTabs]);
+
+  const handleMobileMainTabChange = (value: string) => {
+    if (orderedMainTabs.some((t) => t.value === value)) {
+      setActiveMainTab(value);
+      return;
+    }
+
+    if (addOnTabDefs.some((t) => t.value === value)) {
+      toggleAddOnTab(value, true);
+      return;
+    }
+
+    setActiveMainTab(value);
+  };
 
   const persistMainTabOrder = (next: string[]) => {
     // Keep storage small + resilient (no unknown values / no duplicates).
@@ -1590,7 +1609,7 @@ function AdminDashboardInner() {
                 <Label htmlFor="admin-portal-section" className="sr-only">
                   Admin portal section
                 </Label>
-                <Select value={activeMainTab} onValueChange={setActiveMainTab}>
+                <Select value={activeMainTab} onValueChange={handleMobileMainTabChange}>
                   <SelectTrigger
                     id="admin-portal-section"
                     className="h-12 w-full rounded-xl font-bold"
@@ -1599,11 +1618,31 @@ function AdminDashboardInner() {
                     <SelectValue placeholder="Choose a section" />
                   </SelectTrigger>
                   <SelectContent position="popper" className="max-h-[min(70vh,440px)]">
-                    {orderedMainTabs.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>
-                        {t.label}
-                      </SelectItem>
-                    ))}
+                    <SelectGroup>
+                      <SelectLabel className="pl-8 text-[10px] font-black uppercase tracking-wider text-muted-foreground">
+                        Current tabs
+                      </SelectLabel>
+                      {orderedMainTabs.map((t) => (
+                        <SelectItem key={t.value} value={t.value}>
+                          {t.label}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                    {mobileMoreTabOptions.length > 0 ? (
+                      <>
+                        <SelectSeparator />
+                        <SelectGroup>
+                          <SelectLabel className="pl-8 text-[10px] font-black uppercase tracking-wider text-muted-foreground">
+                            Add more tabs
+                          </SelectLabel>
+                          {mobileMoreTabOptions.map((t) => (
+                            <SelectItem key={t.value} value={t.value}>
+                              {t.label}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </>
+                    ) : null}
                   </SelectContent>
                 </Select>
               </div>
