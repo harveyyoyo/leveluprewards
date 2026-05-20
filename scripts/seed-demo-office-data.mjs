@@ -1,5 +1,6 @@
 import admin from 'firebase-admin';
 import { build } from 'esbuild';
+import { existsSync } from 'node:fs';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -75,9 +76,20 @@ async function loadSeedFactory() {
       {
         name: 'workspace-alias',
         setup(builder) {
-          builder.onResolve({ filter: /^@\// }, (args) => ({
-            path: path.join(srcRoot, args.path.slice(2)),
-          }));
+          builder.onResolve({ filter: /^@\// }, (args) => {
+            const basePath = path.join(srcRoot, args.path.slice(2));
+            const candidates = [
+              basePath,
+              `${basePath}.ts`,
+              `${basePath}.tsx`,
+              `${basePath}.js`,
+              `${basePath}.mjs`,
+              path.join(basePath, 'index.ts'),
+              path.join(basePath, 'index.tsx'),
+              path.join(basePath, 'index.js'),
+            ];
+            return { path: candidates.find((candidate) => existsSync(candidate)) ?? basePath };
+          });
         },
       },
     ],
