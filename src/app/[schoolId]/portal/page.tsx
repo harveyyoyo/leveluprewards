@@ -3,7 +3,7 @@ import { useMemo, useState, useEffect, useLayoutEffect, useRef, type ComponentTy
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
-import { Book, Building2, GraduationCap, Printer, UserCog, Loader2, ShieldCheck, ArrowUpRight } from 'lucide-react';
+import { Book, GraduationCap, Printer, UserCog, Loader2, ShieldCheck, ArrowUpRight } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useToast } from '@/hooks/use-toast';
@@ -20,7 +20,6 @@ import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { rainbowByIndex, rainbowForPortalId } from '@/lib/rainbowNav';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
 import { LEVELUP_BRAND_PRIMARY_HEX, LEVELUP_BRAND_PRIMARY_ON_DARK_HEX } from '@/lib/appBranding';
-import { isOfficePillarOn } from '@/lib/productPillars';
 import {
     isKioskPortraitDisplay,
     portalChooseGridClass,
@@ -134,7 +133,7 @@ function WhereToDrawnTitle({
 }
 
 export default function PortalPage() {
-    const { loginState, isInitialized, schoolId, isAdmin, isOffice, login } = useAppContext();
+    const { loginState, isInitialized, schoolId, isAdmin, login } = useAppContext();
     const { settings } = useSettings();
     const prefersReducedMotion = useReducedMotion();
     const playSound = useArcadeSound();
@@ -265,17 +264,6 @@ export default function PortalPage() {
                       title: 'Teacher & Faculty Portal',
                       description: 'Print point coupons, adjust points manually, customize categories, print reports, and add prizes.',
                       icon: Printer,
-                  },
-              ]
-            : []),
-        ...(isOfficePillarOn(settings) && (isAdmin || isOffice)
-            ? [
-                  {
-                      id: 'office',
-                      href: `/${schoolId}/office`,
-                      title: 'School Office',
-                      description: 'Grades, family billing, and student profiles in one calm workspace.',
-                      icon: Building2,
                   },
               ]
             : []),

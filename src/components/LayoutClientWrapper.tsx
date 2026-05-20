@@ -92,10 +92,8 @@ function LayoutClientWrapperInner({ children }: LayoutClientWrapperProps) {
     const kioskPortraitLayout = isKioskPortraitDisplay(settings) && isKioskPortraitRoute;
     const showStudentHomeHeader =
       isStudentHomePage && settings.studentPortalShowHeader === true;
-    const isOfficePortal =
-      typeof pathname === 'string' && /\/office(?:\/|$)/.test(pathname);
     const hideAppChrome =
-      isLoginPage || isSignInPage || isMarketingLandingPath(pathname) || isOfficePortal;
+      isLoginPage || isSignInPage || isMarketingLandingPath(pathname);
     const useHoverKioskHeader =
       isStudentKioskPage && !hideAppChrome && !showStudentHomeHeader;
     /** Staff portal “home” routes: same shell as admin (full-width `<main>`, inner pages use `max-w-7xl`). */
