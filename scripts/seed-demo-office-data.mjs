@@ -190,18 +190,42 @@ async function seedSchool(db, schoolId, factory) {
 }
 
 async function main() {
-  const requestedSchools = process.argv.slice(2).map((s) => s.trim().toLowerCase()).filter(Boolean);
+  const args = process.argv.slice(2);
+  const dryRun = args.includes('--dry-run');
+  const requestedSchools = args
+    .filter((arg) => arg !== '--dry-run')
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
   const schools = requestedSchools.length ? requestedSchools : DEMO_SCHOOLS;
   const invalid = schools.filter((schoolId) => !DEMO_SCHOOLS.includes(schoolId));
   if (invalid.length) {
     throw new Error(`Unsupported demo school(s): ${invalid.join(', ')}. Use ${DEMO_SCHOOLS.join(', ')}.`);
   }
 
-  initializeFirebaseAdmin();
-  const db = admin.firestore();
   const factory = await loadSeedFactory();
 
   try {
+    if (dryRun) {
+      for (const schoolId of schools) {
+        const { payload, teachers } = factory.buildDemoOfficeSeedForSchool(schoolId);
+        console.log(
+          [
+            `Dry run ${schoolId}:`,
+            `${payload.officeStudents.length} office students`,
+            `${payload.officeClasses.length} classes`,
+            `${payload.gradeEntries.length} grades`,
+            `${payload.billingAccounts.length} billing accounts`,
+            `${payload.invoices.length} invoices`,
+            `${payload.staffAccounts.length} office staff login`,
+            `${teachers.length} teachers for staff directory sync`,
+          ].join(' '),
+        );
+      }
+      return;
+    }
+
+    initializeFirebaseAdmin();
+    const db = admin.firestore();
     for (const schoolId of schools) {
       const result = await seedSchool(db, schoolId, factory);
       console.log(
