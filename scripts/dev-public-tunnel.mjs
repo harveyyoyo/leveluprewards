@@ -4,11 +4,14 @@
  * By default this uses ngrok. For Cloudflare Quick Tunnels, run:
  *   TUNNEL_PROVIDER=cloudflare npm run dev:tunnel
  *
+ * The public URL mirrors the localhost of the machine running this script.
+ * Run it on your workstation if you want the URL to match your local browser.
+ *
  * Set your free ngrok dev domain in `.env.local` as `NGROK_DOMAIN=yourname.ngrok-free.dev`
  * (claim at https://dashboard.ngrok.com/domains), or pass it in the shell for one run.
  *
- * Requires: ngrok authtoken in %LOCALAPPDATA%\ngrok\ngrok.yml or cloudflared in PATH,
- * plus npm run dev on :3000.
+ * Requires: ngrok authtoken in %LOCALAPPDATA%\ngrok\ngrok.yml, or npm/npx for
+ * Cloudflare Quick Tunnels, plus npm run dev on :3000.
  */
 import { spawn } from 'child_process';
 import { createRequire } from 'module';
@@ -47,6 +50,7 @@ const PROJECT_ID = 'studio-1273073612-71183';
 const PORT = process.env.PORT || '3000';
 const NGROK_DOMAIN = (process.env.NGROK_DOMAIN || '').trim();
 const TUNNEL_PROVIDER = (process.env.TUNNEL_PROVIDER || 'ngrok').trim().toLowerCase();
+const CLOUDFLARED_BIN = (process.env.CLOUDFLARED_BIN || '').trim();
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
@@ -142,7 +146,13 @@ function startNgrok() {
 }
 
 function startCloudflared() {
-  return spawn('cloudflared', ['tunnel', '--url', `http://127.0.0.1:${PORT}`], {
+  const targetUrl = `http://127.0.0.1:${PORT}`;
+  const command = CLOUDFLARED_BIN || 'npx';
+  const args = CLOUDFLARED_BIN
+    ? ['tunnel', '--url', targetUrl]
+    : ['--yes', 'cloudflared', 'tunnel', '--url', targetUrl];
+
+  return spawn(command, args, {
     stdio: ['ignore', 'pipe', 'pipe'],
     shell: process.platform === 'win32',
   });
