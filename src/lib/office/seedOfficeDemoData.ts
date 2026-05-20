@@ -5,7 +5,7 @@ import {
   writeBatch,
   type Firestore,
 } from 'firebase/firestore';
-import type { Class, Student } from '@/lib/types';
+import type { Class, StaffAccount, Student } from '@/lib/types';
 import type {
   OfficeBillingAccount,
   OfficeClass,
@@ -24,6 +24,9 @@ export const OFFICE_DEMO_COLLECTIONS = [
 ] as const;
 
 const BATCH_LIMIT = 499;
+const OFFICE_DEMO_STAFF_ACCOUNT_ID = 'demo_office_staff';
+
+type OfficeDemoWritableCollection = (typeof OFFICE_DEMO_COLLECTIONS)[number] | 'staffAccounts';
 
 export type OfficeDemoVariant = 'schoolabc' | 'yeshiva';
 
@@ -39,6 +42,7 @@ export type OfficeDemoSeedPayload = {
   gradeEntries: OfficeGradeEntry[];
   billingAccounts: OfficeBillingAccount[];
   invoices: OfficeInvoice[];
+  staffAccounts: StaffAccount[];
 };
 
 function hashToIndex(seed: string, mod: number): number {
@@ -94,6 +98,19 @@ const TEACHER_NAMES_YESHIVA = [
   'Rosh Yeshiva',
   'Rabbi Epstein',
 ] as const;
+
+export function buildOfficeDemoStaffAccount(variant: OfficeDemoVariant): StaffAccount {
+  return {
+    id: OFFICE_DEMO_STAFF_ACCOUNT_ID,
+    username: 'office',
+    passcode: '1234',
+    displayName: variant === 'yeshiva' ? 'Yeshiva Office' : 'School Office',
+    role: 'office',
+    roles: ['office'],
+    email: variant === 'yeshiva' ? 'office@yeshiva-demo.example' : 'office@schoolabc.example',
+    phone: '(555) 010-0100',
+  };
+}
 
 /**
  * Builds office roster, grades, and billing demo data aligned with rewards sample IDs.
@@ -237,6 +254,7 @@ export function buildOfficeDemoSeed(input: OfficeDemoSeedInput): OfficeDemoSeedP
     gradeEntries,
     billingAccounts,
     invoices,
+    staffAccounts: [buildOfficeDemoStaffAccount(input.variant)],
   };
 }
 
@@ -259,8 +277,7 @@ export async function writeOfficeDemoSeedToFirestore(
   payload: OfficeDemoSeedPayload,
 ): Promise<void> {
   const school = schoolId.trim().toLowerCase();
-  const ops: Array<{ collection: (typeof OFFICE_DEMO_COLLECTIONS)[number]; id: string; data: object }> =
-    [];
+  const ops: Array<{ collection: OfficeDemoWritableCollection; id: string; data: object }> = [];
 
   for (const c of payload.officeClasses) {
     const { id, ...data } = c;
@@ -281,6 +298,9 @@ export async function writeOfficeDemoSeedToFirestore(
   for (const inv of payload.invoices) {
     const { id, ...data } = inv;
     ops.push({ collection: 'officeInvoices', id, data });
+  }
+  for (const account of payload.staffAccounts) {
+    ops.push({ collection: 'staffAccounts', id: account.id, data: account });
   }
 
   for (let i = 0; i < ops.length; i += BATCH_LIMIT) {

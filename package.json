@@ -31,6 +31,7 @@
     "firebase:ssr:prepare": "node scripts/prepare-firebase-framework-deploy.mjs",
     "test:themes": "node scripts/validate-themes.mjs",
     "backup:code": "node scripts/backup-code.mjs",
+    "seed:demo-office": "node scripts/seed-demo-office-data.mjs",
     "generate:legal-pdfs": "node scripts/generate-legal-pdfs.mjs",
     "generate:legal-pdfs:text": "node scripts/generate-legal-pdfs-from-text.mjs",
     "generate:flyer-pdf": "node scripts/generate-flyer-pdf.mjs",
