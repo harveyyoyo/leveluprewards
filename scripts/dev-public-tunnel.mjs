@@ -1,10 +1,17 @@
 /**
  * Expose local dev (port 3000) over HTTPS and register the hostname in Firebase Auth.
  *
+ * By default this uses ngrok. For Cloudflare Quick Tunnels, run:
+ *   TUNNEL_PROVIDER=cloudflare npm run dev:tunnel
+ *
+ * The public URL mirrors the localhost of the machine running this script.
+ * Run it on your workstation if you want the URL to match your local browser.
+ *
  * Set your free ngrok dev domain in `.env.local` as `NGROK_DOMAIN=yourname.ngrok-free.dev`
  * (claim at https://dashboard.ngrok.com/domains), or pass it in the shell for one run.
  *
- * Requires: ngrok authtoken in %LOCALAPPDATA%\ngrok\ngrok.yml, npm run dev on :3000
+ * Requires: ngrok authtoken in %LOCALAPPDATA%\ngrok\ngrok.yml, or npm/npx for
+ * Cloudflare Quick Tunnels, plus npm run dev on :3000.
  */
 import { spawn } from 'child_process';
 import { createRequire } from 'module';
@@ -42,6 +49,8 @@ loadEnvLocal();
 const PROJECT_ID = 'studio-1273073612-71183';
 const PORT = process.env.PORT || '3000';
 const NGROK_DOMAIN = (process.env.NGROK_DOMAIN || '').trim();
+const TUNNEL_PROVIDER = (process.env.TUNNEL_PROVIDER || 'ngrok').trim().toLowerCase();
+const CLOUDFLARED_BIN = (process.env.CLOUDFLARED_BIN || '').trim();
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
@@ -76,6 +85,43 @@ async function getNgrokUrl() {
   throw new Error('ngrok did not start — check authtoken in ngrok.yml');
 }
 
+function waitForCloudflaredUrl(cloudflared) {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      reject(new Error('cloudflared did not publish a trycloudflare.com URL in time'));
+    }, 30000);
+
+    const handleOutput = (chunk, stream) => {
+      const text = chunk.toString();
+      stream.write(chunk);
+      const match = text.match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/i);
+      if (match && !settled) {
+        settled = true;
+        clearTimeout(timer);
+        resolve(match[0]);
+      }
+    };
+
+    cloudflared.stdout?.on('data', (chunk) => handleOutput(chunk, process.stdout));
+    cloudflared.stderr?.on('data', (chunk) => handleOutput(chunk, process.stderr));
+    cloudflared.once('error', (error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      reject(error);
+    });
+    cloudflared.once('exit', (code) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      reject(new Error(`cloudflared exited before publishing a URL (code ${code ?? 'unknown'})`));
+    });
+  });
+}
+
 async function addFirebaseAuthDomain(hostname) {
   const ft = `${process.env.APPDATA}/npm/node_modules/firebase-tools`;
   const auth = require(`${ft}/lib/auth`);
@@ -99,20 +145,44 @@ function startNgrok() {
   });
 }
 
+function startCloudflared() {
+  const targetUrl = `http://127.0.0.1:${PORT}`;
+  const command = CLOUDFLARED_BIN || 'npx';
+  const args = CLOUDFLARED_BIN
+    ? ['tunnel', '--url', targetUrl]
+    : ['--yes', 'cloudflared', 'tunnel', '--url', targetUrl];
+
+  return spawn(command, args, {
+    stdio: ['ignore', 'pipe', 'pipe'],
+    shell: process.platform === 'win32',
+  });
+}
+
 console.log('[dev-public-tunnel] Waiting for dev server…');
 await waitForDev();
 
-if (NGROK_DOMAIN) {
-  console.log(`[dev-public-tunnel] Using reserved dev domain: ${NGROK_DOMAIN}`);
-} else {
-  console.warn(
-    '[dev-public-tunnel] No NGROK_DOMAIN — ngrok will assign a random URL. Add NGROK_DOMAIN to .env.local (see .env.example).',
-  );
-}
+let tunnel;
+let url;
 
-console.log('[dev-public-tunnel] Starting ngrok…');
-const ngrok = startNgrok();
-const url = await getNgrokUrl();
+if (TUNNEL_PROVIDER === 'cloudflare' || TUNNEL_PROVIDER === 'cloudflared') {
+  console.log('[dev-public-tunnel] Starting Cloudflare Quick Tunnel…');
+  tunnel = startCloudflared();
+  url = await waitForCloudflaredUrl(tunnel);
+} else if (TUNNEL_PROVIDER === 'ngrok') {
+  if (NGROK_DOMAIN) {
+    console.log(`[dev-public-tunnel] Using reserved dev domain: ${NGROK_DOMAIN}`);
+  } else {
+    console.warn(
+      '[dev-public-tunnel] No NGROK_DOMAIN — ngrok will assign a random URL. Add NGROK_DOMAIN to .env.local (see .env.example).',
+    );
+  }
+
+  console.log('[dev-public-tunnel] Starting ngrok…');
+  tunnel = startNgrok();
+  url = await getNgrokUrl();
+} else {
+  throw new Error(`Unsupported TUNNEL_PROVIDER "${TUNNEL_PROVIDER}". Use "ngrok" or "cloudflare".`);
+}
 const hostname = new URL(url).hostname;
 
 console.log(`\n[dev-public-tunnel] Public URL: ${url}`);
@@ -129,7 +199,7 @@ try {
   console.warn('  Add manually in Firebase Console → Authentication → Authorized domains');
 }
 
-if (!NGROK_DOMAIN) {
+if (TUNNEL_PROVIDER === 'ngrok' && !NGROK_DOMAIN) {
   console.log(
     '\nTip: For a shorter stable URL, claim a free static domain at https://dashboard.ngrok.com/domains',
   );
@@ -137,6 +207,6 @@ if (!NGROK_DOMAIN) {
 }
 
 process.on('SIGINT', () => {
-  ngrok.kill();
+  tunnel.kill();
   process.exit(0);
 });

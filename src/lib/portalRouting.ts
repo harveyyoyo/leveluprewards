@@ -75,7 +75,8 @@ function isTunnelDevHost(host: string): boolean {
     host.endsWith('.ngrok-free.dev') ||
     host.endsWith('.ngrok-free.app') ||
     host.endsWith('.ngrok.io') ||
-    host.endsWith('.ngrok.app')
+    host.endsWith('.ngrok.app') ||
+    host.endsWith('.trycloudflare.com')
   );
 }
 
