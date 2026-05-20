@@ -45,10 +45,10 @@ export default function LevelUpArcadeLandingPage() {
               levelUp <span className="text-cyan-400 text-sm font-semibold">EDU</span>
             </span>
           </Link>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             <Link
               href="/login"
-              className="text-sm font-semibold text-slate-300 transition-colors hover:text-white"
+              className="hidden sm:block text-sm font-semibold text-slate-300 transition-colors hover:text-white"
             >
               Sign In
             </Link>
@@ -56,10 +56,11 @@ export default function LevelUpArcadeLandingPage() {
               href="/login"
               className={cn(
                 buttonVariants({ size: 'sm' }),
-                'relative overflow-hidden rounded-xl bg-gradient-to-r from-fuchsia-600 to-cyan-500 px-5 font-bold text-white shadow-lg shadow-fuchsia-500/20 transition-all duration-300 hover:scale-105 hover:shadow-cyan-500/25 hover:brightness-110 active:scale-95',
+                'relative overflow-hidden rounded-xl bg-gradient-to-r from-fuchsia-600 to-cyan-500 px-3 sm:px-5 py-2 font-bold text-white shadow-lg shadow-fuchsia-500/20 transition-all duration-300 hover:scale-105 hover:shadow-cyan-500/25 hover:brightness-110 active:scale-95 text-xs sm:text-sm',
               )}
             >
-              Start Playing →
+              <span className="hidden sm:inline">Start Playing →</span>
+              <span className="sm:hidden">Play Now →</span>
             </Link>
           </div>
         </div>

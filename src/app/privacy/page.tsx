@@ -12,7 +12,7 @@ export default function PrivacyPage() {
   return (
     <main className="bg-background text-foreground px-6 py-16">
       <div className="mx-auto max-w-3xl">
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-black tracking-tight">Privacy Policy</h1>
             <p className="mt-2 text-sm font-semibold text-muted-foreground">
@@ -23,7 +23,7 @@ export default function PrivacyPage() {
             href={privacyUrl}
             target={privacyUrl.startsWith('http') ? '_blank' : undefined}
             rel={privacyUrl.startsWith('http') ? 'noreferrer' : undefined}
-            className="shrink-0 inline-flex items-center rounded-md border border-border bg-card px-3 py-1.5 text-xs font-bold hover:bg-accent transition-colors"
+            className="w-full sm:w-auto text-center justify-center shrink-0 inline-flex items-center rounded-md border border-border bg-card px-3 py-1.5 text-xs font-bold hover:bg-accent transition-colors"
           >
             [Download Official PDF Version]
           </a>
