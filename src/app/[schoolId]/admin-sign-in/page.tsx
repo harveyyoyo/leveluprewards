@@ -70,7 +70,7 @@ function AdminSignInContent() {
     [activeSchoolId, params.schoolId],
   );
 
-  /** Kiosk (student) session should return to redeem — not the faculty hub (`/portal`). */
+  /** Kiosk (student) session should return to redeem — not the portal hub (`/portal`). */
   const backHref = useMemo(() => {
     if (!schoolId) return '/login';
     if (loginState === 'student') return `/${schoolId}/student`;
@@ -113,7 +113,7 @@ function AdminSignInContent() {
       <div className="min-h-[calc(100vh-5rem)] flex items-center justify-center p-8">
         <Button disabled variant="ghost" size="lg" className="text-muted-foreground">
           <Loader2 className="mr-2 h-5 w-5 animate-spin" aria-hidden />
-          Loading...
+          Loading…
         </Button>
       </div>
     );

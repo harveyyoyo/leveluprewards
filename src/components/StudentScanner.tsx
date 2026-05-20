@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback, RefObject, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { httpsCallable } from 'firebase/functions';
 import { Nfc, Type, Camera, GraduationCap, User, ScanFace } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -25,6 +25,7 @@ import {
     getStudentSignInThrottleStatus,
     recordStudentSignIn,
 } from '@/lib/studentSignInThrottle';
+import { isStudentKioskUiContext } from '@/lib/studentKioskRoute';
 
 export type StudentFoundMeta = { source: 'face'; confidence?: number };
 
@@ -122,6 +123,7 @@ export function StudentScanner({
     isActive = true,
 }: StudentScannerProps) {
     const { schoolId } = useAppContext();
+    const pathname = usePathname();
     const firestore = useFirestore();
     const functions = useFunctions();
     const { user, isUserLoading } = useUser();
@@ -425,7 +427,7 @@ export function StudentScanner({
             }
         }
 
-        if (loginState === 'student') {
+        if (isStudentKioskUiContext(loginState, pathname, schoolId)) {
             if (studentKioskSessionError) {
                 playSound('error');
                 toast({
@@ -702,16 +704,16 @@ export function StudentScanner({
                             </div>
                             <div className="space-y-1">
                                 <p className={cn("font-black text-xl sm:text-2xl [@media(max-height:720px)]:text-lg", isGraphic ? 'text-foreground' : 'text-foreground')}>
-                                    {loginState === 'student' && studentKioskSessionError
+                                    {isStudentKioskUiContext(loginState, pathname, schoolId) && studentKioskSessionError
                                         ? 'Check-in Unavailable'
-                                        : loginState === 'student' && !studentKioskSessionEstablished
+                                        : isStudentKioskUiContext(loginState, pathname, schoolId) && !studentKioskSessionEstablished
                                           ? 'Connecting…'
                                           : 'System Ready'}
                                 </p>
                                 <p className="text-muted-foreground text-sm sm:text-base font-semibold [@media(max-height:720px)]:text-xs">
-                                    {loginState === 'student' && studentKioskSessionError
+                                    {isStudentKioskUiContext(loginState, pathname, schoolId) && studentKioskSessionError
                                         ? studentKioskSessionError
-                                        : loginState === 'student' && !studentKioskSessionEstablished
+                                        : isStudentKioskUiContext(loginState, pathname, schoolId) && !studentKioskSessionEstablished
                                           ? 'This device is registering with the school. Please wait.'
                                           : 'Please scan your card'}
                                 </p>

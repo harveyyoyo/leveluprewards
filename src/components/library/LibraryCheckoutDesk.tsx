@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
-import { ArrowLeftRight, Barcode, Loader2, User } from 'lucide-react';
+import { ArrowLeftRight, Barcode, ChevronUp, Loader2, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFirestore, useFunctions } from '@/firebase';
 import { useAppContext } from '@/components/AppProvider';
@@ -10,20 +10,23 @@ import { useToast } from '@/hooks/use-toast';
 import { useBarcodeReaderWedge } from '@/hooks/useBarcodeReaderWedge';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { lookupStudentId } from '@/lib/db/lookup';
-import { performLibraryCheckoutOrReturn } from '@/lib/libraryOperations';
+import { performLibraryCheckoutOrReturn, findLibraryItemByUpc } from '@/lib/libraryOperations';
 import { formatDueDate, getLibraryPolicyFromSettings } from '@/lib/libraryPolicy';
 import { isSchoolLibraryBarcode } from '@/lib/libraryScanCode';
 import { isRetailIsbnBarcode } from '@/lib/libraryCatalogLookup';
 import { createScanDeduper } from '@/lib/libraryIntakeHelpers';
-import type { Category } from '@/lib/types';
+import type { Category, Student } from '@/lib/types';
 import { LibraryBarcodeReaderField } from './LibraryBarcodeReaderField';
+import { LibraryStudentNamePicker } from './LibraryStudentNamePicker';
 
 export function LibraryCheckoutDesk({
   getStudentName,
   categories,
+  students,
 }: {
   getStudentName: (id?: string) => string;
   categories?: Category[] | null;
+  students?: Student[] | null;
 }) {
   const { schoolId } = useAppContext();
   const firestore = useFirestore();
@@ -32,6 +35,7 @@ export function LibraryCheckoutDesk({
   const { toast } = useToast();
   const playSound = useArcadeSound();
 
+  const [deskOpen, setDeskOpen] = useState(true);
   const [scanning, setScanning] = useState(false);
   const [busy, setBusy] = useState(false);
   const [studentId, setStudentId] = useState<string | null>(null);
@@ -50,12 +54,29 @@ export function LibraryCheckoutDesk({
     setLastBookTitle(null);
   }, []);
 
+  const selectStudentById = useCallback(
+    (id: string, source: 'scan' | 'manual') => {
+      setStudentId(id);
+      setLastBookTitle(null);
+      playSound('success');
+      toast({
+        title: 'Student ready',
+        description:
+          source === 'manual'
+            ? `${getStudentName(id)} — scan book LIB barcodes or press Start scanning.`
+            : `Now scan a book LIB barcode for ${getStudentName(id)}.`,
+      });
+    },
+    [getStudentName, playSound, toast],
+  );
+
   const processBook = useCallback(
-    async (code: string) => {
-      if (!firestore || !schoolId || !studentId) return;
+    async (code: string, targetStudentId?: string) => {
+      const activeStudentId = targetStudentId || studentId;
+      if (!firestore || !schoolId || !activeStudentId) return;
       setBusy(true);
       try {
-        const result = await performLibraryCheckoutOrReturn(firestore, schoolId, studentId, code, {
+        const result = await performLibraryCheckoutOrReturn(firestore, schoolId, activeStudentId, code, {
           policy: libraryPolicy,
           functions,
         });
@@ -108,22 +129,16 @@ export function LibraryCheckoutDesk({
           toast({
             variant: 'destructive',
             title: 'Student not found',
-            description: 'Scan a valid student ID card.',
+            description: 'Scan a valid student ID card or find the student by name.',
           });
           return;
         }
-        setStudentId(id);
-        setLastBookTitle(null);
-        playSound('success');
-        toast({
-          title: 'Student ready',
-          description: `Now scan a book LIB barcode for ${getStudentName(id)}.`,
-        });
+        selectStudentById(id, 'scan');
       } finally {
         setBusy(false);
       }
     },
-    [firestore, schoolId, getStudentName, playSound, toast],
+    [firestore, schoolId, selectStudentById, playSound, toast],
   );
 
   const handleScan = useCallback(
@@ -134,11 +149,37 @@ export function LibraryCheckoutDesk({
 
       if (isSchoolLibraryBarcode(trimmed)) {
         if (!studentId) {
-          toast({
-            variant: 'destructive',
-            title: 'Scan student first',
-            description: 'Scan the student ID card, then the book LIB barcode.',
-          });
+          // If no student is selected, look up the book copy.
+          // If it is currently checked out, we can automatically process the check-in (return) for the borrower!
+          if (!firestore || !schoolId) return;
+          setBusy(true);
+          findLibraryItemByUpc(firestore, schoolId, trimmed)
+            .then((found) => {
+              setBusy(false);
+              if (!found) {
+                playSound('error');
+                toast({
+                  variant: 'destructive',
+                  title: 'Book not found',
+                  description: 'Scan the LIB sticker barcode on this school copy.',
+                });
+                return;
+              }
+              if (found.item.status === 'checked_out' && found.item.checkedOutTo) {
+                // Instantly check it in for the borrowing student!
+                void processBook(trimmed, found.item.checkedOutTo);
+              } else {
+                playSound('error');
+                toast({
+                  variant: 'destructive',
+                  title: 'Select student first',
+                  description: 'Find a student by name or scan their ID card first to check out this available book.',
+                });
+              }
+            })
+            .catch(() => {
+              setBusy(false);
+            });
           return;
         }
         void processBook(trimmed);
@@ -156,21 +197,25 @@ export function LibraryCheckoutDesk({
 
       void processStudent(trimmed);
     },
-    [processBook, processStudent, shouldAcceptScan, studentId, toast],
+    [firestore, schoolId, processBook, processStudent, shouldAcceptScan, studentId, playSound, toast],
   );
 
   const { inputRef, scanBuffer, setScanBuffer, submitScan, focusReader } = useBarcodeReaderWedge({
-    active: scanning,
+    active: scanning && deskOpen,
     onScan: handleScan,
     disabled: busy,
   });
 
   const stepHint = !studentId
-    ? 'Step 1: Scan the student ID card.'
+    ? 'Step 1: Scan the student ID card (or pick a student by name above).'
     : 'Step 2: Scan the book LIB barcode (repeat for more books).';
 
   return (
-    <div className="rounded-xl border border-primary/25 bg-primary/5 p-4 space-y-4" role="region" aria-label="Library checkout desk">
+    <div
+      className="rounded-xl border border-primary/25 bg-primary/5 p-4 space-y-4"
+      role="region"
+      aria-label="Library checkout desk"
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="font-bold text-sm flex items-center gap-2">
@@ -178,10 +223,25 @@ export function LibraryCheckoutDesk({
             Check out &amp; check in
           </h3>
           <p className="text-xs text-muted-foreground mt-1">
-            Desk checkout: student card, then book LIB barcode. Returns use the same flow when the same student scans the
-            book back in.
+            Pick a student by name or scan their ID card, then scan each book&apos;s LIB barcode.
           </p>
         </div>
+      </div>
+
+      {!studentId ? (
+        <LibraryStudentNamePicker
+          students={students}
+          disabled={busy}
+          onSelect={(s) => selectStudentById(s.id, 'manual')}
+        />
+      ) : null}
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-xs text-muted-foreground">
+          {scanning
+            ? 'Scanner active — scan student ID or book LIB barcode.'
+            : 'Press Start scanning when ready.'}
+        </p>
         <Button
           type="button"
           size="sm"
@@ -222,7 +282,7 @@ export function LibraryCheckoutDesk({
         <User className="h-5 w-5 text-primary shrink-0" aria-hidden />
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Current student</p>
-          <p className="font-bold truncate">{studentLabel ?? 'None — scan student ID first'}</p>
+          <p className="font-bold truncate">{studentLabel ?? 'None — find by name or scan ID'}</p>
           {lastBookTitle ? (
             <p className="text-xs text-muted-foreground truncate">Last book: {lastBookTitle}</p>
           ) : null}

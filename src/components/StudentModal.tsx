@@ -33,7 +33,7 @@ import { AdminFaceEnrollmentPanel } from './AdminFaceEnrollmentPanel';
 import { Wand2, Trash2, Loader2 } from 'lucide-react';
 import { ImageCropper } from './ImageCropper';
 import { cn, getStudentNickname } from '@/lib/utils';
-import { encryptField, decryptField } from '@/lib/crypto';
+import { obfuscateField, deobfuscateField } from '@/lib/crypto';
 import { WELCOME_GREETING_STYLES } from '@/components/WelcomeGreeting';
 import { STUDENT_WELCOME_STYLES_LIVE } from '@/lib/studentWelcome';
 import { normalizeStudentTheme } from '@/lib/themeContrast';
@@ -104,10 +104,10 @@ export function StudentModal({
         setNfcId(student.nfcId || student.id);
         setClassId(student.classId || 'none');
         setHouseId(student.houseId || 'none');
-        setParentEmail(decryptField(student.parentEmail) || '');
-        setParentPhone(decryptField(student.parentPhone) || '');
-        setStudentEmail(decryptField(student.studentEmail) || '');
-        setStudentPhone(decryptField(student.studentPhone) || '');
+        setParentEmail(deobfuscateField(student.parentEmail) || '');
+        setParentPhone(deobfuscateField(student.parentPhone) || '');
+        setStudentEmail(deobfuscateField(student.studentEmail) || '');
+        setStudentPhone(deobfuscateField(student.studentPhone) || '');
         setParentNotificationsAllowed(student.notificationPrefs?.parentEnabled !== false);
         setStudentNotificationsAllowed(student.notificationPrefs?.studentEnabled !== false);
         setParentWeeklyDigestOptIn(student.notificationPrefs?.parentWeeklyDigest === true);
@@ -253,7 +253,7 @@ export function StudentModal({
     } catch (err: any) {
       console.error('Failed to remove photo', err);
       playSound('error');
-      toast({ variant: 'destructive', title: 'Error', description: 'Could not remove the photo.' });
+      toast({ variant: 'destructive', title: 'Failed to remove photo', description: 'Could not remove the photo.' });
     } finally {
       setIsPhotoUploading(false);
     }
@@ -339,7 +339,7 @@ export function StudentModal({
     } catch (err: unknown) {
       console.error('Failed to remove custom emoji', err);
       playSound('error');
-      toast({ variant: 'destructive', title: 'Error', description: 'Could not remove sticker.' });
+      toast({ variant: 'destructive', title: 'Failed to remove sticker', description: 'Could not remove sticker.' });
     } finally {
       setIsCustomEmojiUploading(false);
     }
@@ -397,10 +397,10 @@ export function StudentModal({
         nfcId,
         teacherIds: selectedTeacherIds,
         theme: normalizedTheme,
-        parentEmail: encryptField(parentEmail.trim()) || undefined,
-        parentPhone: encryptField(parentPhone.trim()) || undefined,
-        studentEmail: encryptField(studentEmail.trim()) || undefined,
-        studentPhone: encryptField(studentPhone.trim()) || undefined,
+        parentEmail: obfuscateField(parentEmail.trim()) || undefined,
+        parentPhone: obfuscateField(parentPhone.trim()) || undefined,
+        studentEmail: obfuscateField(studentEmail.trim()) || undefined,
+        studentPhone: obfuscateField(studentPhone.trim()) || undefined,
         notificationPrefs: {
           parentEnabled: parentNotificationsAllowed,
           studentEnabled: studentNotificationsAllowed,
@@ -426,10 +426,10 @@ export function StudentModal({
         houseId: finalHouseId || undefined,
         teacherIds: selectedTeacherIds,
         ...(normalizedTheme ? { theme: normalizedTheme } : {}),
-        parentEmail: encryptField(parentEmail.trim()) || undefined,
-        parentPhone: encryptField(parentPhone.trim()) || undefined,
-        studentEmail: encryptField(studentEmail.trim()) || undefined,
-        studentPhone: encryptField(studentPhone.trim()) || undefined,
+        parentEmail: obfuscateField(parentEmail.trim()) || undefined,
+        parentPhone: obfuscateField(parentPhone.trim()) || undefined,
+        studentEmail: obfuscateField(studentEmail.trim()) || undefined,
+        studentPhone: obfuscateField(studentPhone.trim()) || undefined,
         notificationPrefs: {
           parentEnabled: parentNotificationsAllowed,
           studentEnabled: studentNotificationsAllowed,

@@ -7,22 +7,13 @@ import {
   SCHOOL_GATE_COOKIE_NAME,
   SCHOOL_GATE_JWT_ISS,
 } from '@/lib/auth/schoolGateCookie';
+import { authCookieFlags } from '@/lib/auth/authCookieOptions';
 import { clientIp, sameOrigin, rateLimit, jsonError } from '@/lib/server/apiSecurity';
 
 const MAX_ATTEMPTS = 20;
 const MAX_BODY_BYTES = 32 * 1024;
 
 const SCHOOL_ID_RE = /^[\w-]{1,128}$/;
-
-function cookieFlags() {
-  const secure = process.env.NODE_ENV === 'production';
-  return {
-    httpOnly: true as const,
-    secure,
-    sameSite: 'lax' as const,
-    path: '/',
-  };
-}
 
 /** POST: mint signed school gate cookie (scopes from Firestore + optional portal session doc). */
 export async function POST(req: NextRequest) {
@@ -78,7 +69,7 @@ export async function POST(req: NextRequest) {
       name: SCHOOL_GATE_COOKIE_NAME,
       value: token,
       maxAge: maxAgeSec,
-      ...cookieFlags(),
+      ...authCookieFlags(),
     });
     return res;
   } catch (e) {
@@ -101,7 +92,7 @@ export async function DELETE(req: NextRequest) {
     name: SCHOOL_GATE_COOKIE_NAME,
     value: '',
     maxAge: 0,
-    ...cookieFlags(),
+    ...authCookieFlags(),
   });
   return res;
 }

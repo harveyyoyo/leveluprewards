@@ -26,6 +26,7 @@ import {
     portalChoosePageShellClass,
     portalChooseTitleClass,
 } from '@/lib/kioskPortraitLayout';
+import { isSchoolPortalChooser } from '@/lib/studentKioskRoute';
 
 type PortalArea = {
     id: string;
@@ -38,7 +39,7 @@ type PortalArea = {
 type StaffPortalLoginOption = {
     id: string;
     sourceId?: string;
-    type: 'teacher' | 'secretary' | 'prizeClerk' | 'reports' | 'librarian';
+    type: 'teacher' | 'secretary' | 'prizeClerk' | 'reports' | 'librarian' | 'office';
     label: string;
     username: string;
 };
@@ -56,6 +57,7 @@ function roleLabel(type: StaffPortalLoginOption['type']) {
     if (type === 'secretary') return 'Coupon printing';
     if (type === 'prizeClerk') return 'Prize desk';
     if (type === 'librarian') return 'Library';
+    if (type === 'office') return 'School Office';
     return 'Reports';
 }
 
@@ -64,6 +66,7 @@ function staffLandingPath(schoolId: string, type: StaffPortalLoginOption['type']
     if (type === 'prizeClerk') return `/${schoolId}/admin`;
     if (type === 'reports') return `/${schoolId}/reports`;
     if (type === 'librarian') return `/${schoolId}/librarian`;
+    if (type === 'office') return `/${schoolId}/office`;
     return `/${schoolId}/teacher`;
 }
 
@@ -133,7 +136,7 @@ function WhereToDrawnTitle({
 }
 
 export default function PortalPage() {
-    const { loginState, isInitialized, schoolId, isAdmin, login } = useAppContext();
+    const { loginState, isInitialized, schoolId, isAdmin, isOffice, login } = useAppContext();
     const { settings } = useSettings();
     const prefersReducedMotion = useReducedMotion();
     const playSound = useArcadeSound();
@@ -183,9 +186,9 @@ export default function PortalPage() {
         !settings.legacyMode &&
         (isDefaultScheme ||
             (settings.graphicMode === 'graphics' && !!settings.enableAnimatedBackground));
-    /** Pop-out via lift + neutral shadow only (no glow, gradient, or icon scale). */
+    /** Card lift on hover; icon pop via `.portal-choose-icon--hoverable` (off in legacy / reduced motion). */
     const portalCardHoverEffects = !prefersReducedMotion && !settings.legacyMode;
-    const isSchoolChooser = loginState === 'school';
+    const isSchoolChooser = isSchoolPortalChooser(loginState);
     const isStaff =
         loginState === 'teacher' ||
         loginState === 'admin' ||
@@ -211,7 +214,8 @@ export default function PortalPage() {
                         option.type === 'secretary' ||
                         option.type === 'prizeClerk' ||
                         option.type === 'reports' ||
-                        option.type === 'librarian'),
+                        option.type === 'librarian' ||
+                        option.type === 'office'),
             ),
         [schoolPublic],
     );
@@ -261,7 +265,7 @@ export default function PortalPage() {
                   {
                       id: 'print',
                       href: `/${schoolId}/teacher`,
-                      title: 'Teacher & Faculty Portal',
+                      title: 'Teacher Portal',
                       description: 'Print point coupons, adjust points manually, customize categories, print reports, and add prizes.',
                       icon: Printer,
                   },
@@ -395,10 +399,10 @@ export default function PortalPage() {
                         const rainbowColor = rainbowForPortalId(area.id, settings.colorScheme);
                         const needsStudentSession = area.id === 'redeem' && loginState !== 'student';
                         const needsAdminPasscode = area.id === 'admin' && !isAdmin;
-                        // School chooser needs the faculty list + passcode. Admins already have a staff
-                        // session — send them straight to `/teacher` like an already-signed-in teacher.
-                        // Otherwise opening the dialog here often led to picking "Prize desk" and landing on `/admin`.
-                        const needsTeacherLogin = area.id === 'print' && loginState === 'school';
+                        // School gate and admins pick staff (or continue as admin); signed-in teachers go straight through.
+                        const needsTeacherLogin =
+                            area.id === 'print' &&
+                            (loginState === 'school' || loginState === 'admin');
                         const isAppDisplay = settings.displayMode === 'app';
                         const portalCard = (
                                 <motion.div
@@ -420,7 +424,10 @@ export default function PortalPage() {
                                     {isAppDisplay ? (
                                     <div className="relative z-10 flex w-full items-center gap-3 sm:gap-4">
                                         <div
-                                            className="portal-choose-icon flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl sm:h-16 sm:w-16"
+                                            className={cn(
+                                                'portal-choose-icon flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl sm:h-16 sm:w-16',
+                                                portalCardHoverEffects && 'portal-choose-icon--hoverable',
+                                            )}
                                             style={{
                                                 backgroundColor: rainbowColor,
                                             }}
@@ -450,7 +457,10 @@ export default function PortalPage() {
                                     <div className="relative z-10 flex h-full min-h-0 flex-1 flex-col">
                                         <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2.5 text-center md:gap-4">
                                             <motion.div
-                                                className="portal-choose-icon shrink-0 rounded-xl p-3 md:p-4"
+                                                className={cn(
+                                                    'portal-choose-icon shrink-0 rounded-xl p-3 md:p-4',
+                                                    portalCardHoverEffects && 'portal-choose-icon--hoverable',
+                                                )}
                                                 style={{
                                                     backgroundColor: rainbowColor,
                                                 }}
@@ -492,25 +502,7 @@ export default function PortalPage() {
                                         setTeacherDialogOpen(true);
                                         return;
                                     }
-                                    // In school mode, student kiosk should open immediately (no extra login step).
                                     if (area.id === 'redeem' && isSchoolChooser) return;
-                                    if (!needsStudentSession) return;
-                                    e.preventDefault();
-                                    if (!schoolId) return;
-                                    // Go straight to the kiosk route; establish student session in the background.
-                                    router.replace(`/${schoolId}/student`);
-                                    void (async () => {
-                                        const authResult = await login('student', { schoolId });
-                                        if (!authResult.ok) {
-                                            playSound('error');
-                                            toast({
-                                                variant: 'destructive',
-                                                title: 'Could not open student kiosk',
-                                                description: authResult.message,
-                                            });
-                                            router.replace(`/${schoolId}/portal`);
-                                        }
-                                    })();
                                 }}
                                 className={cn(
                                     'group relative block h-full flex flex-col rounded-2xl no-underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background',
@@ -663,11 +655,36 @@ export default function PortalPage() {
                 }}>
                     <DialogContent className="sm:max-w-md">
                         <DialogHeader>
-                            <DialogTitle className="font-headline font-black tracking-tight">Teacher & faculty sign-in</DialogTitle>
+                            <DialogTitle className="font-headline font-black tracking-tight">Staff sign-in</DialogTitle>
                             <DialogDescription>
-                                Select your name and enter your passcode to open faculty tools.
+                                Select your name and enter your passcode to open staff tools.
                             </DialogDescription>
                         </DialogHeader>
+
+                        {isAdmin && schoolId && (
+                            <div className="rounded-xl border border-border/70 bg-muted/30 p-3">
+                                <p className="text-xs font-semibold text-muted-foreground">Already signed in as admin</p>
+                                <p className="mt-1 text-xs text-muted-foreground/80">
+                                    Open teacher tools with your admin session, or pick a staff account below to sign in as
+                                    them.
+                                </p>
+                                <div className="mt-3">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="w-full rounded-xl font-bold"
+                                        onClick={() => {
+                                            playSound('click');
+                                            setTeacherDialogOpen(false);
+                                            router.replace(`/${schoolId}/teacher?as=admin`);
+                                        }}
+                                        disabled={teacherSubmitting}
+                                    >
+                                        Continue as admin
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
 
                         {!isAdmin && schoolId && (
                             <Button
@@ -693,8 +710,8 @@ export default function PortalPage() {
                                     Select your name
                                 </Label>
                                 <Select value={selectedTeacherKey} onValueChange={setSelectedTeacherKey}>
-                                    <SelectTrigger className="h-12 rounded-xl font-semibold" autoFocus>
-                                        <SelectValue placeholder={staffOptions.length ? 'Choose your name' : 'No faculty list yet'} />
+                                    <SelectTrigger className="h-12 rounded-xl font-semibold" autoFocus={!isAdmin}>
+                                        <SelectValue placeholder={staffOptions.length ? 'Choose your name' : 'No staff accounts yet'} />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {staffOptions.map((opt) => (
@@ -706,7 +723,10 @@ export default function PortalPage() {
                                 </Select>
                                 {!staffOptions.length && (
                                     <p className="text-xs text-muted-foreground">
-                                        Ask an admin to open <span className="font-semibold">Admin → Staff</span> once to publish the teacher directory.
+                                        Ask an admin to open <span className="font-semibold">Admin</span> once (any tab) so the
+                                        staff list publishes, or add the account under{' '}
+                                        <span className="font-semibold">Admin → Teachers → Desk staff</span> with{' '}
+                                        <span className="font-semibold">Library catalog &amp; checkouts</span> checked.
                                     </p>
                                 )}
                             </div>
@@ -742,7 +762,7 @@ export default function PortalPage() {
                                                 playSound('error');
                                                 toast({
                                                     variant: 'destructive',
-                                                    title: 'Choose a faculty account from the list',
+                                                    title: 'Choose a staff account from the list',
                                                     description: 'Please select your name again.',
                                                 });
                                                 return;
@@ -808,7 +828,7 @@ export default function PortalPage() {
                                             playSound('error');
                                             toast({
                                                 variant: 'destructive',
-                                                title: 'Choose a faculty account from the list',
+                                                title: 'Choose a staff account from the list',
                                                 description: 'Please select your name again.',
                                             });
                                             return;
@@ -851,21 +871,6 @@ export default function PortalPage() {
                     </DialogContent>
                 </Dialog>
 
-                {loginState === 'student' && schoolId && (
-                    <div
-                        className={cn(
-                            'pointer-events-auto fixed left-1/2 z-[12] w-full max-w-lg -translate-x-1/2 rounded-2xl border border-border/60 bg-background/15 px-4 py-5 text-center backdrop-blur',
-                            settings.displayMode === 'app' ? 'bottom-28' : 'bottom-8',
-                        )}
-                    >
-                        <p className="text-sm text-muted-foreground mb-3">Need faculty access?</p>
-                        <Button variant="outline" size="sm" asChild className="font-bold">
-                            <Link href={`/${schoolId}/portal`} onClick={() => playSound('click')}>
-                                Open faculty hub
-                            </Link>
-                        </Button>
-                    </div>
-                )}
         </div>
     );
 }

@@ -1,1 +1,1 @@
-export type LevelUpPillarId = 'rewards' | 'attendance' | 'homework' | 'library';
+export type LevelUpPillarId = 'rewards' | 'attendance' | 'homework' | 'library' | 'office';

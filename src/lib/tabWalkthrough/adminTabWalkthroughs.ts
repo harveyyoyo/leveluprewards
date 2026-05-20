@@ -17,7 +17,7 @@ const ADMIN_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
       {
         title: 'Import or print IDs',
         checklist: [
-          'Use Import CSV for large rosters, or Import CSV (map columns) when headers do not match.',
+          'Use Import CSV for rosters. Recognized columns open a quick mapping step; unusual exports are read with AI automatically.',
           'Print ID cards from the toolbar when students are ready for the kiosk.',
         ],
       },
@@ -52,7 +52,7 @@ const ADMIN_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
     ],
   },
   teachers: {
-    title: 'Faculty tab',
+    title: 'Teachers tab',
     subtitle: 'Teachers, budgets, and desk staff',
     steps: [
       {
@@ -107,7 +107,7 @@ const ADMIN_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
         checklist: [
           'Use Manually Add or Deduct Points for direct awards or deductions without printing coupons.',
           'Use Print coupons below to generate scannable sheets (10 or 30 per page).',
-          'Faculty can also print from their Points tab using the same categories.',
+          'Teachers can also print from their Points tab using the same categories.',
           'Students redeem codes at the kiosk to bank points.',
         ],
       },

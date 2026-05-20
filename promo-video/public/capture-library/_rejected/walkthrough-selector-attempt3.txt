@@ -1,0 +1,13 @@
+locator.waitFor: Timeout 45000ms exceeded.
+Call log:
+[2m  - waiting for getByRole('link', { name: /Student Kiosk/i }).first() to be visible[22m
+
+locator.waitFor: Timeout 45000ms exceeded.
+Call log:
+[2m  - waiting for getByRole('link', { name: /Student Kiosk/i }).first() to be visible[22m
+
+    at waitForPortalHub (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:217:6)
+    at async prepare (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:627:11)
+    at async recordClipReady (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:492:9)
+    at async Object.capture (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:620:7)
+    at async main (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:1360:5)

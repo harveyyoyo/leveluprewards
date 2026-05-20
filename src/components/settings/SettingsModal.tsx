@@ -47,6 +47,7 @@ import { cn } from '@/lib/utils';
 import { WELCOME_GREETING_STYLES } from '@/components/WelcomeGreeting';
 import { AdminBackupsTab } from '@/app/[schoolId]/admin/sections/AdminBackupsTab';
 import { IdCardPrinterSettingsSection } from '@/components/settings/IdCardPrinterSettingsSection';
+import { PRODUCT_PILLAR_LABELS } from '@/lib/productPillars';
 
 type SettingsView = 'hub' | 'interface' | 'security' | 'features' | 'pillars' | 'developer';
 type RoleView = 'global' | 'student' | 'teacher';
@@ -307,7 +308,9 @@ export function SettingsModal() {
 
     const canLivePreviewInterfaceRole = useMemo(() => {
         if (interfaceRole === 'global') return true;
-        if (interfaceRole === 'student') return loginState === 'student';
+        if (interfaceRole === 'student') {
+            return loginState === 'school' || loginState === 'student';
+        }
         if (interfaceRole === 'teacher') return loginState === 'teacher';
         return false;
     }, [interfaceRole, loginState]);
@@ -1622,7 +1625,9 @@ export function SettingsModal() {
                                 <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 pb-1 flex items-center gap-2">
                                     <ShieldCheck className="w-3.5 h-3.5" /> Product Pillars
                                 </p>
-                                <p className="text-xs text-muted-foreground leading-normal mb-3">Select which of the 4 core pillars are part of your active paid plan.</p>
+                                <p className="text-xs text-muted-foreground leading-normal mb-3">
+                                    Select which products are part of your active plan. School Office is optional and uses its own roster (not shared with rewards).
+                                </p>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     {(() => {
                                         const enabledCount = [
@@ -1676,6 +1681,23 @@ export function SettingsModal() {
                                                         onCheckedChange={(val) => handleToggle('payLibrary', val)}
                                                         disabled={enabledCount === 1 && (local.payLibrary ?? true)}
                                                     />
+                                                </div>
+                                                <div className="sm:col-span-2 p-3 bg-background/50 border border-border/40 rounded-xl space-y-2">
+                                                    <div className="flex items-center justify-between gap-4">
+                                                        <div>
+                                                            <h4 className="font-bold text-sm text-foreground uppercase tracking-tight">
+                                                                {PRODUCT_PILLAR_LABELS.payOffice}
+                                                            </h4>
+                                                            <p className="text-[10px] text-muted-foreground">
+                                                                Grades &amp; billing · separate office roster (no rewards portal link)
+                                                            </p>
+                                                        </div>
+                                                        <Switch
+                                                            checked={local.payOffice === true}
+                                                            onCheckedChange={(val) => handleToggle('payOffice', val)}
+                                                            aria-label={PRODUCT_PILLAR_LABELS.payOffice}
+                                                        />
+                                                    </div>
                                                 </div>
                                             </>
                                         );

@@ -25,6 +25,9 @@ import {
 } from 'firebase/auth';
 import { Loader2 } from 'lucide-react';
 
+/** Set before Google redirect sign-in so we only auto-complete developer login when intended. */
+const PENDING_DEVELOPER_LOGIN_KEY = 'levelup:pendingDeveloperLogin';
+
 export type SchoolDeveloperLoginFormMode = 'full' | 'developer-only';
 
 export type SchoolDeveloperLoginFormProps = {
@@ -49,6 +52,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
   const passcodeRef = useRef<HTMLInputElement | null>(null);
   const lastAutoFocusedRef = useRef<null | 'schoolId' | 'passcode'>(null);
   const developerAutoLoginAttemptedRef = useRef(false);
+  const schoolLoginIntentRef = useRef(false);
   const { login, isInitialized, isUserLoading, loginState } = useAppContext();
   const { toast } = useToast();
   const router = useRouter();
@@ -75,8 +79,29 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
     setMounted(true);
   }, []);
 
+  const shouldCompleteDeveloperLogin = () =>
+    isDeveloperOnly ||
+    (typeof sessionStorage !== 'undefined' &&
+      sessionStorage.getItem(PENDING_DEVELOPER_LOGIN_KEY) === 'true');
+
+  const clearPendingDeveloperLogin = () => {
+    try {
+      sessionStorage.removeItem(PENDING_DEVELOPER_LOGIN_KEY);
+    } catch {
+      // ignore
+    }
+  };
+
+  const markPendingDeveloperLogin = () => {
+    try {
+      sessionStorage.setItem(PENDING_DEVELOPER_LOGIN_KEY, 'true');
+    } catch {
+      // ignore
+    }
+  };
+
   // If we had to fall back to redirect-based sign-in (popup blocked),
-  // complete the flow when we return to this page.
+  // complete the flow when we return to this page — only for explicit developer intent.
   useEffect(() => {
     if (!mounted || !auth) return;
     void (async () => {
@@ -84,13 +109,17 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
         const res = await getRedirectResult(auth);
         if (!res?.user) return;
         const allowed = isAllowedDeveloperGoogleUser(res.user);
+        const pendingDeveloper = shouldCompleteDeveloperLogin();
         toast({
           title: allowed ? 'Google sign-in complete' : 'Google sign-in complete (no dev access)',
           description: allowed
-            ? 'Developer mode is now available on this device.'
+            ? pendingDeveloper
+              ? 'Finishing developer sign-in…'
+              : 'Developer mode is available if you switch to developer login.'
             : 'This Google account is not on the developer allowlist.',
         });
-        if (allowed) {
+        if (allowed && pendingDeveloper) {
+          clearPendingDeveloperLogin();
           setIsSubmitting(true);
           try {
             const loginRes = await login('developer', {});
@@ -103,7 +132,10 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
           } finally {
             setIsSubmitting(false);
           }
-        } } catch (e) {
+        } else {
+          clearPendingDeveloperLogin();
+        }
+      } catch (e) {
         // getRedirectResult throws if there was no pending redirect in some environments.
       }
     })();
@@ -180,10 +212,13 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
     }
     if (!allowDeveloperToggle && isDeveloper) setIsDeveloper(false);
   }, [allowDeveloperToggle, isDeveloper, isDeveloperOnly]);
-  // If already signed in with a verified developer Google account, auto-log into developer mode.
+  // Auto-log into developer mode only when the user explicitly chose developer login
+  // (`/developer` or the "Developer? Click here" toggle). Never hijack school sign-in.
   useEffect(() => {
     if (!mounted || !isInitialized || isUserLoading) return;
-    if (loginState === 'developer') return;
+    if (loginState === 'developer' || loginState === 'school') return;
+    if (schoolLoginIntentRef.current) return;
+    if (!isDeveloperOnly && !isDeveloper) return;
     if (!allowDeveloperLogin || !isAllowedGoogleEmail) return;
     if (isSubmitting || developerAutoLoginAttemptedRef.current) return;
 
@@ -192,6 +227,12 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
     void (async () => {
       try {
         const result = await login('developer', {});
+        if (schoolLoginIntentRef.current) return;
+        try {
+          if (localStorage.getItem('loginState') === 'school') return;
+        } catch {
+          // ignore
+        }
         if (result.ok) {
           playSound('login');
           if (pathname !== '/developer') {
@@ -212,7 +253,16 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mounted, isInitialized, isUserLoading, loginState, allowDeveloperLogin, isAllowedGoogleEmail]);
+  }, [
+    mounted,
+    isInitialized,
+    isUserLoading,
+    loginState,
+    allowDeveloperLogin,
+    isAllowedGoogleEmail,
+    isDeveloperOnly,
+    isDeveloper,
+  ]);
 
 
   const handleGoogleSignIn = async () => {
@@ -240,7 +290,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
           ? 'Developer mode is now available on this device.'
           : 'This Google account is not on the developer allowlist.',
       });
-      if (allowed) {
+      if (allowed && (isDeveloperOnly || isDeveloper)) {
         developerAutoLoginAttemptedRef.current = true;
         setIsSubmitting(true);
         try {
@@ -289,6 +339,9 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
 
       if (shouldRedirect) {
         try {
+          if (isDeveloperOnly || isDeveloper) {
+            markPendingDeveloperLogin();
+          }
           const provider = new GoogleAuthProvider();
           provider.setCustomParameters({ prompt: 'select_account' });
           if (auth.currentUser?.isAnonymous) {
@@ -368,6 +421,8 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
     }
 
     playSound('click');
+    schoolLoginIntentRef.current = true;
+    clearPendingDeveloperLogin();
     setIsSubmitting(true);
     try {
       const result = await login('school', { schoolId: sid, passcode: schoolPasscode.trim() });

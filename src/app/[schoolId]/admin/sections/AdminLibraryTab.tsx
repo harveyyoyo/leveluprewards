@@ -2,7 +2,7 @@
 
 import { LibraryManagementPanel } from '@/components/library/LibraryManagementPanel';
 import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
-import type { Category, LibraryItem, LibraryItemInput } from '@/lib/types';
+import type { Category, LibraryItem, LibraryItemInput, Student } from '@/lib/types';
 
 export function AdminLibraryTab({
   libraryItems,
@@ -14,9 +14,11 @@ export function AdminLibraryTab({
   onRegisterFromScan,
   upcTaken,
   categories,
+  students,
 }: {
   libraryItems: LibraryItem[] | null | undefined;
   getStudentName: (id?: string) => string;
+  students?: Student[] | null;
   categories?: Category[] | null;
   onAddLibraryItem: () => void;
   onEditLibraryItem: (i: LibraryItem) => void;
@@ -37,6 +39,7 @@ export function AdminLibraryTab({
       onRegisterFromScan={onRegisterFromScan}
       upcTaken={upcTaken}
       categories={categories}
+      students={students}
     />
   );
 }

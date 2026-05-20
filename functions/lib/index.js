@@ -100,11 +100,12 @@ async function hasSchoolRole(schoolId, uid, roles) {
         secretary: "roles_secretary",
         prizeClerk: "roles_prizeClerk",
         reports: "roles_reports",
+        librarian: "roles_librarian",
     };
     const snaps = await Promise.all(roles.map((role) => db.collection("schools").doc(schoolId).collection(roleCollections[role]).doc(uid).get()));
     return snaps.some((snap, index) => { var _a; return snap.exists && ((_a = snap.data()) === null || _a === void 0 ? void 0 : _a.role) === roles[index]; });
 }
-async function hasKioskMembershipOrStaff(schoolId, context, roles = ["admin", "teacher", "secretary", "prizeClerk"]) {
+async function hasKioskMembershipOrStaff(schoolId, context, roles = ["admin", "teacher", "secretary", "prizeClerk", "librarian"]) {
     requireAuth(context);
     const uid = context.auth.uid;
     const db = admin.firestore();
@@ -583,7 +584,7 @@ exports.verifySchoolPasscode = functions.https.onCall(async (data, context) => {
 });
 // ========================================================================
 // Callable: Verify school access passcode (NO role provisioning)
-// Used for "school sign-in" gate before choosing student/faculty/admin.
+// Used for "school sign-in" gate before choosing student/staff/admin.
 // ========================================================================
 exports.verifySchoolAccessPasscode = functions.https.onCall(async (data, context) => {
     requireAuth(context);
@@ -757,6 +758,14 @@ exports.createSchoolByDeveloper = functions.https.onCall(async (data, context) =
             passcode: "1234",
             role: "reports",
             roles: ["reports"],
+        },
+        {
+            id: "default_librarian_staff",
+            displayName: "Library Staff",
+            username: "library",
+            passcode: "1234",
+            role: "librarian",
+            roles: ["librarian"],
         },
     ];
     const db = admin.firestore();
@@ -1031,6 +1040,81 @@ exports.lookupStudentByBadge = functions
     }
     return { studentId: null };
 });
+const STUDENT_THEME_HEX = /^#[0-9a-fA-F]{6}$/;
+function sanitizeKioskStudentThemePayload(raw) {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw))
+        return null;
+    const data = raw;
+    const requireHex = (value, fallback) => {
+        const s = typeof value === "string" ? value.trim() : "";
+        return STUDENT_THEME_HEX.test(s) ? s : fallback;
+    };
+    const out = {
+        background: requireHex(data.background, "#020617"),
+        text: requireHex(data.text, "#ffffff"),
+        primary: requireHex(data.primary, "#13a58d"),
+        cardBackground: requireHex(data.cardBackground, "#111827"),
+        accent: requireHex(data.accent, "#22c55e"),
+    };
+    if (typeof data.emoji === "string" && data.emoji.trim()) {
+        out.emoji = data.emoji.trim().slice(0, 8);
+    }
+    if (typeof data.fontFamily === "string" && data.fontFamily.trim()) {
+        out.fontFamily = data.fontFamily.trim().replace(/[^\w\s-]/g, "").slice(0, 80);
+    }
+    if (typeof data.backgroundStyle === "string") {
+        const bs = data.backgroundStyle.trim().slice(0, 500);
+        if (bs.startsWith("linear-gradient") || bs.startsWith("radial-gradient")) {
+            out.backgroundStyle = bs;
+        }
+    }
+    if (typeof data.fontScale === "number" && Number.isFinite(data.fontScale)) {
+        out.fontScale = Math.min(1.5, Math.max(0.85, data.fontScale));
+    }
+    if (typeof data.fontTracking === "number" && Number.isFinite(data.fontTracking)) {
+        out.fontTracking = Math.min(0.2, Math.max(-0.05, data.fontTracking));
+    }
+    if (data.fontStyle === "normal" || data.fontStyle === "italic") {
+        out.fontStyle = data.fontStyle;
+    }
+    if (typeof data.fontWeight === "number" && Number.isFinite(data.fontWeight)) {
+        out.fontWeight = data.fontWeight >= 600 ? 800 : 400;
+    }
+    return out;
+}
+/** Callable: kiosk may set or clear a student's personal theme (theme field only). */
+exports.setStudentKioskTheme = functions.https.onCall(async (data, context) => {
+    var _a;
+    requireAuth(context);
+    requireString(data.schoolId, "schoolId");
+    const schoolId = String(data.schoolId).trim().toLowerCase();
+    if (!(await hasKioskMembershipOrStaff(schoolId, context))) {
+        throw new functions.https.HttpsError("permission-denied", "School entry required.");
+    }
+    requireString(data.studentId, "studentId");
+    const studentId = String(data.studentId).trim();
+    const db = admin.firestore();
+    const schoolSnap = await db.collection("schools").doc(schoolId).get();
+    const appSettings = schoolSnap.exists ? (((_a = schoolSnap.data()) === null || _a === void 0 ? void 0 : _a.appSettings) || {}) : {};
+    if (appSettings.enableStudentThemes === false) {
+        throw new functions.https.HttpsError("failed-precondition", "Student themes are turned off for this school.");
+    }
+    const studentRef = db.collection("schools").doc(schoolId).collection("students").doc(studentId);
+    const studentSnap = await studentRef.get();
+    if (!studentSnap.exists) {
+        throw new functions.https.HttpsError("not-found", "Student not found.");
+    }
+    if (data.remove === true || data.theme === null) {
+        await studentRef.update({ theme: admin.firestore.FieldValue.delete() });
+        return { success: true };
+    }
+    const theme = sanitizeKioskStudentThemePayload(data.theme);
+    if (!theme) {
+        throw new functions.https.HttpsError("invalid-argument", "Invalid theme payload.");
+    }
+    await studentRef.update({ theme });
+    return { success: true };
+});
 async function redeemCouponForStudent(db, schoolId, studentId, couponCode) {
     var _a;
     const schoolRef = db.collection("schools").doc(schoolId);
@@ -1178,6 +1262,130 @@ exports.redeemCouponServer = functions
         message: "Redeemed successfully",
         value: result.value,
         bonusTotal: result.bonusTotal,
+    };
+});
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+function libraryDaysOverdue(dueAt, now) {
+    const due = typeof dueAt === "number" ? dueAt : 0;
+    if (!due || now <= due)
+        return 0;
+    return Math.ceil((now - due) / MS_PER_DAY);
+}
+/** Callable: return library book + optional category point adjustments (kiosk-safe). */
+exports.libraryReturnServer = functions
+    .runWith(HOT_KIOSK_FUNCTION_OPTIONS)
+    .https.onCall(async (data, context) => {
+    var _a, _b, _c;
+    requireAuth(context);
+    requireString(data.schoolId, "schoolId");
+    requireString(data.studentId, "studentId");
+    requireString(data.upc, "upc");
+    const schoolId = String(data.schoolId).trim().toLowerCase();
+    const studentId = String(data.studentId).trim();
+    const upc = String(data.upc).trim().toUpperCase();
+    if (!(await hasKioskMembershipOrStaff(schoolId, context, [
+        "admin",
+        "teacher",
+        "secretary",
+        "prizeClerk",
+        "librarian",
+    ]))) {
+        throw new functions.https.HttpsError("permission-denied", "School entry required.");
+    }
+    const db = admin.firestore();
+    const schoolRef = db.collection("schools").doc(schoolId);
+    const libSnap = await schoolRef.collection("library").where("upc", "==", upc).limit(1).get();
+    if (libSnap.empty) {
+        throw new functions.https.HttpsError("not-found", "Library item not found.");
+    }
+    const itemDoc = libSnap.docs[0];
+    const itemData = itemDoc.data();
+    if (itemData.status !== "checked_out" || itemData.checkedOutTo !== studentId) {
+        throw new functions.https.HttpsError("failed-precondition", "This book is not checked out to this student.");
+    }
+    const schoolSnap = await schoolRef.get();
+    const appSettings = ((_b = (_a = schoolSnap.data()) === null || _a === void 0 ? void 0 : _a.appSettings) !== null && _b !== void 0 ? _b : {});
+    const loanPeriodDays = typeof appSettings.libraryLoanPeriodDays === "number" && appSettings.libraryLoanPeriodDays > 0
+        ? appSettings.libraryLoanPeriodDays
+        : 14;
+    void loanPeriodDays;
+    const lateFeesEnabled = appSettings.libraryLateFeesEnabled !== false;
+    const latePointsPerDay = typeof appSettings.libraryLatePointsPerDay === "number" && appSettings.libraryLatePointsPerDay >= 0
+        ? appSettings.libraryLatePointsPerDay
+        : 2;
+    const onTimeReturnPoints = typeof appSettings.libraryOnTimeReturnPoints === "number" && appSettings.libraryOnTimeReturnPoints > 0
+        ? appSettings.libraryOnTimeReturnPoints
+        : 0;
+    const categoryId = typeof appSettings.libraryPointsCategoryId === "string"
+        ? appSettings.libraryPointsCategoryId.trim()
+        : "";
+    let categoryName = "";
+    if (categoryId) {
+        const catSnap = await schoolRef.collection("categories").doc(categoryId).get();
+        if (catSnap.exists && typeof ((_c = catSnap.data()) === null || _c === void 0 ? void 0 : _c.name) === "string") {
+            categoryName = catSnap.data().name.trim();
+        }
+    }
+    const itemName = typeof itemData.name === "string" ? itemData.name.trim() : "Book";
+    const now = Date.now();
+    const daysOverdue = libraryDaysOverdue(itemData.dueAt, now);
+    let pointsDelta = 0;
+    let pointsMessage = "";
+    if (categoryName) {
+        if (daysOverdue > 0 && lateFeesEnabled && latePointsPerDay > 0) {
+            pointsDelta = -(daysOverdue * latePointsPerDay);
+            pointsMessage = `Late return: ${Math.abs(pointsDelta)} point(s) deducted (${categoryName}).`;
+        }
+        else if (daysOverdue === 0 && onTimeReturnPoints > 0) {
+            pointsDelta = onTimeReturnPoints;
+            pointsMessage = `On-time return: +${pointsDelta} point(s) (${categoryName}).`;
+        }
+    }
+    await db.runTransaction(async (tx) => {
+        var _a;
+        const studentRef = schoolRef.collection("students").doc(studentId);
+        const studentSnap = await tx.get(studentRef);
+        tx.update(itemDoc.ref, {
+            status: "available",
+            checkedOutTo: null,
+            checkedOutAt: null,
+            dueAt: null,
+        });
+        if (pointsDelta !== 0 && studentSnap.exists) {
+            const studentData = studentSnap.data();
+            const currentPoints = typeof studentData.points === "number" ? studentData.points : 0;
+            const newPoints = Math.max(0, currentPoints + pointsDelta);
+            const categoryPoints = Object.assign({}, ((_a = studentData.categoryPoints) !== null && _a !== void 0 ? _a : {}));
+            categoryPoints[categoryName] = (categoryPoints[categoryName] || 0) + pointsDelta;
+            tx.update(studentRef, {
+                points: newPoints,
+                categoryPoints,
+                updatedAt: now,
+            });
+            const activityRef = studentRef.collection("activities").doc();
+            tx.set(activityRef, {
+                desc: pointsDelta < 0
+                    ? `Library late fee (${daysOverdue} day${daysOverdue === 1 ? "" : "s"}): ${itemName}`
+                    : `Library on-time bonus: ${itemName}`,
+                amount: pointsDelta,
+                date: now,
+            });
+        }
+        const returnActivityRef = studentRef.collection("activities").doc();
+        tx.set(returnActivityRef, {
+            desc: `Returned library item: ${itemName}`,
+            amount: 0,
+            date: now,
+        });
+    });
+    return {
+        success: true,
+        pointsDelta,
+        daysOverdue,
+        message: pointsMessage ||
+            (daysOverdue > 0
+                ? `Returned "${itemName}" (${daysOverdue} day${daysOverdue === 1 ? "" : "s"} late).`
+                : `Returned "${itemName}".`),
     };
 });
 /** Callable: kiosk-safe prize redemption with trusted balance + stock updates. */
@@ -1845,7 +2053,7 @@ exports.getStaffPortalLoginOptions = functions.https.onCall(async (data, context
     const staff = staffSnap.docs
         .map((docSnap) => {
         const row = docSnap.data();
-        const role = row.role === "secretary" || row.role === "prizeClerk" || row.role === "reports"
+        const role = row.role === "secretary" || row.role === "prizeClerk" || row.role === "reports" || row.role === "librarian" || row.role === "office"
             ? row.role
             : null;
         const username = typeof row.username === "string" ? row.username.trim().toLowerCase() : "";
@@ -1871,8 +2079,8 @@ exports.verifyStaffAccountPasscode = functions.https.onCall(async (data, context
     requireString(data.username, "username");
     requireString(data.passcode, "passcode");
     const role = data.role;
-    if (role !== "secretary" && role !== "prizeClerk" && role !== "reports") {
-        throw new functions.https.HttpsError("invalid-argument", "role must be 'secretary', 'prizeClerk', or 'reports'.");
+    if (role !== "secretary" && role !== "prizeClerk" && role !== "reports" && role !== "librarian" && role !== "office") {
+        throw new functions.https.HttpsError("invalid-argument", "role must be 'secretary', 'prizeClerk', 'reports', 'librarian', or 'office'.");
     }
     const db = admin.firestore();
     const schoolId = String(data.schoolId).trim().toLowerCase();
@@ -1894,13 +2102,17 @@ exports.verifyStaffAccountPasscode = functions.https.onCall(async (data, context
     }
     const row = match.data();
     const roles = (Array.isArray(row.roles) && row.roles.length > 0 ? row.roles : [row.role])
-        .filter((item) => item === "secretary" || item === "prizeClerk" || item === "reports");
+        .filter((item) => item === "secretary" || item === "prizeClerk" || item === "reports" || item === "librarian" || item === "office");
     const writes = roles.map((staffRole) => {
         const roleCollection = staffRole === "secretary"
             ? "roles_secretary"
             : staffRole === "prizeClerk"
                 ? "roles_prizeClerk"
-                : "roles_reports";
+                : staffRole === "librarian"
+                    ? "roles_librarian"
+                    : staffRole === "office"
+                        ? "roles_office"
+                        : "roles_reports";
         return db
             .collection("schools")
             .doc(schoolId)

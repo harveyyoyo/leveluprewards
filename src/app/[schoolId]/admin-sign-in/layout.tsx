@@ -1,4 +1,10 @@
 import type { ReactNode } from 'react';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Admin Sign In - levelUp EDU',
+  description: 'Secure sign-in for school administrators.',
+};
 
 /**
  * Server segment config only applies from Server Components; keeps admin-sign-in off static paths

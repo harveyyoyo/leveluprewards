@@ -5,20 +5,11 @@ import {
   shouldEnforceFirebaseSessionEdge,
 } from '@/lib/auth/firebaseSessionCookie';
 import { SCHOOL_GATE_COOKIE_NAME } from '@/lib/auth/schoolGateCookie';
+import { authCookieFlags } from '@/lib/auth/authCookieOptions';
 import { clientIp, sameOrigin, rateLimit, jsonError } from '@/lib/server/apiSecurity';
 
 const MAX_ATTEMPTS = 20;
 const MAX_BODY_BYTES = 32 * 1024;
-
-function sessionCookieFlags() {
-  const secure = process.env.NODE_ENV === 'production';
-  return {
-    httpOnly: true as const,
-    secure,
-    sameSite: 'lax' as const,
-    path: '/',
-  };
-}
 
 /** POST: exchange Firebase ID token for HttpOnly session cookie (verified server-side). */
 export async function POST(req: NextRequest) {
@@ -58,7 +49,7 @@ export async function POST(req: NextRequest) {
       name: FIREBASE_SESSION_COOKIE_NAME,
       value: sessionCookie,
       maxAge: maxAgeSec,
-      ...sessionCookieFlags(),
+      ...authCookieFlags(),
     });
     return res;
   } catch (e) {
@@ -81,13 +72,13 @@ export async function DELETE(req: NextRequest) {
     name: FIREBASE_SESSION_COOKIE_NAME,
     value: '',
     maxAge: 0,
-    ...sessionCookieFlags(),
+    ...authCookieFlags(),
   });
   res.cookies.set({
     name: SCHOOL_GATE_COOKIE_NAME,
     value: '',
     maxAge: 0,
-    ...sessionCookieFlags(),
+    ...authCookieFlags(),
   });
   return res;
 }

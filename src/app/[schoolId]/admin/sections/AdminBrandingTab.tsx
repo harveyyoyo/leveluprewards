@@ -1,7 +1,23 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2, Trash2, UploadCloud, Palette, User, Shield, Clock, Megaphone, Tv } from 'lucide-react';
+import {
+  Loader2,
+  Trash2,
+  UploadCloud,
+  Palette,
+  User,
+  Shield,
+  Clock,
+  Megaphone,
+  Tv,
+  Image as ImageIcon,
+  Sparkles,
+  Maximize2,
+  RotateCcw,
+  Check,
+  Calendar,
+} from 'lucide-react';
 import type { DocumentReference, Firestore } from 'firebase/firestore';
 import { updateDoc, setDoc } from 'firebase/firestore';
 import { schoolPublicDocRef } from '@/lib/schoolPublic';
@@ -20,7 +36,7 @@ import type { StudentTheme } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { KioskSponsorBanner } from '@/components/KioskSponsorBanner';
 import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
-
+import { ContentSectionTreeNav } from '@/components/ui/content-section-tree-nav';
 
 export function AdminBrandingTab({
   schoolId,
@@ -68,6 +84,7 @@ export function AdminBrandingTab({
   const [newSponsorSpeed, setNewSponsorSpeed] = useState<'slow' | 'normal' | 'fast' | 'very_fast' | 'static'>('normal');
   const [newSponsorPosition, setNewSponsorPosition] = useState<'top' | 'bottom'>('bottom');
   const [newSponsorIcon, setNewSponsorIcon] = useState('🎉');
+  const [section, setSection] = useState<'logo' | 'photos' | 'theme' | 'sessions' | 'sponsor'>('logo');
 
   const handleSchoolDefaultThemeSave = (theme: StudentTheme) => {
     const normalized = normalizeStudentTheme(theme);
@@ -86,365 +103,494 @@ export function AdminBrandingTab({
 
   return (
     <div className="space-y-6">
-      {/* LOGO CARD */}
-      <Card className="border-t-4 border-primary shadow-md">
-        <CardHeader className="py-6 flex flex-row items-start justify-between gap-4">
-          <div>
-            <Helper content="Upload your school logo to show it next to the school name across the app.">
-              <CardTitle className="flex items-center gap-2">
-                <UploadCloud className="w-5 h-5 text-primary" /> School Logo
-              </CardTitle>
-            </Helper>
-            <CardDescription>Logo appears beside the school name in the header. PNG, JPG, or WebP under 10MB.</CardDescription>
-          </div>
-          <TabWalkthroughHeaderAction />
-        </CardHeader>
-        <CardContent className="flex flex-col sm:flex-row items-center gap-6">
-          <div className="flex flex-col items-center gap-1">
-            <div className="relative group">
-              <div className={cn(
-                "h-24 w-auto min-w-[6rem] max-w-[240px] bg-transparent flex items-center justify-center text-xs font-semibold text-muted-foreground transition-all duration-300",
-                settings.logoDropShadow === 'sm' && 'drop-shadow-sm',
-                settings.logoDropShadow === 'md' && 'drop-shadow-md',
-                settings.logoDropShadow === 'lg' && 'drop-shadow-xl',
-              )}>
-                {currentLogo ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={currentLogo}
-                    alt="Current school logo"
-                    className={cn(
-                      "h-full w-auto object-contain transition-all duration-300",
-                      logoDisplayMode === 'cover' && 'w-full object-cover',
-                      settings.logoBorderRadius === 'sm' && 'rounded-sm',
-                      settings.logoBorderRadius === 'md' && 'rounded-md',
-                      settings.logoBorderRadius === 'lg' && 'rounded-2xl',
-                      settings.logoBorderRadius === 'full' && 'rounded-full'
-                    )}
-                  />
-                ) : (
-                  <span className="h-20 w-20 rounded-full bg-muted border border-border/60 flex items-center justify-center shadow-lg shadow-primary/30">No logo</span>
-                )}
+      <ContentSectionTreeNav
+        branchLabel="Branding & Identity"
+        items={[
+          { id: 'logo', label: 'School Logo' },
+          { id: 'photos', label: 'Student Photos' },
+          { id: 'theme', label: 'ID Card Theme' },
+          { id: 'sessions', label: 'Session Timeouts' },
+          { id: 'sponsor', label: 'Sponsor Banner' },
+        ]}
+        value={section}
+        onValueChange={(id) => setSection(id as typeof section)}
+        className="bg-muted/50 p-1.5 rounded-2xl border"
+      />
+
+      {/* 1. SCHOOL LOGO */}
+      {section === 'logo' && (
+        <Card className="border-0 bg-background shadow-lg rounded-3xl overflow-hidden">
+          <CardHeader className="p-6 md:p-8 border-b bg-gradient-to-r from-muted/50 via-background to-muted/20">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="space-y-1">
+                <CardTitle className="text-xl font-black tracking-tight flex items-center gap-3">
+                  <UploadCloud className="w-5 h-5 text-primary" />
+                  School Logo
+                </CardTitle>
+                <CardDescription className="text-sm text-muted-foreground max-w-xl">
+                  Upload your school's official logo. It will appear next to the school name across all headers, kiosk stations, and printed receipts.
+                </CardDescription>
               </div>
-              {currentLogo && (
-                <button
-                  onClick={handleRemoveLogo}
-                  className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                  title="Remove logo"
-                  disabled={isLogoUploading}
-                >
-                  <Trash2 className="w-3 h-3" />
-                </button>
-              )}
+              <TabWalkthroughHeaderAction />
             </div>
-            <span className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground mt-2">Current</span>
-            <div className="mt-2 flex flex-col items-center gap-1">
-              {previousSchoolLogos.length >= 1 ? (
-                <>
-                  <Button
-                    variant="link"
-                    size="sm"
-                    className="text-[11px] h-auto p-0 text-muted-foreground"
-                    onClick={() => setIsPreviousLogosOpen(true)}
-                  >
-                    View previous logos
-                  </Button>
-                  <Dialog open={isPreviousLogosOpen} onOpenChange={setIsPreviousLogosOpen}>
-                    <DialogContent size="sm">
-                      <DialogHeader>
-                        <DialogTitle>Previous School Logos</DialogTitle>
-                        <DialogDescription>Select a previous logo to restore it.</DialogDescription>
-                      </DialogHeader>
-                      <div className="flex flex-wrap justify-center gap-4 py-4 max-h-[400px] overflow-y-auto">
-                        {previousSchoolLogos.map((url, idx) => (
-                          <button
-                            key={`${url}-${idx}`}
-                            type="button"
-                            onClick={async () => {
-                              if (!schoolDocRef || !firestore || !schoolId) return;
-                              try {
-                                await updateDoc(schoolDocRef, { logoUrl: url });
-                                await setDoc(
-                                  schoolPublicDocRef(firestore, schoolId),
-                                  { logoUrl: url, active: true, updatedAt: Date.now() },
-                                  { merge: true },
-                                );
-                                setLogoPreviewUrl(url ?? null);
-                                playSound('success');
-                                toast({ title: 'Logo restored', description: 'Using selected previous logo.' });
-                                setIsPreviousLogosOpen(false);
-                              } catch (e) {
-                                toast({ variant: 'destructive', title: 'Failed to restore logo', description: String(e) });
-                              }
-                            }}
-                            className="h-24 w-24 rounded-2xl overflow-hidden border-2 border-border hover:border-primary transition-all bg-muted/60 flex-shrink-0"
-                          >
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={url}
-                              alt="Previous logo"
-                              className={logoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'}
-                            />
-                          </button>
-                        ))}
-                      </div>
-                      <DialogFooter>
-                        <Button variant="secondary" onClick={() => setIsPreviousLogosOpen(false)}>
-                          Close
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                </>
-              ) : (
-                <p className="text-[11px] text-muted-foreground text-center max-w-[200px]">
-                  Previous logos will appear here after you upload new ones.
-                </p>
-              )}
-            </div>
-          </div>
+          </CardHeader>
+          <CardContent className="p-6 md:p-8 space-y-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Logo Preview Panel */}
+              <div className="lg:col-span-1 flex flex-col items-center justify-center p-6 rounded-3xl border bg-muted/5 relative overflow-hidden group min-h-[220px]">
+                <div className="absolute inset-0 bg-grid-white/[0.02] -z-10" />
+                <div className={cn(
+                  "relative max-w-[200px] max-h-[140px] flex items-center justify-center transition-all duration-300",
+                  settings.logoDropShadow === 'sm' && 'drop-shadow-sm',
+                  settings.logoDropShadow === 'md' && 'drop-shadow-md',
+                  settings.logoDropShadow === 'lg' && 'drop-shadow-xl',
+                )}>
+                  {currentLogo ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={currentLogo}
+                      alt="Current school logo"
+                      className={cn(
+                        "h-32 w-auto object-contain transition-all duration-300",
+                        logoDisplayMode === 'cover' && 'w-full object-cover',
+                        settings.logoBorderRadius === 'sm' && 'rounded-sm',
+                        settings.logoBorderRadius === 'md' && 'rounded-md',
+                        settings.logoBorderRadius === 'lg' && 'rounded-2xl',
+                        settings.logoBorderRadius === 'full' && 'rounded-full'
+                      )}
+                    />
+                  ) : (
+                    <div className="h-28 w-28 rounded-3xl bg-muted border-2 border-dashed border-muted-foreground/20 flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                      <ImageIcon className="w-8 h-8 opacity-40" />
+                      <span className="text-[11px] font-bold tracking-wider uppercase opacity-60">No Logo</span>
+                    </div>
+                  )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
-            <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase text-muted-foreground">Display Mode</Label>
-              <div className="flex gap-2">
-                {(['contain', 'cover'] as const).map((mode) => (
-                  <button
-                    key={mode}
-                    type="button"
-                    onClick={() => setLogoDisplayMode(mode)}
-                    className={`flex-1 py-1.5 px-3 rounded-md text-sm font-bold transition-all ${
-                      logoDisplayMode === mode ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                    }`}
-                  >
-                    {mode === 'contain' ? 'Fit' : 'Fill'}
-                  </button>
-                ))}
+                  {currentLogo && (
+                    <button
+                      onClick={handleRemoveLogo}
+                      className="absolute -top-3 -right-3 bg-destructive hover:bg-destructive/90 text-white rounded-full p-2 shadow-md transition-all hover:scale-110"
+                      title="Remove logo"
+                      disabled={isLogoUploading}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                <div className="mt-6 flex flex-col items-center gap-2">
+                  <span className="text-[10px] uppercase tracking-widest font-black text-muted-foreground">Active Identity Logo</span>
+                  {previousSchoolLogos.length >= 1 ? (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs h-auto py-1 px-3 rounded-lg text-primary hover:bg-primary/5 font-bold"
+                        onClick={() => setIsPreviousLogosOpen(true)}
+                      >
+                        Restore previous logo
+                      </Button>
+                      <Dialog open={isPreviousLogosOpen} onOpenChange={setIsPreviousLogosOpen}>
+                        <DialogContent className="sm:max-w-md rounded-3xl">
+                          <DialogHeader>
+                            <DialogTitle className="text-lg font-bold">Restore Previous Logo</DialogTitle>
+                            <DialogDescription className="text-sm">Select an older upload to roll back to that visual brand.</DialogDescription>
+                          </DialogHeader>
+                          <div className="grid grid-cols-3 gap-4 py-4 max-h-[300px] overflow-y-auto pr-1">
+                            {previousSchoolLogos.map((url, idx) => (
+                              <button
+                                key={`${url}-${idx}`}
+                                type="button"
+                                onClick={async () => {
+                                  if (!schoolDocRef || !firestore || !schoolId) return;
+                                  try {
+                                    await updateDoc(schoolDocRef, { logoUrl: url });
+                                    await setDoc(
+                                      schoolPublicDocRef(firestore, schoolId),
+                                      { logoUrl: url, active: true, updatedAt: Date.now() },
+                                      { merge: true },
+                                    );
+                                    setLogoPreviewUrl(url ?? null);
+                                    playSound('success');
+                                    toast({ title: 'Logo restored', description: 'Using selected previous logo.' });
+                                    setIsPreviousLogosOpen(false);
+                                  } catch (e) {
+                                    toast({ variant: 'destructive', title: 'Failed to restore logo', description: String(e) });
+                                  }
+                                }}
+                                className="h-20 w-full rounded-2xl overflow-hidden border-2 border-border hover:border-primary bg-muted/30 p-2 transition-all hover:scale-102 flex items-center justify-center group"
+                              >
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={url}
+                                  alt="Previous logo"
+                                  className="h-full w-auto object-contain transition-transform group-hover:scale-105"
+                                />
+                              </button>
+                            ))}
+                          </div>
+                          <DialogFooter>
+                            <Button variant="outline" className="rounded-xl font-bold" onClick={() => setIsPreviousLogosOpen(false)}>
+                              Close
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    </>
+                  ) : null}
+                </div>
               </div>
 
-              <Label className="text-xs font-bold uppercase text-muted-foreground pt-2 block">Rounding</Label>
-              <div className="flex flex-wrap gap-1">
-                {(['none', 'sm', 'md', 'lg', 'full'] as const).map((r) => (
-                  <button
-                    key={r}
-                    type="button"
-                    onClick={() => updateSettings({ logoBorderRadius: r })}
-                    className={`px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider transition-all ${
-                      settings.logoBorderRadius === r ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                    }`}
-                  >
-                    {r}
-                  </button>
-                ))}
-              </div>
-
-              <Label className="text-xs font-bold uppercase text-muted-foreground pt-2 block">Shadow</Label>
-              <div className="flex flex-wrap gap-1">
-                {(['none', 'sm', 'md', 'lg'] as const).map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => updateSettings({ logoDropShadow: s })}
-                    className={`px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider transition-all ${
-                      settings.logoDropShadow === s ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                    }`}
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="school-logo">Upload new logo</Label>
-              <Input
-                id="school-logo"
-                type="file"
-                className="text-xs"
-                accept="image/png,image/jpeg,image/jpg,image/webp"
-                onChange={handleLogoUpload}
-                disabled={!schoolId || isLogoUploading}
-              />
-              {isLogoUploading && (
-                <p className="text-sm text-muted-foreground flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Uploading…
-                </p>
-              )}
-              <p className="text-[11px] text-muted-foreground mt-1">Square image recommended, at least 128×128px.</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* STUDENT PHOTO STYLING */}
-      <Card className="shadow-md border-l-4 border-indigo-500">
-        <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <User className="w-5 h-5 text-indigo-500" />
-                <h3 className="font-bold text-lg">Student Photo Styling</h3>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Customize how student profile photos appear across the app and on ID cards.
-              </p>
-
-              <div className="space-y-4 pt-2">
+              {/* Logo Layout Controls */}
+              <div className="lg:col-span-2 space-y-6">
+                {/* Upload Area */}
                 <div className="space-y-2">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground">Display Mode</Label>
-                  <div className="flex gap-1">
+                  <Label htmlFor="school-logo" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Upload New Asset</Label>
+                  <div className="flex flex-col sm:flex-row items-center gap-3">
+                    <Input
+                      id="school-logo"
+                      type="file"
+                      className="text-xs rounded-xl shadow-sm cursor-pointer bg-muted/20 file:font-semibold"
+                      accept="image/png,image/jpeg,image/jpg,image/webp"
+                      onChange={handleLogoUpload}
+                      disabled={!schoolId || isLogoUploading}
+                    />
+                    {isLogoUploading && (
+                      <p className="text-sm font-semibold text-muted-foreground flex items-center gap-2 shrink-0">
+                        <Loader2 className="h-4 w-4 animate-spin text-primary" /> Uploading…
+                      </p>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    Supported extensions: PNG, JPG, JPEG, and WebP under 10MB. We recommend uploading high-contrast square shapes (min. 256x256px).
+                  </p>
+                </div>
+
+                {/* Preset Option Grids */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-4 border-t">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Scaling Mode</Label>
+                    <div className="flex bg-muted/65 p-1 rounded-xl gap-1">
+                      {(['contain', 'cover'] as const).map((mode) => (
+                        <button
+                          key={mode}
+                          type="button"
+                          onClick={() => setLogoDisplayMode(mode)}
+                          className={cn(
+                            'flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all uppercase tracking-wider',
+                            logoDisplayMode === mode
+                              ? 'bg-background text-foreground shadow-sm'
+                              : 'text-muted-foreground hover:text-foreground',
+                          )}
+                        >
+                          {mode === 'contain' ? 'Fit' : 'Fill'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Corner Rounding</Label>
+                    <div className="flex flex-wrap bg-muted/65 p-1 rounded-xl gap-1">
+                      {(['none', 'sm', 'md', 'lg', 'full'] as const).map((r) => (
+                        <button
+                          key={r}
+                          type="button"
+                          onClick={() => updateSettings({ logoBorderRadius: r })}
+                          className={cn(
+                            'flex-1 min-w-[32px] py-1 px-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all',
+                            settings.logoBorderRadius === r
+                              ? 'bg-background text-foreground shadow-sm'
+                              : 'text-muted-foreground hover:text-foreground',
+                          )}
+                        >
+                          {r}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Drop Shadow</Label>
+                    <div className="flex flex-wrap bg-muted/65 p-1 rounded-xl gap-1">
+                      {(['none', 'sm', 'md', 'lg'] as const).map((s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => updateSettings({ logoDropShadow: s })}
+                          className={cn(
+                            'flex-1 min-w-[32px] py-1 px-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all',
+                            settings.logoDropShadow === s
+                              ? 'bg-background text-foreground shadow-sm'
+                              : 'text-muted-foreground hover:text-foreground',
+                          )}
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 2. STUDENT PHOTO STYLING */}
+      {section === 'photos' && (
+        <Card className="border-0 bg-background shadow-lg rounded-3xl overflow-hidden">
+          <CardHeader className="p-6 md:p-8 border-b bg-gradient-to-r from-muted/50 via-background to-muted/20">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="space-y-1">
+                <CardTitle className="text-xl font-black tracking-tight flex items-center gap-3">
+                  <User className="w-5 h-5 text-indigo-500" />
+                  Student Photo Styling
+                </CardTitle>
+                <CardDescription className="text-sm text-muted-foreground max-w-xl">
+                  Adjust visual styles applied to student portrait photos dynamically generated on their badges, leaderboards, and dashboard accounts.
+                </CardDescription>
+              </div>
+              <TabWalkthroughHeaderAction />
+            </div>
+          </CardHeader>
+          <CardContent className="p-6 md:p-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Photo Controls Panel */}
+              <div className="lg:col-span-2 space-y-6">
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Fitting Mode</Label>
+                  <div className="flex bg-muted/50 p-1.5 rounded-2xl gap-1 max-w-xs">
                     {(['contain', 'cover'] as const).map((mode) => (
                       <button
                         key={mode}
                         type="button"
                         onClick={() => updateSettings({ photoDisplayMode: mode })}
-                        className={`px-3 py-1.5 rounded-md text-[11px] font-bold uppercase tracking-wider transition-all ${
-                          settings.photoDisplayMode === mode ? 'bg-indigo-600 text-white' : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                        }`}
+                        className={cn(
+                          'flex-1 py-2 px-4 rounded-xl text-xs font-bold transition-all uppercase tracking-wider',
+                          settings.photoDisplayMode === mode
+                            ? 'bg-indigo-600 text-white shadow-md'
+                            : 'text-muted-foreground hover:bg-muted/80',
+                        )}
                       >
                         {mode === 'contain' ? 'Fit' : 'Fill'}
                       </button>
                     ))}
                   </div>
+                  <p className="text-[11px] text-muted-foreground">"Fill" will crop photos to cover the entire space, whereas "Fit" adds letterbox bars to maintain proportions.</p>
                 </div>
 
-                <div className="space-y-2">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground">Rounding</Label>
-                  <div className="flex flex-wrap gap-1">
-                    {(['none', 'sm', 'md', 'lg', 'full'] as const).map((r) => (
-                      <button
-                        key={r}
-                        type="button"
-                        onClick={() => updateSettings({ photoBorderRadius: r })}
-                        className={`px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider transition-all ${
-                          settings.photoBorderRadius === r ? 'bg-indigo-600 text-white' : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                        }`}
-                      >
-                        {r}
-                      </button>
-                    ))}
+                <div className="space-y-3 pt-2">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Corners Rounding</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {(['none', 'sm', 'md', 'lg', 'full'] as const).map((r) => {
+                      const active = settings.photoBorderRadius === r;
+                      return (
+                        <button
+                          key={r}
+                          type="button"
+                          onClick={() => updateSettings({ photoBorderRadius: r })}
+                          className={cn(
+                            'px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border',
+                            active
+                              ? 'bg-indigo-50 border-indigo-200 text-indigo-700 ring-2 ring-indigo-600/10'
+                              : 'bg-card border-border hover:bg-muted/40 text-muted-foreground',
+                          )}
+                        >
+                          {r}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground">Shadow</Label>
-                  <div className="flex flex-wrap gap-1">
-                    {(['none', 'sm', 'md', 'lg'] as const).map((s) => (
-                      <button
-                        key={s}
-                        type="button"
-                        onClick={() => updateSettings({ photoDropShadow: s })}
-                        className={`px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider transition-all ${
-                          settings.photoDropShadow === s ? 'bg-indigo-600 text-white' : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                        }`}
-                      >
-                        {s}
-                      </button>
-                    ))}
+                <div className="space-y-3 pt-2">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Depth Shadow</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {(['none', 'sm', 'md', 'lg'] as const).map((s) => {
+                      const active = settings.photoDropShadow === s;
+                      return (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => updateSettings({ photoDropShadow: s })}
+                          className={cn(
+                            'px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border',
+                            active
+                              ? 'bg-indigo-50 border-indigo-200 text-indigo-700 ring-2 ring-indigo-600/10'
+                              : 'bg-card border-border hover:bg-muted/40 text-muted-foreground',
+                          )}
+                        >
+                          {s}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div className="flex flex-col items-center justify-center p-8 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800">
-              <div className={cn(
-                "w-32 h-32 bg-white dark:bg-slate-800 border-2 border-indigo-500/20 overflow-hidden transition-all duration-300",
-                settings.photoBorderRadius === 'none' && 'rounded-none',
-                settings.photoBorderRadius === 'sm' && 'rounded-sm',
-                settings.photoBorderRadius === 'md' && 'rounded-md',
-                settings.photoBorderRadius === 'lg' && 'rounded-2xl',
-                settings.photoBorderRadius === 'full' && 'rounded-full',
-                settings.photoDropShadow === 'none' && 'drop-shadow-none',
-                settings.photoDropShadow === 'sm' && 'drop-shadow-sm',
-                settings.photoDropShadow === 'md' && 'drop-shadow-md',
-                settings.photoDropShadow === 'lg' && 'drop-shadow-xl',
-              )}>
-                <img 
-                  src="https://api.dicebear.com/9.x/avataaars/svg?seed=Felix" 
-                  alt="Preview" 
-                  className={cn(
-                    "w-full h-full transition-all duration-300",
-                    settings.photoDisplayMode === 'cover' ? 'object-cover' : 'object-contain'
-                  )}
-                />
+              {/* Photo Preview Card */}
+              <div className="lg:col-span-1 flex flex-col items-center justify-center p-8 bg-slate-50 dark:bg-slate-900/50 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-800/80">
+                <div className={cn(
+                  "w-36 h-36 bg-white dark:bg-slate-800 border-2 border-indigo-500/10 overflow-hidden transition-all duration-300",
+                  settings.photoBorderRadius === 'none' && 'rounded-none',
+                  settings.photoBorderRadius === 'sm' && 'rounded-sm',
+                  settings.photoBorderRadius === 'md' && 'rounded-md',
+                  settings.photoBorderRadius === 'lg' && 'rounded-3xl',
+                  settings.photoBorderRadius === 'full' && 'rounded-full',
+                  settings.photoDropShadow === 'none' && 'drop-shadow-none',
+                  settings.photoDropShadow === 'sm' && 'drop-shadow-sm',
+                  settings.photoDropShadow === 'md' && 'drop-shadow-md',
+                  settings.photoDropShadow === 'lg' && 'drop-shadow-xl',
+                )}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="https://api.dicebear.com/9.x/avataaars/svg?seed=Felix"
+                    alt="Preview"
+                    className={cn(
+                      "w-full h-full transition-all duration-300",
+                      settings.photoDisplayMode === 'cover' ? 'object-cover' : 'object-contain'
+                    )}
+                  />
+                </div>
+                <span className="mt-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Rendering Preview</span>
               </div>
-              <p className="mt-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Photo Preview</p>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
-      {/* THEME CARD */}
-      <Card className="border-t-4 border-primary shadow-md">
-        <CardHeader className="py-6">
-          <Helper content="Configure the default visual theme for student ID cards and kiosks.">
-            <CardTitle className="flex items-center gap-2">
-              <Palette className="w-5 h-5 text-primary" /> Default ID Card Theme
-            </CardTitle>
-          </Helper>
-          <CardDescription>
-                    This theme is used for the kiosk, rewards shop, and ID cards when a student has no individual theme.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="rounded-xl text-xs font-bold"
-              onClick={() => {
-                setIsDefaultThemeModalOpen(true);
-                playSound('click');
-              }}
-            >
-              {settings.defaultStudentTheme ? 'Edit default theme' : 'Set default theme'}
-            </Button>
-            {settings.defaultStudentTheme && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="rounded-xl text-xs font-bold text-muted-foreground"
-                onClick={handleClearSchoolDefaultTheme}
-              >
-                Clear
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      <ThemeGeneratorModal
-        isOpen={isDefaultThemeModalOpen}
-        onOpenChange={setIsDefaultThemeModalOpen}
-        studentName="School default"
-        currentTheme={settings.defaultStudentTheme || undefined}
-        onSave={handleSchoolDefaultThemeSave}
-        onRemoveTheme={() => {
-          handleClearSchoolDefaultTheme();
-        }}
-      />
-
-      {/* BASIC SETTINGS CARD */}
-      <Card className="border-t-4 border-amber-500 shadow-md">
-        <CardHeader className="py-6">
-          <Helper content="Configure session timeouts for admin and kiosk access.">
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="w-5 h-5 text-amber-500" /> Basic settings
-            </CardTitle>
-          </Helper>
-          <CardDescription>
-            Manage how long sessions stay active before requiring re-authentication or returning to home.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="space-y-4">
+      {/* 3. ID CARD THEME */}
+      {section === 'theme' && (
+        <Card className="border-0 bg-background shadow-lg rounded-3xl overflow-hidden">
+          <CardHeader className="p-6 md:p-8 border-b bg-gradient-to-r from-muted/50 via-background to-muted/20">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="space-y-1">
+                <CardTitle className="text-xl font-black tracking-tight flex items-center gap-3">
+                  <Palette className="w-5 h-5 text-primary" />
+                  Default Student ID Card Theme
+                </CardTitle>
+                <CardDescription className="text-sm text-muted-foreground max-w-xl">
+                  Configure custom card background gradients, font themes, and textures that serve as default presets for students, kiosk panels, and printouts.
+                </CardDescription>
+              </div>
+              <TabWalkthroughHeaderAction />
+            </div>
+          </CardHeader>
+          <CardContent className="p-6 md:p-8 space-y-6">
+            <div className="rounded-3xl border bg-muted/5 p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
               <div className="space-y-2">
-                <Label htmlFor="admin-timeout" className="text-sm font-bold flex items-center gap-2">
-                  <Clock className="w-4 h-4" /> Admin Session Timeout
-                </Label>
-                <div className="flex items-center gap-3">
+                <h4 className="text-sm font-bold text-foreground">Interactive Theme Designer</h4>
+                <p className="text-xs text-muted-foreground max-w-md leading-relaxed">
+                  Design bespoke color palettes matching your school's exact school colors. We'll automatically enforce AAA color contrast checks for clear, accessible text layouts.
+                </p>
+              </div>
+              <div className="flex items-center gap-3 shrink-0 self-stretch sm:self-auto">
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setIsDefaultThemeModalOpen(true);
+                    playSound('click');
+                  }}
+                  className="rounded-xl font-bold bg-primary hover:bg-primary/90 text-white shadow-md shadow-primary/20 flex-1 sm:flex-initial"
+                >
+                  <Palette className="w-4 h-4 mr-2" />
+                  {settings.defaultStudentTheme ? 'Customize Theme' : 'Configure Brand Theme'}
+                </Button>
+                {settings.defaultStudentTheme && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleClearSchoolDefaultTheme}
+                    className="rounded-xl font-bold hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20 border-border"
+                  >
+                    <RotateCcw className="w-4 h-4 mr-2" />
+                    Reset Standard
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {settings.defaultStudentTheme && (
+              <div className="rounded-3xl border p-6 flex flex-col items-center justify-center bg-muted/10 relative min-h-[160px]">
+                <div
+                  className="w-full max-w-md rounded-2xl p-5 border shadow-xl flex items-center justify-between relative overflow-hidden"
+                  style={{
+                    background: settings.defaultStudentTheme.backgroundStyle || settings.defaultStudentTheme.cardBackground || '#ffffff',
+                    borderColor: settings.defaultStudentTheme.primary || 'rgba(0,0,0,0.1)',
+                  }}
+                >
+                  <div>
+                    <h5
+                      className="font-black text-sm tracking-wide uppercase"
+                      style={{ color: settings.defaultStudentTheme.text || '#000000' }}
+                    >
+                      LevelUp Student ID
+                    </h5>
+                    <p
+                      className="text-xs font-bold mt-1 opacity-80"
+                      style={{ color: settings.defaultStudentTheme.accent || '#555555' }}
+                    >
+                      School Brand Standard
+                    </p>
+                  </div>
+                  <div
+                    className="px-3 py-1.5 rounded-lg text-[10px] font-black tracking-wider uppercase border"
+                    style={{
+                      backgroundColor: settings.defaultStudentTheme.cardBackground || '#ffffff',
+                      borderColor: settings.defaultStudentTheme.primary || 'rgba(0,0,0,0.1)',
+                      color: settings.defaultStudentTheme.text || '#000000',
+                    }}
+                  >
+                    Kiosk Default
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <ThemeGeneratorModal
+              isOpen={isDefaultThemeModalOpen}
+              onOpenChange={setIsDefaultThemeModalOpen}
+              studentName="School default"
+              currentTheme={settings.defaultStudentTheme || undefined}
+              onSave={handleSchoolDefaultThemeSave}
+              onRemoveTheme={handleClearSchoolDefaultTheme}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 4. SESSION TIMEOUTS */}
+      {section === 'sessions' && (
+        <Card className="border-0 bg-background shadow-lg rounded-3xl overflow-hidden">
+          <CardHeader className="p-6 md:p-8 border-b bg-gradient-to-r from-muted/50 via-background to-muted/20">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="space-y-1">
+                <CardTitle className="text-xl font-black tracking-tight flex items-center gap-3">
+                  <Shield className="w-5 h-5 text-amber-500" />
+                  Security & Session Timeouts
+                </CardTitle>
+                <CardDescription className="text-sm text-muted-foreground max-w-xl">
+                  Adjust active login durations, student sign-in freeze locks, and screensaver reset timers.
+                </CardDescription>
+              </div>
+              <TabWalkthroughHeaderAction />
+            </div>
+          </CardHeader>
+          <CardContent className="p-6 md:p-8 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Card 1: Admin */}
+              <div className="rounded-3xl border bg-card p-6 shadow-sm space-y-4 hover:border-amber-500/20 transition-all flex flex-col justify-between">
+                <div className="space-y-2">
+                  <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500 mb-4">
+                    <Clock className="w-5 h-5" />
+                  </div>
+                  <Label htmlFor="admin-timeout" className="font-bold text-sm text-foreground">Admin Session Timeout</Label>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Auto-log out teachers and admins after consecutive minutes of inactivity. Keep schools secure.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 pt-3 border-t">
                   <Input
                     id="admin-timeout"
                     type="number"
@@ -455,22 +601,24 @@ export function AdminBrandingTab({
                       const mins = Math.max(1, parseInt(e.target.value) || 1);
                       updateSettings({ adminSessionTimeoutMs: mins * 60000 });
                     }}
-                    className="w-24 font-bold"
+                    className="w-24 font-bold rounded-xl text-center"
                   />
-                  <span className="text-sm font-medium text-muted-foreground">minutes</span>
+                  <span className="text-xs font-semibold text-muted-foreground">Minutes</span>
                 </div>
-                <p className="text-[11px] text-muted-foreground">
-                  Inactivity before an admin/teacher is automatically logged out.
-                </p>
               </div>
-            </div>
 
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="kiosk-timeout" className="text-sm font-bold flex items-center gap-2">
-                  <Clock className="w-4 h-4" /> Kiosk Session Timeout
-                </Label>
-                <div className="flex items-center gap-3">
+              {/* Card 2: Kiosk Timeout */}
+              <div className="rounded-3xl border bg-card p-6 shadow-sm space-y-4 hover:border-amber-500/20 transition-all flex flex-col justify-between">
+                <div className="space-y-2">
+                  <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 mb-4">
+                    <Tv className="w-5 h-5" />
+                  </div>
+                  <Label htmlFor="kiosk-timeout" className="font-bold text-sm text-foreground">Kiosk Idle Reset</Label>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Automatically return to the scan screen on the kiosk if a student leaves it idle.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 pt-3 border-t">
                   <Input
                     id="kiosk-timeout"
                     type="number"
@@ -481,20 +629,24 @@ export function AdminBrandingTab({
                       const secs = Math.max(1, parseInt(e.target.value) || 10);
                       updateSettings({ kioskSessionTimeoutSec: secs });
                     }}
-                    className="w-24 font-bold"
+                    className="w-24 font-bold rounded-xl text-center"
                   />
-                  <span className="text-sm font-medium text-muted-foreground">seconds</span>
+                  <span className="text-xs font-semibold text-muted-foreground">Seconds</span>
                 </div>
-                <p className="text-[11px] text-muted-foreground">
-                    Inactivity before the student dashboard or rewards shop returns to the home screen.
-                </p>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="kiosk-voucher-timeout" className="text-sm font-bold flex items-center gap-2">
-                  <Clock className="w-4 h-4" /> Voucher timeout
-                </Label>
-                <div className="flex items-center gap-3">
+              {/* Card 3: Voucher Timeout */}
+              <div className="rounded-3xl border bg-card p-6 shadow-sm space-y-4 hover:border-indigo-500/10 transition-all flex flex-col justify-between">
+                <div className="space-y-2">
+                  <div className="h-10 w-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-500 mb-4">
+                    <Maximize2 className="w-5 h-5" />
+                  </div>
+                  <Label htmlFor="kiosk-voucher-timeout" className="font-bold text-sm text-foreground">Voucher Modal Pause</Label>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    If no tap is received during printed voucher redemption prompts, pause auto-print until another tap.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 pt-3 border-t">
                   <Input
                     id="kiosk-voucher-timeout"
                     type="number"
@@ -506,20 +658,24 @@ export function AdminBrandingTab({
                       const secs = Number.isFinite(n) ? Math.min(14400, Math.max(1, n)) : 360;
                       updateSettings({ kioskVoucherIdleOffSec: secs });
                     }}
-                    className="w-24 font-bold"
+                    className="w-24 font-bold rounded-xl text-center"
                   />
-                  <span className="text-sm font-medium text-muted-foreground">seconds</span>
+                  <span className="text-xs font-semibold text-muted-foreground">Seconds</span>
                 </div>
-                <p className="text-[11px] text-muted-foreground">
-                  After this long without taps or keys on the kiosk, redeem print-voucher prompts pause until someone uses the screen again.
-                </p>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="signin-freeze" className="text-sm font-bold flex items-center gap-2">
-                  <Clock className="w-4 h-4" /> Student sign-in freeze
-                </Label>
-                <div className="flex items-center gap-3">
+              {/* Card 4: Sign-in Freeze */}
+              <div className="rounded-3xl border bg-card p-6 shadow-sm space-y-4 hover:border-emerald-500/10 transition-all flex flex-col justify-between">
+                <div className="space-y-2">
+                  <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 mb-4">
+                    <Shield className="w-5 h-5" />
+                  </div>
+                  <Label htmlFor="signin-freeze" className="font-bold text-sm text-foreground">Duplicate Tap Freeze Lock</Label>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Prevent students from duplicate sign-ins by blocking subsequent scans for a freeze window. (0 to disable)
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 pt-3 border-t">
                   <Input
                     id="signin-freeze"
                     type="number"
@@ -531,20 +687,24 @@ export function AdminBrandingTab({
                       const secs = Number.isFinite(n) ? Math.min(3600, Math.max(0, n)) : 0;
                       updateSettings({ studentSignInFreezeSec: secs });
                     }}
-                    className="w-24 font-bold"
+                    className="w-24 font-bold rounded-xl text-center"
                   />
-                  <span className="text-sm font-medium text-muted-foreground">seconds</span>
+                  <span className="text-xs font-semibold text-muted-foreground">Seconds</span>
                 </div>
-                <p className="text-[11px] text-muted-foreground">
-                  If a student tries to sign in again right after they just signed in, the kiosk will block them for this many seconds. Set 0 to disable.
-                </p>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="welcome-back-duration" className="text-sm font-bold flex items-center gap-2">
-                  <Tv className="w-4 h-4" /> Welcome back splash duration
-                </Label>
-                <div className="flex items-center gap-3">
+              {/* Card 5: Welcome Splash */}
+              <div className="rounded-3xl border bg-card p-6 shadow-sm space-y-4 hover:border-purple-500/10 transition-all flex flex-col justify-between md:col-span-2">
+                <div className="space-y-2">
+                  <div className="h-10 w-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-500 mb-4">
+                    <Sparkles className="w-5 h-5" />
+                  </div>
+                  <Label htmlFor="welcome-back-duration" className="font-bold text-sm text-foreground">Welcome Back Splash Duration</Label>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Number of seconds the personalized kiosk celebration screen stays active when checking in before auto-routing back.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 pt-3 border-t">
                   <Input
                     id="welcome-back-duration"
                     type="number"
@@ -556,379 +716,355 @@ export function AdminBrandingTab({
                       const secs = Number.isFinite(n) ? Math.min(60, Math.max(1, n)) : 3;
                       updateSettings({ studentWelcomeBackDurationSec: secs });
                     }}
-                    className="w-24 font-bold"
+                    className="w-24 font-bold rounded-xl text-center"
                   />
-                  <span className="text-sm font-medium text-muted-foreground">seconds</span>
+                  <span className="text-xs font-semibold text-muted-foreground">Seconds</span>
                 </div>
-                <p className="text-[11px] text-muted-foreground">
-                  How long the kiosk “Welcome back” screen stays up (1–60). Students can still tap Skip to dismiss sooner.
-                </p>
               </div>
-
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
-      <Card className="border-t-4 border-indigo-500 shadow-md">
-        <CardHeader className="py-6">
-          <Helper content="Configure the scrolling sponsor banner message.">
-            <CardTitle className="flex items-center gap-2">
-              <Megaphone className="w-5 h-5 text-indigo-500" /> Sponsor Banner
-            </CardTitle>
-          </Helper>
-          <CardDescription>
-            Show a sponsor or announcement banner at the top or bottom of student kiosk screens. Draft the content below, then turn on the banner so students see it.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Live Preview */}
-          <div className="mb-6 border-b border-border/40 pb-6">
-             <Label className="text-xs font-bold text-muted-foreground uppercase tracking-widest block mb-3">Live Preview</Label>
-             <div className="rounded-xl overflow-hidden shadow-sm border border-border/50 bg-slate-100 dark:bg-slate-900 min-h-[5rem] flex items-center justify-center p-2 relative">
+      {/* 5. SPONSOR BANNER */}
+      {section === 'sponsor' && (
+        <Card className="border-0 bg-background shadow-lg rounded-3xl overflow-hidden">
+          <CardHeader className="p-6 md:p-8 border-b bg-gradient-to-r from-muted/50 via-background to-muted/20">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="space-y-1">
+                <CardTitle className="text-xl font-black tracking-tight flex items-center gap-3">
+                  <Megaphone className="w-5 h-5 text-indigo-500" />
+                  Kiosk Sponsor & Announcement Banners
+                </CardTitle>
+                <CardDescription className="text-sm text-muted-foreground max-w-xl">
+                  Highlight local businesses, PTA announcements, or milestone notes dynamically on student-facing kiosk screens.
+                </CardDescription>
+              </div>
+              <TabWalkthroughHeaderAction />
+            </div>
+          </CardHeader>
+          <CardContent className="p-6 md:p-8 space-y-8">
+            {/* Live Preview Container */}
+            <div className="space-y-3">
+              <Label className="text-xs font-bold text-muted-foreground uppercase tracking-widest block">Live Kiosk Preview</Label>
+              <div className="rounded-2xl overflow-hidden shadow-inner border bg-slate-100 dark:bg-slate-900 min-h-[90px] flex items-center justify-center p-3 relative">
                 {(!settings.kioskSponsorEnabled && !settings.kioskSponsorSchedules?.length) ? (
-                    <p className="text-sm text-muted-foreground">Sponsor banner is currently disabled.</p>
+                  <p className="text-xs font-semibold text-muted-foreground flex items-center gap-2">
+                    <Tv className="w-4 h-4" /> Sponsor banner is currently disabled.
+                  </p>
                 ) : (!settings.kioskSponsorMessage?.trim() && !settings.kioskSponsorLogoUrl?.trim() && !settings.kioskSponsorLink?.trim()) ? (
-                    <p className="text-sm text-muted-foreground">Add a message, logo, or link before students will see the banner.</p>
+                  <p className="text-xs font-semibold text-muted-foreground">Add a banner message or logo below to generate the output preview.</p>
                 ) : (
-                    <div className="w-full relative overflow-hidden rounded-lg">
-                        <KioskSponsorBanner 
-                            previewOverride={{
-                                message: settings.kioskSponsorMessage || 'Thanks to our sponsor',
-                                link: settings.kioskSponsorLink,
-                                logoUrl: settings.kioskSponsorLogoUrl,
-                                speed: settings.kioskSponsorSpeed,
-                                position: settings.kioskSponsorPosition,
-                                bannerStyle: settings.kioskSponsorBannerStyle,
-                                icon: settings.kioskSponsorIcon
-                            }}
-                        />
-                    </div>
-                )}
-             </div>
-          </div>
-
-          <div className="flex items-start justify-between py-4 border-b border-border/40 transition-colors">
-            <div className="flex items-start gap-4 mr-6">
-              <div className="flex flex-col">
-                <Label className="font-bold text-base block text-foreground mb-1" htmlFor="kioskSponsorEnabledBranding">
-                  Enable Default Sponsor Banner
-                </Label>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Display this sponsor or announcement banner on student kiosk screens by default.
-                </p>
-              </div>
-            </div>
-            <Switch
-              id="kioskSponsorEnabledBranding"
-              checked={!!settings.kioskSponsorEnabled}
-              onCheckedChange={(checked) => updateSettings({ kioskSponsorEnabled: checked })}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 pb-6">
-            <div className="space-y-3 col-span-2">
-              <Label htmlFor="kioskSponsorMessageBranding" className="text-xs font-bold text-muted-foreground uppercase tracking-widest block">
-                Sponsor Message
-              </Label>
-              <Input
-                id="kioskSponsorMessageBranding"
-                placeholder="e.g. Proudly sponsored by Acme Corp · Visit us at acme.com"
-                value={settings.kioskSponsorMessage || ''}
-                onChange={(e) => updateSettings({ kioskSponsorMessage: e.target.value })}
-                className="text-sm rounded-xl"
-                maxLength={300}
-              />
-              <p className="text-[10px] text-muted-foreground">
-                {(settings.kioskSponsorMessage || '').length}/300 characters
-                {!settings.kioskSponsorEnabled ? ' · Banner stays hidden for students until you enable it above.' : null}
-              </p>
-            </div>
-
-            <div className="space-y-3">
-              <Label htmlFor="kioskSponsorLinkBranding" className="text-xs font-bold text-muted-foreground uppercase tracking-widest block">
-                Sponsor Website or Call to Action
-              </Label>
-              <Input
-                id="kioskSponsorLinkBranding"
-                placeholder="e.g. https://acme.com or @AcmeCorp"
-                value={settings.kioskSponsorLink || ''}
-                onChange={(e) => updateSettings({ kioskSponsorLink: e.target.value })}
-                className="text-sm rounded-xl"
-              />
-            </div>
-
-            <div className="space-y-3">
-              <Label htmlFor="kioskSponsorLogoUrlBranding" className="text-xs font-bold text-muted-foreground uppercase tracking-widest block">
-                Sponsor Logo URL
-              </Label>
-              <Input
-                id="kioskSponsorLogoUrlBranding"
-                placeholder="e.g. https://example.com/logo.png"
-                value={settings.kioskSponsorLogoUrl || ''}
-                onChange={(e) => updateSettings({ kioskSponsorLogoUrl: e.target.value })}
-                className="text-sm rounded-xl"
-              />
-            </div>
-
-            <div className="space-y-3">
-              <Label htmlFor="kioskSponsorBannerStyleBranding" className="text-xs font-bold text-muted-foreground uppercase tracking-widest block">
-                Visual Theme / Banner Style
-              </Label>
-              <Select
-                value={settings.kioskSponsorBannerStyle || 'primary'}
-                onValueChange={(val: any) => updateSettings({ kioskSponsorBannerStyle: val })}
-              >
-                <SelectTrigger className="rounded-xl">
-                  <SelectValue placeholder="Style" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="primary">Primary Brand Color</SelectItem>
-                  <SelectItem value="subtle">Subtle Slate</SelectItem>
-                  <SelectItem value="neon_gold">Neon Gold</SelectItem>
-                  <SelectItem value="electric">Electric Blue</SelectItem>
-                  <SelectItem value="gradient">Hyper Gradient</SelectItem>
-                  <SelectItem value="glass">Glassmorphic Blur</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-3">
-              <Label htmlFor="kioskSponsorSpeedBranding" className="text-xs font-bold text-muted-foreground uppercase tracking-widest block">
-                Scroll Speed
-              </Label>
-              <Select
-                value={settings.kioskSponsorSpeed || 'normal'}
-                onValueChange={(val: any) => updateSettings({ kioskSponsorSpeed: val })}
-              >
-                <SelectTrigger className="rounded-xl">
-                  <SelectValue placeholder="Speed" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="slow">Slow</SelectItem>
-                  <SelectItem value="normal">Normal</SelectItem>
-                  <SelectItem value="fast">Fast</SelectItem>
-                  <SelectItem value="very_fast">Very Fast</SelectItem>
-                  <SelectItem value="static">Static (Fixed Banner)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-3">
-              <Label htmlFor="kioskSponsorPositionBranding" className="text-xs font-bold text-muted-foreground uppercase tracking-widest block">
-                Banner Position
-              </Label>
-              <Select
-                value={settings.kioskSponsorPosition || 'bottom'}
-                onValueChange={(val: any) => updateSettings({ kioskSponsorPosition: val })}
-              >
-                <SelectTrigger className="rounded-xl">
-                  <SelectValue placeholder="Position" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="bottom">Bottom of screen</SelectItem>
-                  <SelectItem value="top">Top of screen</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-3">
-              <Label htmlFor="kioskSponsorIconBranding" className="text-xs font-bold text-muted-foreground uppercase tracking-widest block">
-                Emoji / Icon Prefix
-              </Label>
-              <Input
-                id="kioskSponsorIconBranding"
-                placeholder="e.g. 🎉, 🌟, 💡, 🏫, 🍎, etc."
-                value={settings.kioskSponsorIcon || ''}
-                onChange={(e) => updateSettings({ kioskSponsorIcon: e.target.value })}
-                className="text-sm rounded-xl"
-                maxLength={10}
-              />
-            </div>
-          </div>
-
-          {/* Sponsor Schedules Sub-Section - Always visible regardless of default settings */}
-          <div className="col-span-2 pt-6 border-t border-border/40 space-y-6">
-            <div>
-              <h4 className="text-sm font-bold text-foreground">Scheduled Sponsor Banners</h4>
-                  <p className="text-xs text-muted-foreground">Schedule sponsor banners or special announcements for specific days.</p>
-                </div>
-
-                {/* Form to add a new schedule */}
-                <div className="p-4 bg-muted/40 rounded-2xl border border-border/40 space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="text-xs font-bold text-muted-foreground uppercase">Target Date</Label>
-                      <Input
-                        type="date"
-                        value={newSponsorDate}
-                        onChange={(e) => setNewSponsorDate(e.target.value)}
-                        className="text-sm rounded-xl"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs font-bold text-muted-foreground uppercase">Prefix Emoji</Label>
-                      <Input
-                        placeholder="🎉"
-                        value={newSponsorIcon}
-                        onChange={(e) => setNewSponsorIcon(e.target.value)}
-                        className="text-sm rounded-xl"
-                        maxLength={10}
-                      />
-                    </div>
-                    <div className="space-y-2 col-span-2">
-                      <Label className="text-xs font-bold text-muted-foreground uppercase">Scheduled Message</Label>
-                      <Input
-                        placeholder="e.g. Happy Teacher Appreciation Day from the PTA"
-                        value={newSponsorMessage}
-                        onChange={(e) => setNewSponsorMessage(e.target.value)}
-                        className="text-sm rounded-xl"
-                        maxLength={300}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs font-bold text-muted-foreground uppercase">Custom Logo URL</Label>
-                      <Input
-                        placeholder="https://example.com/sponsor-logo.png"
-                        value={newSponsorLogo}
-                        onChange={(e) => setNewSponsorLogo(e.target.value)}
-                        className="text-sm rounded-xl"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs font-bold text-muted-foreground uppercase">Sponsor Website</Label>
-                      <Input
-                        placeholder="https://acme.com"
-                        value={newSponsorLink}
-                        onChange={(e) => setNewSponsorLink(e.target.value)}
-                        className="text-sm rounded-xl"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs font-bold text-muted-foreground uppercase">Theme Style</Label>
-                      <Select value={newSponsorStyle} onValueChange={(val: any) => setNewSponsorStyle(val)}>
-                        <SelectTrigger className="rounded-xl">
-                          <SelectValue placeholder="Style" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="primary">Primary Brand Color</SelectItem>
-                          <SelectItem value="subtle">Subtle Slate</SelectItem>
-                          <SelectItem value="neon_gold">Neon Gold</SelectItem>
-                          <SelectItem value="electric">Electric Blue</SelectItem>
-                          <SelectItem value="gradient">Hyper Gradient</SelectItem>
-                          <SelectItem value="glass">Glassmorphic Blur</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs font-bold text-muted-foreground uppercase">Scroll Speed</Label>
-                      <Select value={newSponsorSpeed} onValueChange={(val: any) => setNewSponsorSpeed(val)}>
-                        <SelectTrigger className="rounded-xl">
-                          <SelectValue placeholder="Speed" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="slow">Slow</SelectItem>
-                          <SelectItem value="normal">Normal</SelectItem>
-                          <SelectItem value="fast">Fast</SelectItem>
-                          <SelectItem value="very_fast">Very Fast</SelectItem>
-                          <SelectItem value="static">Static (Fixed Banner)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs font-bold text-muted-foreground uppercase">Banner position</Label>
-                      <Select value={newSponsorPosition} onValueChange={(val: any) => setNewSponsorPosition(val)}>
-                        <SelectTrigger className="rounded-xl">
-                          <SelectValue placeholder="Position" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="bottom">Bottom of screen</SelectItem>
-                          <SelectItem value="top">Top of screen</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                  <div className="w-full relative overflow-hidden rounded-xl">
+                    <KioskSponsorBanner
+                      previewOverride={{
+                        message: settings.kioskSponsorMessage || 'Thanks to our sponsor',
+                        link: settings.kioskSponsorLink,
+                        logoUrl: settings.kioskSponsorLogoUrl,
+                        speed: settings.kioskSponsorSpeed,
+                        position: settings.kioskSponsorPosition,
+                        bannerStyle: settings.kioskSponsorBannerStyle,
+                        icon: settings.kioskSponsorIcon
+                      }}
+                    />
                   </div>
-                  <Button
-                    onClick={() => {
-                      if (!newSponsorDate || !newSponsorMessage) {
-                        toast({ variant: 'destructive', title: 'Missing fields', description: 'Date and scheduled message are required.' });
-                        return;
-                      }
-                      const newItem = {
-                        id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
-                        date: newSponsorDate,
-                        message: newSponsorMessage,
-                        link: newSponsorLink || undefined,
-                        logoUrl: newSponsorLogo || undefined,
-                        bannerStyle: newSponsorStyle,
-                        speed: newSponsorSpeed,
-                        position: newSponsorPosition,
-                        icon: newSponsorIcon || undefined,
-                      };
-                      updateSettings({
-                        kioskSponsorSchedules: [...(settings.kioskSponsorSchedules || []), newItem],
-                      });
-                      setNewSponsorDate('');
-                      setNewSponsorMessage('');
-                      setNewSponsorLink('');
-                      setNewSponsorLogo('');
-                      setNewSponsorIcon('🎉');
-                      toast({ title: 'Schedule added', description: `Sponsor banner scheduled for ${newSponsorDate}` });
-                    }}
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold py-2.5 transition-all shadow-md flex items-center justify-center gap-2"
-                  >
-                    <span>+ Add Scheduled Banner</span>
-                  </Button>
-                </div>
+                )}
+              </div>
+            </div>
 
-                {/* List of Scheduled Items */}
-                <div className="space-y-3">
-                  <h5 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Active & Future Schedules</h5>
-                  {(settings.kioskSponsorSchedules || []).length === 0 ? (
-                    <div className="text-xs text-muted-foreground bg-muted/20 border border-border/40 p-4 rounded-xl text-center">
-                      No future date-specific schedules configured.
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {(settings.kioskSponsorSchedules || []).map((s) => (
-                        <div key={s.id} className="flex items-center justify-between p-3.5 bg-muted/30 border border-border/30 rounded-2xl hover:bg-muted/40 transition-colors">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 font-bold text-xs px-2.5 py-1 rounded-lg">
-                                {s.date}
-                              </span>
-                              <span className="text-xs font-semibold text-foreground truncate max-w-xs">
-                                {s.message}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-3 text-[10px] text-muted-foreground mt-1.5 flex-wrap">
-                              <span>Style: <span className="font-semibold text-foreground/80">{s.bannerStyle || 'primary'}</span></span>
-                              <span>Speed: <span className="font-semibold text-foreground/80">{s.speed || 'normal'}</span></span>
-                              {s.link && <span>Link: <span className="font-semibold text-foreground/80">{s.link}</span></span>}
-                              {s.logoUrl && <span>Logo: <span className="font-semibold text-foreground/80">Custom</span></span>}
-                            </div>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-destructive hover:bg-destructive/10 shrink-0 h-9 w-9 rounded-xl"
-                            onClick={() => {
-                              updateSettings({
-                                kioskSponsorSchedules: (settings.kioskSponsorSchedules || []).filter(item => item.id !== s.id),
-                              });
-                              toast({ title: 'Schedule removed', description: 'The scheduled sponsor banner has been removed.' });
-                            }}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+            {/* Toggle Switch */}
+            <div className="flex items-center justify-between rounded-2xl border bg-muted/15 p-5 shadow-sm">
+              <div className="min-w-0 pr-4">
+                <p className="text-sm font-bold text-foreground">Enable Default Sponsor Banner</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Show this announcement scrolling at all times on standard kiosk checks.</p>
+              </div>
+              <Switch
+                id="kioskSponsorEnabledBranding"
+                checked={!!settings.kioskSponsorEnabled}
+                onCheckedChange={(checked) => updateSettings({ kioskSponsorEnabled: checked })}
+              />
+            </div>
+
+            {/* Customizer Parameters Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="kioskSponsorMessageBranding" className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Sponsor Message</Label>
+                <Input
+                  id="kioskSponsorMessageBranding"
+                  placeholder="e.g. Proudly sponsored by Acme Corp · Visit us at acme.com"
+                  value={settings.kioskSponsorMessage || ''}
+                  onChange={(e) => updateSettings({ kioskSponsorMessage: e.target.value })}
+                  className="rounded-xl"
+                  maxLength={300}
+                />
+                <div className="flex justify-between items-center text-[10px] text-muted-foreground">
+                  <span>{(settings.kioskSponsorMessage || '').length}/300 characters</span>
                 </div>
               </div>
-        </CardContent>
-      </Card>
+
+              <div className="space-y-2">
+                <Label htmlFor="kioskSponsorLinkBranding" className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Website or CTA link</Label>
+                <Input
+                  id="kioskSponsorLinkBranding"
+                  placeholder="e.g. https://acme.com"
+                  value={settings.kioskSponsorLink || ''}
+                  onChange={(e) => updateSettings({ kioskSponsorLink: e.target.value })}
+                  className="rounded-xl"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="kioskSponsorLogoUrlBranding" className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Custom Logo Image URL</Label>
+                <Input
+                  id="kioskSponsorLogoUrlBranding"
+                  placeholder="e.g. https://example.com/logo.png"
+                  value={settings.kioskSponsorLogoUrl || ''}
+                  onChange={(e) => updateSettings({ kioskSponsorLogoUrl: e.target.value })}
+                  className="rounded-xl"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="kioskSponsorBannerStyleBranding" className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Banner Style Preset</Label>
+                <Select
+                  value={settings.kioskSponsorBannerStyle || 'primary'}
+                  onValueChange={(val: any) => updateSettings({ kioskSponsorBannerStyle: val })}
+                >
+                  <SelectTrigger className="rounded-xl">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="primary">Primary Brand Color</SelectItem>
+                    <SelectItem value="subtle">Subtle Slate</SelectItem>
+                    <SelectItem value="neon_gold">🌟 Neon Gold</SelectItem>
+                    <SelectItem value="electric">⚡ Electric Blue</SelectItem>
+                    <SelectItem value="gradient">🌈 Hyper Gradient</SelectItem>
+                    <SelectItem value="glass">🔮 Glassmorphic Blur</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="kioskSponsorSpeedBranding" className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Scroll Speed</Label>
+                <Select
+                  value={settings.kioskSponsorSpeed || 'normal'}
+                  onValueChange={(val: any) => updateSettings({ kioskSponsorSpeed: val })}
+                >
+                  <SelectTrigger className="rounded-xl">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="slow">Slow</SelectItem>
+                    <SelectItem value="normal">Normal</SelectItem>
+                    <SelectItem value="fast">Fast</SelectItem>
+                    <SelectItem value="very_fast">Very Fast</SelectItem>
+                    <SelectItem value="static">Static Banner (No scrolling)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="kioskSponsorPositionBranding" className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Kiosk Position</Label>
+                <Select
+                  value={settings.kioskSponsorPosition || 'bottom'}
+                  onValueChange={(val: any) => updateSettings({ kioskSponsorPosition: val })}
+                >
+                  <SelectTrigger className="rounded-xl">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="bottom">Bottom of screen</SelectItem>
+                    <SelectItem value="top">Top of screen</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="kioskSponsorIconBranding" className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Emoji Prefix</Label>
+                <Input
+                  id="kioskSponsorIconBranding"
+                  placeholder="🎉"
+                  value={settings.kioskSponsorIcon || ''}
+                  onChange={(e) => updateSettings({ kioskSponsorIcon: e.target.value })}
+                  className="rounded-xl"
+                  maxLength={10}
+                />
+              </div>
+            </div>
+
+            {/* Scheduled announcements section */}
+            <div className="col-span-2 pt-8 border-t space-y-6">
+              <div className="space-y-1">
+                <h4 className="text-base font-bold text-foreground">Scheduled Date Announcements</h4>
+                <p className="text-xs text-muted-foreground">Automatically swap out the standard banner for highly targeted schedules on specific calendar dates.</p>
+              </div>
+
+              {/* Form card */}
+              <div className="p-6 bg-muted/15 rounded-3xl border space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold text-muted-foreground uppercase">Target Calendar Date</Label>
+                    <Input
+                      type="date"
+                      value={newSponsorDate}
+                      onChange={(e) => setNewSponsorDate(e.target.value)}
+                      className="rounded-xl"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold text-muted-foreground uppercase">Emoji prefix</Label>
+                    <Input
+                      placeholder="🎉"
+                      value={newSponsorIcon}
+                      onChange={(e) => setNewSponsorIcon(e.target.value)}
+                      className="rounded-xl"
+                      maxLength={10}
+                    />
+                  </div>
+                  <div className="space-y-2 col-span-2">
+                    <Label className="text-xs font-bold text-muted-foreground uppercase">Sponsor / Announcement Message</Label>
+                    <Input
+                      placeholder="e.g. Teacher Appreciation Week sponsored by LevelUp PTG!"
+                      value={newSponsorMessage}
+                      onChange={(e) => setNewSponsorMessage(e.target.value)}
+                      className="rounded-xl"
+                      maxLength={300}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold text-muted-foreground uppercase">CTA link</Label>
+                    <Input
+                      placeholder="https://acme.com"
+                      value={newSponsorLink}
+                      onChange={(e) => setNewSponsorLink(e.target.value)}
+                      className="rounded-xl"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold text-muted-foreground uppercase">Custom Sponsor Logo URL</Label>
+                    <Input
+                      placeholder="https://example.com/logo.png"
+                      value={newSponsorLogo}
+                      onChange={(e) => setNewSponsorLogo(e.target.value)}
+                      className="rounded-xl"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold text-muted-foreground uppercase">Theme Style</Label>
+                    <Select value={newSponsorStyle} onValueChange={(val: any) => setNewSponsorStyle(val)}>
+                      <SelectTrigger className="rounded-xl">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="primary">Primary Brand Color</SelectItem>
+                        <SelectItem value="subtle">Subtle Slate</SelectItem>
+                        <SelectItem value="neon_gold">Neon Gold</SelectItem>
+                        <SelectItem value="electric">Electric Blue</SelectItem>
+                        <SelectItem value="gradient">Hyper Gradient</SelectItem>
+                        <SelectItem value="glass">Glassmorphic Blur</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold text-muted-foreground uppercase">Scroll Speed</Label>
+                    <Select value={newSponsorSpeed} onValueChange={(val: any) => setNewSponsorSpeed(val)}>
+                      <SelectTrigger className="rounded-xl">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="slow">Slow</SelectItem>
+                        <SelectItem value="normal">Normal</SelectItem>
+                        <SelectItem value="fast">Fast</SelectItem>
+                        <SelectItem value="very_fast">Very Fast</SelectItem>
+                        <SelectItem value="static">Static Banner</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <Button
+                  onClick={() => {
+                    if (!newSponsorDate || !newSponsorMessage) {
+                      toast({ variant: 'destructive', title: 'Missing fields', description: 'Date and scheduled message are required.' });
+                      return;
+                    }
+                    const newItem = {
+                      id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
+                      date: newSponsorDate,
+                      message: newSponsorMessage,
+                      link: newSponsorLink || undefined,
+                      logoUrl: newSponsorLogo || undefined,
+                      bannerStyle: newSponsorStyle,
+                      speed: newSponsorSpeed,
+                      position: newSponsorPosition,
+                      icon: newSponsorIcon || undefined,
+                    };
+                    updateSettings({
+                      kioskSponsorSchedules: [...(settings.kioskSponsorSchedules || []), newItem],
+                    });
+                    setNewSponsorDate('');
+                    setNewSponsorMessage('');
+                    setNewSponsorLink('');
+                    setNewSponsorLogo('');
+                    setNewSponsorIcon('🎉');
+                    toast({ title: 'Schedule added', description: `Sponsor banner scheduled for ${newSponsorDate}` });
+                  }}
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold py-2.5 transition-all shadow-md flex items-center justify-center gap-2"
+                >
+                  <span>+ Schedule Announcement</span>
+                </Button>
+              </div>
+
+              {/* Scheduled listings */}
+              <div className="space-y-3 pt-2">
+                <h5 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Configured Announcements</h5>
+                {(settings.kioskSponsorSchedules || []).length === 0 ? (
+                  <div className="text-xs text-muted-foreground bg-muted/5 border border-dashed p-6 rounded-2xl text-center">
+                    No date-specific schedules configured yet.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {(settings.kioskSponsorSchedules || []).map((s) => (
+                      <div key={s.id} className="flex items-center justify-between p-4 bg-muted/10 border rounded-2xl hover:bg-muted/20 transition-colors">
+                        <div className="flex-1 min-w-0 pr-4">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 font-bold text-xs px-2.5 py-0.5 rounded-lg flex items-center gap-1">
+                              <Calendar className="w-3.5 h-3.5" />
+                              {s.date}
+                            </span>
+                            <span className="text-xs font-bold text-foreground truncate max-w-sm">
+                              {s.message}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3 text-[10px] text-muted-foreground mt-2 flex-wrap font-medium">
+                            <span>Style: <span className="text-foreground/80">{s.bannerStyle || 'primary'}</span></span>
+                            <span>Speed: <span className="text-foreground/80">{s.speed || 'normal'}</span></span>
+                            {s.link && <span>Link: <span className="text-foreground/80">{s.link}</span></span>}
+                            {s.logoUrl && <span>Logo: <span className="text-foreground/80">Custom</span></span>}
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive hover:bg-destructive/10 shrink-0 h-9 w-9 rounded-xl"
+                          onClick={() => {
+                            updateSettings({
+                              kioskSponsorSchedules: (settings.kioskSponsorSchedules || []).filter(item => item.id !== s.id),
+                            });
+                            toast({ title: 'Schedule removed', description: 'The scheduled sponsor banner has been removed.' });
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

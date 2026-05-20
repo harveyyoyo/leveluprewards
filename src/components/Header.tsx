@@ -37,7 +37,6 @@ import Logo from './Logo';
 import { portalHoverTextClass, portalTextClass, type PortalColorKey } from '@/lib/portalColors';
 import { getLevelUpLogoHref } from '@/lib/appBranding';
 
-
 export default function Header() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -90,13 +89,25 @@ export default function Header() {
 
   const portalDockItems = useMemo(() => {
     if (!schoolId) return [];
-    const teacherPortalHref = `/${schoolId}/teacher`;
     const adminHref = isAdmin ? `/${schoolId}/admin` : `/${schoolId}/portal`;
-    return [
-      { id: 'admin' as const, href: adminHref, icon: UserCog, label: 'Admin', color: 'destructive' as const },
-      { id: 'print' as const, href: `/${schoolId}/teacher`, icon: Printer, label: 'Teacher', color: 'chart-2' as const },
-      { id: 'redeem' as const, href: `/${schoolId}/student`, icon: GraduationCap, label: 'Student', color: 'chart-1' as const },
+    const items: Array<{
+      id: 'admin' | 'print' | 'redeem';
+      href: string;
+      icon: typeof UserCog;
+      label: string;
+      color: 'destructive' | 'chart-2' | 'chart-1';
+    }> = [
+      { id: 'admin', href: adminHref, icon: UserCog, label: 'Admin', color: 'destructive' },
+      { id: 'print', href: `/${schoolId}/teacher`, icon: Printer, label: 'Teacher', color: 'chart-2' },
     ];
+    items.push({
+      id: 'redeem',
+      href: `/${schoolId}/student`,
+      icon: GraduationCap,
+      label: 'Student',
+      color: 'chart-1',
+    });
+    return items;
   }, [schoolId, isAdmin]);
 
   const showPortalDock =

@@ -28,6 +28,7 @@ const PROTECTED_SECOND = new Set([
   'reports',
   'hall-of-fame',
   'bulletin-board',
+  'office',
 ]);
 
 /** Allowed without session cookie (server redirect or legacy). */

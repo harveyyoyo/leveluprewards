@@ -98,7 +98,7 @@ export default function ReportsPage() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Button disabled variant="ghost" size="lg" className="text-muted-foreground">
           <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-          Loading...
+          Loading…
         </Button>
       </div>
     );

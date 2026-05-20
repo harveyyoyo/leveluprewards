@@ -30,6 +30,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import {
   Table,
   TableBody,
@@ -48,7 +49,7 @@ import {
 } from './notificationDiagnostics';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ContentSectionTreeNav } from '@/components/ui/content-section-tree-nav';
 import {
   NotificationSetupWizard,
   type NotificationWizardDraft,
@@ -158,6 +159,7 @@ export function AdminNotificationsTab() {
 
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardInitialDraft, setWizardInitialDraft] = useState<NotificationWizardDraft | null>(null);
+  const [section, setSection] = useState<'alerts' | 'advanced'>('alerts');
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
   const { lines: diagnosticLines, activeRows, headlineStatus } = useMemo(
@@ -270,676 +272,667 @@ export function AdminNotificationsTab() {
   };
 
   return (
-    <div className="space-y-6">
-      <Card className="border-t-4 border-blue-500 shadow-md">
-        <CardHeader className="py-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-1">
-              <CardTitle className="flex items-center gap-2">
-                <Bell className="w-5 h-5 text-blue-500" /> Notifications
-              </CardTitle>
-              <CardDescription>
-                Add alerts one step at a time — who to notify, when it fires, and how it&apos;s delivered.
-              </CardDescription>
-            </div>
-            <div className="flex flex-col items-stretch sm:items-end gap-2 shrink-0">
-              <TabWalkthroughHeaderAction />
-              <Button
-                type="button"
-                size="lg"
-                className="gap-2 shadow-md"
-                disabled={!settings.enableNotifications}
-                onClick={openCreateWizard}
-              >
-                <Plus className="h-4 w-4" aria-hidden="true" />
-                Create a notification
-              </Button>
-              <div className="flex items-center gap-2 flex-wrap justify-end">
-                {statusBadge(headlineStatus)}
-                <span className="text-[11px] text-muted-foreground max-w-[220px] leading-snug text-right">
-                  {headlineStatus === 'blocked' && 'Turn on notifications in Admin settings.'}
-                  {headlineStatus === 'limited' && 'Create your first notification below.'}
-                  {headlineStatus === 'active' && 'At least one alert is configured.'}
-                </span>
-              </div>
-            </div>
-          </div>
-        </CardHeader>
-      </Card>
-
-      <Card className="shadow-md">
-        <CardHeader>
-          <CardTitle className="text-base">Your notifications</CardTitle>
-          <CardDescription>
-            {activeRules.length
-              ? 'These alerts are on for your school. Turn one off or create another anytime.'
-              : 'No alerts yet. Click Create a notification to set up your first one.'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {activeRules.length ? (
-            <ul className="space-y-3">
-              {activeRules.map((rule) => (
-                <li
-                  key={rule.id}
-                  className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-xl border p-4 bg-muted/20"
-                >
-                  <div className="space-y-1 min-w-0">
-                    <p className="font-semibold text-sm">{rule.label}</p>
-                    <p className="text-xs text-muted-foreground">
-                      <span className="font-medium text-foreground">Who:</span> {rule.whoSummary}
-                      <span className="mx-1.5">·</span>
-                      <span className="font-medium text-foreground">How:</span> {rule.howSummary}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setWizardInitialDraft(rule.draft);
-                        setWizardOpen(true);
-                      }}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="text-muted-foreground"
-                      onClick={() => disableNotificationRule(rule.trigger, updateSettings)}
-                    >
-                      Turn off
-                    </Button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <div className="rounded-xl border border-dashed p-8 text-center space-y-3">
-              <Bell className="h-10 w-10 text-muted-foreground/50 mx-auto" aria-hidden="true" />
-              <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                Start with one simple alert — for example, email parents when a student redeems a prize.
-              </p>
-              <Button type="button" className="gap-2" disabled={!settings.enableNotifications} onClick={openCreateWizard}>
-                <Plus className="h-4 w-4" aria-hidden="true" />
-                Create a notification
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
-        <CollapsibleTrigger asChild>
-          <Button type="button" variant="outline" className="w-full justify-between gap-2 h-11">
-            <span className="font-semibold">Advanced tools & manual controls</span>
-            <ChevronDown
-              className={`h-4 w-4 shrink-0 transition-transform ${advancedOpen ? 'rotate-180' : ''}`}
-              aria-hidden="true"
-            />
-          </Button>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="space-y-6 pt-6">
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <Card className="shadow-md">
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <ListTree className="w-4 h-4 text-primary" /> Delivery diagnostic log
+    <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden bg-background/95 backdrop-blur-md">
+      <CardHeader className="py-6 bg-secondary/35 border-b border-border/40">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <CardTitle className="flex items-center gap-2 text-2xl font-black tracking-tight text-foreground">
+              <Bell className="w-6 h-6 text-primary animate-pulse" /> Notifications &amp; Alerts
             </CardTitle>
-            <CardDescription>
-              Plain-language checks that mirror Cloud Function gates in this codebase. Use with Firebase Functions logs
-              and the mail queue on the right.
+            <CardDescription className="mt-1 text-sm font-medium">
+              Configure automated school notifications, manage active delivery rules, and view diagnostic logs.
             </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="pr-3">
-              <ul className="space-y-3 text-sm">
-                {diagnosticLines.map((line, i) => (
-                  <li key={i} className="flex gap-2 items-start">
-                    <LogIcon level={line.level} />
-                    <span className="text-muted-foreground leading-relaxed">{line.text}</span>
+          </div>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 shrink-0">
+            <div className="flex items-center gap-2 bg-background/60 p-2 rounded-xl border border-border/50">
+              {statusBadge(headlineStatus)}
+              <span className="text-[10px] text-muted-foreground font-semibold leading-none max-w-[130px]">
+                {headlineStatus === 'blocked' && 'Off in Settings'}
+                {headlineStatus === 'limited' && 'Awaiting Alerts'}
+                {headlineStatus === 'active' && 'Active Alerts'}
+              </span>
+            </div>
+            <TabWalkthroughHeaderAction />
+            <Button
+              type="button"
+              className="gap-2 shadow-md rounded-xl"
+              disabled={!settings.enableNotifications}
+              onClick={openCreateWizard}
+            >
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              Create Alert
+            </Button>
+          </div>
+        </div>
+      </CardHeader>
+
+      <CardContent className="p-6 space-y-6">
+        <ContentSectionTreeNav
+          items={[
+            { id: 'alerts', label: 'Active Alerts', badge: activeRules.length },
+            { id: 'advanced', label: 'Diagnostics & Logs' },
+          ]}
+          value={section}
+          onValueChange={(id) => setSection(id as 'alerts' | 'advanced')}
+          className="mb-2"
+        />
+
+        {section === 'alerts' && (
+          <div className="space-y-6 animate-in fade-in-50 duration-200">
+            <div className="border-b pb-4">
+              <h3 className="text-lg font-black tracking-tight flex items-center gap-2">
+                <Bell className="w-5 h-5 text-primary" /> Your Active Notifications
+              </h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                These alerts are active for your school. Turn one off or configure another anytime.
+              </p>
+            </div>
+
+            {activeRules.length ? (
+              <ul className="space-y-3">
+                {activeRules.map((rule) => (
+                  <li
+                    key={rule.id}
+                    className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-2xl border p-4 bg-muted/20 hover:bg-muted/30 transition-colors"
+                  >
+                    <div className="space-y-1 min-w-0">
+                      <p className="font-bold text-sm text-foreground">{rule.label}</p>
+                      <p className="text-xs text-muted-foreground">
+                        <span className="font-semibold text-foreground">Who:</span> {rule.whoSummary}
+                        <span className="mx-1.5 text-muted-foreground/50">·</span>
+                        <span className="font-semibold text-foreground">Delivery:</span> {rule.howSummary}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="rounded-xl font-bold h-9"
+                        onClick={() => {
+                          setWizardInitialDraft(rule.draft);
+                          setWizardOpen(true);
+                        }}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl font-bold h-9"
+                        onClick={() => disableNotificationRule(rule.trigger, updateSettings)}
+                      >
+                        Turn off
+                      </Button>
+                    </div>
                   </li>
                 ))}
               </ul>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-md">
-          <CardHeader className="space-y-3">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Mail className="w-4 h-4 text-primary" /> Recent mail queue (this school)
-                </CardTitle>
-                <CardDescription className="mt-1.5">
-                  Loaded via the <code className="text-xs">adminListMailQueue</code> Cloud Function (Admin SDK), so it
-                  does not depend on Firestore client rules for the <code className="text-xs">mail</code> collection.
-                  Deploy functions after updating. Optional: deploy <code className="text-xs">firestore.rules</code>{' '}
-                  if you also want direct client reads.
-                </CardDescription>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="shrink-0 gap-1.5"
-                disabled={mailLoading || !functions || !schoolId}
-                onClick={() => void loadMailQueue()}
-              >
-                <RefreshCw className={`h-3.5 w-3.5 ${mailLoading ? 'animate-spin' : ''}`} aria-hidden="true" />
-                Refresh
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="rounded-xl border bg-muted/20 p-4 space-y-3">
-              <div className="flex items-center justify-between gap-3 flex-wrap">
-                <div>
-                  <p className="font-bold text-sm">Send a test email</p>
-                  <p className="text-[11px] text-muted-foreground leading-relaxed">
-                    Generates a preview using the same HTML builder, then enqueues a test mail document.
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  className="gap-1.5"
-                  disabled={testSending || !functions || !schoolId || !testStudentId.trim()}
-                  onClick={() => void sendTestEmail()}
-                >
-                  {testSending ? 'Sending…' : 'Send test'}
+            ) : (
+              <div className="rounded-2xl border border-dashed p-8 text-center space-y-3 bg-muted/5">
+                <Bell className="h-10 w-10 text-muted-foreground/50 mx-auto animate-bounce" aria-hidden="true" />
+                <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+                  Start with one simple alert — for example, email parents when a student redeems a prize.
+                </p>
+                <Button type="button" className="gap-2 rounded-xl" disabled={!settings.enableNotifications} onClick={openCreateWizard}>
+                  <Plus className="h-4 w-4" aria-hidden="true" />
+                  Create a notification
                 </Button>
               </div>
+            )}
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs">Student ID</Label>
-                  <Input
-                    value={testStudentId}
-                    onChange={(e) => setTestStudentId(e.target.value)}
-                    placeholder="e.g. 12345678"
-                  />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t">
+              <div className="space-y-4">
+                <div className="border-b pb-2">
+                  <h4 className="font-black text-base flex items-center gap-2">
+                    <CheckCircle2 className="w-5 h-5 text-primary" /> Event Triggers
+                  </h4>
+                  <p className="text-xs text-muted-foreground mt-0.5">Select which student activities trigger an alert.</p>
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Template</Label>
-                  <Select value={testTemplate} onValueChange={(v) => setTestTemplate(v as any)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="reward_redemption">Reward redemption</SelectItem>
-                      <SelectItem value="points_award">Points award</SelectItem>
-                      <SelectItem value="milestone">Milestone</SelectItem>
-                      {attendancePillarOn ? <SelectItem value="attendance">Attendance</SelectItem> : null}
-                      {libraryPillarOn ? (
-                        <>
-                          <SelectItem value="library_checkout">Library checkout</SelectItem>
-                          <SelectItem value="library_return">Library return</SelectItem>
-                        </>
-                      ) : null}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Recipient</Label>
-                  <Select value={testRecipient} onValueChange={(v) => setTestRecipient(v as any)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="parent">Parent email</SelectItem>
-                      <SelectItem value="student">Student email</SelectItem>
-                    </SelectContent>
-                  </Select>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3.5 rounded-2xl border bg-muted/20 hover:bg-muted/30 transition-colors">
+                    <div className="space-y-0.5">
+                      <Label className="text-sm font-bold">Reward Redemptions</Label>
+                      <p className="text-[11px] text-muted-foreground">Notify when a student redeems points for a prize.</p>
+                    </div>
+                    <Switch
+                      checked={settings.notificationRewardsEnabled}
+                      onCheckedChange={(checked) => updateSettings({ notificationRewardsEnabled: checked })}
+                    />
+                  </div>
+
+                  {attendancePillarOn ? (
+                    <div className="flex items-center justify-between p-3.5 rounded-2xl border bg-muted/20 hover:bg-muted/30 transition-colors">
+                      <div className="space-y-0.5">
+                        <Label className="text-sm font-bold">Attendance Sign-ins</Label>
+                        <p className="text-[11px] text-muted-foreground">Notify when a student signs in for a class period.</p>
+                      </div>
+                      <Switch
+                        checked={settings.notificationAttendanceEnabled}
+                        onCheckedChange={(checked) => updateSettings({ notificationAttendanceEnabled: checked })}
+                      />
+                    </div>
+                  ) : null}
+
+                  {libraryPillarOn ? (
+                    <div className="flex items-center justify-between p-3.5 rounded-2xl border bg-muted/20 hover:bg-muted/30 transition-colors">
+                      <div className="space-y-0.5">
+                        <Label className="text-sm font-bold flex items-center gap-2">
+                          Library Activity <BookOpenCheck className="w-3.5 h-3.5 text-indigo-500" />
+                        </Label>
+                        <p className="text-[11px] text-muted-foreground">Notify when a student checks out or returns a library item.</p>
+                      </div>
+                      <Switch
+                        checked={settings.notificationLibraryEnabled}
+                        onCheckedChange={(checked) => updateSettings({ notificationLibraryEnabled: checked })}
+                      />
+                    </div>
+                  ) : null}
+
+                  <div className="flex items-center justify-between p-3.5 rounded-2xl border bg-muted/20 hover:bg-muted/30 transition-colors">
+                    <div className="space-y-0.5">
+                      <Label className="text-sm font-bold flex items-center gap-2">
+                        Milestones &amp; Badges <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                        <span className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
+                          <input
+                            type="checkbox"
+                            className="h-3 w-3 accent-sky-600 rounded"
+                            checked={settings.notificationArtworkEnabled !== false}
+                            disabled={settings.notificationMilestonesEnabled === false}
+                            onChange={(e) => updateSettings({ notificationArtworkEnabled: e.target.checked })}
+                            aria-label="Include celebration artwork in milestone/badge emails"
+                          />
+                          Artwork
+                        </span>
+                      </Label>
+                      <p className="text-[11px] text-muted-foreground">Notify when a student unlocks bonus milestones or category badges.</p>
+                    </div>
+                    <Switch
+                      checked={settings.notificationMilestonesEnabled}
+                      onCheckedChange={(checked) => updateSettings({ notificationMilestonesEnabled: checked })}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-3.5 rounded-2xl border bg-muted/20 hover:bg-muted/30 transition-colors">
+                    <div className="space-y-0.5">
+                      <Label className="text-sm font-bold flex items-center gap-2">
+                        WhatsApp Alerts <span className="text-[10px] bg-green-500 text-white px-1.5 py-0.5 rounded font-black uppercase tracking-tighter">New</span>
+                      </Label>
+                      <p className="text-[11px] text-muted-foreground">Enable instant notifications via WhatsApp Business API.</p>
+                    </div>
+                    <Switch
+                      checked={settings.notificationWhatsAppEnabled}
+                      onCheckedChange={(checked) => updateSettings({ notificationWhatsAppEnabled: checked })}
+                    />
+                  </div>
                 </div>
               </div>
 
-              {testError ? (
-                <Alert variant="destructive">
-                  <AlertTitle>Test tool error</AlertTitle>
-                  <AlertDescription className="text-xs leading-relaxed">{testError}</AlertDescription>
-                </Alert>
-              ) : null}
+              <div className="space-y-4">
+                <div className="border-b pb-2">
+                  <h4 className="font-black text-base flex items-center gap-2">
+                    <Users className="w-5 h-5 text-primary" /> Recipient Groups
+                  </h4>
+                  <p className="text-xs text-muted-foreground mt-0.5">Control who receives alerts for these events.</p>
+                </div>
 
-              {testPreview ? (
-                <div className="rounded-lg border bg-background p-3 space-y-2">
-                  <div className="text-xs">
-                    <div><span className="font-semibold">To (masked)</span>: {testRecipient === 'parent' ? testPreview.to.parentEmail : testPreview.to.studentEmail}</div>
-                    <div><span className="font-semibold">Subject</span>: {testPreview.subject}</div>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3.5 rounded-2xl border bg-muted/20">
+                    <div className="space-y-0.5">
+                      <Label className="text-sm font-bold">Parents / Guardians</Label>
+                      <p className="text-[11px] text-muted-foreground">
+                        Default recipients when parent contact info is provided. Can be disabled per student.
+                      </p>
+                    </div>
+                    <div className="text-[10px] uppercase font-black text-blue-500 bg-blue-50 dark:bg-blue-900/20 px-2.5 py-1 rounded-xl border border-blue-200/50">
+                      Default On
+                    </div>
                   </div>
-                  <div className="rounded-md border bg-muted/10 p-2">
-                    <div className="text-[11px] font-semibold mb-1">Preview</div>
-                    <div className="text-xs whitespace-pre-wrap">{testPreview.text}</div>
+
+                  <div className="flex items-center justify-between p-3.5 rounded-2xl border bg-muted/20 hover:bg-muted/30 transition-colors">
+                    <div className="space-y-0.5">
+                      <Label className="text-sm font-bold flex items-center gap-2">
+                        Students <User className="w-3.5 h-3.5 text-primary" />
+                      </Label>
+                      <p className="text-[11px] text-muted-foreground">Notify students directly when their student email or phone is saved.</p>
+                    </div>
+                    <Switch
+                      checked={settings.notificationStudentsEnabled}
+                      onCheckedChange={(checked) => updateSettings({ notificationStudentsEnabled: checked })}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-3.5 rounded-2xl border bg-muted/20 hover:bg-muted/30 transition-colors">
+                    <div className="space-y-0.5">
+                      <Label className="text-sm font-bold">Staff Alerts</Label>
+                      <p className="text-[11px] text-muted-foreground">Notify assigned teachers and administrators.</p>
+                    </div>
+                    <Switch
+                      checked={settings.notificationStaffAlertsEnabled}
+                      onCheckedChange={(checked) => updateSettings({ notificationStaffAlertsEnabled: checked })}
+                    />
                   </div>
                 </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border bg-muted/10 p-5 space-y-4 shadow-sm border-t-4 border-chart-2/70">
+              <div className="border-b pb-3 flex items-center gap-2">
+                <ShoppingBag className="w-5 h-5 text-chart-2" />
+                <div>
+                  <h4 className="text-base font-black tracking-tight">Inventory &amp; Low Stock Alerts</h4>
+                  <p className="text-xs text-muted-foreground">Notify staff when prizes are running low or when the rewards shop is empty.</p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between p-3.5 rounded-xl border bg-background">
+                <div className="space-y-0.5">
+                  <Label className="text-sm font-bold">Enable stock tracking alerts</Label>
+                  <p className="text-[11px] text-muted-foreground">
+                    Sends a staff alert when a prize hits low stock, and optionally when the shop is empty.
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.notificationPrizeInventoryEnabled}
+                  onCheckedChange={(checked) => updateSettings({ notificationPrizeInventoryEnabled: checked })}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                <div className="p-4 rounded-xl border bg-background space-y-2">
+                  <Label className="text-sm font-bold">Low stock threshold</Label>
+                  <p className="text-[11px] text-muted-foreground">
+                    Alert when remaining quantity is ≤ this number.
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={0}
+                      className="h-10 w-24 rounded-xl border bg-background px-3 text-sm font-semibold"
+                      value={String(settings.notificationPrizeLowStockThreshold ?? 5)}
+                      disabled={!settings.notificationPrizeInventoryEnabled}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        const n = Math.max(0, Math.round(Number(raw) || 0));
+                        updateSettings({ notificationPrizeLowStockThreshold: n });
+                      }}
+                    />
+                    <span className="text-xs text-muted-foreground font-semibold">items left</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between p-4 rounded-xl border bg-background">
+                  <div className="space-y-0.5">
+                    <Label className="text-sm font-bold">Shop empty alert</Label>
+                    <p className="text-[11px] text-muted-foreground">
+                      Notify staff when no prizes are available to redeem.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={settings.notificationPrizeEmptyShopEnabled}
+                    disabled={!settings.notificationPrizeInventoryEnabled}
+                    onCheckedChange={(checked) => updateSettings({ notificationPrizeEmptyShopEnabled: checked })}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border bg-muted/10 p-5 space-y-4 shadow-sm">
+              <div className="border-b pb-3 flex items-center gap-2">
+                <Users className="w-5 h-5 text-primary" />
+                <div>
+                  <h4 className="text-base font-black tracking-tight">Families &amp; Shared Display Privacy</h4>
+                  <p className="text-xs text-muted-foreground">Weekly parent summaries and name privacy on public boards.</p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between p-3.5 rounded-xl border bg-background">
+                <div className="space-y-0.5">
+                  <Label className="text-sm font-bold">Weekly parent digest email</Label>
+                  <p className="text-[11px] text-muted-foreground">
+                    Sends a Sunday summary (3:00 PM Eastern time) to opted-in parents with point tallies.
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.notificationParentWeeklyDigestEnabled}
+                  disabled={!settings.enableNotifications}
+                  onCheckedChange={(checked) => updateSettings({ notificationParentWeeklyDigestEnabled: checked })}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                <div className="p-4 rounded-xl border bg-background space-y-2">
+                  <Label className="text-sm font-bold">Names on public leaderboards</Label>
+                  <p className="text-[11px] text-muted-foreground">
+                    Hide legal surnames on shared screens to preserve student privacy.
+                  </p>
+                  <Select
+                    value={settings.privacyStudentNameDisplayMode}
+                    onValueChange={(v) =>
+                      updateSettings({ privacyStudentNameDisplayMode: v === 'preferred_only' ? 'preferred_only' : 'full' })
+                    }
+                  >
+                    <SelectTrigger className="w-full rounded-xl bg-background">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="full">Full name (preferred + last)</SelectItem>
+                      <SelectItem value="preferred_only">Preferred name / nickname only</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center justify-between p-4 rounded-xl border bg-background">
+                  <div className="space-y-0.5">
+                    <Label className="text-sm font-bold">Offline teacher award queue</Label>
+                    <p className="text-[11px] text-muted-foreground">
+                      Saves transactions locally when internet is offline and syncs upon reconnect.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={settings.enableTeacherOfflineAwardQueue !== false}
+                    onCheckedChange={(checked) => updateSettings({ enableTeacherOfflineAwardQueue: checked })}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border-2 border-primary/20 bg-primary/[0.02] overflow-hidden shadow-sm">
+              <div className="grid md:grid-cols-[1fr_1.2fr]">
+                <div className="p-6 bg-slate-900 text-white flex flex-col justify-center">
+                  <div className="flex items-center gap-2 text-amber-400">
+                    <Award className="w-5 h-5 animate-spin" style={{ animationDuration: '6s' }} />
+                    <span className="text-xs font-black uppercase tracking-[0.2em]">Artwork preview</span>
+                  </div>
+                  <h3 className="mt-3 text-lg font-black tracking-tight leading-tight">Milestone and badge emails feel earned.</h3>
+                  <p className="mt-2 text-xs text-slate-300 leading-relaxed">
+                    Email alerts can include a polished celebration panel with the student name, achievement title, points, and badge icon.
+                  </p>
+                </div>
+                <div className="p-6 bg-gradient-to-br from-sky-50/50 via-white to-amber-50/50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex items-center justify-center">
+                  <div className="w-full max-w-sm rounded-2xl border border-amber-200 bg-white p-5 text-center shadow-md dark:bg-slate-900 dark:border-amber-500/20">
+                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-amber-100 text-amber-600 ring-8 ring-amber-50 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/5">
+                      <Sparkles className="h-7 w-7" />
+                    </div>
+                    <p className="mt-3 text-[10px] font-black uppercase tracking-[0.2em] text-sky-600">Badge unlocked</p>
+                    <p className="mt-0.5 text-xl font-black text-slate-950 dark:text-white">Monthly Champion</p>
+                    <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">Beautiful email artwork celebrates milestones and badges.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-amber-500/5 border-l-4 border-amber-500 p-4 rounded-r-2xl flex gap-3.5 items-start">
+              <Shield className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <h4 className="font-bold text-xs text-foreground">Privacy &amp; Secure Cloud Delivery Notice</h4>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  Alerts are sent via secure Firebase Cloud Functions. Ensure you have the
+                  <strong> &quot;Trigger Email&quot;</strong> or <strong>&quot;Twilio SMS&quot;</strong> extensions configured in
+                  your Firebase Console to enable delivery. Contact information is stored encrypted within your school&apos;s private database.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {section === 'advanced' && (
+          <div className="space-y-6 animate-in fade-in-50 duration-200">
+            <div className="border-b pb-4">
+              <h3 className="text-lg font-black tracking-tight flex items-center gap-2">
+                <ListTree className="w-5 h-5 text-primary" /> Delivery Diagnostics &amp; Logs
+              </h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Use these tools to diagnose notification delivery gates, view enqueued mail documents, and send test payloads.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+              <div className="rounded-2xl border bg-muted/10 p-5 space-y-4">
+                <div>
+                  <h4 className="text-base font-black tracking-tight flex items-center gap-2">
+                    <ListTree className="w-4 h-4 text-primary" /> Active Delivery Diagnostic Checks
+                  </h4>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Checks that mirror Firebase Cloud Function gates in real-time.
+                  </p>
+                </div>
+                <div className="bg-background rounded-xl border p-4">
+                  <ul className="space-y-3.5 text-xs">
+                    {diagnosticLines.map((line, i) => (
+                      <li key={i} className="flex gap-2.5 items-start">
+                        <LogIcon level={line.level} />
+                        <span className="text-muted-foreground leading-normal font-medium">{line.text}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border bg-muted/10 p-5 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <div>
+                    <h4 className="text-base font-black tracking-tight flex items-center gap-2">
+                      <Mail className="w-4 h-4 text-primary" /> Test Tool &amp; Live Mail Queue
+                    </h4>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Enqueue test emails or monitor enqueued transactions.
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0 gap-1.5 rounded-xl h-9 font-bold"
+                    disabled={mailLoading || !functions || !schoolId}
+                    onClick={() => void loadMailQueue()}
+                  >
+                    <RefreshCw className={`h-3.5 w-3.5 ${mailLoading ? 'animate-spin' : ''}`} aria-hidden="true" />
+                    Refresh Queue
+                  </Button>
+                </div>
+
+                <div className="rounded-xl border bg-background p-4 space-y-3 shadow-sm">
+                  <div className="flex items-center justify-between gap-3 flex-wrap border-b pb-3">
+                    <div>
+                      <p className="font-bold text-xs text-foreground">Send a test email</p>
+                      <p className="text-[10px] text-muted-foreground">Generates a test notification document in the database.</p>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="gap-1.5 rounded-xl font-bold"
+                      disabled={testSending || !functions || !schoolId || !testStudentId.trim()}
+                      onClick={() => void sendTestEmail()}
+                    >
+                      {testSending ? 'Sending…' : 'Send test'}
+                    </Button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground">Student ID</Label>
+                      <Input
+                        value={testStudentId}
+                        onChange={(e) => setTestStudentId(e.target.value)}
+                        placeholder="e.g. 12345678"
+                        className="rounded-xl h-9"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground">Template</Label>
+                      <Select value={testTemplate} onValueChange={(v) => setTestTemplate(v as any)}>
+                        <SelectTrigger className="rounded-xl h-9"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="reward_redemption">Reward redemption</SelectItem>
+                          <SelectItem value="points_award">Points award</SelectItem>
+                          <SelectItem value="milestone">Milestone</SelectItem>
+                          {attendancePillarOn ? <SelectItem value="attendance">Attendance</SelectItem> : null}
+                          {libraryPillarOn ? (
+                            <>
+                              <SelectItem value="library_checkout">Library checkout</SelectItem>
+                              <SelectItem value="library_return">Library return</SelectItem>
+                            </>
+                          ) : null}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground">Recipient</Label>
+                      <Select value={testRecipient} onValueChange={(v) => setTestRecipient(v as any)}>
+                        <SelectTrigger className="rounded-xl h-9"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="parent">Parent email</SelectItem>
+                          <SelectItem value="student">Student email</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {testError ? (
+                    <Alert variant="destructive" className="rounded-xl">
+                      <AlertTitle className="text-xs font-bold">Test tool error</AlertTitle>
+                      <AlertDescription className="text-[10px] leading-relaxed">{testError}</AlertDescription>
+                    </Alert>
+                  ) : null}
+
+                  {testPreview ? (
+                    <div className="rounded-xl border bg-muted/10 p-3 space-y-2">
+                      <div className="text-[10px] font-medium space-y-0.5">
+                        <div><span className="font-bold">To</span>: {testRecipient === 'parent' ? testPreview.to.parentEmail : testPreview.to.studentEmail}</div>
+                        <div><span className="font-bold">Subject</span>: {testPreview.subject}</div>
+                      </div>
+                      <div className="rounded-lg border bg-background p-2">
+                        <div className="text-[9px] font-black uppercase text-sky-600 tracking-wider mb-1">Preview text</div>
+                        <div className="text-[10px] whitespace-pre-wrap leading-normal text-muted-foreground font-medium">{testPreview.text}</div>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-[10px] text-muted-foreground font-semibold italic text-center py-2">Enter student ID to preview template contents.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border bg-muted/10 p-5 space-y-4">
+              <div>
+                <h4 className="text-base font-black tracking-tight">Recent Mail Queue Status</h4>
+                <p className="text-xs text-muted-foreground mt-0.5">Monitor transaction logs and delivery states from Cloud Functions.</p>
+              </div>
+
+              {mailError ? (
+                <Alert variant="destructive" className="rounded-2xl">
+                  <AlertTitle className="text-xs font-bold">Could not load mail queue</AlertTitle>
+                  <AlertDescription className="text-xs leading-relaxed">
+                    {mailError}. Deploy Cloud Functions that include <code className="text-[10px]">adminListMailQueue</code>, confirm you are signed in as admin (or developer) for this school, and try Refresh.
+                  </AlertDescription>
+                </Alert>
+              ) : mailLoading && mailRows === null ? (
+                <p className="text-sm text-muted-foreground font-medium flex items-center gap-2">
+                  <RefreshCw className="w-4 h-4 animate-spin text-primary" /> Loading mail queue…
+                </p>
+              ) : mailRows !== null && !sortedMail.length ? (
+                <p className="text-sm text-muted-foreground font-medium text-center py-6">
+                  No mail documents for this school yet. Trigger a student action to generate mail enqueues.
+                </p>
               ) : (
-                <p className="text-xs text-muted-foreground">Enter a student ID to preview.</p>
+                <div className="overflow-x-auto rounded-2xl border bg-background">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[100px] font-bold text-xs uppercase tracking-wider">Doc</TableHead>
+                        <TableHead className="min-w-[140px] font-bold text-xs uppercase tracking-wider">When</TableHead>
+                        <TableHead className="font-bold text-xs uppercase tracking-wider">To</TableHead>
+                        <TableHead className="font-bold text-xs uppercase tracking-wider">Subject</TableHead>
+                        <TableHead className="w-[90px] font-bold text-xs uppercase tracking-wider">Delivery</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {sortedMail.map((row) => (
+                        <TableRow key={row.id}>
+                          <TableCell className="font-mono text-[10px] align-top">{row.id.slice(0, 8)}…</TableCell>
+                          <TableCell className="text-[10px] align-top text-muted-foreground whitespace-nowrap">
+                            {formatWhen(row.createdAtMs)}
+                          </TableCell>
+                          <TableCell className="text-xs align-top font-medium">{row.toMasked}</TableCell>
+                          <TableCell className="text-xs align-top font-bold max-w-[200px] break-words">{row.subject}</TableCell>
+                          <TableCell className="text-[10px] align-top text-muted-foreground break-words">
+                            <div className="space-y-1">
+                              <div>{row.delivery}</div>
+                              {row.deliveryAttempts != null || row.deliveryError || row.deliveryMessage ? (
+                                <div className="text-[10px] text-muted-foreground/90 leading-snug">
+                                  {row.deliveryAttempts != null ? (
+                                    <span className="mr-2">attempts: {row.deliveryAttempts}</span>
+                                  ) : null}
+                                  {row.deliveryError ? <span className="text-destructive font-semibold">{row.deliveryError}</span> : null}
+                                  {!row.deliveryError && row.deliveryMessage ? <span>{row.deliveryMessage}</span> : null}
+                                </div>
+                              ) : null}
+                              {row.deliveryStartTimeMs || row.deliveryEndTimeMs ? (
+                                <div className="text-[10px] text-muted-foreground/80 leading-snug">
+                                  {row.deliveryStartTimeMs ? <span>start: {formatWhen(row.deliveryStartTimeMs)}</span> : null}
+                                  {row.deliveryStartTimeMs && row.deliveryEndTimeMs ? <span className="mx-1">·</span> : null}
+                                  {row.deliveryEndTimeMs ? <span>end: {formatWhen(row.deliveryEndTimeMs)}</span> : null}
+                                </div>
+                              ) : null}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               )}
             </div>
 
-            {mailError ? (
-              <Alert variant="destructive">
-                <AlertTitle>Could not load mail queue</AlertTitle>
-                <AlertDescription className="text-xs leading-relaxed">
-                  {mailError}. Deploy Cloud Functions that include <code className="text-[10px]">adminListMailQueue</code>,
-                  confirm you are signed in as admin (or developer) for this school, and try Refresh.
-                </AlertDescription>
-              </Alert>
-            ) : mailLoading && mailRows === null ? (
-              <p className="text-sm text-muted-foreground">Loading mail queue…</p>
-            ) : mailRows !== null && !sortedMail.length ? (
-              <p className="text-sm text-muted-foreground">
-                No mail documents for this school yet. Trigger a redemption with notifications enabled, then refresh —
-                if still empty, check Functions deployment and logs for <code className="text-xs">onStudentActivityCreated</code>.
-              </p>
-            ) : (
-              <div className="overflow-x-auto rounded-md border">
+            <div className="rounded-2xl border bg-muted/10 p-5 space-y-4">
+              <div>
+                <h4 className="text-base font-black tracking-tight flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-primary" /> Supported Event Triggers Reference
+                </h4>
+                <p className="text-xs text-muted-foreground mt-0.5 font-medium">
+                  Review the exact database states and recipient queues for automated event gates.
+                </p>
+              </div>
+
+              <div className="overflow-x-auto rounded-2xl border bg-background">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[100px]">Doc</TableHead>
-                      <TableHead className="min-w-[140px]">When</TableHead>
-                      <TableHead>To</TableHead>
-                      <TableHead>Subject</TableHead>
-                      <TableHead className="w-[90px]">Delivery</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider">Event</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider">When it fires</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider">Parent Queue</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider">Student Queue</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider">Staff Queue</TableHead>
+                      <TableHead className="min-w-[180px] font-bold text-xs uppercase tracking-wider">Gate Notes</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {sortedMail.map((row) => (
+                    {activeRows.map((row: ActiveNotificationRow) => (
                       <TableRow key={row.id}>
-                        <TableCell className="font-mono text-[10px] align-top">{row.id.slice(0, 8)}…</TableCell>
-                        <TableCell className="text-[10px] align-top text-muted-foreground whitespace-nowrap">
-                          {formatWhen(row.createdAtMs)}
+                        <TableCell className="font-bold text-sm align-top">{row.label}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground align-top max-w-[220px] font-medium">{row.trigger}</TableCell>
+                        <TableCell className="align-top">
+                          <QueueCell active={row.parentQueue} />
                         </TableCell>
-                        <TableCell className="text-xs align-top">{row.toMasked}</TableCell>
-                        <TableCell className="text-xs align-top max-w-[200px] break-words">{row.subject}</TableCell>
-                        <TableCell className="text-[10px] align-top text-muted-foreground break-words">
-                          <div className="space-y-1">
-                            <div>{row.delivery}</div>
-                            {row.deliveryAttempts != null || row.deliveryError || row.deliveryMessage ? (
-                              <div className="text-[10px] text-muted-foreground/90 leading-snug">
-                                {row.deliveryAttempts != null ? (
-                                  <span className="mr-2">attempts: {row.deliveryAttempts}</span>
-                                ) : null}
-                                {row.deliveryError ? <span className="text-destructive">{row.deliveryError}</span> : null}
-                                {!row.deliveryError && row.deliveryMessage ? <span>{row.deliveryMessage}</span> : null}
-                              </div>
-                            ) : null}
-                            {row.deliveryStartTimeMs || row.deliveryEndTimeMs ? (
-                              <div className="text-[10px] text-muted-foreground/80 leading-snug">
-                                {row.deliveryStartTimeMs ? <span>start: {formatWhen(row.deliveryStartTimeMs)}</span> : null}
-                                {row.deliveryStartTimeMs && row.deliveryEndTimeMs ? <span className="mx-1">·</span> : null}
-                                {row.deliveryEndTimeMs ? <span>end: {formatWhen(row.deliveryEndTimeMs)}</span> : null}
-                              </div>
-                            ) : null}
-                          </div>
+                        <TableCell className="align-top">
+                          <QueueCell active={row.studentQueue} />
                         </TableCell>
+                        <TableCell className="align-top">
+                          <QueueCell active={row.staffQueue} />
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground align-top font-medium">{row.gateNote}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
               </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card className="shadow-md">
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-primary" /> What can notify as of now
-          </CardTitle>
-          <CardDescription>
-            &quot;Parent / student / staff queue&quot; means the Cloud Function will try to enqueue that channel when
-            the event happens — it still skips missing email or phone on the record.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Event</TableHead>
-                <TableHead>When it fires</TableHead>
-                <TableHead>Parent queue</TableHead>
-                <TableHead>Student queue</TableHead>
-                <TableHead>Staff queue</TableHead>
-                <TableHead className="min-w-[180px]">Notes</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {activeRows.map((row: ActiveNotificationRow) => (
-                <TableRow key={row.id}>
-                  <TableCell className="font-semibold text-sm align-top">{row.label}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground align-top max-w-[220px]">{row.trigger}</TableCell>
-                  <TableCell className="align-top">
-                    <QueueCell active={row.parentQueue} />
-                  </TableCell>
-                  <TableCell className="align-top">
-                    <QueueCell active={row.studentQueue} />
-                  </TableCell>
-                  <TableCell className="align-top">
-                    <QueueCell active={row.staffQueue} />
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground align-top">{row.gateNote}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 transition-opacity">
-        <Card className="shadow-md">
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-primary" /> Event Triggers
-            </CardTitle>
-            <CardDescription>Select which student activities should trigger an alert.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
-              <div className="space-y-0.5">
-                <Label className="text-sm font-bold">Reward Redemptions</Label>
-                <p className="text-[11px] text-muted-foreground">Notify when a student redeems points for a prize.</p>
-              </div>
-              <Switch
-                checked={settings.notificationRewardsEnabled}
-                onCheckedChange={(checked) => updateSettings({ notificationRewardsEnabled: checked })}
-              />
-            </div>
-
-            {attendancePillarOn ? (
-              <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
-                <div className="space-y-0.5">
-                  <Label className="text-sm font-bold">Attendance Sign-ins</Label>
-                  <p className="text-[11px] text-muted-foreground">Notify when a student signs in for a class period.</p>
-                </div>
-                <Switch
-                  checked={settings.notificationAttendanceEnabled}
-                  onCheckedChange={(checked) => updateSettings({ notificationAttendanceEnabled: checked })}
-                />
-              </div>
-            ) : null}
-
-            {libraryPillarOn ? (
-              <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
-                <div className="space-y-0.5">
-                  <Label className="text-sm font-bold flex items-center gap-2">
-                    Library activity <BookOpenCheck className="w-3.5 h-3.5 text-indigo-500" />
-                  </Label>
-                  <p className="text-[11px] text-muted-foreground">Notify when a student checks out or returns a library item.</p>
-                </div>
-                <Switch
-                  checked={settings.notificationLibraryEnabled}
-                  onCheckedChange={(checked) => updateSettings({ notificationLibraryEnabled: checked })}
-                />
-              </div>
-            ) : null}
-
-            <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
-              <div className="space-y-0.5">
-                <Label className="text-sm font-bold flex items-center gap-2">
-                  Milestones & Badges <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                  <span className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
-                    <input
-                      type="checkbox"
-                      className="h-3 w-3 accent-sky-600"
-                      checked={settings.notificationArtworkEnabled !== false}
-                      disabled={settings.notificationMilestonesEnabled === false}
-                      onChange={(e) => updateSettings({ notificationArtworkEnabled: e.target.checked })}
-                      aria-label="Include celebration artwork in milestone/badge emails"
-                    />
-                    Artwork
-                  </span>
-                </Label>
-                <p className="text-[11px] text-muted-foreground">Notify when a student unlocks bonus milestones or category badges.</p>
-              </div>
-              <Switch
-                checked={settings.notificationMilestonesEnabled}
-                onCheckedChange={(checked) => updateSettings({ notificationMilestonesEnabled: checked })}
-              />
-            </div>
-
-            <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
-              <div className="space-y-0.5">
-                <Label className="text-sm font-bold flex items-center gap-2">
-                  WhatsApp Alerts <span className="text-[10px] bg-green-500 text-white px-1.5 py-0.5 rounded font-black uppercase tracking-tighter">New</span>
-                </Label>
-                <p className="text-[11px] text-muted-foreground">Enable instant notifications via WhatsApp Business API.</p>
-              </div>
-              <Switch
-                checked={settings.notificationWhatsAppEnabled}
-                onCheckedChange={(checked) => updateSettings({ notificationWhatsAppEnabled: checked })}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-md">
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Users className="w-4 h-4 text-primary" /> Recipient Groups
-            </CardTitle>
-            <CardDescription>Control who receives alerts for these events.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
-              <div className="space-y-0.5">
-                <Label className="text-sm font-bold">Parents / Guardians</Label>
-                <p className="text-[11px] text-muted-foreground">
-                  Default recipients when parent contact info is provided. Can be disabled per student.
-                </p>
-              </div>
-              <div className="text-[10px] uppercase font-bold text-blue-500 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded">
-                Default On
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
-              <div className="space-y-0.5">
-                <Label className="text-sm font-bold flex items-center gap-2">
-                  Students <User className="w-3.5 h-3.5 text-primary" />
-                </Label>
-                <p className="text-[11px] text-muted-foreground">Notify students directly when their student email or phone is saved.</p>
-              </div>
-              <Switch
-                checked={settings.notificationStudentsEnabled}
-                onCheckedChange={(checked) => updateSettings({ notificationStudentsEnabled: checked })}
-              />
-            </div>
-
-            <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
-              <div className="space-y-0.5">
-                <Label className="text-sm font-bold">Staff Alerts</Label>
-                <p className="text-[11px] text-muted-foreground">Notify assigned teachers and administrators.</p>
-              </div>
-              <Switch
-                checked={settings.notificationStaffAlertsEnabled}
-                onCheckedChange={(checked) => updateSettings({ notificationStaffAlertsEnabled: checked })}
-              />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card className="shadow-md">
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <ShoppingBag className="w-4 h-4 text-primary" /> Inventory Alerts
-          </CardTitle>
-          <CardDescription>
-            Notify staff when prizes are running low or when the rewards shop is empty (requires Staff Alerts + Notifications enabled).
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="rounded-xl border bg-muted/30 overflow-hidden">
-            <div className="flex items-center justify-between p-4">
-              <div className="space-y-0.5">
-                <Label className="text-sm font-bold">Inventory alerts</Label>
-                <p className="text-[11px] text-muted-foreground">
-                  Sends a staff alert when a prize hits low stock, and optionally when the shop is empty.
-                </p>
-              </div>
-              <Switch
-                checked={settings.notificationPrizeInventoryEnabled}
-                onCheckedChange={(checked) => updateSettings({ notificationPrizeInventoryEnabled: checked })}
-              />
-            </div>
-            <div className="border-t bg-background/40 px-4 py-2">
-              <p className="text-[11px] text-muted-foreground leading-relaxed">
-                Tip: Low-stock alerts only apply to prizes with a Qty set. Unlimited Qty prizes won&apos;t trigger inventory alerts.
-              </p>
             </div>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="p-4 rounded-xl border bg-muted/30">
-              <Label className="text-sm font-bold">Low stock threshold</Label>
-              <p className="text-[11px] text-muted-foreground mb-2">
-                Alert when remaining quantity is ≤ this number.
-              </p>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  min={0}
-                  className="h-9 w-24 rounded-md border bg-background px-2 text-sm font-semibold"
-                  value={String(settings.notificationPrizeLowStockThreshold ?? 5)}
-                  disabled={!settings.notificationPrizeInventoryEnabled}
-                  onChange={(e) => {
-                    const raw = e.target.value;
-                    const n = Math.max(0, Math.round(Number(raw) || 0));
-                    updateSettings({ notificationPrizeLowStockThreshold: n });
-                  }}
-                />
-                <span className="text-xs text-muted-foreground">items</span>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between p-4 rounded-xl border bg-muted/30">
-              <div className="space-y-0.5">
-                <Label className="text-sm font-bold">Shop empty alert</Label>
-                <p className="text-[11px] text-muted-foreground">
-                  Notify staff when no prizes are available to redeem.
-                </p>
-              </div>
-              <Switch
-                checked={settings.notificationPrizeEmptyShopEnabled}
-                disabled={!settings.notificationPrizeInventoryEnabled}
-                onCheckedChange={(checked) => updateSettings({ notificationPrizeEmptyShopEnabled: checked })}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="shadow-md">
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Users className="w-4 h-4 text-primary" />
-            Families & shared displays
-          </CardTitle>
-          <CardDescription>
-            Weekly parent summaries and how names appear on Hall of Fame-style boards (staff must still sign in to open
-            those routes).
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
-            <div className="space-y-0.5">
-              <Label className="text-sm font-bold">Weekly parent digest</Label>
-              <p className="text-[11px] text-muted-foreground">
-                Sends a Sunday summary (3:00 PM Eastern / New York time) to parents who opted in on each student
-                (parent email or SMS). Requires Notifications on and valid parent contact.
-              </p>
-            </div>
-            <Switch
-              checked={settings.notificationParentWeeklyDigestEnabled}
-              disabled={!settings.enableNotifications}
-              onCheckedChange={(checked) => updateSettings({ notificationParentWeeklyDigestEnabled: checked })}
-            />
-          </div>
-
-          <div className="p-4 rounded-xl border bg-muted/30 space-y-2">
-            <Label className="text-sm font-bold">Names on shared leaderboards</Label>
-            <p className="text-[11px] text-muted-foreground">
-              Preferred-only hides legal surnames on shared displays (nickname or first name). Rosters in Admin and
-              Teacher portals still show full names.
-            </p>
-            <Select
-              value={settings.privacyStudentNameDisplayMode}
-              onValueChange={(v) =>
-                updateSettings({ privacyStudentNameDisplayMode: v === 'preferred_only' ? 'preferred_only' : 'full' })
-              }
-            >
-              <SelectTrigger className="max-w-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="full">Full display name (preferred + last)</SelectItem>
-                <SelectItem value="preferred_only">Preferred / first name only</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
-            <div className="space-y-0.5">
-              <Label className="text-sm font-bold">Offline teacher award queue</Label>
-              <p className="text-[11px] text-muted-foreground">
-                When the teacher device has no network, bulk point awards are saved locally and sent when the connection
-                returns.
-              </p>
-            </div>
-            <Switch
-              checked={settings.enableTeacherOfflineAwardQueue !== false}
-              onCheckedChange={(checked) => updateSettings({ enableTeacherOfflineAwardQueue: checked })}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="shadow-md overflow-hidden">
-        <CardContent className="p-0">
-          <div className="grid md:grid-cols-[1.1fr_1.4fr]">
-            <div className="p-6 bg-slate-950 text-white">
-              <div className="flex items-center gap-2 text-amber-300">
-                <Award className="w-5 h-5" />
-                <span className="text-xs font-black uppercase tracking-[0.2em]">Artwork preview</span>
-              </div>
-              <h3 className="mt-3 text-xl font-black">Milestone and badge emails now feel earned.</h3>
-              <p className="mt-2 text-sm text-slate-300 leading-relaxed">
-                Email alerts can include a polished celebration panel with the student name, achievement title, points, and badge icon.
-              </p>
-            </div>
-            <div className="p-6 bg-gradient-to-br from-sky-50 via-white to-amber-50 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900">
-              <div className="mx-auto max-w-sm rounded-2xl border border-amber-200 bg-white p-5 text-center shadow-xl dark:bg-slate-900 dark:border-amber-500/30">
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 text-amber-600 ring-8 ring-amber-50 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/10">
-                  <Sparkles className="h-8 w-8" />
-                </div>
-                <p className="mt-4 text-xs font-black uppercase tracking-[0.2em] text-sky-600">Badge unlocked</p>
-                <p className="mt-1 text-2xl font-black text-slate-950 dark:text-white">Monthly Champion</p>
-                <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">Beautiful email artwork celebrates milestones and badges.</p>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="border-l-4 border-amber-500 shadow-md">
-        <CardContent className="py-6 flex gap-4 items-start">
-          <Shield className="w-6 h-6 text-amber-500 shrink-0 mt-0.5" />
-          <div className="space-y-2">
-            <h4 className="font-bold text-sm">Privacy & Security Notice</h4>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Alerts are sent via secure Firebase Cloud Functions. Ensure you have the
-              <strong> &quot;Trigger Email&quot;</strong> or <strong>&quot;Twilio SMS&quot;</strong> extensions configured in
-              your Firebase Console to enable delivery. Contact information is stored encrypted
-              within your school&apos;s private database.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-        </CollapsibleContent>
-      </Collapsible>
+        )}
+      </CardContent>
 
       <NotificationSetupWizard
         open={wizardOpen}
@@ -950,6 +943,6 @@ export function AdminNotificationsTab() {
         notificationsEnabled={settings.enableNotifications === true}
         updateSettings={updateSettings}
       />
-    </div>
+    </Card>
   );
 }

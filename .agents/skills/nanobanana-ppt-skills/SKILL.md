@@ -17,11 +17,8 @@ Generates **16:9 PPT slide images** (2K/4K) via Google Gemini (Nano Banana Pro),
 ## Prerequisites
 
 1. **Python venv** (already created): `tools/NanoBanana-PPT-Skills/venv/`
-2. **API key** in `tools/NanoBanana-PPT-Skills/.env`:
-   - `GEMINI_API_KEY` — required ([Google AI Studio](https://aistudio.google.com/apikey))
-   - `KLING_ACCESS_KEY` / `KLING_SECRET_KEY` — optional (transition videos; needs FFmpeg)
-
-Replace placeholder values in `.env` before generating slides.
+2. **API key** — uses the **studio root** `.env` (`GEMINI_API_KEY`) automatically. Do **not** add a placeholder `.env` under `tools/NanoBanana-PPT-Skills/` (it overrides the real key).
+   - Optional Kling keys in root `.env` for transition videos (needs FFmpeg)
 
 ## When to Use
 
@@ -95,7 +92,7 @@ Requires Kling keys + FFmpeg. See `tools/NanoBanana-PPT-Skills/README.md` and `g
 | Install root | `tools/NanoBanana-PPT-Skills/` |
 | CLI | `generate_ppt.py` |
 | Styles | `styles/gradient-glass.md`, `styles/vector-illustration.md` |
-| Env | `tools/NanoBanana-PPT-Skills/.env` |
+| Env | Studio root `.env` (`GEMINI_API_KEY`) |
 | Upstream docs | `tools/NanoBanana-PPT-Skills/SKILL.md`, `QUICKSTART.md` |
 
 ## Limitations
@@ -107,5 +104,5 @@ Requires Kling keys + FFmpeg. See `tools/NanoBanana-PPT-Skills/README.md` and `g
 
 ## Troubleshooting
 
-- `GEMINI_API_KEY` missing → edit `.env` in `tools/NanoBanana-PPT-Skills/`
+- `GEMINI_API_KEY` missing → set in studio root `.env` (not a placeholder copy under `tools/`)
 - Regenerate venv: `py -3.10 -m venv venv` then `.\venv\Scripts\pip install google-genai pillow python-dotenv`

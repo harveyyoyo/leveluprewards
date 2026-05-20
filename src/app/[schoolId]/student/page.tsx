@@ -2349,9 +2349,6 @@ export default function StudentLoginPage() {
     playSound('swoosh');
     if (activeStudentIdRef.current) {
       finishStudentSession();
-      if (loginState === 'student' && schoolId) {
-        logout();
-      }
       toast({ title: 'Logged Out', description: 'Returning to kiosk home.' });
     } else {
       router.push(schoolId ? `/${schoolId}/portal` : '/login');

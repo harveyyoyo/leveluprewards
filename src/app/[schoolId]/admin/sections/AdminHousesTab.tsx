@@ -8,14 +8,17 @@ import {
   Trash2,
   ChevronDown,
   ChevronUp,
-  Sparkles,
   RefreshCw,
   Wand2,
   ExternalLink,
   UserPlus,
   Loader2,
   Pencil,
+  FlaskConical,
+  Search,
+  ArrowRightLeft,
 } from 'lucide-react';
+import { useConfirm } from '@/components/providers/ConfirmProvider';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Helper } from '@/components/ui/helper';
@@ -34,16 +37,30 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Checkbox } from '@/components/ui/checkbox';
+import { useToast } from '@/hooks/use-toast';
 import { HouseBadge } from '@/components/houses/HouseBadge';
 import type { House, Student, Teacher } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import {
-  seedRcaHousePresets,
+  seedHouseThemePack,
   syncHousePointsFromStudents,
   assignStudentsToHousesBalanced,
   assignStudentsToHousesRandom,
+  listHouses,
 } from '@/lib/db';
+import { HOUSE_PRESET_THEMES, type HousePresetThemeId } from '@/lib/housePresets';
 import { useFirestore } from '@/firebase';
 
 export function AdminHousesTab({
@@ -68,7 +85,13 @@ export function AdminHousesTab({
   onUpdateTeacher: (teacher: Teacher) => Promise<void> | void;
 }) {
   const firestore = useFirestore();
+  const { toast } = useToast();
+  const confirm = useConfirm();
   const { settings, updateSettings } = useSettings();
+  const [sampleDialogOpen, setSampleDialogOpen] = useState(false);
+  const [sampleThemeId, setSampleThemeId] = useState<HousePresetThemeId>('classic');
+  const [sampleAssignStudents, setSampleAssignStudents] = useState(true);
+  const [sampleSyncTotals, setSampleSyncTotals] = useState(true);
   const [expandedHouseIds, setExpandedHouseIds] = useState<Set<string>>(new Set());
   const [studentPickByHouse, setStudentPickByHouse] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
@@ -79,6 +102,8 @@ export function AdminHousesTab({
   const [draftColor, setDraftColor] = useState('#2563EB');
   const [draftEmoji, setDraftEmoji] = useState('');
   const [draftMotto, setDraftMotto] = useState('');
+  const [memberSearch, setMemberSearch] = useState<Record<string, string>>({});
+  const [transferStudent, setTransferStudent] = useState<{ student: Student; fromHouseId: string } | null>(null);
 
   const sortedHouses = useMemo(
     () =>
@@ -143,11 +168,50 @@ export function AdminHousesTab({
     }
   };
 
-  const runSeedRca = async () => {
+  const runPopulateSample = async () => {
     if (!firestore) return;
-    setBusy('rca');
+    setBusy('sample');
     try {
-      await seedRcaHousePresets(firestore, schoolId, sortedHouses);
+      const seedResult = await seedHouseThemePack(firestore, schoolId, sortedHouses, sampleThemeId);
+
+      let latestHouses = await listHouses(firestore, schoolId);
+      let assigned = 0;
+      const unassigned = (students || []).filter((s) => !s.houseId);
+      if (sampleAssignStudents && latestHouses.length > 0 && unassigned.length > 0) {
+        await assignStudentsToHousesBalanced(
+          firestore,
+          schoolId,
+          unassigned.map((s) => s.id),
+          latestHouses,
+        );
+        assigned = unassigned.length;
+      }
+
+      if (sampleSyncTotals && latestHouses.length > 0) {
+        latestHouses = await listHouses(firestore, schoolId);
+        await syncHousePointsFromStudents(
+          firestore,
+          schoolId,
+          latestHouses,
+          students || [],
+          'both',
+        );
+      }
+
+      const parts = [
+        `${seedResult.created} house${seedResult.created === 1 ? '' : 's'} added`,
+        seedResult.skipped ? `${seedResult.skipped} skipped (already exist)` : null,
+        assigned > 0 ? `${assigned} student${assigned === 1 ? '' : 's'} assigned` : null,
+        sampleSyncTotals && latestHouses.length > 0 ? 'totals synced' : null,
+      ].filter(Boolean);
+
+      toast({
+        title: 'Sample houses populated',
+        description: parts.join(' · ') || 'Nothing new to add.',
+      });
+      setSampleDialogOpen(false);
+    } catch {
+      toast({ variant: 'destructive', title: 'Could not populate sample houses' });
     } finally {
       setBusy(null);
     }
@@ -158,6 +222,9 @@ export function AdminHousesTab({
     setBusy('sync');
     try {
       await syncHousePointsFromStudents(firestore, schoolId, sortedHouses, students || [], 'both');
+      toast({ title: 'Totals synced', description: `Updated points for ${sortedHouses.length} house${sortedHouses.length === 1 ? '' : 's'}.` });
+    } catch {
+      toast({ variant: 'destructive', title: 'Failed to sync totals' });
     } finally {
       setBusy(null);
     }
@@ -165,6 +232,7 @@ export function AdminHousesTab({
 
   const runBulkAssign = async (mode: 'balanced' | 'random') => {
     if (!firestore || unassignedStudents.length === 0 || sortedHouses.length === 0) return;
+    const count = unassignedStudents.length;
     setBusy(`assign-${mode}`);
     try {
       const ids = unassignedStudents.map((s) => s.id);
@@ -173,9 +241,37 @@ export function AdminHousesTab({
       } else {
         await assignStudentsToHousesRandom(firestore, schoolId, ids, sortedHouses);
       }
+      toast({ title: 'Students assigned', description: `${count} student${count === 1 ? '' : 's'} assigned (${mode}).` });
+    } catch {
+      toast({ variant: 'destructive', title: 'Failed to assign students' });
     } finally {
       setBusy(null);
     }
+  };
+
+  const handleConfirmedDelete = async (house: House, houseStudents: Student[]) => {
+    const ok = await confirm({
+      title: `Delete "${house.name}"?`,
+      description: houseStudents.length > 0
+        ? `This will remove the house and unassign ${houseStudents.length} student${houseStudents.length === 1 ? '' : 's'}. This cannot be undone.`
+        : 'This will permanently remove the house. This cannot be undone.',
+      confirmLabel: 'Delete',
+      destructive: true,
+    });
+    if (ok) {
+      await onDeleteHouse(house.id, houseStudents);
+      toast({ title: 'House deleted', description: `"${house.name}" has been removed.` });
+    }
+  };
+
+  const handleTransfer = async (student: Student, toHouseId: string) => {
+    await onUpdateStudent({ ...student, houseId: toHouseId });
+    const toHouse = sortedHouses.find((h) => h.id === toHouseId);
+    toast({
+      title: 'Student transferred',
+      description: `${student.firstName} ${student.lastName} moved to ${toHouse?.name ?? 'new house'}.`,
+    });
+    setTransferStudent(null);
   };
 
   const sortingHref = useMemo(() => {
@@ -188,12 +284,12 @@ export function AdminHousesTab({
   }, [schoolId, unassignedStudents]);
 
   return (
-    <Card className="w-full border-t-4 border-violet-500 shadow-md overflow-hidden">
+    <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden">
       <CardHeader className="flex flex-col gap-4 py-6 bg-secondary sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <Helper content="RCA-style houses: rosters, house parents, point rollups, sorting ceremony, and Hall of Fame standings.">
+          <Helper content="School houses: rosters, house parents, point rollups, sorting ceremony, and Hall of Fame standings.">
             <CardTitle className="flex items-center gap-2">
-              <Home className="w-5 h-5 text-violet-600" /> Houses
+              <Home className="w-5 h-5 text-primary" /> Houses
             </CardTitle>
           </Helper>
           <CardDescription>
@@ -212,10 +308,14 @@ export function AdminHousesTab({
             variant="outline"
             className="rounded-xl"
             disabled={busy !== null}
-            onClick={() => void runSeedRca()}
+            onClick={() => setSampleDialogOpen(true)}
           >
-            {busy === 'rca' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-            RCA preset (8)
+            {busy === 'sample' ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <FlaskConical className="mr-2 h-4 w-4" />
+            )}
+            Populate sample
           </Button>
           <Button
             variant="outline"
@@ -262,6 +362,56 @@ export function AdminHousesTab({
           </div>
         </div>
 
+        {/* House comparison dashboard */}
+        {sortedHouses.length > 1 ? (() => {
+          const maxPts = Math.max(...sortedHouses.map((h) => h.points ?? 0), 1);
+          const totalStudents = (students || []).filter((s) => s.houseId).length;
+          const memberCounts = new Map(sortedHouses.map((h) => [h.id, (students || []).filter((s) => s.houseId === h.id).length]));
+          const avgMembersPerHouse = totalStudents > 0 ? Math.round(totalStudents / sortedHouses.length) : 0;
+          const imbalanceThreshold = Math.max(3, Math.round(avgMembersPerHouse * 0.35));
+          const ranked = [...sortedHouses].sort((a, b) => (b.points ?? 0) - (a.points ?? 0));
+
+          return (
+            <div className="rounded-2xl border bg-muted/20 p-4 space-y-3">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                House standings
+              </p>
+              <div className="space-y-2">
+                {ranked.map((house, i) => {
+                  const pts = house.points ?? 0;
+                  const pct = maxPts > 0 ? Math.round((pts / maxPts) * 100) : 0;
+                  const members = memberCounts.get(house.id) ?? 0;
+                  const perCapita = members > 0 ? Math.round(pts / members) : 0;
+                  const imbalanced = Math.abs(members - avgMembersPerHouse) >= imbalanceThreshold;
+                  return (
+                    <div key={house.id} className="flex items-center gap-3">
+                      <span className="w-5 shrink-0 text-xs font-black text-muted-foreground tabular-nums text-center">
+                        {i + 1}
+                      </span>
+                      <HouseBadge house={house} size="sm" className="shrink-0 w-28 justify-center" />
+                      <div className="flex-1 min-w-0 space-y-0.5">
+                        <div className="w-full bg-muted/40 rounded-full h-2.5 overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all duration-500"
+                            style={{ width: `${pct}%`, backgroundColor: house.color }}
+                          />
+                        </div>
+                        <div className="flex justify-between text-[10px] text-muted-foreground">
+                          <span className="font-bold tabular-nums">{pts.toLocaleString()} pts</span>
+                          <span className={cn('tabular-nums', imbalanced && 'text-amber-600 dark:text-amber-400 font-bold')}>
+                            {members} member{members !== 1 ? 's' : ''} · {perCapita} avg
+                            {imbalanced ? ' ⚠' : ''}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })() : null}
+
         {unassignedStudents.length > 0 && sortedHouses.length > 0 ? (
           <div className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm">
             <span className="font-semibold text-amber-900 dark:text-amber-100">
@@ -292,11 +442,11 @@ export function AdminHousesTab({
           <EmptyState
             icon={Home}
             title="No houses yet"
-            description="Add houses manually or load the RCA preset pack to get started."
+            description="Add houses manually or load a starter theme pack (Quick demo, Classic virtues, or Yeshiva middot)."
             action={{
-              label: 'Load RCA preset',
-              onClick: () => void runSeedRca(),
-              icon: Sparkles,
+              label: 'Populate sample',
+              onClick: () => setSampleDialogOpen(true),
+              icon: FlaskConical,
             }}
           />
         ) : (
@@ -326,7 +476,7 @@ export function AdminHousesTab({
               return (
                 <li
                   key={house.id}
-                  className="flex flex-col overflow-hidden rounded-2xl border border-violet-500/20 bg-secondary/45 transition-all hover:border-violet-500/40"
+                  className="flex flex-col overflow-hidden rounded-2xl border border-primary/20 bg-secondary/45 transition-all hover:border-primary/40"
                 >
                   <div className="grid grid-cols-[minmax(140px,1fr)_100px_100px_90px_44px_44px] items-center gap-3 p-3">
                     <div className="flex min-w-0 items-center gap-2">
@@ -342,7 +492,7 @@ export function AdminHousesTab({
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-8 w-full gap-1.5 rounded-lg border-violet-500/35 bg-background font-semibold"
+                      className="h-8 w-full gap-1.5 rounded-lg border-primary/35 bg-background font-semibold"
                       onClick={() => toggleExpand(house.id)}
                     >
                       {houseStudents.length}
@@ -361,7 +511,7 @@ export function AdminHousesTab({
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 text-destructive hover:text-destructive"
-                      onClick={() => void onDeleteHouse(house.id, houseStudents)}
+                      onClick={() => void handleConfirmedDelete(house, houseStudents)}
                       aria-label={`Delete ${house.name}`}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -369,7 +519,7 @@ export function AdminHousesTab({
                   </div>
 
                   {isExpanded ? (
-                    <div className="space-y-4 border-t border-violet-500/15 bg-background/60 px-4 py-4">
+                    <div className="space-y-4 border-t border-primary/15 bg-background/60 px-4 py-4">
                       <div>
                         <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">
                           House parents
@@ -381,7 +531,7 @@ export function AdminHousesTab({
                               <Badge
                                 key={t.id}
                                 variant={isParent ? 'default' : 'outline'}
-                                className={cn('cursor-pointer rounded-full', isParent && 'bg-violet-600')}
+                                className={cn('cursor-pointer rounded-full', isParent && 'bg-primary')}
                                 onClick={() => {
                                   const current = t.houseParentHouseIds || [];
                                   const next = isParent
@@ -396,7 +546,7 @@ export function AdminHousesTab({
                           })}
                         </div>
                         {parents.length === 0 ? (
-                          <p className="text-xs text-muted-foreground mt-2">Tap faculty names to assign house parents.</p>
+                          <p className="text-xs text-muted-foreground mt-2">Tap teacher names to assign house parents.</p>
                         ) : null}
                       </div>
 
@@ -438,28 +588,57 @@ export function AdminHousesTab({
                         </Button>
                       </div>
 
+                      {houseStudents.length > 5 ? (
+                        <div className="relative group">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                          <Input
+                            placeholder="Search members…"
+                            value={memberSearch[house.id] ?? ''}
+                            onChange={(e) => setMemberSearch((prev) => ({ ...prev, [house.id]: e.target.value }))}
+                            className="h-8 rounded-lg pl-8 text-xs"
+                          />
+                        </div>
+                      ) : null}
                       <ul className="space-y-1 max-h-48 overflow-y-auto">
-                        {houseStudents.map((s) => (
-                          <li
-                            key={s.id}
-                            className="flex items-center justify-between rounded-lg bg-muted/30 px-3 py-2 text-sm"
-                          >
-                            <span>
-                              {s.lastName}, {s.firstName}
-                            </span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 text-xs text-muted-foreground"
-                              onClick={() => void onUpdateStudent({ ...s, houseId: '' })}
+                        {(() => {
+                          const searchTerm = (memberSearch[house.id] ?? '').trim().toLowerCase();
+                          const filtered = searchTerm
+                            ? houseStudents.filter((s) => `${s.firstName} ${s.lastName}`.toLowerCase().includes(searchTerm))
+                            : houseStudents;
+                          return filtered.length > 0 ? filtered.map((s) => (
+                            <li
+                              key={s.id}
+                              className="flex items-center justify-between rounded-lg bg-muted/30 px-3 py-2 text-sm"
                             >
-                              Remove
-                            </Button>
-                          </li>
-                        ))}
-                        {houseStudents.length === 0 ? (
-                          <li className="text-xs text-muted-foreground py-2">No students in this house yet.</li>
-                        ) : null}
+                              <span>
+                                {s.lastName}, {s.firstName}
+                              </span>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 text-xs text-primary"
+                                  onClick={() => setTransferStudent({ student: s, fromHouseId: house.id })}
+                                  title="Transfer to another house"
+                                >
+                                  <ArrowRightLeft className="h-3 w-3 mr-1" /> Transfer
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 text-xs text-muted-foreground"
+                                  onClick={() => void onUpdateStudent({ ...s, houseId: '' })}
+                                >
+                                  Remove
+                                </Button>
+                              </div>
+                            </li>
+                          )) : (
+                            <li className="text-xs text-muted-foreground py-2">
+                              {searchTerm ? 'No matching students.' : 'No students in this house yet.'}
+                            </li>
+                          );
+                        })()}
                       </ul>
                     </div>
                   ) : null}
@@ -470,6 +649,71 @@ export function AdminHousesTab({
         )}
       </CardContent>
 
+      <AlertDialog open={sampleDialogOpen} onOpenChange={setSampleDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Populate sample houses?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 text-sm text-muted-foreground">
+                <p>
+                  Creates preset houses (skips any that already exist). You can optionally assign students and
+                  sync house point totals from current student balances.
+                </p>
+                <div className="space-y-2 rounded-xl border bg-muted/30 p-3">
+                  <p className="text-xs font-bold uppercase tracking-widest text-foreground">Starter theme</p>
+                  {HOUSE_PRESET_THEMES.map((theme) => (
+                    <label key={theme.id} className="flex items-start gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="houseSampleTheme"
+                        checked={sampleThemeId === theme.id}
+                        onChange={() => setSampleThemeId(theme.id)}
+                        className="accent-violet-600 mt-1"
+                      />
+                      <span>
+                        <span className="font-medium text-foreground">{theme.label}</span>
+                        <span className="block text-xs text-muted-foreground">
+                          {theme.description} ({theme.houses.length} houses)
+                        </span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <Checkbox
+                    checked={sampleAssignStudents}
+                    onCheckedChange={(v) => setSampleAssignStudents(v === true)}
+                    className="mt-0.5"
+                  />
+                  <span>Assign all unassigned students to houses (balanced)</span>
+                </label>
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <Checkbox
+                    checked={sampleSyncTotals}
+                    onCheckedChange={(v) => setSampleSyncTotals(v === true)}
+                    className="mt-0.5"
+                  />
+                  <span>Sync house totals from student point balances</span>
+                </label>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busy === 'sample'}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={busy === 'sample'}
+              onClick={(e) => {
+                e.preventDefault();
+                void runPopulateSample();
+              }}
+            >
+              {busy === 'sample' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Populate
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -478,7 +722,7 @@ export function AdminHousesTab({
           <div className="space-y-3 py-2">
             <div className="space-y-1">
               <Label>Name</Label>
-              <Input value={draftName} onChange={(e) => setDraftName(e.target.value)} placeholder="Amistad" />
+              <Input value={draftName} onChange={(e) => setDraftName(e.target.value)} placeholder="Ember" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
@@ -515,6 +759,36 @@ export function AdminHousesTab({
               Save
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Transfer student dialog */}
+      <Dialog open={transferStudent !== null} onOpenChange={(open) => { if (!open) setTransferStudent(null); }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Transfer student</DialogTitle>
+          </DialogHeader>
+          {transferStudent ? (
+            <div className="space-y-3 py-2">
+              <p className="text-sm text-muted-foreground">
+                Move <span className="font-semibold text-foreground">{transferStudent.student.firstName} {transferStudent.student.lastName}</span> to:
+              </p>
+              <div className="space-y-2">
+                {sortedHouses
+                  .filter((h) => h.id !== transferStudent.fromHouseId)
+                  .map((h) => (
+                    <Button
+                      key={h.id}
+                      variant="outline"
+                      className="w-full justify-start gap-2 rounded-xl"
+                      onClick={() => void handleTransfer(transferStudent.student, h.id)}
+                    >
+                      <HouseBadge house={h} size="sm" />
+                    </Button>
+                  ))}
+              </div>
+            </div>
+          ) : null}
         </DialogContent>
       </Dialog>
     </Card>

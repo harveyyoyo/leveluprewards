@@ -12,11 +12,20 @@ import {
 } from '@/lib/auth/schoolGateCookie';
 import { verifySchoolGateJwt } from '@/lib/auth/verifySchoolGateJwt';
 import { schoolPathAllowedByGate } from '@/lib/auth/schoolGatePathPolicy';
+import { authCookieFlags } from '@/lib/auth/authCookieOptions';
 import {
   canonicalPortalRedirectUrl,
+  canonicalPortalHost,
   isPortalHostname,
   portalHostRedirectPath,
 } from '@/lib/portalRouting';
+import {
+  canonicalOfficeRedirectUrl,
+  isOfficeHostname,
+  officeHostInternalRewritePath,
+  officeHostPortalRedirectUrl,
+} from '@/lib/officeRouting';
+import { officePublicHref } from '@/lib/officePublicUrl';
 
 function applySecurityHeaders(response: NextResponse) {
   response.headers.set('X-Content-Type-Options', 'nosniff');
@@ -24,9 +33,6 @@ function applySecurityHeaders(response: NextResponse) {
   response.headers.set('X-XSS-Protection', '1; mode=block');
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
 
-  // Content-Security-Policy: hardened default with carve-outs for the
-  // features the app legitimately uses (theme engine inline styles, Google
-  // Fonts, Firebase services, camera blobs, base64 data-URIs for images).
   const csp = [
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://*.firebaseio.com",
@@ -45,13 +51,30 @@ function applySecurityHeaders(response: NextResponse) {
 function clearAuthCookies(response: NextResponse) {
   const base = {
     maxAge: 0,
-    path: '/',
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax' as const,
+    ...authCookieFlags(),
   };
   response.cookies.set({ name: FIREBASE_SESSION_COOKIE_NAME, value: '', ...base });
   response.cookies.set({ name: SCHOOL_GATE_COOKIE_NAME, value: '', ...base });
+}
+
+function portalLoginRedirect(
+  request: NextRequest,
+  schoolId: string,
+  nextPath: string,
+): NextResponse {
+  const portalHost = canonicalPortalHost();
+  const scheme = request.nextUrl.protocol;
+  const loginBase = portalHost
+    ? new URL(`${scheme}//${portalHost}/login`)
+    : new URL('/login', request.nextUrl.origin);
+
+  loginBase.searchParams.set('school', schoolId.toLowerCase());
+  loginBase.searchParams.set('next', nextPath);
+
+  const redirect = NextResponse.redirect(loginBase);
+  applySecurityHeaders(redirect);
+  clearAuthCookies(redirect);
+  return redirect;
 }
 
 export async function middleware(request: NextRequest) {
@@ -70,6 +93,29 @@ export async function middleware(request: NextRequest) {
     return redirect;
   }
 
+  const canonicalOfficeUrl = canonicalOfficeRedirectUrl(
+    pathname,
+    search,
+    forwardedHost,
+    request.nextUrl.protocol,
+  );
+  if (canonicalOfficeUrl) {
+    const redirect = NextResponse.redirect(canonicalOfficeUrl);
+    applySecurityHeaders(redirect);
+    return redirect;
+  }
+
+  const officePortalUrl = officeHostPortalRedirectUrl(
+    pathname,
+    forwardedHost,
+    request.nextUrl.protocol,
+  );
+  if (officePortalUrl) {
+    const redirect = NextResponse.redirect(officePortalUrl);
+    applySecurityHeaders(redirect);
+    return redirect;
+  }
+
   if (isPortalHostname(forwardedHost)) {
     const portalPath = portalHostRedirectPath(pathname);
     if (portalPath && portalPath !== pathname) {
@@ -81,7 +127,12 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  const gated = parseSchoolScopedSessionPath(pathname);
+  const internalRewrite = isOfficeHostname(forwardedHost)
+    ? officeHostInternalRewritePath(pathname)
+    : null;
+  const sessionPathname = internalRewrite ?? pathname;
+
+  const gated = parseSchoolScopedSessionPath(sessionPathname);
   const enforce = shouldEnforceFirebaseSessionEdge();
 
   if (enforce && gated && !pathname.startsWith('/api/')) {
@@ -103,11 +154,16 @@ export async function middleware(request: NextRequest) {
         gate &&
         gate.uid === fbUid &&
         gate.schoolId === school &&
-        schoolPathAllowedByGate(pathname, gated.schoolId, gate.scopes)
+        schoolPathAllowedByGate(sessionPathname, gated.schoolId, gate.scopes)
       );
     }
 
     if (!allowed) {
+      if (isOfficeHostname(forwardedHost)) {
+        const nextOffice = officePublicHref(gated.schoolId);
+        return portalLoginRedirect(request, gated.schoolId, nextOffice);
+      }
+
       const url = request.nextUrl.clone();
       url.pathname = '/login';
       url.searchParams.set('school', gated.schoolId.toLowerCase());
@@ -117,6 +173,14 @@ export async function middleware(request: NextRequest) {
       clearAuthCookies(redirect);
       return redirect;
     }
+  }
+
+  if (internalRewrite && internalRewrite !== pathname) {
+    const url = request.nextUrl.clone();
+    url.pathname = internalRewrite;
+    const response = NextResponse.rewrite(url);
+    applySecurityHeaders(response);
+    return response;
   }
 
   const response = NextResponse.next();

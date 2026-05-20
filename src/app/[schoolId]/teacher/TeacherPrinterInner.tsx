@@ -157,7 +157,7 @@ function TeacherHomeworkTab({ schoolId, teacherId, students, classes }: { school
             setNewReward({ title: '', description: '', points: 10, classId: 'all' });
             toast({ title: 'Homework reward saved' });
         } catch (e) {
-            toast({ variant: 'destructive', title: 'Error', description: (e as Error).message });
+            toast({ variant: 'destructive', title: 'Failed to save homework reward', description: (e as Error).message });
         } finally {
             setIsSubmitting(false);
         }
@@ -169,7 +169,7 @@ function TeacherHomeworkTab({ schoolId, teacherId, students, classes }: { school
             await deleteHomeworkAssignment(id);
             toast({ title: 'Homework reward deleted' });
         } catch (e) {
-            toast({ variant: 'destructive', title: 'Error', description: (e as Error).message });
+            toast({ variant: 'destructive', title: 'Failed to delete homework reward', description: (e as Error).message });
         }
     };
 
@@ -2525,7 +2525,7 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                         <Helper content={secretaryMode ? 'Generate coupon sheets for teachers to hand out. You cannot award points or edit prizes from here.' : 'Use Points to print coupon sheets from school categories, or open Manually Add or Deduct Points for direct changes without a printed coupon. Prizes, attendance, and reports are also here.'}>
                             <div>
                                 <h2 className="text-2xl font-bold tracking-tight" style={{ color: teacherAccent }}>
-                                    {secretaryMode ? 'Secretary - coupon printing' : 'Teacher & Faculty Portal'}
+                                    {secretaryMode ? 'Secretary - coupon printing' : 'Teacher Portal'}
                                 </h2>
                                 <p className="text-muted-foreground">
                                     {secretaryMode

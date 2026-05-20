@@ -35,7 +35,7 @@ export function AdminBonusPointsTab(props: any) {
         <div>
           <Helper content="Define bonus point milestones. When students hit these point thresholds they earn extra bonus points. Enable from Admin → Add more.">
             <CardTitle className="flex items-center gap-2">
-              <Trophy className="w-5 h-5 text-destructive" /> Bonus Points
+              <Trophy className="w-5 h-5 text-primary" /> Bonus Points
             </CardTitle>
           </Helper>
           <CardDescription>Create milestones that award extra points when students reach point thresholds.</CardDescription>

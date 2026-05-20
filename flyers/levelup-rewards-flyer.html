@@ -12,10 +12,10 @@
 
       :root {
         --bg: #0b1220;
-        --panel: rgba(255, 255, 255, 0.06);
+        --panel: rgba(255, 255, 255, 0.05);
         --text: #eaf0ff;
         --muted: rgba(234, 240, 255, 0.78);
-        --hair: rgba(234, 240, 255, 0.18);
+        --hair: rgba(234, 240, 255, 0.15);
         --accent: #7c3aed;
         --accent2: #06b6d4;
         --success: #22c55e;
@@ -56,8 +56,8 @@
         overflow: hidden;
         border-radius: 18px;
         background:
-          radial-gradient(1200px 700px at 10% 10%, rgba(124, 58, 237, 0.35), transparent 60%),
-          radial-gradient(900px 600px at 90% 20%, rgba(6, 182, 212, 0.28), transparent 55%),
+          radial-gradient(1200px 700px at 10% 10%, rgba(124, 58, 237, 0.3), transparent 60%),
+          radial-gradient(900px 600px at 90% 20%, rgba(6, 182, 212, 0.25), transparent 55%),
           linear-gradient(180deg, #081022, #070b16 70%, #05060c);
         padding: 24px;
       }
@@ -89,10 +89,11 @@
         border-radius: 999px;
         background: rgba(255, 255, 255, 0.08);
         border: 1px solid rgba(255, 255, 255, 0.12);
-        font-size: 12px;
+        font-size: 11px;
         letter-spacing: 0.08em;
         text-transform: uppercase;
         color: rgba(234, 240, 255, 0.9);
+        width: max-content;
       }
 
       .dot {
@@ -108,19 +109,22 @@
         font-size: 34px;
         line-height: 1.05;
         letter-spacing: -0.02em;
+        background: linear-gradient(135deg, #ffffff 60%, rgba(234, 240, 255, 0.7));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
       }
 
       .subtitle {
         margin: 0;
-        font-size: 15px;
-        line-height: 1.35;
+        font-size: 14px;
+        line-height: 1.4;
         color: var(--muted);
-        max-width: 42ch;
+        max-width: 48ch;
       }
 
       .right-meta {
         text-align: right;
-        font-size: 12px;
+        font-size: 11.5px;
         line-height: 1.5;
         color: rgba(234, 240, 255, 0.8);
         white-space: nowrap;
@@ -128,36 +132,52 @@
 
       .grid {
         display: grid;
-        grid-template-columns: 1.25fr 0.95fr;
+        grid-template-columns: 1.2fr 0.95fr;
         gap: 16px;
         margin-top: 16px;
       }
 
       .card {
         background: var(--panel);
-        border: 1px solid rgba(255, 255, 255, 0.12);
+        border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 16px;
         padding: 16px;
+        backdrop-filter: blur(10px);
       }
 
       h2 {
         margin: 0 0 10px 0;
-        font-size: 14px;
+        font-size: 13.5px;
         letter-spacing: 0.08em;
         text-transform: uppercase;
-        color: rgba(234, 240, 255, 0.9);
+        color: var(--accent2);
+        font-weight: 700;
       }
 
       ul {
+        list-style: none;
         margin: 0;
-        padding: 0 0 0 18px;
+        padding: 0;
       }
 
       li {
         margin: 8px 0;
         color: rgba(234, 240, 255, 0.88);
-        line-height: 1.25;
-        font-size: 13.5px;
+        line-height: 1.35;
+        font-size: 13px;
+        position: relative;
+        padding-left: 20px;
+      }
+
+      li::before {
+        content: "✦";
+        position: absolute;
+        left: 0;
+        top: 0;
+        color: var(--accent2);
+        font-size: 11px;
+        line-height: 18px;
+        text-shadow: 0 0 8px rgba(6, 182, 212, 0.6);
       }
 
       li strong {
@@ -165,17 +185,17 @@
       }
 
       .callout {
-        border-left: 3px solid rgba(124, 58, 237, 0.8);
-        padding: 12px 12px 12px 14px;
-        background: rgba(124, 58, 237, 0.12);
+        border-left: 3px solid var(--accent);
+        padding: 10px 12px 10px 14px;
+        background: rgba(124, 58, 237, 0.1);
         border-radius: 12px;
       }
 
       .callout p {
         margin: 0;
         color: rgba(234, 240, 255, 0.92);
-        font-size: 14px;
-        line-height: 1.35;
+        font-size: 13px;
+        line-height: 1.4;
       }
 
       .kpis {
@@ -186,25 +206,25 @@
       }
 
       .kpi {
-        padding: 12px;
-        border-radius: 14px;
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        background: rgba(255, 255, 255, 0.06);
+        padding: 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.04);
       }
 
       .kpi .label {
-        font-size: 11px;
-        letter-spacing: 0.08em;
+        font-size: 9.5px;
+        letter-spacing: 0.06em;
         text-transform: uppercase;
-        color: rgba(234, 240, 255, 0.72);
+        color: rgba(234, 240, 255, 0.6);
       }
 
       .kpi .value {
-        margin-top: 6px;
-        font-size: 14px;
-        line-height: 1.2;
-        color: rgba(255, 255, 255, 0.96);
-        font-weight: 650;
+        margin-top: 4px;
+        font-size: 12px;
+        line-height: 1.25;
+        color: rgba(255, 255, 255, 0.95);
+        font-weight: 600;
       }
 
       .footer {
@@ -216,10 +236,10 @@
         justify-content: space-between;
         align-items: flex-end;
         gap: 16px;
-        padding-top: 14px;
+        padding-top: 12px;
         border-top: 1px solid var(--hair);
-        color: rgba(234, 240, 255, 0.8);
-        font-size: 11.5px;
+        color: rgba(234, 240, 255, 0.75);
+        font-size: 11px;
         line-height: 1.4;
       }
 
@@ -230,12 +250,12 @@
       .pill {
         display: inline-flex;
         align-items: center;
-        padding: 6px 10px;
+        padding: 5px 10px;
         border-radius: 999px;
-        border: 1px solid rgba(255, 255, 255, 0.14);
-        background: rgba(255, 255, 255, 0.06);
-        font-size: 11px;
-        color: rgba(234, 240, 255, 0.88);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.05);
+        font-size: 10px;
+        color: rgba(234, 240, 255, 0.85);
         white-space: nowrap;
       }
 
@@ -245,7 +265,7 @@
       }
 
       .muted {
-        color: rgba(234, 240, 255, 0.72);
+        color: rgba(234, 240, 255, 0.65);
       }
     </style>
   </head>
@@ -266,7 +286,7 @@
           <div>Brooklyn, NY</div>
           <div class="muted">1849 East 38th Street</div>
           <div class="muted">
-            <a href="mailto:contact@leveluprewards.app?subject=NYC%20DOE%20Procurement%20Inquiry"
+            <a href="mailto:contact@leveluprewards.app?subject=NYC%20DOE%20Procurement%20Inquiry" style="color: var(--accent2); text-decoration: none;"
               >contact@leveluprewards.app</a
             >
           </div>
@@ -274,21 +294,23 @@
       </header>
 
       <div class="grid">
-        <div class="card">
-          <h2>What it does (PBIS rewards + school climate)</h2>
-          <ul>
-            <li><strong>Runs a school-wide points and rewards program</strong> aligned to PBIS expectations.</li>
-            <li><strong>Makes recognition consistent</strong> across classrooms with shared categories and clear rules.</li>
-            <li><strong>Keeps incentives transparent and equitable</strong> so students see the same system everywhere.</li>
-            <li><strong>Automates the “paperwork” of rewards</strong> (balances, redemptions, and histories) in one place.</li>
-          </ul>
+        <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <h2>What it does (PBIS rewards & school climate)</h2>
+            <ul>
+              <li><strong>Runs a school-wide points and rewards program</strong> aligned to PBIS expectations.</li>
+              <li><strong>Makes recognition consistent</strong> across classrooms with shared categories and clear rules.</li>
+              <li><strong>Keeps incentives transparent and equitable</strong> so students see the same system everywhere.</li>
+              <li><strong>Automates the “paperwork” of rewards</strong> (balances, redemptions, and histories) in one place.</li>
+            </ul>
+          </div>
 
-          <div style="height: 12px"></div>
-          <div class="callout">
-            <p>
-              <strong>Designed for busy schools:</strong> fewer manual tallies, fewer spreadsheets, fewer “who has points?”
-              questions—and a rewards program students actually trust and stay motivated by.
-            </p>
+          <div style="margin-top: 10px; margin-bottom: 10px;">
+            <div class="callout">
+              <p>
+                <strong>Designed for busy schools:</strong> fewer manual tallies, fewer spreadsheets—and a rewards program students actually trust.
+              </p>
+            </div>
           </div>
 
           <div class="kpis" aria-label="Leadership outcomes">
@@ -307,42 +329,37 @@
           </div>
         </div>
 
-        <div class="card">
-          <h2>How it works (rewards workflow)</h2>
-          <ul>
-            <li><strong>Teachers recognize positive behaviors</strong> quickly, without extra steps after class.</li>
-            <li><strong>Students see their balance</strong> and build motivation through clear goals and progress.</li>
-            <li><strong>Redemptions are tracked automatically</strong> with a complete history for transparency.</li>
-            <li>
-              <strong>Optional automated reward dispensers</strong> provide fast, reliable prize dispensing backed by a
-              proprietary device verification handshake.
-            </li>
-            <li><strong>Real-time dashboard</strong> keeps balances and redemptions consistent across the building.</li>
-          </ul>
-
-          <div style="height: 12px"></div>
-          <h2>Funding & procurement</h2>
-          <ul>
-            <li><strong>Eligible funding:</strong> Title IV-A (Student Support & Academic Enrichment) and Title I.</li>
-            <li>
-              <strong>Procurement:</strong> available as a <strong>Sole Source</strong> resource, enabling direct purchase
-              up to <strong>$25,000</strong>.
-            </li>
-          </ul>
-
-          <div style="height: 12px"></div>
-          <h2>Security</h2>
-          <ul>
-            <li><strong>NY Education Law 2-d compliant</strong>.</li>
-            <li><strong>Ready for a Data Privacy Agreement (DPA)</strong>.</li>
-          </ul>
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+          <!-- 3D Graphic Panel -->
+          <div class="card" style="padding: 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px; height: 180px; position: relative;">
+            <img src="../public/levelup_rewards_hero.png" style="width: 100%; height: 100%; object-fit: cover;" alt="LevelUp 3D Gamification UI Hero" />
+            <div style="position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 6px; font-size: 10px; border: 1px solid rgba(255,255,255,0.15); color: #fff;">
+              Arcade & PBIS Hub
+            </div>
+          </div>
+          
+          <div class="card" style="flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <h2>Funding & procurement</h2>
+              <ul style="margin-bottom: 10px;">
+                <li><strong>Eligible funding:</strong> Title IV-A (SSAE) and Title I.</li>
+                <li><strong>Procurement:</strong> Available as a <strong>Sole Source</strong> resource, enabling direct purchase up to <strong>$25,000</strong>.</li>
+              </ul>
+            </div>
+            <div>
+              <h2>Security & Compliance</h2>
+              <ul>
+                <li><strong>NY Education Law 2-d compliant</strong>.</li>
+                <li><strong>DPA-ready</strong> for district agreements.</li>
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
 
       <footer class="footer">
         <div>
-          <strong>PBIS rewards, done right.</strong> Built for NYC schools that want a consistent incentives program
-          without adding more work to teachers’ plates.
+          <strong>PBIS rewards, done right.</strong> Built for NYC schools that want a consistent incentives program.
         </div>
         <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end">
           <span class="pill">Title IV-A eligible</span>
@@ -371,48 +388,62 @@
       </header>
 
       <div class="grid">
-        <div class="card">
-          <h2>School-wide impact</h2>
-          <ul>
-            <li><strong>Higher participation</strong> because students understand the system and see rewards quickly.</li>
-            <li><strong>More consistent implementation</strong> across staff with shared categories and clear rules.</li>
-            <li><strong>Fewer disputes</strong> with transparent balances and redemption histories.</li>
-            <li><strong>Reduced admin overhead</strong> with fewer manual corrections and reward reconciliation.</li>
-          </ul>
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+          <div class="card">
+            <h2>School-wide impact</h2>
+            <ul>
+              <li><strong>Higher participation</strong> because students understand the system and see rewards quickly.</li>
+              <li><strong>More consistent implementation</strong> across staff with shared categories and expectations.</li>
+              <li><strong>Fewer disputes</strong> with transparent balances and complete redemption histories.</li>
+              <li><strong>Reduced admin overhead</strong> with fewer manual corrections and reward reconciliation.</li>
+            </ul>
 
-          <div style="height: 12px"></div>
-          <h2>For teachers</h2>
-          <ul>
-            <li><strong>Faster recognition</strong> that fits into instruction—not another after-school task.</li>
-            <li><strong>No more point bookkeeping</strong>—balances and redemption records stay organized automatically.</li>
-            <li><strong>Clear student motivation loop</strong> that reinforces positive behavior in the moment.</li>
-          </ul>
+            <div style="height: 12px"></div>
+            <h2>For teachers</h2>
+            <ul>
+              <li><strong>Faster recognition</strong> that fits directly into instruction.</li>
+              <li><strong>No more point bookkeeping</strong>—balances and records stay organized automatically.</li>
+            </ul>
+          </div>
+          
+          <!-- 3D Achievements graphic panel -->
+          <div class="card" style="padding: 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px; height: 130px; position: relative;">
+            <img src="../public/levelup_rewards_achievements.png" style="width: 100%; height: 100%; object-fit: cover;" alt="LevelUp 3D Badges & Achievements" />
+            <div style="position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 6px; font-size: 10px; border: 1px solid rgba(255,255,255,0.15); color: #fff;">
+              Student Level-Up Progression
+            </div>
+          </div>
         </div>
 
-        <div class="card">
-          <h2>For deans, counselors & PBIS teams</h2>
-          <ul>
-            <li><strong>Real-time visibility</strong> into recognition patterns and incentive usage.</li>
-            <li><strong>Clean, exportable reporting</strong> to support PBIS/MTSS meetings and planning.</li>
-            <li><strong>Controlled access</strong> that supports consistent implementation across staff.</li>
-          </ul>
-
-          <div style="height: 12px"></div>
-          <h2>System summary</h2>
-          <ul>
-            <li><strong>Real-time dashboard</strong> for balances, recognition activity, and redemption history.</li>
-            <li><strong>Student-facing experience</strong> that supports goal-setting and motivation.</li>
-            <li><strong>Optional automated dispensers</strong> for fast, reliable prize dispensing with device verification.</li>
-          </ul>
-
-          <div style="height: 12px"></div>
-          <h2>Privacy & procurement readiness</h2>
-          <ul>
-            <li><strong>NY Education Law 2-d compliance</strong> aligned to student data protection expectations.</li>
-            <li><strong>DPA-ready</strong> for district/school privacy review workflows.</li>
-            <li><strong>Sole Source</strong> procurement enables <strong>direct purchase up to $25,000</strong>.</li>
-            <li><strong>Funding:</strong> Title IV-A and Title I.</li>
-          </ul>
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+          <!-- App Mockup Panel -->
+          <div class="card" style="padding: 6px; overflow: hidden; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px; background: rgba(0,0,0,0.4);">
+            <div style="font-size: 9px; color: rgba(255,255,255,0.4); padding: 2px 6px 6px 6px; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 6px; display: flex; align-items: center; gap: 4px;">
+              <span style="width: 5px; height: 5px; border-radius: 50%; background: #ef4444; display: inline-block;"></span>
+              <span style="width: 5px; height: 5px; border-radius: 50%; background: #eab308; display: inline-block;"></span>
+              <span style="width: 5px; height: 5px; border-radius: 50%; background: #22c55e; display: inline-block;"></span>
+              <span style="margin-left: 4px; font-family: monospace;">portal.leveluprewards.app/student</span>
+            </div>
+            <img src="../public/student-dashboard-layout-desktop.png" style="width: 100%; border-radius: 10px; display: block; border: 1px solid rgba(255,255,255,0.08);" alt="LevelUp Student Portal Dashboard Screenshot" />
+          </div>
+          
+          <div class="card" style="flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <h2>For deans & PBIS teams</h2>
+              <ul>
+                <li><strong>Real-time visibility</strong> into recognition patterns and incentive usage.</li>
+                <li><strong>Clean, exportable reporting</strong> to support PBIS/MTSS planning.</li>
+                <li><strong>Controlled access</strong> to support consistent implementation building-wide.</li>
+              </ul>
+            </div>
+            
+            <div>
+              <h2>Support & Verification</h2>
+              <ul>
+                <li><strong>Optional automated dispensers</strong> for reliable rewards backed by hardware handshakes.</li>
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -420,7 +451,7 @@
         <div>
           <strong>LevelUp EdTech Enterprises LLC</strong><br />
           1849 East 38th Street, Brooklyn, NY<br />
-          <a href="mailto:contact@leveluprewards.app?subject=NYC%20DOE%20Procurement%20Inquiry"
+          <a href="mailto:contact@leveluprewards.app?subject=NYC%20DOE%20Procurement%20Inquiry" style="color: var(--accent2); text-decoration: none;"
             >contact@leveluprewards.app</a
           >
         </div>

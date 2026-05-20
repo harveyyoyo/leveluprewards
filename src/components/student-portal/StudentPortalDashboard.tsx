@@ -1,11 +1,11 @@
 'use client';
 
 import { useMemo } from 'react';
-import { collection, doc, limit, orderBy, query } from 'firebase/firestore';
+import { collection, doc, limit, orderBy, query, where } from 'firebase/firestore';
 import { LogOut, Star, Gift, History } from 'lucide-react';
 import { useFirestore, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { useSettings } from '@/components/providers/SettingsProvider';
-import type { Student, Prize, HistoryItem, Badge } from '@/lib/types';
+import type { Student, Prize, HistoryItem, Badge, LibraryItem } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge as UiBadge } from '@/components/ui/badge';
@@ -14,6 +14,8 @@ import { cn, getStudentNickname } from '@/lib/utils';
 import { EarnedBadgesShowcase } from '@/components/EarnedBadgesShowcase';
 import { StudentGoalsCard } from '@/components/goals/StudentGoalsCard';
 import { getStudentPointTypeTotals } from '@/lib/studentPointTypes';
+import { StudentPortalMyBooksCard } from './StudentPortalMyBooksCard';
+import { StudentPortalMyHouseCard } from './StudentPortalMyHouseCard';
 
 type Props = {
   schoolId: string;
@@ -56,6 +58,22 @@ export function StudentPortalDashboard({ schoolId, studentId, onSignOut, signing
     [firestore, schoolId],
   );
   const { data: badges } = useCollection<Badge>(badgesQuery);
+
+  const libraryCheckoutsQuery = useMemoFirebase(
+    () =>
+      firestore && schoolId && studentId && settings.payLibrary !== false
+        ? query(
+            collection(firestore, 'schools', schoolId, 'library'),
+            where('checkedOutTo', '==', studentId),
+          )
+        : null,
+    [firestore, schoolId, studentId, settings.payLibrary],
+  );
+  const { data: libraryCheckoutsRaw, isLoading: libraryLoading } = useCollection<LibraryItem>(libraryCheckoutsQuery);
+  const myLibraryBooks = useMemo(
+    () => (libraryCheckoutsRaw ?? []).filter((i) => i.status === 'checked_out'),
+    [libraryCheckoutsRaw],
+  );
 
   const visiblePrizes = useMemo(() => {
     if (!prizes) return [];
@@ -142,6 +160,14 @@ export function StudentPortalDashboard({ schoolId, studentId, onSignOut, signing
 
       {settings.enableBadges ? (
         <EarnedBadgesShowcase student={student} badges={badges ?? []} enableBadges={settings.enableBadges} />
+      ) : null}
+
+      {settings.enableHouses && student.houseId ? (
+        <StudentPortalMyHouseCard schoolId={schoolId} student={student} />
+      ) : null}
+
+      {settings.payLibrary !== false ? (
+        <StudentPortalMyBooksCard items={myLibraryBooks} isLoading={libraryLoading} />
       ) : null}
 
       <Card>

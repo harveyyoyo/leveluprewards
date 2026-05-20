@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Book, ChevronDown, Copy, Edit, FileText, Gift, Minus, Plus, Printer, Trash2, User, UserMinus, UserPlus } from 'lucide-react';
-import { doc, setDoc } from 'firebase/firestore';
+import { Book, Building2, ChevronDown, Copy, Edit, FileText, Gift, Minus, Plus, Printer, Trash2, User, UserMinus, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Helper } from '@/components/ui/helper';
@@ -18,27 +17,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { useFirestore } from '@/firebase';
 import { studentsInTeacherScope } from '@/lib/reportsScope';
+import { teacherPortalKey } from '@/lib/syncSchoolStaffDirectory';
 import { cn, getStudentNickname } from '@/lib/utils';
-import { encryptField, decryptField } from '@/lib/crypto';
+import { obfuscateField, deobfuscateField } from '@/lib/crypto';
 import type { Class, StaffAccount, StaffAccountRole, Student, Teacher } from '@/lib/types';
 import { AdminRecordListHeader } from '@/components/admin/AdminRecordListHeader';
 import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
-
-function normalizePortalKeyPart(value: string) {
-  return value.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '');
-}
-
-function teacherPortalKey(teacher: Teacher) {
-  const usernameKey = normalizePortalKeyPart(teacher.username || '');
-  return `teacher:${usernameKey || teacher.id}`;
-}
 
 function staffRoleLabel(role: StaffAccountRole) {
   if (role === 'secretary') return 'Coupon printing';
   if (role === 'prizeClerk') return 'Prize desk';
   if (role === 'librarian') return 'Library only';
+  if (role === 'office') return 'School Office';
   return 'Reports';
 }
 
@@ -46,6 +37,7 @@ function StaffRoleIcon({ role }: { role: StaffAccountRole }) {
   if (role === 'secretary') return <Printer className="w-5 h-5" />;
   if (role === 'prizeClerk') return <Gift className="w-5 h-5" />;
   if (role === 'librarian') return <Book className="w-5 h-5" />;
+  if (role === 'office') return <Building2 className="w-5 h-5" />;
   return <FileText className="w-5 h-5" />;
 }
 
@@ -86,7 +78,6 @@ export function AdminTeachersTab({
   onSaveStaffAccount: (account: StaffAccount | Omit<StaffAccount, 'id'>) => Promise<void>;
   onDeleteStaffAccount: (accountId: string) => Promise<void>;
 }) {
-  const firestore = useFirestore();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<StaffAccount | null>(null);
   const [username, setUsername] = useState('');
@@ -151,60 +142,6 @@ export function AdminTeachersTab({
     }
   };
 
-  useEffect(() => {
-    if (!schoolId) return;
-    if (!teachers || !staffAccounts) return;
-
-    const syncDirectory = async () => {
-      const expected = new Map<string, Record<string, unknown>>();
-
-      for (const teacher of teachers) {
-        const username = (teacher.username || teacher.id).trim();
-        const key = teacherPortalKey(teacher);
-        if (!teacher.name?.trim() || !username) continue;
-        expected.set(key, {
-          id: key,
-          sourceId: teacher.id,
-          type: 'teacher',
-          label: teacher.name.trim(),
-          username,
-          updatedAt: Date.now(),
-        });
-      }
-
-      for (const account of staffAccounts) {
-        const username = account.username.trim().toLowerCase();
-        const label = account.displayName.trim();
-        const accountRoles = account.roles?.length ? account.roles : [account.role];
-        if (!username || !label) continue;
-        expected.set(`${account.role}:${account.id}`, {
-          id: `${account.role}:${account.id}`,
-          sourceId: account.id,
-          type: account.role,
-          roles: accountRoles,
-          label,
-          username,
-          updatedAt: Date.now(),
-        });
-      }
-
-      await setDoc(
-        doc(firestore, 'schoolPublic', schoolId),
-        {
-          active: true,
-          staffDirectory: Array.from(expected.values()),
-          staffDirectoryUpdatedAt: Date.now(),
-          updatedAt: Date.now(),
-        },
-        { merge: true },
-      );
-    };
-
-    void syncDirectory().catch(() => {
-      // Best effort: staff can still use manually copied links once rules/data are in sync.
-    });
-  }, [firestore, schoolId, staffAccounts, teachers]);
-
   const getStaffPortalUrl = (key: string) => {
     const path = `/${schoolId}/teacher?account=${encodeURIComponent(key)}`;
     return `${origin}${path}`;
@@ -251,8 +188,8 @@ export function AdminTeachersTab({
     setDisplayName(account.displayName);
     setRole(account.role);
     setRoles(account.roles?.length ? account.roles : [account.role]);
-    setEmail(decryptField(account.email) || '');
-    setPhone(decryptField(account.phone) || '');
+    setEmail(deobfuscateField(account.email) || '');
+    setPhone(deobfuscateField(account.phone) || '');
     setError('');
     setDialogOpen(true);
   };
@@ -278,8 +215,8 @@ export function AdminTeachersTab({
       const primaryRole = cleanRoles[0];
       await onSaveStaffAccount(
         editing
-          ? { ...editing, username: cleanUsername, passcode: cleanPasscode, displayName: cleanDisplayName, role: primaryRole, roles: cleanRoles, email: encryptField(email), phone: encryptField(phone) }
-          : { username: cleanUsername, passcode: cleanPasscode, displayName: cleanDisplayName, role: primaryRole, roles: cleanRoles, email: encryptField(email), phone: encryptField(phone) },
+          ? { ...editing, username: cleanUsername, passcode: cleanPasscode, displayName: cleanDisplayName, role: primaryRole, roles: cleanRoles, email: obfuscateField(email), phone: obfuscateField(phone) }
+          : { username: cleanUsername, passcode: cleanPasscode, displayName: cleanDisplayName, role: primaryRole, roles: cleanRoles, email: obfuscateField(email), phone: obfuscateField(phone) },
       );
       setDialogOpen(false);
     } finally {
@@ -302,12 +239,12 @@ export function AdminTeachersTab({
     <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden">
       <CardHeader className="flex flex-row justify-between items-center py-6">
         <div>
-          <Helper content="Manage faculty and limited desk accounts for this school.">
+          <Helper content="Manage teachers and limited desk accounts for this school.">
             <CardTitle className="flex items-center gap-2">
-              <User className="w-5 h-5 text-destructive" /> Faculty
+              <User className="w-5 h-5 text-primary" /> Teachers
             </CardTitle>
           </Helper>
-          <CardDescription>Faculty can issue rewards. Desk staff get limited coupon, prize, library, or reports access.</CardDescription>
+          <CardDescription>Teachers can issue rewards. Desk staff get limited coupon, prize, library, or reports access.</CardDescription>
         </div>
         <div className="flex flex-wrap gap-2">
           <TabWalkthroughHeaderAction />
@@ -725,6 +662,7 @@ export function AdminTeachersTab({
                     ['prizeClerk', 'Prize desk redemption'],
                     ['librarian', 'Library catalog & checkouts'],
                     ['reports', 'Reports'],
+                    ['office', 'School Office (grades & billing)'],
                   ] as const).map(([value, label]) => (
                     <label key={value} className="flex items-center gap-2 text-sm font-medium">
                       <input

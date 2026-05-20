@@ -455,7 +455,7 @@ export function ThemeGeneratorModal({
                     ? error.message
                     : 'There was a problem generating the theme. Please try again.';
             toast({
-                title: 'Error',
+                title: 'Failed to generate theme',
                 description,
                 variant: 'destructive',
             });
@@ -506,7 +506,7 @@ export function ThemeGeneratorModal({
                 error instanceof Error && error.message
                     ? error.message
                     : 'Could not remove the theme. Please try again.';
-            toast({ title: 'Error', description, variant: 'destructive' });
+            toast({ title: 'Failed to remove theme', description, variant: 'destructive' });
         } finally {
             setIsRemovingTheme(false);
         }
@@ -554,7 +554,7 @@ export function ThemeGeneratorModal({
                     ? error.message
                     : 'There was a problem asking AI for a suggestion. Please try again.';
             toast({
-                title: 'Error',
+                title: 'Failed to generate suggestion',
                 description,
                 variant: 'destructive',
             });

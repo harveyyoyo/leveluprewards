@@ -7,7 +7,7 @@ import { useFirestore, useFunctions, useCollection, useMemoFirebase } from '@/fi
 import { collection } from 'firebase/firestore';
 import { useAppContext } from '@/components/AppProvider';
 import { useSettings } from '@/components/providers/SettingsProvider';
-import { getLibraryPolicyFromSettings } from '@/lib/libraryPolicy';
+import { computeDaysOverdue, formatDueDate, getLibraryPolicyFromSettings } from '@/lib/libraryPolicy';
 import type { Category } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -163,6 +163,7 @@ function LibraryBookPageInner({ schoolId }: { schoolId: string }) {
   }
 
   const isOut = item.status === 'checked_out';
+  const overdueDays = computeDaysOverdue(item.dueAt);
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
@@ -184,7 +185,13 @@ function LibraryBookPageInner({ schoolId }: { schoolId: string }) {
                 isOut ? 'border-amber-300 bg-amber-50 text-amber-900' : 'border-emerald-300 bg-emerald-50 text-emerald-900'
               }`}
             >
-              {isOut ? 'Currently checked out' : 'Available on shelf'}
+              {isOut
+                ? overdueDays > 0
+                  ? `Overdue by ${overdueDays} day${overdueDays === 1 ? '' : 's'}`
+                  : item.dueAt
+                    ? `Checked out · due ${formatDueDate(item.dueAt)}`
+                    : 'Currently checked out'
+                : 'Available on shelf'}
             </div>
 
             {lastAction ? (

@@ -73,8 +73,8 @@ export function StudentCsvColumnMapDialog({ open, onOpenChange, csvText, onConfi
         <DialogHeader className="px-6 pt-6 pb-4 border-b shrink-0">
           <DialogTitle>Map CSV columns</DialogTitle>
           <DialogDescription>
-            Match each file column to a student field. First and last name are required. The preview uses your first
-            data row.
+            Match each file column to a student field. First and last name are required. When headers are not recognized,
+            import uses AI instead. The preview uses your first data row.
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="flex-1 min-h-0 px-6 py-4">

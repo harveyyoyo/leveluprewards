@@ -44,7 +44,7 @@ export function AdminClassesTab({
   };
 
   return (
-    <Card className="w-full border-t-4 border-ring shadow-md overflow-hidden">
+    <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden">
       <CardHeader className="flex flex-row justify-between items-center py-6 bg-secondary">
         <div>
           <Helper content="Manage class groups for your school.">

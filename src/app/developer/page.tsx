@@ -64,6 +64,7 @@ interface SchoolInfo {
     payAttendance?: boolean;
     payLibrary?: boolean;
     payHomework?: boolean;
+    payOffice?: boolean;
   };
 }
 
@@ -177,7 +178,7 @@ export default function DeveloperPage() {
   const {
     loginState, isInitialized, isUserLoading, logout, createSchool, deleteSchool, updateSchool,
     devCreateBackup, devRestoreFromBackup, devDownloadBackup, devBackupAllSchools,
-    devVerifyBackup, devMigrateSchoolData, devResetSampleSchool, devSyncSchoolPublicIndex,
+    devVerifyBackup, devMigrateSchoolData, devResetSampleSchool, devSeedOfficeDemoData, devSyncSchoolPublicIndex,
     startDeveloperSupportSession,
   } = useAppContext();
   const firestore = useFirestore();
@@ -206,6 +207,7 @@ export default function DeveloperPage() {
     payAttendance: true,
     payLibrary: true,
     payHomework: true,
+    payOffice: false,
   });
   const [backupSchool, setBackupSchool] = useState<SchoolInfo | null>(null);
   const [schoolBackups, setSchoolBackups] = useState<BackupInfo[]>([]);
@@ -508,12 +510,14 @@ export default function DeveloperPage() {
         payAttendance: app?.payAttendance !== false,
         payLibrary: app?.payLibrary !== false,
         payHomework: app?.payHomework !== false,
+        payOffice: app?.payOffice === true,
       });
     } catch {
       setEditingPillars({
         payAttendance: school.appSettings?.payAttendance !== false,
         payLibrary: school.appSettings?.payLibrary !== false,
         payHomework: school.appSettings?.payHomework !== false,
+        payOffice: school.appSettings?.payOffice === true,
       });
     }
   };
@@ -524,6 +528,7 @@ export default function DeveloperPage() {
       payAttendance: true,
       payLibrary: true,
       payHomework: true,
+      payOffice: false,
     });
   };
 
@@ -537,6 +542,7 @@ export default function DeveloperPage() {
         payAttendance: editingPillars.payAttendance,
         payLibrary: editingPillars.payLibrary,
         payHomework: editingPillars.payHomework,
+        payOffice: editingPillars.payOffice,
       };
       const payload = {
         appSettings: nextAppSettings,
@@ -662,7 +668,7 @@ export default function DeveloperPage() {
       <div className="min-h-screen flex items-center justify-center">
         <Button disabled variant="ghost" size="lg" className="text-muted-foreground">
           <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-          Loading...
+          Loading…
         </Button>
       </div>
     );
@@ -938,7 +944,7 @@ export default function DeveloperPage() {
               <CardHeader className="pb-3">
                 <CardTitle className="text-base">Sample Schools</CardTitle>
                 <CardDescription>
-                  Reset built-in demo schools to default data. This wipes local changes for that sample only.
+                  Reset built-in demo schools to default data (rewards + School Office). This wipes local changes for that sample only.
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
@@ -955,6 +961,31 @@ export default function DeveloperPage() {
                   className="justify-center sm:flex-1"
                 >
                   <span className="font-semibold">Reset &quot;schoolabc&quot;</span>
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">School Office demo data</CardTitle>
+                <CardDescription>
+                  Seed roster, grades, and billing for a demo school without resetting rewards data. Enables the School Office pillar.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                <Button
+                  variant="secondary"
+                  onClick={() => devSeedOfficeDemoData('yeshiva')}
+                  className="justify-center sm:flex-1"
+                >
+                  Seed office — yeshiva
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => devSeedOfficeDemoData('schoolabc')}
+                  className="justify-center sm:flex-1"
+                >
+                  Seed office — schoolabc
                 </Button>
               </CardContent>
             </Card>
@@ -1360,31 +1391,31 @@ export default function DeveloperPage() {
             <DialogHeader>
               <DialogTitle>Product pillars: <span className="font-code">{pillarSchool?.id}</span></DialogTitle>
               <DialogDescription>
-                Turn attendance, library, and homework on or off for this school. All other features are controlled in Admin settings.
+                Turn product pillars on or off for this school. School Office is accessed directly (not from the rewards portal chooser).
               </DialogDescription>
             </DialogHeader>
             {pillarSchool ? (
                 <div className="space-y-4 py-2">
                   {PRODUCT_PILLAR_KEYS.map((key) => (
-                    <div
-                      key={key}
-                      className="flex items-center justify-between gap-4 rounded-xl border p-4"
-                    >
-                      <div>
-                        <Label className="text-sm font-bold">{PRODUCT_PILLAR_LABELS[key]}</Label>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {key === 'payAttendance' && 'Class sign-in, attendance rewards, and related admin tabs.'}
-                          {key === 'payLibrary' && 'Library catalog, checkout scans, and library notifications.'}
-                          {key === 'payHomework' && 'Teacher homework rewards (not shown on the student portal).'}
-                        </p>
+                    <div key={key} className="rounded-xl border p-4 space-y-2">
+                      <div className="flex items-center justify-between gap-4">
+                        <div>
+                          <Label className="text-sm font-bold">{PRODUCT_PILLAR_LABELS[key]}</Label>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {key === 'payAttendance' && 'Class sign-in, attendance rewards, and related admin tabs.'}
+                            {key === 'payLibrary' && 'Library catalog, checkout scans, and library notifications.'}
+                            {key === 'payHomework' && 'Teacher homework rewards (not shown on the student portal).'}
+                            {key === 'payOffice' && 'Grades, billing, and office-only student roster (not shared with rewards).'}
+                          </p>
+                        </div>
+                        <Switch
+                          checked={editingPillars[key]}
+                          onCheckedChange={(checked) =>
+                            setEditingPillars((prev) => ({ ...prev, [key]: checked }))
+                          }
+                          aria-label={PRODUCT_PILLAR_LABELS[key]}
+                        />
                       </div>
-                      <Switch
-                        checked={editingPillars[key]}
-                        onCheckedChange={(checked) =>
-                          setEditingPillars((prev) => ({ ...prev, [key]: checked }))
-                        }
-                        aria-label={PRODUCT_PILLAR_LABELS[key]}
-                      />
                     </div>
                   ))}
                 </div>

@@ -28,7 +28,8 @@ export function schoolPathAllowedByGate(
       scopes.has('secretary') ||
       scopes.has('prizeClerk') ||
       scopes.has('reports') ||
-      scopes.has('librarian')
+      scopes.has('librarian') ||
+      scopes.has('office')
     );
   }
   if (section === 'teacher') {
@@ -48,6 +49,9 @@ export function schoolPathAllowedByGate(
   }
   if (section === 'librarian') {
     return scopes.has('librarian') || scopes.has('admin');
+  }
+  if (section === 'office') {
+    return scopes.has('office') || scopes.has('admin');
   }
   if (section === 'library') {
     return true;

@@ -232,7 +232,7 @@ export function AdminPrizesTab({
       <CardHeader className="flex flex-row justify-between items-center py-6">
         <div>
           <CardTitle className="flex items-center gap-2">
-                <Gift className="text-destructive w-5 h-5" /> Rewards Shop
+                <Gift className="text-primary w-5 h-5" /> Rewards Shop
             <Button
               type="button"
               variant="ghost"

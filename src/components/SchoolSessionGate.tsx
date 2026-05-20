@@ -6,7 +6,7 @@ import { Loader2 } from 'lucide-react';
 import { useAppContext } from '@/components/AppProvider';
 import { canAccessHallOfFameRoute } from '@/lib/hallOfFameAccess';
 
-const ALLOWED = new Set(['school', 'student', 'teacher', 'admin', 'developer', 'secretary', 'prizeClerk', 'reports', 'librarian']);
+const ALLOWED = new Set(['school', 'student', 'teacher', 'admin', 'developer', 'secretary', 'prizeClerk', 'reports', 'librarian', 'office']);
 
 function SessionGateLoading({ label }: { label?: string }) {
   return (
@@ -32,7 +32,8 @@ function canUseRoute(pathname: string, routeSchoolId: string, loginState: string
       loginState === 'secretary' ||
       loginState === 'prizeClerk' ||
       loginState === 'reports' ||
-      loginState === 'librarian'
+      loginState === 'librarian' ||
+      loginState === 'office'
     );
   }
 
@@ -49,6 +50,7 @@ function canUseRoute(pathname: string, routeSchoolId: string, loginState: string
   if (section === 'prize-clerk') return loginState === 'prizeClerk' || loginState === 'admin';
   if (section === 'reports') return loginState === 'reports' || loginState === 'admin';
   if (section === 'librarian') return loginState === 'librarian' || loginState === 'admin';
+  if (section === 'office') return loginState === 'office' || loginState === 'admin';
   if (section === 'library') return true;
 
   if (section === 'hall-of-fame') return canAccessHallOfFameRoute(loginState);
@@ -133,7 +135,7 @@ function SchoolSessionGateBody({
     if (loginState === 'loggedOut' && isStaffSignInLink) {
       return (
         <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-2 text-muted-foreground text-sm">
-          <div className="animate-pulse font-semibold text-foreground">Loading...</div>
+          <div className="animate-pulse font-semibold text-foreground">Loading…</div>
         </div>
       );
     }

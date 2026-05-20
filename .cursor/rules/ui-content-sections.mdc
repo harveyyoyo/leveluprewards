@@ -1,0 +1,16 @@
+---
+description: Use ContentSectionTreeNav when an admin/office tab has multiple major content panels
+globs:
+  - src/app/**/admin/**/*.tsx
+  - src/components/office/**/*.tsx
+---
+
+# Content section tree navigation
+
+When a tab renders **two or more major content panels** (separate cards or regions), use **`ContentSectionTreeNav`** from `@/components/ui/content-section-tree-nav` so users switch sections without stacking every panel on one long page.
+
+Read `.agent/knowledge/ui-content-sections.md` for full rules. Do **not** use pill-style `TabsList` for this level of navigation.
+
+- Centered tree switcher (stem + branch labels as text links)
+- One panel visible at a time
+- Shared filters stay **above** the tree nav

@@ -56,7 +56,7 @@ import { StudentActivityModal } from '@/components/StudentActivityModal';
 import DynamicIcon from '@/components/DynamicIcon';
 import { Switch } from '@/components/ui/switch';
 import { cn, getStudentNickname, getRandomColor } from '@/lib/utils';
-import { encryptField, decryptField } from '@/lib/crypto';
+import { obfuscateField, deobfuscateField } from '@/lib/crypto';
 import {
   Tooltip,
   TooltipContent,
@@ -82,6 +82,7 @@ import dynamic from 'next/dynamic';
 import { CategoryModal } from '@/components/CategoryModal';
 import { LibraryItemModal } from '@/components/LibraryItemModal';
 import { normalizeLibraryUpc } from '@/lib/libraryScanCode';
+import { syncSchoolStaffDirectory } from '@/lib/syncSchoolStaffDirectory';
 import { StudentIdCard } from '@/components/StudentIdCard';
 import { IdCardPrintSetupDialog } from '@/components/admin/IdCardPrintSetupDialog';
 import { AchievementModal } from '@/components/AchievementModal';
@@ -211,6 +212,7 @@ const AdminHousesTab = dynamic(
 import { getReadableErrorMessage } from '@/lib/errorMessage';
 import { BulkRosterSetupDialog } from '@/components/BulkRosterSetupDialog';
 import { StudentCsvColumnMapDialog } from '@/components/StudentCsvColumnMapDialog';
+import { guessStudentCsvColumnMap, parseStudentCsvToMatrix } from '@/lib/studentCsvColumnMap';
 import { AdminPrizeDeskDashboard } from './AdminPrizeDeskDashboard';
 
 function describeCsvImportReport(
@@ -265,41 +267,57 @@ function describeSnapshotImport(result: SchoolSnapshotImportResult): {
 const fittedAdminTabClassName = 'transition-opacity duration-150 h-full min-h-0 w-full overflow-y-auto overflow-x-hidden pb-6';
 const scrollingAdminTabClassName = fittedAdminTabClassName;
 
+/** Mirrors the loaded admin shell: page header, tab row, default Students roster. */
 function AdminDashboardSkeleton() {
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-6 animate-pulse p-4 md:p-8">
-      <Card className="bg-card p-6 shadow-lg flex justify-between items-center">
-        <div>
-          <Skeleton className="h-8 w-64 mb-2" />
-          <Skeleton className="h-4 w-48" />
-        </div>
-        <Skeleton className="h-9 w-36" />
-      </Card>
+    <div
+      className="mx-auto flex h-full min-h-0 min-w-0 w-full max-w-7xl flex-col gap-6 p-4 md:p-8"
+      aria-busy="true"
+      aria-hidden="true"
+    >
+      <p className="sr-only" role="status">
+        Loading admin dashboard…
+      </p>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {[1, 2, 3, 4].map((i) => (
-          <Card key={i}>
-            <CardHeader>
-              <Skeleton className="h-6 w-24" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-12 w-full" />
-            </CardContent>
-          </Card>
-        ))}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-24" />
+          <Skeleton className="h-4 w-full max-w-md" />
+        </div>
+        <Skeleton className="h-10 w-40 shrink-0 rounded-xl" />
       </div>
 
-      <Card>
-        <CardHeader className="flex flex-row justify-between items-center">
-          <Skeleton className="h-6 w-32" />
-          <div className="flex gap-2">
-            <Skeleton className="h-9 w-24" />
-            <Skeleton className="h-9 w-24" />
+      <div
+        className="hidden w-full flex-wrap items-center justify-center gap-2 rounded-2xl border bg-muted/50 p-2 shadow-sm md:flex"
+        aria-hidden
+      >
+        <Skeleton className="h-10 w-[5.5rem] rounded-xl" />
+        <Skeleton className="h-10 w-20 rounded-xl" />
+        <Skeleton className="h-10 w-24 rounded-xl" />
+        <Skeleton className="h-10 w-20 rounded-xl" />
+        <Skeleton className="h-10 w-[4.5rem] rounded-xl" />
+        <Skeleton className="ml-1 h-10 w-28 rounded-xl" />
+      </div>
+      <Skeleton className="h-12 w-full rounded-xl md:hidden" aria-hidden />
+
+      <Card className="w-full overflow-hidden border-t-4 border-primary shadow-md">
+        <CardHeader className="flex flex-col gap-4 py-6 sm:flex-row sm:items-center sm:justify-between">
+          <Skeleton className="h-7 w-32" />
+          <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
+            <Skeleton className="h-10 w-32 rounded-xl" />
+            <Skeleton className="h-10 w-28 rounded-xl" />
+            <Skeleton className="hidden h-10 w-36 rounded-xl sm:block" />
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {[1, 2, 3].map(i => (
-            <Skeleton key={i} className="h-16 w-full" />
+        <CardContent className="space-y-4 p-6 pt-0">
+          <Skeleton className="h-11 w-full rounded-full" />
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Skeleton className="h-11 w-full rounded-xl sm:w-[180px]" />
+            <Skeleton className="h-11 w-full rounded-xl sm:w-[180px]" />
+          </div>
+          <Skeleton className="h-10 w-full rounded-xl" />
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <Skeleton key={i} className="h-14 w-full rounded-xl" />
           ))}
         </CardContent>
       </Card>
@@ -336,10 +354,11 @@ function AdminDashboardInner() {
   const { toast } = useToast();
   const confirm = useConfirm();
   const playSound = useArcadeSound();
+  const authFetch = useAuthFetch();
   const studentCsvInputRef = useRef<HTMLInputElement>(null);
-  const studentCsvMapInputRef = useRef<HTMLInputElement>(null);
   const [csvColumnMapOpen, setCsvColumnMapOpen] = useState(false);
   const [csvColumnMapText, setCsvColumnMapText] = useState('');
+  const [csvImportBusy, setCsvImportBusy] = useState(false);
   const { settings, updateSettings } = useSettings();
   const couponsTabMigratedRef = useRef(false);
 
@@ -379,7 +398,7 @@ function AdminDashboardInner() {
     attendancePeriods, attendancePeriodsLoading,
     schoolData, schoolDocRef,
     appConfigGlobal,
-  } = useAdminDashboardData(schoolId, settings.payLibrary);
+  } = useAdminDashboardData(schoolId, settings.payLibrary, settings.enableHouses);
 
   const backupsQuery = useMemoFirebase(
     () => (firestore && schoolId && loginState === 'developer' ? collection(firestore, 'schools', schoolId, 'backups') : null),
@@ -650,6 +669,23 @@ function AdminDashboardInner() {
     ];
   }, [settings.adminHiddenAddOnTabs, settings.adminPinnedAddOnTabs, updateSettings]);
 
+  /** Recover from older builds that pinned Houses without setting enableHouses. */
+  useEffect(() => {
+    const pinned = settings.adminPinnedAddOnTabs || [];
+    if (pinned.includes('houses') && !settings.enableHouses) {
+      updateSettings({ enableHouses: true });
+    }
+  }, [settings.adminPinnedAddOnTabs, settings.enableHouses, updateSettings]);
+
+  /** Publish teachers + desk staff (including librarians) to the portal staff sign-in list. */
+  useEffect(() => {
+    if (!firestore || !schoolId || teachersLoading || staffAccountsLoading) return;
+    if (!teachers || !staffAccounts) return;
+    void syncSchoolStaffDirectory(firestore, schoolId, teachers, staffAccounts).catch(() => {
+      // Best effort — staff can still sign in via direct librarian URL if needed.
+    });
+  }, [firestore, schoolId, teachers, staffAccounts, teachersLoading, staffAccountsLoading]);
+
   const visibleAddOnTabs = useMemo(() => {
     return addOnTabDefs.filter((t) => t.isOn(settings));
   }, [addOnTabDefs, settings]);
@@ -672,7 +708,7 @@ function AdminDashboardInner() {
     const base: AdminMainTabDef[] = [
       { value: 'students', label: 'Students', icon: Users },
       { value: 'classes', label: 'Classes', icon: BookOpen },
-      { value: 'teachers', label: 'Faculty', icon: User },
+      { value: 'teachers', label: 'Teachers', icon: User },
       { value: 'prizes', label: 'Prizes', icon: Gift },
       { value: 'categories', label: 'Points', icon: Tag },
       { value: 'reports', label: 'Reports', icon: FileText },
@@ -777,6 +813,7 @@ function AdminDashboardInner() {
         case 'bonuspoints': patch.enableAchievements = true; break;
         case 'category-badges': patch.enableBadges = true; break;
         case 'goals': patch.enableGoals = true; break;
+        case 'houses': patch.enableHouses = true; break;
         case 'notifications': patch.enableNotifications = true; break;
         case 'student-portal':
           break;
@@ -825,6 +862,10 @@ function AdminDashboardInner() {
         case 'goals':
           patch.enableGoals = false;
           nextHidden = nextHidden.filter((x) => x !== 'goals');
+          break;
+        case 'houses':
+          patch.enableHouses = false;
+          nextHidden = nextHidden.filter((x) => x !== 'houses');
           break;
         case 'notifications':
           patch.enableNotifications = false;
@@ -896,6 +937,9 @@ function AdminDashboardInner() {
         case 'goals':
           patch.enableGoals = true;
           break;
+        case 'houses':
+          patch.enableHouses = true;
+          break;
         case 'notifications':
           patch.enableNotifications = true;
           break;
@@ -959,6 +1003,10 @@ function AdminDashboardInner() {
         case 'goals':
           patch.enableGoals = false;
           nextHidden = nextHidden.filter((x) => x !== 'goals');
+          break;
+        case 'houses':
+          patch.enableHouses = false;
+          nextHidden = nextHidden.filter((x) => x !== 'houses');
           break;
         case 'notifications':
           patch.enableNotifications = false;
@@ -1133,7 +1181,7 @@ function AdminDashboardInner() {
     if (editingTeacher) {
       if (budgetVal === undefined) {
         updateTeacher(
-          { ...editingTeacher, name: newTeacherName, username, passcode, email: encryptField(newTeacherEmail), phone: encryptField(newTeacherPhone) },
+          { ...editingTeacher, name: newTeacherName, username, passcode, email: obfuscateField(newTeacherEmail), phone: obfuscateField(newTeacherPhone) },
           { clearTeacherBudget: true },
         );
       } else {
@@ -1147,8 +1195,8 @@ function AdminDashboardInner() {
           passcode,
           monthlyBudget: budgetVal,
           budgetPeriod: periodForSave,
-          email: encryptField(newTeacherEmail),
-          phone: encryptField(newTeacherPhone),
+          email: obfuscateField(newTeacherEmail),
+          phone: obfuscateField(newTeacherPhone),
         };
         if (budgetChanged) {
           updateTeacher({
@@ -1161,14 +1209,14 @@ function AdminDashboardInner() {
         }
       }
     } else if (budgetVal === undefined) {
-      addTeacher({ name: newTeacherName, username, passcode, email: encryptField(newTeacherEmail), phone: encryptField(newTeacherPhone) });
+      addTeacher({ name: newTeacherName, username, passcode, email: obfuscateField(newTeacherEmail), phone: obfuscateField(newTeacherPhone) });
     } else {
       addTeacher({
         name: newTeacherName,
         username,
         passcode,
-        email: encryptField(newTeacherEmail),
-        phone: encryptField(newTeacherPhone),
+        email: obfuscateField(newTeacherEmail),
+        phone: obfuscateField(newTeacherPhone),
         monthlyBudget: budgetVal,
         budgetPeriod: periodForSave,
         spentThisMonth: 0,
@@ -1210,33 +1258,70 @@ function AdminDashboardInner() {
     setActivityStudent(student);
   };
 
+  const importStudentsCsvWithAi = async (text: string) => {
+    if (!schoolId) return;
+    setCsvImportBusy(true);
+    try {
+      const res = await authFetch('/api/parse-students', {
+        method: 'POST',
+        body: JSON.stringify({
+          prompt: text,
+          model: localStorage.getItem('arcade_ai_model') || 'gpt-4o-mini',
+          classNames: (classes || []).map((c) => c.name),
+          schoolId,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(typeof err.error === 'string' ? err.error : 'AI could not read this CSV.');
+      }
+      const parsed = await res.json();
+      if (!Array.isArray(parsed) || parsed.length === 0) {
+        playSound('error');
+        toast({
+          variant: 'destructive',
+          title: 'No students found',
+          description: 'AI could not extract any students from this file. Try a different export or paste into Bulk setup.',
+        });
+        return;
+      }
+      await handleAiCommitSnapshot({ students: parsed });
+    } catch (err: unknown) {
+      playSound('error');
+      toast({
+        variant: 'destructive',
+        title: 'Failed to import CSV',
+        description: getReadableErrorMessage(err, 'AI import failed.'),
+      });
+    } finally {
+      setCsvImportBusy(false);
+    }
+  };
+
   const onStudentCsvFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
       const text = await file.text();
-      const report = await uploadStudents(text, students || [], classes || []);
-      playSound(report.success > 0 ? 'success' : 'error');
-      const msg = describeCsvImportReport(report, 'Students');
-      toast({ variant: msg.variant, title: msg.title, description: msg.description });
-    } catch (err: any) {
-      playSound('error');
+      const { rows } = parseStudentCsvToMatrix(text);
+      if (rows.length === 0) {
+        playSound('error');
+        toast({ variant: 'destructive', title: 'Empty file', description: 'The CSV has no rows to import.' });
+        return;
+      }
+      const map = guessStudentCsvColumnMap(rows[0] || []);
+      const firstIdx = map.indexOf('firstName');
+      const lastIdx = map.indexOf('lastName');
+      if (firstIdx >= 0 && lastIdx >= 0 && firstIdx !== lastIdx) {
+        setCsvColumnMapText(text);
+        setCsvColumnMapOpen(true);
+        return;
+      }
       toast({
-        variant: 'destructive',
-        title: 'Failed to process CSV file.',
-        description: (err as Error).message,
+        title: 'Reading CSV with AI…',
+        description: 'Column headers were not recognized; using AI to extract students.',
       });
-    }
-    if (studentCsvInputRef.current) studentCsvInputRef.current.value = '';
-  };
-
-  const onStudentCsvMapFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const text = await file.text();
-      setCsvColumnMapText(text);
-      setCsvColumnMapOpen(true);
+      await importStudentsCsvWithAi(text);
     } catch (err: unknown) {
       playSound('error');
       toast({
@@ -1244,12 +1329,9 @@ function AdminDashboardInner() {
         title: 'Failed to read CSV file.',
         description: getReadableErrorMessage(err, 'Could not read file.'),
       });
+    } finally {
+      if (studentCsvInputRef.current) studentCsvInputRef.current.value = '';
     }
-    if (studentCsvMapInputRef.current) studentCsvMapInputRef.current.value = '';
-  };
-
-  const handleStudentCsvMapUpload = () => {
-    studentCsvMapInputRef.current?.click();
   };
 
   const handleCsvColumnMapConfirm = async (canonicalCsv: string) => {
@@ -1676,11 +1758,9 @@ function AdminDashboardInner() {
               students={students}
               filteredStudents={filteredStudents}
               studentCsvInputRef={studentCsvInputRef}
-              studentCsvMapInputRef={studentCsvMapInputRef}
               onStudentCsvFileChange={onStudentCsvFileChange}
-              onStudentCsvMapFileChange={onStudentCsvMapFileChange}
               handleStudentCsvUpload={handleStudentCsvUpload}
-              handleStudentCsvMapUpload={handleStudentCsvMapUpload}
+              csvImportBusy={csvImportBusy}
               selectionMode={selectionMode}
               setSelectionMode={setSelectionMode}
               selectedStudentIds={selectedStudentIds}
@@ -1759,8 +1839,8 @@ function AdminDashboardInner() {
                 setNewTeacherBudget(t.monthlyBudget?.toString() || '');
                 const p = t.budgetPeriod;
                 setNewTeacherBudgetPeriod(p === 'day' || p === 'week' || p === 'month' ? p : 'month');
-                setNewTeacherEmail(decryptField(t.email) || '');
-                setNewTeacherPhone(decryptField(t.phone) || '');
+                setNewTeacherEmail(deobfuscateField(t.email) || '');
+                setNewTeacherPhone(deobfuscateField(t.phone) || '');
                 setIsTeacherModalOpen(true);
               }}
               onUpdateStudent={updateStudent}
@@ -1780,11 +1860,22 @@ function AdminDashboardInner() {
                 if (!firestore || !schoolId) return;
                 try {
                   if ('id' in account && account.id) {
-                    await updateStaffAccount(firestore, schoolId, account as StaffAccount);
+                    const updated = account as StaffAccount;
+                    await updateStaffAccount(firestore, schoolId, updated);
                     toast({ title: 'Account updated' });
+                    if (teachers && staffAccounts) {
+                      const merged = staffAccounts.map((row) => (row.id === updated.id ? updated : row));
+                      void syncSchoolStaffDirectory(firestore, schoolId, teachers, merged).catch(() => undefined);
+                    }
                   } else {
-                    await addStaffAccount(firestore, schoolId, account);
+                    const created = await addStaffAccount(firestore, schoolId, account);
                     toast({ title: 'Account created' });
+                    if (teachers) {
+                      void syncSchoolStaffDirectory(firestore, schoolId, teachers, [
+                        ...(staffAccounts || []),
+                        created,
+                      ]).catch(() => undefined);
+                    }
                   }
                 } catch (e) {
                   toast({ variant: 'destructive', title: 'Save failed', description: getReadableErrorMessage(e, 'Save failed.') });
@@ -1802,6 +1893,10 @@ function AdminDashboardInner() {
                 try {
                   await deleteStaffAccount(firestore, schoolId, id);
                   toast({ title: 'Account removed' });
+                  if (teachers && staffAccounts) {
+                    const remaining = staffAccounts.filter((row) => row.id !== id);
+                    void syncSchoolStaffDirectory(firestore, schoolId, teachers, remaining).catch(() => undefined);
+                  }
                 } catch (e) {
                   toast({ variant: 'destructive', title: 'Delete failed', description: getReadableErrorMessage(e, 'Delete failed.') });
                 }
@@ -1969,6 +2064,7 @@ function AdminDashboardInner() {
           <TabsContent value="library" className={fittedAdminTabClassName}>
             <AdminLibraryTab
               libraryItems={library}
+              students={students}
               categories={categories}
               getStudentName={getStudentName}
               onAddLibraryItem={handleAddLibraryItem}
@@ -2358,7 +2454,7 @@ function AdminDashboardInner() {
               } catch (e) {
                 console.error(e);
                 playSound('error');
-                toast({ variant: 'destructive', title: 'Error', description: 'Failed to update student theme.' });
+                toast({ variant: 'destructive', title: 'Failed to update student theme', description: 'Failed to update student theme.' });
               }
             }}
             onRemoveTheme={async () => {
@@ -2372,7 +2468,7 @@ function AdminDashboardInner() {
               } catch (e) {
                 console.error(e);
                 playSound('error');
-                toast({ variant: 'destructive', title: 'Error', description: 'Failed to remove student theme.' });
+                toast({ variant: 'destructive', title: 'Failed to remove student theme', description: 'Failed to remove student theme.' });
                 throw e;
               }
             }}

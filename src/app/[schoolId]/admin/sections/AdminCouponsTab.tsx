@@ -1,4 +1,7 @@
+'use client';
+
 import { useMemo, useState } from 'react';
+import { ContentSectionTreeNav } from '@/components/ui/content-section-tree-nav';
 import { Ticket, Search, Trash2, X, ChevronsUpDown } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Helper } from '@/components/ui/helper';
@@ -45,6 +48,7 @@ export function AdminCouponsTab({
   const [isPurging, setIsPurging] = useState(false);
   const [availableGroupsPage, setAvailableGroupsPage] = useState(1);
   const [redeemedGroupsPage, setRedeemedGroupsPage] = useState(1);
+  const [section, setSection] = useState<'available' | 'redeemed'>('available');
   const [expandedAvailableGroupKey, setExpandedAvailableGroupKey] = useState<string | null>(null);
   const [expandedRedeemedGroupKey, setExpandedRedeemedGroupKey] = useState<string | null>(null);
 
@@ -174,88 +178,104 @@ export function AdminCouponsTab({
   };
 
   return (
-    <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden">
-      <CardHeader className="flex flex-row items-start justify-between gap-4">
-        <div>
-        <Helper content="This section lists coupons generated for this school: still available, and already redeemed by a student.">
-          <CardTitle className="flex items-center gap-2">
-            <Ticket className="w-5 h-5 text-destructive" /> Coupon Management
-          </CardTitle>
-        </Helper>
-        <CardDescription>
-          View all available and redeemed coupons in the system. Print new coupon sheets from Admin → Points.
-        </CardDescription>
-        </div>
-        <TabWalkthroughHeaderAction />
-      </CardHeader>
-
-      <div className="px-6 pb-4 flex flex-wrap gap-4 items-end border-b">
-        <div className="flex-1 min-w-[200px]">
-          <label className="text-[10px] font-black uppercase text-muted-foreground mb-1.5 block tracking-wider">Search Code</label>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Enter coupon code..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 rounded-xl h-11"
-            />
+    <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden bg-background/95 backdrop-blur-md">
+      <CardHeader className="py-6 bg-secondary/35 border-b border-border/40">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <Helper content="This section lists coupons generated for this school: still available, and already redeemed by a student.">
+              <CardTitle className="flex items-center gap-2 text-2xl font-black tracking-tight text-foreground">
+                <Ticket className="w-6 h-6 text-primary animate-pulse" /> Coupon Management
+              </CardTitle>
+            </Helper>
+            <CardDescription className="mt-1 text-sm font-medium">
+              View all available and redeemed coupons in the system. Print new coupon sheets from Admin → Points.
+            </CardDescription>
+          </div>
+          <div className="flex shrink-0">
+            <TabWalkthroughHeaderAction />
           </div>
         </div>
-        <div className="w-full sm:w-48">
-          <label className="text-[10px] font-black uppercase text-muted-foreground mb-1.5 block tracking-wider">Category</label>
-          <Select value={category} onValueChange={setCategory}>
-            <SelectTrigger className="rounded-xl h-11">
-              <SelectValue placeholder="All Categories" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              {categories.map((c) => (
-                <SelectItem key={c} value={c}>
-                  {c}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="w-full sm:w-48">
-          <label className="text-[10px] font-black uppercase text-muted-foreground mb-1.5 block tracking-wider">Teacher</label>
-          <Select value={teacher} onValueChange={setTeacher}>
-            <SelectTrigger className="rounded-xl h-11">
-              <SelectValue placeholder="All Teachers" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Teachers</SelectItem>
-              {teachers.map((t) => (
-                <SelectItem key={t} value={t}>
-                  {t}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        {(search || category !== 'all' || teacher !== 'all') && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => {
-              setSearch('');
-              setCategory('all');
-              setTeacher('all');
-              setAvailableGroupsPage(1);
-              setRedeemedGroupsPage(1);
-              setExpandedAvailableGroupKey(null);
-              setExpandedRedeemedGroupKey(null);
-            }}
-            className="rounded-xl h-11 w-11"
-            title="Clear filters"
-          >
-            <X className="w-4 h-4" />
-          </Button>
-        )}
-      </div>
+      </CardHeader>
 
-      <CardContent className="grid md:grid-cols-2 gap-6 pt-6">
+      <CardContent className="p-6 space-y-6">
+        <ContentSectionTreeNav
+          items={[
+            { id: 'available', label: 'Available', badge: filteredAvailable.length },
+            { id: 'redeemed', label: 'Redeemed', badge: filteredRedeemed.length },
+          ]}
+          value={section}
+          onValueChange={(id) => setSection(id as 'available' | 'redeemed')}
+          className="mb-2"
+        />
+
+        <div className="flex flex-wrap gap-4 items-end bg-muted/20 p-4 rounded-2xl border">
+          <div className="flex-1 min-w-[200px]">
+            <label className="text-[10px] font-black uppercase text-muted-foreground mb-1.5 block tracking-wider">Search Code</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Enter coupon code..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9 rounded-xl h-11 bg-background"
+              />
+            </div>
+          </div>
+          <div className="w-full sm:w-48">
+            <label className="text-[10px] font-black uppercase text-muted-foreground mb-1.5 block tracking-wider">Category</label>
+            <Select value={category} onValueChange={setCategory}>
+              <SelectTrigger className="rounded-xl h-11 bg-background">
+                <SelectValue placeholder="All Categories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {categories.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {c}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="w-full sm:w-48">
+            <label className="text-[10px] font-black uppercase text-muted-foreground mb-1.5 block tracking-wider">Teacher</label>
+            <Select value={teacher} onValueChange={setTeacher}>
+              <SelectTrigger className="rounded-xl h-11 bg-background">
+                <SelectValue placeholder="All Teachers" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Teachers</SelectItem>
+                {teachers.map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {t}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {(search || category !== 'all' || teacher !== 'all') && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                setSearch('');
+                setCategory('all');
+                setTeacher('all');
+                setAvailableGroupsPage(1);
+                setRedeemedGroupsPage(1);
+                setExpandedAvailableGroupKey(null);
+                setExpandedRedeemedGroupKey(null);
+              }}
+              className="rounded-xl h-11 w-11 hover:bg-background border"
+              title="Clear filters"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          )}
+        </div>
+
+        <div className="pt-2">
+          {section === 'available' ? (
         <div className="space-y-4">
           <div className="flex justify-between items-end">
             <h3 className="text-lg font-black tracking-tight">Available ({filteredAvailable.length})</h3>
@@ -457,7 +477,7 @@ export function AdminCouponsTab({
             )}
           </div>
         </div>
-
+        ) : (
         <div className="space-y-4">
           <div className="flex justify-between items-end">
             <h3 className="text-lg font-black tracking-tight">Redeemed ({filteredRedeemed.length})</h3>
@@ -654,8 +674,10 @@ export function AdminCouponsTab({
             )}
           </div>
         </div>
-      </CardContent>
-    </Card>
+        )}
+      </div>
+    </CardContent>
+  </Card>
   );
 }
 

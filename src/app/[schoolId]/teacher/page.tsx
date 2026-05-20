@@ -36,7 +36,7 @@ const TeacherPrinterInner = dynamic(
 type StaffPortalLoginOption = {
     id: string;
     sourceId?: string;
-    type: 'teacher' | 'secretary' | 'prizeClerk' | 'reports';
+    type: 'teacher' | 'secretary' | 'prizeClerk' | 'reports' | 'librarian' | 'office';
     label: string;
     username: string;
 };
@@ -53,6 +53,8 @@ function roleLabel(type: StaffPortalLoginOption['type']) {
     if (type === 'teacher') return 'Teacher';
     if (type === 'secretary') return 'Coupon printing';
     if (type === 'prizeClerk') return 'Prize desk';
+    if (type === 'librarian') return 'Library';
+    if (type === 'office') return 'School Office';
     return 'Reports';
 }
 
@@ -60,6 +62,8 @@ function staffLandingPath(schoolId: string, type: StaffPortalLoginOption['type']
     if (type === 'secretary') return `/${schoolId}/secretary`;
     if (type === 'prizeClerk') return `/${schoolId}/admin`;
     if (type === 'reports') return `/${schoolId}/reports`;
+    if (type === 'librarian') return `/${schoolId}/librarian`;
+    if (type === 'office') return `/${schoolId}/office`;
     return `/${schoolId}/teacher`;
 }
 
@@ -118,6 +122,7 @@ export default function TeacherPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const passcodeRef = useRef<HTMLInputElement | null>(null);
     const directAccountKey = searchParams.get('account') || '';
+    const adminTeacherBypass = searchParams.get('as') === 'admin';
     const schoolId = useMemo(
         () => (params.schoolId || activeSchoolId || '').trim().toLowerCase(),
         [activeSchoolId, params.schoolId],
@@ -139,7 +144,12 @@ export default function TeacherPage() {
                     option?.id &&
                     option?.username &&
                     option?.label &&
-                    (option.type === 'teacher' || option.type === 'secretary' || option.type === 'prizeClerk' || option.type === 'reports'),
+                    (option.type === 'teacher' ||
+                        option.type === 'secretary' ||
+                        option.type === 'prizeClerk' ||
+                        option.type === 'reports' ||
+                        option.type === 'librarian' ||
+                        option.type === 'office'),
             ),
         [schoolPublic],
     );
@@ -153,6 +163,10 @@ export default function TeacherPage() {
             router.replace(`/${schoolId}/admin`);
         } else if (loginState === 'reports') {
             router.replace(`/${schoolId}/reports`);
+        } else if (loginState === 'librarian') {
+            router.replace(`/${schoolId}/librarian`);
+        } else if (loginState === 'office') {
+            router.replace(`/${schoolId}/office`);
         }
     }, [directAccountKey, isInitialized, loginState, schoolId, router]);
 
@@ -243,8 +257,13 @@ export default function TeacherPage() {
         );
     }
 
-    if (!directAccountKey && (loginState === 'teacher' || loginState === 'admin' || loginState === 'developer')) {
-        const displayName = userName || (loginState === 'admin' || loginState === 'developer' ? 'Admin' : 'Teacher');
+    const canOpenTeacherTools =
+        loginState === 'teacher' ||
+        (adminTeacherBypass && (loginState === 'admin' || loginState === 'developer') && isAdmin);
+
+    if (!directAccountKey && canOpenTeacherTools) {
+        const displayName =
+            userName || (loginState === 'admin' || loginState === 'developer' ? 'Admin' : 'Teacher');
         const validTeacherId = teacherDocId || userId || '';
         return <TeacherPrinter teacherName={displayName} teacherId={validTeacherId} onLogout={handleLogout} />;
     }
@@ -264,7 +283,7 @@ export default function TeacherPage() {
                             <UserCheck className="w-10 h-10" />
                         </div>
                         <div>
-                            <CardTitle className={`text-2xl font-black tracking-tight ${isGraphic ? 'text-foreground' : 'text-slate-800'}`}>Teacher & Faculty Portal</CardTitle>
+                            <CardTitle className={`text-2xl font-black tracking-tight ${isGraphic ? 'text-foreground' : 'text-slate-800'}`}>Teacher Portal</CardTitle>
                             <CardDescription className={isGraphic ? 'text-muted-foreground' : ''}>
                                 Print point coupons from the Points tab, use Manually Add or Deduct Points for direct changes, and manage reports and prizes.
                             </CardDescription>
@@ -340,18 +359,36 @@ export default function TeacherPage() {
                                 )}
                             </Button>
 
-                            <Button
-                                type="button"
-                                variant="outline"
-                                className="w-full h-12 rounded-xl font-bold"
-                                onClick={() => {
-                                    playSound('click');
-                                    setAdminDialogOpen(true);
-                                }}
-                            >
-                                <ShieldCheck className="mr-2 h-4 w-4" aria-hidden />
-                                Sign in as admin
-                            </Button>
+                            {isAdmin && loginState === 'admin' && (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="w-full h-12 rounded-xl font-bold"
+                                    onClick={() => {
+                                        playSound('click');
+                                        router.replace(`/${schoolId}/teacher?as=admin`);
+                                    }}
+                                    disabled={isSubmitting}
+                                >
+                                    <ShieldCheck className="mr-2 h-4 w-4" aria-hidden />
+                                    Continue as admin
+                                </Button>
+                            )}
+
+                            {!isAdmin && (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="w-full h-12 rounded-xl font-bold"
+                                    onClick={() => {
+                                        playSound('click');
+                                        setAdminDialogOpen(true);
+                                    }}
+                                >
+                                    <ShieldCheck className="mr-2 h-4 w-4" aria-hidden />
+                                    Sign in as admin
+                                </Button>
+                            )}
                         </form>
 
                         <Dialog
@@ -410,7 +447,7 @@ export default function TeacherPage() {
                                                 }
                                                 playSound('login');
                                                 setAdminDialogOpen(false);
-                                                router.replace(`/${schoolId}/teacher`);
+                                                router.replace(`/${schoolId}/teacher?as=admin`);
                                             })();
                                         }}
                                     />
@@ -456,7 +493,7 @@ export default function TeacherPage() {
                                                 }
                                                 playSound('login');
                                                 setAdminDialogOpen(false);
-                                                router.replace(`/${schoolId}/teacher`);
+                                                router.replace(`/${schoolId}/teacher?as=admin`);
                                             })();
                                         }}
                                     >

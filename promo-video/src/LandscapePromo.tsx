@@ -1,5 +1,4 @@
 import React from "react";
-import { Video } from "@remotion/media";
 import {
   AbsoluteFill,
   Sequence,
@@ -8,6 +7,8 @@ import {
   staticFile,
   useCurrentFrame,
   useVideoConfig,
+  Img,
+  Audio,
 } from "remotion";
 import {
   LANDSCAPE_CLIPS,
@@ -38,21 +39,17 @@ const FLASH_BOUNDARIES = [
   T.actionEnd,
 ];
 
-const ClipVideo: React.FC<{
-  clip: (typeof LANDSCAPE_CLIPS)[keyof typeof LANDSCAPE_CLIPS];
-}> = ({ clip }) => {
-  const { fps } = useVideoConfig();
-  const trimBefore =
-    clip.trimBeforeSec > 0 ? Math.round(clip.trimBeforeSec * fps) : undefined;
-
+const ClipScreenshot: React.FC<{
+  src: string;
+}> = ({ src }) => {
   return (
-    <Video
-      src={staticFile(clip.src)}
-      playbackRate={clip.playbackRate}
-      trimBefore={trimBefore}
-      muted
-      objectFit="cover"
-      style={{ width: "100%", height: "100%" }}
+    <Img
+      src={staticFile(src)}
+      style={{
+        width: "100%",
+        height: "100%",
+        objectFit: "cover",
+      }}
     />
   );
 };
@@ -145,34 +142,34 @@ const LandscapeMontage: React.FC = () => {
       >
         <LandscapeBrowser scale={cardScale} rotateY={rotateY} kenBurn={kenBurn}>
           <Sequence from={0} durationInFrames={loginDur}>
-            <ClipVideo clip={LANDSCAPE_CLIPS.login} />
+            <ClipScreenshot src="walkthrough-login.png" />
           </Sequence>
           <Sequence from={loginDur} durationInFrames={selectorDur}>
-            <ClipVideo clip={LANDSCAPE_CLIPS.selector} />
+            <ClipScreenshot src="walkthrough-selector.png" />
           </Sequence>
           <Sequence
             from={loginDur + selectorDur}
             durationInFrames={kioskDur}
           >
-            <ClipVideo clip={LANDSCAPE_CLIPS.studentKiosk} />
+            <ClipScreenshot src="walkthrough-student-kiosk.png" />
           </Sequence>
           <Sequence
             from={loginDur + selectorDur + kioskDur}
             durationInFrames={homeDur}
           >
-            <ClipVideo clip={LANDSCAPE_CLIPS.studentHome} />
+            <ClipScreenshot src="walkthrough-student-home.png" />
           </Sequence>
           <Sequence
             from={loginDur + selectorDur + kioskDur + homeDur}
             durationInFrames={dashboardDur}
           >
-            <ClipVideo clip={LANDSCAPE_CLIPS.dashboard} />
+            <ClipScreenshot src="walkthrough-dashboard.png" />
           </Sequence>
           <Sequence
             from={loginDur + selectorDur + kioskDur + homeDur + dashboardDur}
             durationInFrames={actionDur}
           >
-            <ClipVideo clip={LANDSCAPE_CLIPS.action} />
+            <ClipScreenshot src="walkthrough-action.png" />
           </Sequence>
         </LandscapeBrowser>
 
@@ -195,6 +192,7 @@ const LandscapeMontage: React.FC = () => {
 export const LandscapePromo: React.FC = () => {
   return (
     <AbsoluteFill style={{ backgroundColor: BRAND.bg, color: "white" }}>
+      <Audio src={staticFile("background-music.mp3")} volume={0.3} loop />
       <LandscapeBackground totalFrames={T.total} />
       <Sequence durationInFrames={T.introEnd}>
         <LandscapeIntro />

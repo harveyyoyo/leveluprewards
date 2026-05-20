@@ -1,0 +1,133 @@
+{
+  "capturedAt": "2026-05-19T12:26:15.787Z",
+  "base": "https://portal.leveluprewards.app",
+  "school": "schoolabc",
+  "variants": [
+    {
+      "category": "login",
+      "name": "login-demo-picker",
+      "path": "capture-library\\login\\login-demo-picker.mp4",
+      "status": "ok"
+    },
+    {
+      "category": "login",
+      "name": "login-type-schoolid",
+      "path": "capture-library\\login\\login-type-schoolid.mp4",
+      "status": "ok"
+    },
+    {
+      "category": "login",
+      "name": "login-portal-settle",
+      "path": "capture-library\\login\\login-portal-settle.mp4",
+      "status": "ok"
+    },
+    {
+      "category": "selector",
+      "name": "selector-hub-pan",
+      "path": "capture-library\\selector\\selector-hub-pan.mp4",
+      "status": "ok"
+    },
+    {
+      "category": "selector",
+      "name": "selector-hover-kiosk",
+      "path": "capture-library\\selector\\selector-hover-kiosk.mp4",
+      "status": "ok"
+    },
+    {
+      "category": "selector",
+      "name": "selector-hover-teacher",
+      "path": "capture-library\\selector\\selector-hover-teacher.mp4",
+      "status": "ok"
+    },
+    {
+      "category": "student-kiosk",
+      "name": "kiosk-type-entry",
+      "path": "capture-library\\student-kiosk\\kiosk-type-entry.mp4",
+      "status": "ok"
+    },
+    {
+      "category": "student-kiosk",
+      "name": "kiosk-signin-rewards",
+      "path": "capture-library\\student-kiosk\\kiosk-signin-rewards.mp4",
+      "status": "ok"
+    },
+    {
+      "category": "student-kiosk",
+      "name": "kiosk-welcome-balance",
+      "path": "capture-library\\student-kiosk\\kiosk-welcome-balance.mp4",
+      "status": "ok"
+    },
+    {
+      "category": "student-kiosk",
+      "name": "kiosk-prizes-hover",
+      "path": "capture-library\\student-kiosk\\kiosk-prizes-hover.mp4",
+      "status": "ok"
+    },
+    {
+      "category": "student-kiosk",
+      "name": "kiosk-card-tab",
+      "path": "capture-library\\student-kiosk\\kiosk-card-tab.mp4",
+      "status": "ok"
+    },
+    {
+      "category": "student-home",
+      "name": "home-login-type-id",
+      "path": "capture-library\\student-home\\home-login-type-id.mp4",
+      "status": "ok"
+    },
+    {
+      "category": "student-home",
+      "name": "home-login-form-static",
+      "path": "capture-library\\student-home\\home-login-form-static.mp4",
+      "status": "ok"
+    },
+    {
+      "category": "student-home",
+      "name": "home-signed-in-dashboard",
+      "status": "failed",
+      "error": "Student home sign-in unavailable on this environment"
+    },
+    {
+      "category": "teacher",
+      "name": "teacher-students-roster",
+      "path": "capture-library\\teacher\\teacher-students-roster.mp4",
+      "status": "ok"
+    },
+    {
+      "category": "teacher",
+      "name": "teacher-classes-tab",
+      "path": "capture-library\\teacher\\teacher-classes-tab.mp4",
+      "status": "ok"
+    },
+    {
+      "category": "teacher",
+      "name": "teacher-tabs-cycle",
+      "path": "capture-library\\teacher\\teacher-tabs-cycle.mp4",
+      "status": "ok"
+    },
+    {
+      "category": "teacher",
+      "name": "teacher-points-tab",
+      "path": "capture-library\\teacher\\teacher-points-tab.mp4",
+      "status": "ok"
+    },
+    {
+      "category": "action",
+      "name": "action-print-coupons",
+      "path": "capture-library\\action\\action-print-coupons.mp4",
+      "status": "ok"
+    },
+    {
+      "category": "action",
+      "name": "action-print-preview-hold",
+      "path": "capture-library\\action\\action-print-preview-hold.mp4",
+      "status": "ok"
+    },
+    {
+      "category": "portal",
+      "name": "portal-student-home-link",
+      "path": "capture-library\\portal\\portal-student-home-link.mp4",
+      "status": "ok"
+    }
+  ]
+}

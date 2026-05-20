@@ -8,6 +8,8 @@ const HALL_OF_FAME_STAFF_LOGIN_STATES = [
   'secretary',
   'prizeClerk',
   'reports',
+  'librarian',
+  'office',
 ] as const;
 
 export function canAccessHallOfFameRoute(loginState: string): boolean {

@@ -45,7 +45,7 @@ function resolveServiceAccount(): ServiceAccount | null {
  * Mirrors the lightweight init used elsewhere in this repo (project id + ADC when available).
  */
 export async function getFirebaseAdminAuth(): Promise<Auth> {
-  const [{ cert, getApp, initializeApp }, { getAuth }] = await Promise.all([
+  const [{ applicationDefault, cert, getApp, initializeApp }, { getAuth }] = await Promise.all([
     import('firebase-admin/app'),
     import('firebase-admin/auth'),
   ]);
@@ -74,10 +74,19 @@ export async function getFirebaseAdminAuth(): Promise<Auth> {
     } else if (process.env.FIREBASE_CONFIG) {
       // Managed Firebase runtimes inject FIREBASE_CONFIG for Admin SDK auto-init.
       initializeApp();
-    } else if (projectId) {
-      initializeApp({ projectId });
     } else {
-      throw new Error('Firebase Admin: missing project id for session cookies.');
+      try {
+        initializeApp({
+          credential: applicationDefault(),
+          projectId,
+        });
+      } catch {
+        if (projectId) {
+          initializeApp({ projectId });
+        } else {
+          throw new Error('Firebase Admin: missing project id for session cookies.');
+        }
+      }
     }
   }
 

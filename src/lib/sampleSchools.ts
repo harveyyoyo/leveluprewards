@@ -1,6 +1,6 @@
 /**
  * Built-in schools exposed on the public login page ("Try a demo school").
- * Keep in sync with reset/seed logic (e.g. BackupProvider dev reset).
+ * Keep in sync with reset/seed logic (e.g. BackupProvider dev reset + office seed).
  */
 export const PUBLIC_SAMPLE_SCHOOL_IDS = ['schoolabc', 'yeshiva'] as const;
 export type PublicSampleSchoolId = (typeof PUBLIC_SAMPLE_SCHOOL_IDS)[number];

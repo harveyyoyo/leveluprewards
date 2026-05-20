@@ -27,6 +27,7 @@ import {
 import { couponIsKnownAndValidOffline, saveCouponSnapshot } from '@/lib/couponCache';
 import type { LoginResult } from '@/lib/loginResult';
 import { AI_FUN_UNIFIED_PRIZE_ID } from '@/lib/aiJokePrize';
+import { isStudentKioskRoute, isStudentKioskUiContext } from '@/lib/studentKioskRoute';
 
 const getDb = () => import('@/lib/db');
 
@@ -39,19 +40,20 @@ interface AppContextType {
   // Auth
   isInitialized: boolean;
   isUserLoading: boolean;
-  loginState: 'loggedOut' | 'school' | 'developer' | 'student' | 'teacher' | 'admin' | 'secretary' | 'prizeClerk' | 'reports' | 'librarian';
+  loginState: 'loggedOut' | 'school' | 'developer' | 'student' | 'teacher' | 'admin' | 'secretary' | 'prizeClerk' | 'reports' | 'librarian' | 'office';
   isAdmin: boolean;
   isTeacher: boolean;
   isSecretary: boolean;
   isPrizeClerk: boolean;
   isReports: boolean;
   isLibrarian: boolean;
+  isOffice: boolean;
   userName: string | null;
   userId: string | null;
   teacherDocId: string | null;
   schoolId: string | null;
   syncStatus: 'synced' | 'syncing' | 'offline' | 'error';
-  login: (type: 'school' | 'developer' | 'student' | 'teacher' | 'admin' | 'secretary' | 'prizeClerk' | 'reports' | 'librarian', credentials: { schoolId?: string; passcode?: string; username?: string; teacherName?: string; teacherDocId?: string; staffRole?: 'secretary' | 'prizeClerk' | 'reports' | 'librarian'; }) => Promise<LoginResult>;
+  login: (type: 'school' | 'developer' | 'student' | 'teacher' | 'admin' | 'secretary' | 'prizeClerk' | 'reports' | 'librarian' | 'office', credentials: { schoolId?: string; passcode?: string; username?: string; teacherName?: string; teacherDocId?: string; staffRole?: 'secretary' | 'prizeClerk' | 'reports' | 'librarian' | 'office'; }) => Promise<LoginResult>;
   startDeveloperSupportSession: (schoolId: string) => Promise<boolean>;
   logout: (options?: LogoutOptions) => void;
   setUserName: (name: string | null) => void;
@@ -113,6 +115,7 @@ interface AppContextType {
   devVerifyBackup: (schoolId: string, backupId: string) => Promise<{ verified: boolean; reason: string }>;
   devMigrateSchoolData: (schoolId: string) => Promise<void>;
   devResetSampleSchool: (schoolId: string) => Promise<void>;
+  devSeedOfficeDemoData: (schoolId: string) => Promise<void>;
   devSyncSchoolPublicIndex: () => Promise<void>;
   purgeStudentProgress: (studentId: string) => Promise<void>;
   purgeStudentsProgress: (studentIds: string[]) => Promise<{ success: number; failed: number }>;
@@ -180,7 +183,8 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
   // Kiosk entry: optional `?kioskEntry=` or `?entry=` on the student URL verifies with Cloud Functions
   // and grants `kioskMembers` when the school has configured `secrets/entry` (see verifySchoolEntryCode).
   React.useEffect(() => {
-    if (loginState !== 'student' || !schoolId || !functions || !auth?.currentUser) return;
+    if (!isStudentKioskRoute(typeof window !== 'undefined' ? window.location.pathname : null, schoolId)) return;
+    if (loginState !== 'school' || !schoolId || !functions || !auth?.currentUser) return;
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
     const code = (params.get('kioskEntry') || params.get('entry') || '').trim();
@@ -297,7 +301,12 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
   // Background refresh: download coupon snapshot for offline validation.
   React.useEffect(() => {
     if (!schoolId || !functions || schoolId === 'schoolabc') return;
-    if (loginState === 'student' && !studentKioskSessionEstablished) return;
+    if (
+      isStudentKioskUiContext(loginState, typeof window !== 'undefined' ? window.location.pathname : null, schoolId) &&
+      !studentKioskSessionEstablished
+    ) {
+      return;
+    }
     if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
     const fn = httpsCallable(functions, 'getCouponSnapshot');
     void fn({ schoolId })
@@ -867,6 +876,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     isPrizeClerk: authCtx.isPrizeClerk,
     isReports: authCtx.isReports,
     isLibrarian: authCtx.isLibrarian,
+    isOffice: authCtx.isOffice,
     // Print
     ...printCtx,
     printPrizeTickets: printCtx.printPrizeTickets,

@@ -28,6 +28,8 @@ import {
     resolveLegacyModePreference,
     type LegacyModeSignals,
 } from '@/lib/legacyMode';
+import { isStudentKioskUiContext } from '@/lib/studentKioskRoute';
+import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
 
 type ColorScheme =
     | 'default'
@@ -69,7 +71,7 @@ interface Settings {
     enableLevels: boolean;
     enableStreaks: boolean;
     enableGoals: boolean;
-    /** RCA-style house system: rosters, house totals, sorting ceremony, Hall of Fame. */
+    /** School house system: rosters, house totals, sorting ceremony, Hall of Fame. */
     enableHouses: boolean;
     /** When on, teacher point awards also update each house's cached totals. */
     housesRollupPoints: boolean;
@@ -300,6 +302,7 @@ interface Settings {
     payAttendance?: boolean;
     payHomework?: boolean;
     payLibrary?: boolean;
+    payOffice?: boolean;
     /** Default checkout loan length before a book is overdue. */
     libraryLoanPeriodDays?: number;
     /** When true, overdue returns deduct points via the library category. */
@@ -561,6 +564,7 @@ const defaultSettings: Settings = {
     payAttendance: true,
     payHomework: true,
     payLibrary: true,
+    payOffice: false,
     libraryLoanPeriodDays: 14,
     libraryLateFeesEnabled: true,
     libraryLatePointsPerDay: 2,
@@ -660,10 +664,16 @@ export type { DisplayModePreference } from '@/lib/displayMode';
 
 const SettingsContext = createContext<SettingsContextType | null>(null);
 
-/** Per-browser settings: students and staff keep separate theme and UI prefs on shared devices. */
-function getLocalArcadeSettingsKey(schoolId: string | null, loginState: LoginState): string {
+/** Per-browser settings: kiosk, teacher, and staff keep separate theme and UI prefs on shared devices. */
+function getLocalArcadeSettingsKey(
+    schoolId: string | null,
+    loginState: LoginState,
+    pathname: string | null,
+): string {
     if (!schoolId) return 'arcade_settings_global';
-    if (loginState === 'student') return `arcade_settings_${schoolId}_student`;
+    if (isStudentKioskUiContext(loginState, pathname, schoolId)) {
+        return `arcade_settings_${schoolId}_student`;
+    }
     if (loginState === 'teacher') return `arcade_settings_${schoolId}_teacher`;
     return `arcade_settings_${schoolId}_staff`;
 }
@@ -675,7 +685,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     const [isLoaded, setIsLoaded] = useState(false);
     const [automaticLegacySignals, setAutomaticLegacySignals] = useState<LegacyModeSignals>({});
     const pathname = usePathname();
-    const isStaff = loginState === 'admin' || loginState === 'developer' || loginState === 'teacher' || loginState === 'secretary' || loginState === 'prizeClerk' || loginState === 'reports';
+    const studentKioskUi = useMemo(
+        () => isStudentKioskUiContext(loginState, pathname, schoolId),
+        [loginState, pathname, schoolId],
+    );
+    const isStaff = loginState === 'admin' || loginState === 'developer' || loginState === 'teacher' || loginState === 'secretary' || loginState === 'prizeClerk' || loginState === 'reports' || loginState === 'librarian' || loginState === 'office';
     const schoolDocRef = useMemoFirebase(() => {
         if (!firestore || !schoolId) return null;
         const sid = schoolId.trim().toLowerCase();
@@ -747,10 +761,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             return; // Wait for auth provider to be ready
         }
 
-        const settingsKey = getLocalArcadeSettingsKey(schoolId, loginState);
+        const settingsKey = getLocalArcadeSettingsKey(schoolId, loginState, pathname);
         const legacySchoolKey = schoolId ? `arcade_settings_${schoolId}` : null;
         let saved = localStorage.getItem(settingsKey);
-        if (!saved && legacySchoolKey && loginState !== 'student') {
+        if (!saved && legacySchoolKey && !isStudentKioskUiContext(loginState, pathname, schoolId)) {
             const legacy = localStorage.getItem(legacySchoolKey);
             if (legacy) {
                 saved = legacy;
@@ -929,11 +943,12 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                     soundEnabled: true,
                     enableHelperMode: true
                 } : {}),
+                ...(isPublicSampleSchoolId(schoolId) ? { payOffice: true } : {}),
             };
             setSettings(applyEntitlements(initialSettings));
         }
         setIsLoaded(true);
-    }, [schoolId, isInitialized, applyEntitlements, stableRemoteAppSettingsJson, stableFeatureDefaultsJson, loginState]);
+    }, [schoolId, isInitialized, applyEntitlements, stableRemoteAppSettingsJson, stableFeatureDefaultsJson, loginState, pathname]);
 
     useEffect(() => {
         if (!isLoaded) return;
@@ -1003,7 +1018,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     }, [schoolId, loginState, flushAppSettingsToFirestore]);
 
     const updateSettings = (updates: Partial<Settings>) => {
-        const settingsKey = getLocalArcadeSettingsKey(schoolId, loginState);
+        const settingsKey = getLocalArcadeSettingsKey(schoolId, loginState, pathname);
         setSettings((prev) => {
             const allowedUpdates = { ...updates };
             if (typeof allowedUpdates.enableClassSignIn === 'boolean') {
@@ -1047,24 +1062,25 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
     /** Dark mode as seen on `html` for the active login surface (student/teacher overrides). */
     const effectiveDomDarkMode = useMemo(() => {
-        if (loginState === 'student' && typeof settings.studentDarkMode === 'boolean') {
+        if (studentKioskUi && typeof settings.studentDarkMode === 'boolean') {
             return settings.studentDarkMode;
         }
         if (loginState === 'teacher' && typeof settings.teacherDarkMode === 'boolean') {
             return settings.teacherDarkMode;
         }
         return settings.darkMode;
-    }, [loginState, settings.darkMode, settings.studentDarkMode, settings.teacherDarkMode]);
+    }, [studentKioskUi, settings.darkMode, settings.studentDarkMode, settings.teacherDarkMode]);
 
     const effectiveDomDarkColorized = useMemo(() => {
         let c = settings.darkModeColorized ?? false;
-        if (loginState === 'student' && typeof settings.studentDarkModeColorized === 'boolean') {
+        if (studentKioskUi && typeof settings.studentDarkModeColorized === 'boolean') {
             c = settings.studentDarkModeColorized;
         } else if (loginState === 'teacher' && typeof settings.teacherDarkModeColorized === 'boolean') {
             c = settings.teacherDarkModeColorized;
         }
         return c;
     }, [
+        studentKioskUi,
         loginState,
         settings.darkModeColorized,
         settings.studentDarkModeColorized,
@@ -1091,7 +1107,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         if (!isLoaded) return;
         let scheme = settings.colorScheme ?? 'default';
-        if (loginState === 'student' && settings.studentColorScheme) {
+        if (studentKioskUi && settings.studentColorScheme) {
             scheme = settings.studentColorScheme;
         } else if (loginState === 'teacher' && settings.teacherColorScheme) {
             scheme = settings.teacherColorScheme;
@@ -1172,7 +1188,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         const s = { ...settings, legacyMode: effectiveLegacyMode };
         let displayPreference = normalizeDisplayModePreference(s.displayMode);
 
-        if (loginState === 'student') {
+        if (studentKioskUi) {
             if (s.studentDisplayMode !== undefined) {
                 displayPreference = normalizeDisplayModePreference(s.studentDisplayMode);
             }
@@ -1196,7 +1212,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             ...s,
             displayMode: resolveDisplayMode(displayPreference, isTabletOrMobile),
         };
-    }, [settings, loginState, isTabletOrMobile, effectiveLegacyMode]);
+    }, [settings, studentKioskUi, loginState, isTabletOrMobile, effectiveLegacyMode]);
 
     const isTeacherAllowed = useCallback((key: string) => {
         if (!isAllowed(key)) return false;

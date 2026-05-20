@@ -1,0 +1,63 @@
+Command failed: ffmpeg -y -ss 2.4 -i "C:\Users\Administrator\school arcade reward antigravity\studio\promo-video\public\_capture-raw\_trim-walkthrough-student-kiosk.mp4" -t 4.5 -c:v libx264 -preset fast -crf 23 -pix_fmt yuv420p -movflags +faststart "C:\Users\Administrator\school arcade reward antigravity\studio\promo-video\public\walkthrough-student-kiosk.mp4"
+ffmpeg version 2025-03-20-git-76f09ab647-essentials_build-www.gyan.dev Copyright (c) 2000-2025 the FFmpeg developers
+  built with gcc 14.2.0 (Rev1, Built by MSYS2 project)
+  configuration: --enable-gpl --enable-version3 --enable-static --disable-w32threads --disable-autodetect --enable-fontconfig --enable-iconv --enable-gnutls --enable-libxml2 --enable-gmp --enable-bzlib --enable-lzma --enable-zlib --enable-libsrt --enable-libssh --enable-libzmq --enable-avisynth --enable-sdl2 --enable-libwebp --enable-libx264 --enable-libx265 --enable-libxvid --enable-libaom --enable-libopenjpeg --enable-libvpx --enable-mediafoundation --enable-libass --enable-libfreetype --enable-libfribidi --enable-libharfbuzz --enable-libvidstab --enable-libvmaf --enable-libzimg --enable-amf --enable-cuda-llvm --enable-cuvid --enable-dxva2 --enable-d3d11va --enable-d3d12va --enable-ffnvcodec --enable-libvpl --enable-nvdec --enable-nvenc --enable-vaapi --enable-libgme --enable-libopenmpt --enable-libopencore-amrwb --enable-libmp3lame --enable-libtheora --enable-libvo-amrwbenc --enable-libgsm --enable-libopencore-amrnb --enable-libopus --enable-libspeex --enable-libvorbis --enable-librubberband
+  libavutil      59. 60.100 / 59. 60.100
+  libavcodec     61. 33.102 / 61. 33.102
+  libavformat    61.  9.107 / 61.  9.107
+  libavdevice    61.  4.100 / 61.  4.100
+  libavfilter    10.  9.100 / 10.  9.100
+  libswscale      8. 13.103 /  8. 13.103
+  libswresample   5.  4.100 /  5.  4.100
+  libpostproc    58.  4.100 / 58.  4.100
+Input #0, mov,mp4,m4a,3gp,3g2,mj2, from 'C:\Users\Administrator\school arcade reward antigravity\studio\promo-video\public\_capture-raw\_trim-walkthrough-student-kiosk.mp4':
+  Metadata:
+    major_brand     : isom
+    minor_version   : 512
+    compatible_brands: isomiso2avc1mp41
+    encoder         : Lavf61.9.107
+  Duration: 00:00:06.20, start: 0.000000, bitrate: 375 kb/s
+  Stream #0:0[0x1](und): Video: h264 (High) (avc1 / 0x31637661), yuv420p(tv, bt470bg/unknown/unknown, progressive), 1280x720 [SAR 1:1 DAR 16:9], 371 kb/s, 25 fps, 25 tbr, 12800 tbn (default)
+    Metadata:
+      handler_name    : VideoHandler
+      vendor_id       : [0][0][0][0]
+      encoder         : Lavc61.33.102 libx264
+[out#0/mp4 @ 000001e68a075d80] Error opening output C:\Users\Administrator\school arcade reward antigravity\studio\promo-video\public\walkthrough-student-kiosk.mp4: Invalid argument
+Error opening output file C:\Users\Administrator\school arcade reward antigravity\studio\promo-video\public\walkthrough-student-kiosk.mp4.
+Error opening output files: Invalid argument
+
+Error: Command failed: ffmpeg -y -ss 2.4 -i "C:\Users\Administrator\school arcade reward antigravity\studio\promo-video\public\_capture-raw\_trim-walkthrough-student-kiosk.mp4" -t 4.5 -c:v libx264 -preset fast -crf 23 -pix_fmt yuv420p -movflags +faststart "C:\Users\Administrator\school arcade reward antigravity\studio\promo-video\public\walkthrough-student-kiosk.mp4"
+ffmpeg version 2025-03-20-git-76f09ab647-essentials_build-www.gyan.dev Copyright (c) 2000-2025 the FFmpeg developers
+  built with gcc 14.2.0 (Rev1, Built by MSYS2 project)
+  configuration: --enable-gpl --enable-version3 --enable-static --disable-w32threads --disable-autodetect --enable-fontconfig --enable-iconv --enable-gnutls --enable-libxml2 --enable-gmp --enable-bzlib --enable-lzma --enable-zlib --enable-libsrt --enable-libssh --enable-libzmq --enable-avisynth --enable-sdl2 --enable-libwebp --enable-libx264 --enable-libx265 --enable-libxvid --enable-libaom --enable-libopenjpeg --enable-libvpx --enable-mediafoundation --enable-libass --enable-libfreetype --enable-libfribidi --enable-libharfbuzz --enable-libvidstab --enable-libvmaf --enable-libzimg --enable-amf --enable-cuda-llvm --enable-cuvid --enable-dxva2 --enable-d3d11va --enable-d3d12va --enable-ffnvcodec --enable-libvpl --enable-nvdec --enable-nvenc --enable-vaapi --enable-libgme --enable-libopenmpt --enable-libopencore-amrwb --enable-libmp3lame --enable-libtheora --enable-libvo-amrwbenc --enable-libgsm --enable-libopencore-amrnb --enable-libopus --enable-libspeex --enable-libvorbis --enable-librubberband
+  libavutil      59. 60.100 / 59. 60.100
+  libavcodec     61. 33.102 / 61. 33.102
+  libavformat    61.  9.107 / 61.  9.107
+  libavdevice    61.  4.100 / 61.  4.100
+  libavfilter    10.  9.100 / 10.  9.100
+  libswscale      8. 13.103 /  8. 13.103
+  libswresample   5.  4.100 /  5.  4.100
+  libpostproc    58.  4.100 / 58.  4.100
+Input #0, mov,mp4,m4a,3gp,3g2,mj2, from 'C:\Users\Administrator\school arcade reward antigravity\studio\promo-video\public\_capture-raw\_trim-walkthrough-student-kiosk.mp4':
+  Metadata:
+    major_brand     : isom
+    minor_version   : 512
+    compatible_brands: isomiso2avc1mp41
+    encoder         : Lavf61.9.107
+  Duration: 00:00:06.20, start: 0.000000, bitrate: 375 kb/s
+  Stream #0:0[0x1](und): Video: h264 (High) (avc1 / 0x31637661), yuv420p(tv, bt470bg/unknown/unknown, progressive), 1280x720 [SAR 1:1 DAR 16:9], 371 kb/s, 25 fps, 25 tbr, 12800 tbn (default)
+    Metadata:
+      handler_name    : VideoHandler
+      vendor_id       : [0][0][0][0]
+      encoder         : Lavc61.33.102 libx264
+[out#0/mp4 @ 000001e68a075d80] Error opening output C:\Users\Administrator\school arcade reward antigravity\studio\promo-video\public\walkthrough-student-kiosk.mp4: Invalid argument
+Error opening output file C:\Users\Administrator\school arcade reward antigravity\studio\promo-video\public\walkthrough-student-kiosk.mp4.
+Error opening output files: Invalid argument
+
+    at genericNodeError (node:internal/errors:983:15)
+    at wrappedFn (node:internal/errors:537:14)
+    at checkExecSyncError (node:child_process:916:11)
+    at execSync (node:child_process:988:15)
+    at recordClipReady (file:///C:/Users/Administrator/school%20arcade%20reward%20antigravity/studio/scripts/capture-walkthrough-videos.mjs:534:7)
+    at async Object.capture (file:///C:/Users/Administrator/school%20arcade%20reward%20antigravity/studio/scripts/capture-walkthrough-videos.mjs:627:7)
+    at async main (file:///C:/Users/Administrator/school%20arcade%20reward%20antigravity/studio/scripts/capture-walkthrough-videos.mjs:1322:5)

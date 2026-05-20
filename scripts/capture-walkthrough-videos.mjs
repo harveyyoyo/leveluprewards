@@ -19,7 +19,7 @@
  */
 
 import { chromium } from '@playwright/test';
-import { execSync } from 'child_process';
+import { execSync, execFileSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -229,7 +229,7 @@ async function waitForTeacherReady(page) {
   await page.waitForURL((url) => url.pathname.includes('/teacher'), { timeout: 60000 });
   await waitNoAppLoading(page);
   await page
-    .getByRole('heading', { name: /Teacher & Faculty Portal/i })
+    .getByRole('heading', { name: /Teacher Portal/i })
     .waitFor({ state: 'visible', timeout: 90000 });
   await page.getByRole('tab', { name: /^Students$/i }).waitFor({ state: 'visible', timeout: 90000 });
   await page
@@ -286,7 +286,7 @@ async function openTeacherPortal(page, origin) {
     await page.goto(portalUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
   }
   await waitForPortalHub(page);
-  await page.getByRole('link', { name: /Teacher & Faculty Portal/i }).first().click();
+  await page.getByRole('link', { name: /Teacher Portal/i }).first().click();
   await page.getByRole('dialog').waitFor({ state: 'visible', timeout: 15000 });
   await page.getByRole('combobox').click();
   await page.getByRole('option', { name: TEACHER_NAME }).click();
@@ -471,7 +471,9 @@ async function recordClipReady({
   validate,
   maxAttempts = 1,
 }) {
-  fs.mkdirSync(RAW_DIR, { recursive: true });
+  const TEMP_DIR = 'C:/Users/Administrator/capture-temp';
+  fs.mkdirSync(TEMP_DIR, { recursive: true });
+
   const dest = outputPath ?? path.join(OUT_DIR, file);
   fs.mkdirSync(path.dirname(dest), { recursive: true });
 
@@ -479,7 +481,13 @@ async function recordClipReady({
   let lastError;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    const before = new Set(fs.existsSync(RAW_DIR) ? fs.readdirSync(RAW_DIR) : []);
+    // Clean temp dir before capture
+    if (fs.existsSync(TEMP_DIR)) {
+      fs.readdirSync(TEMP_DIR).forEach(f => {
+        try { fs.unlinkSync(path.join(TEMP_DIR, f)); } catch {}
+      });
+    }
+
     const browser = await chromium.launch({ headless: true });
 
     try {
@@ -497,7 +505,7 @@ async function recordClipReady({
       const ctx = await browser.newContext({
         viewport: VIEWPORT,
         ...(storageState ? { storageState } : {}),
-        recordVideo: { dir: RAW_DIR, size: VIEWPORT },
+        recordVideo: { dir: TEMP_DIR, size: VIEWPORT },
       });
       const page = await ctx.newPage();
       if (USE_LOCAL_DEV()) {
@@ -518,24 +526,49 @@ async function recordClipReady({
       }
 
       const created = fs
-        .readdirSync(RAW_DIR)
-        .filter((f) => f.endsWith('.webm') && !before.has(f));
+        .readdirSync(TEMP_DIR)
+        .filter((f) => f.endsWith('.webm'));
       if (!created.length) throw new Error('No webm recording produced');
 
-      const webmPath = path.join(RAW_DIR, created.sort().pop());
-      const trimmedPath = path.join(RAW_DIR, `_trim-${path.basename(dest)}`);
+      const webmPath = path.join(TEMP_DIR, created.sort().pop()).replace(/\\/g, '/');
+      const trimmedPath = path.join(TEMP_DIR, `_trim-${path.basename(dest)}`).replace(/\\/g, '/');
+      const tempDest = path.join(TEMP_DIR, `_out-${path.basename(dest)}`).replace(/\\/g, '/');
 
-      execSync(
-        `ffmpeg -y -i "${webmPath}" -c:v libx264 -preset fast -crf 23 -pix_fmt yuv420p -movflags +faststart "${trimmedPath}"`,
-        { stdio: 'pipe' },
+      execFileSync(
+        'ffmpeg',
+        [
+          '-y',
+          '-i', webmPath,
+          '-c:v', 'libx264',
+          '-preset', 'fast',
+          '-crf', '23',
+          '-pix_fmt', 'yuv420p',
+          '-movflags', '+faststart',
+          trimmedPath
+        ],
+        { stdio: 'pipe' }
       );
-      fs.unlinkSync(webmPath);
+      try { fs.unlinkSync(webmPath); } catch {}
 
-      execSync(
-        `ffmpeg -y -ss ${trimOpts.startSec} -i "${trimmedPath}" -t ${trimOpts.maxDurationSec} -c:v libx264 -preset fast -crf 23 -pix_fmt yuv420p -movflags +faststart "${dest}"`,
-        { stdio: 'pipe' },
+      execFileSync(
+        'ffmpeg',
+        [
+          '-y',
+          '-ss', String(trimOpts.startSec),
+          '-i', trimmedPath,
+          '-t', String(trimOpts.maxDurationSec),
+          '-c:v', 'libx264',
+          '-preset', 'fast',
+          '-crf', '23',
+          '-pix_fmt', 'yuv420p',
+          '-movflags', '+faststart',
+          tempDest
+        ],
+        { stdio: 'pipe' }
       );
-      fs.unlinkSync(trimmedPath);
+      try { fs.unlinkSync(trimmedPath); } catch {}
+
+      fs.copyFileSync(tempDest, dest);
 
       console.log(`✓ ${path.relative(ROOT, dest)}${attempt > 1 ? ` (attempt ${attempt})` : ''}`);
       return dest;
@@ -839,7 +872,7 @@ const LIBRARY_VARIANTS = [
     record: async (page) => {
       await page.goto(`${localOrigin()}/${SCHOOL}/portal`, { waitUntil: 'domcontentloaded' });
       await waitForPortalHub(page);
-      const teacher = page.getByRole('link', { name: /Teacher & Faculty Portal/i }).first();
+      const teacher = page.getByRole('link', { name: /Teacher Portal/i }).first();
       await teacher.hover();
       await sleep(900);
     },
@@ -1247,15 +1280,40 @@ function promoteDefaultsToWalkthrough() {
 }
 
 function concatFastWalkthrough() {
-  const listPath = path.join(OUT_DIR, '_concat-list.txt');
+  const TEMP_DIR = 'C:/Users/Administrator/capture-temp';
+  fs.mkdirSync(TEMP_DIR, { recursive: true });
+
+  const tempConcats = CLIPS.map(c => {
+    const src = path.join(OUT_DIR, c.file);
+    const tempSrc = path.join(TEMP_DIR, c.file);
+    try { fs.copyFileSync(src, tempSrc); } catch {}
+    return tempSrc;
+  });
+
+  const listPath = path.join(TEMP_DIR, '_concat-list.txt').replace(/\\/g, '/');
   const lines = CLIPS.map((c) => `file '${c.file.replace(/'/g, "'\\''")}'`).join('\n');
   fs.writeFileSync(listPath, lines);
+
+  const tempOut = path.join(TEMP_DIR, 'walkthrough-fast.mp4').replace(/\\/g, '/');
   const out = path.join(OUT_DIR, 'walkthrough-fast.mp4');
-  execSync(`ffmpeg -y -f concat -safe 0 -i "${listPath}" -c copy "${out}"`, {
-    stdio: 'inherit',
-    cwd: OUT_DIR,
-  });
-  fs.unlinkSync(listPath);
+
+  execFileSync(
+    'ffmpeg',
+    [
+      '-y',
+      '-f', 'concat',
+      '-safe', '0',
+      '-i', listPath,
+      '-c', 'copy',
+      tempOut
+    ],
+    {
+      stdio: 'inherit',
+      cwd: TEMP_DIR,
+    }
+  );
+
+  fs.copyFileSync(tempOut, out);
   console.log('✓ walkthrough-fast.mp4 (concat)');
 }
 
@@ -1288,6 +1346,11 @@ async function main() {
   if (libraryMode) {
     await captureLibrary({ categoryFilter });
     if (promoteDefaults) promoteDefaultsToWalkthrough();
+    return;
+  }
+
+  if (promoteDefaults) {
+    promoteDefaultsToWalkthrough();
     return;
   }
 

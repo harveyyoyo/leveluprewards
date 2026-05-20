@@ -48,10 +48,26 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/schools/$(schoolId)/roles_librarian/$(request.auth.uid)).data.role == 'librarian';
     }
 
+    function isOffice(schoolId) {
+      return isAuth()
+        && exists(/databases/$(database)/documents/schools/$(schoolId)/roles_office/$(request.auth.uid))
+        && get(/databases/$(database)/documents/schools/$(schoolId)/roles_office/$(request.auth.uid)).data.role == 'office';
+    }
+
+    function canAccessOffice(schoolId) {
+      return isDeveloper() || isAdmin(schoolId) || isOffice(schoolId);
+    }
+
     // A student who has entered a school kiosk session via the Cloud Function.
     function hasKioskSession(schoolId) {
       return isAuth()
         && exists(/databases/$(database)/documents/schools/$(schoolId)/kioskMembers/$(request.auth.uid));
+    }
+
+    // School access passcode succeeded (portal chooser / staff hub before role sign-in).
+    function hasAnonymousPortalSession(schoolId) {
+      return isAuth()
+        && exists(/databases/$(database)/documents/schools/$(schoolId)/anonymousPortalSessions/$(request.auth.uid));
     }
 
     // Signed in via student home portal (custom token uid == student doc id).
@@ -60,11 +76,12 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/schools/$(schoolId)/studentPortalSessions/$(request.auth.uid));
     }
 
-    // Any staff member OR a student with an active kiosk session for this school.
+    // Staff, kiosk, or school-portal lobby (read-mostly admin UI before admin/teacher passcode).
+    // Rewards / kiosk / portal hub — office staff use separate office* collections only.
     function isSchoolMember(schoolId) {
       return isAdmin(schoolId) || isTeacher(schoolId) || isSecretary(schoolId)
         || isPrizeClerk(schoolId) || isReports(schoolId) || isLibrarian(schoolId) || isDeveloper()
-        || hasKioskSession(schoolId);
+        || hasKioskSession(schoolId) || hasAnonymousPortalSession(schoolId);
     }
 
     function isLibraryCheckoutActivity() {
@@ -164,7 +181,7 @@ service cloud.firestore {
     }
     
     match /schools/{schoolId} {
-      allow read: if isDeveloper() || isAdmin(schoolId) || isTeacher(schoolId) || isSecretary(schoolId) || isPrizeClerk(schoolId) || isReports(schoolId);
+      allow read: if isDeveloper() || isAdmin(schoolId) || isTeacher(schoolId) || isSecretary(schoolId) || isPrizeClerk(schoolId) || isReports(schoolId) || isLibrarian(schoolId) || isOffice(schoolId);
       allow create: if isDeveloper();
       allow delete: if isAdmin(schoolId) || isDeveloper();
       // Teachers may adjust raffle knobs (stored in appSettings) without full admin rights.
@@ -197,7 +214,7 @@ service cloud.firestore {
       }
       
       match /teachers/{teacherId} {
-        allow read: if isAdmin(schoolId) || isTeacher(schoolId) || isPrizeClerk(schoolId) || isReports(schoolId) || isDeveloper();
+        allow read: if isAdmin(schoolId) || isTeacher(schoolId) || isPrizeClerk(schoolId) || isReports(schoolId) || isOffice(schoolId) || isDeveloper();
         allow create, delete: if isAdmin(schoolId);
         allow update: if isAdmin(schoolId)
           || (
@@ -231,7 +248,7 @@ service cloud.firestore {
 
       match /houses/{houseId} {
         allow read: if isSchoolMember(schoolId) || hasStudentPortalSession(schoolId);
-        allow write: if isAdmin(schoolId) || isTeacher(schoolId);
+        allow write: if isAdmin(schoolId) || isTeacher(schoolId) || isDeveloper();
       }
       
       match /categories/{categoryId} {
@@ -348,6 +365,31 @@ service cloud.firestore {
       match /roles_librarian/{uid} {
         allow read: if isAuth() && request.auth.uid == uid;
         allow write: if false;
+      }
+
+      match /roles_office/{uid} {
+        allow read: if isAuth() && request.auth.uid == uid;
+        allow write: if false;
+      }
+
+      match /officeStudents/{studentId} {
+        allow read, write: if canAccessOffice(schoolId);
+      }
+
+      match /officeClasses/{classId} {
+        allow read, write: if canAccessOffice(schoolId);
+      }
+
+      match /officeGradeEntries/{entryId} {
+        allow read, write: if canAccessOffice(schoolId);
+      }
+
+      match /officeBillingAccounts/{accountId} {
+        allow read, write: if canAccessOffice(schoolId);
+      }
+
+      match /officeInvoices/{invoiceId} {
+        allow read, write: if canAccessOffice(schoolId);
       }
 
       match /anonymousPortalSessions/{uid} {

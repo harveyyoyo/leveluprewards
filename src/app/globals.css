@@ -411,6 +411,29 @@
     0 8px 22px color-mix(in srgb, var(--portal-accent, hsl(var(--primary))) 38%, transparent);
 }
 
+.portal-choose-icon > svg {
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.group:hover .portal-choose-icon--hoverable,
+.group:focus-visible .portal-choose-icon--hoverable {
+  transform: scale(1.1) translateY(-3px);
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.group:hover .portal-choose-icon--hoverable > svg,
+.group:focus-visible .portal-choose-icon--hoverable > svg {
+  transform: scale(1.12) rotate(-8deg);
+}
+
+.group:active .portal-choose-icon--hoverable {
+  transform: scale(1.04) translateY(-1px);
+}
+
+.group:active .portal-choose-icon--hoverable > svg {
+  transform: scale(1.05) rotate(-3deg);
+}
+
 .portal-choose-title-depth {
   text-shadow:
     0 2px 18px hsl(var(--primary) / 0.2),

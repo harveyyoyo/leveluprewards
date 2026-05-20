@@ -730,7 +730,7 @@ exports.verifySchoolPasscode = functions.https.onCall(
 
 // ========================================================================
 // Callable: Verify school access passcode (NO role provisioning)
-// Used for "school sign-in" gate before choosing student/faculty/admin.
+// Used for "school sign-in" gate before choosing student/staff/admin.
 // ========================================================================
 
 exports.verifySchoolAccessPasscode = functions.https.onCall(
@@ -2510,7 +2510,7 @@ exports.getStaffPortalLoginOptions = functions.https.onCall(
           role?: string;
         };
         const role =
-          row.role === "secretary" || row.role === "prizeClerk" || row.role === "reports" || row.role === "librarian"
+          row.role === "secretary" || row.role === "prizeClerk" || row.role === "reports" || row.role === "librarian" || row.role === "office"
             ? row.role
             : null;
         const username = typeof row.username === "string" ? row.username.trim().toLowerCase() : "";
@@ -2540,10 +2540,10 @@ exports.verifyStaffAccountPasscode = functions.https.onCall(
     requireString(data.username, "username");
     requireString(data.passcode, "passcode");
     const role = data.role as string;
-    if (role !== "secretary" && role !== "prizeClerk" && role !== "reports" && role !== "librarian") {
+    if (role !== "secretary" && role !== "prizeClerk" && role !== "reports" && role !== "librarian" && role !== "office") {
       throw new functions.https.HttpsError(
         "invalid-argument",
-        "role must be 'secretary', 'prizeClerk', 'reports', or 'librarian'."
+        "role must be 'secretary', 'prizeClerk', 'reports', 'librarian', or 'office'."
       );
     }
 
@@ -2571,7 +2571,7 @@ exports.verifyStaffAccountPasscode = functions.https.onCall(
 
     const row = match.data() as { displayName?: string; role?: string; roles?: string[] };
     const roles = (Array.isArray(row.roles) && row.roles.length > 0 ? row.roles : [row.role])
-      .filter((item): item is string => item === "secretary" || item === "prizeClerk" || item === "reports" || item === "librarian");
+      .filter((item): item is string => item === "secretary" || item === "prizeClerk" || item === "reports" || item === "librarian" || item === "office");
     const writes = roles.map((staffRole) => {
       const roleCollection =
         staffRole === "secretary"
@@ -2580,7 +2580,9 @@ exports.verifyStaffAccountPasscode = functions.https.onCall(
             ? "roles_prizeClerk"
             : staffRole === "librarian"
               ? "roles_librarian"
-              : "roles_reports";
+              : staffRole === "office"
+                ? "roles_office"
+                : "roles_reports";
       return db
         .collection("schools")
         .doc(schoolId)

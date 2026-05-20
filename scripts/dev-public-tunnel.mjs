@@ -1,15 +1,44 @@
 /**
  * Expose local dev (port 3000) over HTTPS and register the hostname in Firebase Auth.
  *
- * Shorter URL (optional): claim a free static domain at https://dashboard.ngrok.com/domains
- * then run:  $env:NGROK_DOMAIN='yourname.ngrok-free.app'; node scripts/dev-public-tunnel.mjs
+ * Set your free ngrok dev domain in `.env.local` as `NGROK_DOMAIN=yourname.ngrok-free.dev`
+ * (claim at https://dashboard.ngrok.com/domains), or pass it in the shell for one run.
  *
  * Requires: ngrok authtoken in %LOCALAPPDATA%\ngrok\ngrok.yml, npm run dev on :3000
  */
-import { spawn, spawnSync } from 'child_process';
+import { spawn } from 'child_process';
 import { createRequire } from 'module';
+import { readFileSync, existsSync } from 'fs';
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
 
 const require = createRequire(import.meta.url);
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+
+/** Load NGROK_DOMAIN (and other keys) from `.env.local` when not already set in the shell. */
+function loadEnvLocal() {
+  const path = join(ROOT, '.env.local');
+  if (!existsSync(path)) return;
+  const text = readFileSync(path, 'utf8');
+  for (const line of text.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const eq = trimmed.indexOf('=');
+    if (eq <= 0) continue;
+    const key = trimmed.slice(0, eq).trim();
+    let value = trimmed.slice(eq + 1).trim();
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+    if (process.env[key] === undefined) process.env[key] = value;
+  }
+}
+
+loadEnvLocal();
+
 const PROJECT_ID = 'studio-1273073612-71183';
 const PORT = process.env.PORT || '3000';
 const NGROK_DOMAIN = (process.env.NGROK_DOMAIN || '').trim();
@@ -72,6 +101,14 @@ function startNgrok() {
 
 console.log('[dev-public-tunnel] Waiting for dev server…');
 await waitForDev();
+
+if (NGROK_DOMAIN) {
+  console.log(`[dev-public-tunnel] Using reserved dev domain: ${NGROK_DOMAIN}`);
+} else {
+  console.warn(
+    '[dev-public-tunnel] No NGROK_DOMAIN — ngrok will assign a random URL. Add NGROK_DOMAIN to .env.local (see .env.example).',
+  );
+}
 
 console.log('[dev-public-tunnel] Starting ngrok…');
 const ngrok = startNgrok();

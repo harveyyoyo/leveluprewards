@@ -3,7 +3,7 @@
  * Each pillar maps to a `pay*` flag on school `appSettings`.
  */
 
-export const PRODUCT_PILLAR_KEYS = ['payAttendance', 'payLibrary', 'payHomework'] as const;
+export const PRODUCT_PILLAR_KEYS = ['payAttendance', 'payLibrary', 'payHomework', 'payOffice'] as const;
 
 export type ProductPillarKey = (typeof PRODUCT_PILLAR_KEYS)[number];
 
@@ -11,6 +11,7 @@ export const PRODUCT_PILLAR_LABELS: Record<ProductPillarKey, string> = {
   payAttendance: 'Attendance',
   payLibrary: 'Library',
   payHomework: 'Homework',
+  payOffice: 'School Office',
 };
 
 export type PillarSettings = Partial<Record<ProductPillarKey, boolean>>;
@@ -19,9 +20,15 @@ export function isProductPillarKey(key: string): key is ProductPillarKey {
   return (PRODUCT_PILLAR_KEYS as readonly string[]).includes(key);
 }
 
-/** Pillars default to on when unset. */
+/** Pillars default to on when unset (except School Office, which is opt-in). */
 export function isPillarOn(settings: PillarSettings | null | undefined, pillar: ProductPillarKey): boolean {
+  if (pillar === 'payOffice') return settings?.payOffice === true;
   return settings?.[pillar] !== false;
+}
+
+/** School Office pillar — grades & billing portal (off unless explicitly enabled). */
+export function isOfficePillarOn(settings: PillarSettings | null | undefined): boolean {
+  return isPillarOn(settings, 'payOffice');
 }
 
 /** Feature toggles that require a product pillar to be on. */

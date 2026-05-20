@@ -39,7 +39,7 @@ export interface Class {
   primaryTeacherId?: string;
 }
 
-/** School house (RCA-style house system). */
+/** School house for spirit competitions and rosters. */
 export interface House {
   id: string;
   name: string;
@@ -56,15 +56,19 @@ export interface House {
   /** Teachers serving as house parents for this house. */
   houseParentTeacherIds?: string[];
   sortOrder?: number;
-  /** When seeded from the RCA preset pack. */
+  /** Stable id from a starter theme pack (e.g. `yeshiva:torah`). */
+  presetKey?: string;
+  /** @deprecated Legacy import — use `presetKey`. */
   rcaPresetKey?: string;
+  /** @deprecated Legacy import — use `presetKey`. */
+  samplePresetKey?: string;
 }
 
 /** How often a teacher’s point budget resets (local date on this device). */
 export type TeacherBudgetPeriod = 'day' | 'week' | 'month';
 
 /** Desk staff logins managed in Admin (not full teachers). */
-export type StaffAccountRole = 'secretary' | 'prizeClerk' | 'reports' | 'librarian';
+export type StaffAccountRole = 'secretary' | 'prizeClerk' | 'reports' | 'librarian' | 'office';
 
 export interface StaffAccount {
   id: string;

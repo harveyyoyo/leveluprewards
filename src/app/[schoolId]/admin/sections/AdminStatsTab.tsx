@@ -27,7 +27,7 @@ export function AdminStatsTab({
         <CardHeader className="py-6 flex flex-row items-start justify-between gap-4">
           <div>
             <CardTitle className="text-2xl flex items-center gap-2">
-              <Activity className="text-destructive w-6 h-6" /> School Analytics
+              <Activity className="text-primary w-6 h-6" /> School Analytics
             </CardTitle>
             <CardDescription>Overview of points and engagement across the school.</CardDescription>
           </div>
@@ -69,7 +69,7 @@ export function AdminStatsTab({
         <CardHeader>
           <Helper content="A high-level overview of your school's data, including counts for students, classes, teachers, and coupon activity.">
             <CardTitle className="flex items-center gap-2">
-              <LayoutDashboard className="w-5 h-5 text-destructive" /> System Stats
+              <LayoutDashboard className="w-5 h-5 text-primary" /> System Stats
             </CardTitle>
           </Helper>
           <CardDescription>Overview of your school data at a glance.</CardDescription>

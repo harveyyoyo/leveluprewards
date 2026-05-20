@@ -36,7 +36,7 @@ export function AdminBadgesTab(props: any) {
         <div>
           <Helper content="Define badges students earn by reaching a points threshold in a category within a time period (e.g. Good Behavior badge for 50 points this month).">
             <CardTitle className="flex items-center gap-2">
-              <Award className="w-5 h-5 text-destructive" /> Badges
+              <Award className="w-5 h-5 text-primary" /> Badges
             </CardTitle>
           </Helper>
           <CardDescription>Category-based badges. Enable from Admin → Add more.</CardDescription>

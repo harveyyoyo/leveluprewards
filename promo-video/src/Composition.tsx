@@ -1,5 +1,5 @@
 import React from "react";
-import { AbsoluteFill, Sequence, Video, staticFile, useVideoConfig, spring, useCurrentFrame, interpolate } from "remotion";
+import { AbsoluteFill, Sequence, Video, Audio, staticFile, useVideoConfig, spring, useCurrentFrame, interpolate } from "remotion";
 import {
   MY_COMP_BANNERS,
   MY_COMP_INTRO_END,
@@ -422,6 +422,9 @@ export const MyComposition = () => {
           </div>
         </AbsoluteFill>
       </Sequence>
+
+      {/* Background Music Audio */}
+      <Audio src={staticFile("background-music.mp3")} volume={0.3} loop />
 
     </AbsoluteFill>
   );

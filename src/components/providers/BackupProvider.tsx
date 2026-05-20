@@ -16,6 +16,7 @@ import {
     collection,
     writeBatch,
     getDocs,
+    getDoc,
 } from 'firebase/firestore';
 import {
     mainSchoolDocToPublicPayload,
@@ -27,7 +28,11 @@ import { useToast } from '@/hooks/use-toast';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import type { HistoryItem, Student } from '@/lib/types';
 import { DEFAULT_PLAN } from '@/lib/plans';
-import { SAMPLE_SCHOOL_ACCESS_PASSCODE } from '@/lib/sampleSchools';
+import { isPublicSampleSchoolId, SAMPLE_SCHOOL_ACCESS_PASSCODE } from '@/lib/sampleSchools';
+import {
+    seedOfficeDemoDataForSchool,
+    type OfficeDemoVariant,
+} from '@/lib/office/seedOfficeDemoData';
 
 interface BackupContextType {
     createSchool: (schoolId: string, name?: string, passcodes?: SchoolPasscodeUpdates) => Promise<CreateSchoolResult | null>;
@@ -40,6 +45,7 @@ interface BackupContextType {
     devVerifyBackup: (schoolId: string, backupId: string) => Promise<{ verified: boolean; reason: string }>;
     devMigrateSchoolData: (schoolId: string) => Promise<void>;
     devResetSampleSchool: (schoolId: string) => Promise<void>;
+    devSeedOfficeDemoData: (schoolId: string) => Promise<void>;
     devSyncSchoolPublicIndex: () => Promise<void>;
 }
 
@@ -187,6 +193,65 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
         }
     }, [functions]);
 
+    const seedOfficeForSampleSchool = useCallback(async (cleanId: OfficeDemoVariant, students: any[], classes: any[]) => {
+        if (!firestore) return;
+        await seedOfficeDemoDataForSchool(firestore, cleanId, {
+            variant: cleanId,
+            students,
+            classes,
+        });
+        const schoolRef = doc(firestore, 'schools', cleanId);
+        const schoolSnap = await getDoc(schoolRef);
+        const existingAppSettings = (schoolSnap.data()?.appSettings as Record<string, unknown> | undefined) ?? {};
+        await updateDoc(schoolRef, {
+            appSettings: { ...existingAppSettings, payOffice: true },
+        });
+    }, [firestore]);
+
+    const devSeedOfficeDemoData = useCallback(async (schoolId: string) => {
+        if (!firestore || !auth.currentUser) return;
+        const cleanId = schoolId.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+        if (!isPublicSampleSchoolId(cleanId)) {
+            playSound('error');
+            toast({
+                variant: 'destructive',
+                title: 'Office seed only for sample schools',
+                description: 'Use "yeshiva" or "schoolabc".',
+            });
+            return;
+        }
+
+        toast({ title: `Seeding office data for ${cleanId}...`, description: 'Roster, grades, and billing.' });
+
+        try {
+            let students: any[];
+            let classes: any[];
+            if (cleanId === 'yeshiva') {
+                const { YESHIVA_DATA } = await import('@/lib/yeshivaData');
+                students = YESHIVA_DATA.students ?? [];
+                classes = YESHIVA_DATA.classes ?? [];
+            } else {
+                const { SCHOOL_DATA } = await import('@/lib/schoolData');
+                students = SCHOOL_DATA.students ?? [];
+                classes = SCHOOL_DATA.classes ?? [];
+            }
+
+            await seedOfficeForSampleSchool(cleanId as OfficeDemoVariant, students, classes);
+            playSound('success');
+            toast({
+                title: `Office demo data ready for "${cleanId}"`,
+                description: 'School Office pillar enabled. Sign in as admin to open the office portal.',
+            });
+        } catch (e) {
+            playSound('error');
+            toast({
+                variant: 'destructive',
+                title: 'Office seed failed',
+                description: (e as Error).message,
+            });
+        }
+    }, [firestore, auth, playSound, toast, seedOfficeForSampleSchool]);
+
     const devResetSampleSchool = useCallback(async (schoolId: string) => {
         if (!firestore || !auth.currentUser) return;
         const cleanId = schoolId.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
@@ -305,9 +370,14 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
             await batch.commit();
         }
 
+        await seedOfficeForSampleSchool(cleanId as OfficeDemoVariant, students ?? [], classes ?? []);
+
         playSound('success');
-        toast({ title: `Sample school "${cleanId}" reset`, description: 'All sample data was restored.' });
-    }, [firestore, auth, playSound, toast]);
+        toast({
+            title: `Sample school "${cleanId}" reset`,
+            description: 'Rewards and School Office demo data were restored.',
+        });
+    }, [firestore, auth, playSound, toast, seedOfficeForSampleSchool]);
 
     const deleteSchool = useCallback(async (schoolId: string) => {
         if (!firestore || !auth.currentUser) return;
@@ -395,12 +465,12 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
         () => ({
             createSchool, deleteSchool, updateSchool,
             devCreateBackup, devRestoreFromBackup, devDownloadBackup, devBackupAllSchools,
-            devVerifyBackup, devMigrateSchoolData, devResetSampleSchool, devSyncSchoolPublicIndex,
+            devVerifyBackup, devMigrateSchoolData, devResetSampleSchool, devSeedOfficeDemoData, devSyncSchoolPublicIndex,
         }),
         [
             createSchool, deleteSchool, updateSchool,
             devCreateBackup, devRestoreFromBackup, devDownloadBackup, devBackupAllSchools,
-            devVerifyBackup, devMigrateSchoolData, devResetSampleSchool, devSyncSchoolPublicIndex,
+            devVerifyBackup, devMigrateSchoolData, devResetSampleSchool, devSeedOfficeDemoData, devSyncSchoolPublicIndex,
         ]
     );
 

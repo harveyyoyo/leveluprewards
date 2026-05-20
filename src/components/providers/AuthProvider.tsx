@@ -26,9 +26,11 @@ import {
 } from '@/lib/auth/syncFirebaseSessionCookie';
 import { sanitizeInternalNextPath } from '@/lib/auth/internalNextRedirect';
 import { isAllowedDeveloperGoogleUser } from '@/lib/developerAccess';
+import { isStudentKioskRoute } from '@/lib/studentKioskRoute';
+import { verifyStaffDeskLogin } from '@/lib/staffDeskLogin';
 
 export type SyncStatus = 'synced' | 'syncing' | 'offline' | 'error';
-export type LoginState = 'loggedOut' | 'school' | 'developer' | 'student' | 'teacher' | 'admin' | 'secretary' | 'prizeClerk' | 'reports' | 'librarian';
+export type LoginState = 'loggedOut' | 'school' | 'developer' | 'student' | 'teacher' | 'admin' | 'secretary' | 'prizeClerk' | 'reports' | 'librarian' | 'office';
 
 /** Prefer server read on restore; offline or transient errors fall back to persistent local cache. */
 async function getRoleDocForSessionRestore(
@@ -60,6 +62,7 @@ interface AuthContextType {
     isPrizeClerk: boolean;
     isReports: boolean;
     isLibrarian: boolean;
+    isOffice: boolean;
     userName: string | null;
     userId: string | null;
     teacherDocId: string | null;
@@ -67,7 +70,7 @@ interface AuthContextType {
     syncStatus: SyncStatus;
     login: (
         type: LoginState,
-        credentials: { schoolId?: string; passcode?: string; username?: string; teacherName?: string; teacherDocId?: string; staffRole?: 'secretary' | 'prizeClerk' | 'reports' | 'librarian'; }
+        credentials: { schoolId?: string; passcode?: string; username?: string; teacherName?: string; teacherDocId?: string; staffRole?: 'secretary' | 'prizeClerk' | 'reports' | 'librarian' | 'office'; }
     ) => Promise<LoginResult>;
     startDeveloperSupportSession: (schoolId: string) => Promise<boolean>;
     logout: (options?: LogoutOptions) => void;
@@ -128,10 +131,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [schoolId, setSchoolId] = useState<string | null>(null);
     const [syncStatus, setSyncStatus] = useState<SyncStatus>('syncing');
     const [isKioskLocked, setIsKioskLocked] = useState(false);
-    const [studentKioskSessionEstablished, setStudentKioskSessionEstablished] = useState(() => {
-        if (typeof window === 'undefined') return true;
-        return localStorage.getItem('loginState') !== 'student';
-    });
+    const [studentKioskSessionEstablished, setStudentKioskSessionEstablished] = useState(true);
     const [studentKioskSessionError, setStudentKioskSessionError] = useState<string | null>(null);
 
     const [isAdmin, setIsAdmin] = useState(false);
@@ -140,6 +140,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [isPrizeClerk, setIsPrizeClerk] = useState(false);
     const [isReports, setIsReports] = useState(false);
     const [isLibrarian, setIsLibrarian] = useState(false);
+    const [isOffice, setIsOffice] = useState(false);
     const [userName, setUserName] = useState<string | null>(null);
     const [userId, setUserId] = useState<string | null>(null);
     const [teacherDocId, setTeacherDocId] = useState<string | null>(null);
@@ -156,6 +157,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setIsPrizeClerk(false);
         setIsReports(false);
         setIsLibrarian(false);
+        setIsOffice(false);
         setUserName(null);
         setTeacherDocId(null);
         localStorage.setItem('loginState', 'school');
@@ -198,6 +200,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setIsPrizeClerk(false);
         setIsReports(false);
         setIsLibrarian(false);
+        setIsOffice(false);
         setIsKioskLocked(false);
         setUserName(null);
         setTeacherDocId(null);
@@ -307,7 +310,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     if (auth.currentUser) {
                         setUserId(auth.currentUser.uid);
                     }
-                } else if (savedState === 'school') {
+                } else if (savedState === 'school' || savedState === 'student') {
+                    if (savedState === 'student') {
+                        localStorage.setItem('loginState', 'school');
+                    }
                     setLoginState('school');
                     setIsAdmin(false);
                     setIsTeacher(false);
@@ -381,7 +387,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     } else {
                         returnToSchoolSession(savedSchoolId);
                     }
-                } else if (savedState === 'prizeClerk' || savedState === 'reports' || savedState === 'librarian') {
+                } else if (savedState === 'prizeClerk' || savedState === 'reports' || savedState === 'librarian' || savedState === 'office') {
                     setLoginState(savedState);
                     if (auth.currentUser) {
                         try {
@@ -390,13 +396,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                                     ? 'roles_prizeClerk'
                                     : savedState === 'librarian'
                                       ? 'roles_librarian'
-                                      : 'roles_reports';
+                                      : savedState === 'office'
+                                        ? 'roles_office'
+                                        : 'roles_reports';
                             const ref = doc(firestore, 'schools', savedSchoolId, roleCollection, auth.currentUser.uid);
                             const roleDoc = await getRoleDocForSessionRestore(ref);
                             if (roleDoc.exists() && roleDoc.data().role === savedState) {
                                 setIsPrizeClerk(savedState === 'prizeClerk');
                                 setIsReports(savedState === 'reports');
                                 setIsLibrarian(savedState === 'librarian');
+                                setIsOffice(savedState === 'office');
                                 setIsAdmin(false);
                                 setIsTeacher(false);
                                 setIsSecretary(false);
@@ -520,11 +529,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
     }, [isInitialized, isUserLoading, loginState, auth, schoolId]);
 
-    // Student kiosk: `login()` already calls `enterSchoolKioskSession`, but session restore from localStorage
-    // (refresh, new tab, or fallback from expired staff role) skipped it — then badge lookup fails with
-    // "School entry required." Re-establish whenever we have a signed-in student context and surface errors in UI.
+    // Kiosk device token: `login('student')` registers the browser on the student route only.
+    // School account stays `loginState === 'school'`; re-run on refresh while on /{school}/student.
     useEffect(() => {
-        if (loginState !== 'student') {
+        const onKioskRoute =
+            typeof window !== 'undefined' &&
+            isStudentKioskRoute(window.location.pathname, schoolId);
+
+        if (loginState !== 'school' || !onKioskRoute) {
             setStudentKioskSessionEstablished(true);
             setStudentKioskSessionError(null);
             return;
@@ -544,7 +556,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 }
             })
             .catch((err) => {
-                console.warn('enterSchoolKioskSession (student session):', err);
+                console.warn('enterSchoolKioskSession (kiosk route):', err);
                 if (!cancelled) {
                     setStudentKioskSessionEstablished(false);
                     setStudentKioskSessionError(
@@ -555,7 +567,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return () => {
             cancelled = true;
         };
-    }, [isInitialized, loginState, schoolId, functions, auth.currentUser, establishStudentKioskSession]);
+    }, [isInitialized, loginState, schoolId, functions, auth?.currentUser, establishStudentKioskSession]);
 
     useEffect(() => {
         // This effect is not necessary anymore as the Cloud Function will handle role provisioning on login.
@@ -624,7 +636,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const login = useCallback(
         async (
             type: LoginState,
-            credentials: { schoolId?: string; passcode?: string; username?: string; teacherName?: string; teacherDocId?: string; staffRole?: 'secretary' | 'prizeClerk' | 'reports' | 'librarian'; }
+            credentials: { schoolId?: string; passcode?: string; username?: string; teacherName?: string; teacherDocId?: string; staffRole?: 'secretary' | 'prizeClerk' | 'reports' | 'librarian' | 'office'; }
         ): Promise<LoginResult> => {
             if (type === 'developer') {
                 try {
@@ -751,24 +763,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         getReadableErrorMessage(e, 'Could not open student check-in. Check your connection and try again.'),
                     );
                 }
-                const shouldStaySchoolUser =
-                    loginState === 'school' &&
-                    (schoolId?.trim().toLowerCase() || lowerSchoolId) === lowerSchoolId;
-                if (shouldStaySchoolUser) {
-                    returnToSchoolSession(lowerSchoolId);
-                    return loginOk();
-                }
                 setSchoolId(lowerSchoolId);
-                setLoginState('student');
-                setIsAdmin(false);
-                setIsTeacher(false);
-                setIsSecretary(false);
-                setIsPrizeClerk(false);
-                setIsReports(false);
-                setUserName(null);
-                localStorage.setItem('loginState', 'student');
-                localStorage.setItem('schoolId', lowerSchoolId);
-                localStorage.removeItem('userName');
+                returnToSchoolSession(lowerSchoolId);
                 return loginOk();
             } else if ((type === 'school' || type === 'admin') && credentials.schoolId && auth.currentUser) {
                 const lowerSchoolId = credentials.schoolId.trim().toLowerCase();
@@ -858,7 +854,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     );
                 }
             } else if (
-                (type === 'secretary' || type === 'prizeClerk' || type === 'reports' || type === 'librarian') &&
+                (type === 'secretary' || type === 'prizeClerk' || type === 'reports' || type === 'librarian' || type === 'office') &&
                 credentials.schoolId &&
                 credentials.username &&
                 auth.currentUser
@@ -872,17 +868,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                           ? 'roles_prizeClerk'
                           : type === 'librarian'
                             ? 'roles_librarian'
-                            : 'roles_reports';
+                            : type === 'office'
+                              ? 'roles_office'
+                              : 'roles_reports';
                 const expectedRole = type;
                 try {
-                    const verify = httpsCallable(functions, 'verifyStaffAccountPasscode');
-                    const res = await verify({
+                    const serverData = await verifyStaffDeskLogin(auth, functions, {
                         schoolId: lowerSchoolId,
                         username: credentials.username,
-                        passcode: credentials.passcode,
+                        passcode: credentials.passcode || '',
                         role,
                     });
-                    const serverData = res.data as { displayName?: string; roles?: string[] };
                     const serverDisplay =
                         typeof serverData?.displayName === 'string'
                             ? serverData.displayName.trim()
@@ -892,6 +888,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     const hasPrizeClerk = grantedRoles.includes('prizeClerk');
                     const hasReports = grantedRoles.includes('reports');
                     const hasLibrarian = grantedRoles.includes('librarian');
+                    const hasOffice = grantedRoles.includes('office');
 
                     const roleRef = doc(firestore, 'schools', lowerSchoolId, roleCollection, auth.currentUser.uid);
                     const roleData = await waitForReadableRole(roleRef, expectedRole, {
@@ -910,6 +907,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     setIsPrizeClerk(hasPrizeClerk);
                     setIsReports(hasReports);
                     setIsLibrarian(hasLibrarian);
+                    setIsOffice(hasOffice);
                     const displayName =
                         serverDisplay ||
                         (credentials.teacherName && credentials.teacherName.trim()) ||
@@ -920,7 +918,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                               ? 'Prize desk'
                               : type === 'librarian'
                                 ? 'Librarian'
-                                : 'Reports');
+                                : type === 'office'
+                                  ? 'Office staff'
+                                  : 'Reports');
                     setUserName(displayName);
                     setUserId(auth.currentUser.uid);
                     setTeacherDocId(null);
@@ -984,6 +984,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             isPrizeClerk,
             isReports,
             isLibrarian,
+            isOffice,
             userName,
             userId,
             teacherDocId,
@@ -1008,6 +1009,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             isPrizeClerk,
             isReports,
             isLibrarian,
+            isOffice,
             userName,
             userId,
             teacherDocId,

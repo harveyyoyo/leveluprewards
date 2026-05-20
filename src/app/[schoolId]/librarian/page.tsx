@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { collection, doc, getDocs, limit, query, setDoc, updateDoc, where } from 'firebase/firestore';
 import { Loader2, LogIn, LogOut } from 'lucide-react';
 import { useAppContext } from '@/components/AppProvider';
-import { useFirestore, useFunctions } from '@/firebase';
+import { useFirestore, useFunctions, useMemoFirebase } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -37,13 +37,13 @@ export default function LibrarianPage() {
   const [isLibraryModalOpen, setIsLibraryModalOpen] = useState(false);
   const [editingLibraryItem, setEditingLibraryItem] = useState<LibraryItem | null>(null);
 
-  const libraryQuery = useMemo(
+  const libraryQuery = useMemoFirebase(
     () => (firestore && schoolId && (isLibrarian || isAdmin) ? collection(firestore, 'schools', schoolId, 'library') : null),
     [firestore, schoolId, isLibrarian, isAdmin],
   );
   const { data: library } = useCollection<LibraryItem>(libraryQuery);
 
-  const studentsQuery = useMemo(
+  const studentsQuery = useMemoFirebase(
     () => (firestore && schoolId && (isLibrarian || isAdmin) ? collection(firestore, 'schools', schoolId, 'students') : null),
     [firestore, schoolId, isLibrarian, isAdmin],
   );
@@ -214,6 +214,7 @@ export default function LibrarianPage() {
 
           <LibraryManagementPanel
             libraryItems={library}
+            students={students}
             getStudentName={(id) => (id ? studentNameById.get(id) : undefined) ?? 'Unknown'}
             showIntakeScanner
             onAddLibraryItem={() => {

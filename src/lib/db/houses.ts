@@ -11,7 +11,11 @@ import {
 import type { House, Student } from '../types';
 import { reportFirestorePermissionError } from '@/firebase/error-emitter';
 import { removeUndefined } from './helpers';
-import { RCA_HOUSE_PRESET_PACK } from '@/lib/housePresets';
+import {
+  getHousePresetTheme,
+  housePresetKeysFromDoc,
+  type HousePresetThemeId,
+} from '@/lib/housePresets';
 
 function newHouseId(): string {
   return `h_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
@@ -88,33 +92,44 @@ export const deleteHouse = async (
   }
 };
 
-/** Seed the 8 RCA-style houses; skips names that already exist (case-insensitive). */
-export const seedRcaHousePresets = async (
+/** Seed houses from a preset pack; skips duplicate names or preset keys. */
+export const seedHousePresets = async (
   firestore: Firestore,
   schoolId: string,
   currentHouses: House[],
+  presets: Omit<House, 'id' | 'points' | 'lifetimePoints'>[],
 ): Promise<{ created: number; skipped: number }> => {
   const existingLower = new Set(currentHouses.map((h) => h.name.trim().toLowerCase()));
-  const existingPresetKeys = new Set(
-    currentHouses.map((h) => h.rcaPresetKey).filter(Boolean) as string[],
-  );
+  const existingPresetKeys = new Set(currentHouses.flatMap((h) => housePresetKeysFromDoc(h)));
 
   let created = 0;
   let skipped = 0;
 
-  for (const preset of RCA_HOUSE_PRESET_PACK) {
+  for (const preset of presets) {
     const key = preset.name.trim().toLowerCase();
-    if (existingLower.has(key) || (preset.rcaPresetKey && existingPresetKeys.has(preset.rcaPresetKey))) {
+    const presetId = preset.presetKey;
+    if (existingLower.has(key) || (presetId && existingPresetKeys.has(presetId))) {
       skipped += 1;
       continue;
     }
     await addHouse(firestore, schoolId, preset);
     existingLower.add(key);
-    if (preset.rcaPresetKey) existingPresetKeys.add(preset.rcaPresetKey);
+    if (presetId) existingPresetKeys.add(presetId);
     created += 1;
   }
 
   return { created, skipped };
+};
+
+/** Seed houses from a built-in theme pack. */
+export const seedHouseThemePack = async (
+  firestore: Firestore,
+  schoolId: string,
+  currentHouses: House[],
+  themeId: HousePresetThemeId,
+): Promise<{ created: number; skipped: number }> => {
+  const theme = getHousePresetTheme(themeId);
+  return seedHousePresets(firestore, schoolId, currentHouses, theme.houses);
 };
 
 /** Recompute each house's cached points from member student balances. */

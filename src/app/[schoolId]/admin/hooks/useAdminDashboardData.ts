@@ -39,7 +39,11 @@ export interface AppConfigGlobalData {
  * destructure only what they use; identities of returned arrays/objects are
  * stable as long as Firestore snapshots don't change.
  */
-export function useAdminDashboardData(schoolId: string | null, payLibrary?: boolean) {
+export function useAdminDashboardData(
+  schoolId: string | null,
+  payLibrary?: boolean,
+  enableHouses?: boolean,
+) {
   const firestore = useFirestore();
 
   // --- Queries ---------------------------------------------------------
@@ -52,8 +56,11 @@ export function useAdminDashboardData(schoolId: string | null, payLibrary?: bool
     [firestore, schoolId],
   );
   const housesQuery = useMemoFirebase(
-    () => (schoolId ? collection(firestore, 'schools', schoolId, 'houses') : null),
-    [firestore, schoolId],
+    () =>
+      schoolId && enableHouses
+        ? collection(firestore, 'schools', schoolId, 'houses')
+        : null,
+    [firestore, schoolId, enableHouses],
   );
   const teachersQuery = useMemoFirebase(
     () => (schoolId ? collection(firestore, 'schools', schoolId, 'teachers') : null),

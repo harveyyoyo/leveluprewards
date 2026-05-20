@@ -52,6 +52,9 @@ jobs:
             printf 'NEXT_PUBLIC_ENABLE_DEV_LOGIN=false\n'
             # Session cookies still 503 on SSR; keep middleware gate off until Admin ADC is fixed.
             printf 'DISABLE_AUTH_SESSION_EDGE=1\n'
+            printf 'OFFICE_CANONICAL_HOST=office.leveluprewards.app\n'
+            printf 'NEXT_PUBLIC_OFFICE_CANONICAL_HOST=office.leveluprewards.app\n'
+            printf 'AUTH_COOKIE_DOMAIN=.leveluprewards.app\n'
           } > .env
 
       - name: Build

@@ -25,7 +25,7 @@ export function AdminBackupsTab({
         <div>
           <Helper content="Create and restore full data snapshots of your school. This is a critical tool for data safety and recovery.">
             <CardTitle className="flex items-center gap-2">
-              <Database className="text-destructive w-5 h-5" /> System Backups
+              <Database className="text-primary w-5 h-5" /> System Backups
             </CardTitle>
           </Helper>
           <CardDescription>Create and restore data snapshots.</CardDescription>
