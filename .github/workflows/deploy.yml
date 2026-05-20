@@ -21,7 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
@@ -41,13 +41,18 @@ jobs:
             base="HEAD^"
           fi
 
-          changed_files="$(git diff --name-only "$base" "$AFTER_SHA" -- firestore.rules functions || true)"
+          changed_files="$(git diff --name-only "$base" "$AFTER_SHA" -- firestore.rules functions .github/workflows/deploy.yml || true)"
           firestore_rules_changed=false
           functions_changed=false
           while IFS= read -r file; do
             case "$file" in
               firestore.rules) firestore_rules_changed=true ;;
               functions/*) functions_changed=true ;;
+              .github/workflows/deploy.yml)
+                # A deploy-workflow change should publish backend updates as a safety net.
+                firestore_rules_changed=true
+                functions_changed=true
+                ;;
             esac
           done <<< "$changed_files"
 
