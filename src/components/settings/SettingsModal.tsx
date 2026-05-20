@@ -651,8 +651,8 @@ export function SettingsModal() {
             )}
       <DialogContent
                 size="lg"
-                overlayClassName="z-[110]"
-                className="z-[110] p-0 overflow-hidden border border-border bg-background flex flex-col shadow-2xl"
+                overlayClassName="z-[270]"
+                className="z-[280] p-0 overflow-hidden border border-border bg-background flex flex-col shadow-2xl"
                 data-settings-open="true"
             >
                 {/* Header */}
@@ -2178,7 +2178,7 @@ export function SettingsModal() {
         </Dialog>
 
         <Dialog open={vendingSettingsOpen} onOpenChange={setVendingSettingsOpen}>
-            <DialogContent size="lg" overlayClassName="z-[120]" className="z-[120]">
+            <DialogContent size="lg" overlayClassName="z-[290]" className="z-[300]">
                 <DialogHeader>
                     <DialogTitle>Vending Machine Settings</DialogTitle>
                 </DialogHeader>

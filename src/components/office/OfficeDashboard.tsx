@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { AlertCircle, ArrowRight, CreditCard, GraduationCap, LayoutGrid, Users } from 'lucide-react';
+import { AlertCircle, ArrowRight, CreditCard, GraduationCap, LayoutGrid, Users, FileText } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { formatCents } from '@/lib/office/officeNav';
@@ -55,6 +55,13 @@ export function OfficeDashboard({
       description: 'Family accounts, invoices, and balances.',
       icon: CreditCard,
       stat: `${formatCents(insights.openBalanceCents)} open`,
+    },
+    {
+      href: officePublicHref(schoolId, 'reports'),
+      title: 'Reports',
+      description: 'Print scannable term grade summaries.',
+      icon: FileText,
+      stat: 'Print ready',
     },
   ];
 
@@ -116,7 +123,7 @@ export function OfficeDashboard({
         </section>
       ) : null}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {quickLinks.map((link) => {
           const Icon = link.icon;
           return (

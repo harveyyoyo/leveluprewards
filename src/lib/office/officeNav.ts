@@ -48,6 +48,13 @@ export const OFFICE_NAV_ITEMS: OfficeNavItem[] = [
     href: (schoolId) => `/${schoolId}/office/billing`,
     icon: CreditCard,
   },
+  {
+    id: 'reports',
+    label: 'Reports',
+    description: 'Print term grades and reports',
+    href: (schoolId) => officePublicHref(schoolId, 'reports'),
+    icon: FileText,
+  },
 ];
 
 export function officeNavIdFromPath(pathname: string, schoolId: string): OfficeNavId {
