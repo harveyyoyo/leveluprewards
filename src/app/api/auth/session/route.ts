@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdminAuth } from '@/lib/server/firebaseAdminAuth';
 import {
   FIREBASE_SESSION_COOKIE_NAME,
+  shouldEnforceFirebaseSessionEdge,
   shouldMintFirebaseSessionCookie,
 } from '@/lib/auth/firebaseSessionCookie';
 import { SCHOOL_GATE_COOKIE_NAME } from '@/lib/auth/schoolGateCookie';
@@ -37,11 +38,26 @@ export async function POST(req: NextRequest) {
       return jsonError(400, 'idToken required');
     }
 
-    const auth = await getFirebaseAdminAuth();
-    await auth.verifyIdToken(idToken, true);
+    let sessionCookie = '';
+    let expiresInMs = 0;
+    try {
+      const auth = await getFirebaseAdminAuth();
+      await auth.verifyIdToken(idToken, true);
 
-    const expiresInMs = 1000 * 60 * 60 * 24 * 5; // 5 days (under Firebase 14d cap)
-    const sessionCookie = await auth.createSessionCookie(idToken, { expiresIn: expiresInMs });
+      expiresInMs = 1000 * 60 * 60 * 24 * 5; // 5 days (under Firebase 14d cap)
+      sessionCookie = await auth.createSessionCookie(idToken, { expiresIn: expiresInMs });
+    } catch (e) {
+      console.error('[api/auth/session] cookie mint failed:', e);
+      if (!shouldEnforceFirebaseSessionEdge()) {
+        return NextResponse.json({
+          ok: true,
+          skipped: true,
+          reason: 'session-cookie-unavailable',
+        });
+      }
+      return jsonError(503, 'Could not create session. Check Firebase Admin credentials in this environment.');
+    }
+
     const maxAgeSec = Math.floor(expiresInMs / 1000);
 
     const res = NextResponse.json({ ok: true });
