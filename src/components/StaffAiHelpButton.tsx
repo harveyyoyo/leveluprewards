@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { APP_NAME } from '@/lib/appBranding';
 import { getArcadeAiModelFromStorage } from '@/lib/aiModelPreference';
+import { canAccessStaffAiHelp } from '@/lib/staffAiHelpAccess';
 import { RemoteSupportSharePanel } from '@/components/RemoteSupportSharePanel';
 import {
   Sheet,
@@ -29,19 +30,6 @@ const WELCOME: ChatMessage = {
   role: 'assistant',
   content: `Hi! I can help you use ${APP_NAME}: the Admin, Teacher, and student tools; printing coupons; the rewards shop; settings; and Admin → Notifications (email, SMS, and WhatsApp alerts). What would you like to know?`,
 };
-
-/** Admin, teacher, and other staff sign-in roles (not students). */
-const STAFF_OR_ADMIN_LOGIN = new Set([
-  'admin',
-  'teacher',
-  'secretary',
-  'prizeClerk',
-  'reports',
-  'librarian',
-  'office',
-  'houseCoordinator',
-  'school',
-]);
 
 function isPublicRoute(pathname: string) {
   return (
@@ -71,7 +59,7 @@ export function StaffAiHelpButton() {
     isInitialized &&
     !isUserLoading &&
     !isPublicRoute(pathname) &&
-    STAFF_OR_ADMIN_LOGIN.has(loginState);
+    canAccessStaffAiHelp(loginState);
 
   const scrollToBottom = useCallback(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });

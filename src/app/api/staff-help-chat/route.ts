@@ -8,6 +8,7 @@ import { guardAiRoute } from '@/lib/apiAuth';
 import { APP_NAME } from '@/lib/appBranding';
 import { STAFF_HELP_AI_MODEL } from '@/lib/aiModelPreference';
 import { buildStaffHelpCodeContextBlock } from '@/lib/staffHelpCodeContext';
+import { canAccessStaffAiHelp } from '@/lib/staffAiHelpAccess';
 
 const MAX_MESSAGES = 10;
 const MAX_CONTENT_LEN = 2000;
@@ -175,6 +176,13 @@ export async function POST(req: NextRequest) {
 
     const pathname = typeof body.pathname === 'string' ? body.pathname : undefined;
     const loginState = typeof body.loginState === 'string' ? body.loginState : undefined;
+
+    if (loginState && !canAccessStaffAiHelp(loginState)) {
+      return NextResponse.json(
+        { error: 'You do not have permission to use this chat.' },
+        { status: 403 },
+      );
+    }
 
     const messages = normalizeMessages(body.messages);
     if (!messages) {
