@@ -39,6 +39,15 @@ async function readText(response) {
   }
 }
 
+async function checkRedirectTarget(location) {
+  const target = new URL(location, baseUrl).toString();
+  const response = await fetchWithTimeout(target, { redirect: 'follow' });
+  if (!response.ok) {
+    fail(`Portal redirect target returned HTTP ${response.status}.`, target);
+  }
+  console.log(`[live-uptime] Portal redirect target returned ${response.status}: ${target}`);
+}
+
 async function checkHealth() {
   const response = await fetchWithTimeout(`${baseUrl}/api/health`);
   const body = await readText(response);
@@ -95,6 +104,10 @@ async function checkPortal() {
     }
     if (response.status >= 300 && response.status < 400 && location.includes('/login')) {
       console.log(`[live-uptime] /${schoolId}/portal redirected to ${location}.`);
+      return;
+    }
+    if (response.status >= 300 && response.status < 400 && location) {
+      await checkRedirectTarget(location);
       return;
     }
     fail(`Portal check failed. HTTP ${response.status}`, location || (await readText(response)));

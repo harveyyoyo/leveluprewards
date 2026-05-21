@@ -22,6 +22,15 @@ async function readBody(response) {
   }
 }
 
+async function verifyRedirectTarget(location) {
+  const target = new URL(location, baseUrl).toString();
+  const response = await fetch(target, { redirect: 'follow' });
+  if (!response.ok) {
+    fail(`Portal canonical redirect target failed. HTTP ${response.status}`, target);
+  }
+  console.log(`[live-auth-smoke] Portal canonical redirect target returned ${response.status}: ${target}`);
+}
+
 function resolveRequireSessionCookieFlag() {
   if (process.env.LIVE_AUTH_REQUIRE_SESSION_COOKIE === '1') return true;
   if (process.env.LIVE_AUTH_REQUIRE_SESSION_COOKIE === '0') return false;
@@ -123,7 +132,11 @@ async function verifyDirectPortalHttp(requireSessionCookie) {
   }
 
   if (response.status >= 300 && response.status < 400) {
-    fail(`Portal request redirected while edge enforcement is disabled. HTTP ${response.status}`, location);
+    if (location.toLowerCase().includes('/login')) {
+      fail(`Portal request redirected to login while edge enforcement is disabled. HTTP ${response.status}`, location);
+    }
+    await verifyRedirectTarget(location);
+    return;
   }
   if (!response.ok) {
     fail(`Direct portal request failed. HTTP ${response.status}`, await readBody(response));
