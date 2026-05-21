@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from 'react';
 import { useFirebase } from '@/firebase';
-import { officePortalEntryHref } from '@/lib/officePublicUrl';
+import { officePortalEntryHref, officePortalHandoffHref } from '@/lib/officePublicUrl';
 import {
   syncFirebaseSessionCookie,
   syncSchoolGateCookie,
@@ -14,6 +14,12 @@ type OfficePortalEntryLinkProps = {
   children?: React.ReactNode;
 };
 
+function resolveOpenUrl(href: string): string {
+  if (href.startsWith('http://') || href.startsWith('https://')) return href;
+  if (typeof window === 'undefined') return href;
+  return `${window.location.origin}${href.startsWith('/') ? href : `/${href}`}`;
+}
+
 /** Opens School Office after syncing HttpOnly session cookies required for portal → office handoff. */
 export function OfficePortalEntryLink({
   schoolId,
@@ -22,6 +28,7 @@ export function OfficePortalEntryLink({
 }: OfficePortalEntryLinkProps) {
   const { auth } = useFirebase();
   const [busy, setBusy] = useState(false);
+  const publicHref = officePortalEntryHref(schoolId);
 
   const handleClick = useCallback(
     async (event: React.MouseEvent<HTMLAnchorElement>) => {
@@ -31,9 +38,9 @@ export function OfficePortalEntryLink({
       const sid = schoolId.trim().toLowerCase();
       if (!sid) return;
 
-      const target = officePortalEntryHref(sid);
+      const openTarget = resolveOpenUrl(officePortalHandoffHref(sid));
       if (!auth?.currentUser) {
-        window.open(target, '_blank', 'noopener,noreferrer');
+        window.open(openTarget, '_blank', 'noopener,noreferrer');
         return;
       }
 
@@ -47,14 +54,14 @@ export function OfficePortalEntryLink({
         setBusy(false);
       }
 
-      window.open(target, '_blank', 'noopener,noreferrer');
+      window.open(openTarget, '_blank', 'noopener,noreferrer');
     },
     [auth, busy, schoolId],
   );
 
   return (
     <a
-      href={officePortalEntryHref(schoolId)}
+      href={publicHref}
       target="_blank"
       rel="noreferrer"
       aria-busy={busy}
