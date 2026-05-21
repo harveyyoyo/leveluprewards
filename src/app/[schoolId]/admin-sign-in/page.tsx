@@ -2,12 +2,15 @@
 
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { ShieldCheck, ArrowLeft, Loader2 } from 'lucide-react';
 
 import { useAppContext } from '@/components/AppProvider';
+import { useFirebase } from '@/firebase';
+import { useAdminGooglePasscodeBypass } from '@/hooks/useAdminGooglePasscodeBypass';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useToast } from '@/hooks/use-toast';
+import { loginSchoolAdmin } from '@/lib/adminGoogleAccess';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -61,7 +64,8 @@ function AdminSignInContent() {
   const searchParams = useSearchParams();
   const playSound = useArcadeSound();
   const { toast } = useToast();
-  const { login, isInitialized, schoolId: activeSchoolId, loginState } = useAppContext();
+  const { login, isInitialized, schoolId: activeSchoolId, loginState, isAdmin } = useAppContext();
+  const { user } = useFirebase();
   const [passcode, setPasscode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -77,19 +81,39 @@ function AdminSignInContent() {
     return `/${schoolId}/portal`;
   }, [schoolId, loginState]);
 
-  const handleSubmit = async () => {
-    if (!schoolId || !passcode.trim()) {
+  const redirectAfterAdminLogin = useCallback(() => {
+    const next = destinationAfterAdminLogin(searchParams.get('redirect'), schoolId);
+    router.replace(next ?? `/${schoolId}/admin`);
+  }, [router, schoolId, searchParams]);
+
+  const { canBypassAdminPasscode, isAutoLoggingIn } = useAdminGooglePasscodeBypass({
+    schoolId,
+    onSuccess: redirectAfterAdminLogin,
+    onError: (message) => {
       playSound('error');
-      toast({
-        variant: 'destructive',
-        title: 'Missing passcode',
-        description: 'Enter the admin passcode to continue.',
-      });
-      return;
-    }
+      toast({ variant: 'destructive', title: 'Admin sign-in failed', description: message });
+    },
+  });
+
+  useEffect(() => {
+    if (!isInitialized || !isAdmin || !schoolId) return;
+    redirectAfterAdminLogin();
+  }, [isAdmin, isInitialized, redirectAfterAdminLogin, schoolId]);
+
+  const handleSubmit = async () => {
+    if (!schoolId) return;
     setIsSubmitting(true);
     try {
-      const authResult = await login('admin', { schoolId, passcode: passcode.trim() });
+      const authResult = await loginSchoolAdmin(login, user, schoolId, passcode);
+      if (!authResult.ok && !passcode.trim()) {
+        playSound('error');
+        toast({
+          variant: 'destructive',
+          title: 'Missing passcode',
+          description: authResult.message,
+        });
+        return;
+      }
       if (!authResult.ok) {
         playSound('error');
         toast({
@@ -101,19 +125,18 @@ function AdminSignInContent() {
         return;
       }
       playSound('login');
-      const next = destinationAfterAdminLogin(searchParams.get('redirect'), schoolId);
-      router.replace(next ?? `/${schoolId}/admin`);
+      redirectAfterAdminLogin();
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (!isInitialized) {
+  if (!isInitialized || isAutoLoggingIn || (canBypassAdminPasscode && !isAdmin)) {
     return (
       <div className="min-h-[calc(100vh-5rem)] flex items-center justify-center p-8">
         <Button disabled variant="ghost" size="lg" className="text-muted-foreground">
           <Loader2 className="mr-2 h-5 w-5 animate-spin" aria-hidden />
-          Loading…
+          {canBypassAdminPasscode ? 'Signing in with Google…' : 'Loading…'}
         </Button>
       </div>
     );

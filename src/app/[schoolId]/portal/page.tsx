@@ -3,6 +3,7 @@ import { useMemo, useState, useEffect, useLayoutEffect, useRef, type ComponentTy
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
+import { useAdminGooglePasscodeBypass } from '@/hooks/useAdminGooglePasscodeBypass';
 import { Book, GraduationCap, Printer, UserCog, Loader2, ShieldCheck, ArrowUpRight } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
@@ -138,6 +139,10 @@ function WhereToDrawnTitle({
 
 export default function PortalPage() {
     const { loginState, isInitialized, schoolId, isAdmin, isOffice, login, logout } = useAppContext();
+    const { canBypassAdminPasscode, loginAsAdminViaGoogle } = useAdminGooglePasscodeBypass({
+        schoolId,
+        autoLogin: false,
+    });
     const { settings } = useSettings();
     const prefersReducedMotion = useReducedMotion();
     const playSound = useArcadeSound();
@@ -364,7 +369,7 @@ export default function PortalPage() {
                         const Icon = area.icon;
                         const rainbowColor = rainbowForPortalId(area.id, settings.colorScheme);
                         const needsAdminKioskHandoff = area.id === 'redeem' && loginState === 'admin';
-                        const needsAdminPasscode = area.id === 'admin' && !isAdmin;
+                        const needsAdminPasscode = area.id === 'admin' && !isAdmin && !canBypassAdminPasscode;
                         // School gate and admins pick staff (or continue as admin); signed-in teachers go straight through.
                         const needsTeacherLogin =
                             area.id === 'print' &&
@@ -453,12 +458,36 @@ export default function PortalPage() {
                                 href={area.href}
                                 onClick={(e) => {
                                     playSound('click');
-                                    if (needsAdminPasscode) {
+                                    if (area.id === 'admin' && !isAdmin) {
                                         e.preventDefault();
-                                        if (schoolId) router.prefetch(`/${schoolId}/admin`);
-                                        setAdminDestination('admin');
-                                        setAdminDialogOpen(true);
-                                        return;
+                                        if (canBypassAdminPasscode && schoolId) {
+                                            void (async () => {
+                                                setAdminSubmitting(true);
+                                                const ok = await loginAsAdminViaGoogle();
+                                                setAdminSubmitting(false);
+                                                if (!ok) {
+                                                    playSound('error');
+                                                    toast({
+                                                        variant: 'destructive',
+                                                        title: 'Admin sign-in failed',
+                                                        description:
+                                                            'Could not sign in with your Google account. Try again or use the admin passcode.',
+                                                    });
+                                                    setAdminDestination('admin');
+                                                    setAdminDialogOpen(true);
+                                                    return;
+                                                }
+                                                playSound('login');
+                                                router.replace(`/${schoolId}/admin`);
+                                            })();
+                                            return;
+                                        }
+                                        if (needsAdminPasscode) {
+                                            if (schoolId) router.prefetch(`/${schoolId}/admin`);
+                                            setAdminDestination('admin');
+                                            setAdminDialogOpen(true);
+                                            return;
+                                        }
                                     }
                                     if (needsTeacherLogin) {
                                         e.preventDefault();

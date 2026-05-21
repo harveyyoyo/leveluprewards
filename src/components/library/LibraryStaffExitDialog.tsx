@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirebase } from '@/firebase';
+import { loginSchoolAdmin } from '@/lib/adminGoogleAccess';
 import { useToast } from '@/hooks/use-toast';
 import { verifyStaffDeskLogin } from '@/lib/staffDeskLogin';
 
@@ -29,7 +30,7 @@ export function LibraryStaffExitDialog({
   onUnlocked: () => void;
 }) {
   const { schoolId, login } = useAppContext();
-  const { auth, functions } = useFirebase();
+  const { auth, functions, user } = useFirebase();
   const { toast } = useToast();
   const [adminPasscode, setAdminPasscode] = useState('');
   const [librarianUser, setLibrarianUser] = useState('');
@@ -44,14 +45,9 @@ export function LibraryStaffExitDialog({
 
   const handleAdminExit = async () => {
     if (!schoolId || busy) return;
-    const code = adminPasscode.trim();
-    if (!code) {
-      toast({ variant: 'destructive', title: 'Enter admin passcode' });
-      return;
-    }
     setBusy(true);
     try {
-      const authResult = await login('admin', { schoolId, passcode: code });
+      const authResult = await loginSchoolAdmin(login, user, schoolId, adminPasscode);
       if (!authResult.ok) {
         toast({
           variant: 'destructive',
