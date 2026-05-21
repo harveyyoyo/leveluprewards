@@ -118,6 +118,8 @@ html[data-office-portal] {
   .student-kiosk-warm-aurora,
   .student-kiosk-scan-beam,
   .student-kiosk-scan-beam-horizontal,
+  .student-kiosk-scan-beam-core,
+  .student-kiosk-scan-flash,
   .rk-dot,
   .rk-rise,
   .rk-title {
@@ -161,10 +163,31 @@ html[data-office-portal] {
 
 @keyframes rk-scan-horizontal {
   0% {
-    transform: translateX(-120%);
+    left: -36%;
   }
   100% {
-    transform: translateX(420%);
+    left: 100%;
+  }
+}
+
+@keyframes rk-scan-horizontal-core {
+  0% {
+    left: -3px;
+  }
+  100% {
+    left: calc(100% + 3px);
+  }
+}
+
+@keyframes rk-scan-flash {
+  0%,
+  44%,
+  56%,
+  100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.28;
   }
 }
 
@@ -221,7 +244,17 @@ html[data-office-portal] {
 }
 
 .student-kiosk-scan-beam-horizontal {
-  animation: rk-scan-horizontal 0.85s linear infinite;
+  animation: rk-scan-horizontal 1.05s linear infinite;
+  will-change: left;
+}
+
+.student-kiosk-scan-beam-core {
+  animation: rk-scan-horizontal-core 1.05s linear infinite;
+  will-change: left;
+}
+
+.student-kiosk-scan-flash {
+  animation: rk-scan-flash 1.05s linear infinite;
 }
 
 .rk-title {

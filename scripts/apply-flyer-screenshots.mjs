@@ -22,7 +22,8 @@ const FLYER_IMAGES = {
   'flyer-students-elementary.html': ['kiosk-welcome.png'],
   'flyer-students-elementary-2.html': ['kiosk-welcome.png'],
   'flyer-students-middle.html': ['hall-of-fame.png'],
-  'flyer-students-middle-2.html': ['hall-of-fame.png', 'student-home-portal.png'],
+  'flyer-students-middle-2.html': ['hall-of-fame.png', 'kiosk-rewards-shop.png'],
+  'flyer-retro.html': ['kiosk-welcome.png', 'kiosk-system-ready.png'],
   'flyer-students-high.html': ['kiosk-rewards-shop.png'],
   'flyer-students-high-2.html': ['kiosk-rewards-shop.png'],
   'flyer-principal-data.html': ['admin-stats.png'],
@@ -42,6 +43,7 @@ const FLYER_IMAGES = {
   'flyer-feature-attendance.html': ['admin-attendance.png'],
   'flyer-feature-notifications.html': ['admin-notifications.png'],
   'flyer-feature-id-cards-themes.html': ['admin-id-card.png', 'admin-theme-designer.png'],
+  'flyer-feature-student-kiosk.html': ['kiosk-system-ready.png'],
   'flyer-feature-rewards-shop.html': ['kiosk-rewards-shop.png'],
 };
 

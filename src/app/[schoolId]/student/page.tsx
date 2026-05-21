@@ -45,6 +45,12 @@ import { HouseBadge } from '@/components/houses/HouseBadge';
 import { computeDaysOverdue, getLibraryPolicyFromSettings } from '@/lib/libraryPolicy';
 import { StudentLibraryCheckoutsCard } from '@/components/student-kiosk/StudentLibraryCheckoutsCard';
 import { StudentKioskThemeButton } from '@/components/student-kiosk/StudentKioskThemeButton';
+import { StudentKioskActivityPreview } from '@/components/student-kiosk/StudentKioskActivityPreview';
+import { StudentActivityList } from '@/components/student-kiosk/StudentActivityList';
+import {
+  StudentKioskTopBar,
+  StudentKioskPointCategoriesPanel,
+} from '@/components/student-kiosk/StudentKioskTopBar';
 import { performKioskAttendanceSignIn, describeAttendanceKioskOutcome } from '@/lib/attendance/kioskSignIn';
 import DynamicIcon from '@/components/DynamicIcon';
 import { Progress } from '@/components/ui/progress';
@@ -132,7 +138,6 @@ import { StudentKioskTransitionFlash } from '@/components/StudentKioskTransition
 import { isPillarOn } from '@/lib/productPillars';
 import {
   StudentKioskWarmBackdrop,
-  StudentKioskBalancePill,
   StudentKioskRewardRail,
   StudentKioskRedeemHero,
   studentKioskCenterStackClass,
@@ -220,182 +225,6 @@ function fallbackPrizeSurprise(
   return selected;
 }
 
-function StudentActivityList({
-  schoolId,
-  studentId,
-  themed = false,
-  onReprintTicket,
-  maxItems,
-}: {
-  schoolId: string;
-  studentId: string;
-  themed?: boolean;
-  onReprintTicket?: (item: HistoryItem) => void;
-  maxItems?: number;
-}) {
-  const firestore = useFirestore();
-  const activitiesQuery = useMemoFirebase(() => (
-    query(
-      collection(firestore, `schools/${schoolId}/students/${studentId}/activities`),
-      orderBy('date', 'desc'),
-      limit(20)
-    )
-  ), [firestore, schoolId, studentId]);
-  const { data: history, isLoading } = useCollection<HistoryItem>(activitiesQuery);
-  // When hosted inside a custom-themed card, fall back to `currentColor`
-  // / inherited theme text rather than the slate Tailwind ladder, so
-  // text always contrasts against the student's chosen card color.
-  const themedTextStyle: React.CSSProperties | undefined = themed ? { color: 'var(--theme-text)' } : undefined;
-  const themedMutedStyle: React.CSSProperties | undefined = themed ? { color: 'var(--theme-text)', opacity: 0.7 } : undefined;
-
-  if (isLoading) {
-    return (
-      <div className="space-y-2 p-3" role="status" aria-live="polite" aria-label="Loading activity">
-        {[...Array(5)].map((_, i) => (
-          <div key={i} className="flex justify-between items-center py-2 border-b border-border/50">
-            <div className="space-y-1.5">
-              <Skeleton className="h-3.5 w-28" />
-              <Skeleton className="h-2.5 w-14" />
-            </div>
-            <Skeleton className="h-5 w-10 rounded-full" />
-          </div>
-        ))}
-        <span className="sr-only">Loading activity…</span>
-      </div>
-    );
-  }
-
-  const visibleHistory = typeof maxItems === 'number' ? (history || []).slice(0, Math.max(0, maxItems)) : (history || []);
-
-  return (
-    <div className="w-full overflow-hidden">
-      <ul className="space-y-2">
-        {history && history.length > 0 ? (
-          visibleHistory.map((item, index) => {
-            const isRedemption = item.desc.startsWith('Redeemed:');
-            const isPointGain = item.amount > 0;
-
-            return (
-                            <li
-                                key={index}
-                                className={cn(
-                                  "group p-2 rounded-xl transition-all duration-300",
-                                  !themed && "border border-slate-50 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 hover:bg-slate-50 dark:hover:bg-slate-800/80",
-                                )}
-                                style={themed ? { backgroundColor: 'rgba(255,255,255,0.08)', borderColor: 'rgba(127,127,127,0.25)', borderWidth: 1, borderStyle: 'solid' } : undefined}
-                            >
-                                <div className="flex justify-between items-start mb-1">
-                                    <div className="flex gap-2">
-                                        <div className={cn(
-                                            "w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5",
-                                            isRedemption ? "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400" :
-                                                (item.desc.toLowerCase().includes('attendance') || item.desc.toLowerCase().includes('sign-in')) ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400" :
-                                                    "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
-                                        )}>
-                                            {isRedemption ? <Gift className="w-3.5 h-3.5" /> :
-                                                (item.desc.toLowerCase().includes('attendance') || item.desc.toLowerCase().includes('sign-in')) ? <CheckCircle2 className="w-3.5 h-3.5" /> :
-                                                    <Ticket className="w-3.5 h-3.5" />}
-                                        </div>
-                                        <div>
-                                            <p
-                                                className={cn("text-[13px] font-bold leading-tight", !themed && "text-slate-800 dark:text-slate-200")}
-                                                style={themedTextStyle}
-                                            >
-                                                {item.desc}
-                                            </p>
-                                            <div
-                                                className={cn("flex items-center gap-1 mt-0.5", !themed && "text-muted-foreground")}
-                                                style={themedMutedStyle}
-                                            >
-                                                <Clock className="w-2.5 h-2.5" aria-hidden="true" />
-                                                <span className="text-[10px] font-semibold tracking-wide">
-                                                    {item.date ? format(new Date(item.date), 'MMM d, h:mm a') : 'Recently'}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <Badge
-                                        variant={isPointGain ? 'default' : 'secondary'}
-                                        className={cn(
-                                            "font-black text-[9px] px-1.5 py-0 rounded-full tracking-tighter shrink-0",
-                                            !themed && (isPointGain ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'),
-                                        )}
-                                        style={themed ? {
-                                            backgroundColor: isPointGain ? 'rgba(16,185,129,0.18)' : 'rgba(244,63,94,0.18)',
-                                            color: 'var(--theme-text)',
-                                            borderColor: 'transparent',
-                                        } : undefined}
-                                    >
-                                        {isPointGain ? `+${item.amount}` : item.amount} PTS
-                                    </Badge>
-                                </div>
-                                <div className="flex justify-between items-center mt-1">
-                                    <div />
-                                    {isRedemption && (
-                                        <div className="flex items-center gap-2 shrink-0">
-                                            <div
-                                                className={cn(
-                                                    "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide",
-                                                    !themed && (item.fulfilled
-                                                        ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30"
-                                                        : "bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30"),
-                                                )}
-                                                style={themed ? {
-                                                    backgroundColor: item.fulfilled ? 'rgba(16,185,129,0.18)' : 'rgba(245,158,11,0.18)',
-                                                    color: 'var(--theme-text)',
-                                                    borderColor: 'transparent',
-                                                } : undefined}
-                                            >
-                                                {item.fulfilled ? (
-                                                    <>
-                                                        <CheckCircle2 className="w-3 h-3" aria-hidden="true" /> Delivered
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <Clock className="w-3 h-3" aria-hidden="true" /> Pending
-                                                    </>
-                                                )}
-                                            </div>
-                                            {onReprintTicket && (
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        onReprintTicket(item);
-                                                    }}
-                                                    className={cn(
-                                                        "h-6 px-2 text-[10px] rounded-full border flex items-center gap-1 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 shrink-0",
-                                                        !themed && "border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300",
-                                                    )}
-                                                    style={themed ? {
-                                                        backgroundColor: 'rgba(255,255,255,0.1)',
-                                                        borderColor: 'rgba(127,127,127,0.3)',
-                                                        color: 'var(--theme-text)',
-                                                    } : undefined}
-                                                >
-                                                    <Printer className="w-3 h-3" aria-hidden="true" /> Reprint
-                                                </Button>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                            </li>
-            );
-          })
-        ) : (
-          <div className="flex flex-col items-center justify-center py-12 text-center space-y-3">
-            <div className="w-12 h-12 rounded-full bg-slate-50 dark:bg-slate-800 flex items-center justify-center">
-              <Clock className="w-6 h-6 text-slate-300" />
-            </div>
-            <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">No activity found</p>
-          </div>
-        )}
-      </ul>
-    </div>
-  );
-}
-
 function EligibleRewardCard({
   reward,
   themed,
@@ -419,9 +248,9 @@ function EligibleRewardCard({
       className={cn(
         'reward-card min-h-[8.5rem] min-w-0 rounded-2xl border p-3 sm:min-h-[9.5rem] sm:p-4 lg:min-h-[10rem]',
         grow && 'flex-1',
-        'flex cursor-pointer flex-col items-stretch justify-between gap-1 text-center shadow-sm',
+        'flex cursor-pointer flex-col items-stretch justify-between gap-2 text-center shadow-sm',
         'transition-[box-shadow] duration-500 [transition-timing-function:cubic-bezier(0.22,1,0.36,1)]',
-        'hover:shadow-lg motion-reduce:transition-none group relative overflow-visible',
+        'hover:shadow-lg motion-reduce:transition-none group relative overflow-hidden',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
         !themed && 'border-slate-100 bg-white/40 dark:border-slate-800 dark:bg-slate-800/40',
       )}
@@ -437,15 +266,37 @@ function EligibleRewardCard({
           : undefined
       }
     >
-      {reward.name ? (
-        <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl opacity-5">
-          <img
-            src={`https://api.dicebear.com/9.x/shapes/svg?seed=${encodeURIComponent(reward.name)}&backgroundColor=transparent`}
-            alt=""
-            className="h-full w-full object-cover"
-          />
-        </div>
-      ) : null}
+      <div
+        className={cn(
+          'relative mx-auto flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl shadow-inner sm:h-16 sm:w-16',
+          !themed && 'bg-gradient-to-br from-primary/15 to-chart-3/25 text-primary',
+        )}
+        style={
+          themed
+            ? {
+                backgroundColor: 'color-mix(in srgb, var(--theme-primary) 14%, var(--theme-bg))',
+                color: 'var(--theme-primary)',
+              }
+            : undefined
+        }
+      >
+        {reward.imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={reward.imageUrl} alt="" className="absolute inset-0 z-[5] size-full object-cover" />
+        ) : reward.name ? (
+          <div className="pointer-events-none absolute inset-0 z-0 opacity-35 mix-blend-overlay">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={`https://api.dicebear.com/9.x/shapes/svg?seed=${encodeURIComponent(reward.name)}&backgroundColor=transparent`}
+              alt=""
+              className="size-full object-cover"
+            />
+          </div>
+        ) : null}
+        {!reward.imageUrl ? (
+          <DynamicIcon name={reward.icon || 'Gift'} className="relative z-10 h-7 w-7 drop-shadow-sm sm:h-8 sm:w-8" />
+        ) : null}
+      </div>
       <p
         className={cn(
           'z-10 min-h-0 shrink text-base font-black leading-tight line-clamp-3 break-words [overflow-wrap:anywhere] sm:text-lg',
@@ -1363,16 +1214,6 @@ function StudentDashboardInner({
     [rewardPrizes, student, kioskAiFunInShop],
   );
 
-  const leftEligibleRewards = useMemo(() => {
-    const mid = Math.ceil(eligibleRewards.length / 2);
-    return eligibleRewards.slice(0, mid);
-  }, [eligibleRewards]);
-
-  const rightEligibleRewards = useMemo(() => {
-    const mid = Math.ceil(eligibleRewards.length / 2);
-    return eligibleRewards.slice(mid);
-  }, [eligibleRewards]);
-
   if (studentLoading || !student || !schoolId) {
     return (
       <div
@@ -1425,6 +1266,26 @@ function StudentDashboardInner({
   const computedThemePageText = effectiveTheme ? ensureContrast(computedThemeText, themeBg, 4.5) : computedThemeText;
   const computedThemeCardText = effectiveTheme ? ensureContrast(computedThemeText, themeCard, 4.5) : computedThemeText;
   const primaryForeground = effectiveTheme ? primaryForegroundFor(effectiveTheme) : '#ffffff';
+  const portalRaffleFooter = portalRaffleTickets ? (
+    <div
+      className="flex items-center justify-between gap-2 text-xs font-bold sm:text-sm"
+      style={effectiveTheme ? { color: 'var(--theme-text)' } : undefined}
+      title={
+        `Raffle: ${portalRaffleTickets.count === 1 ? '1 ticket' : `${portalRaffleTickets.count} tickets`} at ${portalRaffleTickets.pointsPerTicket} points per ticket.`
+      }
+    >
+      <span className="flex items-center gap-1.5">
+        <Ticket className="h-4 w-4 shrink-0 opacity-75" aria-hidden />
+        Raffle tickets
+      </span>
+      <span
+        className="tabular-nums"
+        style={effectiveTheme ? { color: 'var(--theme-primary)' } : undefined}
+      >
+        {portalRaffleTickets.count.toLocaleString()}
+      </span>
+    </div>
+  ) : undefined;
   const themeSurfaceStyle: React.CSSProperties | undefined = effectiveTheme
     ? ({
         '--theme-bg': themeBg,
@@ -1489,7 +1350,7 @@ function StudentDashboardInner({
         <div className="relative z-10 mx-auto flex h-full min-h-0 w-full max-w-7xl flex-1 flex-col overflow-hidden px-4 md:px-8 [@media(max-height:760px)]:px-3">
         <div
           className={cn(
-            "flex flex-1 flex-col min-h-0 min-w-0 w-full space-y-3 md:space-y-4 overflow-hidden [@media(max-height:760px)]:space-y-2",
+            "flex flex-1 flex-col min-h-0 min-w-0 w-full space-y-4 md:space-y-6 overflow-hidden [@media(max-height:760px)]:space-y-3",
             isGraphic
               ? "animate-in fade-in duration-200 motion-reduce:animate-none motion-reduce:duration-0"
               : "",
@@ -1548,162 +1409,95 @@ function StudentDashboardInner({
           </div>
         )}
 
-        <header className="relative z-10 flex w-full shrink-0 flex-wrap items-center justify-between gap-4 py-3 md:gap-5 md:py-4 lg:py-5">
-          <div className="rk-rise flex min-w-0 items-center gap-4">
-            <div
-              className={cn(
-                'flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl text-base font-black uppercase tracking-wide shadow-md sm:h-16 sm:w-16 md:h-[4.5rem] md:w-[4.5rem] md:text-lg [@media(max-height:760px)]:h-12 [@media(max-height:760px)]:w-12',
-                !effectiveTheme && 'student-kiosk-gradient-brand text-white shadow-[0_8px_20px_-6px_oklch(0.6_0.22_10_/_0.5)]',
-              )}
-              style={
-                effectiveTheme
-                  ? {
-                      borderColor: 'var(--theme-primary)',
-                      backgroundColor: 'var(--theme-primary)',
-                      color: primaryForeground,
-                    }
-                  : undefined
-              }
-            >
-              {student.photoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={student.photoUrl}
-                  alt=""
-                  className={cn(
-                    'h-full w-full',
-                    settings.photoDisplayMode === 'cover' ? 'object-cover' : 'object-contain',
-                  )}
-                />
-              ) : (
-                <span aria-hidden>
-                  {(student.firstName?.[0] || '')}
-                  {(student.lastName?.[0] || '')}
-                </span>
-              )}
-            </div>
-            <div className="min-w-0">
-              <p
-                className="text-xs font-bold uppercase tracking-[0.28em] sm:text-sm"
-                style={{ color: effectiveTheme ? 'var(--theme-page-text)' : 'oklch(0.5 0.1 10)' }}
-              >
-                Welcome back
-              </p>
-              <div className="flex flex-wrap items-center gap-2">
-                <h1
-                  className="truncate text-2xl font-black leading-tight sm:text-3xl md:text-4xl lg:text-5xl [@media(max-height:760px)]:text-2xl"
-                  style={{ color: effectiveTheme ? 'var(--theme-page-text)' : undefined }}
+        <StudentKioskTopBar
+          student={student}
+          points={student.points ?? 0}
+          themed={!!effectiveTheme}
+          primaryForeground={primaryForeground}
+          photoDisplayMode={settings.photoDisplayMode}
+          nameExtras={
+            <>
+              {birthdayToday ? (
+                <span
+                  className="inline-flex items-center gap-1 rounded-full border border-amber-500/25 bg-amber-500/15 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-amber-800 dark:text-amber-200"
+                  title="Birthday today"
                 >
-                  {student.firstName} {student.lastName}
-                </h1>
-                {birthdayToday ? (
-                  <span
-                    className="inline-flex items-center gap-1 rounded-full border border-amber-500/25 bg-amber-500/15 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-amber-800 dark:text-amber-200"
-                    title="Birthday today"
+                  🎂 Birthday
+                </span>
+              ) : null}
+              {studentHouse ? <HouseBadge house={studentHouse} size="sm" /> : null}
+              {(student.customEmojiUrl || effectiveTheme?.emoji) &&
+                (student.customEmojiUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={student.customEmojiUrl}
+                    alt=""
+                    className="theme-animated-emoji h-8 w-8 shrink-0 object-contain"
+                  />
+                ) : (
+                  <span className="theme-animated-emoji text-2xl leading-none">{effectiveTheme?.emoji ?? ''}</span>
+                ))}
+            </>
+          }
+        />
+        {student.nickname?.trim() ||
+        (settings.enableBadges && headerBadges.length > 0) ||
+        (studentSeesWelcomePage(settings, student) && schoolId) ? (
+          <div className="flex w-full shrink-0 flex-wrap items-center gap-2 px-0.5">
+            {student.nickname?.trim() ? (
+              <p
+                className="truncate text-[10px] font-bold uppercase tracking-[0.2em] opacity-60"
+                style={{ color: effectiveTheme ? 'var(--theme-page-text)' : undefined }}
+              >
+                {student.nickname.trim()}
+              </p>
+            ) : null}
+            {settings.enableBadges && headerBadges.length > 0 ? (
+              <div className="flex flex-wrap items-center gap-1">
+                {headerBadges.map((b) => (
+                  <div
+                    key={b.id}
+                    className="flex h-6 w-6 items-center justify-center rounded-full border border-border/50 bg-card/80 shadow-sm"
                   >
-                    🎂 Birthday
+                    <DynamicIcon
+                      name={b.icon}
+                      className="h-3.5 w-3.5"
+                      style={b.accentColor ? { color: b.accentColor } : undefined}
+                    />
+                  </div>
+                ))}
+                {totalUniqueBadges > headerBadges.length ? (
+                  <span className="text-[9px] font-bold uppercase tracking-widest opacity-60">
+                    +{totalUniqueBadges - headerBadges.length}
                   </span>
                 ) : null}
-                {studentHouse ? <HouseBadge house={studentHouse} size="sm" /> : null}
-                {(student.customEmojiUrl || effectiveTheme?.emoji) &&
-                  (student.customEmojiUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={student.customEmojiUrl}
-                      alt=""
-                      className="theme-animated-emoji h-8 w-8 shrink-0 object-contain"
-                    />
-                  ) : (
-                    <span className="theme-animated-emoji text-2xl leading-none">{effectiveTheme?.emoji ?? ''}</span>
-                  ))}
               </div>
-              {student.nickname?.trim() ? (
-                <p
-                  className="mt-0.5 truncate text-[10px] font-bold uppercase tracking-[0.2em] opacity-60"
-                  style={{ color: effectiveTheme ? 'var(--theme-page-text)' : undefined }}
-                >
-                  {student.nickname.trim()}
-                </p>
-              ) : null}
-              {settings.enableBadges && headerBadges.length > 0 ? (
-                <div className="mt-1.5 flex flex-wrap items-center gap-1">
-                  {headerBadges.map((b) => (
-                    <div
-                      key={b.id}
-                      className="flex h-6 w-6 items-center justify-center rounded-full border border-border/50 bg-card/80 shadow-sm"
-                    >
-                      <DynamicIcon
-                        name={b.icon}
-                        className="h-3.5 w-3.5"
-                        style={b.accentColor ? { color: b.accentColor } : undefined}
-                      />
-                    </div>
-                  ))}
-                  {totalUniqueBadges > headerBadges.length ? (
-                    <span className="text-[9px] font-bold uppercase tracking-widest opacity-60">
-                      +{totalUniqueBadges - headerBadges.length}
-                    </span>
-                  ) : null}
-                </div>
-              ) : null}
-              {studentSeesWelcomePage(settings, student) && schoolId ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="mt-2 h-8 gap-1 rounded-full text-[10px] font-bold uppercase tracking-widest"
-                  style={
-                    activeTheme
-                      ? {
-                          borderColor: 'var(--theme-primary)',
-                          backgroundColor: 'transparent',
-                          color: 'var(--theme-primary)',
-                        }
-                      : undefined
-                  }
-                  asChild
-                >
-                  <Link href={`/${schoolId}/student/welcome`}>
-                    <Sparkles className="h-3.5 w-3.5 shrink-0 opacity-90" aria-hidden />
-                    Welcome styles
-                  </Link>
-                </Button>
-              ) : null}
-            </div>
-          </div>
-
-          <div className="flex shrink-0 items-center gap-2">
-          <div
-            className="flex shrink-0 flex-col items-end gap-0.5 md:hidden"
-            style={{ color: effectiveTheme ? 'var(--theme-page-text)' : 'oklch(0.5 0.22 10)' }}
-          >
-            <span className="text-3xl font-black tabular-nums leading-none sm:text-4xl">
-              {(student.points || 0).toLocaleString()}{' '}
-              <span className="text-sm font-bold uppercase tracking-widest opacity-70">pts</span>
-            </span>
-            {portalRaffleTickets ? (
-              <span className="flex items-center gap-1 text-sm font-black tabular-nums">
-                <Ticket className="h-3.5 w-3.5 opacity-75" aria-hidden />
-                {portalRaffleTickets.count.toLocaleString()}
-              </span>
+            ) : null}
+            {studentSeesWelcomePage(settings, student) && schoolId ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1 rounded-full text-[10px] font-bold uppercase tracking-widest"
+                style={
+                  activeTheme
+                    ? {
+                        borderColor: 'var(--theme-primary)',
+                        backgroundColor: 'transparent',
+                        color: 'var(--theme-primary)',
+                      }
+                    : undefined
+                }
+                asChild
+              >
+                <Link href={`/${schoolId}/student/welcome`}>
+                  <Sparkles className="h-3.5 w-3.5 shrink-0 opacity-90" aria-hidden />
+                  Welcome styles
+                </Link>
+              </Button>
             ) : null}
           </div>
-          <StudentKioskBalancePill
-            themed={{ active: !!effectiveTheme }}
-            points={student.points ?? 0}
-            pointTypeTotals={pointTypeTotals.slice(0, 4)}
-            portalRaffleTickets={portalRaffleTickets}
-          />
-          {schoolId ? (
-            <StudentKioskThemeButton
-              schoolId={schoolId}
-              student={student}
-              classLabel={studentClassLabel}
-              themed={!!effectiveTheme}
-            />
-          ) : null}
-          </div>
-        </header>
+        ) : null}
 
 
         <div
@@ -1744,93 +1538,7 @@ function StudentDashboardInner({
                 ? [...Array(4)].map((_, i) => (
                     <Skeleton key={i} className="min-h-[9.5rem] w-full flex-1 rounded-xl" />
                   ))
-                : leftEligibleRewards.map((reward) => (
-                    <EligibleRewardCard
-                      key={reward.id}
-                      reward={reward}
-                      themed={!!effectiveTheme}
-                      primaryForeground={primaryForeground}
-                      grow
-                      onRedeem={() => {
-                        playSound('click');
-                        setConfirmingPrize(reward);
-                      }}
-                    />
-                  ))}
-            </div>
-          </aside>
-
-          {/* Center: redeem coupon (primary focus) */}
-          <div
-            className={cn(
-              'order-1 flex min-h-0 flex-col gap-3 lg:order-2 [@media(max-height:760px)]:gap-2',
-              studentKioskCenterStackClass,
-            )}
-          >
-          <StudentKioskRedeemHero
-            themed={{ active: !!effectiveTheme }}
-            primaryForeground={primaryForeground}
-            couponHelperText={couponHelperText}
-            couponCode={couponCode}
-            setCouponCode={setCouponCode}
-            showManualCoupon={showManualCoupon}
-            showCameraCoupon={showCameraCoupon}
-            couponSectionEnabled={couponSectionEnabled}
-            onRedeemCoupon={() => void handleRedeemCoupon()}
-            onLogout={handleManualLogout}
-            isKioskLocked={isKioskLocked}
-            logoutTimer={logoutTimer}
-            videoRef={videoRef}
-            hasCameraPermission={hasCameraPermission}
-          />
-
-            <Button
-              type="button"
-              variant="outline"
-              className={cn(
-                'h-11 w-full shrink-0 rounded-xl border-2 text-xs font-black uppercase tracking-widest shadow-sm',
-                !effectiveTheme && 'border-slate-200 bg-white/90 dark:border-slate-600 dark:bg-slate-900/90',
-              )}
-              style={
-                effectiveTheme
-                  ? {
-                      borderColor: 'color-mix(in srgb, var(--theme-primary) 40%, transparent)',
-                      backgroundColor: 'var(--theme-card)',
-                      color: 'var(--theme-text)',
-                    }
-                  : undefined
-              }
-              onClick={() => {
-                playSound('click');
-                setActivityDialogOpen(true);
-              }}
-            >
-              <Clock className="mr-2 h-4 w-4 shrink-0 opacity-80" aria-hidden />
-              Activity
-            </Button>
-
-            <EarnedBadgesShowcase
-              student={student}
-              badges={badges || []}
-              enableBadges={settings.enableBadges}
-              theme={activeTheme}
-            />
-
-          </div>
-
-          <aside className="order-3 hidden min-h-0 min-w-0 flex-col gap-3 overflow-hidden lg:flex">
-            <p
-              className="shrink-0 text-center text-xs font-black uppercase tracking-[0.2em] opacity-80 sm:text-sm"
-              style={effectiveTheme ? { color: 'var(--theme-page-text)' } : undefined}
-            >
-              Eligible prizes
-            </p>
-            <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overflow-x-hidden pl-0.5 scroll-pb-2">
-              {prizesLoading
-                ? [...Array(4)].map((_, i) => (
-                    <Skeleton key={`r-${i}`} className="min-h-[9.5rem] w-full flex-1 rounded-xl" />
-                  ))
-                : rightEligibleRewards.map((reward) => (
+                : eligibleRewards.map((reward) => (
                     <EligibleRewardCard
                       key={reward.id}
                       reward={reward}
@@ -1870,7 +1578,81 @@ function StudentDashboardInner({
             </Button>
           </aside>
 
+          {/* Center: redeem coupon (primary focus) */}
+          <div
+            className={cn(
+              'order-1 flex min-h-0 flex-col gap-3 lg:order-2 [@media(max-height:760px)]:gap-2',
+              studentKioskCenterStackClass,
+            )}
+          >
+          <StudentKioskRedeemHero
+            themed={{ active: !!effectiveTheme }}
+            primaryForeground={primaryForeground}
+            couponHelperText={couponHelperText}
+            couponCode={couponCode}
+            setCouponCode={setCouponCode}
+            showManualCoupon={showManualCoupon}
+            showCameraCoupon={showCameraCoupon}
+            couponSectionEnabled={couponSectionEnabled}
+            onRedeemCoupon={() => void handleRedeemCoupon()}
+            onLogout={handleManualLogout}
+            isKioskLocked={isKioskLocked}
+            logoutTimer={logoutTimer}
+            videoRef={videoRef}
+            hasCameraPermission={hasCameraPermission}
+          />
+
+            {schoolId ? (
+              <StudentKioskActivityPreview
+                schoolId={schoolId}
+                studentId={student.id}
+                themed={!!effectiveTheme}
+                onViewAll={() => {
+                  playSound('click');
+                  setActivityDialogOpen(true);
+                }}
+              />
+            ) : null}
+
+            <EarnedBadgesShowcase
+              student={student}
+              badges={badges || []}
+              enableBadges={settings.enableBadges}
+              theme={activeTheme}
+            />
+
+          </div>
+
+          <aside className="order-3 hidden min-h-0 min-w-0 flex-col gap-3 overflow-hidden lg:flex">
+            {schoolId ? (
+              <StudentKioskThemeButton
+                schoolId={schoolId}
+                student={student}
+                classLabel={studentClassLabel}
+                themed={!!effectiveTheme}
+              />
+            ) : null}
+            <StudentKioskPointCategoriesPanel
+              themed={!!effectiveTheme}
+              totals={pointTypeTotals}
+              footer={portalRaffleFooter}
+            />
+          </aside>
+
           <div className="order-4 flex min-h-0 min-w-0 flex-col gap-2 overflow-hidden lg:hidden [@media(max-height:760px)]:gap-1.5">
+            {schoolId ? (
+              <StudentKioskThemeButton
+                schoolId={schoolId}
+                student={student}
+                classLabel={studentClassLabel}
+                themed={!!effectiveTheme}
+              />
+            ) : null}
+            <StudentKioskPointCategoriesPanel
+              themed={!!effectiveTheme}
+              totals={pointTypeTotals}
+              footer={portalRaffleFooter}
+            />
             <p className="shrink-0 text-center text-xs font-black uppercase tracking-[0.2em] text-muted-foreground sm:text-sm">
               Eligible prizes
             </p>

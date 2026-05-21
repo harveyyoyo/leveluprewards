@@ -282,7 +282,7 @@ export const PROMOTION_FLYERS: readonly PromotionFlyer[] = [
     id: 'feature-raffle',
     name: 'Weekly Raffle',
     description:
-      'Points-to-tickets, jackpot reels, or spin wheel—with equal-odds and deduction rules.',
+      'Points-to-tickets, jackpot reels, spin wheel, or loto cage—with equal-odds and deduction rules.',
     href: '/marketing/flyer-feature-raffle.html',
     audience: 'features',
     preview: { border: 'border-amber-500/40', tag: 'Raffle' },
@@ -367,6 +367,16 @@ export const PROMOTION_FLYERS: readonly PromotionFlyer[] = [
     audience: 'features',
     preview: { border: 'border-sky-500/40', tag: 'IDs' },
     tags: ['ID cards', 'Themes', 'Branding', 'Print'],
+  },
+  {
+    id: 'feature-student-kiosk',
+    name: 'Student Kiosk (Scan Card)',
+    description:
+      'Touchscreen sign-in—students scan their ID card, type a badge, or use QR/face to open rewards and the prize shop.',
+    href: '/marketing/flyer-feature-student-kiosk.html',
+    audience: 'features',
+    preview: { border: 'border-teal-500/40', tag: 'Kiosk' },
+    tags: ['Kiosk', 'Students', 'Scan card', 'Rewards'],
   },
   {
     id: 'feature-rewards-shop',

@@ -42,6 +42,11 @@
       }
       .post:last-child { margin-bottom: 0; }
       .post small { display: block; font-weight: 500; font-size: 0.09in; margin-top: 0.03in; }
+      .img {
+        margin-top: 0.14in; border: 3px solid #1c1917; border-radius: 8px;
+        overflow: hidden; box-shadow: 4px 4px 0 #1c1917;
+      }
+      .img img { width: 100%; display: block; }
       .opts { margin-top: 0.14in; font-size: 0.1in; line-height: 1.5; font-weight: 600; }
       .cta { margin-top: auto; padding-top: 0.14in; font-family: 'Archivo Black', sans-serif; font-size: 0.11in; }
       .cta a { color: #1c1917; }
@@ -64,12 +69,25 @@
         <div class="post">🎁 New prize: Front-of-line lunch pass<small>Rewards shop · 150 pts</small></div>
         <div class="post">⭐ Shoutout: Grade 7 helpers<small>Thank you for setup crew!</small></div>
       </section>
+      <div class="img">
+        <img
+          src="/marketing/screenshots/bulletin-board.png"
+          alt="School bulletin board display"
+          width="900"
+          height="500"
+        />
+      </div>
       <p class="opts">
         Custom title &amp; theme · 1 or 2 columns · Logo size · Optional WOW badge ·
         Admin-managed incentive posts · Public URL for any display TV
       </p>
       <p class="cta">/{school}/bulletin-board · <a href="https://leveluprewards.app">leveluprewards.app</a></p>
-      <p class="foot">© 2026 LevelUp EdTech Enterprises LLC</p>
-    </article>
+      <footer class="flyer-footer">
+        <p class="flyer-footer__vendor">Approved NYC Department of Education (DOE) vendor</p>
+        <p class="flyer-footer__links"><a href="https://leveluprewards.app">leveluprewards.app</a> · <a href="mailto:contact@leveluprewards.app">contact@leveluprewards.app</a></p>
+        <p class="flyer-footer__copy">© 2026 LevelUp EdTech Enterprises LLC</p>
+      </footer>
+
+      </article>
   </body>
 </html>

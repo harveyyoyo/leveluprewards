@@ -6,7 +6,7 @@ import Link from 'next/link';
 
 import { useAppContext } from '@/components/AppProvider';
 import { useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, collection, query, orderBy, limit } from 'firebase/firestore';
+import { doc, collection } from 'firebase/firestore';
 import dynamic from 'next/dynamic';
 import { FaceMismatchBanner } from '@/components/FaceMismatchBanner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -32,14 +32,12 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import type { Student, Prize, HistoryItem, PrizeAiFunReward } from '@/lib/types';
-import { format } from 'date-fns';
+import type { Student, Prize, PrizeAiFunReward } from '@/lib/types';
 import {
     Gift,
     LogOut,
-    ShoppingBag,
     ChevronRight,
-    Clock,
+    ArrowLeft,
     ShoppingBasket,
     Plus,
     Minus,
@@ -47,7 +45,6 @@ import {
     Sparkles,
     Printer,
 } from 'lucide-react';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import DynamicIcon from '@/components/DynamicIcon';
 import { cn, getStudentNickname, getContrastColor } from '@/lib/utils';
@@ -70,6 +67,8 @@ import type { StudentFoundMeta } from '@/components/StudentScanner';
 import { rainbowTripletForNavId, complementTripletForNavId } from '@/lib/rainbowNav';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
 import { appearanceVarsForSurface } from '@/lib/appearance';
+import { StudentKioskTopBar } from '@/components/student-kiosk/StudentKioskTopBar';
+import { StudentKioskWarmBackdrop } from '@/components/student-kiosk/StudentKioskRedeemUI';
 
 import { prizeIsListed, stripLeadingEmojiFromPrizeName, studentSeesPrizeByTeachers } from '@/lib/prizeUtils';
 import { runMotor as runVendingMotor, isConnected as motorIsConnected } from '@/lib/vendingMotor';
@@ -397,137 +396,6 @@ function ConfirmRedemptionDialog({
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
-    );
-}
-
-function PrizeActivityList({ schoolId, studentId, themed = false, onReprintTicket }: { schoolId: string; studentId: string; themed?: boolean; onReprintTicket?: (item: HistoryItem) => void }) {
-    const firestore = useFirestore();
-    const activitiesQuery = useMemoFirebase(() => {
-        if (!schoolId || !studentId) return null;
-        return query(
-            collection(firestore, `schools/${schoolId}/students/${studentId}/activities`),
-            orderBy('date', 'desc'),
-            limit(20)
-        );
-    }, [firestore, schoolId, studentId]);
-    const { data: history, isLoading, error: historyError } = useCollection<HistoryItem>(activitiesQuery);
-
-    // When the parent card is using a custom student theme, the semantic
-    // Tailwind tokens (`text-foreground`, `bg-background/50`, the
-    // emerald/rose pills) can't guarantee contrast against the themed
-    // card background. In that mode we hand back to the inherited
-    // `var(--theme-text)` color and use neutral translucent surfaces.
-    const mutedStyle: CSSProperties | undefined = themed ? { color: 'var(--theme-text)', opacity: 0.7 } : undefined;
-
-    if (isLoading) {
-        return (
-            <div
-                className={cn("py-4 text-center text-sm", !themed && "text-muted-foreground")}
-                style={mutedStyle}
-            >
-                Loading history...
-            </div>
-        );
-    }
-
-    if (historyError) {
-        return (
-            <p
-                className={cn("py-4 text-center text-sm leading-relaxed px-2", !themed && "text-muted-foreground")}
-                style={mutedStyle}
-            >
-                {getReadableErrorMessage(historyError, "Couldn't load recent activity.")}
-            </p>
-        );
-    }
-
-    return (
-        <ScrollArea className="h-full min-h-[240px] max-h-[min(70dvh,720px)] w-full flex-1 pr-4">
-            <ul className="space-y-3">
-                {history && history.length > 0 ? (
-                    history.map((item, index) => (
-                        <li
-                            key={index}
-                            className={cn(
-                                "rounded-xl p-3 transition-all",
-                                !themed && "bg-background/50 border border-border/40 hover:bg-background/80",
-                                themed && "border",
-                            )}
-                            style={themed ? { backgroundColor: 'rgba(255,255,255,0.08)', borderColor: 'rgba(127,127,127,0.25)', borderWidth: 1, borderStyle: 'solid' } : undefined}
-                        >
-                            <div className="flex justify-between items-start mb-1">
-                                <p className={cn("font-bold text-sm truncate", !themed && "text-foreground")}>{item.desc}</p>
-                                <Badge
-                                    variant={item.amount > 0 ? 'default' : 'secondary'}
-                                    className={cn(
-                                        "text-[10px] h-5 px-1.5",
-                                        !themed && (item.amount > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'),
-                                    )}
-                                    style={themed ? {
-                                        backgroundColor: item.amount > 0 ? 'rgba(16,185,129,0.18)' : 'rgba(244,63,94,0.18)',
-                                        color: 'var(--theme-text)',
-                                        borderColor: 'transparent',
-                                    } : undefined}
-                                >
-                                    {item.amount > 0 ? `+${item.amount}` : item.amount} pts
-                                </Badge>
-                            </div>
-                            <div className="flex justify-between items-center mt-2">
-                                {item.date ? (
-                                    <p
-                                        className={cn("text-[10px] font-bold uppercase tracking-widest", !themed && "text-muted-foreground")}
-                                        style={mutedStyle}
-                                    >
-                                        {(() => {
-                                            try {
-                                                return format(new Date(item.date), 'MMM d, h:mm a');
-                                            } catch {
-                                                return 'Date unknown';
-                                            }
-                                        })()}
-                                    </p>
-                                ) : (
-                                    <p
-                                        className={cn("text-[10px] font-bold uppercase tracking-widest opacity-30", !themed && "text-muted-foreground")}
-                                        style={mutedStyle}
-                                    >
-                                        Date unknown
-                                    </p>
-                                )}
-                                {item.desc.startsWith('Redeemed:') && onReprintTicket && (
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            onReprintTicket(item);
-                                        }}
-                                        className={cn(
-                                            "h-6 px-2 text-[10px] rounded-full border flex items-center gap-1 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700",
-                                            !themed && "border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300",
-                                        )}
-                                        style={themed ? {
-                                            backgroundColor: 'rgba(255,255,255,0.1)',
-                                            borderColor: 'rgba(127,127,127,0.3)',
-                                            color: 'var(--theme-text)',
-                                        } : undefined}
-                                    >
-                                        <Printer className="w-3 h-3" aria-hidden="true" /> Reprint
-                                    </Button>
-                                )}
-                            </div>
-                        </li>
-                    ))
-                ) : (
-                    <p
-                        className={cn("text-center italic py-4 text-sm font-medium", !themed && "text-muted-foreground")}
-                        style={mutedStyle}
-                    >
-                        No recent activity.
-                    </p>
-                )}
-            </ul>
-        </ScrollArea>
     );
 }
 
@@ -915,45 +783,6 @@ export function PrizeDashboard({
         printPrizeTickets(sheets);
     }, [ticketData, schoolId, printPrizeTickets]);
 
-    const handleReprint = useCallback((item: HistoryItem) => {
-        if (!student) return;
-        let prizeName = item.desc.replace(/^Redeemed:\s*/, '');
-        let quantity = 1;
-        const match = prizeName.match(/\s*\(x(\d+)\)$/);
-        if (match) {
-            quantity = parseInt(match[1], 10);
-            prizeName = prizeName.replace(/\s*\(x(\d+)\)$/, '');
-        }
-        const foundPrize = rewardPrizes.find(p => p.name === prizeName);
-        const prizeIcon = foundPrize?.icon || 'Gift';
-
-        const ticketNo = String(item.date).slice(-6);
-        const displayFirst = getStudentNickname(student);
-        const legalFirst = (student.firstName || '').trim();
-        const nick = student.nickname?.trim();
-        const themeForTicket = resolveStudentThemeWithSchoolDefault(
-            student.theme,
-            settings.defaultStudentTheme,
-            settings.enableStudentThemes,
-        );
-        const emojiRaw = settings.enableStudentEmojiOnPrizeTickets === true ? themeForTicket?.emoji : undefined;
-        const studentEmoji = typeof emojiRaw === 'string' && emojiRaw.trim() ? emojiRaw.trim() : undefined;
-
-        setTicketData({
-            activityId: item.id || String(item.date),
-            ticketNo,
-            redeemedAt: item.date,
-            studentId: student.id,
-            studentName: `${displayFirst} ${student.lastName}`.trim(),
-            studentNickname: nick && legalFirst && displayFirst.trim() !== legalFirst ? legalFirst : undefined,
-            studentEmoji,
-            prizeName,
-            prizeIcon,
-            quantity,
-            totalCost: -item.amount,
-        });
-    }, [student, rewardPrizes, settings]);
-
 
     if (studentLoading || prizesLoading) {
         return (
@@ -1137,6 +966,7 @@ export function PrizeDashboard({
             <div
                 className={cn(
                     "min-h-screen relative overflow-x-hidden font-sans flex flex-col items-center",
+                    "pt-3 md:pt-8 [@media(max-height:760px)]:pt-2 [@media(max-height:760px)]:md:pt-3",
                     settings.enableThemeAnimations && !!activeTheme && "theme-theme-elements-animated theme-motion-override",
                     activeTheme && 'student-theme-surface',
                     settings.displayMode === 'app' && 'pb-24',
@@ -1157,163 +987,95 @@ export function PrizeDashboard({
                     </div>
                 )}
 
-                <div className="relative z-10 w-full max-w-full px-4 sm:px-6 lg:px-8">
-                    <Card
-                        className={cn(
-                            "border-t-8 shadow-2xl mt-3 mb-4 backdrop-blur-md",
-                            !activeTheme
-                                ? animBackdrop
-                                    ? "border-chart-3 bg-card/92 border-border/30"
-                                    : "border-chart-3 bg-card/80"
-                                : "border-2",
-                        )}
-                        style={
-                            activeTheme
-                                ? {
-                                    backgroundColor: 'var(--theme-card)',
-                                    color: 'var(--theme-text)',
-                                    borderColor: 'color-mix(in srgb, var(--theme-primary) 42%, transparent)',
-                                    boxShadow: 'inset 0 1px 0 0 color-mix(in srgb, var(--theme-text) 6%, transparent)',
+                {!activeTheme ? <StudentKioskWarmBackdrop /> : null}
+
+                <div className="relative z-10 mx-auto flex w-full max-w-7xl flex-1 flex-col gap-5 px-4 pb-4 md:gap-6 md:px-8 md:pb-6">
+                    <StudentKioskTopBar
+                        student={student}
+                        points={student.points ?? 0}
+                        themed={!!activeTheme}
+                        primaryForeground={primaryForeground}
+                        photoDisplayMode={settings.photoDisplayMode}
+                    />
+
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-9 rounded-full px-3.5 text-[11px] font-bold uppercase tracking-widest"
+                            style={activeTheme ? themedFieldStyle : undefined}
+                            asChild
+                        >
+                            <Link href={schoolId ? `/${schoolId}/student` : '#'}>
+                                <ArrowLeft className="mr-1.5 h-4 w-4 shrink-0" aria-hidden />
+                                Back to kiosk
+                            </Link>
+                        </Button>
+                        <div className="flex items-center gap-2">
+                            <div
+                                className={cn(
+                                    'whitespace-nowrap rounded-full border-2 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest',
+                                    !activeTheme &&
+                                        (isKioskLocked
+                                            ? 'border-red-200 bg-red-100 text-red-800 dark:border-red-800 dark:bg-red-950/50 dark:text-red-300'
+                                            : 'border-slate-300 bg-slate-100 text-slate-800 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100'),
+                                )}
+                                style={
+                                    activeTheme
+                                        ? isKioskLocked
+                                            ? {
+                                                  borderColor: 'color-mix(in srgb, #ef4444 55%, var(--theme-primary))',
+                                                  backgroundColor: 'color-mix(in srgb, #ef4444 22%, var(--theme-bg))',
+                                                  color: 'var(--theme-text)',
+                                              }
+                                            : {
+                                                  borderColor: 'color-mix(in srgb, var(--theme-primary) 45%, transparent)',
+                                                  backgroundColor: 'var(--theme-bg)',
+                                                  color: 'var(--theme-text)',
+                                              }
+                                        : undefined
                                 }
-                                : undefined
-                        }
-                    >
-                        <CardContent className="p-5 md:p-6">
-                            {/* Header */}
-                            <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
-                                <div className="text-center md:text-left">
-                                    <h2 className="text-3xl sm:text-4xl font-black tracking-tighter font-headline drop-shadow-sm mb-3 flex items-center justify-center md:justify-start gap-3">
-                                        {(student?.customEmojiUrl || activeTheme?.emoji) ? (
-                                            student?.customEmojiUrl ? (
-                                                // eslint-disable-next-line @next/next/no-img-element
-                                                <img
-                                                    src={student.customEmojiUrl}
-                                                    alt=""
-                                                    className="theme-animated-emoji h-10 w-10 md:h-12 md:w-12 shrink-0 object-contain"
-                                                    style={{ filter: activeTheme?.primary ? `drop-shadow(0 0 10px ${activeTheme.primary}) drop-shadow(0 0 20px ${activeTheme.primary})` : undefined }}
-                                                />
-                                            ) : (
-                                                <span
-                                                    className="theme-animated-emoji text-4xl sm:text-5xl leading-none"
-                                                    style={{ filter: activeTheme?.primary ? `drop-shadow(0 0 10px ${activeTheme.primary}) drop-shadow(0 0 20px ${activeTheme.primary})` : undefined }}
-                                                >
-                                                    {activeTheme?.emoji}
-                                                </span>
-                                            )
-                                        ) : (
-                                            <ShoppingBag className="w-8 h-8 sm:w-10 sm:h-10 text-primary" style={activeTheme ? { color: 'var(--theme-primary)' } : undefined} />
-                                        )}
-                        <span style={activeTheme ? { color: 'var(--theme-primary)' } : { color: 'hsl(var(--primary))' }}>Rewards Shop</span>
-                                    </h2>
-                                    <p className="text-xs font-bold uppercase tracking-[0.3em]" style={activeTheme ? { color: 'var(--theme-text-muted)' } : { opacity: 0.7 }}>
-                                        Redeem your points for rewards
-                                    </p>
-                                </div>
-                                <div className="flex flex-col items-stretch sm:items-end gap-4 w-full md:w-auto">
-                                    <div className="flex items-center justify-center sm:justify-end gap-2 flex-wrap">
-                                        <div
-                                            className={cn(
-                                                "px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-colors whitespace-nowrap",
-                                                isKioskLocked
-                                                    ? "bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-red-100 dark:border-red-800"
-                                                    : "bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-800",
-                                            )}
-                                            role="timer"
-                                            aria-live={logoutTimer <= 5 ? 'assertive' : 'off'}
-                                            aria-label={isKioskLocked ? 'Kiosk locked' : `Auto logout in ${logoutTimer} seconds`}
-                                        >
-                                            <span>{isKioskLocked ? 'Kiosk Locked - ' : ''}Auto-logout in {logoutTimer}s</span>
-                                        </div>
-                                        <div className="relative">
-                                            {!isKioskLocked && (
-                                                <svg
-                                                    className="absolute inset-0 w-full h-full pointer-events-none motion-reduce:hidden"
-                                                    viewBox="0 0 36 36"
-                                                    aria-hidden="true"
-                                                >
-                                                    <circle
-                                                        cx="18"
-                                                        cy="18"
-                                                        r="16"
-                                                        fill="none"
-                                                        stroke="currentColor"
-                                                        strokeOpacity="0.15"
-                                                        strokeWidth="2"
-                                                    />
-                                                    <circle
-                                                        cx="18"
-                                                        cy="18"
-                                                        r="16"
-                                                        fill="none"
-                                                        stroke="currentColor"
-                                                        strokeWidth="2"
-                                                        strokeLinecap="round"
-                                                        strokeDasharray={2 * Math.PI * 16}
-                                                        strokeDashoffset={
-                                                            2 *
-                                                            Math.PI *
-                                                            16 *
-                                                            (1 - Math.max(0, Math.min(1, logoutTimer / (settings.kioskSessionTimeoutSec || 10))))
-                                                        }
-                                                        transform="rotate(-90 18 18)"
-                                                        className={cn(
-                                                            'transition-[stroke-dashoffset] duration-500 ease-linear',
-                                                            logoutTimer <= 5 ? 'text-rose-500' : 'text-amber-500',
-                                                        )}
-                                                    />
-                                                </svg>
-                                            )}
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                size="sm"
-                                                className="relative h-8 px-3.5 rounded-full text-[11px] font-bold uppercase tracking-widest whitespace-nowrap"
-                                                onClick={onRequestExit}
-                                                aria-label={`Log out now. Auto logout in ${logoutTimer} seconds.`}
-                                                style={activeTheme ? themedFieldStyle : undefined}
-                                            >
-                                                Logout
-                                            </Button>
-                                        </div>
-                                    </div>
-                                    <div
-                                        className="backdrop-blur-md border-2 rounded-2xl py-3 px-5 text-center md:text-right shadow-md flex flex-col sm:flex-row md:flex-col items-center md:items-end gap-2 sm:gap-6 md:gap-0"
-                                        style={activeTheme ? {
-                                            backgroundColor: 'var(--theme-card)',
-                                            borderColor: 'var(--theme-primary)'
-                                        } : {
-                                            backgroundColor: 'hsl(var(--card) / 0.8)',
-                                            borderColor: 'hsl(var(--primary) / 0.2)'
-                                        }}
-                                    >
-                                        <div className="flex flex-col items-center md:items-end leading-tight">
-                                            <p className="text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] mb-0.5" style={activeTheme ? { color: 'var(--theme-text-muted)' } : { opacity: 0.7 }}>
-                                                {student.firstName} {student.lastName}
-                                            </p>
-                                            {student.nickname?.trim() ? (
-                                                <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.25em] -mt-0.5" style={activeTheme ? { color: 'var(--theme-text-muted)' } : { opacity: 0.65 }}>
-                                                    {student.nickname.trim()}
-                                                </p>
-                                            ) : null}
-                                        </div>
-                                        <p className="text-2xl sm:text-3xl font-black tracking-tighter" style={activeTheme ? { color: 'var(--theme-primary)' } : { color: 'hsl(var(--primary))' }}>
-                                            {(student.points || 0).toLocaleString()}
-                                            <span className="text-xs font-bold uppercase tracking-widest ml-1" style={activeTheme ? { color: 'var(--theme-primary)', opacity: 0.6 } : { color: 'hsl(var(--primary) / 0.6)' }}>
-                                                pts
-                                            </span>
-                                        </p>
-                                    </div>
-                                </div>
+                                aria-label={isKioskLocked ? 'Kiosk locked' : `Auto logout in ${logoutTimer} seconds`}
+                            >
+                                {isKioskLocked ? 'Kiosk Locked • Stays signed in' : `Auto-logout ${logoutTimer}`}
                             </div>
+                            <Button
+                                type="button"
+                                size="sm"
+                                className={cn(
+                                    'h-8 rounded-full border-2 px-3.5 text-[11px] font-bold uppercase tracking-widest shadow-sm',
+                                    !activeTheme && 'border-primary/40 bg-primary text-primary-foreground hover:bg-primary/90',
+                                )}
+                                style={
+                                    activeTheme
+                                        ? {
+                                              borderColor: 'var(--theme-primary)',
+                                              backgroundColor: 'var(--theme-primary)',
+                                              color: primaryForeground,
+                                          }
+                                        : undefined
+                                }
+                                onClick={onRequestExit}
+                            >
+                                Logout
+                            </Button>
+                        </div>
+                    </div>
 
-                            <PrinterReminderCallout
-                                title="Voucher / slip printer"
-                                message={settings.printerReminderPrizeVouchers}
-                                className="mb-6"
-                            />
+                    <p
+                        className="text-xs font-black uppercase tracking-[0.2em] opacity-70"
+                        style={activeTheme ? { color: 'var(--theme-page-text)' } : undefined}
+                    >
+                        All eligible prizes
+                    </p>
 
-                            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_360px] gap-6 lg:gap-8">
-                                <div className="flex flex-col gap-4 min-w-0">
+                    <PrinterReminderCallout
+                        title="Voucher / slip printer"
+                        message={settings.printerReminderPrizeVouchers}
+                    />
+
+                    <div className="flex min-w-0 flex-col gap-4">
                                 {/* Filter & sort controls */}
                                 {baseVisiblePrizes.length > 0 && (
                                     <div className="flex flex-col sm:flex-row gap-3 px-1">
@@ -1350,8 +1112,7 @@ export function PrizeDashboard({
                                     </div>
                                 )}
 
-                                {/* Prizes Grid */}
-                                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 h-fit">
+                                <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4 h-fit">
                                     {visiblePrizes.length === 0 ? (
                                         <div
                                             className={cn(
@@ -1552,67 +1313,29 @@ export function PrizeDashboard({
                                         })
                                     )}
                                 </div>
-                                </div>
 
-                                {/* Sidebar */}
-                                <div className="space-y-3 min-w-0">
-                                    <Card
-                                        className={cn(
-                                            "backdrop-blur-sm border-2 rounded-3xl overflow-hidden shadow-xl flex flex-col min-h-0 max-h-[min(70dvh,760px)] lg:sticky lg:top-6",
-                                            !activeTheme && "border-border/50",
-                                        )}
-                                        style={
-                                            activeTheme
-                                                ? {
-                                                    backgroundColor: 'var(--theme-card)',
-                                                    borderColor: 'color-mix(in srgb, var(--theme-primary) 28%, transparent)',
-                                                    color: 'var(--theme-text)',
-                                                }
-                                                : { backgroundColor: 'hsl(var(--card) / 0.4)', borderColor: 'hsl(var(--border) / 0.5)' }
-                                        }
-                                    >
-                                        <CardHeader
-                                            className="border-b py-4 px-6 shrink-0"
-                                            style={
-                                                activeTheme
-                                                    ? {
-                                                        backgroundColor: 'color-mix(in srgb, var(--theme-bg) 55%, var(--theme-card))',
-                                                        borderColor: 'color-mix(in srgb, var(--theme-primary) 28%, transparent)',
-                                                    }
-                                                    : { backgroundColor: 'hsl(var(--primary) / 0.05)', borderColor: 'hsl(var(--border) / 0.5)' }
-                                            }
-                                        >
-                                            <CardTitle className="text-sm font-black uppercase tracking-[0.3em] flex items-center gap-3" style={activeTheme ? { color: 'var(--theme-primary)' } : { color: 'hsl(var(--primary))' }}>
-                                                <Clock className="w-5 h-5" style={activeTheme ? { color: 'var(--theme-primary)' } : { color: 'hsl(var(--chart-3))' }} /> Recent Activity
-                                            </CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="p-4 flex-1 min-h-0 overflow-hidden flex flex-col">
-                                            <PrizeActivityList schoolId={schoolId!} studentId={student.id} themed={!!activeTheme} onReprintTicket={handleReprint} />
-                                        </CardContent>
-                                    </Card>
-
-                                    <Button
-                                        variant="outline"
-                                        className="w-full h-12 rounded-2xl border-2 font-black uppercase tracking-widest text-xs transition-all group"
-                                        onClick={onRequestExit}
-                                        style={activeTheme ? {
-                                            borderColor: 'var(--theme-text)',
-                                            color: 'var(--theme-text)',
-                                            backgroundColor: 'transparent'
-                                        } : {
-                                            borderColor: 'hsl(var(--rose-200))',
-                                            color: 'hsl(var(--rose-600))'
-                                        }}
-                                    >
-                                        <LogOut className="mr-2 w-5 h-5 transition-transform group-hover:-translate-x-1" /> Log Out & Finish
-                                    </Button>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+                    <Button
+                        variant="outline"
+                        className="h-12 w-full rounded-2xl border-2 text-xs font-black uppercase tracking-widest transition-all group sm:max-w-sm sm:mx-auto"
+                        onClick={onRequestExit}
+                        style={
+                            activeTheme
+                                ? {
+                                      borderColor: 'var(--theme-text)',
+                                      color: 'var(--theme-text)',
+                                      backgroundColor: 'transparent',
+                                  }
+                                : {
+                                      borderColor: 'hsl(var(--rose-200))',
+                                      color: 'hsl(var(--rose-600))',
+                                  }
+                        }
+                    >
+                        <LogOut className="mr-2 h-5 w-5 transition-transform group-hover:-translate-x-1" aria-hidden />
+                        Log out & finish
+                    </Button>
+                    </div>
                 </div>
-
-
 
                 <ConfirmRedemptionDialog
                     isOpen={!!confirmingPrize}

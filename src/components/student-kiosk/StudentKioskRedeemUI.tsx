@@ -79,7 +79,8 @@ export function StudentKioskBalancePill({
   points,
   pointTypeTotals,
   portalRaffleTickets,
-}: StudentKioskBalancePillProps) {
+  showCategories = true,
+}: StudentKioskBalancePillProps & { showCategories?: boolean }) {
   const t = themed.active;
 
   return (
@@ -101,28 +102,30 @@ export function StudentKioskBalancePill({
           {points.toLocaleString()}{' '}
           <span className="text-xs font-bold uppercase tracking-widest opacity-70 sm:text-sm">pts</span>
         </p>
-        <div className="mt-2 flex max-w-[17rem] flex-wrap justify-center gap-1 sm:justify-start">
-          {pointTypeTotals.length > 0 ? (
-            pointTypeTotals.map((row) => (
-              <span
-                key={row.label}
-                className="rounded-full border px-2 py-0.5 text-[10px] font-bold leading-tight"
-                style={
-                  t
-                    ? {
-                        borderColor: 'color-mix(in srgb, var(--theme-primary) 22%, transparent)',
-                        color: 'var(--theme-text)',
-                      }
-                    : undefined
-                }
-              >
-                {row.label}: {row.points.toLocaleString()}
-              </span>
-            ))
-          ) : (
-            <span className="text-[10px] font-semibold opacity-60">No point types yet</span>
-          )}
-        </div>
+        {showCategories ? (
+          <div className="mt-2 flex max-w-[17rem] flex-wrap justify-center gap-1 sm:justify-start">
+            {pointTypeTotals.length > 0 ? (
+              pointTypeTotals.map((row) => (
+                <span
+                  key={row.label}
+                  className="rounded-full border px-2 py-0.5 text-[10px] font-bold leading-tight"
+                  style={
+                    t
+                      ? {
+                          borderColor: 'color-mix(in srgb, var(--theme-primary) 22%, transparent)',
+                          color: 'var(--theme-text)',
+                        }
+                      : undefined
+                  }
+                >
+                  {row.label}: {row.points.toLocaleString()}
+                </span>
+              ))
+            ) : (
+              <span className="text-[10px] font-semibold opacity-60">No point types yet</span>
+            )}
+          </div>
+        ) : null}
       </div>
       {portalRaffleTickets ? (
         <>
@@ -306,12 +309,45 @@ function ScanCouponScanZone({
     >
       <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]">
         <div
-          className="student-kiosk-scan-beam-horizontal absolute top-[10%] bottom-[10%] left-0 w-[18%] max-w-[4.5rem] opacity-90"
+          className="student-kiosk-scan-flash absolute inset-0 opacity-0"
           style={{
             background: t
-              ? 'linear-gradient(90deg, transparent, color-mix(in srgb, white 58%, var(--theme-primary)), transparent)'
-              : `linear-gradient(90deg, transparent, oklch(0.93 0.1 ${prizeAccentHue('scan', 0)} / 0.88), transparent)`,
+              ? 'linear-gradient(90deg, transparent 42%, color-mix(in srgb, white 22%, var(--theme-primary)) 50%, transparent 58%)'
+              : `linear-gradient(90deg, transparent 42%, oklch(0.96 0.12 ${prizeAccentHue('scan', 0)} / 0.55) 50%, transparent 58%)`,
           }}
+        />
+        <div
+          className="student-kiosk-scan-beam-horizontal absolute top-[5%] bottom-[5%] w-[36%] max-w-[7rem] rounded-full opacity-80 blur-[10px]"
+          style={{
+            background: t
+              ? 'linear-gradient(90deg, transparent 0%, color-mix(in srgb, var(--theme-primary) 35%, white) 42%, color-mix(in srgb, white 70%, var(--theme-primary)) 50%, color-mix(in srgb, var(--theme-primary) 35%, white) 58%, transparent 100%)'
+              : `linear-gradient(90deg, transparent 0%, oklch(0.88 0.14 ${prizeAccentHue('scan', 0)} / 0.45) 42%, oklch(0.97 0.1 ${prizeAccentHue('scan', 0)} / 0.95) 50%, oklch(0.88 0.14 ${prizeAccentHue('scan', 0)} / 0.45) 58%, transparent 100%)`,
+          }}
+        />
+        <div
+          className="student-kiosk-scan-beam-core absolute top-[2%] bottom-[2%] w-[2px] rounded-full"
+          style={{
+            background: t ? 'color-mix(in srgb, white 92%, var(--theme-primary))' : `oklch(0.99 0.04 ${prizeAccentHue('scan', 0)})`,
+            boxShadow: t
+              ? '0 0 14px 3px color-mix(in srgb, var(--theme-primary) 55%, white), 0 0 28px 6px color-mix(in srgb, var(--theme-primary) 35%, transparent)'
+              : `0 0 14px 3px oklch(0.93 0.14 ${prizeAccentHue('scan', 0)} / 0.85), 0 0 26px 5px oklch(0.85 0.12 ${prizeAccentHue('scan', 0)} / 0.45)`,
+          }}
+        />
+        <span
+          className="absolute left-2 top-2 h-4 w-4 rounded-tl border-l-2 border-t-2 border-white/35"
+          aria-hidden
+        />
+        <span
+          className="absolute right-2 top-2 h-4 w-4 rounded-tr border-r-2 border-t-2 border-white/35"
+          aria-hidden
+        />
+        <span
+          className="absolute bottom-2 left-2 h-4 w-4 rounded-bl border-b-2 border-l-2 border-white/35"
+          aria-hidden
+        />
+        <span
+          className="absolute bottom-2 right-2 h-4 w-4 rounded-br border-b-2 border-r-2 border-white/35"
+          aria-hidden
         />
       </div>
       <div className="relative z-[1] flex w-full flex-col items-center gap-1">{children}</div>

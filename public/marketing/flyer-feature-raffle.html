@@ -35,8 +35,31 @@
       .rules { margin-top: 0.18in; background: #1c1917; border-radius: 12px; padding: 0.14in 0.16in; border: 1px solid #44403c; }
       .rules h3 { font-size: 0.11in; color: #fbbf24; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.1in; }
       .rules li { font-size: 0.105in; color: #d6d3d1; line-height: 1.45; margin-left: 0.16in; margin-bottom: 0.06in; }
-      .img { margin-top: 0.14in; border-radius: 10px; overflow: hidden; border: 2px solid #f59e0b; }
-      .img img { width: 100%; display: block; }
+      .raffle-demo {
+        margin-top: 0.14in; display: grid; grid-template-columns: 1fr 1fr; gap: 0.12in;
+      }
+      .demo-panel {
+        background: #1c1917; border: 2px solid #f59e0b; border-radius: 12px;
+        padding: 0.16in; text-align: center; min-height: 1.4in;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+      }
+      .demo-panel b { font-size: 0.11in; color: #fbbf24; margin-top: 0.08in; }
+      .wheel {
+        width: 0.9in; height: 0.9in; border-radius: 50%;
+        background: conic-gradient(#f59e0b 0 45deg, #1c1917 45deg 90deg, #f59e0b 90deg 135deg, #1c1917 135deg 180deg, #f59e0b 180deg 225deg, #1c1917 225deg 270deg, #f59e0b 270deg 315deg, #1c1917 315deg);
+        border: 3px solid #fbbf24; position: relative;
+      }
+      .wheel::after {
+        content: ''; position: absolute; top: -0.08in; left: 50%; transform: translateX(-50%);
+        border-left: 0.08in solid transparent; border-right: 0.08in solid transparent;
+        border-bottom: 0.12in solid #fbbf24;
+      }
+      .reels { display: flex; gap: 0.06in; }
+      .reel {
+        width: 0.22in; height: 0.7in; background: #292524; border: 2px solid #78716c;
+        border-radius: 6px; display: flex; align-items: center; justify-content: center;
+        font-size: 0.2in; font-weight: 900; color: #fbbf24;
+      }
       .cta { margin-top: auto; padding-top: 0.14in; font-weight: 800; font-size: 0.12in; }
       .cta a { color: #fbbf24; text-decoration: none; }
       .foot { font-size: 0.075in; color: #57534e; margin-top: 0.08in; }
@@ -55,6 +78,7 @@
       <section class="modes" aria-label="Draw modes">
         <div class="mode"><div class="icon">🎰</div><b>Jackpot</b><span>Reel machine</span></div>
         <div class="mode"><div class="icon">🎡</div><b>Spin wheel</b><span>Weighted entries</span></div>
+        <div class="mode"><div class="icon">🎱</div><b>Loto cage</b><span>Assembly draw</span></div>
       </section>
       <section class="rules">
         <h3>Admin controls</h3>
@@ -65,11 +89,23 @@
           <li>Students see ticket count on portal when raffle is active</li>
         </ul>
       </section>
-      <div class="img">
-        <img src="/marketing/screenshots/teacher-raffle.png" alt="LevelUp rewards" width="1000" height="500" />
+      <div class="raffle-demo" aria-hidden="true">
+        <div class="demo-panel">
+          <div class="reels"><span class="reel">7</span><span class="reel">★</span><span class="reel">3</span></div>
+          <b>Jackpot reels</b>
+        </div>
+        <div class="demo-panel">
+          <div class="wheel"></div>
+          <b>Spin wheel</b>
+        </div>
       </div>
-      <p class="cta">Admin → Raffle · Teacher portal draw tools · <a href="https://leveluprewards.app">leveluprewards.app</a></p>
-      <p class="foot">© 2026 LevelUp EdTech Enterprises LLC</p>
-    </article>
+      <p class="cta">Enable Weekly Raffle in settings · Teacher portal draw · <a href="https://leveluprewards.app">leveluprewards.app</a></p>
+      <footer class="flyer-footer">
+        <p class="flyer-footer__vendor">Approved NYC Department of Education (DOE) vendor</p>
+        <p class="flyer-footer__links"><a href="https://leveluprewards.app">leveluprewards.app</a> · <a href="mailto:contact@leveluprewards.app">contact@leveluprewards.app</a></p>
+        <p class="flyer-footer__copy">© 2026 LevelUp EdTech Enterprises LLC</p>
+      </footer>
+
+      </article>
   </body>
 </html>

@@ -1,0 +1,71 @@
+/* Shared print + embed helpers for marketing flyers (link after flyer-embed.js). */
+.shot img,
+.img img,
+.img-frame img,
+.img-wrap img,
+.img-box img,
+.frame img,
+.screenshot-wrap img,
+.panel .shot img {
+  height: auto !important;
+  max-width: 100%;
+  width: 100%;
+  object-fit: contain;
+  object-position: top center;
+}
+
+.logo img,
+.brand img,
+header img,
+.top img,
+.brand-row img,
+.head img,
+header > img:not(.shot img) {
+  width: auto !important;
+  max-width: 0.85in;
+  max-height: 0.75in;
+  height: auto !important;
+  object-fit: contain;
+}
+
+/* Unified footer (see scripts/apply-flyer-footer.mjs) */
+.flyer-footer {
+  margin-top: auto;
+  padding-top: 0.14in;
+  text-align: center;
+  line-height: 1.45;
+  flex-shrink: 0;
+}
+.flyer-footer__vendor {
+  font-weight: 800;
+  font-size: 0.082in;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 0.06in;
+}
+.flyer-footer__links {
+  font-size: 0.078in;
+  font-weight: 600;
+}
+.flyer-footer__links a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.flyer-footer__copy {
+  margin-top: 0.05in;
+  font-size: 0.07in;
+  opacity: 0.88;
+}
+.flyer-note {
+  font-size: 0.095in;
+  opacity: 0.9;
+  margin-top: 0.08in;
+}
+
+@media print {
+  .flyer,
+  article.flyer {
+    min-height: 11in;
+  }
+}
