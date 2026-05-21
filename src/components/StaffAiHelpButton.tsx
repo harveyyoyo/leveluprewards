@@ -13,6 +13,7 @@ import { useAuthFetch } from '@/lib/authFetch';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { APP_NAME } from '@/lib/appBranding';
+import { getArcadeAiModelFromStorage } from '@/lib/aiModelPreference';
 import { RemoteSupportSharePanel } from '@/components/RemoteSupportSharePanel';
 import {
   Sheet,
@@ -96,17 +97,14 @@ export function StaffAiHelpButton() {
     setSending(true);
 
     try {
-      const model =
-        (typeof window !== 'undefined' ? localStorage.getItem('arcade_ai_model') : null) ||
-        'gpt-4o-mini';
       const res = await authFetch('/api/staff-help-chat', {
         method: 'POST',
         body: JSON.stringify({
           schoolId,
           pathname,
           loginState,
-          model,
-          messages: nextForApi,
+          model: getArcadeAiModelFromStorage(),
+          messages: nextForApi.slice(1).slice(-10),
         }),
       });
       const data = (await res.json().catch(() => ({}))) as { reply?: string; error?: string };

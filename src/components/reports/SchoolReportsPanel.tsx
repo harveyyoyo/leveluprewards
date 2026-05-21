@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Download, FileText, Printer, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -1215,20 +1215,19 @@ export function SchoolReportsPanel({
     <>
       <Card className="border-t-4 border-primary shadow-md">
         <CardHeader className="py-6 flex flex-row items-start justify-between gap-4">
-          <div>
+          <Helper
+            content={
+              <>
+                Printable and exportable summaries for documentation and meetings ({scopeLabel}). Print opens your
+                browser dialog. CSV downloads the currently selected report with the filters shown here.
+              </>
+            }
+          >
             <CardTitle className="text-2xl flex items-center gap-2">
               <FileText className="text-primary w-6 h-6" aria-hidden />
               Reports
             </CardTitle>
-            <CardDescription>
-              Printable and exportable summaries for documentation and meetings ({scopeLabel}).
-            </CardDescription>
-            <p className="text-xs text-muted-foreground mt-2">
-              <Helper content="Print opens your browser dialog. CSV downloads the currently selected report with the filters shown here.">
-                Print to paper, save as PDF, or export the current report as CSV.
-              </Helper>
-            </p>
-          </div>
+          </Helper>
           <TabWalkthroughHeaderAction />
         </CardHeader>
         <CardContent className="space-y-6">

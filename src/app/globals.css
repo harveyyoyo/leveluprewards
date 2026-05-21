@@ -11,6 +11,17 @@
   --emoji-font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", "Android Emoji", emoji, sans-serif;
 }
 
+/* School Office: larger rem baseline for desk-friendly typography and spacing. */
+html[data-office-portal] {
+  font-size: calc(100% * var(--office-ui-scale, 1.5));
+}
+
+@media print {
+  html[data-office-portal] {
+    font-size: 100%;
+  }
+}
+
 @keyframes lovable-tab-in {
   from {
     opacity: 0;
@@ -106,6 +117,7 @@
   .student-kiosk-transition-ring,
   .student-kiosk-warm-aurora,
   .student-kiosk-scan-beam,
+  .student-kiosk-scan-beam-horizontal,
   .rk-dot,
   .rk-rise,
   .rk-title {
@@ -144,6 +156,15 @@
   }
   100% {
     transform: translateY(1100%);
+  }
+}
+
+@keyframes rk-scan-horizontal {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(420%);
   }
 }
 
@@ -197,6 +218,10 @@
 
 .student-kiosk-scan-beam {
   animation: rk-scan 2.4s linear infinite;
+}
+
+.student-kiosk-scan-beam-horizontal {
+  animation: rk-scan-horizontal 0.85s linear infinite;
 }
 
 .rk-title {

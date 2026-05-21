@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { Award, Ticket, Coins } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Helper } from '@/components/ui/helper';
 import { ContentSectionTreeNav } from '@/components/ui/content-section-tree-nav';
 import { cn } from '@/lib/utils';
 
@@ -64,14 +65,11 @@ export function PointsTabLayout({
     return (
       <Card className={cn("w-full border-t-4 border-primary shadow-md overflow-hidden bg-background/95 backdrop-blur-md", className)}>
         <CardHeader className="bg-secondary/35 border-b border-border/40 p-4 sm:p-6">
-          <div>
+          <Helper content="Configure reward categories, print point coupons, and apply direct points additions or deductions.">
             <CardTitle className="flex items-center gap-2 text-xl font-black leading-tight tracking-tight text-foreground sm:text-2xl">
               <Coins className="w-5 h-5 shrink-0 text-primary sm:w-6 sm:h-6" /> Points &amp; Rewards
             </CardTitle>
-            <CardDescription className="mt-1 max-w-3xl text-sm font-medium leading-relaxed">
-              Configure reward categories, print point coupons, and apply direct points additions or deductions.
-            </CardDescription>
-          </div>
+          </Helper>
         </CardHeader>
 
         <CardContent className="space-y-5 p-4 sm:space-y-6 sm:p-6">

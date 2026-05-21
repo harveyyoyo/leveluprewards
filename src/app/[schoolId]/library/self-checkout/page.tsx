@@ -57,20 +57,6 @@ export default function LibrarySelfCheckoutPage() {
     );
   }
 
-  if (!settings.libraryAutoStudentPortalEnabled) {
-    return (
-      <div className="min-h-[100dvh] flex flex-col items-center justify-center gap-4 p-6 max-w-md text-center">
-        <p className="text-muted-foreground">
-          The library student self-checkout portal is turned off. Enable it under Library → Policy &amp; Rules, or
-          Student Checkout settings.
-        </p>
-        <Button variant="outline" className="rounded-xl" asChild>
-          <Link href={`/${schoolId}/librarian`}>Library staff login</Link>
-        </Button>
-      </div>
-    );
-  }
-
   if (!schoolId) {
     return (
       <div className="min-h-[100dvh] flex items-center justify-center">

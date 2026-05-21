@@ -27,7 +27,6 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -358,9 +357,6 @@ export function AdminStudentsTab({
               <Users className="text-ring w-6 h-6" /> Students
             </CardTitle>
           </Helper>
-          <CardDescription>
-            Manage your enrollments and view student activity.
-          </CardDescription>
           <div className="flex flex-wrap items-center gap-2 w-full pb-1 sm:pb-0 justify-between">
             <div className="flex flex-wrap items-center gap-2 min-w-0">
               <Button

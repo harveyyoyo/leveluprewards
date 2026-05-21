@@ -10,6 +10,7 @@ import { useStudentRoster } from './hooks/useStudentRoster';
 import { useAdminAttendance } from './hooks/useAdminAttendance';
 import { useSchoolLogoUpload } from './hooks/useSchoolLogoUpload';
 import { useAuthFetch } from '@/lib/authFetch';
+import { getArcadeAiModelFromStorage } from '@/lib/aiModelPreference';
 import { collection, doc, updateDoc, setDoc, deleteDoc, getDocs, query, orderBy, limit, where } from 'firebase/firestore';
 import {
    Users, Gift, BookOpen, Trash2, Edit, UploadCloud, Printer, LayoutDashboard, Database,
@@ -19,7 +20,7 @@ import {
  } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
@@ -664,7 +665,7 @@ function AdminDashboardInner() {
       },
       {
         value: 'student-portal',
-        label: 'Student portal',
+        label: 'Student home portal',
         icon: GraduationCap,
         /** Tab visibility only — portal on/off is the switch inside the tab (`enableStudentPortal`). */
         isOn: () => !hiddenNow.includes('student-portal'),
@@ -717,7 +718,7 @@ function AdminDashboardInner() {
     const base: AdminMainTabDef[] = [
       { value: 'students', label: 'Students', icon: Users },
       { value: 'classes', label: 'Classes', icon: BookOpen },
-      { value: 'teachers', label: 'Teachers', icon: User },
+      { value: 'teachers', label: 'Teachers & staff', icon: User },
       { value: 'prizes', label: 'Prizes', icon: Gift },
       { value: 'categories', label: 'Points', icon: Tag },
       { value: 'reports', label: 'Reports', icon: FileText },
@@ -1294,7 +1295,7 @@ function AdminDashboardInner() {
         method: 'POST',
         body: JSON.stringify({
           prompt: text,
-          model: localStorage.getItem('arcade_ai_model') || 'gpt-4o-mini',
+          model: getArcadeAiModelFromStorage(),
           classNames: (classes || []).map((c) => c.name),
           schoolId,
         }),
@@ -2912,7 +2913,7 @@ function UniversalPeriodsAdmin({ schoolId }: { schoolId: string }) {
         }
       }
 
-      const model = localStorage.getItem('arcade_ai_model') || 'gpt-4o-mini';
+      const model = getArcadeAiModelFromStorage();
       const res = await authFetch('/api/parse-schedule', {
         method: 'POST',
         body: JSON.stringify({ prompt: aiPrompt, model, schoolId }),
@@ -3233,7 +3234,6 @@ function AdminLogin({ onLogin }: { onLogin: (passcode: string) => Promise<boolea
             <LayoutDashboard className="w-8 h-8" />
           </div>
           <CardTitle className="text-2xl font-black">Admin Access</CardTitle>
-          <CardDescription>Manage students, classes, prizes, and system settings.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">

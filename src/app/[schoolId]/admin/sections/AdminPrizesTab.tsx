@@ -1,8 +1,9 @@
 'use client';
 
-import { CheckSquare, Cog, Edit3, Gift, Plus, Printer, Trash2, HelpCircle, GraduationCap, ShoppingBag, Wand2, UserMinus, X } from 'lucide-react';
+import { CheckSquare, Cog, Edit3, Gift, Plus, Printer, Trash2, GraduationCap, ShoppingBag, Wand2, UserMinus, X } from 'lucide-react';
+import { Helper } from '@/components/ui/helper';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -68,7 +69,6 @@ export function AdminPrizesTab({
   const { setPrizeIdCardsToPrint } = usePrint();
   const { toast } = useToast();
   const vendingEnabled = settings.enableVendingMachine === true;
-  const [helpOpen, setHelpOpen] = useState(false);
   const cardColorBackfillStarted = useRef(false);
   const [prizeIdPrintJob, setPrizeIdPrintJob] = useState<Prize[] | null>(null);
   const [selectedPrizeIds, setSelectedPrizeIds] = useState<Set<string>>(new Set());
@@ -230,23 +230,11 @@ export function AdminPrizesTab({
   return (
     <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden">
       <CardHeader className="flex flex-row justify-between items-center py-6">
-        <div>
+        <Helper content="Items students redeem with points in the rewards shop. Set cost, stock, shop visibility, teacher or class access, vending motor, and print card options per item.">
           <CardTitle className="flex items-center gap-2">
-                <Gift className="text-primary w-5 h-5" /> Rewards Shop
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 rounded-full text-muted-foreground/60 hover:text-muted-foreground"
-              onClick={() => setHelpOpen(true)}
-              aria-label="How items work"
-              title="How items work"
-            >
-              <HelpCircle className="h-4 w-4" />
-            </Button>
+            <Gift className="text-primary w-5 h-5" /> Rewards Shop
           </CardTitle>
-          <CardDescription>Items available for student redemption.</CardDescription>
-        </div>
+        </Helper>
         <div className="flex flex-wrap items-center justify-end gap-2">
           <TabWalkthroughHeaderAction />
           <Button
@@ -730,33 +718,6 @@ export function AdminPrizesTab({
           )}
         </ul>
       </CardContent>
-      <Dialog open={helpOpen} onOpenChange={setHelpOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>How items work</DialogTitle>
-            <DialogDescription>Quick overview of item settings.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 text-sm">
-            <p>
-              <span className="font-bold">Items</span> are rewards students redeem using points in the rewards shop.
-            </p>
-            <ul className="list-disc pl-5 space-y-1">
-              <li><span className="font-bold">Points</span>: cost per redemption.</li>
-              <li><span className="font-bold">In Stock</span>: whether it appears in the shop.</li>
-              <li><span className="font-bold">Stock</span>: optional count on hand. Blank = unlimited.</li>
-              <li><span className="font-bold">Shop</span>: list in shop and print voucher toggles.</li>
-              <li><span className="font-bold">Teachers</span>: pick multiple teachers or school-wide.</li>
-              <li><span className="font-bold">Class</span>: optionally restrict by class.</li>
-              <li><span className="font-bold">Vending motor</span>: enable the Vending Machine feature in settings, then use the prize motor button to pick axis X/Y/Z/E.</li>
-              <li><span className="font-bold">Print card</span>: check rows to print a subset, use Select all, or Print all prize cards for every item in the list. The row printer icon still prints one card.</li>
-              <li><span className="font-bold">Card color</span>: set per item in Edit → Shelf card color (requires color printing in settings).</li>
-            </ul>
-          </div>
-          <DialogFooter>
-            <Button onClick={() => setHelpOpen(false)}>Close</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
       <Dialog open={wizardOpen} onOpenChange={(open) => { setWizardOpen(open); if (!open) resetWizard(); }}>
         <DialogContent>
           <DialogHeader>

@@ -5,7 +5,8 @@ import { Award, Search, Undo2 } from 'lucide-react';
 import { useAppContext } from '@/components/AppProvider';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Helper } from '@/components/ui/helper';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
@@ -635,18 +636,19 @@ export function ManualPointsAwardDialog({
         )}
       >
         <CardHeader className="p-4 md:p-6">
-          <CardTitle className="flex items-center gap-3 text-xl font-black">
-            <div
-              className={cn(
-                'p-2 rounded-xl',
-                isGraphic ? 'bg-chart-2/20 text-chart-2' : 'bg-primary/10 text-primary',
-              )}
-            >
-              <Award className="w-5 h-5" />
-            </div>
-            Manually Add or Deduct
-          </CardTitle>
-          <CardDescription>{description}</CardDescription>
+          <Helper content={description}>
+            <CardTitle className="flex items-center gap-3 text-xl font-black">
+              <div
+                className={cn(
+                  'p-2 rounded-xl',
+                  isGraphic ? 'bg-chart-2/20 text-chart-2' : 'bg-primary/10 text-primary',
+                )}
+              >
+                <Award className="w-5 h-5" />
+              </div>
+              Manually Add or Deduct
+            </CardTitle>
+          </Helper>
         </CardHeader>
         <CardContent className="p-4 md:p-6 pt-0">{formContent}</CardContent>
       </Card>

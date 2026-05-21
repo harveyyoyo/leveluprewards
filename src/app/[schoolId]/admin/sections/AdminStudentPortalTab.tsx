@@ -6,7 +6,8 @@ import { useFirebase, useUser } from '@/firebase';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import type { Student } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Helper } from '@/components/ui/helper';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -161,16 +162,12 @@ export function AdminStudentPortalTab({ schoolId, students }: Props) {
     <div className="space-y-6">
       <Card>
         <CardHeader className="flex flex-row items-start justify-between gap-4">
-          <div>
+          <Helper content="Students sign in at home with their ID and a personal passcode (recommended). They only see their own rewards — not other students or staff tools.">
             <CardTitle className="flex items-center gap-2">
               <GraduationCap className="h-5 w-5" aria-hidden />
               Student home portal
             </CardTitle>
-            <CardDescription>
-              Students sign in at home with their ID and a personal passcode (recommended). They only see their own
-              rewards — not other students or staff tools.
-            </CardDescription>
-          </div>
+          </Helper>
           <TabWalkthroughHeaderAction />
         </CardHeader>
         <CardContent className="space-y-6">
@@ -193,7 +190,7 @@ export function AdminStudentPortalTab({ schoolId, students }: Props) {
           {portalOn ? (
             <>
               <div className="space-y-2">
-                <Label>Student portal URL</Label>
+                <Label>Student home portal URL</Label>
                 <div className="flex flex-wrap gap-2">
                   <Input readOnly value={portalUrl} className="font-mono text-sm flex-1 min-w-[200px]" />
                   <Button type="button" variant="outline" onClick={() => void handleCopyUrl()}>
@@ -292,10 +289,9 @@ export function AdminStudentPortalTab({ schoolId, students }: Props) {
       {portalOn ? (
         <Card>
           <CardHeader>
-            <CardTitle>Student passcodes &amp; lockouts</CardTitle>
-            <CardDescription>
-              Set an optional second passcode per student. Locked accounts can only be unlocked here.
-            </CardDescription>
+            <Helper content="Set an optional second passcode per student. Locked accounts can only be unlocked here.">
+              <CardTitle>Student passcodes &amp; lockouts</CardTitle>
+            </Helper>
           </CardHeader>
           <CardContent>
             <ul className="space-y-3">

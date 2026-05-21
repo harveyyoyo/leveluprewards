@@ -23,14 +23,36 @@ import { LibraryStaffExitDialog } from './LibraryStaffExitDialog';
 
 type PortalStep = 'student' | 'book' | 'success';
 
+const STAFF_LIBRARY_SESSION_STATES = new Set([
+  'admin',
+  'librarian',
+  'teacher',
+  'secretary',
+  'prizeClerk',
+  'reports',
+  'office',
+  'houseCoordinator',
+  'developer',
+]);
+
 export function LibraryStudentSelfCheckoutPortal({
   schoolId,
   categories,
   getStudentName,
+  embedded = false,
+  exitOpen: exitOpenProp,
+  onExitOpenChange,
+  onExit,
 }: {
   schoolId: string;
   categories?: Category[] | null;
   getStudentName: (id?: string) => string;
+  /** When true, renders inside a modal overlay instead of a full-page route. */
+  embedded?: boolean;
+  exitOpen?: boolean;
+  onExitOpenChange?: (open: boolean) => void;
+  /** Called after staff passcode unlock (embedded mode closes the overlay). */
+  onExit?: () => void;
 }) {
   const router = useRouter();
   const firestore = useFirestore();
@@ -45,7 +67,9 @@ export function LibraryStudentSelfCheckoutPortal({
   const [lastBookTitle, setLastBookTitle] = useState<string | null>(null);
   const [lastAction, setLastAction] = useState<'checkout' | 'return' | null>(null);
   const [busy, setBusy] = useState(false);
-  const [exitOpen, setExitOpen] = useState(false);
+  const [exitOpenInternal, setExitOpenInternal] = useState(false);
+  const exitOpen = exitOpenProp ?? exitOpenInternal;
+  const setExitOpen = onExitOpenChange ?? setExitOpenInternal;
   const [sessionReady, setSessionReady] = useState(false);
 
   const libraryPolicy = useMemo(
@@ -55,9 +79,16 @@ export function LibraryStudentSelfCheckoutPortal({
   const shouldAcceptScan = useMemo(() => createScanDeduper(1500), []);
   const studentLabel = studentId ? getStudentName(studentId) : null;
 
+  const staffCanDismissWithoutPasscode =
+    embedded && (loginState === 'librarian' || loginState === 'admin');
+
   useEffect(() => {
     if (!isInitialized || !schoolId) return;
     if (loginState === 'student' || loginState === 'school') {
+      setSessionReady(true);
+      return;
+    }
+    if (embedded && STAFF_LIBRARY_SESSION_STATES.has(loginState)) {
       setSessionReady(true);
       return;
     }
@@ -76,7 +107,7 @@ export function LibraryStudentSelfCheckoutPortal({
     return () => {
       cancelled = true;
     };
-  }, [isInitialized, login, loginState, schoolId, toast]);
+  }, [embedded, isInitialized, login, loginState, schoolId, toast]);
 
   const resetForNextStudent = useCallback(() => {
     setStudentId(null);
@@ -219,14 +250,24 @@ export function LibraryStudentSelfCheckoutPortal({
 
   if (!sessionReady) {
     return (
-      <div className="min-h-[100dvh] flex items-center justify-center bg-background">
+      <div
+        className={cn(
+          'flex items-center justify-center bg-background',
+          'min-h-[100dvh]',
+        )}
+      >
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-[100dvh] flex flex-col bg-gradient-to-b from-primary/8 via-background to-background">
+    <div
+      className={cn(
+        'flex flex-col bg-gradient-to-b from-primary/8 via-background to-background',
+        'min-h-[100dvh] h-full w-full flex-1 overflow-y-auto',
+      )}
+    >
       <header className="flex items-center justify-between gap-3 border-b bg-background/90 backdrop-blur px-4 py-3 shrink-0">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Library</p>
@@ -237,10 +278,16 @@ export function LibraryStudentSelfCheckoutPortal({
           variant="outline"
           size="sm"
           className="rounded-xl shrink-0"
-          onClick={() => setExitOpen(true)}
+          onClick={() => {
+            if (staffCanDismissWithoutPasscode && onExit) {
+              onExit();
+              return;
+            }
+            setExitOpen(true);
+          }}
         >
           <Lock className="mr-2 h-4 w-4" />
-          Staff
+          {staffCanDismissWithoutPasscode ? 'Close' : 'Staff'}
         </Button>
       </header>
 
@@ -323,6 +370,10 @@ export function LibraryStudentSelfCheckoutPortal({
         open={exitOpen}
         onOpenChange={setExitOpen}
         onUnlocked={() => {
+          if (onExit) {
+            onExit();
+            return;
+          }
           if (loginState === 'admin') {
             router.push(`/${schoolId}/admin`);
           } else {

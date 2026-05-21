@@ -1,12 +1,12 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Printer } from 'lucide-react';
+import { Download, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { OfficeGradeEntry } from '@/lib/office/types';
-import { formatGradeDisplay } from '@/lib/office/officeUtils';
+import { downloadCsv, formatGradeDisplay } from '@/lib/office/officeUtils';
 import { useOfficeTerm } from '@/lib/office/useOfficeTerm';
 
 type OfficeGradeReportViewProps = {
@@ -47,6 +47,20 @@ export function OfficeGradeReportView({
 
   const displaySchool = schoolName?.trim() || schoolId;
 
+  const handleExportCsv = () => {
+    const filename = `grades-${term.replace(/\s+/g, '-').toLowerCase()}-${schoolId}.csv`;
+    downloadCsv(
+      filename,
+      ['Student', 'Class', 'Subject', 'Grade'],
+      rows.map((r) => [
+        studentLabelById.get(r.studentId) ?? '',
+        (r.classId && classNameById.get(r.classId)) ?? '',
+        r.subject,
+        formatGradeDisplay(r),
+      ]),
+    );
+  };
+
   return (
     <div className="space-y-6 print:space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between no-print">
@@ -70,6 +84,16 @@ export function OfficeGradeReportView({
               </SelectContent>
             </Select>
           </div>
+          <Button
+            type="button"
+            variant="outline"
+            className="rounded-xl gap-2"
+            disabled={rows.length === 0}
+            onClick={handleExportCsv}
+          >
+            <Download className="h-4 w-4" />
+            Export CSV
+          </Button>
           <Button type="button" className="rounded-xl gap-2" onClick={() => window.print()}>
             <Printer className="h-4 w-4" />
             Print
@@ -109,7 +133,7 @@ export function OfficeGradeReportView({
             </tbody>
           </table>
         )}
-        <p className="mt-6 text-[10px] text-muted-foreground print:mt-4">
+        <p className="mt-6 text-[0.625rem] text-muted-foreground print:mt-4">
           Generated from School Office · {new Date().toLocaleDateString()}
         </p>
       </article>

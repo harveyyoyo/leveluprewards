@@ -3,15 +3,12 @@
 
 import React from 'react';
 import { HelpCircle } from 'lucide-react';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useSettings } from '../providers/SettingsProvider';
 import { cn } from '@/lib/utils';
 
 interface HelperProps {
+  /** Short explanation of what this section does and how to use it. */
   content: React.ReactNode;
   side?: 'top' | 'bottom' | 'left' | 'right';
   className?: string;
@@ -20,7 +17,22 @@ interface HelperProps {
   children: React.ReactNode;
 }
 
-export function Helper({ children, content, side = 'right', className, iconClassName, iconSize = 16 }: HelperProps) {
+function HelperTooltipBody({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="max-w-xs space-y-1.5 text-sm leading-relaxed text-popover-foreground">
+      {children}
+    </div>
+  );
+}
+
+export function Helper({
+  children,
+  content,
+  side = 'top',
+  className,
+  iconClassName,
+  iconSize = 16,
+}: HelperProps) {
   const { settings } = useSettings();
 
   if (!settings.enableHelperMode) {
@@ -28,21 +40,29 @@ export function Helper({ children, content, side = 'right', className, iconClass
   }
 
   return (
-    <div className={cn("inline-flex items-center gap-1.5", className)}>
+    <div className={cn('inline-flex items-center gap-1.5', className)}>
       {children}
-      <Popover>
-        <PopoverTrigger asChild>
+      <Tooltip delayDuration={200}>
+        <TooltipTrigger asChild>
           <button
             type="button"
-            className={cn("text-muted-foreground/50 hover:text-muted-foreground transition-colors focus:outline-none", iconClassName)}
+            aria-label="Section help"
+            className={cn(
+              'cursor-help text-muted-foreground/50 transition-colors hover:text-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm',
+              iconClassName,
+            )}
           >
-            <HelpCircle style={{ width: iconSize, height: iconSize }} />
+            <HelpCircle style={{ width: iconSize, height: iconSize }} aria-hidden />
           </button>
-        </PopoverTrigger>
-        <PopoverContent side={side} className="max-w-xs z-[101] text-sm p-3 bg-background border-2 shadow-xl w-auto">
-          {content}
-        </PopoverContent>
-      </Popover>
+        </TooltipTrigger>
+        <TooltipContent
+          side={side}
+          sideOffset={6}
+          className="z-[101] max-w-xs border-2 p-3 shadow-xl"
+        >
+          <HelperTooltipBody>{content}</HelperTooltipBody>
+        </TooltipContent>
+      </Tooltip>
     </div>
   );
 }

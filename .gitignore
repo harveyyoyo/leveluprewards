@@ -70,6 +70,12 @@ prize_error*.png
 codex-*.log
 codex-*.out.log
 codex-*.err.log
+.codex-*.log
+.codex-*.out.log
+.codex-*.err.log
+
+# local browser auth captures
+promo-video/public/.capture-auth/
 
 # assistant handoff scratch (local only)
 HANDOFF.md

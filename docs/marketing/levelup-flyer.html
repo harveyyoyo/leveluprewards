@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LevelUp EDU — School Rewards Flyer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #070814;
+        --navy: #102a45;
+        --fuchsia: #d946ef;
+        --cyan: #22d3ee;
+        --violet: #a78bfa;
+        --text: #f1f5f9;
+        --muted: #94a3b8;
+        --dim: #64748b;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      @page {
+        size: letter;
+        margin: 0;
+      }
+
+      html,
+      body {
+        width: 8.5in;
+        min-height: 11in;
+        font-family: 'Outfit', system-ui, sans-serif;
+        background: #1e293b;
+        color: var(--text);
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      .flyer {
+        position: relative;
+        width: 8.5in;
+        min-height: 11in;
+        overflow: hidden;
+        background: var(--bg);
+      }
+
+      .glow-a {
+        position: absolute;
+        top: -2in;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 9in;
+        height: 5in;
+        background: radial-gradient(
+          circle,
+          rgba(120, 119, 198, 0.28) 0%,
+          transparent 68%
+        );
+        pointer-events: none;
+      }
+
+      .glow-b {
+        position: absolute;
+        top: 3.5in;
+        left: -1.5in;
+        width: 4.5in;
+        height: 4.5in;
+        border-radius: 50%;
+        background: rgba(6, 182, 212, 0.12);
+        filter: blur(60px);
+        pointer-events: none;
+      }
+
+      .glow-c {
+        position: absolute;
+        bottom: 1.5in;
+        right: -1.2in;
+        width: 4in;
+        height: 4in;
+        border-radius: 50%;
+        background: rgba(217, 70, 239, 0.14);
+        filter: blur(55px);
+        pointer-events: none;
+      }
+
+      .content {
+        position: relative;
+        z-index: 1;
+        padding: 0.42in 0.5in 0.38in;
+        display: flex;
+        flex-direction: column;
+        min-height: 11in;
+      }
+
+      .top-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.25in;
+        padding-bottom: 0.22in;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 0.14in;
+      }
+
+      .brand img {
+        width: 0.62in;
+        height: 0.62in;
+        object-fit: contain;
+      }
+
+      .brand-name {
+        font-size: 0.28in;
+        font-weight: 900;
+        letter-spacing: 0.04em;
+        line-height: 1;
+      }
+
+      .brand-name span {
+        font-size: 0.17in;
+        font-weight: 700;
+        color: var(--cyan);
+        letter-spacing: 0.12em;
+        margin-left: 0.06in;
+      }
+
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.08in;
+        padding: 0.06in 0.14in;
+        border-radius: 999px;
+        border: 1px solid rgba(217, 70, 239, 0.35);
+        background: rgba(217, 70, 239, 0.12);
+        font-size: 0.1in;
+        font-weight: 800;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: #f5d0fe;
+      }
+
+      .chip-dot {
+        width: 0.08in;
+        height: 0.08in;
+        border-radius: 50%;
+        background: var(--fuchsia);
+        box-shadow: 0 0 8px var(--fuchsia);
+      }
+
+      .hero {
+        padding-top: 0.28in;
+        text-align: center;
+      }
+
+      .hero h1 {
+        font-size: 0.52in;
+        font-weight: 900;
+        line-height: 1.05;
+        letter-spacing: -0.02em;
+        max-width: 7.2in;
+        margin: 0 auto;
+      }
+
+      .hero h1 .gradient {
+        background: linear-gradient(90deg, #f472b6, #c084fc, #22d3ee);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+
+      .hero p {
+        margin: 0.16in auto 0;
+        max-width: 6.2in;
+        font-size: 0.155in;
+        line-height: 1.45;
+        color: var(--muted);
+      }
+
+      .tagline {
+        margin-top: 0.1in;
+        font-size: 0.12in;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--dim);
+      }
+
+      .screenshot-wrap {
+        margin: 0.26in auto 0;
+        width: 100%;
+        max-width: 7.3in;
+        padding: 0.12in;
+        border-radius: 0.2in;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(2, 6, 23, 0.65);
+        box-shadow: 0 0 40px rgba(168, 85, 247, 0.18);
+      }
+
+      .screenshot-wrap img {
+        display: block;
+        width: 100%;
+        height: auto;
+        border-radius: 0.12in;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .features {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.14in;
+        margin-top: 0.24in;
+      }
+
+      .feature {
+        padding: 0.14in 0.15in;
+        border-radius: 0.14in;
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        background: rgba(255, 255, 255, 0.02);
+      }
+
+      .feature-label {
+        font-size: 0.095in;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        margin-bottom: 0.05in;
+      }
+
+      .feature-label.cyan {
+        color: var(--cyan);
+      }
+      .feature-label.fuchsia {
+        color: #f472b6;
+      }
+      .feature-label.amber {
+        color: #fbbf24;
+      }
+      .feature-label.emerald {
+        color: #34d399;
+      }
+
+      .feature h3 {
+        font-size: 0.145in;
+        font-weight: 800;
+        line-height: 1.2;
+        margin-bottom: 0.05in;
+      }
+
+      .feature p {
+        font-size: 0.105in;
+        line-height: 1.4;
+        color: var(--muted);
+      }
+
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0.1in;
+        margin-top: 0.2in;
+        padding: 0.14in 0.08in;
+        border-radius: 0.14in;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        background: rgba(2, 6, 23, 0.45);
+      }
+
+      .stat-value {
+        font-size: 0.16in;
+        font-weight: 900;
+        text-align: center;
+        background: linear-gradient(90deg, var(--cyan), var(--fuchsia));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+
+      .stat-label {
+        margin-top: 0.04in;
+        font-size: 0.085in;
+        font-weight: 700;
+        text-align: center;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--dim);
+      }
+
+      .roles {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.1in;
+        margin-top: 0.18in;
+      }
+
+      .role-pill {
+        padding: 0.07in 0.14in;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(16, 42, 69, 0.55);
+        font-size: 0.1in;
+        font-weight: 700;
+        color: #e2e8f0;
+      }
+
+      .cta {
+        margin-top: auto;
+        padding-top: 0.22in;
+      }
+
+      .cta-box {
+        text-align: center;
+        padding: 0.2in 0.24in;
+        border-radius: 0.18in;
+        border: 1px solid rgba(217, 70, 239, 0.25);
+        background: linear-gradient(
+          180deg,
+          rgba(15, 23, 42, 0.9),
+          rgba(2, 6, 23, 0.75)
+        );
+      }
+
+      .cta-box h2 {
+        font-size: 0.26in;
+        font-weight: 900;
+        letter-spacing: -0.01em;
+      }
+
+      .cta-box p {
+        margin-top: 0.08in;
+        font-size: 0.115in;
+        color: var(--muted);
+      }
+
+      .cta-links {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.2in;
+        margin-top: 0.14in;
+        font-size: 0.125in;
+        font-weight: 800;
+      }
+
+      .cta-links a {
+        color: var(--cyan);
+        text-decoration: none;
+      }
+
+      .cta-links .divider {
+        color: rgba(255, 255, 255, 0.2);
+        font-weight: 400;
+      }
+
+      .footer {
+        margin-top: 0.12in;
+        text-align: center;
+        font-size: 0.075in;
+        line-height: 1.35;
+        color: #64748b;
+      }
+
+      .print-hint {
+        position: fixed;
+        bottom: 12px;
+        right: 12px;
+        padding: 10px 14px;
+        border-radius: 10px;
+        background: #0f172a;
+        color: #e2e8f0;
+        font: 600 13px/1.4 system-ui, sans-serif;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+        z-index: 99;
+      }
+
+      @media print {
+        html,
+        body {
+          background: var(--bg);
+        }
+        .print-hint {
+          display: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <p class="print-hint" aria-hidden="true">
+      Print: Ctrl+P → Letter, margins None, backgrounds on
+    </p>
+
+    <article class="flyer" aria-label="LevelUp EDU marketing flyer">
+      <div class="glow-a" aria-hidden="true"></div>
+      <div class="glow-b" aria-hidden="true"></div>
+      <div class="glow-c" aria-hidden="true"></div>
+
+      <div class="content">
+        <header class="top-bar">
+          <div class="brand">
+            <img src="../../public/logo.png" alt="LevelUp logo" width="64" height="64" />
+            <div class="brand-name">levelUp <span>EDU</span></div>
+          </div>
+          <div class="chip"><span class="chip-dot"></span> PBIS Rewards</div>
+        </header>
+
+        <section class="hero">
+          <p class="tagline">School Rewards System</p>
+          <h1>
+            Turn positive behavior into an
+            <span class="gradient">arcade adventure.</span>
+          </h1>
+          <p>
+            LevelUp EDU transforms PBIS into a vibrant gaming ecosystem—students earn
+            points, unlock levels, and redeem rewards while teachers award coupons in
+            seconds and admins stay in sync across every device.
+          </p>
+
+          <div class="screenshot-wrap">
+            <img
+              src="../../public/user_preview_student_details.png"
+              alt="LevelUp student dashboard preview"
+              width="1280"
+              height="720"
+            />
+          </div>
+        </section>
+
+        <section class="features" aria-label="Key features">
+          <div class="feature">
+            <div class="feature-label cyan">Fast check-in</div>
+            <h3>Student kiosk</h3>
+            <p>NFC cards, barcode scans, or quick ID login—students see balances and redeem prizes on the spot.</p>
+          </div>
+          <div class="feature">
+            <div class="feature-label fuchsia">Teacher station</div>
+            <h3>Instant point awards</h3>
+            <p>Print or share coupon codes for any reason. Track usage and keep PBIS consistent class to class.</p>
+          </div>
+          <div class="feature">
+            <div class="feature-label amber">Motivation</div>
+            <h3>Hall of Fame</h3>
+            <p>Leaderboards and achievement tiers keep students engaged with healthy, school-wide competition.</p>
+          </div>
+          <div class="feature">
+            <div class="feature-label emerald">Rewards shop</div>
+            <h3>Custom prize catalog</h3>
+            <p>Homework passes, privileges, stickers, and more—your loot table, your rules, real-time point deductions.</p>
+          </div>
+        </section>
+
+        <section class="stats" aria-label="Highlights">
+          <div>
+            <div class="stat-value">1-Tap</div>
+            <div class="stat-label">Point awards</div>
+          </div>
+          <div>
+            <div class="stat-value">4 Ways</div>
+            <div class="stat-label">Check-in modes</div>
+          </div>
+          <div>
+            <div class="stat-value">Cloud</div>
+            <div class="stat-label">Firebase sync</div>
+          </div>
+          <div>
+            <div class="stat-value">Live</div>
+            <div class="stat-label">PBIS telemetry</div>
+          </div>
+        </section>
+
+        <div class="roles" aria-label="Who it's for">
+          <span class="role-pill">Student kiosk</span>
+          <span class="role-pill">Teacher station</span>
+          <span class="role-pill">Admin portal</span>
+          <span class="role-pill">School office</span>
+        </div>
+
+        <section class="cta">
+          <div class="cta-box">
+            <h2>Ready to level up your school?</h2>
+            <p>Request a demo or sign in with your school token today.</p>
+            <div class="cta-links">
+              <a href="https://leveluprewards.app">leveluprewards.app</a>
+              <span class="divider">|</span>
+              <a href="https://portal.leveluprewards.app">portal.leveluprewards.app</a>
+              <span class="divider">|</span>
+              <a href="mailto:contact@leveluprewards.app">contact@leveluprewards.app</a>
+            </div>
+          </div>
+          <p class="footer">
+            LevelUp Rewards is developed, owned, and operated by LevelUp EdTech Enterprises LLC.
+            <br />
+            © 2026 levelUp EDU · beta-1.1.0
+          </p>
+        </section>
+      </div>
+    </article>
+  </body>
+</html>

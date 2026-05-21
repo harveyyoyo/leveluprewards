@@ -23,7 +23,8 @@ import {
   X,
 } from 'lucide-react';
 import { httpsCallable } from 'firebase/functions';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Helper } from '@/components/ui/helper';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -275,14 +276,11 @@ export function AdminNotificationsTab() {
     <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden bg-background/95 backdrop-blur-md">
       <CardHeader className="py-6 bg-secondary/35 border-b border-border/40">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-1">
+          <Helper content="Configure automated school notifications, manage active delivery rules, and view diagnostic logs.">
             <CardTitle className="flex items-center gap-2 text-2xl font-black tracking-tight text-foreground">
               <Bell className="w-6 h-6 text-primary animate-pulse" /> Notifications &amp; Alerts
             </CardTitle>
-            <CardDescription className="mt-1 text-sm font-medium">
-              Configure automated school notifications, manage active delivery rules, and view diagnostic logs.
-            </CardDescription>
-          </div>
+          </Helper>
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 shrink-0">
             <div className="flex items-center gap-2 bg-background/60 p-2 rounded-xl border border-border/50">
               {statusBadge(headlineStatus)}
@@ -320,12 +318,11 @@ export function AdminNotificationsTab() {
         {section === 'alerts' && (
           <div className="space-y-6 animate-in fade-in-50 duration-200">
             <div className="border-b pb-4">
-              <h3 className="text-lg font-black tracking-tight flex items-center gap-2">
-                <Bell className="w-5 h-5 text-primary" /> Your Active Notifications
-              </h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                These alerts are active for your school. Turn one off or configure another anytime.
-              </p>
+              <Helper content="These alerts are active for your school. Turn one off or configure another anytime.">
+                <h3 className="text-lg font-black tracking-tight flex items-center gap-2">
+                  <Bell className="w-5 h-5 text-primary" /> Your Active Notifications
+                </h3>
+              </Helper>
             </div>
 
             {activeRules.length ? (
@@ -681,12 +678,11 @@ export function AdminNotificationsTab() {
         {section === 'advanced' && (
           <div className="space-y-6 animate-in fade-in-50 duration-200">
             <div className="border-b pb-4">
-              <h3 className="text-lg font-black tracking-tight flex items-center gap-2">
-                <ListTree className="w-5 h-5 text-primary" /> Delivery Diagnostics &amp; Logs
-              </h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                Use these tools to diagnose notification delivery gates, view enqueued mail documents, and send test payloads.
-              </p>
+              <Helper content="Use these tools to diagnose notification delivery gates, view enqueued mail documents, and send test payloads.">
+                <h3 className="text-lg font-black tracking-tight flex items-center gap-2">
+                  <ListTree className="w-5 h-5 text-primary" /> Delivery Diagnostics &amp; Logs
+                </h3>
+              </Helper>
             </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">

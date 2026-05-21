@@ -159,7 +159,13 @@ export default function Header() {
                 key={id}
                 href={href}
                 className={cn('flex flex-col items-center px-3 py-1 transition-all', activeClass)}
-                onClick={() => playSound('click')}
+                onClick={(e) => {
+                  playSound('click');
+                  if (id === 'redeem' && loginState === 'admin') {
+                    e.preventDefault();
+                    logout({ staffNavigateTo: 'student' });
+                  }
+                }}
               >
                 <Icon className="h-6 w-6" />
                 <span className="mt-1 text-[10px] font-bold uppercase tracking-wider">{label}</span>
@@ -194,7 +200,13 @@ export default function Header() {
     return (
       <div className="w-full">
         <div className="mx-auto w-full max-w-7xl px-4 md:px-8">
-        <header className="no-print relative flex w-full min-w-0 items-center justify-between z-20 pt-3 sm:pt-4 pb-3 sm:pb-4 border-b border-border/10 shadow-[0_4px_20px_hsl(var(--primary)/0.08)]">
+        <header
+          className={cn(
+            'no-print relative z-20 mb-2 flex w-full min-w-0 items-center justify-between rounded-b-2xl border border-border/10 border-t-0',
+            'bg-card/95 pt-3 shadow-[0_4px_20px_hsl(var(--primary)/0.08)] backdrop-blur-md sm:mb-3 sm:rounded-b-3xl sm:pb-4 sm:pt-4',
+            'pb-3',
+          )}
+        >
           <div className="relative z-10 flex shrink-0 justify-start">
             {schoolId && (
               <Link
@@ -268,19 +280,23 @@ export default function Header() {
     );
   }
 
-  // --- WEB MODE HEADER ---
+  // --- WEB MODE HEADER (rounded bottom shell, same card shape as app mode) ---
   return (
     <>
-    <header className={cn(
-      "no-print z-50 transition-colors border-b border-primary/10 sticky top-0",
-      "bg-background/80 backdrop-blur-xl shadow-[0_4px_24px_hsl(var(--primary)/0.1)]",
-      "mx-auto w-full max-w-7xl min-w-0 px-4 md:px-8"
-    )}>
-      <div className="relative h-20 min-w-0">
+    <div className="no-print sticky top-0 z-50 w-full transition-colors">
+      <div className="mx-auto w-full max-w-7xl min-w-0 px-4 md:px-8">
+        <header
+          className={cn(
+            'relative z-20 mb-2 w-full min-w-0 rounded-b-2xl border border-border/10 border-t-0',
+            'bg-card/95 shadow-[0_4px_20px_hsl(var(--primary)/0.08)] backdrop-blur-md',
+            'sm:mb-3 sm:rounded-b-3xl',
+          )}
+        >
+      <div className="relative h-20 min-w-0 w-full px-3 sm:px-5">
         {/* Left: Branding */}
-        <div className="absolute inset-y-0 left-0 z-10 flex min-w-0 shrink-0 items-center gap-1 sm:gap-4">
+        <div className="absolute inset-y-0 left-3 z-10 flex min-w-0 shrink-0 items-center gap-1 sm:left-5 sm:gap-4">
           <div className={cn("items-center gap-1 sm:gap-4", schoolId ? "hidden sm:flex" : "flex")}>
-            <Link href={logoLink} className="flex items-center gap-1 sm:gap-4 group" data-home-button="true">
+            <Link href={logoLink} className="flex items-center gap-1 sm:gap-4 pl-0.5 group" data-home-button="true">
             {appLogoUrl ? (
               <span className={cn(
                 "inline-flex h-10 w-auto max-w-[200px] shrink-0 items-center justify-center transition-all duration-300",
@@ -431,7 +447,9 @@ export default function Header() {
           )}
         </div>
       </div>
-    </header>
+        </header>
+      </div>
+    </div>
     {portalDockNav}
     </>
   );

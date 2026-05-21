@@ -3,6 +3,7 @@ import Image from 'next/image';
 import Logo from '@/components/Logo';
 import { buttonVariants } from '@/components/ui/button';
 import { getContactFormHref, SITE_LEGAL_UMBRELLA } from '@/lib/appBranding';
+import { MARKETING_PROMOTIONS_HREF } from '@/lib/marketingLandings';
 import { cn } from '@/lib/utils';
 
 export const metadata = {
@@ -46,6 +47,12 @@ export default function LevelUpArcadeLandingPage() {
             </span>
           </Link>
           <div className="flex items-center gap-2 sm:gap-4">
+            <Link
+              href={MARKETING_PROMOTIONS_HREF}
+              className="hidden text-sm font-semibold text-slate-300 transition-colors hover:text-white md:block"
+            >
+              Promotions
+            </Link>
             <Link
               href="/login"
               className="hidden sm:block text-sm font-semibold text-slate-300 transition-colors hover:text-white"
@@ -320,6 +327,9 @@ export default function LevelUpArcadeLandingPage() {
               All Rights Reserved.
             </div>
             <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 font-semibold sm:justify-end">
+              <Link href={MARKETING_PROMOTIONS_HREF} className="transition-colors hover:text-slate-300">
+                Promotional Materials
+              </Link>
               <Link href={getContactFormHref()} className="transition-colors hover:text-slate-300">
                 Contact Us
               </Link>

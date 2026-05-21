@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdminAuth } from '@/lib/server/firebaseAdminAuth';
 import {
   FIREBASE_SESSION_COOKIE_NAME,
-  shouldEnforceFirebaseSessionEdge,
+  shouldMintFirebaseSessionCookie,
 } from '@/lib/auth/firebaseSessionCookie';
 import { SCHOOL_GATE_COOKIE_NAME } from '@/lib/auth/schoolGateCookie';
 import { authCookieFlags } from '@/lib/auth/authCookieOptions';
@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
       return jsonError(403, 'Forbidden');
     }
 
-    if (!shouldEnforceFirebaseSessionEdge()) {
+    if (!shouldMintFirebaseSessionCookie()) {
       return NextResponse.json({ ok: true, skipped: true });
     }
 

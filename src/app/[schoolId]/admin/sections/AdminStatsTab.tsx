@@ -1,7 +1,7 @@
 'use client';
 
 import { Activity, LayoutDashboard } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Helper } from '@/components/ui/helper';
 import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 import type { Class, Coupon, Student, Teacher } from '@/lib/types';
@@ -25,12 +25,11 @@ export function AdminStatsTab({
     <>
       <Card className="border-t-4 border-primary shadow-md">
         <CardHeader className="py-6 flex flex-row items-start justify-between gap-4">
-          <div>
+          <Helper content="Overview of points and engagement across the school.">
             <CardTitle className="text-2xl flex items-center gap-2">
               <Activity className="text-primary w-6 h-6" /> School Analytics
             </CardTitle>
-            <CardDescription>Overview of points and engagement across the school.</CardDescription>
-          </div>
+          </Helper>
           <TabWalkthroughHeaderAction />
         </CardHeader>
         <CardContent className="space-y-6">
@@ -72,7 +71,6 @@ export function AdminStatsTab({
               <LayoutDashboard className="w-5 h-5 text-primary" /> System Stats
             </CardTitle>
           </Helper>
-          <CardDescription>Overview of your school data at a glance.</CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-2 lg:grid-cols-3 gap-4 text-center">
           {[

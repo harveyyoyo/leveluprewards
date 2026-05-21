@@ -39,7 +39,7 @@ import {
 import { useAuthFetch } from '@/lib/authFetch';
 import { useAppContext } from '@/components/AppProvider';
 import { useToast } from '@/hooks/use-toast';
-import { normalizeArcadeAiModel } from '@/lib/aiModelPreference';
+import { getArcadeAiModelFromStorage } from '@/lib/aiModelPreference';
 import type { ParsedSchoolSnapshot } from '@/lib/schoolDataImport';
 
 export type BulkRosterKind = 'classes' | 'teachers' | 'students';
@@ -182,10 +182,7 @@ export function BulkRosterSetupDialog({
           schoolId,
           kind: 'auto',
           prompt: combined,
-          model:
-            typeof window !== 'undefined'
-              ? normalizeArcadeAiModel(localStorage.getItem('arcade_ai_model')) || 'gemini-2.5-flash'
-              : 'gemini-2.5-flash',
+          model: getArcadeAiModelFromStorage(),
           classNames: aiClassNames,
         }),
       });

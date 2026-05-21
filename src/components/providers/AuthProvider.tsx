@@ -60,7 +60,7 @@ async function getRoleDocForSessionRestore(
 
 /** Optional navigation after ending a scoped session (default: staff -> portal, student -> kiosk). */
 export type LogoutOptions = {
-    staffNavigateTo?: 'portal' | 'teacher';
+    staffNavigateTo?: 'portal' | 'teacher' | 'student';
     studentNavigateTo?: 'portal' | 'student';
 };
 
@@ -264,7 +264,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             localStorage.removeItem(DEVELOPER_SUPPORT_SESSION_KEY);
             setLoginState('school');
             if (schoolId) {
-                const dest = options?.staffNavigateTo === 'teacher' ? 'teacher' : 'portal';
+                const dest =
+                    options?.staffNavigateTo === 'teacher'
+                        ? 'teacher'
+                        : options?.staffNavigateTo === 'student'
+                          ? 'student'
+                          : 'portal';
                 router.push(`/${schoolId}/${dest}`);
             } else {
                 router.push('/login');

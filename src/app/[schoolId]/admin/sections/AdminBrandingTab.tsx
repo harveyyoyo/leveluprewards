@@ -24,7 +24,7 @@ import { schoolPublicDocRef } from '@/lib/schoolPublic';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -122,15 +122,12 @@ export function AdminBrandingTab({
         <Card className="border-0 bg-background shadow-lg rounded-3xl overflow-hidden">
           <CardHeader className="p-6 md:p-8 border-b bg-gradient-to-r from-muted/50 via-background to-muted/20">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="space-y-1">
+              <Helper content="Upload your school's official logo. It will appear next to the school name across all headers, kiosk stations, and printed receipts.">
                 <CardTitle className="text-xl font-black tracking-tight flex items-center gap-3">
                   <UploadCloud className="w-5 h-5 text-primary" />
                   School Logo
                 </CardTitle>
-                <CardDescription className="text-sm text-muted-foreground max-w-xl">
-                  Upload your school's official logo. It will appear next to the school name across all headers, kiosk stations, and printed receipts.
-                </CardDescription>
-              </div>
+              </Helper>
               <TabWalkthroughHeaderAction />
             </div>
           </CardHeader>
@@ -342,15 +339,12 @@ export function AdminBrandingTab({
         <Card className="border-0 bg-background shadow-lg rounded-3xl overflow-hidden">
           <CardHeader className="p-6 md:p-8 border-b bg-gradient-to-r from-muted/50 via-background to-muted/20">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="space-y-1">
+              <Helper content="Adjust visual styles applied to student portrait photos on badges, leaderboards, and dashboard accounts.">
                 <CardTitle className="text-xl font-black tracking-tight flex items-center gap-3">
                   <User className="w-5 h-5 text-indigo-500" />
                   Student Photo Styling
                 </CardTitle>
-                <CardDescription className="text-sm text-muted-foreground max-w-xl">
-                  Adjust visual styles applied to student portrait photos dynamically generated on their badges, leaderboards, and dashboard accounts.
-                </CardDescription>
-              </div>
+              </Helper>
               <TabWalkthroughHeaderAction />
             </div>
           </CardHeader>
@@ -465,15 +459,12 @@ export function AdminBrandingTab({
         <Card className="border-0 bg-background shadow-lg rounded-3xl overflow-hidden">
           <CardHeader className="p-6 md:p-8 border-b bg-gradient-to-r from-muted/50 via-background to-muted/20">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="space-y-1">
+              <Helper content="Configure card background gradients, font themes, and textures as default presets for students, kiosk panels, and printouts.">
                 <CardTitle className="text-xl font-black tracking-tight flex items-center gap-3">
                   <Palette className="w-5 h-5 text-primary" />
                   Default Student ID Card Theme
                 </CardTitle>
-                <CardDescription className="text-sm text-muted-foreground max-w-xl">
-                  Configure custom card background gradients, font themes, and textures that serve as default presets for students, kiosk panels, and printouts.
-                </CardDescription>
-              </div>
+              </Helper>
               <TabWalkthroughHeaderAction />
             </div>
           </CardHeader>
@@ -565,15 +556,12 @@ export function AdminBrandingTab({
         <Card className="border-0 bg-background shadow-lg rounded-3xl overflow-hidden">
           <CardHeader className="p-6 md:p-8 border-b bg-gradient-to-r from-muted/50 via-background to-muted/20">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="space-y-1">
+              <Helper content="Adjust active login durations, student sign-in freeze locks, and screensaver reset timers.">
                 <CardTitle className="text-xl font-black tracking-tight flex items-center gap-3">
                   <Shield className="w-5 h-5 text-amber-500" />
                   Security & Session Timeouts
                 </CardTitle>
-                <CardDescription className="text-sm text-muted-foreground max-w-xl">
-                  Adjust active login durations, student sign-in freeze locks, and screensaver reset timers.
-                </CardDescription>
-              </div>
+              </Helper>
               <TabWalkthroughHeaderAction />
             </div>
           </CardHeader>
@@ -731,15 +719,12 @@ export function AdminBrandingTab({
         <Card className="border-0 bg-background shadow-lg rounded-3xl overflow-hidden">
           <CardHeader className="p-6 md:p-8 border-b bg-gradient-to-r from-muted/50 via-background to-muted/20">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="space-y-1">
+              <Helper content="Highlight local businesses, PTA announcements, or milestone notes on student-facing kiosk screens.">
                 <CardTitle className="text-xl font-black tracking-tight flex items-center gap-3">
                   <Megaphone className="w-5 h-5 text-indigo-500" />
                   Kiosk Sponsor & Announcement Banners
                 </CardTitle>
-                <CardDescription className="text-sm text-muted-foreground max-w-xl">
-                  Highlight local businesses, PTA announcements, or milestone notes dynamically on student-facing kiosk screens.
-                </CardDescription>
-              </div>
+              </Helper>
               <TabWalkthroughHeaderAction />
             </div>
           </CardHeader>

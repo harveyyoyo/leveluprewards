@@ -9,13 +9,9 @@ import {
   Clock,
   Gift,
   HelpCircle,
-  Keyboard,
-  LogOut,
   ScanBarcode,
-  ScanLine,
   Sparkles,
   Ticket,
-  Type,
   Wallet,
 } from 'lucide-react';
 
@@ -24,13 +20,13 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Helper } from '@/components/ui/helper';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import type { Prize } from '@/lib/types';
+
+/** Shared max width for redeem coupon, activity, and other center-stack kiosk controls. */
+export const studentKioskCenterStackClass = 'w-full min-w-0 max-w-lg mx-auto sm:max-w-xl';
 
 /** OKLCH hue used for warm kiosk accents on reward rails when no student theme is active. */
 export function prizeAccentHue(seed: string, index = 0): number {
@@ -88,33 +84,22 @@ export function StudentKioskBalancePill({
 
   return (
     <div
-      className={cn(
-        'hidden shrink-0 items-center gap-3 rounded-2xl border px-4 py-2.5 shadow-lg backdrop-blur-sm md:flex sm:gap-5 sm:px-5',
-        !t && 'border-border/60 bg-card/95',
-      )}
-      style={
-        t
-          ? {
-              backgroundColor: 'color-mix(in srgb, var(--theme-card) 92%, white)',
-              borderColor: 'color-mix(in srgb, var(--theme-primary) 22%, transparent)',
-              color: 'var(--theme-text)',
-            }
-          : undefined
-      }
+      className="hidden shrink-0 items-center gap-3 md:flex sm:gap-5"
+      style={t ? { color: 'var(--theme-text)' } : undefined}
     >
       <div className="text-center sm:text-left">
         <p
-          className="text-[9px] font-bold uppercase tracking-[0.2em] opacity-55"
+          className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-55 sm:text-[11px]"
           style={{ color: t ? 'var(--theme-text)' : undefined }}
         >
           Balance
         </p>
         <p
-          className="text-lg font-black tabular-nums leading-none sm:text-xl"
+          className="text-3xl font-black tabular-nums leading-none sm:text-4xl md:text-5xl"
           style={{ color: t ? 'var(--theme-primary)' : 'hsl(var(--primary))' }}
         >
           {points.toLocaleString()}{' '}
-          <span className="text-[10px] font-bold uppercase tracking-widest opacity-70">pts</span>
+          <span className="text-xs font-bold uppercase tracking-widest opacity-70 sm:text-sm">pts</span>
         </p>
         <div className="mt-2 flex max-w-[17rem] flex-wrap justify-center gap-1 sm:justify-start">
           {pointTypeTotals.length > 0 ? (
@@ -164,7 +149,7 @@ export function StudentKioskBalancePill({
               Raffles
             </p>
             <p
-              className="flex items-center justify-center gap-1 text-lg font-black tabular-nums leading-none sm:justify-start sm:text-xl"
+              className="flex items-center justify-center gap-1 text-2xl font-black tabular-nums leading-none sm:justify-start sm:text-3xl"
               style={{ color: t ? 'var(--theme-primary)' : 'hsl(var(--primary))' }}
             >
               <Ticket className="h-4 w-4 shrink-0 opacity-75" aria-hidden />
@@ -303,16 +288,15 @@ function ScanCouponScanZone({
   return (
     <div
       className={cn(
-        'relative flex flex-wrap items-center justify-center gap-2 overflow-hidden rounded-xl border-2 border-dashed px-3 py-4 min-h-[3.5rem] text-center motion-safe:animate-[pulse_1.35s_ease-in-out_infinite] motion-reduce:animate-none sm:gap-3',
+        'relative flex flex-wrap items-center justify-center gap-3 overflow-hidden rounded-2xl border-2 border-dashed px-4 py-6 min-h-[5.5rem] text-center sm:min-h-[6.5rem] sm:gap-4 sm:py-8',
         !t &&
-          'border-amber-400/80 bg-gradient-to-r from-amber-900/95 via-amber-950/92 to-amber-900/95 text-amber-50 shadow-[0_10px_44px_-10px_rgba(251,191,36,0.45)] dark:border-amber-500/55 dark:from-amber-900/95 dark:via-amber-950/92 dark:to-amber-900/95 dark:shadow-[0_10px_44px_-10px_rgba(251,191,36,0.38)]',
+          'border-amber-400/80 bg-gradient-to-r from-amber-900/95 via-amber-950/92 to-amber-900/95 text-amber-50 dark:border-amber-500/55 dark:from-amber-900/95 dark:via-amber-950/92 dark:to-amber-900/95',
       )}
       style={
         t
           ? {
               borderColor: 'color-mix(in srgb, var(--theme-primary) 50%, transparent)',
               background: `linear-gradient(165deg, color-mix(in srgb, var(--theme-primary) 54%, var(--theme-card)), color-mix(in srgb, var(--theme-primary) 64%, var(--theme-card)) 50%, color-mix(in srgb, var(--theme-primary) 54%, var(--theme-card)))`,
-              boxShadow: '0 12px 44px -10px color-mix(in srgb, var(--theme-primary) 48%, transparent)',
               color: 'rgba(248, 250, 252, 0.97)',
             }
           : undefined
@@ -322,11 +306,11 @@ function ScanCouponScanZone({
     >
       <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]">
         <div
-          className="student-kiosk-scan-beam absolute left-[8%] right-[8%] top-0 h-10 opacity-80"
+          className="student-kiosk-scan-beam-horizontal absolute top-[10%] bottom-[10%] left-0 w-[18%] max-w-[4.5rem] opacity-90"
           style={{
             background: t
-              ? 'linear-gradient(180deg, transparent, color-mix(in srgb, white 55%, var(--theme-primary)), transparent)'
-              : `linear-gradient(180deg, transparent, oklch(0.93 0.1 ${prizeAccentHue('scan', 0)} / 0.85), transparent)`,
+              ? 'linear-gradient(90deg, transparent, color-mix(in srgb, white 58%, var(--theme-primary)), transparent)'
+              : `linear-gradient(90deg, transparent, oklch(0.93 0.1 ${prizeAccentHue('scan', 0)} / 0.88), transparent)`,
           }}
         />
       </div>
@@ -341,9 +325,6 @@ export type StudentKioskRedeemHeroProps = {
   couponHelperText: string;
   couponCode: string;
   setCouponCode: (code: string) => void;
-  activeTab: 'manual' | 'camera';
-  setActiveTab: (tab: 'manual' | 'camera') => void;
-  showCouponMethodTabs: boolean;
   showManualCoupon: boolean;
   showCameraCoupon: boolean;
   couponSectionEnabled: boolean;
@@ -362,9 +343,6 @@ export function StudentKioskRedeemHero({
   couponHelperText,
   couponCode,
   setCouponCode,
-  activeTab,
-  setActiveTab,
-  showCouponMethodTabs,
   showManualCoupon,
   showCameraCoupon,
   couponSectionEnabled,
@@ -377,8 +355,6 @@ export function StudentKioskRedeemHero({
   className,
 }: StudentKioskRedeemHeroProps) {
   const t = themed.active;
-  const showCameraPreview =
-    showCameraCoupon && (!showCouponMethodTabs || activeTab === 'camera');
 
   if (!couponSectionEnabled) return null;
 
@@ -386,7 +362,7 @@ export function StudentKioskRedeemHero({
     <div className="w-full min-w-0 space-y-3">
       <ScanCouponScanZone themed={themed}>
         <ScanBarcode
-          className={cn('h-7 w-7 shrink-0 sm:h-8 sm:w-8', !t && 'text-amber-200')}
+          className={cn('h-10 w-10 shrink-0 sm:h-12 sm:w-12', !t && 'text-amber-200')}
           style={
             t
               ? {
@@ -398,7 +374,7 @@ export function StudentKioskRedeemHero({
         />
         <span
           className={cn(
-            'max-w-full text-base sm:text-lg md:text-xl font-black uppercase tracking-[0.12em] sm:tracking-[0.18em] leading-snug',
+            'max-w-full text-xl sm:text-2xl md:text-3xl font-black uppercase tracking-[0.12em] sm:tracking-[0.18em] leading-snug',
             !t && 'text-amber-50',
           )}
           style={t ? { color: 'rgba(248, 250, 252, 0.97)' } : undefined}
@@ -406,10 +382,10 @@ export function StudentKioskRedeemHero({
           Scan coupon
         </span>
         <p
-          className="w-full text-center text-[11px] font-semibold opacity-90 sm:text-xs"
+          className="w-full text-center text-xs font-semibold opacity-90 sm:text-sm"
           style={t ? { color: 'rgba(248, 250, 252, 0.92)' } : undefined}
         >
-          Hold your code under the camera, or type below
+          Scan with your barcode scanner, or type the code below
         </p>
       </ScanCouponScanZone>
       <form
@@ -423,7 +399,7 @@ export function StudentKioskRedeemHero({
           placeholder="Code appears here when scanned"
           value={couponCode}
           onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-          className="h-12 w-full min-w-0 rounded-xl border-2 font-mono text-left text-sm tracking-widest sm:flex-1"
+          className="h-14 w-full min-w-0 rounded-xl border-2 font-mono text-left text-base tracking-widest sm:flex-1"
           style={
             t
               ? { backgroundColor: 'var(--theme-bg)', borderColor: 'var(--theme-primary)', color: 'var(--theme-text)' }
@@ -434,7 +410,7 @@ export function StudentKioskRedeemHero({
         />
         <Button
           type="submit"
-          className="h-12 w-full shrink-0 rounded-xl px-6 text-xs font-black uppercase tracking-widest shadow-lg transition-all active:scale-95 sm:w-auto"
+          className="h-14 w-full shrink-0 rounded-xl px-8 text-sm font-black uppercase tracking-widest shadow-lg transition-all active:scale-95 sm:w-auto"
           style={
             t
               ? {
@@ -478,9 +454,10 @@ export function StudentKioskRedeemHero({
   return (
     <Card
       className={cn(
-        'relative z-20 mx-auto w-full min-w-0 max-w-xl shrink-0 origin-center overflow-hidden rounded-[32px] border-2 shadow-[0_24px_60px_rgba(15,23,42,0.28)] ring-4 ring-offset-4 ring-offset-background backdrop-blur-md transition-transform duration-300 lg:max-w-none',
+        'relative z-20 shrink-0 origin-center overflow-hidden rounded-[32px] border-2 shadow-lg backdrop-blur-md transition-transform duration-300',
+        studentKioskCenterStackClass,
         !t
-          ? 'border-primary/25 bg-card/90 ring-primary/15 dark:border-amber-400/60 dark:bg-slate-900/90 dark:ring-amber-500/20'
+          ? 'border-primary/25 bg-card/90 dark:border-amber-400/60 dark:bg-slate-900/90'
           : '',
         className,
       )}
@@ -489,9 +466,7 @@ export function StudentKioskRedeemHero({
           ? {
               backgroundColor: 'var(--theme-card)',
               borderColor: 'var(--theme-primary)',
-              boxShadow: '0 24px 60px color-mix(in srgb, var(--theme-primary) 34%, transparent)',
               color: 'var(--theme-text)',
-              ['--tw-ring-color' as string]: 'color-mix(in srgb, var(--theme-primary) 32%, transparent)',
             }
           : undefined
       }
@@ -512,13 +487,50 @@ export function StudentKioskRedeemHero({
               Redeem Coupon
             </CardTitle>
             <div className="flex items-center gap-2 self-start sm:self-auto">
+              <Button
+                type="button"
+                size="sm"
+                className={cn(
+                  'relative h-8 whitespace-nowrap rounded-full border-2 px-3.5 text-[11px] font-bold uppercase tracking-widest shadow-sm',
+                  !t && 'border-primary/40 bg-primary text-primary-foreground hover:bg-primary/90',
+                )}
+                style={
+                  t
+                    ? {
+                        borderColor: 'var(--theme-primary)',
+                        backgroundColor: 'var(--theme-primary)',
+                        color: primaryForeground,
+                      }
+                    : undefined
+                }
+                onClick={onLogout}
+                aria-label="Log out now."
+              >
+                Logout
+              </Button>
               <div
                 className={cn(
-                  'whitespace-nowrap rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest transition-colors',
-                  isKioskLocked
-                    ? 'border-red-100 bg-red-50 text-red-600 dark:border-red-800 dark:bg-red-900/30 dark:text-red-400'
-                    : 'border-emerald-100 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
+                  'whitespace-nowrap rounded-full border-2 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest transition-colors',
+                  !t &&
+                    (isKioskLocked
+                      ? 'border-red-200 bg-red-100 text-red-800 dark:border-red-800 dark:bg-red-950/50 dark:text-red-300'
+                      : 'border-slate-300 bg-slate-100 text-slate-800 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100'),
                 )}
+                style={
+                  t
+                    ? isKioskLocked
+                      ? {
+                          borderColor: 'color-mix(in srgb, #ef4444 55%, var(--theme-primary))',
+                          backgroundColor: 'color-mix(in srgb, #ef4444 22%, var(--theme-bg))',
+                          color: 'var(--theme-text)',
+                        }
+                      : {
+                          borderColor: 'color-mix(in srgb, var(--theme-primary) 45%, transparent)',
+                          backgroundColor: 'var(--theme-bg)',
+                          color: 'var(--theme-text)',
+                        }
+                    : undefined
+                }
                 aria-label={isKioskLocked ? 'Kiosk locked' : `Auto logout in ${logoutTimer} seconds`}
               >
                 <span>
@@ -526,105 +538,55 @@ export function StudentKioskRedeemHero({
                   {isKioskLocked ? 'Stays signed in' : `Auto-logout ${logoutTimer}`}
                 </span>
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="relative h-8 whitespace-nowrap rounded-full px-3.5 text-[11px] font-bold uppercase tracking-widest"
-                onClick={onLogout}
-                aria-label="Log out now."
-              >
-                Logout
-              </Button>
             </div>
           </div>
         </Helper>
       </CardHeader>
-      <CardContent className="min-w-0 overflow-x-hidden pt-4">
-        {showCouponMethodTabs ? (
-          <Tabs
-            value={activeTab}
-            onValueChange={(v) => setActiveTab(v as 'manual' | 'camera')}
-            className="w-full min-w-0"
-          >
-            <div className="mb-4 md:hidden">
-              <Label htmlFor="student-coupon-entry-mode" className="sr-only">
-                How to enter your coupon code
-              </Label>
-              <Select value={activeTab} onValueChange={(v) => setActiveTab(v as 'manual' | 'camera')}>
-                <SelectTrigger
-                  id="student-coupon-entry-mode"
-                  className="h-12 w-full rounded-xl font-bold"
-                  style={
-                    t
-                      ? {
-                          backgroundColor: 'var(--theme-bg)',
-                          borderColor: 'var(--theme-primary)',
-                          color: 'var(--theme-text)',
-                        }
-                      : undefined
-                  }
-                  aria-label="Coupon entry method"
-                >
-                  <SelectValue placeholder="Choose method" />
-                </SelectTrigger>
-                <SelectContent position="popper" className="max-h-[min(60vh,320px)]">
-                  <SelectItem value="manual">Manual / USB scanner</SelectItem>
-                  <SelectItem value="camera">Webcam scan</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <TabsList
-              className={cn(
-                'mb-4 hidden h-12 min-w-0 w-full grid-cols-2 overflow-hidden rounded-xl p-1 md:grid',
-                !t && 'bg-slate-100 dark:bg-slate-800',
-              )}
-              style={t ? { backgroundColor: 'var(--theme-bg)' } : undefined}
+      <CardContent className="min-w-0 overflow-x-hidden p-5 pt-4 sm:p-6 sm:pt-5">
+        {showCameraCoupon ? (
+          <div className="w-full min-w-0 space-y-3">
+            {cameraPane}
+            <form
+              className="flex min-w-0 w-full flex-col gap-2 sm:flex-row sm:gap-2"
+              onSubmit={(e: FormEvent) => {
+                e.preventDefault();
+                void onRedeemCoupon();
+              }}
             >
-              <TabsTrigger
-                value="manual"
-                className={cn(
-                  'flex min-w-0 items-center gap-1.5 rounded-lg py-1 text-[12px] font-bold data-[state=active]:shadow-sm',
-                  !t &&
-                    'data-[state=active]:bg-white hover:bg-white hover:shadow-sm dark:data-[state=active]:bg-slate-700 dark:hover:bg-slate-700',
-                  t && 'hover:bg-[var(--theme-card)] hover:text-[var(--theme-text)] hover:shadow-sm',
-                )}
+              <Input
+                placeholder="Or type coupon code"
+                value={couponCode}
+                onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                className="h-14 w-full min-w-0 rounded-xl border-2 font-mono text-left text-base tracking-widest sm:flex-1"
                 style={
-                  t && activeTab === 'manual'
-                    ? { backgroundColor: 'var(--theme-card)', color: 'var(--theme-text)' }
+                  t
+                    ? {
+                        backgroundColor: 'var(--theme-bg)',
+                        borderColor: 'var(--theme-primary)',
+                        color: 'var(--theme-text)',
+                      }
                     : undefined
                 }
-              >
-                <Type className="h-3.5 w-3.5" aria-hidden /> Manual / USB
-              </TabsTrigger>
-              <TabsTrigger
-                value="camera"
-                className={cn(
-                  'flex min-w-0 items-center gap-1.5 rounded-lg py-1 text-[12px] font-bold data-[state=active]:shadow-sm',
-                  !t &&
-                    'data-[state=active]:bg-white hover:bg-white hover:shadow-sm dark:data-[state=active]:bg-slate-700 dark:hover:bg-slate-700',
-                  t && 'hover:bg-[var(--theme-card)] hover:text-[var(--theme-text)] hover:shadow-sm',
-                )}
+                autoComplete="one-time-code"
+              />
+              <Button
+                type="submit"
+                className="h-14 w-full shrink-0 rounded-xl px-8 text-sm font-black uppercase tracking-widest shadow-lg transition-all active:scale-95 sm:w-auto"
                 style={
-                  t && activeTab === 'camera'
-                    ? { backgroundColor: 'var(--theme-card)', color: 'var(--theme-text)' }
-                    : undefined
+                  t
+                    ? {
+                        backgroundColor: 'var(--theme-primary)',
+                        color: primaryForeground,
+                      }
+                    : { backgroundColor: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))' }
                 }
               >
-                <Camera className="h-3.5 w-3.5" aria-hidden /> Webcam Scan
-              </TabsTrigger>
-            </TabsList>
-
-            {activeTab === 'manual' ? (
-              <div className="w-full min-w-0">{manualEntry}</div>
-            ) : activeTab === 'camera' && showCouponMethodTabs ? (
-              <div className="w-full min-w-0">{cameraPane}</div>
-            ) : null}
-          </Tabs>
+                Redeem
+              </Button>
+            </form>
+          </div>
         ) : showManualCoupon ? (
           manualEntry
-        ) : showCameraCoupon ? (
-          cameraPane
         ) : null}
       </CardContent>
     </Card>

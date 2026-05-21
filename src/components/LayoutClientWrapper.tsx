@@ -6,6 +6,7 @@ import { Suspense, useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Header from "@/components/Header";
 import { SiteFooter } from '@/components/SiteFooter';
+import { PortalChooseBackdrop } from '@/components/PortalChooseBackdrop';
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useSearchParams } from 'next/navigation';
@@ -356,12 +357,14 @@ function LayoutClientWrapperInner({ children }: LayoutClientWrapperProps) {
                         kioskPortraitLayout && 'kiosk-portrait-layout',
                         // Lock viewport height so only inner panels scroll (student kiosk + app-shell staff routes).
                         // Portal hub: fixed layers + in-flow footer — constrain shell so main flex-1 fills without a page scrollbar.
-                        (appShellNoPageScroll ||
-                            isStudentKioskPage ||
-                            isPortalChoosePage) &&
-                            'h-dvh max-h-dvh overflow-hidden overflow-x-hidden'
+                        (appShellNoPageScroll || isStudentKioskPage || isPortalChoosePage) &&
+                            'h-dvh max-h-dvh',
+                        (appShellNoPageScroll || isStudentKioskPage) &&
+                            'overflow-hidden overflow-x-hidden',
+                        isPortalChoosePage && 'overflow-x-hidden',
                     )}
                 >
+                    {isPortalChoosePage ? <PortalChooseBackdrop /> : null}
                     {!hideAppChrome &&
                         (showStudentHomeHeader ? (
                             <Header />
@@ -387,7 +390,7 @@ function LayoutClientWrapperInner({ children }: LayoutClientWrapperProps) {
                                 ? 'relative z-10 flex w-full flex-col'
                                 : isStudentKioskPage
                                     ? 'relative z-10 flex w-full min-h-0 flex-col overflow-hidden'
-                                    : isStaffPortalShellRoot
+                                    : isStaffPortalShellRoot || isPortalChoosePage
                                         ? 'relative z-10 w-full max-w-none'
                                         : 'relative z-10 mx-auto w-full max-w-7xl',
                             appShellNoPageScroll && 'overflow-hidden flex flex-col min-h-0',

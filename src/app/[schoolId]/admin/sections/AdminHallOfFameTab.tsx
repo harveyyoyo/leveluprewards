@@ -23,7 +23,8 @@ import {
 } from 'lucide-react';
 import { collection, limit, orderBy, query } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Helper } from '@/components/ui/helper';
 import { Button } from '@/components/ui/button';
 import type { Student, Class, Category } from '@/lib/types';
 import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
@@ -135,12 +136,11 @@ export function AdminHallOfFameTab({ schoolId }: { schoolId: string }) {
               <Trophy className="w-3.5 h-3.5" />
               <span>Big Screen Mode Available</span>
             </div>
-            <CardTitle className="text-2xl font-black tracking-tight flex items-center gap-3">
-              Hall of Fame
-            </CardTitle>
-            <CardDescription className="text-sm text-muted-foreground max-w-xl">
-              Configure, customize, and launch a stunning real-time points leaderboard display designed to show on lobby screens, TVs, or projectors!
-            </CardDescription>
+            <Helper content="Configure, customize, and launch a real-time points leaderboard for lobby screens, TVs, or projectors.">
+              <CardTitle className="text-2xl font-black tracking-tight flex items-center gap-3">
+                Hall of Fame
+              </CardTitle>
+            </Helper>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <TabWalkthroughHeaderAction />
@@ -365,8 +365,9 @@ export function AdminHallOfFameTab({ schoolId }: { schoolId: string }) {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-base font-bold text-foreground">Live Monitor Preview</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">This preview reflects exact layout, colors, and live updates.</p>
+                <Helper content="This preview reflects exact layout, colors, and live updates.">
+                  <h3 className="text-base font-bold text-foreground">Live Monitor Preview</h3>
+                </Helper>
               </div>
               <Button asChild size="sm" variant="ghost" className="text-xs gap-1 font-semibold text-muted-foreground hover:text-foreground">
                 <Link href={fullHref} target="_blank" rel="noopener noreferrer">

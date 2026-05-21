@@ -52,7 +52,7 @@ const ADMIN_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
     ],
   },
   teachers: {
-    title: 'Teachers tab',
+    title: 'Teachers & staff',
     subtitle: 'Teachers, budgets, and desk staff',
     steps: [
       {
@@ -306,13 +306,13 @@ const ADMIN_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
     ],
   },
   'student-portal': {
-    title: 'Student portal tab',
+    title: 'Student home portal',
     subtitle: 'Home access for students and families',
     steps: [
       {
         title: 'Enable the portal',
         checklist: [
-          'Turn on Student portal in Add more if the tab is hidden.',
+          'Turn on Student home portal in Add more if the tab is hidden.',
           'Copy the portal URL for newsletters or QR codes on posters.',
         ],
       },

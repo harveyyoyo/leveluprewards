@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Helper } from '@/components/ui/helper';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { BookOpen, Link2, Shield } from 'lucide-react';
@@ -57,13 +58,9 @@ export function AdminIntegrationsTab() {
           <div className="rounded-2xl bg-primary/10 p-3 text-primary shrink-0">
             <Link2 className="h-6 w-6" aria-hidden />
           </div>
-          <div>
+          <Helper content="Connect roster and sign-in providers. OAuth and sync jobs run on the server; configure environment variables for your deployment.">
             <h2 className="text-2xl font-black tracking-tight">Integrations</h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              Connect roster and sign-in providers. OAuth and sync jobs run on the server; configure environment
-              variables for your deployment.
-            </p>
-          </div>
+          </Helper>
         </div>
         <TabWalkthroughHeaderAction />
       </div>
@@ -87,11 +84,12 @@ export function AdminIntegrationsTab() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <BookOpen className="h-5 w-5" aria-hidden />
-            Roster and SSO
-          </CardTitle>
-          <CardDescription>Server-side configuration only (no student data leaves your school without setup).</CardDescription>
+          <Helper content="Server-side configuration only (no student data leaves your school without setup).">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <BookOpen className="h-5 w-5" aria-hidden />
+              Roster and SSO
+            </CardTitle>
+          </Helper>
         </CardHeader>
         <CardContent className="space-y-3">
           {!status ? (

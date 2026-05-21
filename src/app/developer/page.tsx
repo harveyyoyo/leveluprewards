@@ -39,7 +39,7 @@ import {
   PRODUCT_PILLAR_LABELS,
   type ProductPillarKey,
 } from '@/lib/productPillars';
-import { officePortalEntryHref } from '@/lib/officePublicUrl';
+import { OfficePortalEntryLink } from '@/components/office/OfficePortalEntryLink';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { Helper } from '@/components/ui/helper';
@@ -1418,14 +1418,10 @@ export default function DeveloperPage() {
                             aria-label={PRODUCT_PILLAR_LABELS[key]}
                           />
                           {key === 'payOffice' && editingPillars[key] ? (
-                            <a
-                              href={officePortalEntryHref(pillarSchool.id)}
-                              target="_blank"
-                              rel="noreferrer"
+                            <OfficePortalEntryLink
+                              schoolId={pillarSchool.id}
                               className="text-xs font-bold text-teal-700 underline underline-offset-4 hover:text-teal-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:text-teal-300 dark:hover:text-teal-100"
-                            >
-                              Open School Office
-                            </a>
+                            />
                           ) : null}
                         </div>
                       </div>

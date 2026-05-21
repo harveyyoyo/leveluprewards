@@ -3,7 +3,7 @@
 import { Database, Download, Plus, Upload } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Helper } from '@/components/ui/helper';
 import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 import type { BackupInfo } from '@/lib/types';
@@ -28,7 +28,6 @@ export function AdminBackupsTab({
               <Database className="text-primary w-5 h-5" /> System Backups
             </CardTitle>
           </Helper>
-          <CardDescription>Create and restore data snapshots.</CardDescription>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <TabWalkthroughHeaderAction />

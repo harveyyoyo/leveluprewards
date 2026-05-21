@@ -42,8 +42,9 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import type { Student, Prize, HistoryItem, Class, House, LibraryItem, PrizeAiFunReward, Category } from '@/lib/types';
 import { HouseBadge } from '@/components/houses/HouseBadge';
-import { getLibraryPolicyFromSettings } from '@/lib/libraryPolicy';
+import { computeDaysOverdue, getLibraryPolicyFromSettings } from '@/lib/libraryPolicy';
 import { StudentLibraryCheckoutsCard } from '@/components/student-kiosk/StudentLibraryCheckoutsCard';
+import { StudentKioskThemeButton } from '@/components/student-kiosk/StudentKioskThemeButton';
 import { performKioskAttendanceSignIn, describeAttendanceKioskOutcome } from '@/lib/attendance/kioskSignIn';
 import DynamicIcon from '@/components/DynamicIcon';
 import { Progress } from '@/components/ui/progress';
@@ -128,12 +129,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuthFetch } from '@/lib/authFetch';
 import { WelcomeOverlay } from '@/components/WelcomeOverlay';
 import { StudentKioskTransitionFlash } from '@/components/StudentKioskTransitionFlash';
-import { StudentKioskOptionsMenu } from '@/components/student-kiosk/StudentKioskOptionsMenu';
+import { isPillarOn } from '@/lib/productPillars';
 import {
   StudentKioskWarmBackdrop,
   StudentKioskBalancePill,
   StudentKioskRewardRail,
   StudentKioskRedeemHero,
+  studentKioskCenterStackClass,
   StudentKioskMorePrizesButton,
   StudentKioskMobileRewardsGrid,
 } from '@/components/student-kiosk/StudentKioskRedeemUI';
@@ -399,11 +401,14 @@ function EligibleRewardCard({
   themed,
   primaryForeground,
   onRedeem,
+  grow = false,
 }: {
   reward: Prize;
   themed: boolean;
   primaryForeground: string;
   onRedeem: () => void;
+  /** Fill available height in desktop prize columns. */
+  grow?: boolean;
 }) {
   return (
     <button
@@ -412,7 +417,8 @@ function EligibleRewardCard({
       onClick={onRedeem}
       aria-label={`Redeem ${reward.name || 'prize'}`}
       className={cn(
-        'reward-card min-h-[6.5rem] min-w-0 rounded-2xl border p-2 sm:min-h-[7rem] sm:p-2.5',
+        'reward-card min-h-[8.5rem] min-w-0 rounded-2xl border p-3 sm:min-h-[9.5rem] sm:p-4 lg:min-h-[10rem]',
+        grow && 'flex-1',
         'flex cursor-pointer flex-col items-stretch justify-between gap-1 text-center shadow-sm',
         'transition-[box-shadow] duration-500 [transition-timing-function:cubic-bezier(0.22,1,0.36,1)]',
         'hover:shadow-lg motion-reduce:transition-none group relative overflow-visible',
@@ -442,7 +448,7 @@ function EligibleRewardCard({
       ) : null}
       <p
         className={cn(
-          'z-10 min-h-0 shrink text-sm font-black leading-tight line-clamp-2 break-words [overflow-wrap:anywhere] sm:text-base',
+          'z-10 min-h-0 shrink text-base font-black leading-tight line-clamp-3 break-words [overflow-wrap:anywhere] sm:text-lg',
           !themed && 'text-slate-800 dark:text-white',
         )}
         style={themed ? { color: 'var(--theme-text)' } : undefined}
@@ -508,20 +514,18 @@ function StudentDashboardInner({
     isKioskLocked,
   );
   const kioskAiFunInShop = settings.enablePrizeAiSurprise === true && kioskAiFunActive;
-  const showManualCoupon = settings.kioskCouponRedemptionManualEnabled !== false;
-  const showCameraCoupon = settings.kioskCouponRedemptionCameraEnabled !== false;
+  const showCameraCoupon =
+    settings.kioskCouponRedemptionCameraEnabled === true &&
+    settings.kioskCouponRedemptionManualEnabled === false;
+  const showManualCoupon = !showCameraCoupon && settings.kioskCouponRedemptionManualEnabled !== false;
   const couponSectionEnabled = showManualCoupon || showCameraCoupon;
-  const showCouponMethodTabs = showManualCoupon && showCameraCoupon;
   const libraryScanHint =
     settings.payLibrary !== false
       ? ' Scan a library book barcode here to check out or return (after you are signed in).'
       : '';
-  const couponHelperText =
-    showManualCoupon && !showCameraCoupon
-      ? `Type or USB-scan a coupon code to add points.${libraryScanHint} Use Logout on this card to exit.`
-      : showCameraCoupon && !showManualCoupon
-        ? `Scan a coupon or library book barcode with the webcam.${libraryScanHint} Use Logout on this card to exit.`
-        : `Scan or type a coupon code to add points.${libraryScanHint} Use the camera tab for QR codes. Use Logout on this card to exit.`;
+  const couponHelperText = showCameraCoupon
+    ? `Scan a coupon with the device camera.${libraryScanHint} Use Logout on this card to exit.`
+    : `Scan or type a coupon code to add points.${libraryScanHint} Use Logout on this card to exit.`;
   const prefersReducedMotion = useReducedMotion();
   const authFetch = useAuthFetch();
   const isGraphic = settings.graphicMode === 'graphics';
@@ -616,6 +620,11 @@ function StudentDashboardInner({
   const myLibraryBooks = useMemo(
     () => (libraryCheckoutsRaw ?? []).filter((i) => i.status === 'checked_out'),
     [libraryCheckoutsRaw],
+  );
+  const libraryPillarOn = isPillarOn(settings, 'payLibrary');
+  const overdueLibraryBooks = useMemo(
+    () => myLibraryBooks.filter((i) => computeDaysOverdue(i.dueAt) > 0),
+    [myLibraryBooks],
   );
   const studentClassLabel = useMemo(() => {
     if (!student?.classId || !classes?.length) return 'Unassigned';
@@ -778,31 +787,15 @@ function StudentDashboardInner({
     };
   }, [isKioskLocked, resetLogoutTimer]);
 
-  const [activeTab, setActiveTab] = useState<'manual' | 'camera'>(() => (showManualCoupon ? 'manual' : 'camera'));
   const [hasCameraPermission, setHasCameraPermission] = useState(true);
 
-  useEffect(() => {
-    if (!showManualCoupon && showCameraCoupon) setActiveTab('camera');
-    else if (showManualCoupon && !showCameraCoupon) setActiveTab('manual');
-    else if (showManualCoupon && showCameraCoupon) {
-      // keep existing choice
-    } else {
-      // both disabled: no coupon section, default harmless
-      setActiveTab('manual');
-    }
-  }, [showManualCoupon, showCameraCoupon]);
-
-  const couponCameraScannerOn =
-    showRedeem &&
-    showCameraCoupon &&
-    (!showCouponMethodTabs || activeTab === 'camera');
+  const couponCameraScannerOn = showRedeem && showCameraCoupon;
 
   const { videoRef, hasCameraPermission: hookHasPermission } = useBarcodeScanner(
     couponCameraScannerOn,
     (code) => handleRedeemCoupon(code),
     (err) => {
       setHasCameraPermission(false);
-      if (showCouponMethodTabs && activeTab === 'camera') setActiveTab('manual');
       toast({ variant: 'destructive', title: 'Camera Error', description: err });
     }
   );
@@ -969,7 +962,7 @@ function StudentDashboardInner({
             title: 'Library — Checked out',
             description: `"${result.item.name}" is on your account.${dueHint} Scan again to return.`,
           });
-          if (activeTab === 'manual') setCouponCode('');
+          setCouponCode('');
           return;
         }
         if (result.action === 'return') {
@@ -980,7 +973,7 @@ function StudentDashboardInner({
               result.pointsMessage ||
               `Thank you for returning "${result.item.name}".`,
           });
-          if (activeTab === 'manual') setCouponCode('');
+          setCouponCode('');
           return;
         }
         if (result.action === 'wrong_borrower') {
@@ -990,7 +983,7 @@ function StudentDashboardInner({
             title: 'Library',
             description: 'This book is checked out to another student.',
           });
-          if (activeTab === 'manual') setCouponCode('');
+          setCouponCode('');
           return;
         }
       } catch (e) {
@@ -1051,7 +1044,7 @@ function StudentDashboardInner({
         description: getReadableErrorMessage(e, 'Could not redeem this coupon. Check your connection and try again.'),
       });
     } finally {
-      if (activeTab === 'manual') setCouponCode('');
+      setCouponCode('');
     }
   }, [
     couponCode,
@@ -1060,7 +1053,6 @@ function StudentDashboardInner({
     student,
     toast,
     playSound,
-    activeTab,
     settings.payLibrary,
     settings.enableGoals,
     settings.enableCouponRedeemCompliments,
@@ -1459,7 +1451,7 @@ function StudentDashboardInner({
         className={cn(
           // Lock the dashboard to the viewport so inner panes scroll
           // (prevents Activity + CTA from falling below the fold).
-          "student-dashboard-shell w-full max-w-none h-dvh min-h-dvh relative px-3 md:px-6 overflow-x-hidden overflow-y-hidden flex flex-col [@media(max-height:760px)]:px-2 [@media(max-height:760px)]:md:px-4",
+          "student-dashboard-shell w-full h-dvh min-h-dvh relative overflow-x-hidden overflow-y-hidden flex flex-col",
           !effectiveTheme && 'student-kiosk-warm-shell',
           birthdayToday
             ? "pt-14 md:pt-16 [@media(max-height:760px)]:pt-12 [@media(max-height:760px)]:md:pt-12"
@@ -1494,9 +1486,10 @@ function StudentDashboardInner({
         {effectiveTheme?.fontFamily && <GoogleFontLoader fontFamily={effectiveTheme.fontFamily} />}
         {!effectiveTheme ? <StudentKioskWarmBackdrop /> : null}
 
+        <div className="relative z-10 mx-auto flex h-full min-h-0 w-full max-w-7xl flex-1 flex-col overflow-hidden px-4 md:px-8 [@media(max-height:760px)]:px-3">
         <div
           className={cn(
-            "relative z-10 flex flex-1 flex-col min-h-0 min-w-0 w-full space-y-3 md:space-y-4 overflow-hidden [@media(max-height:760px)]:space-y-2",
+            "flex flex-1 flex-col min-h-0 min-w-0 w-full space-y-3 md:space-y-4 overflow-hidden [@media(max-height:760px)]:space-y-2",
             isGraphic
               ? "animate-in fade-in duration-200 motion-reduce:animate-none motion-reduce:duration-0"
               : "",
@@ -1555,11 +1548,11 @@ function StudentDashboardInner({
           </div>
         )}
 
-        <header className="relative z-10 mx-auto flex w-full max-w-[1400px] shrink-0 flex-wrap items-center justify-between gap-3 px-1 pt-1 md:gap-4">
-          <div className="rk-rise flex min-w-0 items-center gap-3">
+        <header className="relative z-10 flex w-full shrink-0 flex-wrap items-center justify-between gap-4 py-3 md:gap-5 md:py-4 lg:py-5">
+          <div className="rk-rise flex min-w-0 items-center gap-4">
             <div
               className={cn(
-                'flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl text-sm font-black uppercase tracking-wide shadow-md [@media(max-height:760px)]:h-10 [@media(max-height:760px)]:w-10',
+                'flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl text-base font-black uppercase tracking-wide shadow-md sm:h-16 sm:w-16 md:h-[4.5rem] md:w-[4.5rem] md:text-lg [@media(max-height:760px)]:h-12 [@media(max-height:760px)]:w-12',
                 !effectiveTheme && 'student-kiosk-gradient-brand text-white shadow-[0_8px_20px_-6px_oklch(0.6_0.22_10_/_0.5)]',
               )}
               style={
@@ -1591,14 +1584,14 @@ function StudentDashboardInner({
             </div>
             <div className="min-w-0">
               <p
-                className="text-[10px] font-bold uppercase tracking-[0.28em]"
+                className="text-xs font-bold uppercase tracking-[0.28em] sm:text-sm"
                 style={{ color: effectiveTheme ? 'var(--theme-page-text)' : 'oklch(0.5 0.1 10)' }}
               >
                 Welcome back
               </p>
               <div className="flex flex-wrap items-center gap-2">
                 <h1
-                  className="truncate text-xl font-black leading-tight sm:text-2xl md:text-3xl [@media(max-height:760px)]:text-xl"
+                  className="truncate text-2xl font-black leading-tight sm:text-3xl md:text-4xl lg:text-5xl [@media(max-height:760px)]:text-2xl"
                   style={{ color: effectiveTheme ? 'var(--theme-page-text)' : undefined }}
                 >
                   {student.firstName} {student.lastName}
@@ -1684,9 +1677,9 @@ function StudentDashboardInner({
             className="flex shrink-0 flex-col items-end gap-0.5 md:hidden"
             style={{ color: effectiveTheme ? 'var(--theme-page-text)' : 'oklch(0.5 0.22 10)' }}
           >
-            <span className="text-lg font-black tabular-nums leading-none">
+            <span className="text-3xl font-black tabular-nums leading-none sm:text-4xl">
               {(student.points || 0).toLocaleString()}{' '}
-              <span className="text-[10px] font-bold uppercase tracking-widest opacity-70">pts</span>
+              <span className="text-sm font-bold uppercase tracking-widest opacity-70">pts</span>
             </span>
             {portalRaffleTickets ? (
               <span className="flex items-center gap-1 text-sm font-black tabular-nums">
@@ -1701,8 +1694,8 @@ function StudentDashboardInner({
             pointTypeTotals={pointTypeTotals.slice(0, 4)}
             portalRaffleTickets={portalRaffleTickets}
           />
-                    {schoolId ? (
-            <StudentKioskOptionsMenu
+          {schoolId ? (
+            <StudentKioskThemeButton
               schoolId={schoolId}
               student={student}
               classLabel={studentClassLabel}
@@ -1719,36 +1712,37 @@ function StudentDashboardInner({
             '[@media(max-height:760px)]:gap-3 [@media(max-height:760px)]:pb-2',
           )}
         >
-          {settings.payLibrary !== false && schoolId ? (
+          {libraryPillarOn && schoolId && overdueLibraryBooks.length > 0 ? (
             <StudentLibraryCheckoutsCard
               schoolId={schoolId}
-              items={myLibraryBooks}
+              items={overdueLibraryBooks}
               themed={!!effectiveTheme}
+              topAlert
             />
           ) : null}
 
           <div
             className={cn(
-              'grid min-h-0 w-full min-w-0 flex-1 gap-3 overflow-hidden xl:gap-4',
-              'grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)_260px] lg:content-stretch',
+              'grid min-h-0 w-full min-w-0 flex-1 gap-4 overflow-hidden xl:gap-5',
+              'grid-cols-1 lg:grid-cols-[minmax(200px,240px)_minmax(0,1fr)_minmax(200px,240px)] lg:items-stretch lg:content-start',
               '[@media(max-height:760px)]:gap-2',
             )}
           >
           {/* Left prize rail (desktop) */}
-          <aside className="order-2 hidden min-h-0 min-w-0 flex-col gap-2 overflow-hidden lg:order-1 lg:flex [@media(max-height:760px)]:gap-1.5">
+          <aside className="order-2 hidden min-h-0 min-w-0 flex-col gap-3 overflow-hidden lg:order-1 lg:flex">
             <p
-              className="shrink-0 text-center text-[10px] font-black uppercase tracking-[0.2em] opacity-70"
+              className="shrink-0 text-center text-xs font-black uppercase tracking-[0.2em] opacity-80 sm:text-sm"
               style={effectiveTheme ? { color: 'var(--theme-page-text)' } : undefined}
             >
-              Rewards
+              Eligible prizes
             </p>
             <div
               ref={rewardGridRef}
-              className="min-h-0 flex-1 space-y-2 overflow-y-auto overflow-x-hidden pr-0.5 scroll-pb-2"
+              className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overflow-x-hidden pr-0.5 scroll-pb-2"
             >
               {prizesLoading
                 ? [...Array(4)].map((_, i) => (
-                    <Skeleton key={i} className="min-h-[6.5rem] w-full rounded-xl" />
+                    <Skeleton key={i} className="min-h-[9.5rem] w-full flex-1 rounded-xl" />
                   ))
                 : leftEligibleRewards.map((reward) => (
                     <EligibleRewardCard
@@ -1756,6 +1750,7 @@ function StudentDashboardInner({
                       reward={reward}
                       themed={!!effectiveTheme}
                       primaryForeground={primaryForeground}
+                      grow
                       onRedeem={() => {
                         playSound('click');
                         setConfirmingPrize(reward);
@@ -1766,16 +1761,18 @@ function StudentDashboardInner({
           </aside>
 
           {/* Center: redeem coupon (primary focus) */}
-          <div className="order-1 flex min-h-0 min-w-0 flex-col gap-3 self-center lg:order-2 lg:justify-center [@media(max-height:760px)]:gap-2">
+          <div
+            className={cn(
+              'order-1 flex min-h-0 flex-col gap-3 lg:order-2 [@media(max-height:760px)]:gap-2',
+              studentKioskCenterStackClass,
+            )}
+          >
           <StudentKioskRedeemHero
             themed={{ active: !!effectiveTheme }}
             primaryForeground={primaryForeground}
             couponHelperText={couponHelperText}
             couponCode={couponCode}
             setCouponCode={setCouponCode}
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            showCouponMethodTabs={showCouponMethodTabs}
             showManualCoupon={showManualCoupon}
             showCameraCoupon={showCameraCoupon}
             couponSectionEnabled={couponSectionEnabled}
@@ -1797,7 +1794,7 @@ function StudentDashboardInner({
               style={
                 effectiveTheme
                   ? {
-                      borderColor: 'color-mix(in srgb, var(--theme-primary) 35%, transparent)',
+                      borderColor: 'color-mix(in srgb, var(--theme-primary) 40%, transparent)',
                       backgroundColor: 'var(--theme-card)',
                       color: 'var(--theme-text)',
                     }
@@ -1818,19 +1815,20 @@ function StudentDashboardInner({
               enableBadges={settings.enableBadges}
               theme={activeTheme}
             />
+
           </div>
 
-          <aside className="order-3 hidden min-h-0 min-w-0 flex-col gap-2 overflow-hidden lg:flex [@media(max-height:760px)]:gap-1.5">
+          <aside className="order-3 hidden min-h-0 min-w-0 flex-col gap-3 overflow-hidden lg:flex">
             <p
-              className="shrink-0 text-center text-[10px] font-black uppercase tracking-[0.2em] opacity-70"
+              className="shrink-0 text-center text-xs font-black uppercase tracking-[0.2em] opacity-80 sm:text-sm"
               style={effectiveTheme ? { color: 'var(--theme-page-text)' } : undefined}
             >
-              Rewards
+              Eligible prizes
             </p>
-            <div className="min-h-0 flex-1 space-y-2 overflow-y-auto overflow-x-hidden pl-0.5 scroll-pb-2">
+            <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overflow-x-hidden pl-0.5 scroll-pb-2">
               {prizesLoading
                 ? [...Array(4)].map((_, i) => (
-                    <Skeleton key={`r-${i}`} className="min-h-[6.5rem] w-full rounded-xl" />
+                    <Skeleton key={`r-${i}`} className="min-h-[9.5rem] w-full flex-1 rounded-xl" />
                   ))
                 : rightEligibleRewards.map((reward) => (
                     <EligibleRewardCard
@@ -1838,6 +1836,7 @@ function StudentDashboardInner({
                       reward={reward}
                       themed={!!effectiveTheme}
                       primaryForeground={primaryForeground}
+                      grow
                       onRedeem={() => {
                         playSound('click');
                         setConfirmingPrize(reward);
@@ -1872,8 +1871,8 @@ function StudentDashboardInner({
           </aside>
 
           <div className="order-4 flex min-h-0 min-w-0 flex-col gap-2 overflow-hidden lg:hidden [@media(max-height:760px)]:gap-1.5">
-            <p className="shrink-0 text-center text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
-              Eligible rewards
+            <p className="shrink-0 text-center text-xs font-black uppercase tracking-[0.2em] text-muted-foreground sm:text-sm">
+              Eligible prizes
             </p>
             <div className="grid min-h-0 flex-1 grid-cols-2 gap-2 overflow-y-auto pb-2">
               {prizesLoading
@@ -2144,6 +2143,7 @@ function StudentDashboardInner({
             </Dialog>
 
         </div>
+        </div>
 
         {welcomeBackdropActive && (
           <>
@@ -2409,6 +2409,13 @@ export default function StudentLoginPage() {
     window.addEventListener(STUDENT_KIOSK_REQUEST_EXIT_EVENT, handleStudentLogout);
     return () => window.removeEventListener(STUDENT_KIOSK_REQUEST_EXIT_EVENT, handleStudentLogout);
   }, [handleStudentLogout]);
+
+  /** Admin on kiosk should use the school chooser session, not stay signed in as admin. */
+  useEffect(() => {
+    if (!isInitialized || !schoolId) return;
+    if (loginState !== 'admin') return;
+    logout({ staffNavigateTo: 'student' });
+  }, [isInitialized, loginState, logout, schoolId]);
 
   /** School chooser has no kiosk token — upgrade to student session in-place so scanning works (no extra screen). */
   useEffect(() => {

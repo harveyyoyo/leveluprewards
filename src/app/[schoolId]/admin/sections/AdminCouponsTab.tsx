@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { ContentSectionTreeNav } from '@/components/ui/content-section-tree-nav';
 import { Ticket, Search, Trash2, X, ChevronsUpDown } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Helper } from '@/components/ui/helper';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -182,14 +182,11 @@ export function AdminCouponsTab({
       <CardHeader className="py-6 bg-secondary/35 border-b border-border/40">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <Helper content="This section lists coupons generated for this school: still available, and already redeemed by a student.">
+            <Helper content="View all available and redeemed coupons for this school. Print new coupon sheets from Admin → Points.">
               <CardTitle className="flex items-center gap-2 text-2xl font-black tracking-tight text-foreground">
                 <Ticket className="w-6 h-6 text-primary animate-pulse" /> Coupon Management
               </CardTitle>
             </Helper>
-            <CardDescription className="mt-1 text-sm font-medium">
-              View all available and redeemed coupons in the system. Print new coupon sheets from Admin → Points.
-            </CardDescription>
           </div>
           <div className="flex shrink-0">
             <TabWalkthroughHeaderAction />

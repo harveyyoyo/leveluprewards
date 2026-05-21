@@ -1,0 +1,64 @@
+{
+  "capturedAt": "2026-05-21T00:42:10.933Z",
+  "base": "https://portal.leveluprewards.app",
+  "school": "schoolabc",
+  "shots": [
+    {
+      "name": "portal-hub",
+      "status": "ok"
+    },
+    {
+      "name": "kiosk-welcome",
+      "status": "ok"
+    },
+    {
+      "name": "kiosk-rewards-shop",
+      "status": "ok"
+    },
+    {
+      "name": "kiosk-system-ready",
+      "status": "ok"
+    },
+    {
+      "name": "student-home-portal",
+      "status": "ok"
+    },
+    {
+      "name": "hall-of-fame",
+      "status": "ok"
+    },
+    {
+      "name": "bulletin-board",
+      "status": "ok"
+    },
+    {
+      "name": "teacher-raffle",
+      "status": "fail",
+      "error": "locator.click: Timeout 15000ms exceeded.\nCall log:\n  - waiting for getByRole('tab', { name: /^Raffle$/i }).first()\n"
+    },
+    {
+      "name": "admin-houses",
+      "status": "ok"
+    },
+    {
+      "name": "admin-library",
+      "status": "ok"
+    },
+    {
+      "name": "admin-attendance",
+      "status": "ok"
+    },
+    {
+      "name": "admin-notifications",
+      "status": "ok"
+    },
+    {
+      "name": "admin-stats",
+      "status": "ok"
+    },
+    {
+      "name": "admin-badges",
+      "status": "ok"
+    }
+  ]
+}

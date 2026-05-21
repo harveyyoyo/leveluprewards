@@ -75,6 +75,8 @@ interface Settings {
     enableHouses: boolean;
     /** When on, teacher point awards also update each house's cached totals. */
     housesRollupPoints: boolean;
+    /** How house competition points are tracked: linked from student awards or edited manually. */
+    housePointsSource?: 'studentRollup' | 'manual';
     /** Show house name/color on the student kiosk header. */
     showHouseOnStudentKiosk: boolean;
     enableChallenges: boolean;
@@ -162,8 +164,8 @@ interface Settings {
     raffleDeductPoints: boolean;
     /** When on, each qualifying student has exactly one entry in the pool; when off, entries scale with points (floor). */
     raffleOneEntryPerStudent: boolean;
-    /** Raffle UI: jackpot reels, weighted wheel, or loto bingo cage. */
-    raffleDisplayMode: 'jackpot' | 'wheel' | 'loto';
+    /** Raffle UI: jackpot reels or weighted wheel. */
+    raffleDisplayMode: 'jackpot' | 'wheel';
     // Student & Access
     enableStudentProfiles: boolean;
     enableQrLogin: boolean;
@@ -256,7 +258,7 @@ interface Settings {
     kioskCouponRedemptionCameraEnabled?: boolean;
     /**
      * Student kiosk rewards shop: how coupon codes are entered.
-     * off = hide coupon redemption; manual/camera = single method (no student-facing tabs); both = Manual + Webcam tabs.
+     * off = hide coupon redemption; manual = USB scanner (default); camera = webcam scan.
      */
     kioskCouponRedemptionInput?: 'off' | 'manual' | 'camera' | 'both';
     // Sponsor Banner (displayed at the bottom/top of student kiosk screens)
@@ -361,6 +363,17 @@ interface Settings {
     hallOfFamePodiumSize?: number;
     hallOfFameAutoScroll?: boolean;
     hallOfFameGridLayout?: boolean;
+
+    // House Hall of Fame (big screen — houses only)
+    houseHallOfFameSortBy?: string;
+    houseHallOfFameLimit?: number;
+    houseHallOfFamePodiumSize?: number;
+    houseHallOfFameAutoScroll?: boolean;
+    houseHallOfFameGridLayout?: boolean;
+    /** Admin Houses tab: standings preview chart style. */
+    houseStandingsChartFormat?: 'bars' | 'columns' | 'line' | 'pie';
+    /** Admin Houses tab: whether the standings preview panel is expanded. */
+    houseStandingsPreviewOpen?: boolean;
 }
 
 /** Settings with display mode resolved for rendering (`web` | `app` only). */
@@ -545,8 +558,8 @@ const defaultSettings: Settings = {
     kioskLoginTabScanEnabled: true,
     kioskLoginTabFaceEnabled: false,
     kioskCouponRedemptionManualEnabled: true,
-    kioskCouponRedemptionCameraEnabled: true,
-    kioskCouponRedemptionInput: 'both',
+    kioskCouponRedemptionCameraEnabled: false,
+    kioskCouponRedemptionInput: 'manual',
     kioskSponsorEnabled: false,
     kioskSponsorMessage: '',
     kioskSponsorLogoUrl: '',
@@ -844,7 +857,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                     parsed.kioskCouponRedemptionCameraEnabled = mode === 'camera' || mode === 'both';
                 }
                 if (typeof parsed.kioskCouponRedemptionManualEnabled !== 'boolean') parsed.kioskCouponRedemptionManualEnabled = true;
-                if (typeof parsed.kioskCouponRedemptionCameraEnabled !== 'boolean') parsed.kioskCouponRedemptionCameraEnabled = true;
+                if (typeof parsed.kioskCouponRedemptionCameraEnabled !== 'boolean') parsed.kioskCouponRedemptionCameraEnabled = false;
                 if (typeof parsed.enableCouponRedeemCompliments !== 'boolean') {
                     parsed.enableCouponRedeemCompliments = true;
                 }
@@ -866,11 +879,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                 } else {
                     parsed.studentWelcomeBackDurationSec = Math.min(60, Math.max(1, Math.round(parsed.studentWelcomeBackDurationSec)));
                 }
-                if (
-                    parsed.raffleDisplayMode !== 'jackpot' &&
-                    parsed.raffleDisplayMode !== 'wheel' &&
-                    parsed.raffleDisplayMode !== 'loto'
-                ) {
+                if (parsed.raffleDisplayMode === 'loto') {
+                    parsed.raffleDisplayMode = 'jackpot';
+                } else if (parsed.raffleDisplayMode !== 'jackpot' && parsed.raffleDisplayMode !== 'wheel') {
                     delete (parsed as Partial<Settings>).raffleDisplayMode;
                 }
                 if (parsed.privacyStudentNameDisplayMode !== 'full' && parsed.privacyStudentNameDisplayMode !== 'preferred_only') {

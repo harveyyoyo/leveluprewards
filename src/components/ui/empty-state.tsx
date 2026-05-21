@@ -19,6 +19,7 @@ interface EmptyStateProps {
   secondaryAction?: {
     label: string;
     onClick?: () => void;
+    icon?: LucideIcon;
   };
   /** Makes the card smaller (for inline/empty lists vs page-level). */
   compact?: boolean;
@@ -97,6 +98,7 @@ export function EmptyState({
           )}
           {secondaryAction && (
             <Button variant="outline" onClick={secondaryAction.onClick} className="rounded-xl">
+              {secondaryAction.icon && <secondaryAction.icon className="mr-2 h-4 w-4" aria-hidden="true" />}
               {secondaryAction.label}
             </Button>
           )}

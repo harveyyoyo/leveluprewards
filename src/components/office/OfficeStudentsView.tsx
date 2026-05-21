@@ -10,6 +10,8 @@ import type { OfficeBillingAccount, OfficeClass, OfficeGradeEntry, OfficeStudent
 import { getOfficeStudentFullName, getOfficeStudentLabel } from '@/lib/office/officeUtils';
 import { cn } from '@/lib/utils';
 
+type SortKey = 'name-asc' | 'name-desc' | 'class';
+
 type OfficeStudentsViewProps = {
   schoolId: string;
   students: OfficeStudent[];
@@ -33,6 +35,7 @@ export function OfficeStudentsView({
 }: OfficeStudentsViewProps) {
   const [query, setQuery] = useState('');
   const [classFilter, setClassFilter] = useState('all');
+  const [sortBy, setSortBy] = useState<SortKey>('name-asc');
   const [selected, setSelected] = useState<OfficeStudent | null>(null);
 
   const classOptions = useMemo(() => {
@@ -41,14 +44,26 @@ export function OfficeStudentsView({
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return students.filter((s) => {
+    const list = students.filter((s) => {
       if (classFilter !== 'all' && s.classId !== classFilter) return false;
       if (!q) return true;
       const label = getOfficeStudentFullName(s).toLowerCase();
       const cls = (s.classId && classNameById.get(s.classId))?.toLowerCase() ?? '';
       return label.includes(q) || cls.includes(q);
     });
-  }, [students, query, classFilter, classNameById]);
+    return list.slice().sort((a, b) => {
+      if (sortBy === 'name-desc') {
+        return getOfficeStudentFullName(b).localeCompare(getOfficeStudentFullName(a));
+      }
+      if (sortBy === 'class') {
+        const ca = (a.classId && classNameById.get(a.classId)) ?? '';
+        const cb = (b.classId && classNameById.get(b.classId)) ?? '';
+        if (ca !== cb) return ca.localeCompare(cb);
+        return getOfficeStudentFullName(a).localeCompare(getOfficeStudentFullName(b));
+      }
+      return getOfficeStudentFullName(a).localeCompare(getOfficeStudentFullName(b));
+    });
+  }, [students, query, classFilter, sortBy, classNameById]);
 
   if (isLoading) {
     return <p className="text-sm text-muted-foreground">Loading roster…</p>;
@@ -78,7 +93,25 @@ export function OfficeStudentsView({
             </SelectContent>
           </Select>
         </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs font-semibold uppercase text-muted-foreground">Sort</Label>
+          <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortKey)}>
+            <SelectTrigger className="w-36 h-11 rounded-xl">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="name-asc">Name A → Z</SelectItem>
+              <SelectItem value="name-desc">Name Z → A</SelectItem>
+              <SelectItem value="class">By class</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
+      <p className="text-xs text-muted-foreground">
+        {filtered.length === students.length
+          ? `${students.length} student${students.length === 1 ? '' : 's'}`
+          : `${filtered.length} of ${students.length} students`}
+      </p>
 
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <table className="w-full text-sm">

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>LevelUp Feature — ID Cards &amp; Themes</title>
+    <script src="/marketing/flyer-embed.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;600;700;800&family=Outfit:wght@700;800;900&display=swap" rel="stylesheet" />
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      @page { size: letter; margin: 0; }
+      html, body {
+        width: 8.5in; min-height: 11in;
+        font-family: 'DM Sans', system-ui, sans-serif;
+        background: #0c1222; color: #f8fafc;
+        -webkit-print-color-adjust: exact; print-color-adjust: exact;
+      }
+      html.embed .hint { display: none !important; }
+      .flyer {
+        width: 8.5in; min-height: 11in;
+        background: linear-gradient(160deg, #1e3a5f 0%, #0f172a 45%, #312e81 100%);
+        padding: 0.42in 0.48in;
+        display: flex; flex-direction: column;
+      }
+      .chip {
+        align-self: flex-start;
+        background: linear-gradient(90deg, #38bdf8, #a78bfa);
+        color: #0f172a;
+        font-family: Outfit, sans-serif;
+        font-size: 0.1in; font-weight: 800;
+        padding: 0.06in 0.16in; border-radius: 999px;
+        text-transform: uppercase; letter-spacing: 0.12em;
+      }
+      h1 {
+        font-family: Outfit, sans-serif;
+        font-size: 0.5in; font-weight: 900; line-height: 1.02;
+        margin-top: 0.14in;
+      }
+      h1 span { color: #7dd3fc; }
+      .sub {
+        font-size: 0.14in; color: #cbd5e1; line-height: 1.5;
+        margin-top: 0.12in; max-width: 6.6in;
+      }
+      .cols {
+        display: grid; grid-template-columns: 1fr 1fr;
+        gap: 0.14in; margin-top: 0.18in;
+      }
+      .col h2 {
+        font-family: Outfit, sans-serif;
+        font-size: 0.16in; font-weight: 800; color: #e0e7ff;
+        margin-bottom: 0.08in;
+      }
+      .col h2::before { content: '◆ '; color: #fbbf24; }
+      .col ul {
+        list-style: none; font-size: 0.095in; line-height: 1.45;
+        color: #94a3b8; margin-bottom: 0.1in;
+      }
+      .col li { padding-left: 0.12in; position: relative; margin-bottom: 0.05in; }
+      .col li::before {
+        content: ''; position: absolute; left: 0; top: 0.35em;
+        width: 4px; height: 4px; border-radius: 50%; background: #38bdf8;
+      }
+      .shots {
+        display: grid; grid-template-columns: 1fr 1fr;
+        gap: 0.12in; margin-top: 0.12in;
+      }
+      .shot {
+        border-radius: 12px; overflow: hidden;
+        border: 2px solid rgba(125, 211, 252, 0.35);
+        background: rgba(15, 23, 42, 0.6);
+      }
+      .shot figcaption {
+        font-size: 0.08in; font-weight: 700; text-transform: uppercase;
+        letter-spacing: 0.08em; color: #7dd3fc;
+        padding: 0.06in 0.1in; background: rgba(0,0,0,0.25);
+      }
+      .shot img { width: 100%; display: block; }
+      .flow {
+        margin-top: 0.14in;
+        display: flex; flex-wrap: wrap; gap: 0.08in;
+      }
+      .step {
+        flex: 1; min-width: 1.6in;
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(167, 139, 250, 0.3);
+        border-radius: 10px; padding: 0.1in 0.12in;
+        font-size: 0.095in; line-height: 1.4; color: #e2e8f0;
+      }
+      .step b { display: block; color: #fde68a; font-size: 0.1in; margin-bottom: 0.03in; }
+      .cta {
+        margin-top: auto; padding-top: 0.14in;
+        font-size: 0.11in; font-weight: 700;
+      }
+      .cta a { color: #7dd3fc; text-decoration: none; }
+      .foot { font-size: 0.075in; color: #64748b; margin-top: 0.08in; }
+      .hint {
+        position: fixed; bottom: 12px; right: 12px;
+        padding: 8px 12px; background: #0369a1; color: #fff;
+        font: 700 12px system-ui;
+      }
+    </style>
+  </head>
+  <body>
+    <p class="hint">Ctrl+P → Letter, backgrounds on</p>
+    <article class="flyer">
+      <span class="chip">LevelUp feature</span>
+      <h1>Student <span>ID Cards</span> &amp; Themes</h1>
+      <p class="sub">
+        Print professional student ID cards with your school logo, then let every student design a personal theme—colors,
+        fonts, emoji, and backgrounds that flow through the kiosk, rewards shop, and printouts.
+      </p>
+
+      <div class="cols">
+        <div class="col">
+          <h2>ID cards</h2>
+          <ul>
+            <li>Preview before print—same layout as the sheet</li>
+            <li>Bulk print from roster or selected students</li>
+            <li>CR80 / ISO ID-1, browser sheets, or saved printer profiles</li>
+            <li>Rounded or rectangular corners for easy cutting</li>
+            <li>Full-color or economical B&amp;W modes</li>
+          </ul>
+        </div>
+        <div class="col">
+          <h2>Theme creation</h2>
+          <ul>
+            <li>School default theme in Admin → Branding</li>
+            <li>Per-student themes from admin or kiosk options</li>
+            <li>Gradients, fonts, emoji, and animated card styles</li>
+            <li>Automatic contrast checks for readable text</li>
+            <li>Themes on kiosk, shop, vouchers, and ID cards</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="shots">
+        <figure class="shot">
+          <img src="/marketing/screenshots/admin-id-card.png" alt="Student ID card preview" width="640" height="400" />
+          <figcaption>ID card preview</figcaption>
+        </figure>
+        <figure class="shot">
+          <img src="/marketing/screenshots/admin-theme-designer.png" alt="Theme designer" width="640" height="400" />
+          <figcaption>Theme designer</figcaption>
+        </figure>
+      </div>
+
+      <div class="flow">
+        <div class="step"><b>1. Brand</b>Set school logo + default theme in Branding.</div>
+        <div class="step"><b>2. Print</b>Preview &amp; print IDs from Students.</div>
+        <div class="step"><b>3. Personalize</b>Students pick themes at the kiosk.</div>
+      </div>
+
+      <p class="cta">Admin → Students · Admin → Branding · <a href="https://leveluprewards.app">leveluprewards.app</a></p>
+      <p class="foot">© 2026 LevelUp EdTech Enterprises LLC</p>
+    </article>
+  </body>
+</html>

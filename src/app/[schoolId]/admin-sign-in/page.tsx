@@ -8,7 +8,7 @@ import { ShieldCheck, ArrowLeft, Loader2 } from 'lucide-react';
 import { useAppContext } from '@/components/AppProvider';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -128,7 +128,6 @@ function AdminSignInContent() {
           </div>
           <div className="space-y-1">
             <CardTitle className="text-2xl font-black tracking-tight">Admin sign-in</CardTitle>
-            <CardDescription>Manage students, classes, prizes, and system settings.</CardDescription>
           </div>
         </CardHeader>
         <CardContent className="space-y-5">

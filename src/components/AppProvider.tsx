@@ -438,7 +438,10 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     return getDb().then((db) => db.deleteClass(firestore, schoolId, id, students));
   }, [firestore, schoolId]);
 
-  const houseRollup = settings.enableHouses && settings.housesRollupPoints !== false;
+  const houseRollup =
+    settings.enableHouses &&
+    (settings.housePointsSource === 'studentRollup' ||
+      (settings.housePointsSource !== 'manual' && settings.housesRollupPoints !== false));
 
   const addHouse_ = useCallback((h: Omit<House, 'id' | 'points' | 'lifetimePoints'>) => {
     if (!firestore || !schoolId) return Promise.reject('Not logged into a school.');

@@ -8,6 +8,7 @@ const RESERVED_PORTAL_SEGMENTS = new Set([
   'terms',
   's',
   'level-up-arcade',
+  'promotions',
   'favicon.ico',
   'icon.png',
   'robots.txt',

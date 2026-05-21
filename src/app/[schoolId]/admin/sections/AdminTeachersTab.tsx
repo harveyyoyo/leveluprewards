@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Book, Building2, ChevronDown, Copy, Edit, FileText, Gift, Home, Minus, Plus, Printer, Trash2, User, UserMinus, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Helper } from '@/components/ui/helper';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -241,12 +241,11 @@ export function AdminTeachersTab({
     <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden">
       <CardHeader className="flex flex-row justify-between items-center py-6">
         <div>
-          <Helper content="Manage teachers and limited desk accounts for this school.">
+          <Helper content="Full classroom staff who can print coupons and award points. Desk staff get limited coupon, prize, library, houses, office, or reports access. Expand Classes or Students on a row to manage scope.">
             <CardTitle className="flex items-center gap-2">
-              <User className="w-5 h-5 text-primary" /> Teachers
+              <User className="w-5 h-5 text-primary" /> Teachers & staff
             </CardTitle>
           </Helper>
-          <CardDescription>Teachers can issue rewards. Staff accounts get limited coupon, prize, library, houses, office, or reports access.</CardDescription>
         </div>
         <div className="flex flex-wrap gap-2">
           <TabWalkthroughHeaderAction />
@@ -260,13 +259,6 @@ export function AdminTeachersTab({
       </CardHeader>
       <CardContent className="space-y-8">
         <section className="space-y-3">
-          <div>
-            <h3 className="font-bold">Teachers</h3>
-            <p className="text-sm text-muted-foreground">
-              Full classroom staff who can print coupons and award points. Expand &quot;Linked students&quot; to see who is in
-              each teacher&apos;s scope (class primary teacher or explicit assignment on the student).
-            </p>
-          </div>
           <ul className="space-y-2 pr-1">
             {teachers && teachers.length > 0 ? (
               <AdminRecordListHeader
@@ -575,10 +567,9 @@ export function AdminTeachersTab({
         </section>
 
         <section className="space-y-3">
-          <div>
+          <Helper content="Limited accounts for coupon sheets, prize redemption, houses, office, library, or reports.">
             <h3 className="font-bold">Desk staff</h3>
-            <p className="text-sm text-muted-foreground">Limited accounts for coupon sheets, prize redemption, houses, office, library, or reports.</p>
-          </div>
+          </Helper>
           <ul className="space-y-2 pr-1">
             {staffAccounts && staffAccounts.length > 0 ? (
               <AdminRecordListHeader

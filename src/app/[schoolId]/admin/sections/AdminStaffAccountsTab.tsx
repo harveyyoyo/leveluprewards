@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Edit, Plus, Trash2, Printer, Gift } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Helper } from '@/components/ui/helper';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
@@ -85,16 +85,21 @@ export function AdminStaffAccountsTab({
     <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden">
       <CardHeader className="flex flex-row justify-between items-center py-6">
         <div>
-          <Helper content="Limited accounts: coupon printing only, or prize redemption at the admin prizes desk. Share desk logins separately from full teacher accounts—desk staff still open Admin at this school's URL after signing in.">
+          <Helper
+            content={
+              <>
+                Limited accounts: coupon printing only, or prize redemption at the admin prizes desk. Share desk
+                logins separately from full teacher accounts—desk staff still open Admin at this school&apos;s URL
+                after signing in. Secretary: path <code className="text-xs bg-muted px-1 rounded">/secretary</code> ·
+                Prize desk: Admin → <span className="font-medium text-foreground">Prizes</span> (URL{' '}
+                <code className="text-xs bg-muted px-1 rounded">/admin</code>)
+              </>
+            }
+          >
             <CardTitle className="flex items-center gap-2">
               <Printer className="w-5 h-5 text-primary" /> Desk staff
             </CardTitle>
           </Helper>
-          <CardDescription>
-            Secretary: path <code className="text-xs bg-muted px-1 rounded">/secretary</code> · Prize desk: Admin →{' '}
-            <span className="font-medium text-foreground">Prizes</span> (URL{' '}
-            <code className="text-xs bg-muted px-1 rounded">/admin</code>)
-          </CardDescription>
         </div>
         <Button onClick={openNew} className="rounded-xl">
           <Plus className="mr-2 h-4 w-4" /> Add account

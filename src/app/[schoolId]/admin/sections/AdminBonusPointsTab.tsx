@@ -2,7 +2,7 @@
 
 import { Edit, Loader2, Plus, Trash2, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Helper } from '@/components/ui/helper';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -38,7 +38,6 @@ export function AdminBonusPointsTab(props: any) {
               <Trophy className="w-5 h-5 text-primary" /> Bonus Points
             </CardTitle>
           </Helper>
-          <CardDescription>Create milestones that award extra points when students reach point thresholds.</CardDescription>
         </div>
         <div className="flex flex-wrap gap-2">
           <TabWalkthroughHeaderAction />

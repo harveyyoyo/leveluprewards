@@ -6,7 +6,8 @@ import { useAppContext } from '@/components/AppProvider';
 import { Coupon as CouponPreview } from '@/components/Coupon';
 import { PrinterReminderCallout } from '@/components/PrinterReminderCallout';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Helper } from '@/components/ui/helper';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
@@ -371,16 +372,14 @@ export function CouponPrintPanel({
   return (
     <Card className={cn('w-full border-t-4 border-primary shadow-md overflow-hidden', className)}>
       <CardHeader className="p-4 md:p-6">
-        <CardTitle className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-primary/10 text-primary" aria-hidden>
-            <Printer className="w-6 h-6" />
-          </div>
-          Print coupons
-        </CardTitle>
-        <CardDescription>
-          Generate printable coupons for student kiosk redemption. Choose 10 or 30 coupons per letter page, set how many
-          sheets to print, and match each cell to the preview layout.
-        </CardDescription>
+        <Helper content="Generate printable coupons for student kiosk redemption. Choose 10 or 30 coupons per letter page, set how many sheets to print, and match each cell to the preview layout.">
+          <CardTitle className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-primary/10 text-primary" aria-hidden>
+              <Printer className="w-6 h-6" />
+            </div>
+            Print coupons
+          </CardTitle>
+        </Helper>
         <PrinterReminderCallout
           title="Coupon / slip printer"
           message={settings.printerReminderPrizeVouchers}

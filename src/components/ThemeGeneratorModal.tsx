@@ -19,8 +19,11 @@ import { doc } from 'firebase/firestore';
 import { APP_NAME, APP_TAGLINE, LEVELUP_BRAND_PRIMARY_HEX } from '@/lib/appBranding';
 import { getStudentThemeCssVars, normalizeStudentTheme } from '@/lib/themeContrast';
 import { useSchoolMetadataDocRef } from '@/hooks/useSchoolMetadataDocRef';
-const THEME_AI_MODEL_KEY = 'arcade_theme_ai_model';
-const DEFAULT_THEME_AI_MODEL = 'gpt-4o-mini';
+import {
+    DEFAULT_ARCADE_AI_MODEL,
+    getArcadeAiModelFromStorage,
+    persistArcadeAiModel,
+} from '@/lib/aiModelPreference';
 
 function hexForColorInput(color: string | undefined, fallback: string): string {
     if (!color) return fallback;
@@ -317,7 +320,7 @@ export function ThemeGeneratorModal({
     const [isGenerating, setIsGenerating] = useState(false);
     const [previewTheme, setPreviewTheme] = useState<StudentTheme | undefined>(initialTheme);
     const [previousTheme, setPreviousTheme] = useState<StudentTheme | undefined>(initialTheme);
-    const [model, setModel] = useState<string>(DEFAULT_THEME_AI_MODEL);
+    const [model, setModel] = useState<string>(DEFAULT_ARCADE_AI_MODEL);
     const [animatePreview, setAnimatePreview] = useState(false);
     const { toast } = useToast();
     const { schoolId } = useAppContext();
@@ -385,14 +388,10 @@ export function ThemeGeneratorModal({
         };
     }, [isOpen]);
 
-    useEffect(() => {
-        const saved = localStorage.getItem(THEME_AI_MODEL_KEY);
-        if (saved) setModel(saved);
-    }, []);
-
     // When the dialog opens, reset preview from the latest saved theme (per student / school default).
     useEffect(() => {
         if (!isOpen) return;
+        setModel(getArcadeAiModelFromStorage());
         const initial = currentTheme ?? settings.defaultStudentTheme ?? undefined;
         setPreviewTheme(initial);
         setPreviousTheme(initial);
@@ -583,7 +582,7 @@ export function ThemeGeneratorModal({
                                     value={model}
                                     onValueChange={(v: string) => {
                                         setModel(v);
-                                        localStorage.setItem(THEME_AI_MODEL_KEY, v);
+                                        persistArcadeAiModel(v);
                                     }}
                                 >
                                     <SelectTrigger>

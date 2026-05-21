@@ -7,6 +7,7 @@ const RESERVED_FIRST = new Set([
   'privacy',
   'terms',
   'level-up-arcade',
+  'promotions',
   '_next',
   'favicon.ico',
   'icon.png',

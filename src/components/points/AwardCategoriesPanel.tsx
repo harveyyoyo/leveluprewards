@@ -2,7 +2,7 @@
 
 import { Edit, Palette, Plus, Tag, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Helper } from '@/components/ui/helper';
 import { EmptyState } from '@/components/ui/empty-state';
 import { AdminRecordListHeader } from '@/components/admin/AdminRecordListHeader';
@@ -51,16 +51,17 @@ export function AwardCategoriesPanel({
     >
       <CardHeader className="flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:justify-between sm:p-6">
         <div className="min-w-0">
-          <Helper content="Categories set default point values for printed coupons and manual awards. Use Print Coupons to generate scannable sheets, or Manually Add or Deduct for direct point changes.">
+          <Helper
+            content={
+              isAdmin
+                ? 'Set incentive categories and default point values used when printing coupons or awarding points manually.'
+                : 'School and personal categories available for printing coupons and manual awards.'
+            }
+          >
             <CardTitle className="flex items-center gap-2 text-xl font-black leading-tight sm:text-2xl">
               <Tag className="w-5 h-5 shrink-0 text-destructive" /> Award Categories
             </CardTitle>
           </Helper>
-          <CardDescription className="mt-1 max-w-2xl leading-relaxed">
-            {isAdmin
-              ? 'Set incentive categories and default point values used when printing coupons or awarding points manually.'
-              : 'School and personal categories available for printing coupons and manual awards.'}
-          </CardDescription>
         </div>
         <div className="flex w-full shrink-0 flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
           {showWalkthrough ? <TabWalkthroughHeaderAction className="shrink-0" /> : null}

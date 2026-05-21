@@ -18,7 +18,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { doc } from 'firebase/firestore';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { rainbowByIndex, rainbowForPortalId } from '@/lib/rainbowNav';
-import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
 import { LEVELUP_BRAND_PRIMARY_HEX, LEVELUP_BRAND_PRIMARY_ON_DARK_HEX } from '@/lib/appBranding';
 import {
     isKioskPortraitDisplay,
@@ -138,7 +137,7 @@ function WhereToDrawnTitle({
 }
 
 export default function PortalPage() {
-    const { loginState, isInitialized, schoolId, isAdmin, isOffice, login } = useAppContext();
+    const { loginState, isInitialized, schoolId, isAdmin, isOffice, login, logout } = useAppContext();
     const { settings } = useSettings();
     const prefersReducedMotion = useReducedMotion();
     const playSound = useArcadeSound();
@@ -160,7 +159,6 @@ export default function PortalPage() {
                 ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
                 : !!prefersReducedMotion,
     );
-    const animBackdrop = globalAnimatedBackdropActive(settings);
     const kioskPortrait = isKioskPortraitDisplay(settings);
     const isAppDisplay = settings.displayMode === 'app';
 
@@ -182,12 +180,6 @@ export default function PortalPage() {
                 : LEVELUP_BRAND_PRIMARY_HEX
             : null;
 
-    const isDefaultScheme = settings.colorScheme === 'default';
-    const showPortalLocalDecor =
-        !animBackdrop &&
-        !settings.legacyMode &&
-        (isDefaultScheme ||
-            (settings.graphicMode === 'graphics' && !!settings.enableAnimatedBackground));
     /** Card lift on hover; icon pop via `.portal-choose-icon--hoverable` (off in legacy / reduced motion). */
     const portalCardHoverEffects = !prefersReducedMotion && !settings.legacyMode;
     const isSchoolChooser = isSchoolPortalChooser(loginState);
@@ -287,52 +279,7 @@ export default function PortalPage() {
     ];
 
     return (
-        <div
-            className={cn(
-                'text-foreground relative min-h-0 h-full w-full font-sans',
-                animBackdrop || isDefaultScheme ? 'bg-transparent' : 'bg-background',
-            )}
-        >
-            {/* Backdrop: keep existing palette; only subtle grid + optional noise/animated orbs */}
-            <div className="pointer-events-none fixed inset-0 z-0">
-                {!animBackdrop && (
-                    <div
-                        className="absolute inset-0 opacity-[0.14]"
-                        style={{
-                            backgroundImage:
-                                'linear-gradient(to right, hsl(var(--primary) / 0.14) 1px, transparent 1px), linear-gradient(to bottom, hsl(var(--primary) / 0.1) 1px, transparent 1px)',
-                            backgroundSize: '48px 48px',
-                        }}
-                    />
-                )}
-                {showPortalLocalDecor && (
-                    <>
-                        <div
-                            className="absolute inset-0 opacity-[0.03]"
-                            style={{
-                                backgroundImage:
-                                    'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noiseFilter\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noiseFilter)\'/%3E%3C/svg%3E")',
-                            }}
-                        />
-                        <motion.div
-                            animate={{ x: [0, 28, 0], y: [0, -18, 0] }}
-                            transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-                            className="absolute -top-24 -right-24 h-[520px] w-[520px] rounded-full bg-primary/20 blur-[130px]"
-                        />
-                        <motion.div
-                            animate={{ x: [0, -20, 0], y: [0, 26, 0] }}
-                            transition={{ duration: 25, repeat: Infinity, ease: 'linear' }}
-                            className="absolute bottom-14 left-16 h-[420px] w-[420px] rounded-full bg-chart-2/20 blur-[135px]"
-                        />
-                        <motion.div
-                            animate={{ x: [0, 18, 0], y: [0, -28, 0] }}
-                            transition={{ duration: 30, repeat: Infinity, ease: 'linear' }}
-                            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[620px] w-[620px] rounded-full bg-chart-3/18 blur-[160px]"
-                        />
-                    </>
-                )}
-            </div>
-
+        <div className="text-foreground relative min-h-0 h-full w-full bg-transparent font-sans">
             {/* Positioning on a plain div so Framer does not override translate-based centering */}
             {/* Main layout: app mode can scroll within the shell when browser chrome leaves little height. */}
             <div
@@ -350,15 +297,15 @@ export default function PortalPage() {
                         'flex min-h-full w-full flex-1 flex-col items-center',
                         isAppDisplay
                             ? 'justify-start gap-3 sm:gap-4 md:justify-center md:gap-8'
-                            : 'justify-center gap-6 sm:gap-8 md:gap-12',
+                            : 'justify-start gap-10 sm:gap-12 md:gap-16',
                     )}
                 >
 
-                    {/* Title: on mobile avoid flex-1+min-h-0 (clips large headline under overflow-hidden). */}
+                    {/* Title: gap above (from outer pt) matches gap below (gap-10/12/16), so title is halfway between header and boxes */}
                     <div
                         className={cn(
                             'flex w-full shrink-0 flex-col items-center justify-center px-1 text-center md:min-h-0',
-                            isAppDisplay ? 'pb-1 pt-0 md:pb-0' : 'pb-3 pt-1 md:pb-0',
+                            isAppDisplay ? 'pb-1 pt-0 md:pb-0' : '',
                         )}
                     >
                         <div className="pointer-events-none w-full max-w-6xl text-center shrink-0 overflow-visible">
@@ -416,7 +363,7 @@ export default function PortalPage() {
                     {portals.map((area, index) => {
                         const Icon = area.icon;
                         const rainbowColor = rainbowForPortalId(area.id, settings.colorScheme);
-                        const needsStudentSession = area.id === 'redeem' && loginState !== 'student';
+                        const needsAdminKioskHandoff = area.id === 'redeem' && loginState === 'admin';
                         const needsAdminPasscode = area.id === 'admin' && !isAdmin;
                         // School gate and admins pick staff (or continue as admin); signed-in teachers go straight through.
                         const needsTeacherLogin =
@@ -519,6 +466,11 @@ export default function PortalPage() {
                                         setSelectedTeacherKey('');
                                         setTeacherPasscode('');
                                         setTeacherDialogOpen(true);
+                                        return;
+                                    }
+                                    if (needsAdminKioskHandoff) {
+                                        e.preventDefault();
+                                        logout({ staffNavigateTo: 'student' });
                                         return;
                                     }
                                     if (area.id === 'redeem' && isSchoolChooser) return;

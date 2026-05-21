@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { BookOpen, Plus, Trash2, ChevronDown, ChevronUp, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Helper } from '@/components/ui/helper';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -52,7 +52,6 @@ export function AdminClassesTab({
               <BookOpen className="w-5 h-5 text-ring" /> Classes
             </CardTitle>
           </Helper>
-          <CardDescription>Manage class groups for your school.</CardDescription>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <TabWalkthroughHeaderAction />

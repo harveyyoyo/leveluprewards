@@ -13,6 +13,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { cn, displayStudentNameOnSharedBoard } from '@/lib/utils';
 import { canAccessHallOfFameRoute } from '@/lib/hallOfFameAccess';
+import { parseHallOfFameSearchParams, type HallOfFameRankType } from '@/lib/hallOfFameUrlConfig';
+import { isHouseStudentPointsRollupEnabled } from '@/lib/housePointsSettings';
 import { computeGoalProgress } from '@/lib/goalsProgress';
 import { getPeriodKeys } from '@/lib/db/helpers';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
@@ -56,16 +58,55 @@ export default function HallOfFamePage() {
 
     const isFullscreen = (searchParams?.get('fullscreen') || '').trim() === '1';
 
-    const [rankType, setRankType] = useState<'students' | 'classes' | 'houses' | 'goals'>(
-        settings.hallOfFameRankType ?? 'students',
-    );
-    const [sortBy, setSortBy] = useState<string>(settings.hallOfFameSortBy ?? 'lifetimePoints');
-    const [scope, setScope] = useState<'all' | string>(settings.hallOfFameScope ?? 'all');
-    const [limit, setLimit] = useState<number>(settings.hallOfFameLimit ?? 50);
-    const [podiumSize, setPodiumSize] = useState<number>(settings.hallOfFamePodiumSize ?? 3);
-    const [autoScroll, setAutoScroll] = useState<boolean>(settings.hallOfFameAutoScroll ?? false);
-    const [gridLayout, setGridLayout] = useState<boolean>(settings.hallOfFameGridLayout ?? true);
-    const [isLockedToUrlConfig, setIsLockedToUrlConfig] = useState(false);
+    const urlConfig = useMemo(() => {
+        const urlRank = (searchParams?.get('rankType') || searchParams?.get('rank') || searchParams?.get('view') || '')
+            .trim()
+            .toLowerCase();
+        const wantsHouses =
+            urlRank === 'houses' || urlRank === 'house-standings' || urlRank === 'house_standings';
+        const houseDefaults = wantsHouses
+            ? {
+                  hallOfFameRankType: 'houses' as const,
+                  hallOfFameSortBy: settings.houseHallOfFameSortBy ?? settings.hallOfFameSortBy,
+                  hallOfFameScope: 'all' as const,
+                  hallOfFameLimit: settings.houseHallOfFameLimit ?? settings.hallOfFameLimit,
+                  hallOfFamePodiumSize: settings.houseHallOfFamePodiumSize ?? settings.hallOfFamePodiumSize,
+                  hallOfFameAutoScroll: settings.houseHallOfFameAutoScroll ?? settings.hallOfFameAutoScroll,
+                  hallOfFameGridLayout: settings.houseHallOfFameGridLayout ?? settings.hallOfFameGridLayout,
+              }
+            : {
+                  hallOfFameRankType: settings.hallOfFameRankType,
+                  hallOfFameSortBy: settings.hallOfFameSortBy,
+                  hallOfFameScope: settings.hallOfFameScope,
+                  hallOfFameLimit: settings.hallOfFameLimit,
+                  hallOfFamePodiumSize: settings.hallOfFamePodiumSize,
+                  hallOfFameAutoScroll: settings.hallOfFameAutoScroll,
+                  hallOfFameGridLayout: settings.hallOfFameGridLayout,
+              };
+        return parseHallOfFameSearchParams(searchParams, houseDefaults);
+    }, [
+        searchParams,
+        settings.hallOfFameRankType,
+        settings.hallOfFameSortBy,
+        settings.hallOfFameScope,
+        settings.hallOfFameLimit,
+        settings.hallOfFamePodiumSize,
+        settings.hallOfFameAutoScroll,
+        settings.hallOfFameGridLayout,
+        settings.houseHallOfFameSortBy,
+        settings.houseHallOfFameLimit,
+        settings.houseHallOfFamePodiumSize,
+        settings.houseHallOfFameAutoScroll,
+        settings.houseHallOfFameGridLayout,
+    ]);
+
+    const [rankType, setRankType] = useState<HallOfFameRankType>(urlConfig.rankType);
+    const [sortBy, setSortBy] = useState<string>(urlConfig.sortBy);
+    const [scope, setScope] = useState<'all' | string>(urlConfig.scope);
+    const [limit, setLimit] = useState<number>(urlConfig.limit);
+    const [podiumSize, setPodiumSize] = useState<number>(urlConfig.podiumSize);
+    const [autoScroll, setAutoScroll] = useState<boolean>(urlConfig.autoScroll);
+    const [gridLayout, setGridLayout] = useState<boolean>(urlConfig.gridLayout);
     const [goalsProgressMap, setGoalsProgressMap] = useState<Record<string, number>>({});
 
     const schoolDocRef = useSchoolMetadataDocRef();
@@ -74,52 +115,20 @@ export default function HallOfFamePage() {
       schoolMeta?.name ||
       (schoolId ? schoolId.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()) : '');
 
-    // Back-compat: allow URL params to lock a display (otherwise settings are live via school appSettings).
+    // URL params lock the display (e.g. House Hall of Fame from Admin → Houses).
     useEffect(() => {
-        if (typeof window !== 'undefined') {
-            const params = new URLSearchParams(window.location.search);
-            const rank = (params.get('rankType') || params.get('rank') || params.get('view') || '').trim().toLowerCase();
-            const s = (params.get('sortBy') || '').trim();
-            const sc = (params.get('scope') || '').trim();
-            const lim = parseInt((params.get('limit') || '').trim(), 10);
-            const pod = parseInt((params.get('podiumSize') || '').trim(), 10);
-            const auto = (params.get('autoScroll') || '').trim();
-            const grid = (params.get('grid') || '').trim();
-
-            const hasUrlConfig = !!(rank || s || sc || params.get('limit') || params.get('podiumSize') || auto || grid);
-            if (hasUrlConfig) setIsLockedToUrlConfig(true);
-
-            if (rank === 'classes' || rank === 'class-standings' || rank === 'class_standings') setRankType('classes');
-            else if (rank === 'houses' || rank === 'house-standings' || rank === 'house_standings') setRankType('houses');
-            else if (rank === 'goals' || rank === 'school-goals' || rank === 'school_goals') setRankType('goals');
-            else if (rank) setRankType('students');
-
-            if (s) setSortBy(s);
-            if (sc) setScope(sc);
-            if (!Number.isNaN(lim) && lim > 0) setLimit(lim);
-            if (!Number.isNaN(pod) && pod >= 0) setPodiumSize(Math.max(0, Math.min(3, pod)));
-            if (auto === '1' || auto.toLowerCase() === 'true') setAutoScroll(true);
-            if (auto === '0' || auto.toLowerCase() === 'false') setAutoScroll(false);
-            if (grid === '1' || grid.toLowerCase() === 'true') setGridLayout(true);
-            if (grid === '0' || grid.toLowerCase() === 'false') setGridLayout(false);
-
-            // Back-compat: support older view-only links.
-            const view = (params.get('view') || params.get('rank') || '').trim().toLowerCase();
-            if (view === 'class-standings' || view === 'classes' || view === 'class_standings') {
-                setRankType('classes');
-                setSortBy('points');
-                return;
-            }
-            if (view === 'goals' || view === 'school-goals' || view === 'school_goals') {
-                setRankType('goals');
-                setSortBy('lifetimePoints');
-                return;
-            }
-        }
-    }, []);
+        if (!urlConfig.locked) return;
+        setRankType(urlConfig.rankType);
+        setSortBy(urlConfig.sortBy);
+        setScope(urlConfig.scope);
+        setLimit(urlConfig.limit);
+        setPodiumSize(urlConfig.podiumSize);
+        setAutoScroll(urlConfig.autoScroll);
+        setGridLayout(urlConfig.gridLayout);
+    }, [urlConfig]);
 
     useEffect(() => {
-        if (isLockedToUrlConfig) return;
+        if (urlConfig.locked) return;
         setRankType(settings.hallOfFameRankType ?? 'students');
         setSortBy(settings.hallOfFameSortBy ?? 'lifetimePoints');
         setScope(settings.hallOfFameScope ?? 'all');
@@ -128,7 +137,7 @@ export default function HallOfFamePage() {
         setAutoScroll(settings.hallOfFameAutoScroll ?? false);
         setGridLayout(settings.hallOfFameGridLayout ?? true);
     }, [
-        isLockedToUrlConfig,
+        urlConfig.locked,
         settings.hallOfFameRankType,
         settings.hallOfFameSortBy,
         settings.hallOfFameScope,
@@ -171,9 +180,13 @@ export default function HallOfFamePage() {
     const classesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'classes') : null, [firestore, schoolId]);
     const { data: classes, isLoading: classesLoading } = useCollection<Class>(classesQuery);
 
+    const showHouseLeaderboard = rankType === 'houses' || urlConfig.rankType === 'houses';
     const housesQuery = useMemoFirebase(
-        () => (schoolId && settings.enableHouses ? collection(firestore, 'schools', schoolId, 'houses') : null),
-        [firestore, schoolId, settings.enableHouses],
+        () =>
+            schoolId && (settings.enableHouses || showHouseLeaderboard)
+                ? collection(firestore, 'schools', schoolId, 'houses')
+                : null,
+        [firestore, schoolId, settings.enableHouses, showHouseLeaderboard],
     );
     const { data: houses, isLoading: housesLoading } = useCollection<House>(housesQuery);
 
@@ -320,7 +333,7 @@ export default function HallOfFamePage() {
             return rows.slice(0, limit);
         } else if (rankType === 'houses') {
             if (!houses) return [];
-            const rollup = settings.housesRollupPoints !== false;
+            const rollup = isHouseStudentPointsRollupEnabled(settings);
             const memberCounts = new Map<string, number>();
             for (const s of allTopStudents ?? []) {
                 if (!s.houseId) continue;
@@ -340,7 +353,7 @@ export default function HallOfFamePage() {
                 memberCount: memberCounts.get(h.id),
             });
 
-            if (rollup && (sortBy === 'points' || sortBy === 'lifetimePoints')) {
+            if (sortBy === 'points' || sortBy === 'lifetimePoints') {
                 const rows = houses.map((h) =>
                     makeHouseRow(
                         h,
@@ -350,7 +363,7 @@ export default function HallOfFamePage() {
                 rows.sort((a, b) => b.points - a.points);
                 return rows.slice(0, limit);
             }
-            if (!allTopStudents) return [];
+            if (!rollup || !allTopStudents) return [];
             const totals = new Map<string, number>();
             for (const s of allTopStudents) {
                 const hid = s.houseId;
@@ -395,8 +408,7 @@ export default function HallOfFamePage() {
         limit,
         getClassName,
         getPointsForStudent,
-        settings.privacyStudentNameDisplayMode,
-        settings.housesRollupPoints,
+        settings,
     ]);
 
     // Auto-scroll logic
@@ -467,7 +479,7 @@ export default function HallOfFamePage() {
         !canAccessHallOfFameRoute(loginState) ||
         studentsLoading ||
         classesLoading ||
-        (settings.enableHouses && housesLoading) ||
+        ((settings.enableHouses || showHouseLeaderboard) && housesLoading) ||
         categoriesLoading
     ) {
         return <HallOfFameSkeleton animBackdrop={animBackdrop} />;

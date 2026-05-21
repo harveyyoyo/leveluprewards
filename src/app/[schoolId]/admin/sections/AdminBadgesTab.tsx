@@ -2,7 +2,7 @@
 
 import { Award, Edit, Loader2, Plus, Trash2, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Helper } from '@/components/ui/helper';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -39,7 +39,6 @@ export function AdminBadgesTab(props: any) {
               <Award className="w-5 h-5 text-primary" /> Badges
             </CardTitle>
           </Helper>
-          <CardDescription>Category-based badges. Enable from Admin → Add more.</CardDescription>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <TabWalkthroughHeaderAction />

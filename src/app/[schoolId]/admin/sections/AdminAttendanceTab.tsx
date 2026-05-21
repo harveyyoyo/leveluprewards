@@ -4,7 +4,8 @@ import React from 'react';
 import { ContentSectionTreeNav } from '@/components/ui/content-section-tree-nav';
 import { Clock, Globe, History, Loader2, Trash2, Users, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Helper } from '@/components/ui/helper';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -125,14 +126,11 @@ export function AdminAttendanceTab(props: any) {
     <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden bg-background/95 backdrop-blur-md">
       <CardHeader className="py-6 bg-secondary/35 border-b border-border/40">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
+          <Helper content="Configure school-wide attendance rules, manage universal period slots, and oversee teacher configurations.">
             <CardTitle className="flex items-center gap-2 text-2xl font-black tracking-tight text-foreground">
               <Clock className="w-6 h-6 text-primary animate-pulse" /> Attendance &amp; Periods
             </CardTitle>
-            <CardDescription className="mt-1 text-sm font-medium">
-              Configure school-wide attendance rules, manage universal period slots, and oversee teacher configurations.
-            </CardDescription>
-          </div>
+          </Helper>
           <div className="flex flex-wrap items-center gap-2 shrink-0">
             <TabWalkthroughHeaderAction />
             <AttendanceSetupWizard variant="admin" />
@@ -156,12 +154,11 @@ export function AdminAttendanceTab(props: any) {
         {section === 'defaults' && (
           <div className="space-y-6 animate-in fade-in-50 duration-200">
             <div className="border-b pb-4">
-              <h3 className="text-lg font-black tracking-tight flex items-center gap-2">
-                <Zap className="w-5 h-5 text-primary" /> Default School-wide Points
-              </h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                These values are used as a fallback if no specific teacher reward rules or class assignments exist.
-              </p>
+              <Helper content="These values are used as a fallback if no specific teacher reward rules or class assignments exist.">
+                <h3 className="text-lg font-black tracking-tight flex items-center gap-2">
+                  <Zap className="w-5 h-5 text-primary" /> Default School-wide Points
+                </h3>
+              </Helper>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -229,12 +226,11 @@ export function AdminAttendanceTab(props: any) {
         {section === 'periods' && (
           <div className="space-y-6 animate-in fade-in-50 duration-200">
             <div className="border-b pb-4">
-              <h3 className="text-lg font-black tracking-tight flex items-center gap-2">
-                <Clock className="w-5 h-5 text-primary" /> Universal Periods
-              </h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                Create and manage period time slots used by all teachers for on-time attendance.
-              </p>
+              <Helper content="Create and manage period time slots used by all teachers for on-time attendance.">
+                <h3 className="text-lg font-black tracking-tight flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-primary" /> Universal Periods
+                </h3>
+              </Helper>
             </div>
             <UniversalPeriodsAdmin schoolId={schoolId!} />
           </div>
@@ -243,12 +239,11 @@ export function AdminAttendanceTab(props: any) {
         {section === 'teachers' && (
           <div className="space-y-6 animate-in fade-in-50 duration-200">
             <div className="border-b pb-4">
-              <h3 className="text-lg font-black tracking-tight flex items-center gap-2">
-                <Users className="w-5 h-5 text-primary" /> Teacher Attendance (per-teacher)
-              </h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                View what each teacher created and edit attendance settings on their behalf. Teachers assign periods to their classes in Teacher Portal.
-              </p>
+              <Helper content="View what each teacher created and edit attendance settings on their behalf. Teachers assign periods to their classes in Teacher Portal.">
+                <h3 className="text-lg font-black tracking-tight flex items-center gap-2">
+                  <Users className="w-5 h-5 text-primary" /> Teacher Attendance (per-teacher)
+                </h3>
+              </Helper>
             </div>
 
             <div className="flex flex-wrap items-end gap-3 bg-muted/20 p-4 rounded-2xl border">
@@ -780,14 +775,11 @@ export function AdminAttendanceTab(props: any) {
         {section === 'activity' && (
           <div className="space-y-6 animate-in fade-in-50 duration-200">
             <div className="border-b pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div>
+              <Helper content="Recent student actions across the school, including attendance sign-ins and point activity.">
                 <h3 className="text-lg font-black tracking-tight flex items-center gap-2">
                   <History className="w-5 h-5 text-primary" /> Student Activity Log
                 </h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Recent student actions across the school, including attendance sign-ins and point activity.
-                </p>
-              </div>
+              </Helper>
               <Button variant="outline" size="sm" className="rounded-xl h-10 px-4 shrink-0" onClick={loadStudentActivityLog} disabled={studentActivityLogLoading}>
                 {studentActivityLogLoading ? <Loader2 className="w-4 h-4 animate-spin mr-1.5" /> : null}
                 Refresh Activity Log

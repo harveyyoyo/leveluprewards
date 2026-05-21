@@ -16,7 +16,7 @@ import {
   ArrowUpRight,
   Settings2,
 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -188,13 +188,11 @@ export function AdminBulletinBoardTab({
       <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden">
         <CardHeader className="py-6 flex flex-row items-start justify-between gap-4">
           <div className="min-w-0">
-            <CardTitle className="flex items-center gap-2">
-              <Megaphone className="w-5 h-5 text-primary" /> Bulletin Board
-            </CardTitle>
-            <CardDescription>
-              Configure the board here, then open the full-screen display (opens in a new tab). Staff-facing board;
-              not shown on the student kiosk.
-            </CardDescription>
+            <Helper content="Configure the board here, then open the full-screen display (opens in a new tab). Staff-facing board; not shown on the student kiosk.">
+              <CardTitle className="flex items-center gap-2">
+                <Megaphone className="w-5 h-5 text-primary" /> Bulletin Board
+              </CardTitle>
+            </Helper>
           </div>
           <div className="flex flex-wrap items-center gap-2 shrink-0">
             <TabWalkthroughHeaderAction />

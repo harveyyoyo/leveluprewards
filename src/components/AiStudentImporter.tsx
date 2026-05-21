@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAppContext } from '@/components/AppProvider';
 import { useAuthFetch } from '@/lib/authFetch';
+import { getArcadeAiModelFromStorage } from '@/lib/aiModelPreference';
 
 interface AiStudentImporterProps {
     classes: Class[];
@@ -41,7 +42,7 @@ export function AiStudentImporter({ classes, onSaveAll }: AiStudentImporterProps
                 method: 'POST',
                 body: JSON.stringify({ 
                     prompt: rawText, 
-                    model: localStorage.getItem('arcade_ai_model') || 'gpt-4o-mini',
+                    model: getArcadeAiModelFromStorage(),
                     classNames,
                     schoolId,
                 })

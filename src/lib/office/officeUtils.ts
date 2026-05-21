@@ -80,6 +80,12 @@ export type OfficeDashboardInsights = {
   overdueInvoiceCount: number;
   openBalanceCents: number;
   studentsMissingGrades: number;
+  /** Number of students with at least one grade entry for the active term. */
+  studentsGraded: number;
+  /** 0–100 rounded percentage of students graded for the active term. */
+  gradeCompletionPct: number;
+  /** Number of invoices with status 'paid'. */
+  paidInvoiceCount: number;
   activeTerm: string;
   recentGrades: OfficeGradeEntry[];
   recentInvoices: OfficeInvoice[];
@@ -95,12 +101,20 @@ export function buildOfficeDashboardInsights(
   const openBalanceCents = invoices
     .filter(isInvoiceOpen)
     .reduce((sum, i) => sum + (i.amountCents || 0), 0);
+  const missingGrades = studentsWithoutGradesForTerm(students, gradeEntries, activeTerm).length;
+  const studentsGraded = students.length - missingGrades;
+  const gradeCompletionPct =
+    students.length > 0 ? Math.round((studentsGraded / students.length) * 100) : 100;
+  const paidInvoiceCount = invoices.filter((i) => i.status === 'paid').length;
 
   return {
     overdueInvoices,
     overdueInvoiceCount: overdueInvoices.length,
     openBalanceCents,
-    studentsMissingGrades: studentsWithoutGradesForTerm(students, gradeEntries, activeTerm).length,
+    studentsMissingGrades: missingGrades,
+    studentsGraded,
+    gradeCompletionPct,
+    paidInvoiceCount,
     activeTerm,
     recentGrades: gradeEntries.slice().sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 5),
     recentInvoices: invoices.slice().sort((a, b) => b.createdAt - a.createdAt).slice(0, 5),

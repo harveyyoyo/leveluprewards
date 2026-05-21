@@ -3,13 +3,15 @@ export const dynamic = 'force-dynamic';
 import { readFileSync } from 'fs';
 import path from 'path';
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import OpenAI from 'openai';
 import { guardAiRoute } from '@/lib/apiAuth';
 import { APP_NAME } from '@/lib/appBranding';
+import { STAFF_HELP_AI_MODEL } from '@/lib/aiModelPreference';
+import { buildStaffHelpCodeContextBlock } from '@/lib/staffHelpCodeContext';
 
-const MAX_MESSAGES = 18;
-const MAX_CONTENT_LEN = 3200;
+const MAX_MESSAGES = 10;
+const MAX_CONTENT_LEN = 2000;
+const STAFF_HELP_MAX_OUTPUT_TOKENS = 480;
 
 type ChatTurn = { role: 'user' | 'assistant'; content: string };
 
@@ -31,6 +33,7 @@ function buildSystemPrompt(context: {
   schoolId: string;
   pathname?: string;
   loginState?: string;
+  userMessage: string;
 }): string {
   const pathLine = context.pathname?.trim()
     ? `The staff member appears to be viewing this path (may be approximate): ${context.pathname.trim()}`
@@ -40,15 +43,35 @@ function buildSystemPrompt(context: {
     : 'Their sign-in role was not provided.';
 
   const base = loadProductKnowledgeMarkdown();
+  const { block: codeBlock, files: codeFiles } = buildStaffHelpCodeContextBlock({
+    pathname: context.pathname,
+    userMessage: context.userMessage,
+  });
+  const codeLine =
+    codeFiles.length > 0
+      ? `Relevant UI source excerpts were loaded from ${codeFiles.length} file(s) in the deployed app.`
+      : 'No matching UI source excerpts were loaded for this question.';
 
-  return `${base}
+  const sections = [
+    base,
+    '',
+    '**Session**',
+    `- The opaque school id for this session is: ${context.schoolId}`,
+    '',
+    '**Context for this question**',
+    `- ${pathLine}`,
+    `- ${roleLine}`,
+    `- ${codeLine}`,
+    '',
+    '**Response style**',
+    '- Be brief: short paragraphs or bullets; avoid long preamble.',
+  ];
 
-**Session**
-- The opaque school id for this session is: ${context.schoolId}
+  if (codeBlock) {
+    sections.push('', codeBlock);
+  }
 
-**Context for this question**
-- ${pathLine}
-- ${roleLine}`;
+  return sections.join('\n');
 }
 
 function normalizeMessages(raw: unknown): ChatTurn[] | null {
@@ -108,15 +131,7 @@ function userFacingChatError(e: unknown): string {
   return 'Could not complete the chat request. If this keeps happening, ask your tech contact to check server logs for staff-help-chat.';
 }
 
-function isProviderAuthConfigError(e: unknown): boolean {
-  const msg = e instanceof Error ? e.message : String(e);
-  return /401|403|API key not valid|invalid api key|leaked|PERMISSION_DENIED|permission denied|billing|payment required|insufficient/i.test(
-    msg,
-  );
-}
-
 async function generateOpenAiReply(params: {
-  model: string;
   systemInstruction: string;
   messages: ChatTurn[];
 }): Promise<string> {
@@ -136,10 +151,10 @@ async function generateOpenAiReply(params: {
 
   const openai = new OpenAI({ apiKey: effectiveKey });
   const response = await openai.chat.completions.create({
-    model: params.model,
+    model: STAFF_HELP_AI_MODEL,
     messages: openaiMessages,
-    max_tokens: 900,
-    temperature: 0.4,
+    max_tokens: STAFF_HELP_MAX_OUTPUT_TOKENS,
+    temperature: 0.3,
   });
   return response.choices[0]?.message?.content?.trim() || '';
 }
@@ -158,10 +173,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'schoolId is required.' }, { status: 400 });
     }
 
-    const modelRaw = body.model;
-    const selectedModel =
-      typeof modelRaw === 'string' && modelRaw.trim() ? modelRaw.trim() : 'gpt-4o-mini';
-
     const pathname = typeof body.pathname === 'string' ? body.pathname : undefined;
     const loginState = typeof body.loginState === 'string' ? body.loginState : undefined;
 
@@ -173,67 +184,23 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const systemInstruction = buildSystemPrompt({ schoolId, pathname, loginState });
+    const lastUserMessage = messages[messages.length - 1]!.content;
+    const systemInstruction = buildSystemPrompt({
+      schoolId,
+      pathname,
+      loginState,
+      userMessage: lastUserMessage,
+    });
 
-    let reply = '';
-
-    if (selectedModel.startsWith('gpt')) {
-      reply = await generateOpenAiReply({
-        model: selectedModel as 'gpt-4o-mini',
-        systemInstruction,
-        messages,
-      });
-    } else {
-      const effectiveKey = process.env.GEMINI_API_KEY;
-      if (!effectiveKey) {
-        return NextResponse.json(
-          { error: 'Gemini API key is not configured on the server.' },
-          { status: 503 },
-        );
-      }
-
-      const genAI = new GoogleGenerativeAI(effectiveKey);
-      const activeModel = genAI.getGenerativeModel({
-        model: selectedModel,
-        systemInstruction,
-      });
-
-      try {
-        if (messages.length === 1) {
-          const result = await activeModel.generateContent(messages[0]!.content);
-          reply = result.response.text().trim();
-        } else {
-          const history = messages.slice(0, -1).map((m) => ({
-            role: m.role === 'assistant' ? ('model' as const) : ('user' as const),
-            parts: [{ text: m.content }],
-          }));
-          const lastUser = messages[messages.length - 1]!.content;
-          const chat = activeModel.startChat({ history });
-          const result = await chat.sendMessage(lastUser);
-          reply = result.response.text().trim();
-        }
-      } catch (e) {
-        if (!isProviderAuthConfigError(e) || !process.env.OPENAI_API_KEY) {
-          throw e;
-        }
-        console.warn(
-          'staff-help-chat: Gemini provider rejected key/config; falling back to OpenAI gpt-4o-mini.',
-        );
-        reply = await generateOpenAiReply({
-          model: 'gpt-4o-mini',
-          systemInstruction,
-          messages,
-        });
-      }
-    }
+    const reply = await generateOpenAiReply({ systemInstruction, messages });
 
     if (!reply) {
       return NextResponse.json({ error: 'The model returned an empty reply.' }, { status: 500 });
     }
 
     return NextResponse.json({
-      reply: reply.slice(0, 8000),
-      model: selectedModel,
+      reply: reply.slice(0, 6000),
+      model: STAFF_HELP_AI_MODEL,
     });
   } catch (e) {
     console.error('staff-help-chat:', e);

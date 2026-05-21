@@ -3,8 +3,6 @@
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useAppContext } from '@/components/AppProvider';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { collection } from 'firebase/firestore';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import {
     Dialog,
     DialogContent,
@@ -31,13 +29,13 @@ import {
     Settings, Volume2, VolumeX, Monitor, Smartphone, ChevronRight,
     Shield, Moon, Sun, ArrowLeft, Palette, Zap, Trophy,
     BarChart3, MessageSquare, ShoppingBag, ShieldCheck, Star,
-    Users, Database, Printer, LayoutDashboard, History, HelpCircle,
+    Users, Printer, LayoutDashboard, History, HelpCircle,
     Cpu, Cog, Lock, Sparkles, Trash2, RotateCcw, Smile, BookOpen, Tv,
     Layers, UsersRound, Ticket, Loader2
 } from 'lucide-react';
 import { useSettings, colorSchemes, type ColorScheme, type Settings as AppSettings } from '../providers/SettingsProvider';
 import { normalizeDisplayModePreference } from '@/lib/displayMode';
-import type { BackupInfo, StudentTheme } from '@/lib/types';
+import type { StudentTheme } from '@/lib/types';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useToast } from '@/hooks/use-toast';
 import { VendingMotorPanel } from '@/components/VendingMotorPanel';
@@ -45,12 +43,11 @@ import { ANIMATED_BACKGROUND_STYLES, type AnimatedBackgroundStyle } from '@/lib/
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
 import { cn } from '@/lib/utils';
 import { WELCOME_GREETING_STYLES } from '@/components/WelcomeGreeting';
-import { AdminBackupsTab } from '@/app/[schoolId]/admin/sections/AdminBackupsTab';
 import { IdCardPrinterSettingsSection } from '@/components/settings/IdCardPrinterSettingsSection';
 import { PRODUCT_PILLAR_LABELS } from '@/lib/productPillars';
-import { officePortalEntryHref } from '@/lib/officePublicUrl';
+import { OfficePortalEntryLink } from '@/components/office/OfficePortalEntryLink';
 
-type SettingsView = 'hub' | 'interface' | 'security' | 'features' | 'pillars' | 'developer';
+type SettingsView = 'hub' | 'interface' | 'security' | 'features' | 'pillars';
 type RoleView = 'global' | 'student' | 'teacher';
 type PreviewMode = 'live' | 'draft';
 
@@ -241,15 +238,11 @@ export function SettingsModal() {
         login,
         isAdmin,
         schoolId,
-        devCreateBackup,
-        devRestoreFromBackup,
-        devDownloadBackup,
     } = useAppContext();
     const canOpenSettings = loginState === 'admin' || loginState === 'developer' || loginState === 'teacher';
     const { settings, settingsPreferences, updateSettings } = useSettings();
     const playSound = useArcadeSound();
     const { toast } = useToast();
-    const firestore = useFirestore();
     const [open, setOpen] = useState(false);
     const [adminDialogOpen, setAdminDialogOpen] = useState(false);
     const [adminPasscode, setAdminPasscode] = useState('');
@@ -415,7 +408,6 @@ export function SettingsModal() {
         security: 'Settings',
         features: 'Settings',
         pillars: 'Product Pillars',
-        developer: 'Developer tools',
     };
 
     const openSettingsView = useCallback(
@@ -425,31 +417,6 @@ export function SettingsModal() {
         },
         [local.soundEnabled, playSound],
     );
-
-    const backupsQuery = useMemoFirebase(
-        () => (firestore && schoolId && loginState === 'developer' ? collection(firestore, 'schools', schoolId, 'backups') : null),
-        [firestore, schoolId, loginState],
-    );
-    const { data: backups } = useCollection<BackupInfo>(backupsQuery);
-
-    const handleCreateBackup = async () => {
-        if (!schoolId) return;
-        await devCreateBackup(schoolId);
-        playSound('success');
-        toast({ title: 'Backup created', description: 'A new snapshot has been saved.' });
-    };
-
-    const handleRestoreFromBackup = async (backupId: string) => {
-        if (!schoolId) return;
-        await devRestoreFromBackup(schoolId, backupId);
-        playSound('success');
-        toast({ title: 'Restore complete', description: 'School data has been restored from the snapshot.' });
-    };
-
-    const handleDownloadBackup = async (backupId: string) => {
-        if (!schoolId) return;
-        await devDownloadBackup(schoolId, backupId);
-    };
 
     const visibleStyles = ANIMATED_BACKGROUND_STYLES.filter(s => !(local.hiddenAnimatedBackgroundIds || []).includes(s.id));
     const backdropActive = globalAnimatedBackdropActive(local);
@@ -489,7 +456,6 @@ export function SettingsModal() {
             if (requested === 'interface') return 'interface';
             if (requested === 'security') return 'security';
             if (requested === 'pillars') return 'pillars';
-            if (requested === 'developer') return 'developer';
             return null;
         })();
         if (!requestedView) return;
@@ -747,29 +713,6 @@ export function SettingsModal() {
                                     Sessions, printing, kiosk options, shop features, and more
                                 </span>
                             </button>
-                            {loginState === 'developer' && (
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setView('developer');
-                                        if (local.soundEnabled) playSound('click');
-                                    }}
-                                    className={cn(
-                                        'flex flex-col items-start gap-2 rounded-2xl border-2 p-4 text-left transition-all',
-                                        'border-fuchsia-200 dark:border-fuchsia-900/50 bg-fuchsia-50/80 dark:bg-fuchsia-950/20',
-                                        'hover:bg-fuchsia-100/80 dark:hover:bg-fuchsia-950/35',
-                                    )}
-                                >
-                                    <div className="flex w-full items-start justify-between gap-2">
-                                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-fuchsia-600 text-white shadow-inner">
-                                            <Database className="h-5 w-5" />
-                                        </span>
-                                        <ChevronRight className="h-5 w-5 shrink-0 text-fuchsia-700/50 dark:text-fuchsia-400/50" aria-hidden />
-                                    </div>
-                                    <span className="font-black text-fuchsia-900 dark:text-fuchsia-100">Developer tools</span>
-                                    <span className="text-xs leading-snug text-fuchsia-800/90 dark:text-fuchsia-200/80">Create, download, and restore snapshots for this school</span>
-                                </button>
-                            )}
                             {isAdmin && (
                                 <button
                                     type="button"
@@ -793,17 +736,6 @@ export function SettingsModal() {
                                     <span className="text-xs leading-snug text-emerald-800/90 dark:text-emerald-200/80">Select active paid plan products</span>
                                 </button>
                             )}
-                        </div>
-                    )}
-
-                    {view === 'developer' && loginState === 'developer' && (
-                        <div className="space-y-4">
-                            <AdminBackupsTab
-                                backups={backups}
-                                onCreateBackup={handleCreateBackup}
-                                onDownloadBackup={handleDownloadBackup}
-                                onRestoreFromBackup={handleRestoreFromBackup}
-                            />
                         </div>
                     )}
 
@@ -1459,44 +1391,22 @@ export function SettingsModal() {
                                         ) : null}
                                     </div>
 
-                                    <div className="space-y-2 border-t border-slate-200/60 dark:border-slate-700/50 pt-4">
-                                        <p className="text-sm font-bold">Coupon redemption methods</p>
-                                        <p className="text-[11px] text-muted-foreground">
-                                            Choose how students can enter coupon codes after sign-in.
-                                        </p>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                                            <div className="flex items-center justify-between gap-3">
-                                                <span className="text-xs font-bold">Manual / USB</span>
-                                                <Switch
-                                                    checked={local.kioskCouponRedemptionManualEnabled !== false}
-                                                    onCheckedChange={(checked) => {
-                                                        handleToggle('kioskCouponRedemptionManualEnabled', checked);
-                                                        const nextManual = checked;
-                                                        const nextCamera = local.kioskCouponRedemptionCameraEnabled !== false;
-                                                        const mode = !nextManual && !nextCamera ? 'off' : nextManual && nextCamera ? 'both' : nextManual ? 'manual' : 'camera';
-                                                        handleToggle('kioskCouponRedemptionInput', mode);
-                                                    }}
-                                                    disabled={!isAdmin}
-                                                />
-                                            </div>
-                                            <div className="flex items-center justify-between gap-3">
-                                                <span className="text-xs font-bold">Webcam scan</span>
-                                                <Switch
-                                                    checked={local.kioskCouponRedemptionCameraEnabled !== false}
-                                                    onCheckedChange={(checked) => {
-                                                        handleToggle('kioskCouponRedemptionCameraEnabled', checked);
-                                                        const nextManual = local.kioskCouponRedemptionManualEnabled !== false;
-                                                        const nextCamera = checked;
-                                                        const mode = !nextManual && !nextCamera ? 'off' : nextManual && nextCamera ? 'both' : nextManual ? 'manual' : 'camera';
-                                                        handleToggle('kioskCouponRedemptionInput', mode);
-                                                    }}
-                                                    disabled={!isAdmin}
-                                                />
-                                            </div>
+                                    <div className="flex items-center justify-between border-t border-slate-200/60 dark:border-slate-700/50 pt-4">
+                                        <div className="flex flex-col pr-4">
+                                            <span className="text-sm font-bold">Camera coupon scan</span>
+                                            <p className="text-[11px] text-muted-foreground">
+                                                Off by default — students use a USB barcode scanner. Turn on to scan coupons with the kiosk webcam instead.
+                                            </p>
                                         </div>
-                                        {!isAdmin ? (
-                                            <p className="text-[11px] text-muted-foreground">Admin only.</p>
-                                        ) : null}
+                                        <Switch
+                                            checked={local.kioskCouponRedemptionCameraEnabled === true}
+                                            onCheckedChange={(checked) => {
+                                                handleToggle('kioskCouponRedemptionCameraEnabled', checked);
+                                                handleToggle('kioskCouponRedemptionManualEnabled', !checked);
+                                                handleToggle('kioskCouponRedemptionInput', checked ? 'camera' : 'manual');
+                                            }}
+                                            disabled={!isAdmin}
+                                        />
                                     </div>
 
                                     <div className="flex items-center justify-between border-t border-slate-200/60 dark:border-slate-700/50 pt-4">
@@ -1627,10 +1537,15 @@ export function SettingsModal() {
                                         </div>
                                     )}
 
-                                    <div className="flex items-center justify-between border-t border-slate-200/60 dark:border-slate-700/50 pt-4">
-                                        <div className="flex items-center gap-2">
-                                            <HelpCircle className="w-4 h-4 text-muted-foreground" />
-                                            <span className="text-sm font-bold">Helper Tips</span>
+                                    <div className="flex items-center justify-between border-t border-slate-200/60 dark:border-slate-700/50 pt-4 gap-4">
+                                        <div className="min-w-0">
+                                            <div className="flex items-center gap-2">
+                                                <HelpCircle className="w-4 h-4 text-muted-foreground shrink-0" />
+                                                <span className="text-sm font-bold">Helper Tips</span>
+                                            </div>
+                                            <p className="text-xs text-muted-foreground mt-1 pl-6">
+                                                Hover the ? beside section titles for a short explanation.
+                                            </p>
                                         </div>
                                         <Switch
                                             checked={local.enableHelperMode}
@@ -1733,14 +1648,10 @@ export function SettingsModal() {
                                                                 aria-label={PRODUCT_PILLAR_LABELS.payOffice}
                                                             />
                                                             {local.payOffice === true && schoolId ? (
-                                                                <a
-                                                                    href={officePortalEntryHref(schoolId)}
-                                                                    target="_blank"
-                                                                    rel="noreferrer"
+                                                                <OfficePortalEntryLink
+                                                                    schoolId={schoolId}
                                                                     className="text-[11px] font-bold text-teal-700 underline underline-offset-4 hover:text-teal-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:text-teal-300 dark:hover:text-teal-100"
-                                                                >
-                                                                    Open School Office
-                                                                </a>
+                                                                />
                                                             ) : null}
                                                         </div>
                                                     </div>

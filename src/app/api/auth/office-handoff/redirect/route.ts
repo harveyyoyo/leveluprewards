@@ -7,6 +7,7 @@ import {
 } from '@/lib/auth/schoolGateCookie';
 import { verifySchoolGateJwt } from '@/lib/auth/verifySchoolGateJwt';
 import { canonicalOfficeHost } from '@/lib/officeRouting';
+import { canonicalPortalHost } from '@/lib/portalRouting';
 import { signOfficeHandoffMeta } from '@/lib/auth/officeHandoff';
 import { getFirebaseAdminAuth } from '@/lib/server/firebaseAdminAuth';
 import { authCookieFlags } from '@/lib/auth/authCookieOptions';
@@ -28,7 +29,15 @@ export async function GET(req: NextRequest) {
 
   const fbRaw = req.cookies.get(FIREBASE_SESSION_COOKIE_NAME)?.value;
   if (!fbRaw) {
-    return jsonError(401, 'Sign in on the portal first.');
+    const handoffPath = `/api/auth/office-handoff/redirect?school=${encodeURIComponent(schoolRaw)}`;
+    const portalHost = canonicalPortalHost();
+    const scheme = req.nextUrl.protocol || 'https:';
+    const loginBase = portalHost
+      ? new URL(`${scheme}//${portalHost}/login`)
+      : new URL('/login', req.nextUrl.origin);
+    loginBase.searchParams.set('school', schoolRaw);
+    loginBase.searchParams.set('next', handoffPath);
+    return NextResponse.redirect(loginBase);
   }
 
   const verified = await verifyFirebaseAuthJwt(fbRaw);

@@ -1,16 +1,13 @@
 'use client';
 
-import Link from 'next/link';
-import { BookMarked, ExternalLink } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { BookMarked } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Helper } from '@/components/ui/helper';
-import { Button } from '@/components/ui/button';
 import { useSettings } from '@/components/providers/SettingsProvider';
-import { useAppContext } from '@/components/AppProvider';
 import {
   LIBRARY_REWARD_MODE_LABELS,
   resolveLibraryRewardMode,
@@ -19,11 +16,9 @@ import {
 import type { Category } from '@/lib/types';
 
 export function LibraryPolicySettingsCard({ categories }: { categories?: Category[] | null }) {
-  const { schoolId } = useAppContext();
   const { settings, updateSettings } = useSettings();
   const categoryList = categories ?? [];
   const rewardMode = resolveLibraryRewardMode(settings);
-  const portalHref = schoolId ? `/${schoolId}/library/self-checkout` : '#';
 
   const setRewardMode = (mode: LibraryRewardMode) => {
     const updates: Parameters<typeof updateSettings>[0] = { libraryRewardMode: mode };
@@ -38,14 +33,12 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
     <div className="space-y-4">
       <Card className="border-dashed">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <BookMarked className="h-4 w-4 text-primary" />
-            Loans &amp; returns
-          </CardTitle>
-          <CardDescription>
-            Choose whether late or on-time returns affect fines, school reward points, a separate library balance, or
-            nothing at all.
-          </CardDescription>
+          <Helper content="Choose whether late or on-time returns affect fines, school reward points, a separate library balance, or nothing at all.">
+            <CardTitle className="text-base flex items-center gap-2">
+              <BookMarked className="h-4 w-4 text-primary" />
+              Loans &amp; returns
+            </CardTitle>
+          </Helper>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2 sm:col-span-2">
@@ -153,36 +146,6 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
                 </div>
               ) : null}
             </>
-          ) : null}
-        </CardContent>
-      </Card>
-
-      <Card className="border-dashed">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Student self-checkout portal</CardTitle>
-          <CardDescription>
-            A full-screen kiosk page: students scan their ID card, then scan each book. Staff need an admin or
-            librarian passcode to leave the page.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2">
-            <div>
-              <p className="text-sm font-semibold">Auto library student portal</p>
-              <p className="text-xs text-muted-foreground">Enable the dedicated self-checkout URL for a library iPad</p>
-            </div>
-            <Switch
-              checked={settings.libraryAutoStudentPortalEnabled === true}
-              onCheckedChange={(v) => updateSettings({ libraryAutoStudentPortalEnabled: v })}
-            />
-          </div>
-          {settings.libraryAutoStudentPortalEnabled && schoolId ? (
-            <Button variant="outline" className="rounded-xl w-full sm:w-auto" asChild>
-              <Link href={portalHref} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="mr-2 h-4 w-4" />
-                Open self-checkout portal
-              </Link>
-            </Button>
           ) : null}
         </CardContent>
       </Card>

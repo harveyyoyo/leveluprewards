@@ -18,10 +18,24 @@ import {
   Search,
   ArrowRightLeft,
   Trophy,
+  Link2,
+  PenLine,
+  Minus,
+  Plus as PlusIcon,
+  Sparkles,
 } from 'lucide-react';
+import { HouseSetupWizard } from '@/app/[schoolId]/admin/sections/HouseSetupWizard';
+import { ContentSectionTreeNav } from '@/components/ui/content-section-tree-nav';
+import { AdminHouseHallOfFamePanel } from '@/app/[schoolId]/admin/sections/AdminHouseHallOfFamePanel';
+import {
+  buildHouseHallOfFameHref,
+  housePointsSourceSettingsPatch,
+  isHouseStudentPointsRollupEnabled,
+  resolveHousePointsSource,
+} from '@/lib/housePointsSettings';
 import { useConfirm } from '@/components/providers/ConfirmProvider';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Helper } from '@/components/ui/helper';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -51,6 +65,14 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { HouseBadge } from '@/components/houses/HouseBadge';
+import {
+  HouseStandingsChartBlock,
+  type HouseStandingsChartFormat,
+  HOUSE_STANDINGS_FORMAT_OPTIONS,
+} from '@/components/houses/HouseStandingsChartBlock';
+import { HouseStandingsInlineCell } from '@/components/houses/HouseStandingsInlineCell';
+import { buildHouseStandingsRows } from '@/lib/houseStandings';
+import { resolveAppAbsoluteUrl } from '@/lib/appUrl';
 import type { House, Student, Teacher } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useSettings } from '@/components/providers/SettingsProvider';
@@ -105,6 +127,14 @@ export function AdminHousesTab({
   const [draftMotto, setDraftMotto] = useState('');
   const [memberSearch, setMemberSearch] = useState<Record<string, string>>({});
   const [transferStudent, setTransferStudent] = useState<{ student: Student; fromHouseId: string } | null>(null);
+  const [mainSection, setMainSection] = useState<'rosters' | 'hallOfFame'>('rosters');
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [pointsAdjustHouse, setPointsAdjustHouse] = useState<House | null>(null);
+  const [draftCurrentPts, setDraftCurrentPts] = useState('0');
+  const [draftLifetimePts, setDraftLifetimePts] = useState('0');
+
+  const housePointsSource = resolveHousePointsSource(settings);
+  const studentPointsRollup = isHouseStudentPointsRollupEnabled(settings);
 
   const sortedHouses = useMemo(
     () =>
@@ -284,15 +314,50 @@ export function AdminHousesTab({
     return `/${schoolId}/house-sorting?${params.toString()}`;
   }, [schoolId, unassignedStudents]);
 
-  const houseHallOfFameHref = useMemo(() => {
-    const params = new URLSearchParams();
-    params.set('fullscreen', '1');
-    params.set('rankType', 'houses');
-    params.set('sortBy', 'lifetimePoints');
-    params.set('scope', 'all');
-    params.set('podiumSize', '3');
-    return `/${schoolId}/hall-of-fame?${params.toString()}`;
-  }, [schoolId]);
+  const houseHallOfFameHref = useMemo(() => buildHouseHallOfFameHref(schoolId, settings), [schoolId, settings]);
+  const houseHallOfFameLaunchUrl = useMemo(() => resolveAppAbsoluteUrl(houseHallOfFameHref), [houseHallOfFameHref]);
+
+  const standingsRows = useMemo(
+    () => buildHouseStandingsRows(sortedHouses, students ?? []),
+    [sortedHouses, students],
+  );
+
+  const chartFormat = (settings.houseStandingsChartFormat as HouseStandingsChartFormat) ?? 'bars';
+
+  const openPointsAdjust = (house: House) => {
+    setPointsAdjustHouse(house);
+    setDraftCurrentPts(String(house.points ?? 0));
+    setDraftLifetimePts(String(house.lifetimePoints ?? 0));
+  };
+
+  const savePointsAdjust = async () => {
+    if (!pointsAdjustHouse) return;
+    const points = Math.max(0, parseInt(draftCurrentPts, 10) || 0);
+    const lifetimePoints = Math.max(points, parseInt(draftLifetimePts, 10) || 0);
+    setBusy('points');
+    try {
+      await onUpdateHouse({ ...pointsAdjustHouse, points, lifetimePoints });
+      toast({ title: 'House points updated', description: `${pointsAdjustHouse.name}: ${points.toLocaleString()} current · ${lifetimePoints.toLocaleString()} lifetime.` });
+      setPointsAdjustHouse(null);
+    } catch {
+      toast({ variant: 'destructive', title: 'Could not update house points' });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const nudgeHousePoints = async (house: House, deltaCurrent: number, deltaLifetime: number) => {
+    setBusy(`nudge-${house.id}`);
+    try {
+      const points = Math.max(0, (house.points ?? 0) + deltaCurrent);
+      const lifetimePoints = Math.max(0, (house.lifetimePoints ?? 0) + deltaLifetime);
+      await onUpdateHouse({ ...house, points, lifetimePoints });
+    } catch {
+      toast({ variant: 'destructive', title: 'Could not adjust points' });
+    } finally {
+      setBusy(null);
+    }
+  };
 
   return (
     <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden">
@@ -303,17 +368,21 @@ export function AdminHousesTab({
               <Home className="w-5 h-5 text-primary" /> Houses
             </CardTitle>
           </Helper>
-          <CardDescription>
-            Build school spirit with named houses, assignments, and competitive totals.
-          </CardDescription>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <TabWalkthroughHeaderAction />
+          <Button
+            variant="default"
+            className="rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white border-0"
+            onClick={() => setWizardOpen(true)}
+          >
+            <Sparkles className="mr-2 h-4 w-4" /> Setup wizard
+          </Button>
           <Button variant="outline" className="rounded-xl" asChild>
-            <Link href={houseHallOfFameHref} target="_blank" rel="noopener noreferrer">
+            <a href={houseHallOfFameLaunchUrl} target="_blank" rel="noopener noreferrer">
               <Trophy className="mr-2 h-4 w-4" /> House Hall of Fame
               <ExternalLink className="ml-1.5 h-3.5 w-3.5 opacity-60" />
-            </Link>
+            </a>
           </Button>
           <Button variant="outline" className="rounded-xl" asChild>
             <Link href={sortingHref} target="_blank" rel="noopener noreferrer">
@@ -334,15 +403,17 @@ export function AdminHousesTab({
             )}
             Populate sample
           </Button>
-          <Button
-            variant="outline"
-            className="rounded-xl"
-            disabled={busy !== null || sortedHouses.length === 0}
-            onClick={() => void runSyncTotals()}
-          >
-            {busy === 'sync' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-            Sync totals
-          </Button>
+          {studentPointsRollup ? (
+            <Button
+              variant="outline"
+              className="rounded-xl"
+              disabled={busy !== null || sortedHouses.length === 0}
+              onClick={() => void runSyncTotals()}
+            >
+              {busy === 'sync' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+              Sync from students
+            </Button>
+          ) : null}
           <Button className="rounded-xl" onClick={() => openEditor(null)}>
             <Plus className="mr-2 h-4 w-4" /> Add house
           </Button>
@@ -350,22 +421,72 @@ export function AdminHousesTab({
       </CardHeader>
 
       <CardContent className="space-y-6">
-        <div className="grid gap-4 rounded-2xl border bg-muted/20 p-4 sm:grid-cols-2">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                Roll up points to houses
-              </Label>
-              <p className="text-xs text-muted-foreground mt-1">
-                When teachers award points, house totals update automatically.
-              </p>
-            </div>
-            <Switch
-              checked={settings.housesRollupPoints !== false}
-              onCheckedChange={(v) => updateSettings({ housesRollupPoints: v })}
-            />
+        <ContentSectionTreeNav
+          branchLabel="Houses"
+          items={[
+            { id: 'rosters', label: 'Rosters & Points' },
+            { id: 'hallOfFame', label: 'House Hall of Fame' },
+          ]}
+          value={mainSection}
+          onValueChange={(id) => setMainSection(id as 'rosters' | 'hallOfFame')}
+          className="bg-muted/50 p-1.5 rounded-2xl border"
+        />
+
+        {mainSection === 'hallOfFame' ? (
+          <AdminHouseHallOfFamePanel schoolId={schoolId} />
+        ) : (
+        <>
+        <div className="space-y-3 rounded-2xl border bg-muted/20 p-4">
+          <div>
+            <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+              House points source
+            </Label>
+            <p className="text-xs text-muted-foreground mt-1">
+              Choose whether house standings follow the student rewards system or use separate manual house scores.
+            </p>
           </div>
-          <div className="flex items-center justify-between gap-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => updateSettings(housePointsSourceSettingsPatch('studentRollup'))}
+              className={cn(
+                'rounded-2xl border p-4 text-left transition-all',
+                housePointsSource === 'studentRollup'
+                  ? 'border-primary ring-2 ring-primary/20 bg-primary/[0.04]'
+                  : 'border-border bg-card hover:bg-muted/30',
+              )}
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <Link2 className="h-4 w-4 text-primary" aria-hidden />
+                <span className="text-sm font-bold">Linked to student rewards</span>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                When teachers award points or students redeem coupons, each house total updates automatically. Use Sync from students to rebuild totals.
+              </p>
+            </button>
+            <button
+              type="button"
+              onClick={() => updateSettings(housePointsSourceSettingsPatch('manual'))}
+              className={cn(
+                'rounded-2xl border p-4 text-left transition-all',
+                housePointsSource === 'manual'
+                  ? 'border-amber-500 ring-2 ring-amber-500/20 bg-amber-500/[0.04]'
+                  : 'border-border bg-card hover:bg-muted/30',
+              )}
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <PenLine className="h-4 w-4 text-amber-600" aria-hidden />
+                <span className="text-sm font-bold">Manual house points</span>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                House scores are edited here only—spirit events, sports days, or house challenges without changing student balances.
+              </p>
+            </button>
+          </div>
+        </div>
+
+        <div className="grid gap-4 rounded-2xl border bg-muted/20 p-4 sm:grid-cols-2">
+          <div className="flex items-center justify-between gap-3 sm:col-span-2">
             <div>
               <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
                 Show house on student kiosk
@@ -378,56 +499,6 @@ export function AdminHousesTab({
             />
           </div>
         </div>
-
-        {/* House comparison dashboard */}
-        {sortedHouses.length > 1 ? (() => {
-          const maxPts = Math.max(...sortedHouses.map((h) => h.points ?? 0), 1);
-          const totalStudents = (students || []).filter((s) => s.houseId).length;
-          const memberCounts = new Map(sortedHouses.map((h) => [h.id, (students || []).filter((s) => s.houseId === h.id).length]));
-          const avgMembersPerHouse = totalStudents > 0 ? Math.round(totalStudents / sortedHouses.length) : 0;
-          const imbalanceThreshold = Math.max(3, Math.round(avgMembersPerHouse * 0.35));
-          const ranked = [...sortedHouses].sort((a, b) => (b.points ?? 0) - (a.points ?? 0));
-
-          return (
-            <div className="rounded-2xl border bg-muted/20 p-4 space-y-3">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                House standings
-              </p>
-              <div className="space-y-2">
-                {ranked.map((house, i) => {
-                  const pts = house.points ?? 0;
-                  const pct = maxPts > 0 ? Math.round((pts / maxPts) * 100) : 0;
-                  const members = memberCounts.get(house.id) ?? 0;
-                  const perCapita = members > 0 ? Math.round(pts / members) : 0;
-                  const imbalanced = Math.abs(members - avgMembersPerHouse) >= imbalanceThreshold;
-                  return (
-                    <div key={house.id} className="flex items-center gap-3">
-                      <span className="w-5 shrink-0 text-xs font-black text-muted-foreground tabular-nums text-center">
-                        {i + 1}
-                      </span>
-                      <HouseBadge house={house} size="sm" className="shrink-0 w-28 justify-center" />
-                      <div className="flex-1 min-w-0 space-y-0.5">
-                        <div className="w-full bg-muted/40 rounded-full h-2.5 overflow-hidden">
-                          <div
-                            className="h-full rounded-full transition-all duration-500"
-                            style={{ width: `${pct}%`, backgroundColor: house.color }}
-                          />
-                        </div>
-                        <div className="flex justify-between text-[10px] text-muted-foreground">
-                          <span className="font-bold tabular-nums">{pts.toLocaleString()} pts</span>
-                          <span className={cn('tabular-nums', imbalanced && 'text-amber-600 dark:text-amber-400 font-bold')}>
-                            {members} member{members !== 1 ? 's' : ''} · {perCapita} avg
-                            {imbalanced ? ' ⚠' : ''}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })() : null}
 
         {unassignedStudents.length > 0 && sortedHouses.length > 0 ? (
           <div className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm">
@@ -459,19 +530,64 @@ export function AdminHousesTab({
           <EmptyState
             icon={Home}
             title="No houses yet"
-            description="Add houses manually or load a starter theme pack (Quick demo, Classic virtues, or Yeshiva middot)."
+            description="Run the setup wizard for a guided start, or load a sample theme pack manually."
             action={{
+              label: 'Setup wizard',
+              onClick: () => setWizardOpen(true),
+              icon: Sparkles,
+            }}
+            secondaryAction={{
               label: 'Populate sample',
               onClick: () => setSampleDialogOpen(true),
               icon: FlaskConical,
             }}
           />
         ) : (
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                Houses — ranked by points
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                {sortedHouses.length > 1 ? (
+                  <Select
+                    value={chartFormat}
+                    onValueChange={(v) => updateSettings({ houseStandingsChartFormat: v as HouseStandingsChartFormat })}
+                  >
+                    <SelectTrigger className="h-8 w-[10.5rem] rounded-lg text-xs font-semibold">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {HOUSE_STANDINGS_FORMAT_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.id} value={opt.id}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : null}
+                <Button className="rounded-xl" size="sm" onClick={() => openEditor(null)}>
+                  <Plus className="mr-2 h-4 w-4" /> Add house
+                </Button>
+              </div>
+            </div>
+
+            {sortedHouses.length > 1 ? (
+              <HouseStandingsChartBlock
+                houses={sortedHouses}
+                students={students ?? []}
+                format={chartFormat}
+                onFormatChange={(format) => updateSettings({ houseStandingsChartFormat: format })}
+              />
+            ) : null}
+
           <ul className="space-y-4 pr-1">
             <AdminRecordListHeader
-              gridClassName="grid-cols-[minmax(140px,1fr)_100px_100px_90px_44px_44px]"
+              gridClassName="grid-cols-[36px_minmax(120px,1fr)_minmax(110px,1.2fr)_80px_80px_72px_40px_40px]"
               columns={[
+                { label: '#' },
                 { label: 'House' },
+                { label: 'Standings' },
                 { label: 'Current' },
                 { label: 'Lifetime' },
                 { label: 'Members' },
@@ -479,7 +595,8 @@ export function AdminHousesTab({
                 { label: 'Delete', className: 'text-right' },
               ]}
             />
-            {sortedHouses.map((house) => {
+            {standingsRows.map((row) => {
+              const house = row.house;
               const houseStudents = (students || []).filter((s) => s.houseId === house.id);
               const availableStudents = (students || [])
                 .filter((s) => s.houseId !== house.id)
@@ -495,17 +612,65 @@ export function AdminHousesTab({
                   key={house.id}
                   className="flex flex-col overflow-hidden rounded-2xl border border-primary/20 bg-secondary/45 transition-all hover:border-primary/40"
                 >
-                  <div className="grid grid-cols-[minmax(140px,1fr)_100px_100px_90px_44px_44px] items-center gap-3 p-3">
+                  <div className="grid grid-cols-[36px_minmax(120px,1fr)_minmax(110px,1.2fr)_80px_80px_72px_40px_40px] items-center gap-2 p-3">
+                    <span className="text-center text-xs font-black tabular-nums text-muted-foreground">
+                      {row.rank}
+                    </span>
                     <div className="flex min-w-0 items-center gap-2">
                       <HouseBadge house={house} size="sm" />
                       {house.value ? (
                         <span className="truncate text-[10px] font-medium text-muted-foreground">{house.value}</span>
                       ) : null}
                     </div>
-                    <div className="text-sm font-bold tabular-nums">{house.points ?? 0}</div>
-                    <div className="text-sm font-bold tabular-nums text-muted-foreground">
-                      {house.lifetimePoints ?? 0}
-                    </div>
+                    <HouseStandingsInlineCell row={row} />
+                    {housePointsSource === 'manual' ? (
+                      <div className="flex items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="h-7 w-7 shrink-0"
+                          disabled={busy !== null}
+                          onClick={() => void nudgeHousePoints(house, -5, 0)}
+                          aria-label={`Remove 5 points from ${house.name}`}
+                        >
+                          <Minus className="h-3 w-3" />
+                        </Button>
+                        <button
+                          type="button"
+                          className="min-w-[3rem] text-sm font-bold tabular-nums underline-offset-2 hover:underline"
+                          onClick={() => openPointsAdjust(house)}
+                        >
+                          {house.points ?? 0}
+                        </button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="h-7 w-7 shrink-0"
+                          disabled={busy !== null}
+                          onClick={() => void nudgeHousePoints(house, 5, 5)}
+                          aria-label={`Add 5 points to ${house.name}`}
+                        >
+                          <PlusIcon className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="text-sm font-bold tabular-nums">{house.points ?? 0}</div>
+                    )}
+                    {housePointsSource === 'manual' ? (
+                      <button
+                        type="button"
+                        className="text-sm font-bold tabular-nums text-muted-foreground underline-offset-2 hover:underline text-left"
+                        onClick={() => openPointsAdjust(house)}
+                      >
+                        {house.lifetimePoints ?? 0}
+                      </button>
+                    ) : (
+                      <div className="text-sm font-bold tabular-nums text-muted-foreground">
+                        {house.lifetimePoints ?? 0}
+                      </div>
+                    )}
                     <Button
                       variant="outline"
                       size="sm"
@@ -663,8 +828,20 @@ export function AdminHousesTab({
               );
             })}
           </ul>
+          </div>
+        )}
+        </>
         )}
       </CardContent>
+
+      <HouseSetupWizard
+        open={wizardOpen}
+        onOpenChange={setWizardOpen}
+        schoolId={schoolId}
+        houses={sortedHouses}
+        students={students ?? []}
+        updateSettings={updateSettings}
+      />
 
       <AlertDialog open={sampleDialogOpen} onOpenChange={setSampleDialogOpen}>
         <AlertDialogContent>
@@ -780,6 +957,54 @@ export function AdminHousesTab({
       </Dialog>
 
       {/* Transfer student dialog */}
+      <Dialog open={pointsAdjustHouse !== null} onOpenChange={(open) => { if (!open) setPointsAdjustHouse(null); }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>House points</DialogTitle>
+          </DialogHeader>
+          {pointsAdjustHouse ? (
+            <div className="space-y-4 py-2">
+              <div className="flex items-center gap-2">
+                <HouseBadge house={pointsAdjustHouse} size="sm" />
+                <p className="text-sm font-semibold">{pointsAdjustHouse.name}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label>Current points</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={draftCurrentPts}
+                    onChange={(e) => setDraftCurrentPts(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label>Lifetime points</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={draftLifetimePts}
+                    onChange={(e) => setDraftLifetimePts(e.target.value)}
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Manual house points do not change student balances. Lifetime should be at least the current total.
+              </p>
+            </div>
+          ) : null}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPointsAdjustHouse(null)}>
+              Cancel
+            </Button>
+            <Button onClick={() => void savePointsAdjust()} disabled={busy === 'points'}>
+              {busy === 'points' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={transferStudent !== null} onOpenChange={(open) => { if (!open) setTransferStudent(null); }}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
