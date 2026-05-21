@@ -1,5 +1,7 @@
 import type { User } from 'firebase/auth';
 
+import { isAllowedGoogleEmailOnAllowlist } from '@/lib/googleAllowlist';
+
 export function getDeveloperGoogleEmailAllowlist(): string[] {
   return (process.env.NEXT_PUBLIC_DEVELOPER_GOOGLE_EMAIL_ALLOWLIST ?? '')
     .split(',')
@@ -16,8 +18,6 @@ export function isAllowedDeveloperGoogleUser(user: User | null | undefined): boo
   const hasGoogleProvider = user.providerData.some((p) => p.providerId === 'google.com');
   if (!hasGoogleProvider) return false;
 
-  const allowlist = getDeveloperGoogleEmailAllowlist();
-  if (allowlist.length === 0) return true; // allow all Google users if list not configured
-  return allowlist.includes(email);
+  return isAllowedGoogleEmailOnAllowlist(email, getDeveloperGoogleEmailAllowlist());
 }
 

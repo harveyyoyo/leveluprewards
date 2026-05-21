@@ -5,6 +5,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { signInAttendance } from "./signInAttendance";
 import { studentMayRedeemCouponData } from "./couponRedemption";
 import { decryptField } from "./crypto";
+import { isAllowedGoogleEmailOnAllowlist } from "./googleAllowlist";
 
 admin.initializeApp();
 
@@ -115,8 +116,7 @@ function isAllowedGoogleAdminBypass(context: functions.https.CallableContext): b
   const email = (context.auth?.token?.email ?? "").trim().toLowerCase();
   const provider = context.auth?.token?.firebase?.sign_in_provider;
   if (provider !== "google.com" || !email) return false;
-  const allowlist = developerGoogleEmailAllowlist();
-  return allowlist.length === 0 || allowlist.includes(email);
+  return isAllowedGoogleEmailOnAllowlist(email, developerGoogleEmailAllowlist());
 }
 
 // Demo schools should authenticate like any other school (no passcode bypass).
@@ -835,7 +835,8 @@ exports.addDeveloperMe = functions.https.onCall(
     const allowlistStr = process.env.DEVELOPER_GOOGLE_EMAIL_ALLOWLIST || process.env.NEXT_PUBLIC_DEVELOPER_GOOGLE_EMAIL_ALLOWLIST || "";
     const allowlist = allowlistStr.split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
 
-    const isGoogleDev = provider === "google.com" && email && (allowlist.length === 0 || allowlist.includes(email));
+    const isGoogleDev =
+      provider === "google.com" && email && isAllowedGoogleEmailOnAllowlist(email, allowlist);
 
     if (!isGoogleDev) {
       throw new functions.https.HttpsError(

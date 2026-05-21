@@ -19,6 +19,7 @@ const firestore_1 = require("firebase-admin/firestore");
 const signInAttendance_1 = require("./signInAttendance");
 const couponRedemption_1 = require("./couponRedemption");
 const crypto_1 = require("./crypto");
+const googleAllowlist_1 = require("./googleAllowlist");
 admin.initializeApp();
 const SUBCOLLECTIONS = ["students", "classes", "teachers", "staffAccounts", "categories", "prizes", "coupons"];
 const RETENTION_DAYS = 30;
@@ -107,8 +108,7 @@ function isAllowedGoogleAdminBypass(context) {
     const provider = (_f = (_e = (_d = context.auth) === null || _d === void 0 ? void 0 : _d.token) === null || _e === void 0 ? void 0 : _e.firebase) === null || _f === void 0 ? void 0 : _f.sign_in_provider;
     if (provider !== "google.com" || !email)
         return false;
-    const allowlist = developerGoogleEmailAllowlist();
-    return allowlist.length === 0 || allowlist.includes(email);
+    return (0, googleAllowlist_1.isAllowedGoogleEmailOnAllowlist)(email, developerGoogleEmailAllowlist());
 }
 // Demo schools should authenticate like any other school (no passcode bypass).
 async function hasSchoolRole(schoolId, uid, roles) {
@@ -668,7 +668,7 @@ exports.addDeveloperMe = functions.https.onCall(async (_data, context) => {
     const provider = (_f = (_e = (_d = context.auth) === null || _d === void 0 ? void 0 : _d.token) === null || _e === void 0 ? void 0 : _e.firebase) === null || _f === void 0 ? void 0 : _f.sign_in_provider;
     const allowlistStr = process.env.DEVELOPER_GOOGLE_EMAIL_ALLOWLIST || process.env.NEXT_PUBLIC_DEVELOPER_GOOGLE_EMAIL_ALLOWLIST || "";
     const allowlist = allowlistStr.split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
-    const isGoogleDev = provider === "google.com" && email && (allowlist.length === 0 || allowlist.includes(email));
+    const isGoogleDev = provider === "google.com" && email && (0, googleAllowlist_1.isAllowedGoogleEmailOnAllowlist)(email, allowlist);
     if (!isGoogleDev) {
         throw new functions.https.HttpsError("permission-denied", "Developer access requires signing in with an allowed Google account.");
     }
