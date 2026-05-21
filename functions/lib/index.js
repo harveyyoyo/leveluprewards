@@ -19,6 +19,7 @@ const firestore_1 = require("firebase-admin/firestore");
 const signInAttendance_1 = require("./signInAttendance");
 const couponRedemption_1 = require("./couponRedemption");
 const crypto_1 = require("./crypto");
+const googleAllowlist_1 = require("./googleAllowlist");
 admin.initializeApp();
 const SUBCOLLECTIONS = ["students", "classes", "teachers", "staffAccounts", "categories", "prizes", "coupons"];
 const RETENTION_DAYS = 30;
@@ -90,6 +91,24 @@ function schoolAccessPasscodeFrom(data) {
 }
 function adminPasscodeFrom(data) {
     return trimmedString(data.adminPasscode) || trimmedString(data.passcode) || "";
+}
+function developerGoogleEmailAllowlist() {
+    const allowlistStr = process.env.DEVELOPER_GOOGLE_EMAIL_ALLOWLIST ||
+        process.env.NEXT_PUBLIC_DEVELOPER_GOOGLE_EMAIL_ALLOWLIST ||
+        "";
+    return allowlistStr
+        .split(",")
+        .map((e) => e.trim().toLowerCase())
+        .filter(Boolean);
+}
+/** Allowed Google accounts may provision school admin without the admin passcode. */
+function isAllowedGoogleAdminBypass(context) {
+    var _a, _b, _c, _d, _e, _f;
+    const email = ((_c = (_b = (_a = context.auth) === null || _a === void 0 ? void 0 : _a.token) === null || _b === void 0 ? void 0 : _b.email) !== null && _c !== void 0 ? _c : "").trim().toLowerCase();
+    const provider = (_f = (_e = (_d = context.auth) === null || _d === void 0 ? void 0 : _d.token) === null || _e === void 0 ? void 0 : _e.firebase) === null || _f === void 0 ? void 0 : _f.sign_in_provider;
+    if (provider !== "google.com" || !email)
+        return false;
+    return (0, googleAllowlist_1.isAllowedGoogleEmailOnAllowlist)(email, developerGoogleEmailAllowlist());
 }
 // Demo schools should authenticate like any other school (no passcode bypass).
 async function hasSchoolRole(schoolId, uid, roles) {
@@ -567,16 +586,19 @@ exports.verifySchoolPasscode = functions.https.onCall(async (data, context) => {
     if (!schoolDoc.exists) {
         throw new functions.https.HttpsError("not-found", "School not found.");
     }
-    if (passcode.length === 0) {
-        throw new functions.https.HttpsError("invalid-argument", "A valid passcode is required.");
-    }
-    const schoolData = schoolDoc.data();
-    const expected = adminPasscodeFrom(schoolData);
-    if (!expected) {
-        throw new functions.https.HttpsError("failed-precondition", "This school has no admin passcode configured. An administrator must set one before login is possible.");
-    }
-    if (!safeEqual(expected, passcode)) {
-        throw new functions.https.HttpsError("permission-denied", "Invalid passcode.");
+    const googleAdminBypass = isAllowedGoogleAdminBypass(context);
+    if (!googleAdminBypass) {
+        if (passcode.length === 0) {
+            throw new functions.https.HttpsError("invalid-argument", "A valid passcode is required.");
+        }
+        const schoolData = schoolDoc.data();
+        const expected = adminPasscodeFrom(schoolData);
+        if (!expected) {
+            throw new functions.https.HttpsError("failed-precondition", "This school has no admin passcode configured. An administrator must set one before login is possible.");
+        }
+        if (!safeEqual(expected, passcode)) {
+            throw new functions.https.HttpsError("permission-denied", "Invalid passcode.");
+        }
     }
     // Provision admin role using the Admin SDK (path must match client: schools/{schoolId}/roles_admin/{uid})
     const adminRoleRef = db.collection("schools").doc(schoolId).collection("roles_admin").doc(context.auth.uid);
@@ -646,7 +668,7 @@ exports.addDeveloperMe = functions.https.onCall(async (_data, context) => {
     const provider = (_f = (_e = (_d = context.auth) === null || _d === void 0 ? void 0 : _d.token) === null || _e === void 0 ? void 0 : _e.firebase) === null || _f === void 0 ? void 0 : _f.sign_in_provider;
     const allowlistStr = process.env.DEVELOPER_GOOGLE_EMAIL_ALLOWLIST || process.env.NEXT_PUBLIC_DEVELOPER_GOOGLE_EMAIL_ALLOWLIST || "";
     const allowlist = allowlistStr.split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
-    const isGoogleDev = provider === "google.com" && email && (allowlist.length === 0 || allowlist.includes(email));
+    const isGoogleDev = provider === "google.com" && email && (0, googleAllowlist_1.isAllowedGoogleEmailOnAllowlist)(email, allowlist);
     if (!isGoogleDev) {
         throw new functions.https.HttpsError("permission-denied", "Developer access requires signing in with an allowed Google account.");
     }
@@ -1231,7 +1253,7 @@ async function redeemCouponForStudent(db, schoolId, studentId, couponCode) {
         const code = String(coupon.code || couponCode);
         tx.set(studentRef.collection("activities").doc(), { desc: `Redeemed coupon: ${code} (${cat})`, amount: value, date: now });
         tx.update(couponRef, { used: true, usedAt: now, usedBy: studentId });
-        return { value, bonusTotal };
+        return { value, bonusTotal, category: categoryName };
     });
 }
 /** Callable: redeem coupon (server-authoritative; kiosk-safe). */
@@ -1263,6 +1285,7 @@ exports.redeemCouponServer = functions
         message: "Redeemed successfully",
         value: result.value,
         bonusTotal: result.bonusTotal,
+        category: result.category,
     };
 });
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -1327,12 +1350,27 @@ exports.libraryReturnServer = functions
             categoryName = catSnap.data().name.trim();
         }
     }
+    const rawRewardMode = typeof appSettings.libraryRewardMode === "string" ? appSettings.libraryRewardMode.trim() : "";
+    let rewardMode = "none";
+    if (rawRewardMode === "none" ||
+        rawRewardMode === "fines" ||
+        rawRewardMode === "app_points" ||
+        rawRewardMode === "isolated_points") {
+        rewardMode = rawRewardMode;
+    }
+    else if (categoryName && (lateFeesEnabled || onTimeReturnPoints > 0)) {
+        rewardMode = "app_points";
+    }
     const itemName = typeof itemData.name === "string" ? itemData.name.trim() : "Book";
     const now = Date.now();
     const daysOverdue = libraryDaysOverdue(itemData.dueAt, now);
     let pointsDelta = 0;
     let pointsMessage = "";
-    if (categoryName) {
+    if (rewardMode === "fines" && daysOverdue > 0 && lateFeesEnabled && latePointsPerDay > 0) {
+        pointsDelta = daysOverdue * latePointsPerDay;
+        pointsMessage = `Late return: ${pointsDelta} library fine${pointsDelta === 1 ? "" : "s"} added.`;
+    }
+    else if (rewardMode === "app_points" && categoryName) {
         if (daysOverdue > 0 && lateFeesEnabled && latePointsPerDay > 0) {
             pointsDelta = -(daysOverdue * latePointsPerDay);
             pointsMessage = `Late return: ${Math.abs(pointsDelta)} point(s) deducted (${categoryName}).`;
@@ -1340,6 +1378,16 @@ exports.libraryReturnServer = functions
         else if (daysOverdue === 0 && onTimeReturnPoints > 0) {
             pointsDelta = onTimeReturnPoints;
             pointsMessage = `On-time return: +${pointsDelta} point(s) (${categoryName}).`;
+        }
+    }
+    else if (rewardMode === "isolated_points") {
+        if (daysOverdue > 0 && lateFeesEnabled && latePointsPerDay > 0) {
+            pointsDelta = -(daysOverdue * latePointsPerDay);
+            pointsMessage = `Late return: ${Math.abs(pointsDelta)} library point(s) deducted.`;
+        }
+        else if (daysOverdue === 0 && onTimeReturnPoints > 0) {
+            pointsDelta = onTimeReturnPoints;
+            pointsMessage = `On-time return: +${pointsDelta} library point(s).`;
         }
     }
     await db.runTransaction(async (tx) => {
@@ -1352,25 +1400,41 @@ exports.libraryReturnServer = functions
             checkedOutAt: null,
             dueAt: null,
         });
-        if (pointsDelta !== 0 && studentSnap.exists) {
+        if (studentSnap.exists) {
             const studentData = studentSnap.data();
-            const currentPoints = typeof studentData.points === "number" ? studentData.points : 0;
-            const newPoints = Math.max(0, currentPoints + pointsDelta);
-            const categoryPoints = Object.assign({}, ((_a = studentData.categoryPoints) !== null && _a !== void 0 ? _a : {}));
-            categoryPoints[categoryName] = (categoryPoints[categoryName] || 0) + pointsDelta;
-            tx.update(studentRef, {
-                points: newPoints,
-                categoryPoints,
-                updatedAt: now,
-            });
-            const activityRef = studentRef.collection("activities").doc();
-            tx.set(activityRef, {
-                desc: pointsDelta < 0
-                    ? `Library late fee (${daysOverdue} day${daysOverdue === 1 ? "" : "s"}): ${itemName}`
-                    : `Library on-time bonus: ${itemName}`,
-                amount: pointsDelta,
-                date: now,
-            });
+            const studentUpdates = { updatedAt: now };
+            if (rewardMode === "fines" && pointsDelta > 0) {
+                const currentFines = typeof studentData.libraryFineBalance === "number" ? studentData.libraryFineBalance : 0;
+                studentUpdates.libraryFineBalance = currentFines + pointsDelta;
+            }
+            else if (rewardMode === "isolated_points" && pointsDelta !== 0) {
+                const currentLib = typeof studentData.libraryPoints === "number" ? studentData.libraryPoints : 0;
+                studentUpdates.libraryPoints = Math.max(0, currentLib + pointsDelta);
+            }
+            else if (rewardMode === "app_points" && pointsDelta !== 0 && categoryName) {
+                const currentPoints = typeof studentData.points === "number" ? studentData.points : 0;
+                const newPoints = Math.max(0, currentPoints + pointsDelta);
+                const categoryPoints = Object.assign({}, ((_a = studentData.categoryPoints) !== null && _a !== void 0 ? _a : {}));
+                categoryPoints[categoryName] = (categoryPoints[categoryName] || 0) + pointsDelta;
+                studentUpdates.points = newPoints;
+                studentUpdates.categoryPoints = categoryPoints;
+            }
+            if (Object.keys(studentUpdates).length > 1) {
+                tx.update(studentRef, studentUpdates);
+            }
+            if (pointsDelta !== 0 && rewardMode !== "none") {
+                const activityRef = studentRef.collection("activities").doc();
+                const amountForActivity = rewardMode === "fines" ? 0 : rewardMode === "app_points" ? pointsDelta : pointsDelta;
+                tx.set(activityRef, {
+                    desc: rewardMode === "fines"
+                        ? `Library late fine (${daysOverdue} day${daysOverdue === 1 ? "" : "s"}): ${itemName}`
+                        : pointsDelta < 0
+                            ? `Library late fee (${daysOverdue} day${daysOverdue === 1 ? "" : "s"}): ${itemName}`
+                            : `Library on-time bonus: ${itemName}`,
+                    amount: amountForActivity,
+                    date: now,
+                });
+            }
         }
         const returnActivityRef = studentRef.collection("activities").doc();
         tx.set(returnActivityRef, {

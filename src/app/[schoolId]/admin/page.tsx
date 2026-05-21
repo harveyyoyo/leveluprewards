@@ -24,6 +24,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
+import { useAdminGooglePasscodeBypass } from '@/hooks/useAdminGooglePasscodeBypass';
 import type { Student, Prize, Coupon, Category, Class, House, Teacher, BackupInfo, Achievement, Badge, AttendanceScheduleSlot, TeacherBudgetPeriod, StaffAccount, LibraryItem, LibraryItemInput } from '@/lib/types';
 import { Label } from '@/components/ui/label';
 import {
@@ -3375,6 +3376,8 @@ export default function AdminPage() {
   const { loginState, isInitialized, isAdmin, isPrizeClerk, isHouseCoordinator, login, schoolId } = useAppContext();
   const router = useRouter();
 
+  const { canBypassAdminPasscode, isAutoLoggingIn } = useAdminGooglePasscodeBypass({ schoolId });
+
   const prizeDeskSession = loginState === 'prizeClerk' && isPrizeClerk;
   const houseCoordinatorSession = loginState === 'houseCoordinator' && isHouseCoordinator;
 
@@ -3397,6 +3400,9 @@ export default function AdminPage() {
   }
 
   if (!isAdmin && !prizeDeskSession && !houseCoordinatorSession) {
+    if (isAutoLoggingIn || (canBypassAdminPasscode && !isAdmin)) {
+      return <AdminDashboardSkeleton />;
+    }
     return <AdminLogin onLogin={handleAdminLogin} />;
   }
 

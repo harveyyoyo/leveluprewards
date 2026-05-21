@@ -11,7 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAppContext } from '@/components/AppProvider';
-import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { useDoc, useFirestore, useMemoFirebase, useFirebase } from '@/firebase';
+import { isAllowedAdminGoogleUser, loginSchoolAdmin } from '@/lib/adminGoogleAccess';
 import { useToast } from '@/hooks/use-toast';
 import { LogIn, LogOut, UserCheck, Loader2, ShieldCheck } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -107,6 +108,8 @@ function TeacherPrinter(props: { teacherName: string; teacherId: string; onLogou
 
 export default function TeacherPage() {
     const { loginState, isInitialized, schoolId: activeSchoolId, login, logout, isAdmin, isTeacher, userName, userId, teacherDocId } = useAppContext();
+    const { user: firebaseUser } = useFirebase();
+    const canBypassAdminPasscode = isAllowedAdminGoogleUser(firebaseUser);
     const params = useParams<{ schoolId: string }>();
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -255,6 +258,30 @@ export default function TeacherPage() {
         logout({ staffNavigateTo: 'teacher' });
     };
 
+    const submitAdminForTeacher = async () => {
+        if (!schoolId || adminSubmitting) return false;
+        setAdminSubmitting(true);
+        try {
+            const authResult = await loginSchoolAdmin(login, firebaseUser, schoolId, adminPasscode);
+            if (!authResult.ok) {
+                playSound('error');
+                toast({
+                    variant: 'destructive',
+                    title: 'Login failed',
+                    description: authResult.message,
+                });
+                setAdminPasscode('');
+                return false;
+            }
+            playSound('login');
+            setAdminDialogOpen(false);
+            router.replace(`/${schoolId}/teacher?as=admin`);
+            return true;
+        } finally {
+            setAdminSubmitting(false);
+        }
+    };
+
     if (!isInitialized || !schoolId) {
         return (
             <div className={`min-h-screen flex items-center justify-center font-sans ${isGraphic ? 'bg-background text-primary' : 'bg-background text-muted-foreground'}`}>
@@ -391,6 +418,10 @@ export default function TeacherPage() {
                                     className="w-full h-12 rounded-xl font-bold"
                                     onClick={() => {
                                         playSound('click');
+                                        if (canBypassAdminPasscode) {
+                                            void submitAdminForTeacher();
+                                            return;
+                                        }
                                         setAdminDialogOpen(true);
                                     }}
                                 >
@@ -431,33 +462,7 @@ export default function TeacherPage() {
                                             if (e.key !== 'Enter') return;
                                             e.preventDefault();
                                             if (adminSubmitting) return;
-                                            void (async () => {
-                                                if (!adminPasscode.trim()) {
-                                                    playSound('error');
-                                                    toast({
-                                                        variant: 'destructive',
-                                                        title: 'Missing passcode',
-                                                        description: 'Enter the admin passcode to continue.',
-                                                    });
-                                                    return;
-                                                }
-                                                setAdminSubmitting(true);
-                                                const authResult = await login('admin', { schoolId, passcode: adminPasscode.trim() });
-                                                if (!authResult.ok) {
-                                                    setAdminSubmitting(false);
-                                                    playSound('error');
-                                                    toast({
-                                                        variant: 'destructive',
-                                                        title: 'Login failed',
-                                                        description: authResult.message,
-                                                    });
-                                                    setAdminPasscode('');
-                                                    return;
-                                                }
-                                                playSound('login');
-                                                setAdminDialogOpen(false);
-                                                router.replace(`/${schoolId}/teacher?as=admin`);
-                                            })();
+                                            void submitAdminForTeacher();
                                         }}
                                     />
                                 </div>
@@ -477,33 +482,7 @@ export default function TeacherPage() {
                                         disabled={adminSubmitting}
                                         onClick={() => {
                                             if (adminSubmitting) return;
-                                            void (async () => {
-                                                if (!adminPasscode.trim()) {
-                                                    playSound('error');
-                                                    toast({
-                                                        variant: 'destructive',
-                                                        title: 'Missing passcode',
-                                                        description: 'Enter the admin passcode to continue.',
-                                                    });
-                                                    return;
-                                                }
-                                                setAdminSubmitting(true);
-                                                const authResult = await login('admin', { schoolId, passcode: adminPasscode.trim() });
-                                                if (!authResult.ok) {
-                                                    setAdminSubmitting(false);
-                                                    playSound('error');
-                                                    toast({
-                                                        variant: 'destructive',
-                                                        title: 'Login failed',
-                                                        description: authResult.message,
-                                                    });
-                                                    setAdminPasscode('');
-                                                    return;
-                                                }
-                                                playSound('login');
-                                                setAdminDialogOpen(false);
-                                                router.replace(`/${schoolId}/teacher?as=admin`);
-                                            })();
+                                            void submitAdminForTeacher();
                                         }}
                                     >
                                         {adminSubmitting ? (

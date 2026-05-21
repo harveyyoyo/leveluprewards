@@ -2,6 +2,8 @@
 
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useAppContext } from '@/components/AppProvider';
+import { useFirebase } from '@/firebase';
+import { isAllowedAdminGoogleUser, loginSchoolAdmin } from '@/lib/adminGoogleAccess';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
     Dialog,
@@ -239,6 +241,8 @@ export function SettingsModal() {
         isAdmin,
         schoolId,
     } = useAppContext();
+    const { user: firebaseUser } = useFirebase();
+    const canBypassAdminPasscode = isAllowedAdminGoogleUser(firebaseUser);
     const canOpenSettings = loginState === 'admin' || loginState === 'developer' || loginState === 'teacher';
     const { settings, settingsPreferences, updateSettings } = useSettings();
     const playSound = useArcadeSound();
@@ -496,18 +500,9 @@ export function SettingsModal() {
 
     const handleAdminUnlockForSettings = useCallback(async () => {
         if (adminSubmitting || !schoolId) return;
-        if (!adminPasscode.trim()) {
-            playSound('error');
-            toast({
-                variant: 'destructive',
-                title: 'Missing passcode',
-                description: 'Enter the admin passcode to continue.',
-            });
-            return;
-        }
 
         setAdminSubmitting(true);
-        const authResult = await login('admin', { schoolId, passcode: adminPasscode.trim() });
+        const authResult = await loginSchoolAdmin(login, firebaseUser, schoolId, adminPasscode);
         if (!authResult.ok) {
             setAdminSubmitting(false);
             playSound('error');
@@ -524,7 +519,7 @@ export function SettingsModal() {
         setOpenSettingsAfterAdminUnlock(true);
         setAdminSubmitting(false);
         setAdminDialogOpen(false);
-    }, [adminPasscode, adminSubmitting, login, playSound, schoolId, toast]);
+    }, [adminPasscode, adminSubmitting, firebaseUser, login, playSound, schoolId, toast]);
 
     // For short-link kiosk entry routes, keep the UI minimal (and avoid showing settings).
     if (isShortLinkKioskRoute) return null;
@@ -623,6 +618,10 @@ export function SettingsModal() {
                         e.preventDefault();
                         e.stopPropagation();
                         playSound('click');
+                        if (canBypassAdminPasscode && schoolId) {
+                            void handleAdminUnlockForSettings();
+                            return;
+                        }
                         setAdminDialogOpen(true);
                     }}
                 >

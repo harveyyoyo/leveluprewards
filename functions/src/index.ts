@@ -5,6 +5,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { signInAttendance } from "./signInAttendance";
 import { studentMayRedeemCouponData } from "./couponRedemption";
 import { decryptField } from "./crypto";
+import { isAllowedGoogleEmailOnAllowlist } from "./googleAllowlist";
 
 admin.initializeApp();
 
@@ -97,6 +98,25 @@ function schoolAccessPasscodeFrom(data: Record<string, any>): string {
 
 function adminPasscodeFrom(data: Record<string, any>): string {
   return trimmedString(data.adminPasscode) || trimmedString(data.passcode) || "";
+}
+
+function developerGoogleEmailAllowlist(): string[] {
+  const allowlistStr =
+    process.env.DEVELOPER_GOOGLE_EMAIL_ALLOWLIST ||
+    process.env.NEXT_PUBLIC_DEVELOPER_GOOGLE_EMAIL_ALLOWLIST ||
+    "";
+  return allowlistStr
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+/** Allowed Google accounts may provision school admin without the admin passcode. */
+function isAllowedGoogleAdminBypass(context: functions.https.CallableContext): boolean {
+  const email = (context.auth?.token?.email ?? "").trim().toLowerCase();
+  const provider = context.auth?.token?.firebase?.sign_in_provider;
+  if (provider !== "google.com" || !email) return false;
+  return isAllowedGoogleEmailOnAllowlist(email, developerGoogleEmailAllowlist());
 }
 
 // Demo schools should authenticate like any other school (no passcode bypass).
@@ -706,19 +726,22 @@ exports.verifySchoolPasscode = functions.https.onCall(
       throw new functions.https.HttpsError("not-found", "School not found.");
     }
 
-    if (passcode.length === 0) {
-      throw new functions.https.HttpsError("invalid-argument", "A valid passcode is required.");
-    }
-    const schoolData = schoolDoc.data()!;
-    const expected = adminPasscodeFrom(schoolData);
-    if (!expected) {
-      throw new functions.https.HttpsError(
-        "failed-precondition",
-        "This school has no admin passcode configured. An administrator must set one before login is possible."
-      );
-    }
-    if (!safeEqual(expected, passcode)) {
-      throw new functions.https.HttpsError("permission-denied", "Invalid passcode.");
+    const googleAdminBypass = isAllowedGoogleAdminBypass(context);
+    if (!googleAdminBypass) {
+      if (passcode.length === 0) {
+        throw new functions.https.HttpsError("invalid-argument", "A valid passcode is required.");
+      }
+      const schoolData = schoolDoc.data()!;
+      const expected = adminPasscodeFrom(schoolData);
+      if (!expected) {
+        throw new functions.https.HttpsError(
+          "failed-precondition",
+          "This school has no admin passcode configured. An administrator must set one before login is possible."
+        );
+      }
+      if (!safeEqual(expected, passcode)) {
+        throw new functions.https.HttpsError("permission-denied", "Invalid passcode.");
+      }
     }
 
     // Provision admin role using the Admin SDK (path must match client: schools/{schoolId}/roles_admin/{uid})
@@ -812,7 +835,8 @@ exports.addDeveloperMe = functions.https.onCall(
     const allowlistStr = process.env.DEVELOPER_GOOGLE_EMAIL_ALLOWLIST || process.env.NEXT_PUBLIC_DEVELOPER_GOOGLE_EMAIL_ALLOWLIST || "";
     const allowlist = allowlistStr.split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
 
-    const isGoogleDev = provider === "google.com" && email && (allowlist.length === 0 || allowlist.includes(email));
+    const isGoogleDev =
+      provider === "google.com" && email && isAllowedGoogleEmailOnAllowlist(email, allowlist);
 
     if (!isGoogleDev) {
       throw new functions.https.HttpsError(

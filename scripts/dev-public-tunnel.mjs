@@ -188,8 +188,16 @@ const hostname = new URL(url).hostname;
 console.log(`\n[dev-public-tunnel] Public URL: ${url}`);
 console.log(`[dev-public-tunnel] School login (no Google): ${url}/login`);
 console.log(`  Demo: school yeshiva or schoolabc, passcode 1234`);
+console.log(`[dev-public-tunnel] Student home portal: ${url}/yeshiva/student-home`);
+console.log(`  (replace yeshiva with your school ID; enable in Admin → Student home portal)`);
 console.log(`[dev-public-tunnel] Developer (no Google): ${url}/developer`);
-console.log(`  Passcode: DEV_DEVELOPER_PASSCODE in .env.local (default local-dev-pass)\n`);
+console.log(`  Passcode: DEV_DEVELOPER_PASSCODE in .env.local (default local-dev-pass)`);
+if (TUNNEL_PROVIDER === 'cloudflare' || TUNNEL_PROVIDER === 'cloudflared') {
+  console.log(
+    '\n[dev-public-tunnel] Cloudflare Quick Tunnel: keep this terminal open. If you see error 530 on phone, restart dev:tunnel:cloudflare and use the NEW URL printed here.',
+  );
+}
+console.log('');
 
 try {
   await addFirebaseAuthDomain(hostname);

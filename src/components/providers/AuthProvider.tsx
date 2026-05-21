@@ -25,6 +25,7 @@ import {
     clearFirebaseSessionCookieSync,
 } from '@/lib/auth/syncFirebaseSessionCookie';
 import { sanitizeInternalNextPath } from '@/lib/auth/internalNextRedirect';
+import { isAllowedAdminGoogleUser } from '@/lib/adminGoogleAccess';
 import { isAllowedDeveloperGoogleUser } from '@/lib/developerAccess';
 import { isStudentKioskRoute } from '@/lib/studentKioskRoute';
 import { verifyStaffDeskLogin } from '@/lib/staffDeskLogin';
@@ -825,12 +826,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 return loginOk();
             } else if ((type === 'school' || type === 'admin') && credentials.schoolId && auth.currentUser) {
                 const lowerSchoolId = credentials.schoolId.trim().toLowerCase();
+                const passcodeTrimmed = (credentials.passcode ?? '').trim();
+                const googleAdminBypass =
+                    type === 'admin' && isAllowedAdminGoogleUser(auth.currentUser) && passcodeTrimmed.length === 0;
+                if (type === 'admin' && passcodeTrimmed.length === 0 && !googleAdminBypass) {
+                    return loginErr('Enter the admin passcode to continue.');
+                }
                 try {
                     // 1. Call the function to set the role on the backend
                     const verify = httpsCallable(functions, 'verifySchoolPasscode');
                     await verify({
                         schoolId: lowerSchoolId,
-                        passcode: credentials.passcode ?? '',
+                        passcode: passcodeTrimmed,
                     });
 
                     // 2. Poll the server to confirm the admin role is readable
