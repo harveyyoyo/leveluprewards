@@ -29,8 +29,13 @@ export function officePublicHref(schoolId: string, segment: OfficePublicSegment 
   return segment ? `/${school}/office/${segment}` : `/${school}/office`;
 }
 
-/** Portal tile / admin links: handoff through API when subdomain is enabled. */
+/** User-facing School Office link (public URL, not the handoff API). */
 export function officePortalEntryHref(schoolId: string): string {
+  return officePublicHref(schoolId);
+}
+
+/** Portal/admin → office session handoff (API on the current app host when subdomain is enabled). */
+export function officePortalHandoffHref(schoolId: string): string {
   if (!officeCanonicalOrigin()) {
     return officePublicHref(schoolId);
   }
