@@ -45,7 +45,7 @@ export function useAdminGooglePasscodeBypass({
     } finally {
       setIsAutoLoggingIn(false);
     }
-  }, [canBypassAdminPasscode, login, onError, onSuccess, schoolId]);
+  }, [canBypassAdminPasscode, login, onError, onSuccess, schoolId, user]);
 
   useEffect(() => {
     if (!autoLogin || attemptedRef.current) return;
