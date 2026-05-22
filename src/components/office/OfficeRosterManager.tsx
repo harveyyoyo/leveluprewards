@@ -36,6 +36,7 @@ export function OfficeRosterManager({ schoolId, classes }: OfficeRosterManagerPr
   const [nickname, setNickname] = useState('');
   const [classId, setClassId] = useState('');
   const [teacherName, setTeacherName] = useState('');
+  const [addAnother, setAddAnother] = useState(false);
 
   const reset = () => {
     setFirstName('');
@@ -80,8 +81,12 @@ export function OfficeRosterManager({ schoolId, classes }: OfficeRosterManagerPr
       };
       await setDoc(doc(collection(firestore, 'schools', schoolId, 'officeStudents')), payload);
       toast({ title: 'Student added' });
-      setOpen(false);
-      reset();
+      if (addAnother) {
+        reset();
+      } else {
+        setOpen(false);
+        reset();
+      }
     } catch (e) {
       toast({ variant: 'destructive', title: 'Could not save student', description: (e as Error).message });
     } finally {
@@ -146,8 +151,24 @@ export function OfficeRosterManager({ schoolId, classes }: OfficeRosterManagerPr
             </div>
             <div className="space-y-2">
               <Label>Teacher (optional)</Label>
-              <Input value={teacherName} onChange={(e) => setTeacherName(e.target.value)} className="rounded-xl" />
+              <Input
+                value={teacherName}
+                onChange={(e) => setTeacherName(e.target.value)}
+                className="rounded-xl"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') void handleSave();
+                }}
+              />
             </div>
+            <label className="flex items-center gap-2 text-sm text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={addAnother}
+                onChange={(e) => setAddAnother(e.target.checked)}
+                className="h-4 w-4 accent-teal-700"
+              />
+              Add another after save
+            </label>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>

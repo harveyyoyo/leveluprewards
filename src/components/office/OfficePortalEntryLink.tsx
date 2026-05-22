@@ -32,6 +32,10 @@ export function OfficePortalEntryLink({
 
   const handleClick = useCallback(
     async (event: React.MouseEvent<HTMLAnchorElement>) => {
+      const openNewTab =
+        event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button === 1;
+      if (openNewTab) return;
+
       event.preventDefault();
       if (busy) return;
 

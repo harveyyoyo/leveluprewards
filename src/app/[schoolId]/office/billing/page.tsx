@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from 'react';
 import { OfficeBillingView } from '@/components/office/OfficeBillingView';
 import { useOfficePortalData } from '@/components/office/OfficePortalGate';
 import { useOfficeSharedData } from '@/lib/office/useOfficeSharedData';
@@ -13,13 +14,15 @@ export default function OfficeBillingPage() {
   if (!schoolId) return null;
 
   return (
-    <OfficeBillingView
-      schoolId={schoolId}
-      students={shared.students}
-      studentLabelById={shared.studentLabelById}
-      accounts={billingAccounts}
-      invoices={invoices}
-      isLoading={shared.isLoading}
-    />
+    <Suspense fallback={<p className="text-sm text-muted-foreground">Loading billing…</p>}>
+      <OfficeBillingView
+        schoolId={schoolId}
+        students={shared.students}
+        studentLabelById={shared.studentLabelById}
+        accounts={billingAccounts}
+        invoices={invoices}
+        isLoading={shared.isLoading}
+      />
+    </Suspense>
   );
 }

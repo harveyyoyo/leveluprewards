@@ -69,6 +69,13 @@ export default function PrizePage() {
         return () => window.clearTimeout(timerId);
     }, [pendingStudentLogin, setActiveStudentId, setLoginMeta]);
 
+    useEffect(() => {
+        if (!schoolId || !activeStudentId) return;
+        const linkedStudentId = searchParams.get('student')?.trim();
+        if (!linkedStudentId || linkedStudentId !== activeStudentId) return;
+        router.replace(`/${schoolId}/student?shop=prizes`, { scroll: false });
+    }, [activeStudentId, router, schoolId, searchParams]);
+
     const handlePrizeSessionExit = useCallback(() => {
         playSound('swoosh');
         handleDone();

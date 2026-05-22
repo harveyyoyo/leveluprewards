@@ -36,9 +36,14 @@ import { useSchoolMetadataDocRef } from '@/hooks/useSchoolMetadataDocRef';
 import Logo from './Logo';
 import { portalHoverTextClass, portalTextClass, type PortalColorKey } from '@/lib/portalColors';
 import { getLevelUpLogoHref } from '@/lib/appBranding';
+import { shouldHideGlobalAppChrome } from '@/lib/officeRouting';
 
 export default function Header() {
   const pathname = usePathname();
+  const host = typeof window !== 'undefined' ? window.location.host : '';
+  if (shouldHideGlobalAppChrome(pathname, host)) {
+    return null;
+  }
   const searchParams = useSearchParams();
   const params = useParams<{ schoolId?: string }>();
   const { loginState, schoolId: contextSchoolId, isInitialized, syncStatus, logout, isAdmin, userName, isKioskLocked } = useAppContext();
@@ -198,7 +203,7 @@ export default function Header() {
   // --- APP MODE HEADER ---
   if (settings.displayMode === 'app') {
     return (
-      <div className="w-full">
+      <div id="levelup-global-app-header" className="w-full">
         <div className="mx-auto w-full max-w-7xl px-4 md:px-8">
         <header
           className={cn(
@@ -283,7 +288,7 @@ export default function Header() {
   // --- WEB MODE HEADER (rounded bottom shell, same card shape as app mode) ---
   return (
     <>
-    <div className="no-print sticky top-0 z-50 w-full transition-colors">
+    <div id="levelup-global-app-header" className="no-print sticky top-0 z-50 w-full transition-colors">
       <div className="mx-auto w-full max-w-7xl min-w-0 px-4 md:px-8">
         <header
           className={cn(

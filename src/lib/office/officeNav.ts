@@ -45,7 +45,7 @@ export const OFFICE_NAV_ITEMS: OfficeNavItem[] = [
     id: 'billing',
     label: 'Billing',
     description: 'Family accounts and invoices',
-    href: (schoolId) => `/${schoolId}/office/billing`,
+    href: (schoolId) => officePublicHref(schoolId, 'billing'),
     icon: CreditCard,
   },
   {

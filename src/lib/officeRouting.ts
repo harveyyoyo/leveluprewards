@@ -55,6 +55,47 @@ export function canonicalOfficeHost(): string {
   );
 }
 
+/** True for internal app routes under `/{schoolId}/office` (after office-host rewrites). */
+export function isOfficeAppPath(pathname: string | null | undefined): boolean {
+  if (!pathname || typeof pathname !== 'string') return false;
+  return /^\/[^/]+\/office(?:\/|$)/i.test(pathname);
+}
+
+/** Public office-host paths: `/{school}`, `/{school}/grades`, or legacy `/{school}/office/…`. */
+export function isOfficeSchoolScopedPath(pathname: string | null | undefined): boolean {
+  if (!pathname || typeof pathname !== 'string') return false;
+  const parts = pathname.split('/').filter(Boolean);
+  if (parts.length === 0) return false;
+  if (!isSchoolIdSegment(parts[0])) return false;
+  if (parts.length === 1) return true;
+  const second = parts[1].toLowerCase();
+  if (second === 'office') return true;
+  return OFFICE_PUBLIC_SEGMENTS.has(second);
+}
+
+/**
+ * Hide LevelUp global header / staff chrome (office has its own shell).
+ * True on `office.*` host or any `/{school}/office` route.
+ */
+export function shouldHideGlobalAppChrome(
+  pathname: string | null | undefined,
+  host?: string | null,
+): boolean {
+  if (isOfficeAppPath(pathname)) return true;
+  if (host && isOfficeHostname(host) && isOfficeSchoolScopedPath(pathname)) return true;
+  return false;
+}
+
+/** Middleware / root layout: School Office should not show the LevelUp app header. */
+export function isOfficeChromeRequest(
+  pathname: string,
+  rawHost: string | null | undefined,
+): boolean {
+  return shouldHideGlobalAppChrome(pathname, rawHost);
+}
+
+export const OFFICE_CHROME_REQUEST_HEADER = 'x-lvlup-office-chrome';
+
 export function isOfficeHostname(rawHost: string | null | undefined): boolean {
   const host = normalizeHost(rawHost);
   if (!host) return false;

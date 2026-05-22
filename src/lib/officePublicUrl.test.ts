@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   officePortalEntryHref,
   officePortalHandoffHref,
@@ -27,10 +27,15 @@ describe('officePublicUrl', () => {
 
   it('uses office subdomain for public links and handoff API for portal entry', () => {
     process.env.NEXT_PUBLIC_OFFICE_CANONICAL_HOST = 'office.leveluprewards.app';
+    const locationSpy = vi.spyOn(window, 'location', 'get').mockReturnValue({
+      ...window.location,
+      host: 'leveluprewards.app',
+    } as Location);
     expect(officePublicHref('Yeshiva')).toBe('https://office.leveluprewards.app/yeshiva');
     expect(officePortalEntryHref('yeshiva')).toBe('https://office.leveluprewards.app/yeshiva');
     expect(officePortalHandoffHref('yeshiva')).toBe(
       '/api/auth/office-handoff/redirect?school=yeshiva',
     );
+    locationSpy.mockRestore();
   });
 });

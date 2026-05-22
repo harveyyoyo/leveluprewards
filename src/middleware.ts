@@ -16,16 +16,29 @@ import { authCookieFlags } from '@/lib/auth/authCookieOptions';
 import {
   canonicalPortalRedirectUrl,
   canonicalPortalHost,
+  isLocalDevHost,
   isPortalHostname,
   portalHostRedirectPath,
+  requestBrowserOrigin,
 } from '@/lib/portalRouting';
 import {
   canonicalOfficeRedirectUrl,
+  isOfficeChromeRequest,
   isOfficeHostname,
+  OFFICE_CHROME_REQUEST_HEADER,
   officeHostInternalRewritePath,
   officeHostPortalRedirectUrl,
 } from '@/lib/officeRouting';
 import { officePublicHref } from '@/lib/officePublicUrl';
+
+function officeChromeRequestHeaders(request: NextRequest): Headers {
+  const forwardedHost = request.headers.get('x-forwarded-host') ?? request.headers.get('host');
+  const headers = new Headers(request.headers);
+  if (isOfficeChromeRequest(request.nextUrl.pathname, forwardedHost)) {
+    headers.set(OFFICE_CHROME_REQUEST_HEADER, 'hidden');
+  }
+  return headers;
+}
 
 function applySecurityHeaders(response: NextResponse) {
   response.headers.set('X-Content-Type-Options', 'nosniff');
@@ -62,11 +75,14 @@ function portalLoginRedirect(
   schoolId: string,
   nextPath: string,
 ): NextResponse {
+  const forwarded = request.headers.get('x-forwarded-host') ?? request.headers.get('host');
   const portalHost = canonicalPortalHost();
-  const scheme = request.nextUrl.protocol;
-  const loginBase = portalHost
-    ? new URL(`${scheme}//${portalHost}/login`)
-    : new URL('/login', request.nextUrl.origin);
+  const useCanonicalPortal = portalHost && !isLocalDevHost(forwarded);
+  const loginBase = useCanonicalPortal
+    ? new URL(
+        `${portalHost.includes('localhost') ? 'http:' : request.nextUrl.protocol}//${portalHost}/login`,
+      )
+    : new URL('/login', requestBrowserOrigin(request));
 
   loginBase.searchParams.set('school', schoolId.toLowerCase());
   loginBase.searchParams.set('next', nextPath);
@@ -178,12 +194,16 @@ export async function middleware(request: NextRequest) {
   if (internalRewrite && internalRewrite !== pathname) {
     const url = request.nextUrl.clone();
     url.pathname = internalRewrite;
-    const response = NextResponse.rewrite(url);
+    const response = NextResponse.rewrite(url, {
+      request: { headers: officeChromeRequestHeaders(request) },
+    });
     applySecurityHeaders(response);
     return response;
   }
 
-  const response = NextResponse.next();
+  const response = NextResponse.next({
+    request: { headers: officeChromeRequestHeaders(request) },
+  });
   applySecurityHeaders(response);
   return response;
 }

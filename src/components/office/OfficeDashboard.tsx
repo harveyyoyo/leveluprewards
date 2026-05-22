@@ -8,6 +8,7 @@ import {
   CreditCard,
   FileText,
   GraduationCap,
+  Printer,
   LayoutGrid,
   PlusCircle,
   RefreshCw,
@@ -15,6 +16,8 @@ import {
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { formatCents } from '@/lib/office/officeNav';
 import { officePublicHref } from '@/lib/officePublicUrl';
 import type { OfficeDashboardInsights } from '@/lib/office/officeUtils';
@@ -31,6 +34,9 @@ type OfficeDashboardProps = {
   canPopulateDemoData?: boolean;
   isPopulatingDemoData?: boolean;
   onPopulateDemoData?: () => void;
+  activeTerm: string;
+  onActiveTermChange: (term: string) => void;
+  suggestedTerm?: string;
 };
 
 export function OfficeDashboard({
@@ -43,6 +49,9 @@ export function OfficeDashboard({
   canPopulateDemoData = false,
   isPopulatingDemoData = false,
   onPopulateDemoData,
+  activeTerm,
+  onActiveTermChange,
+  suggestedTerm,
 }: OfficeDashboardProps) {
   const quickLinks = [
     {
@@ -96,10 +105,10 @@ export function OfficeDashboard({
         <p className="text-[0.625rem] font-bold uppercase tracking-[0.25em] text-teal-700 dark:text-teal-300">
           Welcome
         </p>
-        <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+        <h2 className="mt-1 text-lg font-bold tracking-tight text-slate-900 dark:text-white">
           School office
         </h2>
-        <p className="mt-2 max-w-2xl text-sm text-muted-foreground leading-relaxed">
+        <p className="mt-2 max-w-2xl text-xs text-muted-foreground leading-relaxed">
           Grades and billing in one calm workspace. Office roster is separate from rewards arcade
           data.
         </p>
@@ -123,18 +132,50 @@ export function OfficeDashboard({
               }
             />
           ) : null}
+          {insights.dueSoonCount > 0 ? (
+            <StatChip
+              href={`${officePublicHref(schoolId, 'billing')}?filter=due-soon`}
+              label={`${insights.dueSoonCount} due this week`}
+              variant="amber"
+            />
+          ) : null}
           {insights.overdueInvoiceCount > 0 ? (
             <StatChip
+              href={officePublicHref(schoolId, 'billing')}
               label={`${insights.overdueInvoiceCount} overdue invoice${insights.overdueInvoiceCount === 1 ? '' : 's'}`}
               variant="amber"
             />
           ) : insights.paidInvoiceCount > 0 ? (
             <StatChip label={`${insights.paidInvoiceCount} paid`} variant="green" />
           ) : null}
+          {insights.unassignedCount > 0 ? (
+            <StatChip
+              href={`${officePublicHref(schoolId, 'students')}?filter=unassigned`}
+              label={`${insights.unassignedCount} unassigned`}
+            />
+          ) : null}
+          {insights.noBillingCount > 0 ? (
+            <StatChip
+              href={`${officePublicHref(schoolId, 'students')}?filter=no-billing`}
+              label={`${insights.noBillingCount} no billing`}
+            />
+          ) : null}
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-end gap-3">
+          <div className="space-y-1">
+            <Label className="text-[0.625rem] font-bold uppercase text-muted-foreground">Working term</Label>
+            <Input
+              value={activeTerm}
+              onChange={(e) => onActiveTermChange(e.target.value)}
+              placeholder={suggestedTerm ?? 'e.g. Fall 2026'}
+              className="h-9 w-40 rounded-xl bg-white/90 dark:bg-slate-800/80"
+            />
+          </div>
         </div>
 
         {/* Quick actions */}
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-3 flex flex-wrap gap-2">
           <Button
             asChild
             variant="outline"
@@ -166,6 +207,17 @@ export function OfficeDashboard({
             <Link href={officePublicHref(schoolId, 'billing')}>
               <PlusCircle className="h-3.5 w-3.5" />
               New invoice
+            </Link>
+          </Button>
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="rounded-xl gap-1.5 border-teal-200 bg-white/80 text-teal-800 hover:bg-teal-50 dark:border-teal-800 dark:bg-slate-800/80 dark:text-teal-200"
+          >
+            <Link href={officePublicHref(schoolId, 'reports')}>
+              <Printer className="h-3.5 w-3.5" />
+              Print report
             </Link>
           </Button>
           {canPopulateDemoData && onPopulateDemoData ? (
@@ -210,7 +262,7 @@ export function OfficeDashboard({
                     {insights.studentsMissingGrades === 1 ? '' : 's'} without grades for{' '}
                     {insights.activeTerm} —{' '}
                     <Link
-                      href={officePublicHref(schoolId, 'grades')}
+                      href={`${officePublicHref(schoolId, 'grades')}?term=${encodeURIComponent(insights.activeTerm)}`}
                       className="underline font-medium"
                     >
                       add grades
@@ -292,9 +344,11 @@ export function OfficeDashboard({
 function StatChip({
   label,
   variant = 'default',
+  href,
 }: {
   label: React.ReactNode;
   variant?: 'default' | 'amber' | 'green';
+  href?: string;
 }) {
   const styles = {
     default:
@@ -304,13 +358,15 @@ function StatChip({
     green:
       'bg-emerald-100 text-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-200',
   };
-  return (
-    <div
-      className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold shadow-sm ${styles[variant]}`}
-    >
-      {label}
-    </div>
-  );
+  const className = `flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold shadow-sm ${styles[variant]} ${href ? 'hover:opacity-90 transition-opacity' : ''}`;
+  if (href) {
+    return (
+      <Link href={href} className={className}>
+        {label}
+      </Link>
+    );
+  }
+  return <div className={className}>{label}</div>;
 }
 
 function InvoiceStatusBadge({ status }: { status: OfficeInvoiceStatus }) {

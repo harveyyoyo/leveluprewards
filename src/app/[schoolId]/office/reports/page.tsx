@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from 'react';
 import { OfficeGradeReportView } from '@/components/office/OfficeGradeReportView';
 import { useOfficePortalData } from '@/components/office/OfficePortalGate';
 import { useOfficeSharedData } from '@/lib/office/useOfficeSharedData';
@@ -17,12 +18,14 @@ export default function OfficeReportsPage() {
   if (!schoolId) return null;
 
   return (
-    <OfficeGradeReportView
-      schoolId={schoolId}
-      schoolName={schoolMeta?.name}
-      entries={gradeEntries}
-      studentLabelById={shared.studentLabelById}
-      classNameById={shared.classNameById}
-    />
+    <Suspense fallback={<p className="text-sm text-muted-foreground">Loading report…</p>}>
+      <OfficeGradeReportView
+        schoolId={schoolId}
+        schoolName={schoolMeta?.name}
+        entries={gradeEntries}
+        studentLabelById={shared.studentLabelById}
+        classNameById={shared.classNameById}
+      />
+    </Suspense>
   );
 }

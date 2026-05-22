@@ -12,12 +12,15 @@ export function StudentKioskActivityPreview({
   themed,
   onViewAll,
   className,
+  variant = 'center',
 }: {
   schoolId: string;
   studentId: string;
   themed?: boolean;
   onViewAll: () => void;
   className?: string;
+  /** `sidebar` = right column under categories; `center` = redeem stack. */
+  variant?: 'center' | 'sidebar';
 }) {
   return (
     <button
@@ -25,7 +28,7 @@ export function StudentKioskActivityPreview({
       onClick={onViewAll}
       className={cn(
         'w-full shrink-0 rounded-xl border-2 p-3 text-left shadow-sm transition-colors hover:brightness-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
-        studentKioskCenterStackClass,
+        variant === 'center' ? studentKioskCenterStackClass : 'min-w-0',
         !themed && 'border-slate-200 bg-white/90 dark:border-slate-600 dark:bg-slate-900/90',
         className,
       )}

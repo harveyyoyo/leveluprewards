@@ -18,12 +18,12 @@ export default function OfficeHomePage() {
   const { schoolId, isAdmin, loginState } = useAppContext();
   const { gradeEntries, billingAccounts, invoices, isOfficeDataLoading } = useOfficePortalData();
   const shared = useOfficeSharedData(schoolId, true);
-  const { term } = useOfficeTerm(schoolId);
+  const { term, setTerm, suggestedTerm } = useOfficeTerm(schoolId);
   const [isPopulatingDemoData, setIsPopulatingDemoData] = useState(false);
 
   const insights = useMemo(
-    () => buildOfficeDashboardInsights(shared.students, gradeEntries, invoices, term),
-    [shared.students, gradeEntries, invoices, term],
+    () => buildOfficeDashboardInsights(shared.students, gradeEntries, invoices, term, billingAccounts),
+    [shared.students, gradeEntries, invoices, term, billingAccounts],
   );
 
   const accountNameById = useMemo(() => {
@@ -85,6 +85,9 @@ export default function OfficeHomePage() {
       canPopulateDemoData={canPopulateDemoData}
       isPopulatingDemoData={isPopulatingDemoData}
       onPopulateDemoData={() => void handlePopulateDemoData()}
+      activeTerm={term}
+      onActiveTermChange={setTerm}
+      suggestedTerm={suggestedTerm}
     />
   );
 }

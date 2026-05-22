@@ -26,7 +26,78 @@ import { cn } from '@/lib/utils';
 import type { Prize } from '@/lib/types';
 
 /** Shared max width for redeem coupon, activity, and other center-stack kiosk controls. */
-export const studentKioskCenterStackClass = 'w-full min-w-0 max-w-lg mx-auto sm:max-w-xl';
+export const studentKioskCenterStackClass = 'w-full min-w-0 max-w-xl mx-auto sm:max-w-2xl';
+
+export function StudentKioskLogoutControls({
+  themed,
+  primaryForeground,
+  isKioskLocked,
+  logoutTimer,
+  onLogout,
+  className,
+}: {
+  themed: StudentKioskThemed;
+  primaryForeground: string;
+  isKioskLocked: boolean;
+  logoutTimer: number;
+  onLogout: () => void;
+  className?: string;
+}) {
+  const t = themed.active;
+
+  return (
+    <div className={cn('flex flex-wrap items-center justify-end gap-2', className)}>
+      <div
+        className={cn(
+          'whitespace-nowrap rounded-full border-2 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest transition-colors',
+          !t &&
+            (isKioskLocked
+              ? 'border-red-200 bg-red-100 text-red-800 dark:border-red-800 dark:bg-red-950/50 dark:text-red-300'
+              : 'border-slate-300 bg-slate-100 text-slate-800 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100'),
+        )}
+        style={
+          t
+            ? isKioskLocked
+              ? {
+                  borderColor: 'color-mix(in srgb, #ef4444 55%, var(--theme-primary))',
+                  backgroundColor: 'color-mix(in srgb, #ef4444 22%, var(--theme-bg))',
+                  color: 'var(--theme-text)',
+                }
+              : {
+                  borderColor: 'color-mix(in srgb, var(--theme-primary) 45%, transparent)',
+                  backgroundColor: 'var(--theme-bg)',
+                  color: 'var(--theme-text)',
+                }
+            : undefined
+        }
+        aria-label={isKioskLocked ? 'Kiosk locked' : `Auto logout in ${logoutTimer} seconds`}
+      >
+        {isKioskLocked ? 'Kiosk Locked • Stays signed in' : `Auto-logout ${logoutTimer}`}
+      </div>
+      <Button
+        type="button"
+        size="sm"
+        className={cn(
+          'h-8 whitespace-nowrap rounded-full border-2 px-3.5 text-[11px] font-bold uppercase tracking-widest shadow-sm',
+          !t && 'border-primary/40 bg-primary text-primary-foreground hover:bg-primary/90',
+        )}
+        style={
+          t
+            ? {
+                borderColor: 'var(--theme-primary)',
+                backgroundColor: 'var(--theme-primary)',
+                color: primaryForeground,
+              }
+            : undefined
+        }
+        onClick={onLogout}
+        aria-label="Log out now."
+      >
+        Logout
+      </Button>
+    </div>
+  );
+}
 
 /** OKLCH hue used for warm kiosk accents on reward rails when no student theme is active. */
 export function prizeAccentHue(seed: string, index = 0): number {
@@ -291,7 +362,7 @@ function ScanCouponScanZone({
   return (
     <div
       className={cn(
-        'relative flex flex-wrap items-center justify-center gap-3 overflow-hidden rounded-2xl border-2 border-dashed px-4 py-6 min-h-[5.5rem] text-center sm:min-h-[6.5rem] sm:gap-4 sm:py-8',
+        'relative flex flex-wrap items-center justify-center gap-4 overflow-hidden rounded-2xl border-2 border-dashed px-5 py-8 min-h-[7.5rem] text-center sm:min-h-[9rem] sm:gap-5 sm:px-6 sm:py-10',
         !t &&
           'border-amber-400/80 bg-gradient-to-r from-amber-900/95 via-amber-950/92 to-amber-900/95 text-amber-50 dark:border-amber-500/55 dark:from-amber-900/95 dark:via-amber-950/92 dark:to-amber-900/95',
       )}
@@ -365,9 +436,6 @@ export type StudentKioskRedeemHeroProps = {
   showCameraCoupon: boolean;
   couponSectionEnabled: boolean;
   onRedeemCoupon: (code?: string) => void | Promise<void>;
-  onLogout: () => void;
-  isKioskLocked: boolean;
-  logoutTimer: number;
   videoRef: Ref<HTMLVideoElement | null>;
   hasCameraPermission: boolean;
   className?: string;
@@ -383,9 +451,6 @@ export function StudentKioskRedeemHero({
   showCameraCoupon,
   couponSectionEnabled,
   onRedeemCoupon,
-  onLogout,
-  isKioskLocked,
-  logoutTimer,
   videoRef,
   hasCameraPermission,
   className,
@@ -395,37 +460,9 @@ export function StudentKioskRedeemHero({
   if (!couponSectionEnabled) return null;
 
   const manualEntry = (
-    <div className="w-full min-w-0 space-y-3">
-      <ScanCouponScanZone themed={themed}>
-        <ScanBarcode
-          className={cn('h-10 w-10 shrink-0 sm:h-12 sm:w-12', !t && 'text-amber-200')}
-          style={
-            t
-              ? {
-                  color: 'color-mix(in srgb, var(--theme-primary) 72%, white)',
-                }
-              : undefined
-          }
-          aria-hidden
-        />
-        <span
-          className={cn(
-            'max-w-full text-xl sm:text-2xl md:text-3xl font-black uppercase tracking-[0.12em] sm:tracking-[0.18em] leading-snug',
-            !t && 'text-amber-50',
-          )}
-          style={t ? { color: 'rgba(248, 250, 252, 0.97)' } : undefined}
-        >
-          Scan coupon
-        </span>
-        <p
-          className="w-full text-center text-xs font-semibold opacity-90 sm:text-sm"
-          style={t ? { color: 'rgba(248, 250, 252, 0.92)' } : undefined}
-        >
-          Scan with your barcode scanner, or type the code below
-        </p>
-      </ScanCouponScanZone>
+    <div className="w-full min-w-0 space-y-5">
       <form
-        className="flex min-w-0 w-full flex-col gap-2 sm:flex-row sm:gap-2"
+        className="flex min-w-0 w-full flex-col gap-3 sm:flex-row sm:gap-3"
         onSubmit={(e: FormEvent) => {
           e.preventDefault();
           void onRedeemCoupon();
@@ -435,7 +472,7 @@ export function StudentKioskRedeemHero({
           placeholder="Code appears here when scanned"
           value={couponCode}
           onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-          className="h-14 w-full min-w-0 rounded-xl border-2 font-mono text-left text-base tracking-widest sm:flex-1"
+          className="h-16 w-full min-w-0 rounded-xl border-2 font-mono text-left text-lg tracking-widest sm:flex-1"
           style={
             t
               ? { backgroundColor: 'var(--theme-bg)', borderColor: 'var(--theme-primary)', color: 'var(--theme-text)' }
@@ -446,7 +483,7 @@ export function StudentKioskRedeemHero({
         />
         <Button
           type="submit"
-          className="h-14 w-full shrink-0 rounded-xl px-8 text-sm font-black uppercase tracking-widest shadow-lg transition-all active:scale-95 sm:w-auto"
+          className="h-16 w-full shrink-0 rounded-xl px-10 text-base font-black uppercase tracking-widest shadow-lg transition-all active:scale-95 sm:w-auto"
           style={
             t
               ? {
@@ -459,6 +496,34 @@ export function StudentKioskRedeemHero({
           Redeem
         </Button>
       </form>
+      <ScanCouponScanZone themed={themed}>
+        <ScanBarcode
+          className={cn('h-12 w-12 shrink-0 sm:h-14 sm:w-14', !t && 'text-amber-200')}
+          style={
+            t
+              ? {
+                  color: 'color-mix(in srgb, var(--theme-primary) 72%, white)',
+                }
+              : undefined
+          }
+          aria-hidden
+        />
+        <span
+          className={cn(
+            'max-w-full text-2xl font-black uppercase tracking-[0.12em] leading-snug sm:text-3xl md:text-4xl sm:tracking-[0.18em]',
+            !t && 'text-amber-50',
+          )}
+          style={t ? { color: 'rgba(248, 250, 252, 0.97)' } : undefined}
+        >
+          Scan coupon
+        </span>
+        <p
+          className="w-full text-center text-sm font-semibold opacity-90 sm:text-base"
+          style={t ? { color: 'rgba(248, 250, 252, 0.92)' } : undefined}
+        >
+          Scan with your barcode scanner, or type the code above
+        </p>
+      </ScanCouponScanZone>
       <p
         className="pt-1 text-center text-[10px]"
         style={
@@ -507,78 +572,23 @@ export function StudentKioskRedeemHero({
           : undefined
       }
     >
-      <CardHeader className="border-b pb-3" style={t ? { borderColor: 'var(--theme-bg)' } : undefined}>
+      <CardHeader className="border-b px-5 pb-5 pt-6 text-center sm:px-8 sm:pb-6 sm:pt-7" style={t ? { borderColor: 'var(--theme-bg)' } : undefined}>
         <Helper content={couponHelperText}>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="flex items-center gap-2 text-sm font-black">
-              <div
-                className={cn(
-                  'flex h-8 w-8 items-center justify-center rounded-lg',
-                  !t && 'bg-slate-100 dark:bg-slate-800',
-                )}
-                style={t ? { backgroundColor: 'var(--theme-bg)' } : undefined}
-              >
-                <Wallet className="h-4 w-4" style={t ? { color: 'var(--theme-primary)' } : undefined} />
-              </div>
-              Redeem Coupon
-            </CardTitle>
-            <div className="flex items-center gap-2 self-start sm:self-auto">
-              <Button
-                type="button"
-                size="sm"
-                className={cn(
-                  'relative h-8 whitespace-nowrap rounded-full border-2 px-3.5 text-[11px] font-bold uppercase tracking-widest shadow-sm',
-                  !t && 'border-primary/40 bg-primary text-primary-foreground hover:bg-primary/90',
-                )}
-                style={
-                  t
-                    ? {
-                        borderColor: 'var(--theme-primary)',
-                        backgroundColor: 'var(--theme-primary)',
-                        color: primaryForeground,
-                      }
-                    : undefined
-                }
-                onClick={onLogout}
-                aria-label="Log out now."
-              >
-                Logout
-              </Button>
-              <div
-                className={cn(
-                  'whitespace-nowrap rounded-full border-2 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest transition-colors',
-                  !t &&
-                    (isKioskLocked
-                      ? 'border-red-200 bg-red-100 text-red-800 dark:border-red-800 dark:bg-red-950/50 dark:text-red-300'
-                      : 'border-slate-300 bg-slate-100 text-slate-800 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100'),
-                )}
-                style={
-                  t
-                    ? isKioskLocked
-                      ? {
-                          borderColor: 'color-mix(in srgb, #ef4444 55%, var(--theme-primary))',
-                          backgroundColor: 'color-mix(in srgb, #ef4444 22%, var(--theme-bg))',
-                          color: 'var(--theme-text)',
-                        }
-                      : {
-                          borderColor: 'color-mix(in srgb, var(--theme-primary) 45%, transparent)',
-                          backgroundColor: 'var(--theme-bg)',
-                          color: 'var(--theme-text)',
-                        }
-                    : undefined
-                }
-                aria-label={isKioskLocked ? 'Kiosk locked' : `Auto logout in ${logoutTimer} seconds`}
-              >
-                <span>
-                  {isKioskLocked ? 'Kiosk Locked • ' : ''}
-                  {isKioskLocked ? 'Stays signed in' : `Auto-logout ${logoutTimer}`}
-                </span>
-              </div>
+          <CardTitle className="flex items-center justify-center gap-3 text-2xl font-black uppercase tracking-wide sm:text-3xl md:text-4xl">
+            <div
+              className={cn(
+                'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl sm:h-12 sm:w-12',
+                !t && 'bg-slate-100 dark:bg-slate-800',
+              )}
+              style={t ? { backgroundColor: 'var(--theme-bg)' } : undefined}
+            >
+              <Wallet className="h-6 w-6 sm:h-7 sm:w-7" style={t ? { color: 'var(--theme-primary)' } : undefined} />
             </div>
-          </div>
+            Redeem Coupon
+          </CardTitle>
         </Helper>
       </CardHeader>
-      <CardContent className="min-w-0 overflow-x-hidden p-5 pt-4 sm:p-6 sm:pt-5">
+      <CardContent className="min-w-0 overflow-x-hidden p-6 pt-5 sm:p-8 sm:pt-6">
         {showCameraCoupon ? (
           <div className="w-full min-w-0 space-y-3">
             {cameraPane}
@@ -648,11 +658,42 @@ export function StudentKioskMorePrizesButton({
 }: StudentKioskMorePrizesButtonProps) {
   const t = themed.active;
 
+  const label = (
+    <>
+      <Gift className="h-4 w-4 shrink-0 sm:h-5 sm:w-5" aria-hidden />
+      More prizes
+    </>
+  );
+
+  if (onClick) {
+    return (
+      <Button
+        type="button"
+        onClick={onClick}
+        className={cn(
+          'h-12 w-full shrink-0 text-sm font-black uppercase tracking-wide shadow-md sm:h-14 sm:text-base',
+          !t && 'bg-gradient-to-r from-primary to-primary/90',
+          className,
+        )}
+        style={
+          t
+            ? {
+                backgroundColor: 'var(--theme-primary)',
+                color: primaryForeground,
+              }
+            : undefined
+        }
+      >
+        <span className="flex items-center justify-center gap-2">{label}</span>
+      </Button>
+    );
+  }
+
   return (
     <Button
       asChild
       className={cn(
-        'h-10 w-full shrink-0 text-[10px] font-black uppercase tracking-wide shadow-md',
+        'h-12 w-full shrink-0 text-sm font-black uppercase tracking-wide shadow-md sm:h-14 sm:text-base',
         !t && 'bg-gradient-to-r from-primary to-primary/90',
         className,
       )}
@@ -666,12 +707,10 @@ export function StudentKioskMorePrizesButton({
       }
     >
       <Link
-        href={`/${schoolId}/prize?student=${encodeURIComponent(studentId)}`}
-        onClick={onClick}
-        className="flex items-center justify-center gap-1.5"
+        href={`/${schoolId}/student?shop=prizes`}
+        className="flex items-center justify-center gap-2"
       >
-        <Gift className="h-3.5 w-3.5 shrink-0" aria-hidden />
-        More prizes
+        {label}
       </Link>
     </Button>
   );

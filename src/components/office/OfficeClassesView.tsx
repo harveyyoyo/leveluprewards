@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { ChevronRight, Plus, Pencil, Trash2 } from 'lucide-react';
+import { ChevronRight, Download, Plus, Pencil, Trash2 } from 'lucide-react';
 import { doc, setDoc, updateDoc, writeBatch, collection } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -16,8 +16,16 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import type { OfficeClass, OfficeStudent } from '@/lib/office/types';
-import { getOfficeStudentLabel } from '@/lib/office/officeUtils';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { downloadCsv, getOfficeStudentFullName, getOfficeStudentLabel } from '@/lib/office/officeUtils';
 import { OfficeSearchInput } from '@/components/office/OfficeSearchInput';
+import { OfficeLoadingRows } from '@/components/office/OfficeLoadingRows';
 import { cn } from '@/lib/utils';
 
 type OfficeClassesViewProps = {
@@ -32,8 +40,20 @@ export function OfficeClassesView({ schoolId, students, classes, isLoading, onSe
   const firestore = useFirestore();
   const { toast } = useToast();
 
+  const exportClassRoster = () => {
+    const rows: string[][] = [];
+    for (const s of students) {
+      const cls = classes.find((c) => c.id === s.classId);
+      rows.push([cls?.name ?? 'Unassigned', getOfficeStudentFullName(s), s.teacherName ?? '']);
+    }
+    rows.sort((a, b) => a[0].localeCompare(b[0]) || a[1].localeCompare(b[1]));
+    downloadCsv(`classes-roster-${schoolId}.csv`, ['Class', 'Student', 'Teacher'], rows);
+    toast({ title: 'Exported', description: `${rows.length} students.` });
+  };
+
   const [query, setQuery] = useState('');
   const [expandedClassId, setExpandedClassId] = useState<string | null>(null);
+  const [expandAll, setExpandAll] = useState(false);
 
   // Class Dialog State
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -83,6 +103,21 @@ export function OfficeClassesView({ schoolId, students, classes, isLoading, onSe
       toast({ variant: 'destructive', title: 'Could not save class', description: (e as Error).message });
     } finally {
       setBusy(false);
+    }
+  };
+
+  const assignStudentToClass = async (student: OfficeStudent, nextClassId: string) => {
+    if (!firestore) return;
+    const cid = nextClassId === '__none__' ? null : nextClassId;
+    if (cid === (student.classId ?? null)) return;
+    try {
+      await updateDoc(doc(firestore, 'schools', schoolId, 'officeStudents', student.id), {
+        classId: cid,
+        updatedAt: Date.now(),
+      });
+      toast({ title: 'Class updated' });
+    } catch (e) {
+      toast({ variant: 'destructive', title: 'Could not move student', description: (e as Error).message });
     }
   };
 
@@ -168,26 +203,53 @@ export function OfficeClassesView({ schoolId, students, classes, isLoading, onSe
   }, [grouped, query]);
 
   if (isLoading) {
-    return <p className="text-sm text-muted-foreground">Loading classes…</p>;
+    return <OfficeLoadingRows cols={2} rows={4} />;
   }
 
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between no-print">
-        <p className="text-sm text-muted-foreground">
-          Browse office students by class. Click a name to open their profile.
-        </p>
-        <Button type="button" className="rounded-xl gap-2 self-start sm:self-auto" onClick={openNewClass}>
-          <Plus className="h-4 w-4" />
-          New class
-        </Button>
+        <div>
+          <p className="text-sm text-muted-foreground">
+            Browse office students by class. Click a name to open their profile.
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {classes.length} {classes.length === 1 ? 'class' : 'classes'} · {students.length} students
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2 self-start sm:self-auto">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="rounded-xl gap-1.5"
+            disabled={students.length === 0}
+            onClick={exportClassRoster}
+          >
+            <Download className="h-4 w-4" />
+            Export
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="rounded-xl"
+            onClick={() => setExpandAll((v) => !v)}
+          >
+            {expandAll ? 'Collapse all' : 'Expand all'}
+          </Button>
+          <Button type="button" className="rounded-xl gap-2" onClick={openNewClass}>
+            <Plus className="h-4 w-4" />
+            New class
+          </Button>
+        </div>
       </div>
 
       <OfficeSearchInput value={query} onChange={setQuery} placeholder="Search class or student…" />
 
       <div className="space-y-2">
         {filtered.map(({ class: cls, students: list }) => {
-          const open = expandedClassId === cls.id;
+          const open = expandAll || expandedClassId === cls.id;
           return (
             <div key={cls.id} className="overflow-hidden rounded-2xl border bg-white shadow-sm dark:bg-slate-900 dark:border-slate-800">
               <div
@@ -229,14 +291,33 @@ export function OfficeClassesView({ schoolId, students, classes, isLoading, onSe
               {open ? (
                 <ul className="border-t divide-y dark:divide-slate-800">
                   {list.map((s) => (
-                    <li key={s.id}>
+                    <li
+                      key={s.id}
+                      className="flex flex-wrap items-center gap-2 px-4 py-2 border-b border-slate-100 last:border-0 dark:border-slate-800"
+                    >
                       <button
                         type="button"
-                        className="w-full px-4 py-2.5 text-left text-sm hover:bg-teal-50/80 dark:hover:bg-teal-950/30"
+                        className="min-w-0 flex-1 text-left text-sm font-medium hover:text-teal-800 dark:hover:text-teal-300"
                         onClick={() => onSelectStudent?.(s)}
                       >
                         {getOfficeStudentLabel(s)} {s.lastName}
                       </button>
+                      <Select
+                        value={s.classId || '__none__'}
+                        onValueChange={(v) => void assignStudentToClass(s, v)}
+                      >
+                        <SelectTrigger className="h-8 w-36 rounded-lg text-xs" onClick={(e) => e.stopPropagation()}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">Unassigned</SelectItem>
+                          {classes.map((c) => (
+                            <SelectItem key={c.id} value={c.id}>
+                              {c.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </li>
                   ))}
                   {list.length === 0 ? (

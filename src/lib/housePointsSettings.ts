@@ -32,7 +32,11 @@ export function applyHouseWizardSettings(
   });
 }
 
-/** How house totals are maintained for competitions and Hall of Fame. */
+/**
+ * How house standings are maintained.
+ * `studentRollup` — totals follow LevelUp student point awards (default).
+ * `manual` — house points are entered on the Houses tab; not rolled up from student LevelUp balances.
+ */
 export function resolveHousePointsSource(
   settings: Pick<Settings, 'housePointsSource' | 'housesRollupPoints'>,
 ): HousePointsSource {

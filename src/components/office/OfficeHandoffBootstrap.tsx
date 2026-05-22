@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { signInWithCustomToken } from 'firebase/auth';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirebase } from '@/firebase';
+import { useToast } from '@/hooks/use-toast';
 import { verifyOfficeHandoffMetaClient } from '@/lib/auth/officeHandoffClient';
 import { syncFirebaseSessionCookie, syncSchoolGateCookie } from '@/lib/auth/syncFirebaseSessionCookie';
 
@@ -14,8 +15,10 @@ import { syncFirebaseSessionCookie, syncSchoolGateCookie } from '@/lib/auth/sync
 export function OfficeHandoffBootstrap() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
+  const router = useRouter();
   const { auth } = useFirebase();
   const { schoolId } = useAppContext();
+  const { toast } = useToast();
   const started = useRef(false);
 
   useEffect(() => {
@@ -31,7 +34,19 @@ export function OfficeHandoffBootstrap() {
     const run = async () => {
       try {
         const meta = await verifyOfficeHandoffMetaClient(metaToken);
-        if (!meta) return;
+        if (!meta) {
+          toast({
+            variant: 'destructive',
+            title: 'Office sign-in link expired',
+            description: 'Return to the main portal and open School Office again.',
+          });
+          const clean = new URL(pathname || '/', window.location.origin);
+          clean.searchParams.delete('officeHandoff');
+          clean.searchParams.delete('meta');
+          clean.searchParams.delete('ct');
+          router.replace(clean.pathname + (clean.search || ''));
+          return;
+        }
 
         await signInWithCustomToken(auth, customToken);
         await syncFirebaseSessionCookie(auth);
@@ -50,11 +65,21 @@ export function OfficeHandoffBootstrap() {
         window.location.replace(clean.pathname + (clean.search || ''));
       } catch (e) {
         console.error('[OfficeHandoffBootstrap]', e);
+        toast({
+          variant: 'destructive',
+          title: 'Could not complete office sign-in',
+          description: (e as Error).message,
+        });
+        const clean = new URL(pathname || '/', window.location.origin);
+        clean.searchParams.delete('officeHandoff');
+        clean.searchParams.delete('meta');
+        clean.searchParams.delete('ct');
+        router.replace(clean.pathname + (clean.search || ''));
       }
     };
 
     void run();
-  }, [auth, pathname, searchParams, schoolId]);
+  }, [auth, pathname, router, searchParams, schoolId, toast]);
 
   return null;
 }

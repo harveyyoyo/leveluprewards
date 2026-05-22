@@ -5,7 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Pencil, Trash2, Check } from 'lucide-react';
+import { Copy, ExternalLink, Mail, Pencil, Phone, Printer, Trash2, Check } from 'lucide-react';
 import Link from 'next/link';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -68,6 +68,8 @@ export function OfficeStudentSheet({
   const termGrades = grades.filter((g) => g.termLabel === activeTerm);
   const account = billingAccountForStudent(billingAccounts, student.id);
   const addGradeHref = `${officePublicHref(schoolId, 'grades')}?student=${encodeURIComponent(student.id)}&term=${encodeURIComponent(activeTerm)}`;
+  const printReportHref = `${officePublicHref(schoolId, 'reports')}?student=${encodeURIComponent(student.id)}&term=${encodeURIComponent(activeTerm)}`;
+  const billingHref = officePublicHref(schoolId, 'billing');
 
   const handleSave = async () => {
     if (!firestore) return;
@@ -139,18 +141,33 @@ export function OfficeStudentSheet({
           {isEditing ? (
             <SheetTitle>Edit Student Details</SheetTitle>
           ) : (
-            <div className="flex items-center justify-between pr-6">
+            <div className="flex items-center justify-between pr-6 gap-2">
               <SheetTitle className="text-xl font-bold">{name}</SheetTitle>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsEditing(true)}
-                className="h-8 w-8 rounded-lg hover:bg-muted/60"
-                aria-label="Edit student"
-              >
-                <Pencil className="h-4 w-4" />
-              </Button>
+              <div className="flex gap-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-lg hover:bg-muted/60"
+                  aria-label="Copy name"
+                  onClick={() => {
+                    void navigator.clipboard.writeText(name);
+                    toast({ title: 'Copied name' });
+                  }}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setIsEditing(true)}
+                  className="h-8 w-8 rounded-lg hover:bg-muted/60"
+                  aria-label="Edit student"
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           )}
           {!isEditing && (
@@ -228,6 +245,24 @@ export function OfficeStudentSheet({
           </div>
         ) : (
           <div className="mt-6 space-y-6">
+            <div className="flex flex-wrap gap-2">
+              <Button asChild variant="outline" size="sm" className="h-8 rounded-lg text-xs">
+                <Link href={addGradeHref}>Add grade</Link>
+              </Button>
+              <Button asChild variant="outline" size="sm" className="h-8 rounded-lg text-xs gap-1">
+                <Link href={billingHref}>
+                  Billing
+                  <ExternalLink className="h-3 w-3" />
+                </Link>
+              </Button>
+              <Button asChild variant="outline" size="sm" className="h-8 rounded-lg text-xs gap-1">
+                <Link href={printReportHref}>
+                  <Printer className="h-3 w-3" />
+                  Print report
+                </Link>
+              </Button>
+            </div>
+
             <section>
               <h3 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Billing</h3>
               {account ? (
@@ -236,8 +271,24 @@ export function OfficeStudentSheet({
                   <p className="text-teal-800 dark:text-teal-300 font-medium">
                     Balance: {formatCents(account.balanceCents || 0)}
                   </p>
-                  {account.contactEmail ? <p className="text-muted-foreground mt-1">{account.contactEmail}</p> : null}
-                  {account.contactPhone ? <p className="text-muted-foreground">{account.contactPhone}</p> : null}
+                  {account.contactEmail ? (
+                    <a
+                      href={`mailto:${account.contactEmail}`}
+                      className="mt-2 flex items-center gap-1.5 text-muted-foreground hover:text-foreground"
+                    >
+                      <Mail className="h-3.5 w-3.5 shrink-0" />
+                      {account.contactEmail}
+                    </a>
+                  ) : null}
+                  {account.contactPhone ? (
+                    <a
+                      href={`tel:${account.contactPhone.replace(/\s/g, '')}`}
+                      className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground"
+                    >
+                      <Phone className="h-3.5 w-3.5 shrink-0" />
+                      {account.contactPhone}
+                    </a>
+                  ) : null}
                 </div>
               ) : (
                 <p className="mt-2 text-sm text-muted-foreground">No billing account linked.</p>

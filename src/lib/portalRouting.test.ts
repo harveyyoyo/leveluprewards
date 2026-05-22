@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  browserReachableHost,
   canonicalPortalRedirectUrl,
   isLocalDevHost,
   isPortalHostname,
@@ -28,6 +29,11 @@ describe('portal routing', () => {
     expect(portalHostRedirectPath('/portal')).toBeNull();
     expect(portalHostRedirectPath('/login')).toBeNull();
     expect(portalHostRedirectPath('/api/health')).toBeNull();
+  });
+
+  it('maps bind-all dev hosts to localhost for browsers', () => {
+    expect(browserReachableHost('0.0.0.0:8080')).toBe('localhost:8080');
+    expect(isLocalDevHost('0.0.0.0:8080')).toBe(true);
   });
 
   it('does not canonicalize localhost away to production', () => {

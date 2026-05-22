@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { collection, doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { collection, doc, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,11 +15,24 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Download, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Download, Layers, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { OfficeSearchInput } from '@/components/office/OfficeSearchInput';
 import type { OfficeGradeEntry, OfficeStudent } from '@/lib/office/types';
-import { downloadCsv, formatGradeDisplay } from '@/lib/office/officeUtils';
+import { OfficeQuickChips } from '@/components/office/OfficeQuickChips';
+import { OfficeEmptyState } from '@/components/office/OfficeEmptyState';
+import { OfficeLoadingRows } from '@/components/office/OfficeLoadingRows';
+import {
+  downloadCsv,
+  formatGradeDisplay,
+  getOfficeStudentFullName,
+  getSuggestedTermLabel,
+  studentsWithoutGradesForTerm,
+  uniqueGradeSubjects,
+} from '@/lib/office/officeUtils';
 import { useOfficeTerm } from '@/lib/office/useOfficeTerm';
+import { officePublicHref } from '@/lib/officePublicUrl';
+import Link from 'next/link';
 
 type OfficeGradesViewProps = {
   schoolId: string;
@@ -66,6 +79,12 @@ export function OfficeGradesView({
   const [busy, setBusy] = useState(false);
   const [filterTerm, setFilterTerm] = useState('all');
   const [filterClass, setFilterClass] = useState('all');
+  const [search, setSearch] = useState('');
+  const [showMissingPanel, setShowMissingPanel] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkSubject, setBulkSubject] = useState('');
+  const [bulkLetter, setBulkLetter] = useState('');
+  const [bulkNumeric, setBulkNumeric] = useState('');
 
   const terms = useMemo(() => {
     const set = new Set(entries.map((e) => e.termLabel));
@@ -82,16 +101,30 @@ export function OfficeGradesView({
 
   const studentClassId = useMemo(() => new Map(students.map((s) => [s.id, s.classId])), [students]);
 
+  const missingForTerm = useMemo(
+    () => studentsWithoutGradesForTerm(students, entries, activeTerm),
+    [students, entries, activeTerm],
+  );
+
   const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
     return entries.filter((e) => {
       if (filterTerm !== 'all' && e.termLabel !== filterTerm) return false;
       if (filterClass !== 'all') {
         const cid = studentClassId.get(e.studentId);
         if (cid !== filterClass) return false;
       }
+      if (q) {
+        const label = (studentLabelById.get(e.studentId) ?? '').toLowerCase();
+        const subj = e.subject.toLowerCase();
+        if (!label.includes(q) && !subj.includes(q)) return false;
+      }
       return true;
     });
-  }, [entries, filterTerm, filterClass, studentClassId]);
+  }, [entries, filterTerm, filterClass, studentClassId, search, studentLabelById]);
+
+  const subjectSuggestions = useMemo(() => uniqueGradeSubjects(entries), [entries]);
+  const letterGrades = ['A', 'B', 'C', 'D', 'F'];
 
   const sorted = useMemo(() => {
     return filtered.slice().sort((a, b) => {
@@ -142,6 +175,21 @@ export function OfficeGradesView({
       toast({ variant: 'destructive', title: 'Student, term, and subject are required.' });
       return;
     }
+    const duplicate = entries.find(
+      (e) =>
+        e.id !== editingId &&
+        e.studentId === form.studentId &&
+        e.termLabel === form.termLabel.trim() &&
+        e.subject.toLowerCase() === form.subject.trim().toLowerCase(),
+    );
+    if (duplicate) {
+      toast({
+        variant: 'destructive',
+        title: 'Duplicate grade',
+        description: 'This student already has a grade for that term and subject. Edit the existing entry instead.',
+      });
+      return;
+    }
     setBusy(true);
     try {
       const payload = {
@@ -181,6 +229,70 @@ export function OfficeGradesView({
     }
   };
 
+  const exportMissingCsv = () => {
+    const rows = missingForTerm.map((s) => [
+      getOfficeStudentFullName(s),
+      (s.classId && classNameById.get(s.classId)) ?? '',
+      activeTerm,
+    ]);
+    downloadCsv(`missing-grades-${schoolId}.csv`, ['Student', 'Class', 'Term'], rows);
+    toast({ title: 'Exported', description: `${rows.length} students without grades.` });
+  };
+
+  const handleBulkGrades = async () => {
+    if (!firestore || !bulkSubject.trim()) {
+      toast({ variant: 'destructive', title: 'Subject is required for bulk entry.' });
+      return;
+    }
+    if (missingForTerm.length === 0) {
+      toast({ title: 'No students need grades for this term.' });
+      return;
+    }
+    const numeric = bulkNumeric ? Number(bulkNumeric) : null;
+    if (bulkNumeric && (!Number.isFinite(numeric) || numeric! < 0 || numeric! > 100)) {
+      toast({ variant: 'destructive', title: 'Enter a valid percent (0–100) or leave blank.' });
+      return;
+    }
+    setBusy(true);
+    try {
+      const termLabel = activeTerm.trim();
+      const now = Date.now();
+      const chunkSize = 400;
+      for (let i = 0; i < missingForTerm.length; i += chunkSize) {
+        const chunk = missingForTerm.slice(i, i + chunkSize);
+        const batch = writeBatch(firestore);
+        for (const student of chunk) {
+          const ref = doc(collection(firestore, 'schools', schoolId, 'officeGradeEntries'));
+          batch.set(ref, {
+            studentId: student.id,
+            classId: student.classId ?? null,
+            termLabel,
+            subject: bulkSubject.trim(),
+            letterGrade: bulkLetter.trim() || null,
+            numericGrade: numeric,
+            notes: null,
+            updatedAt: now,
+            updatedBy: userName,
+          });
+        }
+        await batch.commit();
+      }
+      toast({
+        title: 'Bulk grades saved',
+        description: `${missingForTerm.length} students · ${bulkSubject.trim()} · ${termLabel}`,
+      });
+      setBulkOpen(false);
+      setBulkSubject('');
+      setBulkLetter('');
+      setBulkNumeric('');
+      setShowMissingPanel(false);
+    } catch (e) {
+      toast({ variant: 'destructive', title: 'Bulk save failed', description: (e as Error).message });
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const exportCsv = () => {
     const rows = sorted.map((row) => [
       studentLabelById.get(row.studentId) ?? '',
@@ -206,6 +318,12 @@ export function OfficeGradesView({
             <Download className="h-4 w-4" />
             Export CSV
           </Button>
+          {missingForTerm.length > 0 ? (
+            <Button variant="outline" className="rounded-xl gap-2" onClick={() => setBulkOpen(true)}>
+              <Layers className="h-4 w-4" />
+              Bulk fill ({missingForTerm.length})
+            </Button>
+          ) : null}
           <Button className="rounded-xl gap-2" onClick={() => openAdd()}>
             <Plus className="h-4 w-4" />
             Add grade
@@ -213,7 +331,43 @@ export function OfficeGradesView({
         </div>
       </div>
 
+      <OfficeSearchInput
+        value={search}
+        onChange={setSearch}
+        placeholder="Search student or subject…"
+        className="max-w-lg"
+      />
+
       <div className="flex flex-wrap items-end gap-3">
+        <Button
+          type="button"
+          variant={filterTerm === activeTerm ? 'default' : 'outline'}
+          size="sm"
+          className="rounded-lg h-9"
+          onClick={() => setFilterTerm(activeTerm)}
+        >
+          This term
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="rounded-lg h-9"
+          onClick={() => setFilterTerm('all')}
+        >
+          All terms
+        </Button>
+        {missingForTerm.length > 0 ? (
+          <Button
+            type="button"
+            variant={showMissingPanel ? 'default' : 'outline'}
+            size="sm"
+            className="rounded-lg h-9 text-amber-900 border-amber-200 dark:text-amber-200"
+            onClick={() => setShowMissingPanel((v) => !v)}
+          >
+            {missingForTerm.length} missing grades
+          </Button>
+        ) : null}
         <div className="space-y-1.5">
           <Label className="text-xs font-semibold uppercase text-muted-foreground">Filter term</Label>
           <Select value={filterTerm} onValueChange={setFilterTerm}>
@@ -248,16 +402,75 @@ export function OfficeGradesView({
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs font-semibold uppercase text-muted-foreground">Set working term</Label>
-          <Input
-            value={activeTerm}
-            onChange={(e) => setActiveTerm(e.target.value)}
-            className="h-9 w-36 rounded-lg"
-          />
+          <div className="flex gap-2">
+            <Input
+              value={activeTerm}
+              onChange={(e) => setActiveTerm(e.target.value)}
+              className="h-9 w-36 rounded-lg"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-9 rounded-lg text-xs"
+              onClick={() => setActiveTerm(getSuggestedTermLabel())}
+            >
+              This season
+            </Button>
+          </div>
         </div>
       </div>
 
+      <p className="text-xs text-muted-foreground">
+        {sorted.length === entries.length
+          ? `${entries.length} grade ${entries.length === 1 ? 'entry' : 'entries'}`
+          : `${sorted.length} of ${entries.length} entries`}
+      </p>
+
+      {showMissingPanel && missingForTerm.length > 0 ? (
+        <section className="rounded-2xl border border-amber-200/70 bg-amber-50/50 p-4 dark:border-amber-900/40 dark:bg-amber-950/20">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <h3 className="text-sm font-bold text-amber-950 dark:text-amber-100">
+              No grades for {activeTerm}
+            </h3>
+            <Button type="button" variant="outline" size="sm" className="rounded-lg gap-1.5" onClick={exportMissingCsv}>
+              <Download className="h-3.5 w-3.5" />
+              Export list
+            </Button>
+          </div>
+          <ul className="grid gap-1 sm:grid-cols-2">
+            {missingForTerm.slice(0, 12).map((s) => (
+              <li key={s.id} className="flex items-center justify-between gap-2 rounded-lg bg-white/80 px-3 py-2 text-sm dark:bg-slate-900/60">
+                <span className="truncate font-medium">{getOfficeStudentFullName(s)}</span>
+                <Button asChild variant="ghost" size="sm" className="h-7 shrink-0 rounded-md text-teal-700">
+                  <Link
+                    href={`${officePublicHref(schoolId, 'grades')}?student=${encodeURIComponent(s.id)}&term=${encodeURIComponent(activeTerm)}`}
+                  >
+                    Add
+                  </Link>
+                </Button>
+              </li>
+            ))}
+          </ul>
+          {missingForTerm.length > 12 ? (
+            <p className="mt-2 text-xs text-muted-foreground">+{missingForTerm.length - 12} more — export for full list</p>
+          ) : null}
+        </section>
+      ) : null}
+
       {isLoading ? (
-        <p className="text-sm text-muted-foreground">Loading grades…</p>
+        <OfficeLoadingRows cols={5} />
+      ) : entries.length === 0 ? (
+        <OfficeEmptyState
+          title="No grades yet"
+          description="Record term grades for students, or use bulk fill when many students share the same subject."
+          action={
+            <Button className="rounded-xl gap-2" onClick={() => openAdd()}>
+              <Plus className="h-4 w-4" />
+              Add first grade
+            </Button>
+          }
+        />
       ) : (
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <table className="w-full text-sm">
@@ -273,7 +486,11 @@ export function OfficeGradesView({
             </thead>
             <tbody>
               {sorted.map((row) => (
-                <tr key={row.id} className="border-b border-slate-100 last:border-0 dark:border-slate-800">
+                <tr
+                  key={row.id}
+                  className="border-b border-slate-100 last:border-0 dark:border-slate-800 cursor-pointer hover:bg-teal-50/50 dark:hover:bg-teal-950/20"
+                  onClick={() => openEdit(row)}
+                >
                   <td className="px-4 py-3 font-medium">{studentLabelById.get(row.studentId) ?? 'Unknown'}</td>
                   <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">
                     {(row.classId && classNameById.get(row.classId)) || '—'}
@@ -281,7 +498,7 @@ export function OfficeGradesView({
                   <td className="px-4 py-3 text-muted-foreground">{row.termLabel}</td>
                   <td className="px-4 py-3">{row.subject}</td>
                   <td className="px-4 py-3">{formatGradeDisplay(row)}</td>
-                  <td className="px-4 py-2">
+                  <td className="px-4 py-2" onClick={(e) => e.stopPropagation()}>
                     <div className="flex gap-1">
                       <Button type="button" variant="ghost" size="icon" onClick={() => openEdit(row)} aria-label="Edit grade">
                         <Pencil className="h-4 w-4" />
@@ -307,6 +524,64 @@ export function OfficeGradesView({
           ) : null}
         </div>
       )}
+
+      <Dialog open={bulkOpen} onOpenChange={setBulkOpen}>
+        <DialogContent className="max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Bulk fill missing grades</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Adds one grade row for each of the {missingForTerm.length} student
+            {missingForTerm.length === 1 ? '' : 's'} with no grades for <strong>{activeTerm}</strong>.
+          </p>
+          <div className="grid gap-4 py-2">
+            <div className="space-y-2">
+              <Label>Subject</Label>
+              <Input
+                value={bulkSubject}
+                onChange={(e) => setBulkSubject(e.target.value)}
+                placeholder="e.g. Math"
+                className="rounded-xl"
+              />
+              <OfficeQuickChips
+                options={subjectSuggestions.slice(0, 8)}
+                value={bulkSubject}
+                onSelect={setBulkSubject}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Letter (optional)</Label>
+                <Input
+                  value={bulkLetter}
+                  onChange={(e) => setBulkLetter(e.target.value)}
+                  className="rounded-xl"
+                />
+                <OfficeQuickChips options={letterGrades} value={bulkLetter} onSelect={setBulkLetter} />
+              </div>
+              <div className="space-y-2">
+                <Label>Percent (optional)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={bulkNumeric}
+                  onChange={(e) => setBulkNumeric(e.target.value)}
+                  className="rounded-xl"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => void handleBulkGrades()} disabled={busy || !bulkSubject.trim()}>
+              Save {missingForTerm.length} grades
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-md rounded-2xl">
@@ -350,6 +625,17 @@ export function OfficeGradesView({
                   onChange={(e) => setForm((f) => ({ ...f, subject: e.target.value }))}
                   placeholder="Math"
                   className="rounded-xl"
+                  list="office-grade-subjects"
+                />
+                <datalist id="office-grade-subjects">
+                  {subjectSuggestions.map((s) => (
+                    <option key={s} value={s} />
+                  ))}
+                </datalist>
+                <OfficeQuickChips
+                  options={subjectSuggestions.slice(0, 8)}
+                  value={form.subject}
+                  onSelect={(subject) => setForm((f) => ({ ...f, subject }))}
                 />
               </div>
             </div>
@@ -361,6 +647,11 @@ export function OfficeGradesView({
                   onChange={(e) => setForm((f) => ({ ...f, letterGrade: e.target.value }))}
                   placeholder="A"
                   className="rounded-xl"
+                />
+                <OfficeQuickChips
+                  options={letterGrades}
+                  value={form.letterGrade}
+                  onSelect={(letterGrade) => setForm((f) => ({ ...f, letterGrade }))}
                 />
               </div>
               <div className="space-y-2">

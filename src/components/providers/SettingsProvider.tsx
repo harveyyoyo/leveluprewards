@@ -75,7 +75,7 @@ interface Settings {
     enableHouses: boolean;
     /** When on, teacher point awards also update each house's cached totals. */
     housesRollupPoints: boolean;
-    /** How house competition points are tracked: linked from student awards or edited manually. */
+    /** House standings: roll up from student rewards (default on), or house points edited manually on Houses tab. */
     housePointsSource?: 'studentRollup' | 'manual';
     /** Show house name/color on the student kiosk header. */
     showHouseOnStudentKiosk: boolean;
