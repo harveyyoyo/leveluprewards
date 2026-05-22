@@ -40,10 +40,6 @@ import { shouldHideGlobalAppChrome } from '@/lib/officeRouting';
 
 export default function Header() {
   const pathname = usePathname();
-  const host = typeof window !== 'undefined' ? window.location.host : '';
-  if (shouldHideGlobalAppChrome(pathname, host)) {
-    return null;
-  }
   const searchParams = useSearchParams();
   const params = useParams<{ schoolId?: string }>();
   const { loginState, schoolId: contextSchoolId, isInitialized, syncStatus, logout, isAdmin, userName, isKioskLocked } = useAppContext();
@@ -180,6 +176,11 @@ export default function Header() {
         </div>
       </nav>
     ) : null;
+
+  const host = typeof window !== 'undefined' ? window.location.host : '';
+  if (shouldHideGlobalAppChrome(pathname, host)) {
+    return null;
+  }
 
   if (isLoginPage || !isInitialized || isDeveloperMode || isFullscreenSpecialPage) {
     return null;

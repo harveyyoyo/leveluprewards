@@ -65,6 +65,7 @@ export function OfficeGradeReportView({
       .filter((e) => {
         if (e.termLabel !== term) return false;
         if (classFilter !== 'all' && e.classId !== classFilter) return false;
+        if (studentFilter !== 'all' && e.studentId !== studentFilter) return false;
         return true;
       })
       .slice()
