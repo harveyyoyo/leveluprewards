@@ -45,12 +45,10 @@ import {
     Sparkles,
     Printer,
 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import DynamicIcon from '@/components/DynamicIcon';
 import { cn, getStudentNickname, getContrastColor } from '@/lib/utils';
 import { ensureContrast, resolveStudentThemeWithSchoolDefault, primaryForegroundFor } from '@/lib/themeContrast';
 import { getReadableErrorMessage, OFFLINE_USER_MESSAGE } from '@/lib/errorMessage';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
@@ -69,8 +67,9 @@ import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
 import { appearanceVarsForSurface } from '@/lib/appearance';
 import { StudentKioskTopBar } from '@/components/student-kiosk/StudentKioskTopBar';
 import { StudentKioskWarmBackdrop } from '@/components/student-kiosk/StudentKioskRedeemUI';
+import { StudentPrizeShopCard } from '@/components/student-kiosk/StudentPrizeShopCard';
 
-import { prizeIsListed, stripLeadingEmojiFromPrizeName, studentSeesPrizeByTeachers } from '@/lib/prizeUtils';
+import { prizeIsListed, studentSeesPrizeByTeachers } from '@/lib/prizeUtils';
 import { runMotor as runVendingMotor, isConnected as motorIsConnected } from '@/lib/vendingMotor';
 import { useAuthFetch } from '@/lib/authFetch';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -403,10 +402,15 @@ export function PrizeDashboard({
     studentId,
     onDone,
     onRequestExit,
+    embedded = false,
+    onBackToKiosk,
 }: {
     studentId: string;
     onDone: () => void;
     onRequestExit: () => void;
+    /** Render inside student kiosk — skip full-page shell and duplicate header. */
+    embedded?: boolean;
+    onBackToKiosk?: () => void;
 }) {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -965,21 +969,26 @@ export function PrizeDashboard({
         <TooltipProvider>
             <div
                 className={cn(
-                    "min-h-screen relative overflow-x-hidden font-sans flex flex-col items-center",
-                    "pt-3 md:pt-8 [@media(max-height:760px)]:pt-2 [@media(max-height:760px)]:md:pt-3",
-                    settings.enableThemeAnimations && !!activeTheme && "theme-theme-elements-animated theme-motion-override",
-                    activeTheme && 'student-theme-surface',
-                    settings.displayMode === 'app' && 'pb-24',
-                    (!student || !activeTheme) && (animBackdrop ? "bg-transparent text-foreground" : "bg-background text-foreground"),
+                    embedded
+                        ? 'relative flex min-h-0 flex-1 flex-col overflow-hidden font-sans'
+                        : cn(
+                              'min-h-screen relative overflow-x-hidden font-sans flex flex-col items-center',
+                              'pt-1 md:pt-3 [@media(max-height:760px)]:pt-1 [@media(max-height:760px)]:md:pt-2',
+                              settings.enableThemeAnimations && !!activeTheme && 'theme-theme-elements-animated theme-motion-override',
+                              activeTheme && 'student-theme-surface',
+                              settings.displayMode === 'app' && 'pb-24',
+                              (!student || !activeTheme) &&
+                                  (animBackdrop ? 'bg-transparent text-foreground' : 'bg-background text-foreground'),
+                          ),
                 )}
-                style={themeStyle}
+                style={embedded ? undefined : themeStyle}
             >
-                {activeTheme?.fontFamily && <GoogleFontLoader fontFamily={activeTheme.fontFamily} />}
+                {!embedded && activeTheme?.fontFamily ? <GoogleFontLoader fontFamily={activeTheme.fontFamily} /> : null}
 
-                {(!activeTheme || !animBackdrop) && (
+                {!embedded && (!activeTheme || !animBackdrop) && (
                 <div className="pointer-events-none fixed inset-0 opacity-[0.03] z-0" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
                 )}
-                {activeTheme?.emoji && (
+                {!embedded && activeTheme?.emoji && (
                     <div className="pointer-events-none fixed inset-0 flex items-center justify-center z-0 opacity-5">
                         <span className="text-[220px] leading-none">
                             {activeTheme.emoji}
@@ -987,9 +996,16 @@ export function PrizeDashboard({
                     </div>
                 )}
 
-                {!activeTheme ? <StudentKioskWarmBackdrop /> : null}
+                {!embedded && !activeTheme ? <StudentKioskWarmBackdrop /> : null}
 
-                <div className="relative z-10 mx-auto flex w-full max-w-7xl flex-1 flex-col gap-5 px-4 pb-4 md:gap-6 md:px-8 md:pb-6">
+                <div
+                    className={cn(
+                        embedded
+                            ? 'flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-y-auto overflow-x-hidden'
+                            : 'relative z-10 mx-auto flex w-full max-w-7xl flex-1 flex-col gap-5 px-4 pb-4 md:gap-6 md:px-8 md:pb-6',
+                    )}
+                >
+                    {!embedded ? (
                     <StudentKioskTopBar
                         student={student}
                         points={student.points ?? 0}
@@ -997,21 +1013,36 @@ export function PrizeDashboard({
                         primaryForeground={primaryForeground}
                         photoDisplayMode={settings.photoDisplayMode}
                     />
+                    ) : null}
 
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="h-9 rounded-full px-3.5 text-[11px] font-bold uppercase tracking-widest"
-                            style={activeTheme ? themedFieldStyle : undefined}
-                            asChild
-                        >
-                            <Link href={schoolId ? `/${schoolId}/student` : '#'}>
+                        {embedded ? (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-9 rounded-full px-3.5 text-[11px] font-bold uppercase tracking-widest"
+                                style={activeTheme ? themedFieldStyle : undefined}
+                                onClick={onBackToKiosk}
+                            >
                                 <ArrowLeft className="mr-1.5 h-4 w-4 shrink-0" aria-hidden />
                                 Back to kiosk
-                            </Link>
-                        </Button>
+                            </Button>
+                        ) : (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-9 rounded-full px-3.5 text-[11px] font-bold uppercase tracking-widest"
+                                style={activeTheme ? themedFieldStyle : undefined}
+                                asChild
+                            >
+                                <Link href={schoolId ? `/${schoolId}/student` : '#'}>
+                                    <ArrowLeft className="mr-1.5 h-4 w-4 shrink-0" aria-hidden />
+                                    Back to kiosk
+                                </Link>
+                            </Button>
+                        )}
                         <div className="flex items-center gap-2">
                             <div
                                 className={cn(
@@ -1166,154 +1197,20 @@ export function PrizeDashboard({
                                             )}
                                         </div>
                                     ) : (
-                                        visiblePrizes.map((prize: Prize) => {
-                                            const canAfford = student.points >= prize.points;
-                                            const displayName =
-                                                stripLeadingEmojiFromPrizeName(prize.name) || prize.name;
-                                            const pctTowardCost = Math.min(
-                                                100,
-                                                Math.floor((student.points / (prize.points || 1)) * 100)
-                                            );
-
-                                            return (
-                                                <div
-                                                    key={prize.id}
-                                                    className={cn(
-                                                        "group relative flex min-w-0 w-full flex-col items-center justify-between text-center p-3.5 sm:p-4 rounded-2xl border-2 border-transparent transition-all duration-300 backdrop-blur-sm hover:border-[var(--prize-card-hover-border)]",
-                                                        canAfford ? "hover:shadow-2xl hover:shadow-primary/5" : "opacity-75 cursor-not-allowed"
-                                                    )}
-                                                    style={activeTheme ? {
-                                                        backgroundColor: canAfford ? 'var(--theme-card)' : 'color-mix(in srgb, var(--theme-card) 35%, transparent)',
-                                                        color: 'var(--theme-text)',
-                                                        borderColor: canAfford ? 'color-mix(in srgb, var(--theme-primary) 38%, transparent)' : 'color-mix(in srgb, var(--theme-text) 20%, transparent)',
-                                                        borderWidth: 1,
-                                                        borderStyle: 'solid',
-                                                        ['--prize-card-hover-border' as any]: canAfford ? 'var(--theme-primary)' : 'transparent',
-                                                    } : {
-                                                        backgroundColor: canAfford ? 'hsl(var(--card) / 0.4)' : 'hsl(var(--card) / 0.1)',
-                                                        ['--prize-card-hover-border' as any]: canAfford ? 'hsl(var(--primary))' : 'transparent',
-                                                    }}
-                                                >
-                                                    <div className="absolute inset-0 rounded-3xl pointer-events-none bg-primary opacity-0 transition-opacity duration-300 group-hover:opacity-5" />
-
-                                                    <div className={cn(
-                                                        "w-16 h-16 rounded-2xl flex items-center justify-center mb-3 transition-transform duration-500 bg-gradient-to-br shadow-inner relative overflow-hidden",
-                                                        canAfford ? "group-hover:scale-110 group-hover:rotate-6" : "grayscale opacity-80"
-                                                    )}
-                                                        style={activeTheme ? {
-                                                            backgroundColor: canAfford ? 'var(--theme-bg)' : 'transparent',
-                                                            color: canAfford ? 'var(--theme-primary)' : 'var(--theme-text)'
-                                                        } : {
-                                                            backgroundImage: canAfford
-                                                                ? 'linear-gradient(135deg, hsl(var(--primary) / 0.2), hsl(var(--chart-3) / 0.3))'
-                                                                : 'linear-gradient(135deg, hsl(var(--muted) / 0.6), hsl(var(--muted) / 0.8))',
-                                                            color: canAfford ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))'
-                                                        }}
-                                                    >
-                                                        {prize.imageUrl ? (
-                                                            /* eslint-disable-next-line @next/next/no-img-element */
-                                                            <img
-                                                                src={prize.imageUrl}
-                                                                alt=""
-                                                                className="absolute inset-0 z-[5] size-full object-cover group-hover:scale-105 transition-transform duration-700"
-                                                            />
-                                                        ) : (
-                                                            prize.name && (
-                                                                <div className="absolute inset-0 opacity-40 mix-blend-overlay group-hover:scale-125 transition-transform duration-700 pointer-events-none z-0">
-                                                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                                                    <img
-                                                                        src={`https://api.dicebear.com/9.x/shapes/svg?seed=${encodeURIComponent(prize.name)}&backgroundColor=transparent`}
-                                                                        alt=""
-                                                                        className="w-full h-full object-cover"
-                                                                    />
-                                                                </div>
-                                                            )
-                                                        )}
-                                                        <DynamicIcon name={prize.icon || 'Gift'} className="w-8 h-8 drop-shadow-sm relative z-10" />
-                                                    </div>
-
-                                                    <div className="mb-4 w-full min-w-0">
-                                                        <Tooltip>
-                                                            <TooltipTrigger asChild>
-                                                                <h3
-                                                                    className={cn(
-                                                                        "font-extrabold text-lg sm:text-xl tracking-tight line-clamp-2 w-full max-w-full cursor-help break-words leading-snug [overflow-wrap:anywhere]",
-                                                                        !activeTheme && "text-foreground"
-                                                                    )}
-                                                                    style={activeTheme ? { color: 'var(--theme-text)' } : undefined}
-                                                                >
-                                                                    {displayName}
-                                                                </h3>
-                                                            </TooltipTrigger>
-                                                            <TooltipContent side="top" align="center" className="max-w-[min(20rem,calc(100vw-2rem))]">
-                                                                <p className="break-words text-base font-black sm:text-lg [overflow-wrap:anywhere]">
-                                                                    {displayName}
-                                                                </p>
-                                                            </TooltipContent>
-                                                        </Tooltip>
-                                                        <div className="mt-2.5 flex flex-wrap items-center justify-center gap-1.5">
-                                                            <Badge
-                                                                className="font-black text-sm px-3 py-0.5 rounded-xl"
-                                                                style={activeTheme
-                                                                    ? { backgroundColor: 'var(--theme-primary)', color: primaryForeground }
-                                                                    : { backgroundColor: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))' }}
-                                                            >
-                                                                {(prize.points || 0).toLocaleString()} pts
-                                                            </Badge>
-                                                            {!canAfford && (
-                                                                <Badge
-                                                                    variant="outline"
-                                                                    className="font-black text-xs px-2 py-1 rounded-xl border-dashed"
-                                                                    style={activeTheme ? { borderColor: 'var(--theme-text-muted)', color: 'var(--theme-text-muted)' } : { borderColor: 'hsl(var(--muted-foreground))', color: 'hsl(var(--muted-foreground))' }}
-                                                                    title={`You have ${pctTowardCost}% of the points this prize costs (need ${(prize.points || 0).toLocaleString()} pts).`}
-                                                                >
-                                                                    {pctTowardCost}%
-                                                                </Badge>
-                                                            )}
-                                                            {typeof prize.stockCount === 'number' && (
-                                                                <Badge
-                                                                    variant="secondary"
-                                                                    className={cn(
-                                                                        "font-black text-xs px-2 py-1 rounded-xl",
-                                                                        !activeTheme && undefined,
-                                                                    )}
-                                                                    style={
-                                                                        activeTheme
-                                                                            ? {
-                                                                                backgroundColor: 'color-mix(in srgb, var(--theme-primary) 18%, var(--theme-card))',
-                                                                                color: 'var(--theme-text)',
-                                                                                borderColor: 'color-mix(in srgb, var(--theme-primary) 30%, transparent)',
-                                                                            }
-                                                                            : undefined
-                                                                    }
-                                                                >
-                                                                    {prize.stockCount} in stock
-                                                                </Badge>
-                                                            )}
-                                                        </div>
-                                                    </div>
-
-                                                    <Button
-                                                        onClick={() => setConfirmingPrize(prize)}
-                                                        disabled={!canAfford}
-                                                        className={cn(
-                                                            "w-full h-10 rounded-xl font-black uppercase tracking-widest text-xs transition-all shadow-md"
-                                                        )}
-                                                        style={activeTheme && canAfford
-                                                            ? { backgroundColor: 'var(--theme-primary)', color: primaryForeground }
-                                                            : canAfford
-                                                                ? { backgroundColor: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))' }
-                                                                : { backgroundColor: 'hsl(var(--muted))', color: 'hsl(var(--muted-foreground))' }}
-                                                    >
-                                                        <Gift className="mr-2 w-4 h-4" /> Redeem Now
-                                                    </Button>
-
-                                                </div>
-                                            );
-                                        })
+                                        visiblePrizes.map((prize: Prize) => (
+                                            <StudentPrizeShopCard
+                                                key={prize.id}
+                                                prize={prize}
+                                                studentPoints={student.points ?? 0}
+                                                themed={!!activeTheme}
+                                                primaryForeground={primaryForeground}
+                                                onRedeem={() => setConfirmingPrize(prize)}
+                                            />
+                                        ))
                                     )}
                                 </div>
 
+                    {!embedded ? (
                     <Button
                         variant="outline"
                         className="h-12 w-full rounded-2xl border-2 text-xs font-black uppercase tracking-widest transition-all group sm:max-w-sm sm:mx-auto"
@@ -1334,6 +1231,7 @@ export function PrizeDashboard({
                         <LogOut className="mr-2 h-5 w-5 transition-transform group-hover:-translate-x-1" aria-hidden />
                         Log out & finish
                     </Button>
+                    ) : null}
                     </div>
                 </div>
 

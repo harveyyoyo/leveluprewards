@@ -7,12 +7,19 @@ import {
   syncFirebaseSessionCookie,
   syncSchoolGateCookie,
 } from '@/lib/auth/syncFirebaseSessionCookie';
+import { useToast } from '@/hooks/use-toast';
 
 type OfficePortalEntryLinkProps = {
   schoolId: string;
   className?: string;
   children?: React.ReactNode;
 };
+
+function entryUrl(schoolId: string): string {
+  const path = officePortalEntryHref(schoolId);
+  if (typeof window === 'undefined' || path.startsWith('http')) return path;
+  return new URL(path, window.location.origin).href;
+}
 
 /** Opens School Office after syncing HttpOnly session cookies required for portal → office handoff. */
 export function OfficePortalEntryLink({
@@ -21,41 +28,59 @@ export function OfficePortalEntryLink({
   children = 'Open School Office',
 }: OfficePortalEntryLinkProps) {
   const { auth } = useFirebase();
+  const { toast } = useToast();
   const [busy, setBusy] = useState(false);
 
   const handleClick = useCallback(
     async (event: React.MouseEvent<HTMLAnchorElement>) => {
-      event.preventDefault();
-      if (busy) return;
-
       const sid = schoolId.trim().toLowerCase();
       if (!sid) return;
 
-      const target = officePortalEntryHref(sid);
+      const openNewTab =
+        event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button === 1;
+      if (openNewTab) return;
+
+      event.preventDefault();
+      if (busy) return;
+
+      const target = entryUrl(sid);
+
       if (!auth?.currentUser) {
-        window.open(target, '_blank', 'noopener,noreferrer');
+        window.location.assign(target);
         return;
       }
 
       setBusy(true);
       try {
-        await syncFirebaseSessionCookie(auth);
-        await syncSchoolGateCookie(auth, sid);
+        const okFb = await syncFirebaseSessionCookie(auth);
+        const okGate = await syncSchoolGateCookie(auth, sid);
+        if (!okFb || !okGate) {
+          toast({
+            variant: 'destructive',
+            title: 'Could not refresh sign-in',
+            description:
+              'Opening School Office anyway. If it fails, refresh this page and try again.',
+          });
+        }
       } catch {
-        // Handoff redirect sends unauthenticated users to portal login.
+        toast({
+          variant: 'destructive',
+          title: 'Could not refresh sign-in',
+          description:
+            'Opening School Office anyway. If it fails, refresh this page and try again.',
+        });
       } finally {
         setBusy(false);
       }
 
-      window.open(target, '_blank', 'noopener,noreferrer');
+      window.location.assign(target);
     },
-    [auth, busy, schoolId],
+    [auth, busy, schoolId, toast],
   );
 
   return (
     <a
       href={officePortalEntryHref(schoolId)}
-      target="_blank"
       rel="noreferrer"
       aria-busy={busy}
       className={className}

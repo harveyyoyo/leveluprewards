@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
@@ -108,6 +108,7 @@ export default function HallOfFamePage() {
     const [autoScroll, setAutoScroll] = useState<boolean>(urlConfig.autoScroll);
     const [gridLayout, setGridLayout] = useState<boolean>(urlConfig.gridLayout);
     const [goalsProgressMap, setGoalsProgressMap] = useState<Record<string, number>>({});
+    const leaderboardScrollRef = useRef<HTMLDivElement>(null);
 
     const schoolDocRef = useSchoolMetadataDocRef();
     const { data: schoolMeta } = useDoc<{ name?: string }>(schoolDocRef);
@@ -411,15 +412,18 @@ export default function HallOfFamePage() {
         settings,
     ]);
 
-    // Auto-scroll logic
+    // Auto-scroll: only the leaderboard region (header stays fixed).
     useEffect(() => {
         if (!autoScroll) return;
+
+        const scrollEl = leaderboardScrollRef.current;
+        if (!scrollEl) return;
 
         let scrollDirection = 1; // 1 for down, -1 for up
         const scrollSpeed = 0.5; // pixels per frame equivalent-ish
         let lastTime = 0;
         let animationId: number;
-        let timeoutId: NodeJS.Timeout;
+        let timeoutId: ReturnType<typeof setTimeout>;
 
         const handleScroll = (time: number) => {
             if (!lastTime) lastTime = time;
@@ -427,22 +431,21 @@ export default function HallOfFamePage() {
             lastTime = time;
 
             const scrollStep = (scrollSpeed * delta) / 16; // attempt 1px per 16ms
-            window.scrollBy(0, scrollStep * scrollDirection);
+            scrollEl.scrollTop += scrollStep * scrollDirection;
 
-            // Check if we hit bottom or top
-            const isAtBottom = Math.ceil(window.innerHeight + window.scrollY) >= document.documentElement.scrollHeight - 10;
-            const isAtTop = window.scrollY <= 10;
+            const isAtBottom =
+                Math.ceil(scrollEl.clientHeight + scrollEl.scrollTop) >= scrollEl.scrollHeight - 10;
+            const isAtTop = scrollEl.scrollTop <= 10;
 
             if (isAtBottom && scrollDirection === 1) {
-                // Wait a bit at the bottom before reversing
                 timeoutId = setTimeout(() => {
                     scrollDirection = -1;
                     lastTime = 0;
                     animationId = requestAnimationFrame(handleScroll);
                 }, 3000);
-                return; // stop current animation loop, wait for timeout
-            } else if (isAtTop && scrollDirection === -1) {
-                // Wait a bit at the top before reversing
+                return;
+            }
+            if (isAtTop && scrollDirection === -1) {
                 timeoutId = setTimeout(() => {
                     scrollDirection = 1;
                     lastTime = 0;
@@ -589,8 +592,11 @@ export default function HallOfFamePage() {
                         </div>
 
                         <div
+                          ref={leaderboardScrollRef}
                           className={cn(
-                            isFullscreen ? "flex-1 min-h-0 overflow-y-auto overscroll-contain pr-1" : ""
+                            (isFullscreen || autoScroll) && "overflow-y-auto overscroll-contain pr-1",
+                            isFullscreen && "flex-1 min-h-0",
+                            autoScroll && !isFullscreen && "max-h-[calc(100dvh-16rem)]",
                           )}
                         >
 
@@ -802,7 +808,10 @@ export default function HallOfFamePage() {
                                             onMouseEnter={() => setHoveredIndex(item.id)}
                                             onMouseLeave={() => setHoveredIndex(null)}
                                             className={cn(
-                                                "group relative flex items-center justify-between backdrop-blur-sm border-2 border-transparent rounded-2xl px-4 py-3 md:px-6 md:py-4 transition-all hover:bg-card hover:shadow-xl hover:shadow-primary/5",
+                                                "group relative flex items-center justify-between backdrop-blur-sm border-2 border-transparent rounded-2xl transition-all hover:bg-card hover:shadow-xl hover:shadow-primary/5",
+                                                rankType === 'houses'
+                                                  ? "px-5 py-4 md:px-7 md:py-5"
+                                                  : "px-4 py-3 md:px-6 md:py-4",
                                                 index % 2 === 0 ? "bg-card/40" : "bg-card/20",
                                                 "w-full"
                                             )}
@@ -810,10 +819,18 @@ export default function HallOfFamePage() {
                                         >
                                         <div className="flex min-w-0 items-center gap-4">
                                             <span className="w-6 shrink-0 text-sm font-black text-muted-foreground/30">{index + podiumSize + 1}</span>
-                                            <Avatar className="w-10 h-10 border-2 border-background overflow-hidden">
+                                            <Avatar
+                                              className={cn(
+                                                "border-2 border-background overflow-hidden shrink-0",
+                                                rankType === 'houses' ? "w-14 h-14 md:w-16 md:h-16" : "w-10 h-10",
+                                              )}
+                                            >
                                                 {item.photoUrl && <img src={item.photoUrl} alt="Photo" className={settings.photoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />}
                                                 <AvatarFallback
-                                                    className="bg-secondary text-xs font-bold"
+                                                    className={cn(
+                                                      "bg-secondary font-bold",
+                                                      rankType === 'houses' ? "text-lg md:text-xl" : "text-xs",
+                                                    )}
                                                     style={accentColor ? { backgroundColor: `${accentColor}20`, color: accentColor } : undefined}
                                                 >
                                                     {item.initials}
@@ -821,7 +838,16 @@ export default function HallOfFamePage() {
                                             </Avatar>
                                             <div className="min-w-0">
                                                 <div className="flex min-w-0 items-center gap-2">
-                                                    <p className="truncate font-black text-foreground tracking-tight">{item.name}</p>
+                                                    <p
+                                                      className={cn(
+                                                        'truncate font-black text-foreground tracking-tight',
+                                                        rankType === 'houses'
+                                                          ? 'text-2xl md:text-3xl lg:text-4xl'
+                                                          : 'text-base md:text-lg',
+                                                      )}
+                                                    >
+                                                      {item.name}
+                                                    </p>
                                                 </div>
                                                 {metaLine ? (
                                                     <p className="truncate text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{metaLine}</p>

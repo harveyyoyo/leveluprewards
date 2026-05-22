@@ -11,14 +11,63 @@
   --emoji-font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", "Android Emoji", emoji, sans-serif;
 }
 
-/* School Office: larger rem baseline for desk-friendly typography and spacing. */
+/*
+ * School Office typography: Tailwind uses rem from <html>, not the parent pane.
+ * Sidebar baseline = 18px on html; main pane uses zoom so all rem utilities shrink (~14px effective body).
+ */
 html[data-office-portal] {
-  font-size: calc(100% * var(--office-ui-scale, 1.5));
+  font-size: var(--office-sidebar-font-size, 18px);
+}
+
+html[data-office-portal] #levelup-global-app-header {
+  display: none !important;
+}
+
+html[data-hide-global-header] #levelup-global-app-header {
+  display: none !important;
+}
+
+html[data-office-portal] .office-main-pane {
+  zoom: var(--office-main-zoom, 0.7777777778);
+}
+
+/* Tailwind text-* uses rem from <html>; cap large type in the workspace pane. */
+html[data-office-portal] .office-main-pane .text-2xl {
+  font-size: 1.25rem !important;
+  line-height: 1.625rem !important;
+}
+
+html[data-office-portal] .office-main-pane .text-xl {
+  font-size: 1.125rem !important;
+  line-height: 1.5rem !important;
+}
+
+html[data-office-portal] .office-main-pane .text-lg {
+  font-size: 1rem !important;
+  line-height: 1.375rem !important;
+}
+
+@supports not (zoom: 1) {
+  html[data-office-portal] .office-main-pane {
+    transform: scale(var(--office-main-zoom, 0.7777777778));
+    transform-origin: top left;
+    width: calc(100% / var(--office-main-zoom, 0.7777777778));
+  }
 }
 
 @media print {
   html[data-office-portal] {
-    font-size: 100%;
+    font-size: 16px;
+  }
+
+  html[data-office-portal] .office-main-pane {
+    zoom: 1;
+    transform: none;
+    width: auto;
+  }
+
+  .no-print {
+    display: none !important;
   }
 }
 

@@ -8,14 +8,12 @@ import {
   Home,
   Link2,
   Loader2,
-  PenLine,
   Sparkles,
   Trophy,
   Tv,
   Users,
   Wand2,
 } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -184,8 +182,8 @@ export function HouseSetupWizard({
         );
         await syncHousePointsFromStudents(firestore, schoolId, currentHouses, latestStudents, 'both');
         summary.push('House totals synced from student points');
-      } else if (draft.pointsSource === 'manual') {
-        summary.push('Manual house points — edit totals on the Houses tab');
+      } else {
+        summary.push('House points entered manually on the Houses tab');
       }
 
       setFinishSummary(summary);
@@ -241,7 +239,7 @@ export function HouseSetupWizard({
             <ul className="text-sm space-y-2">
               {[
                 { icon: Sparkles, text: 'Create house teams from a starter theme' },
-                { icon: Link2, text: 'Link to student rewards or use manual house scores' },
+                { icon: Link2, text: 'Link house standings to student rewards (recommended)' },
                 { icon: Users, text: 'Assign students and optional point sync' },
                 { icon: Tv, text: 'Configure the House Hall of Fame display' },
               ].map(({ icon: Icon, text }) => (
@@ -313,23 +311,30 @@ export function HouseSetupWizard({
         )}
 
         {step === 2 && (
-          <div className="space-y-3">
-            <PointsSourceOption
-              selected={draft.pointsSource === 'studentRollup'}
-              icon={Link2}
-              title="Linked to student rewards"
-              description="Teacher coupons and manual student awards update house totals automatically."
-              onSelect={() => setDraft((d) => ({ ...d, pointsSource: 'studentRollup', syncTotalsFromStudents: true }))}
-            />
-            <PointsSourceOption
-              selected={draft.pointsSource === 'manual'}
-              icon={PenLine}
-              title="Manual house points"
-              description="Spirit week, sports, or house challenges — scores edited on the Houses tab only."
-              onSelect={() =>
-                setDraft((d) => ({ ...d, pointsSource: 'manual', syncTotalsFromStudents: false }))
-              }
-            />
+          <div className="rounded-xl border bg-muted/20 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Link house totals to student rewards
+                </Label>
+                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                  {draft.pointsSource === 'studentRollup'
+                    ? 'On (default): house scores follow student LevelUp points.'
+                    : 'Off: house points are entered manually on the Houses tab.'}
+                </p>
+              </div>
+              <Switch
+                checked={draft.pointsSource === 'studentRollup'}
+                onCheckedChange={(checked) =>
+                  setDraft((d) => ({
+                    ...d,
+                    pointsSource: checked ? 'studentRollup' : 'manual',
+                    syncTotalsFromStudents: checked ? d.syncTotalsFromStudents : false,
+                  }))
+                }
+                aria-label="Link house totals to student rewards"
+              />
+            </div>
           </div>
         )}
 
@@ -512,45 +517,6 @@ export function HouseSetupWizard({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function PointsSourceOption({
-  selected,
-  icon: Icon,
-  title,
-  description,
-  onSelect,
-}: {
-  selected: boolean;
-  icon: LucideIcon;
-  title: string;
-  description: string;
-  onSelect: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className={cn(
-        'w-full flex items-start gap-3 rounded-xl border p-4 text-left transition-colors',
-        selected ? 'border-primary bg-primary/5 ring-1 ring-primary/20' : 'border-border bg-muted/20 hover:bg-muted/40',
-      )}
-    >
-      <div
-        className={cn(
-          'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg',
-          selected ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground',
-        )}
-      >
-        <Icon className="h-4 w-4" aria-hidden />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="font-semibold text-sm">{title}</p>
-        <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{description}</p>
-      </div>
-      {selected ? <Check className="h-5 w-5 text-primary shrink-0" aria-hidden /> : null}
-    </button>
   );
 }
 

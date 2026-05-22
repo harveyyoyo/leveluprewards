@@ -26,6 +26,7 @@ import {
 } from '@/lib/auth/syncFirebaseSessionCookie';
 import { sanitizeInternalNextPath } from '@/lib/auth/internalNextRedirect';
 import { isAllowedDeveloperGoogleUser } from '@/lib/developerAccess';
+import { isGoogleSignedInUser, resolveExistingSchoolRole } from '@/lib/googleSchoolAccess';
 import { isStudentKioskRoute } from '@/lib/studentKioskRoute';
 import { verifyStaffDeskLogin } from '@/lib/staffDeskLogin';
 
@@ -180,6 +181,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.removeItem('userName');
         localStorage.removeItem('teacherDocId');
     }, []);
+
+    const applyResolvedStaffRole = useCallback(
+        (lowerSchoolId: string, resolved: Awaited<ReturnType<typeof resolveExistingSchoolRole>> & object) => {
+            if (!auth.currentUser || !resolved) return;
+            setSchoolId(lowerSchoolId);
+            setLoginState(resolved.loginState);
+            setIsAdmin(resolved.loginState === 'admin');
+            setIsTeacher(resolved.loginState === 'teacher');
+            setIsSecretary(resolved.loginState === 'secretary');
+            setIsPrizeClerk(resolved.loginState === 'prizeClerk');
+            setIsReports(resolved.loginState === 'reports');
+            setIsLibrarian(resolved.loginState === 'librarian');
+            setIsOffice(resolved.loginState === 'office');
+            setIsHouseCoordinator(resolved.loginState === 'houseCoordinator');
+            setUserName(resolved.userName);
+            setUserId(auth.currentUser.uid);
+            if (resolved.teacherDocId) {
+                setTeacherDocId(resolved.teacherDocId);
+                localStorage.setItem('teacherDocId', resolved.teacherDocId);
+            } else {
+                setTeacherDocId(null);
+                localStorage.removeItem('teacherDocId');
+            }
+            localStorage.setItem('loginState', resolved.loginState);
+            localStorage.setItem('schoolId', lowerSchoolId);
+            localStorage.setItem('userName', resolved.userName);
+        },
+        [auth],
+    );
 
     const getEntryCodeFromUrl = useCallback(() => {
         if (typeof window === 'undefined') return '';
@@ -769,9 +799,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         'No Firebase session yet. Refresh the page and try again.',
                     );
                 }
+                const passcode = credentials.passcode?.trim() || '';
+                if (isGoogleSignedInUser(auth.currentUser) && !passcode) {
+                    const existing = await resolveExistingSchoolRole(
+                        firestore,
+                        lowerSchoolId,
+                        auth.currentUser.uid,
+                    );
+                    if (existing) {
+                        applyResolvedStaffRole(lowerSchoolId, existing);
+                        return loginOk();
+                    }
+                }
                 try {
                     const verifyAccess = httpsCallable(functions, 'verifySchoolAccessPasscode');
-                    await verifyAccess({ schoolId: lowerSchoolId, passcode: credentials.passcode?.trim() || '' });
+                    await verifyAccess({ schoolId: lowerSchoolId, passcode });
                 } catch (e) {
                     console.error('School access login failed', e);
                     return loginErr(
@@ -825,12 +867,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 return loginOk();
             } else if ((type === 'school' || type === 'admin') && credentials.schoolId && auth.currentUser) {
                 const lowerSchoolId = credentials.schoolId.trim().toLowerCase();
+                const passcode = credentials.passcode?.trim() || '';
+                if (isGoogleSignedInUser(auth.currentUser) && !passcode) {
+                    const existing = await resolveExistingSchoolRole(
+                        firestore,
+                        lowerSchoolId,
+                        auth.currentUser.uid,
+                    );
+                    if (existing?.loginState === 'admin') {
+                        applyResolvedStaffRole(lowerSchoolId, existing);
+                        return loginOk();
+                    }
+                }
                 try {
                     // 1. Call the function to set the role on the backend
                     const verify = httpsCallable(functions, 'verifySchoolPasscode');
                     await verify({
                         schoolId: lowerSchoolId,
-                        passcode: credentials.passcode ?? '',
+                        passcode,
                     });
 
                     // 2. Poll the server to confirm the admin role is readable
@@ -865,12 +919,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 }
             } else if (type === 'teacher' && credentials.schoolId && auth.currentUser) {
                 const lowerSchoolId = credentials.schoolId.trim().toLowerCase();
+                const passcode = credentials.passcode?.trim() || '';
+                if (isGoogleSignedInUser(auth.currentUser) && !passcode) {
+                    const existing = await resolveExistingSchoolRole(
+                        firestore,
+                        lowerSchoolId,
+                        auth.currentUser.uid,
+                    );
+                    if (existing?.loginState === 'teacher') {
+                        applyResolvedStaffRole(lowerSchoolId, existing);
+                        return loginOk();
+                    }
+                }
                 try {
                     const verify = httpsCallable(functions, 'verifyTeacherPasscode');
                     await verify({
                         schoolId: lowerSchoolId,
                         username: credentials.username,
-                        passcode: credentials.passcode
+                        passcode,
                     });
 
                     const teacherRoleRef = doc(firestore, 'schools', lowerSchoolId, 'roles_teacher', auth.currentUser.uid);
@@ -925,6 +991,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             ) {
                 const lowerSchoolId = credentials.schoolId.trim().toLowerCase();
                 const role = type;
+                const passcode = credentials.passcode?.trim() || '';
+                if (isGoogleSignedInUser(auth.currentUser) && !passcode) {
+                    const existing = await resolveExistingSchoolRole(
+                        firestore,
+                        lowerSchoolId,
+                        auth.currentUser.uid,
+                    );
+                    if (existing?.loginState === role) {
+                        applyResolvedStaffRole(lowerSchoolId, existing);
+                        return loginOk();
+                    }
+                }
                 const roleCollection =
                     type === 'secretary'
                         ? 'roles_secretary'
@@ -942,7 +1020,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     const serverData = await verifyStaffDeskLogin(auth, functions, {
                         schoolId: lowerSchoolId,
                         username: credentials.username,
-                        passcode: credentials.passcode || '',
+                        passcode,
                         role,
                     });
                     const serverDisplay =
@@ -1011,7 +1089,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
             return loginErr('Could not complete sign-in. Please try again.');
         },
-        [functions, firestore, auth, establishStudentKioskSession, returnToSchoolSession]
+        [functions, firestore, auth, establishStudentKioskSession, returnToSchoolSession, applyResolvedStaffRole]
     );
 
     const startDeveloperSupportSession = useCallback(async (rawSchoolId: string): Promise<boolean> => {

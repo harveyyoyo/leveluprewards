@@ -95,6 +95,7 @@ import { normalizeLibraryUpc } from '@/lib/libraryScanCode';
 import { syncSchoolStaffDirectory } from '@/lib/syncSchoolStaffDirectory';
 import { StudentIdCard } from '@/components/StudentIdCard';
 import { IdCardPrintSetupDialog } from '@/components/admin/IdCardPrintSetupDialog';
+import { AdminMainTabsList } from '@/components/admin/AdminMainTabsList';
 import { AchievementModal } from '@/components/AchievementModal';
 import { BadgeModal } from '@/components/BadgeModal';
 
@@ -298,7 +299,7 @@ function AdminDashboardSkeleton() {
       </div>
 
       <div
-        className="hidden w-full flex-wrap items-center justify-center gap-2 rounded-2xl border bg-muted/50 p-2 shadow-sm md:flex"
+        className="hidden h-[3.25rem] w-full flex-nowrap items-center justify-center gap-2 overflow-hidden rounded-2xl border bg-muted/50 p-2 shadow-sm md:flex"
         aria-hidden
       >
         <Skeleton className="h-10 w-[5.5rem] rounded-xl" />
@@ -1657,10 +1658,82 @@ function AdminDashboardInner() {
                 </Select>
               </div>
               <div className="hidden md:block w-full min-w-0">
-              <TabsList 
-                className="flex h-auto w-full flex-wrap content-center items-stretch justify-center gap-2 rounded-2xl border bg-muted/50 p-2 shadow-sm"
+              <AdminMainTabsList
+                activeTabValue={activeMainTab}
                 style={{ ['--admin-accent' as any]: 'hsl(var(--primary))' }}
                 aria-label="Admin portal main tabs"
+                endAction={
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        type="button"
+                        className="inline-flex h-full shrink-0 items-center gap-2 rounded-xl border bg-muted/40 px-3 py-2 text-sm font-bold text-foreground transition-all hover:bg-muted/60"
+                        title="Add more tabs"
+                        aria-label="Add more"
+                      >
+                        <Settings className="w-4 h-4" aria-hidden />
+                        Add more
+                        <ChevronDown className="w-4 h-4 opacity-70" aria-hidden />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="min-w-[240px]">
+                      <div className="px-2 py-2">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-[10px] font-black uppercase text-muted-foreground tracking-wider">
+                            Feature tabs
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              className="rounded-md border bg-background px-2 py-1 text-[10px] font-black uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                enableAllAddOnTabs();
+                              }}
+                              aria-label="Turn on all feature tabs"
+                              title="Turn on all"
+                            >
+                              All on
+                            </button>
+                            <button
+                              type="button"
+                              className="rounded-md border bg-background px-2 py-1 text-[10px] font-black uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                disableAllAddOnTabs();
+                              }}
+                              aria-label="Turn off all feature tabs"
+                              title="Turn off all"
+                            >
+                              All off
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                      <DropdownMenuSeparator />
+                      {addOnTabDefs.map((t) => {
+                        const Icon = t.icon;
+                        const pinned = new Set(settings.adminPinnedAddOnTabs || []);
+                        const checked = t.isOn(settings) && pinned.has(t.value);
+                        return (
+                          <DropdownMenuCheckboxItem
+                            key={t.value}
+                            checked={checked}
+                            onCheckedChange={(next) => {
+                              toggleAddOnTab(t.value, !!next);
+                            }}
+                            className="flex items-center gap-2"
+                          >
+                            <Icon className="h-4 w-4 opacity-75" aria-hidden />
+                            <span className="flex-1">{t.label}</span>
+                          </DropdownMenuCheckboxItem>
+                        );
+                      })}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                }
                 onDragOver={(e) => {
                   // Allow dropping add-on tabs here to "pin" them into the main row.
                   if (draggingAddOnTabValueRef.current || e.dataTransfer.types.includes('text/admin-addon-tab')) {
@@ -1676,83 +1749,13 @@ function AdminDashboardInner() {
                   draggingAddOnTabValueRef.current = null;
                 }}
               >
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button
-                      type="button"
-                      className="inline-flex shrink-0 items-center gap-2 rounded-xl border bg-muted/40 px-3 py-2 text-sm font-bold text-foreground transition-all hover:bg-muted/60"
-                      title="Add more tabs"
-                      aria-label="Add more"
-                    >
-                      <Settings className="w-4 h-4" aria-hidden />
-                      Add more
-                      <ChevronDown className="w-4 h-4 opacity-70" aria-hidden />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="min-w-[240px]">
-                    <div className="px-2 py-2">
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="text-[10px] font-black uppercase text-muted-foreground tracking-wider">
-                          Feature tabs
-                        </span>
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            className="rounded-md border bg-background px-2 py-1 text-[10px] font-black uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              enableAllAddOnTabs();
-                            }}
-                            aria-label="Turn on all feature tabs"
-                            title="Turn on all"
-                          >
-                            All on
-                          </button>
-                          <button
-                            type="button"
-                            className="rounded-md border bg-background px-2 py-1 text-[10px] font-black uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              disableAllAddOnTabs();
-                            }}
-                            aria-label="Turn off all feature tabs"
-                            title="Turn off all"
-                          >
-                            All off
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                    <DropdownMenuSeparator />
-                    {addOnTabDefs.map((t) => {
-                      const Icon = t.icon;
-                      const pinned = new Set(settings.adminPinnedAddOnTabs || []);
-                      const checked = t.isOn(settings) && pinned.has(t.value);
-                      return (
-                        <DropdownMenuCheckboxItem
-                          key={t.value}
-                          checked={checked}
-                          onCheckedChange={(next) => {
-                            toggleAddOnTab(t.value, !!next);
-                          }}
-                          className="flex items-center gap-2"
-                        >
-                          <Icon className="h-4 w-4 opacity-75" aria-hidden />
-                          <span className="flex-1">{t.label}</span>
-                        </DropdownMenuCheckboxItem>
-                      );
-                    })}
-                  </DropdownMenuContent>
-                </DropdownMenu>
                 {orderedMainTabs.map((t) => {
                   const Icon = t.icon;
                   return (
                     <div
                       key={t.value}
                       draggable
-                      className="flex shrink-0"
+                      className="flex shrink-0 snap-center"
                       title={t.title ?? 'Drag to reorder'}
                       onDragStart={(e) => {
                         e.dataTransfer.setData('text/admin-main-tab', t.value);
@@ -1790,7 +1793,7 @@ function AdminDashboardInner() {
                     </div>
                   );
                 })}
-              </TabsList>
+              </AdminMainTabsList>
               </div>
             </div>
 

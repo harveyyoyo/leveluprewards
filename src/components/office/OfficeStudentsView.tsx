@@ -1,16 +1,30 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { Download } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 import { OfficeSearchInput } from '@/components/office/OfficeSearchInput';
 import { OfficeStudentSheet } from '@/components/office/OfficeStudentSheet';
 import { OfficeRosterManager } from '@/components/office/OfficeRosterManager';
 import type { OfficeBillingAccount, OfficeClass, OfficeGradeEntry, OfficeStudent } from '@/lib/office/types';
-import { getOfficeStudentFullName, getOfficeStudentLabel } from '@/lib/office/officeUtils';
+import {
+  billingAccountForStudent,
+  exportOfficeStudentsCsv,
+  getOfficeStudentFullName,
+  getOfficeStudentLabel,
+  studentIdsWithGradesForTerm,
+} from '@/lib/office/officeUtils';
+import { OfficeEmptyState } from '@/components/office/OfficeEmptyState';
+import { OfficeLoadingRows } from '@/components/office/OfficeLoadingRows';
+import { Users } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
 type SortKey = 'name-asc' | 'name-desc' | 'class';
+type RosterFilter = 'all' | 'missing-grades' | 'no-billing' | 'unassigned';
 
 type OfficeStudentsViewProps = {
   schoolId: string;
@@ -33,19 +47,38 @@ export function OfficeStudentsView({
   activeTerm,
   isLoading,
 }: OfficeStudentsViewProps) {
+  const searchParams = useSearchParams();
+  const { toast } = useToast();
   const [query, setQuery] = useState('');
   const [classFilter, setClassFilter] = useState('all');
+  const [rosterFilter, setRosterFilter] = useState<RosterFilter>('all');
   const [sortBy, setSortBy] = useState<SortKey>('name-asc');
   const [selected, setSelected] = useState<OfficeStudent | null>(null);
+  const openedFromQuery = useRef(false);
 
   const classOptions = useMemo(() => {
     return classes.slice().sort((a, b) => a.name.localeCompare(b.name));
   }, [classes]);
 
+  const gradedForTerm = useMemo(
+    () => studentIdsWithGradesForTerm(gradeEntries, activeTerm),
+    [gradeEntries, activeTerm],
+  );
+
+  const missingGradesCount = students.length - gradedForTerm.size;
+  const noBillingCount = useMemo(
+    () => students.filter((s) => !billingAccountForStudent(billingAccounts, s.id)).length,
+    [students, billingAccounts],
+  );
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     const list = students.filter((s) => {
-      if (classFilter !== 'all' && s.classId !== classFilter) return false;
+      if (rosterFilter === 'unassigned' && s.classId) return false;
+      if (rosterFilter === 'missing-grades' && gradedForTerm.has(s.id)) return false;
+      if (rosterFilter === 'no-billing' && billingAccountForStudent(billingAccounts, s.id)) return false;
+      if (classFilter === '__unassigned__' && s.classId) return false;
+      if (classFilter !== 'all' && classFilter !== '__unassigned__' && s.classId !== classFilter) return false;
       if (!q) return true;
       const label = getOfficeStudentFullName(s).toLowerCase();
       const cls = (s.classId && classNameById.get(s.classId))?.toLowerCase() ?? '';
@@ -63,10 +96,53 @@ export function OfficeStudentsView({
       }
       return getOfficeStudentFullName(a).localeCompare(getOfficeStudentFullName(b));
     });
-  }, [students, query, classFilter, sortBy, classNameById]);
+  }, [students, query, classFilter, rosterFilter, sortBy, classNameById, gradedForTerm, billingAccounts]);
+
+  useEffect(() => {
+    const f = searchParams.get('filter')?.trim();
+    if (f === 'missing-grades' || f === 'no-billing' || f === 'unassigned') {
+      setRosterFilter(f);
+      if (f === 'unassigned') setClassFilter('__unassigned__');
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (openedFromQuery.current || isLoading) return;
+    const id = searchParams.get('student')?.trim();
+    if (!id) return;
+    const match = students.find((s) => s.id === id);
+    if (match) {
+      openedFromQuery.current = true;
+      setSelected(match);
+    }
+  }, [searchParams, students, isLoading]);
+
+  const unassignedCount = useMemo(() => students.filter((s) => !s.classId).length, [students]);
+
+  const rosterFilterOptions: { id: RosterFilter; label: string }[] = [
+    { id: 'all', label: 'All' },
+    ...(missingGradesCount > 0
+      ? [{ id: 'missing-grades' as const, label: `Missing grades (${missingGradesCount})` }]
+      : []),
+    ...(noBillingCount > 0 ? [{ id: 'no-billing' as const, label: `No billing (${noBillingCount})` }] : []),
+    ...(unassignedCount > 0 ? [{ id: 'unassigned' as const, label: `Unassigned (${unassignedCount})` }] : []),
+  ];
 
   if (isLoading) {
-    return <p className="text-sm text-muted-foreground">Loading roster…</p>;
+    return <OfficeLoadingRows cols={4} />;
+  }
+
+  if (students.length === 0) {
+    return (
+      <div className="space-y-4">
+        <OfficeEmptyState
+          icon={Users}
+          title="No office students yet"
+          description="Add students manually or import once from the rewards roster (admin)."
+        />
+        <OfficeRosterManager schoolId={schoolId} classes={classes} />
+      </div>
+    );
   }
 
   return (
@@ -74,7 +150,42 @@ export function OfficeStudentsView({
       <p className="text-sm text-muted-foreground">
         Office roster is separate from rewards arcade students. Add students here or import once from rewards (admin).
       </p>
-      <OfficeRosterManager schoolId={schoolId} classes={classes} />
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <OfficeRosterManager schoolId={schoolId} classes={classes} />
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="rounded-xl gap-2"
+          disabled={students.length === 0}
+          onClick={() => {
+            exportOfficeStudentsCsv(schoolId, filtered, classNameById);
+            toast({ title: 'Roster exported', description: `${filtered.length} rows.` });
+          }}
+        >
+          <Download className="h-4 w-4" />
+          Export CSV
+        </Button>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {rosterFilterOptions.map((opt) => (
+          <Button
+            key={opt.id}
+            type="button"
+            size="sm"
+            variant={rosterFilter === opt.id ? 'default' : 'outline'}
+            className="rounded-lg h-8"
+            onClick={() => {
+              setRosterFilter(opt.id);
+              if (opt.id === 'unassigned') setClassFilter('__unassigned__');
+              else if (classFilter === '__unassigned__') setClassFilter('all');
+            }}
+          >
+            {opt.label}
+          </Button>
+        ))}
+      </div>
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
         <OfficeSearchInput value={query} onChange={setQuery} placeholder="Search by name or class…" className="flex-1" />
         <div className="space-y-1.5">
@@ -85,6 +196,9 @@ export function OfficeStudentsView({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All classes</SelectItem>
+              {unassignedCount > 0 ? (
+                <SelectItem value="__unassigned__">Unassigned ({unassignedCount})</SelectItem>
+              ) : null}
               {classOptions.map((c) => (
                 <SelectItem key={c.id} value={c.id}>
                   {c.name}
@@ -120,6 +234,8 @@ export function OfficeStudentsView({
               <th className="px-4 py-3">Student</th>
               <th className="px-4 py-3 hidden sm:table-cell">Class</th>
               <th className="px-4 py-3 hidden md:table-cell">Teacher</th>
+              <th className="px-4 py-3 hidden lg:table-cell">Billing</th>
+              <th className="px-4 py-3 hidden lg:table-cell">{activeTerm}</th>
             </tr>
           </thead>
           <tbody>
@@ -139,6 +255,20 @@ export function OfficeStudentsView({
                   {(s.classId && classNameById.get(s.classId)) || '—'}
                 </td>
                 <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{s.teacherName || '—'}</td>
+                <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">
+                  {billingAccountForStudent(billingAccounts, s.id)?.familyName ?? '—'}
+                </td>
+                <td className="px-4 py-3 hidden lg:table-cell">
+                  {gradedForTerm.has(s.id) ? (
+                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[0.625rem] font-bold uppercase text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200">
+                      Graded
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[0.625rem] font-bold uppercase text-amber-900 dark:bg-amber-950/50 dark:text-amber-200">
+                      Missing
+                    </span>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>

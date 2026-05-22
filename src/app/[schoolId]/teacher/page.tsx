@@ -19,6 +19,7 @@ import { useSettings } from '@/components/providers/SettingsProvider';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { cn } from '@/lib/utils';
+import { officeStaffEntryHref } from '@/lib/officePublicUrl';
 
 const TeacherPrinterInner = dynamic(
     () =>
@@ -64,7 +65,7 @@ function staffLandingPath(schoolId: string, type: StaffPortalLoginOption['type']
     if (type === 'prizeClerk') return `/${schoolId}/admin`;
     if (type === 'reports') return `/${schoolId}/reports`;
     if (type === 'librarian') return `/${schoolId}/librarian`;
-    if (type === 'office') return `/${schoolId}/office`;
+    if (type === 'office') return officeStaffEntryHref(schoolId);
     if (type === 'houseCoordinator') return `/${schoolId}/admin`;
     return `/${schoolId}/teacher`;
 }
@@ -239,7 +240,12 @@ export default function TeacherPage() {
             if (authResult.ok) {
                 playSound('login');
                 toast({ title: 'Logged in successfully.' });
-                router.replace(staffLandingPath(schoolId, selected.type));
+                const dest = staffLandingPath(schoolId, selected.type);
+                if (selected.type === 'office') {
+                    window.location.assign(dest);
+                } else {
+                    router.replace(dest);
+                }
             } else {
                 playSound('error');
                 toast({ variant: 'destructive', title: 'Login failed', description: authResult.message });

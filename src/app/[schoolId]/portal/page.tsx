@@ -16,7 +16,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { doc } from 'firebase/firestore';
-import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { useDoc, useFirestore, useMemoFirebase, useFirebase } from '@/firebase';
+import { isGoogleSignedInUser } from '@/lib/googleSchoolAccess';
 import { rainbowByIndex, rainbowForPortalId } from '@/lib/rainbowNav';
 import { LEVELUP_BRAND_PRIMARY_HEX, LEVELUP_BRAND_PRIMARY_ON_DARK_HEX } from '@/lib/appBranding';
 import {
@@ -26,6 +27,7 @@ import {
     portalChooseTitleClass,
 } from '@/lib/kioskPortraitLayout';
 import { isSchoolPortalChooser } from '@/lib/studentKioskRoute';
+import { officeStaffEntryHref } from '@/lib/officePublicUrl';
 
 type PortalArea = {
     id: string;
@@ -66,7 +68,7 @@ function staffLandingPath(schoolId: string, type: StaffPortalLoginOption['type']
     if (type === 'prizeClerk') return `/${schoolId}/admin`;
     if (type === 'reports') return `/${schoolId}/reports`;
     if (type === 'librarian') return `/${schoolId}/librarian`;
-    if (type === 'office') return `/${schoolId}/office`;
+    if (type === 'office') return officeStaffEntryHref(schoolId);
     if (type === 'houseCoordinator') return `/${schoolId}/admin`;
     return `/${schoolId}/teacher`;
 }
@@ -138,6 +140,8 @@ function WhereToDrawnTitle({
 
 export default function PortalPage() {
     const { loginState, isInitialized, schoolId, isAdmin, isOffice, login, logout } = useAppContext();
+    const { user: firebaseUser } = useFirebase();
+    const hasGoogleUser = isGoogleSignedInUser(firebaseUser);
     const { settings } = useSettings();
     const prefersReducedMotion = useReducedMotion();
     const playSound = useArcadeSound();
@@ -456,12 +460,40 @@ export default function PortalPage() {
                                     if (needsAdminPasscode) {
                                         e.preventDefault();
                                         if (schoolId) router.prefetch(`/${schoolId}/admin`);
+                                        if (hasGoogleUser && schoolId) {
+                                            void (async () => {
+                                                const result = await login('admin', { schoolId, passcode: '' });
+                                                if (result.ok) {
+                                                    playSound('login');
+                                                    router.replace(`/${schoolId}/admin`);
+                                                    return;
+                                                }
+                                                setAdminDestination('admin');
+                                                setAdminDialogOpen(true);
+                                            })();
+                                            return;
+                                        }
                                         setAdminDestination('admin');
                                         setAdminDialogOpen(true);
                                         return;
                                     }
                                     if (needsTeacherLogin) {
                                         e.preventDefault();
+                                        if (hasGoogleUser && schoolId) {
+                                            void (async () => {
+                                                const result = await login('teacher', { schoolId, passcode: '' });
+                                                if (result.ok) {
+                                                    playSound('login');
+                                                    router.replace(`/${schoolId}/teacher`);
+                                                    return;
+                                                }
+                                                setTeacherSubmitting(false);
+                                                setSelectedTeacherKey('');
+                                                setTeacherPasscode('');
+                                                setTeacherDialogOpen(true);
+                                            })();
+                                            return;
+                                        }
                                         setTeacherSubmitting(false);
                                         setSelectedTeacherKey('');
                                         setTeacherPasscode('');
@@ -825,7 +857,12 @@ export default function PortalPage() {
                                         }
                                         playSound('login');
                                         setTeacherDialogOpen(false);
-                                        router.push(staffLandingPath(schoolId, selected.type));
+                                        const dest = staffLandingPath(schoolId, selected.type);
+                                        if (selected.type === 'office') {
+                                            window.location.assign(dest);
+                                        } else {
+                                            router.push(dest);
+                                        }
                                     })();
                                 }}
                             >

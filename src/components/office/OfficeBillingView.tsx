@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { collection, doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { Button } from '@/components/ui/button';
@@ -14,11 +14,24 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Download, Pencil, Plus, Trash2 } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import { Copy, Download, Mail, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { formatCents } from '@/lib/office/officeNav';
-import { billingStatusForAccount, downloadCsv, isInvoiceOverdue } from '@/lib/office/officeUtils';
+import {
+  billingStatusForAccount,
+  buildInvoiceReminderMailto,
+  defaultDueDateIso,
+  downloadCsv,
+  isInvoiceDueSoon,
+  isInvoiceOverdue,
+  parseUsdToCents,
+} from '@/lib/office/officeUtils';
 import { OfficeSearchInput } from '@/components/office/OfficeSearchInput';
+import { OfficeQuickChips } from '@/components/office/OfficeQuickChips';
+import { OfficeEmptyState } from '@/components/office/OfficeEmptyState';
+import { OfficeLoadingRows } from '@/components/office/OfficeLoadingRows';
+import { CreditCard } from 'lucide-react';
 import type { OfficeBillingAccount, OfficeInvoice } from '@/lib/office/types';
 import type { OfficeStudent } from '@/lib/office/types';
 import { cn } from '@/lib/utils';
@@ -52,10 +65,22 @@ export function OfficeBillingView({
   const [invoiceDue, setInvoiceDue] = useState('');
   const [busy, setBusy] = useState(false);
   const [search, setSearch] = useState('');
+  const [invoiceFilter, setInvoiceFilter] = useState<'all' | 'overdue' | 'open' | 'due-soon'>('all');
+  const [saveAsDraft, setSaveAsDraft] = useState(false);
+  const searchParams = useSearchParams();
   const [editAccountId, setEditAccountId] = useState<string | null>(null);
   const [contactEmail, setContactEmail] = useState('');
   const [contactPhone, setContactPhone] = useState('');
   const [accountNotes, setAccountNotes] = useState('');
+  const [accountStudentSearch, setAccountStudentSearch] = useState('');
+
+  const invoiceLabelSuggestions = useMemo(() => {
+    const set = new Set(['Tuition', 'Registration', 'Activities', 'Lunch', 'Supplies']);
+    for (const inv of invoices) {
+      if (inv.label?.trim()) set.add(inv.label.trim());
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [invoices]);
 
   const invoicesByAccount = useMemo(() => {
     const map = new Map<string, OfficeInvoice[]>();
@@ -63,6 +88,10 @@ export function OfficeBillingView({
       const list = map.get(inv.accountId) ?? [];
       list.push(inv);
       map.set(inv.accountId, list);
+    }
+    for (const [id, list] of map) {
+      list.sort((a, b) => b.dueDate.localeCompare(a.dueDate));
+      map.set(id, list);
     }
     return map;
   }, [invoices]);
@@ -77,14 +106,28 @@ export function OfficeBillingView({
 
   const overdueCount = useMemo(() => invoices.filter((i) => isInvoiceOverdue(i)).length, [invoices]);
 
+  const paidCount = useMemo(() => invoices.filter((i) => i.status === 'paid').length, [invoices]);
+
   const filteredAccounts = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return accounts;
-    return accounts.filter((a) => {
+    let list = accounts;
+    if (invoiceFilter === 'overdue') {
+      list = list.filter((a) => (invoicesByAccount.get(a.id) ?? []).some((i) => isInvoiceOverdue(i)));
+    } else if (invoiceFilter === 'due-soon') {
+      list = list.filter((a) => (invoicesByAccount.get(a.id) ?? []).some((i) => isInvoiceDueSoon(i)));
+    } else if (invoiceFilter === 'open') {
+      list = list.filter(
+        (a) =>
+          (a.balanceCents || 0) > 0 ||
+          (invoicesByAccount.get(a.id) ?? []).some((i) => i.status === 'sent' || i.status === 'draft'),
+      );
+    }
+    if (!q) return list;
+    return list.filter((a) => {
       const linked = a.studentIds.map((id) => studentLabelById.get(id) ?? '').join(' ');
       return a.familyName.toLowerCase().includes(q) || linked.toLowerCase().includes(q);
     });
-  }, [accounts, search, studentLabelById]);
+  }, [accounts, search, studentLabelById, invoiceFilter, invoicesByAccount]);
 
   const resetAccountForm = () => {
     setFamilyName('');
@@ -92,7 +135,24 @@ export function OfficeBillingView({
     setContactEmail('');
     setContactPhone('');
     setAccountNotes('');
+    setAccountStudentSearch('');
     setEditAccountId(null);
+  };
+
+  useEffect(() => {
+    const f = searchParams.get('filter')?.trim();
+    if (f === 'due-soon' || f === 'overdue' || f === 'open') {
+      setInvoiceFilter(f);
+    }
+  }, [searchParams]);
+
+  const openNewInvoice = (accountId?: string, preset?: Partial<OfficeInvoice>) => {
+    setInvoiceAccountId(accountId ?? accounts[0]?.id ?? '');
+    setInvoiceLabel(preset?.label ?? '');
+    setInvoiceAmount(preset ? String((preset.amountCents || 0) / 100) : '');
+    setInvoiceDue(preset?.dueDate ?? defaultDueDateIso());
+    setSaveAsDraft(false);
+    setInvoiceOpen(true);
   };
 
   const openNewAccount = () => {
@@ -159,24 +219,25 @@ export function OfficeBillingView({
       toast({ variant: 'destructive', title: 'Account, label, and amount are required.' });
       return;
     }
-    const cents = Math.round(parseFloat(invoiceAmount) * 100);
-    if (!Number.isFinite(cents) || cents < 0) {
+    const cents = parseUsdToCents(invoiceAmount);
+    if (cents == null) {
       toast({ variant: 'destructive', title: 'Enter a valid dollar amount.' });
       return;
     }
     setBusy(true);
     try {
       const ref = doc(collection(firestore, 'schools', schoolId, 'officeInvoices'));
+      const status = saveAsDraft ? 'draft' : 'sent';
       await setDoc(ref, {
         accountId: invoiceAccountId,
         label: invoiceLabel.trim(),
         amountCents: cents,
         dueDate: invoiceDue || new Date().toISOString().slice(0, 10),
-        status: 'sent',
+        status,
         createdAt: Date.now(),
       });
       const account = accounts.find((a) => a.id === invoiceAccountId);
-      if (account) {
+      if (account && !saveAsDraft) {
         const due = invoiceDue || new Date().toISOString().slice(0, 10);
         const nextInvoices: OfficeInvoice[] = [
           ...invoices,
@@ -186,7 +247,7 @@ export function OfficeBillingView({
             label: invoiceLabel.trim(),
             amountCents: cents,
             dueDate: due,
-            status: 'sent',
+            status,
             createdAt: Date.now(),
           },
         ];
@@ -196,7 +257,7 @@ export function OfficeBillingView({
           updatedAt: Date.now(),
         });
       }
-      toast({ title: 'Invoice created' });
+      toast({ title: saveAsDraft ? 'Draft saved' : 'Invoice created' });
       setInvoiceOpen(false);
       setInvoiceLabel('');
       setInvoiceAmount('');
@@ -228,6 +289,29 @@ export function OfficeBillingView({
       toast({ title: 'Invoice voided' });
     } catch (e) {
       toast({ variant: 'destructive', title: 'Could not void invoice', description: (e as Error).message });
+    }
+  };
+
+  const sendDraft = async (inv: OfficeInvoice) => {
+    if (!firestore || inv.status !== 'draft') return;
+    try {
+      await updateDoc(doc(firestore, 'schools', schoolId, 'officeInvoices', inv.id), {
+        status: 'sent',
+      });
+      const account = accounts.find((a) => a.id === inv.accountId);
+      if (account) {
+        const nextInvoices = invoices.map((i) =>
+          i.id === inv.id ? { ...i, status: 'sent' as const } : i,
+        );
+        await updateDoc(doc(firestore, 'schools', schoolId, 'officeBillingAccounts', inv.accountId), {
+          balanceCents: (account.balanceCents || 0) + inv.amountCents,
+          status: billingStatusForAccount(inv.accountId, nextInvoices, account.status),
+          updatedAt: Date.now(),
+        });
+      }
+      toast({ title: 'Invoice sent', description: 'Balance updated.' });
+    } catch (e) {
+      toast({ variant: 'destructive', title: 'Could not send invoice', description: (e as Error).message });
     }
   };
 
@@ -297,40 +381,71 @@ export function OfficeBillingView({
             <Plus className="h-4 w-4" />
             New account
           </Button>
-          <Button className="rounded-xl gap-2" onClick={() => setInvoiceOpen(true)} disabled={accounts.length === 0}>
+          <Button className="rounded-xl gap-2" onClick={() => openNewInvoice()} disabled={accounts.length === 0}>
             <Plus className="h-4 w-4" />
             New invoice
           </Button>
         </div>
       </div>
 
-      <OfficeSearchInput value={search} onChange={setSearch} placeholder="Search family or student…" />
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <OfficeSearchInput value={search} onChange={setSearch} placeholder="Search family or student…" />
+        <div className="flex flex-wrap gap-2">
+          {(['all', 'open', 'due-soon', 'overdue'] as const).map((key) => (
+            <Button
+              key={key}
+              type="button"
+              size="sm"
+              variant={invoiceFilter === key ? 'default' : 'outline'}
+              className="rounded-lg h-9 capitalize"
+              onClick={() => setInvoiceFilter(key)}
+            >
+              {key === 'all' ? 'All accounts' : key === 'due-soon' ? 'Due soon' : key}
+            </Button>
+          ))}
+        </div>
+      </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-2xl border bg-white p-4 shadow-sm dark:bg-slate-900 dark:border-slate-800">
           <p className="text-xs font-bold uppercase text-muted-foreground">Open invoices</p>
-          <p className="text-2xl font-bold text-teal-800 dark:text-teal-300">{formatCents(openBalanceCents)}</p>
+          <p className="text-xl font-bold text-teal-800 dark:text-teal-300">{formatCents(openBalanceCents)}</p>
         </div>
         <div className="rounded-2xl border bg-white p-4 shadow-sm dark:bg-slate-900 dark:border-slate-800">
           <p className="text-xs font-bold uppercase text-muted-foreground">Billing accounts</p>
-          <p className="text-2xl font-bold">{accounts.length}</p>
+          <p className="text-xl font-bold">{accounts.length}</p>
         </div>
         <div className="rounded-2xl border bg-white p-4 shadow-sm dark:bg-slate-900 dark:border-slate-800">
           <p className="text-xs font-bold uppercase text-muted-foreground">Overdue</p>
           <p className="text-2xl font-bold text-amber-800 dark:text-amber-300">{overdueCount}</p>
         </div>
+        <div className="rounded-2xl border bg-white p-4 shadow-sm dark:bg-slate-900 dark:border-slate-800">
+          <p className="text-xs font-bold uppercase text-muted-foreground">Paid invoices</p>
+          <p className="text-xl font-bold text-emerald-800 dark:text-emerald-300">{paidCount}</p>
+        </div>
       </div>
+      <p className="text-xs text-muted-foreground">
+        {filteredAccounts.length === accounts.length
+          ? `${accounts.length} billing ${accounts.length === 1 ? 'account' : 'accounts'}`
+          : `${filteredAccounts.length} of ${accounts.length} accounts`}
+      </p>
 
       {isLoading ? (
-        <p className="text-sm text-muted-foreground">Loading billing…</p>
+        <OfficeLoadingRows cols={3} />
       ) : accounts.length === 0 ? (
-        <p className="rounded-2xl border border-dashed p-10 text-center text-sm text-muted-foreground">
-          No billing accounts yet. Create a family account to get started.
-        </p>
+        <OfficeEmptyState
+          icon={CreditCard}
+          title="No billing accounts yet"
+          description="Create a family account and link students to track tuition and fees."
+          action={
+            <Button className="rounded-xl gap-2" onClick={openNewAccount}>
+              <Plus className="h-4 w-4" />
+              New account
+            </Button>
+          }
+        />
       ) : filteredAccounts.length === 0 ? (
-        <p className="rounded-2xl border border-dashed p-10 text-center text-sm text-muted-foreground">
-          No accounts match your search.
-        </p>
+        <OfficeEmptyState title="No accounts match" description="Try a different search or filter." />
       ) : (
         <div className="space-y-4">
           {filteredAccounts.map((account) => {
@@ -357,7 +472,17 @@ export function OfficeBillingView({
                       Balance: {formatCents(account.balanceCents || 0)}
                     </p>
                   </div>
-                  <div className="flex gap-1">
+                  <div className="flex flex-wrap gap-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 rounded-lg text-xs"
+                      onClick={() => openNewInvoice(account.id)}
+                    >
+                      <Plus className="h-3.5 w-3.5 mr-1" />
+                      Invoice
+                    </Button>
                     <Button
                       type="button"
                       variant="ghost"
@@ -404,8 +529,50 @@ export function OfficeBillingView({
                           >
                             {inv.status}
                           </span>
+                          {inv.status === 'draft' ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="h-7 rounded-lg"
+                              onClick={() => void sendDraft(inv)}
+                            >
+                              Send
+                            </Button>
+                          ) : null}
                           {inv.status !== 'paid' && inv.status !== 'void' ? (
                             <>
+                              {isInvoiceOverdue(inv) && account.contactEmail?.trim() ? (
+                                <Button asChild type="button" size="sm" variant="outline" className="h-7 rounded-lg gap-1">
+                                  <a
+                                    href={buildInvoiceReminderMailto({
+                                      email: account.contactEmail.trim(),
+                                      familyName: account.familyName,
+                                      invoiceLabel: inv.label,
+                                      amountCents: inv.amountCents,
+                                      dueDate: inv.dueDate,
+                                    })}
+                                  >
+                                    <Mail className="h-3 w-3" />
+                                    Remind
+                                  </a>
+                                </Button>
+                              ) : null}
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 rounded-lg"
+                                onClick={() =>
+                                  openNewInvoice(account.id, {
+                                    ...inv,
+                                    label: inv.label,
+                                    dueDate: defaultDueDateIso(30),
+                                  })
+                                }
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
                               <Button type="button" size="sm" variant="outline" className="h-7 rounded-lg" onClick={() => void markPaid(inv)}>
                                 Mark paid
                               </Button>
@@ -470,8 +637,20 @@ export function OfficeBillingView({
             </div>
             <div className="space-y-2">
               <Label>Link students</Label>
+              <OfficeSearchInput
+                value={accountStudentSearch}
+                onChange={setAccountStudentSearch}
+                placeholder="Filter students…"
+                className="max-w-full"
+              />
               <div className="max-h-40 overflow-y-auto rounded-xl border p-2 space-y-1">
-                {students.map((s) => (
+                {students
+                  .filter((s) => {
+                    const q = accountStudentSearch.trim().toLowerCase();
+                    if (!q) return true;
+                    return (studentLabelById.get(s.id) ?? '').toLowerCase().includes(q);
+                  })
+                  .map((s) => (
                   <label key={s.id} className="flex items-center gap-2 text-sm">
                     <input
                       type="checkbox"
@@ -481,7 +660,7 @@ export function OfficeBillingView({
                     />
                     {studentLabelById.get(s.id)}
                   </label>
-                ))}
+                  ))}
               </div>
             </div>
           </div>
@@ -496,7 +675,17 @@ export function OfficeBillingView({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={invoiceOpen} onOpenChange={setInvoiceOpen}>
+      <Dialog
+        open={invoiceOpen}
+        onOpenChange={(open) => {
+          setInvoiceOpen(open);
+          if (!open) {
+            setInvoiceLabel('');
+            setInvoiceAmount('');
+            setInvoiceDue('');
+          }
+        }}
+      >
         <DialogContent className="max-w-md rounded-2xl">
           <DialogHeader>
             <DialogTitle>New invoice</DialogTitle>
@@ -520,7 +709,21 @@ export function OfficeBillingView({
             <div className="space-y-2">
               <Label>Description</Label>
               <Input value={invoiceLabel} onChange={(e) => setInvoiceLabel(e.target.value)} placeholder="Tuition Q1" className="rounded-xl" />
+              <OfficeQuickChips
+                options={invoiceLabelSuggestions.slice(0, 6)}
+                value={invoiceLabel}
+                onSelect={setInvoiceLabel}
+              />
             </div>
+            <label className="flex items-center gap-2 text-sm text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={saveAsDraft}
+                onChange={(e) => setSaveAsDraft(e.target.checked)}
+                className="h-4 w-4 accent-teal-700"
+              />
+              Save as draft (won&apos;t add to balance until sent)
+            </label>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label>Amount (USD)</Label>

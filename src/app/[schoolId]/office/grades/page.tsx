@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from 'react';
 import { OfficeGradesView } from '@/components/office/OfficeGradesView';
 import { useOfficePortalData } from '@/components/office/OfficePortalGate';
 import { useOfficeSharedData } from '@/lib/office/useOfficeSharedData';
@@ -13,14 +14,16 @@ export default function OfficeGradesPage() {
   if (!schoolId) return null;
 
   return (
-    <OfficeGradesView
-      schoolId={schoolId}
-      students={shared.students}
-      classNameById={shared.classNameById}
-      studentLabelById={shared.studentLabelById}
-      entries={gradeEntries}
-      userName={userName}
-      isLoading={shared.isLoading}
-    />
+    <Suspense fallback={<p className="text-sm text-muted-foreground">Loading grades…</p>}>
+      <OfficeGradesView
+        schoolId={schoolId}
+        students={shared.students}
+        classNameById={shared.classNameById}
+        studentLabelById={shared.studentLabelById}
+        entries={gradeEntries}
+        userName={userName}
+        isLoading={shared.isLoading}
+      />
+    </Suspense>
   );
 }

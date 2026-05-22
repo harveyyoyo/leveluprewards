@@ -6,7 +6,7 @@ import type { Student } from '@/lib/types';
 
 /** Shared space below the welcome/balance header on student kiosk + rewards shop. */
 export const studentKioskHeaderGapClass =
-  'mb-8 sm:mb-10 md:mb-12 [@media(max-height:760px)]:mb-6';
+  'mb-12 sm:mb-14 md:mb-16 [@media(max-height:760px)]:mb-10';
 
 export type StudentKioskTopBarProps = {
   student: Student;
@@ -102,6 +102,9 @@ export function StudentKioskTopBar({
         </div>
 
         <div className="flex shrink-0 flex-col items-end gap-2">
+          {trailingActions ? (
+            <div className="flex flex-wrap items-center justify-end gap-2">{trailingActions}</div>
+          ) : null}
           <div className="text-right">
             <p
               className="text-[10px] font-bold uppercase tracking-[0.28em] opacity-60 sm:text-xs"
@@ -116,9 +119,6 @@ export function StudentKioskTopBar({
               {points.toLocaleString()}
             </p>
           </div>
-          {trailingActions ? (
-            <div className="flex flex-wrap items-center justify-end gap-2">{trailingActions}</div>
-          ) : null}
         </div>
       </div>
     </header>

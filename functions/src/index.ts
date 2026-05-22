@@ -101,6 +101,49 @@ function adminPasscodeFrom(data: Record<string, any>): string {
 
 // Demo schools should authenticate like any other school (no passcode bypass).
 
+function isGoogleAuthenticated(context: functions.https.CallableContext): boolean {
+  return context.auth?.token?.firebase?.sign_in_provider === "google.com";
+}
+
+async function hasExistingSchoolPortalAccess(
+  schoolId: string,
+  uid: string,
+  context: functions.https.CallableContext
+): Promise<boolean> {
+  const db = admin.firestore();
+  if (
+    await hasSchoolRole(schoolId, uid, [
+      "admin",
+      "teacher",
+      "secretary",
+      "prizeClerk",
+      "reports",
+      "librarian",
+      "houseCoordinator",
+    ])
+  ) {
+    return true;
+  }
+  const portalSnap = await db
+    .collection("schools")
+    .doc(schoolId)
+    .collection("anonymousPortalSessions")
+    .doc(uid)
+    .get();
+  if (portalSnap.exists) return true;
+  return isDeveloper(context);
+}
+
+async function ensureAnonymousPortalSession(schoolId: string, uid: string): Promise<void> {
+  const db = admin.firestore();
+  await db
+    .collection("schools")
+    .doc(schoolId)
+    .collection("anonymousPortalSessions")
+    .doc(uid)
+    .set({ grantedAt: FieldValue.serverTimestamp() }, { merge: true });
+}
+
 async function hasSchoolRole(
   schoolId: string,
   uid: string,
@@ -706,7 +749,14 @@ exports.verifySchoolPasscode = functions.https.onCall(
       throw new functions.https.HttpsError("not-found", "School not found.");
     }
 
+    const uid = context.auth!.uid;
+    const adminRoleRef = db.collection("schools").doc(schoolId).collection("roles_admin").doc(uid);
+    const existingAdmin = await adminRoleRef.get();
+
     if (passcode.length === 0) {
+      if (isGoogleAuthenticated(context) && existingAdmin.exists && existingAdmin.data()?.role === "admin") {
+        return { success: true };
+      }
       throw new functions.https.HttpsError("invalid-argument", "A valid passcode is required.");
     }
     const schoolData = schoolDoc.data()!;
@@ -722,7 +772,6 @@ exports.verifySchoolPasscode = functions.https.onCall(
     }
 
     // Provision admin role using the Admin SDK (path must match client: schools/{schoolId}/roles_admin/{uid})
-    const adminRoleRef = db.collection("schools").doc(schoolId).collection("roles_admin").doc(context.auth!.uid);
     await adminRoleRef.set({ role: 'admin' });
 
     return { success: true };
@@ -739,17 +788,23 @@ exports.verifySchoolAccessPasscode = functions.https.onCall(
     requireAuth(context);
     requireString(data.schoolId, "schoolId");
 
-    if (typeof data.passcode !== "string" || data.passcode.length === 0) {
-      throw new functions.https.HttpsError("invalid-argument", "A valid passcode is required.");
-    }
-
     const schoolId = String(data.schoolId).trim().toLowerCase();
-    const passcode = String(data.passcode).trim();
+    const passcode = typeof data.passcode === "string" ? String(data.passcode).trim() : "";
     const db = admin.firestore();
     const schoolDoc = await db.collection("schools").doc(schoolId).get();
 
     if (!schoolDoc.exists) {
       throw new functions.https.HttpsError("not-found", "School not found.");
+    }
+
+    const uid = context.auth!.uid;
+
+    if (passcode.length === 0) {
+      if (isGoogleAuthenticated(context) && (await hasExistingSchoolPortalAccess(schoolId, uid, context))) {
+        await ensureAnonymousPortalSession(schoolId, uid);
+        return { success: true };
+      }
+      throw new functions.https.HttpsError("invalid-argument", "A valid passcode is required.");
     }
 
     const schoolData = schoolDoc.data()!;
@@ -765,13 +820,7 @@ exports.verifySchoolAccessPasscode = functions.https.onCall(
     }
 
     // Lets the Next.js edge gate mint a school-scoped cookie after verifying the same passcode server-side.
-    const uid = context.auth!.uid;
-    await db
-      .collection("schools")
-      .doc(schoolId)
-      .collection("anonymousPortalSessions")
-      .doc(uid)
-      .set({ grantedAt: FieldValue.serverTimestamp() }, { merge: true });
+    await ensureAnonymousPortalSession(schoolId, uid);
 
     return { success: true };
   }
@@ -2477,13 +2526,24 @@ exports.verifyTeacherPasscode = functions.https.onCall(
   async (data: any, context: functions.https.CallableContext) => {
     requireAuth(context);
     requireString(data.schoolId, "schoolId");
-    requireString(data.username, "username");
-    requireString(data.passcode, "passcode");
-
+    const passcode = typeof data.passcode === "string" ? String(data.passcode).trim() : "";
+    const schoolId = String(data.schoolId).trim().toLowerCase();
     const db = admin.firestore();
+    const uid = context.auth!.uid;
+    const teacherRoleRef = db.collection("schools").doc(schoolId).collection("roles_teacher").doc(uid);
+    const existingTeacher = await teacherRoleRef.get();
+
+    if (passcode.length === 0) {
+      if (isGoogleAuthenticated(context) && existingTeacher.exists && existingTeacher.data()?.role === "teacher") {
+        return { success: true };
+      }
+      throw new functions.https.HttpsError("invalid-argument", "A valid passcode is required.");
+    }
+
+    requireString(data.username, "username");
 
     // Find teacher by username in the teachers subcollection
-    const teachersSnap = await db.collection("schools").doc(data.schoolId).collection("teachers")
+    const teachersSnap = await db.collection("schools").doc(schoolId).collection("teachers")
       .where("username", "==", data.username)
       .limit(1)
       .get();
@@ -2496,14 +2556,12 @@ exports.verifyTeacherPasscode = functions.https.onCall(
     const teacherData = teacherDoc.data();
 
     // Check if the passcode matches
-    if (teacherData.passcode !== data.passcode) {
+    if (teacherData.passcode !== passcode) {
       throw new functions.https.HttpsError("permission-denied", "Invalid teacher passcode.");
     }
 
     // Provision only the teacher role. Firestore rules grant narrow teacher
     // permissions from this document instead of relying on admin escalation.
-    const teacherRoleRef = db.collection("schools").doc(data.schoolId).collection("roles_teacher").doc(context.auth!.uid);
-
     await teacherRoleRef.set({ role: 'teacher', teacherId: teacherDoc.id });
 
     return { success: true };
@@ -2585,8 +2643,7 @@ exports.verifyStaffAccountPasscode = functions.https.onCall(
   async (data: any, context: functions.https.CallableContext) => {
     requireAuth(context);
     requireString(data.schoolId, "schoolId");
-    requireString(data.username, "username");
-    requireString(data.passcode, "passcode");
+    const passcode = typeof data.passcode === "string" ? String(data.passcode).trim() : "";
     const role = data.role as string;
     if (role !== "secretary" && role !== "prizeClerk" && role !== "reports" && role !== "librarian" && role !== "office" && role !== "houseCoordinator") {
       throw new functions.https.HttpsError(
@@ -2597,6 +2654,31 @@ exports.verifyStaffAccountPasscode = functions.https.onCall(
 
     const db = admin.firestore();
     const schoolId = String(data.schoolId).trim().toLowerCase();
+    const uid = context.auth!.uid;
+    const roleCollection =
+      role === "secretary"
+        ? "roles_secretary"
+        : role === "prizeClerk"
+          ? "roles_prizeClerk"
+          : role === "librarian"
+            ? "roles_librarian"
+            : role === "office"
+              ? "roles_office"
+              : role === "houseCoordinator"
+                ? "roles_houseCoordinator"
+                : "roles_reports";
+    const existingRoleRef = db.collection("schools").doc(schoolId).collection(roleCollection).doc(uid);
+    const existingRole = await existingRoleRef.get();
+
+    if (passcode.length === 0) {
+      if (isGoogleAuthenticated(context) && existingRole.exists && existingRole.data()?.role === role) {
+        return { success: true, displayName: role, roles: [role] };
+      }
+      requireString(data.username, "username");
+      throw new functions.https.HttpsError("invalid-argument", "A valid passcode is required.");
+    }
+
+    requireString(data.username, "username");
     const username = String(data.username).trim().toLowerCase();
 
     const accountsSnap = await db
@@ -2610,7 +2692,7 @@ exports.verifyStaffAccountPasscode = functions.https.onCall(
     const match = accountsSnap.docs.find((d) => {
       const row = d.data() as { passcode?: string; role?: string; roles?: string[] };
       const roles = Array.isArray(row.roles) && row.roles.length > 0 ? row.roles : [row.role];
-      return roles.includes(role) && row.passcode === data.passcode;
+      return roles.includes(role) && row.passcode === passcode;
     });
 
     if (!match) {

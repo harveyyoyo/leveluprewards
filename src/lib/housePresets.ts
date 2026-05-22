@@ -1,6 +1,6 @@
 import type { House } from '@/lib/types';
 
-export type HousePresetThemeId = 'quick' | 'classic' | 'yeshiva';
+export type HousePresetThemeId = 'quick' | 'classic' | 'yeshiva' | 'sports' | 'elements';
 
 type HouseSeed = Omit<House, 'id' | 'points' | 'lifetimePoints'>;
 
@@ -193,6 +193,92 @@ export const HOUSE_PRESET_THEMES: HousePresetTheme[] = [
         motto: 'Joy in avodas Hashem.',
         presetKey: 'yeshiva:ruach',
         sortOrder: 5,
+      },
+    ],
+  },
+  {
+    id: 'sports',
+    label: 'Sports teams',
+    description: 'Four rivalry-style houses for athletics and pep rallies.',
+    houses: [
+      {
+        name: 'Lions',
+        value: 'Pride',
+        color: '#CA8A04',
+        emoji: '🦁',
+        motto: 'Hear us roar.',
+        presetKey: 'sports:lions',
+        sortOrder: 0,
+      },
+      {
+        name: 'Eagles',
+        value: 'Focus',
+        color: '#1D4ED8',
+        emoji: '🦅',
+        motto: 'Soar together.',
+        presetKey: 'sports:eagles',
+        sortOrder: 1,
+      },
+      {
+        name: 'Bears',
+        value: 'Strength',
+        color: '#78350F',
+        emoji: '🐻',
+        motto: 'Stand your ground.',
+        presetKey: 'sports:bears',
+        sortOrder: 2,
+      },
+      {
+        name: 'Wolves',
+        value: 'Pack',
+        color: '#475569',
+        emoji: '🐺',
+        motto: 'Run as one pack.',
+        presetKey: 'sports:wolves',
+        sortOrder: 3,
+      },
+    ],
+  },
+  {
+    id: 'elements',
+    label: 'Four elements',
+    description: 'Fire, water, earth, and air—works well for STEM or fantasy themes.',
+    houses: [
+      {
+        name: 'Emberforge',
+        value: 'Fire',
+        color: '#DC2626',
+        emoji: '🔥',
+        motto: 'Passion fuels progress.',
+        presetKey: 'elements:fire',
+        sortOrder: 0,
+      },
+      {
+        name: 'Tidewell',
+        value: 'Water',
+        color: '#0284C7',
+        emoji: '💧',
+        motto: 'Flow around obstacles.',
+        presetKey: 'elements:water',
+        sortOrder: 1,
+      },
+      {
+        name: 'Stonegate',
+        value: 'Earth',
+        color: '#15803D',
+        emoji: '🌲',
+        motto: 'Roots run deep.',
+        presetKey: 'elements:earth',
+        sortOrder: 2,
+      },
+      {
+        name: 'Skyreach',
+        value: 'Air',
+        color: '#7C3AED',
+        emoji: '🌬️',
+        motto: 'Reach higher.',
+        presetKey: 'elements:air',
+        sortOrder: 3,
       },
     ],
   },

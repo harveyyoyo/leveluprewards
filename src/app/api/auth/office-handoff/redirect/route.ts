@@ -6,38 +6,47 @@ import {
   SCHOOL_GATE_COOKIE_NAME,
 } from '@/lib/auth/schoolGateCookie';
 import { verifySchoolGateJwt } from '@/lib/auth/verifySchoolGateJwt';
-import { canonicalOfficeHost } from '@/lib/officeRouting';
-import { canonicalPortalHost } from '@/lib/portalRouting';
+import { canonicalOfficeHost, isOfficeHostname } from '@/lib/officeRouting';
+import { isLocalDevHost, requestBrowserOrigin } from '@/lib/portalRouting';
 import { signOfficeHandoffMeta } from '@/lib/auth/officeHandoff';
+import { resolveOfficeHandoffAccess } from '@/lib/auth/resolveOfficeHandoffAccess';
 import { getFirebaseAdminAuth } from '@/lib/server/firebaseAdminAuth';
 import { authCookieFlags } from '@/lib/auth/authCookieOptions';
 import { jsonError } from '@/lib/server/apiSecurity';
 
 const SCHOOL_ID_RE = /^[\w-]{1,128}$/;
 
+function requestHost(req: NextRequest): string {
+  return req.headers.get('x-forwarded-host') ?? req.headers.get('host') ?? req.nextUrl.host ?? '';
+}
+
 /** GET: mint office handoff and redirect to office subdomain (portal → office). */
 export async function GET(req: NextRequest) {
-  const officeHost = canonicalOfficeHost();
-  if (!officeHost) {
-    return jsonError(503, 'Office subdomain is not configured.');
-  }
-
   const schoolRaw = req.nextUrl.searchParams.get('school')?.trim().toLowerCase() || '';
   if (!SCHOOL_ID_RE.test(schoolRaw)) {
     return jsonError(400, 'Invalid school id.');
   }
 
+  const reqHost = requestHost(req);
+  const localDev = isLocalDevHost(reqHost) && !isOfficeHostname(reqHost);
+  const origin = requestBrowserOrigin(req);
+
   const fbRaw = req.cookies.get(FIREBASE_SESSION_COOKIE_NAME)?.value;
   if (!fbRaw) {
     const handoffPath = `/api/auth/office-handoff/redirect?school=${encodeURIComponent(schoolRaw)}`;
-    const portalHost = canonicalPortalHost();
-    const scheme = req.nextUrl.protocol || 'https:';
-    const loginBase = portalHost
-      ? new URL(`${scheme}//${portalHost}/login`)
-      : new URL('/login', req.nextUrl.origin);
+    const loginBase = new URL('/login', origin);
     loginBase.searchParams.set('school', schoolRaw);
     loginBase.searchParams.set('next', handoffPath);
     return NextResponse.redirect(loginBase);
+  }
+
+  if (localDev) {
+    return NextResponse.redirect(new URL(`/${schoolRaw}/office`, origin));
+  }
+
+  const officeHost = canonicalOfficeHost();
+  if (!officeHost) {
+    return NextResponse.redirect(new URL(`/${schoolRaw}/office`, origin));
   }
 
   const verified = await verifyFirebaseAuthJwt(fbRaw);
@@ -48,25 +57,17 @@ export async function GET(req: NextRequest) {
 
   const gateSecret = getAuthGateSecret();
   const gateRaw = req.cookies.get(SCHOOL_GATE_COOKIE_NAME)?.value;
-  const gate = gateSecret && gateRaw ? await verifySchoolGateJwt(gateRaw, gateSecret) : null;
+  const gate =
+    gateSecret && gateRaw ? await verifySchoolGateJwt(gateRaw, gateSecret) : null;
+  const gateScopes =
+    gate && gate.uid === uid && gate.schoolId === schoolRaw ? gate.scopes : null;
 
-  const isAdmin =
-    gate &&
-    gate.uid === uid &&
-    gate.schoolId === schoolRaw &&
-    (gate.scopes.has('admin') || gate.scopes.has('dev'));
-  const isOffice =
-    gate &&
-    gate.uid === uid &&
-    gate.schoolId === schoolRaw &&
-    (gate.scopes.has('office') || gate.scopes.has('admin') || gate.scopes.has('dev'));
-
-  if (!isAdmin && !isOffice) {
+  const access = await resolveOfficeHandoffAccess(uid, schoolRaw, gateScopes);
+  if (!access) {
     return jsonError(403, 'Office access is not enabled for this account.');
   }
 
-  const loginState = isAdmin ? 'admin' : 'office';
-  const userName = isAdmin ? 'Admin' : 'Office staff';
+  const { loginState, userName } = access;
 
   const meta = await signOfficeHandoffMeta({
     uid,

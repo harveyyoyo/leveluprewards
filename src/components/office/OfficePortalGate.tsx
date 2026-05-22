@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { collection } from 'firebase/firestore';
-import { Building2, Loader2, LogIn } from 'lucide-react';
+import { Building2, Eye, EyeOff, Loader2, LogIn } from 'lucide-react';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { useSettings } from '@/components/providers/SettingsProvider';
@@ -60,9 +60,17 @@ export function OfficePortalGate({ children }: { children: React.ReactNode }) {
     isOffice,
   } = useAppContext();
 
+  const usernameStorageKey = routeSchoolId ? `office-last-username-${routeSchoolId}` : '';
   const [username, setUsername] = useState('');
   const [passcode, setPasscode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPasscode, setShowPasscode] = useState(false);
+
+  useEffect(() => {
+    if (!usernameStorageKey || typeof window === 'undefined') return;
+    const saved = sessionStorage.getItem(usernameStorageKey);
+    if (saved?.trim()) setUsername(saved.trim());
+  }, [usernameStorageKey]);
 
   const schoolDocRef = useSchoolMetadataDocRef();
   const { data: schoolMeta } = useDoc<{ name?: string }>(schoolDocRef);
@@ -137,6 +145,9 @@ export function OfficePortalGate({ children }: { children: React.ReactNode }) {
         passcode,
       });
       if (authResult.ok) {
+        if (usernameStorageKey && typeof window !== 'undefined') {
+          sessionStorage.setItem(usernameStorageKey, username.trim());
+        }
         playSound('login');
         toast({ title: 'Signed in to School Office' });
       } else {
@@ -153,9 +164,11 @@ export function OfficePortalGate({ children }: { children: React.ReactNode }) {
 
   if (!isInitialized || handoffPending) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-muted-foreground">
-        <Loader2 className="h-8 w-8 animate-spin" aria-hidden />
-        <span className="sr-only">{handoffPending ? 'Completing office sign-in…' : 'Loading…'}</span>
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#f4f7f9] p-6 dark:bg-slate-950">
+        <Loader2 className="h-8 w-8 animate-spin text-teal-700" aria-hidden />
+        <p className="text-sm text-muted-foreground">
+          {handoffPending ? 'Completing office sign-in…' : 'Loading School Office…'}
+        </p>
       </div>
     );
   }
@@ -216,17 +229,29 @@ export function OfficePortalGate({ children }: { children: React.ReactNode }) {
             </div>
             <div className="space-y-2">
               <Label htmlFor="office-passcode">Passcode</Label>
-              <Input
-                id="office-passcode"
-                type="password"
-                value={passcode}
-                onChange={(e) => setPasscode(e.target.value)}
-                autoComplete="current-password"
-                className="rounded-xl"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') void handleLogin();
-                }}
-              />
+              <div className="relative">
+                <Input
+                  id="office-passcode"
+                  type={showPasscode ? 'text' : 'password'}
+                  value={passcode}
+                  onChange={(e) => setPasscode(e.target.value)}
+                  autoComplete="current-password"
+                  className="rounded-xl pr-10"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') void handleLogin();
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2"
+                  onClick={() => setShowPasscode((v) => !v)}
+                  aria-label={showPasscode ? 'Hide passcode' : 'Show passcode'}
+                >
+                  {showPasscode ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
             </div>
             <Button
               className="w-full rounded-xl gap-2"

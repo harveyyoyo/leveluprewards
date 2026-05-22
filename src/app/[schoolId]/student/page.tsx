@@ -41,12 +41,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import type { Student, Prize, HistoryItem, Class, House, LibraryItem, PrizeAiFunReward, Category } from '@/lib/types';
-import { HouseBadge } from '@/components/houses/HouseBadge';
 import { computeDaysOverdue, getLibraryPolicyFromSettings } from '@/lib/libraryPolicy';
 import { StudentLibraryCheckoutsCard } from '@/components/student-kiosk/StudentLibraryCheckoutsCard';
 import { StudentKioskThemeButton } from '@/components/student-kiosk/StudentKioskThemeButton';
+import { StudentKioskProfileExtras } from '@/components/student-kiosk/StudentKioskProfileExtras';
 import { StudentKioskActivityPreview } from '@/components/student-kiosk/StudentKioskActivityPreview';
 import { StudentActivityList } from '@/components/student-kiosk/StudentActivityList';
+import { StudentPrizeShopCard } from '@/components/student-kiosk/StudentPrizeShopCard';
 import {
   StudentKioskTopBar,
   StudentKioskPointCategoriesPanel,
@@ -81,7 +82,6 @@ import {
   Ticket,
   CheckCircle2,
   LogOut,
-  Sparkles,
   Printer,
   ScanBarcode,
 } from 'lucide-react';
@@ -140,6 +140,7 @@ import {
   StudentKioskWarmBackdrop,
   StudentKioskRewardRail,
   StudentKioskRedeemHero,
+  StudentKioskLogoutControls,
   studentKioskCenterStackClass,
   StudentKioskMorePrizesButton,
   StudentKioskMobileRewardsGrid,
@@ -155,6 +156,14 @@ const STUDENT_TRANSITION_MIN_VISIBLE_MS = 650;
 const STUDENT_TRANSITION_EXIT_MS = 320;
 /** If the dashboard never signals ready (e.g. Firestore error), do not leave the full-screen transition layer up indefinitely. */
 const STUDENT_TRANSITION_FAILSAFE_MS = 30_000;
+
+const PrizeDashboard = dynamic(
+  () => import('@/app/[schoolId]/prize/PrizeDashboard').then((m) => m.PrizeDashboard),
+  {
+    ssr: false,
+    loading: () => null,
+  },
+);
 
 const AI_SURPRISE_KIND_LABEL: Record<string, string> = {
   joke: 'Your joke',
@@ -225,122 +234,6 @@ function fallbackPrizeSurprise(
   return selected;
 }
 
-function EligibleRewardCard({
-  reward,
-  themed,
-  primaryForeground,
-  onRedeem,
-  grow = false,
-}: {
-  reward: Prize;
-  themed: boolean;
-  primaryForeground: string;
-  onRedeem: () => void;
-  /** Fill available height in desktop prize columns. */
-  grow?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      data-stagger-card
-      onClick={onRedeem}
-      aria-label={`Redeem ${reward.name || 'prize'}`}
-      className={cn(
-        'reward-card min-h-[8.5rem] min-w-0 rounded-2xl border p-3 sm:min-h-[9.5rem] sm:p-4 lg:min-h-[10rem]',
-        grow && 'flex-1',
-        'flex cursor-pointer flex-col items-stretch justify-between gap-2 text-center shadow-sm',
-        'transition-[box-shadow] duration-500 [transition-timing-function:cubic-bezier(0.22,1,0.36,1)]',
-        'hover:shadow-lg motion-reduce:transition-none group relative overflow-hidden',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
-        !themed && 'border-slate-100 bg-white/40 dark:border-slate-800 dark:bg-slate-800/40',
-      )}
-      style={
-        themed
-          ? {
-              backgroundColor: 'var(--theme-bg)',
-              color: 'var(--theme-text)',
-              borderColor: 'var(--theme-primary)',
-              borderWidth: 1,
-              borderStyle: 'solid',
-            }
-          : undefined
-      }
-    >
-      <div
-        className={cn(
-          'relative mx-auto flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl shadow-inner sm:h-16 sm:w-16',
-          !themed && 'bg-gradient-to-br from-primary/15 to-chart-3/25 text-primary',
-        )}
-        style={
-          themed
-            ? {
-                backgroundColor: 'color-mix(in srgb, var(--theme-primary) 14%, var(--theme-bg))',
-                color: 'var(--theme-primary)',
-              }
-            : undefined
-        }
-      >
-        {reward.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={reward.imageUrl} alt="" className="absolute inset-0 z-[5] size-full object-cover" />
-        ) : reward.name ? (
-          <div className="pointer-events-none absolute inset-0 z-0 opacity-35 mix-blend-overlay">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={`https://api.dicebear.com/9.x/shapes/svg?seed=${encodeURIComponent(reward.name)}&backgroundColor=transparent`}
-              alt=""
-              className="size-full object-cover"
-            />
-          </div>
-        ) : null}
-        {!reward.imageUrl ? (
-          <DynamicIcon name={reward.icon || 'Gift'} className="relative z-10 h-7 w-7 drop-shadow-sm sm:h-8 sm:w-8" />
-        ) : null}
-      </div>
-      <p
-        className={cn(
-          'z-10 min-h-0 shrink text-base font-black leading-tight line-clamp-3 break-words [overflow-wrap:anywhere] sm:text-lg',
-          !themed && 'text-slate-800 dark:text-white',
-        )}
-        style={themed ? { color: 'var(--theme-text)' } : undefined}
-      >
-        {reward.name}
-      </p>
-      <div className="z-10 mt-auto flex w-full shrink-0 flex-col items-center gap-1.5 pt-0.5">
-        <Badge
-          variant="secondary"
-          className={cn(
-            'rounded-full px-2 py-0.5 text-[10px] font-black tracking-wider',
-            !themed && 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
-          )}
-          style={
-            themed ? { backgroundColor: 'var(--theme-primary)', color: primaryForeground } : undefined
-          }
-        >
-          {(reward.points || 0).toLocaleString()} PTS
-        </Badge>
-        <span
-          className={cn(
-            'inline-flex items-center justify-center rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-widest sm:text-[11px]',
-            !themed && 'bg-primary/10 text-primary ring-1 ring-inset ring-primary/25 dark:bg-primary/20 dark:text-primary',
-          )}
-          style={
-            themed
-              ? {
-                  backgroundColor: 'color-mix(in srgb, var(--theme-primary) 18%, transparent)',
-                  color: 'var(--theme-primary)',
-                  boxShadow: 'inset 0 0 0 1px color-mix(in srgb, var(--theme-primary) 38%, transparent)',
-                }
-              : undefined
-          }
-        >
-          Tap to redeem
-        </span>
-      </div>
-    </button>
-  );
-}
-
 function StudentDashboardInner({
 
   studentId,
@@ -354,6 +247,7 @@ function StudentDashboardInner({
   onReady?: (studentId: string) => void;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { redeemCoupon, redeemPrize, printPrizeTickets, schoolId, isKioskLocked, badges, syncStatus } = useAppContext();
   const firestore = useFirestore();
   const { functions, auth } = useFirebase();
@@ -788,6 +682,34 @@ function StudentDashboardInner({
   ]);
 
   const [activityDialogOpen, setActivityDialogOpen] = useState(false);
+  const [fullPrizeShopOpen, setFullPrizeShopOpen] = useState(false);
+
+  const openFullPrizeShop = useCallback(() => {
+    playSound('click');
+    setFullPrizeShopOpen(true);
+  }, [playSound]);
+
+  const closeFullPrizeShop = useCallback(() => {
+    playSound('click');
+    setFullPrizeShopOpen(false);
+    if (searchParams.get('shop') === 'prizes' && schoolId) {
+      router.replace(`/${schoolId}/student`, { scroll: false });
+    }
+  }, [playSound, router, schoolId, searchParams]);
+
+  useEffect(() => {
+    setFullPrizeShopOpen(false);
+  }, [studentId]);
+
+  useEffect(() => {
+    if (searchParams.get('shop') === 'prizes') {
+      setFullPrizeShopOpen(true);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    void import('@/app/[schoolId]/prize/PrizeDashboard');
+  }, []);
 
   const handleRedeemCoupon = useCallback(async (codeToRedeem?: string) => {
     if (!student) return;
@@ -1305,6 +1227,18 @@ function StudentDashboardInner({
   const welcomeBackdropActive =
     showWelcome && studentSeesWelcomeBackOverlay(settings, student);
 
+  const profileExtrasBlock = (
+    <StudentKioskProfileExtras
+      birthdayToday={birthdayToday}
+      studentHouse={studentHouse}
+      customEmojiUrl={student.customEmojiUrl}
+      themeEmoji={effectiveTheme?.emoji}
+      welcomeStylesHref={schoolId ? `/${schoolId}/student/welcome` : null}
+      showWelcomeStyles={studentSeesWelcomePage(settings, student)}
+      themed={!!effectiveTheme}
+    />
+  );
+
   return (
     <TooltipProvider>
       <>
@@ -1316,7 +1250,7 @@ function StudentDashboardInner({
           !effectiveTheme && 'student-kiosk-warm-shell',
           birthdayToday
             ? "pt-14 md:pt-16 [@media(max-height:760px)]:pt-12 [@media(max-height:760px)]:md:pt-12"
-            : "pt-3 md:pt-8 [@media(max-height:760px)]:pt-2 [@media(max-height:760px)]:md:pt-3",
+            : "pt-1 md:pt-3 [@media(max-height:760px)]:pt-1 [@media(max-height:760px)]:md:pt-2",
           settings.enableThemeAnimations && !!effectiveTheme && "theme-theme-elements-animated theme-motion-override",
           effectiveTheme && 'student-theme-surface',
           settings.displayMode === 'app' && 'pb-6',
@@ -1415,95 +1349,58 @@ function StudentDashboardInner({
           themed={!!effectiveTheme}
           primaryForeground={primaryForeground}
           photoDisplayMode={settings.photoDisplayMode}
-          nameExtras={
-            <>
-              {birthdayToday ? (
-                <span
-                  className="inline-flex items-center gap-1 rounded-full border border-amber-500/25 bg-amber-500/15 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-amber-800 dark:text-amber-200"
-                  title="Birthday today"
-                >
-                  🎂 Birthday
-                </span>
+          trailingActions={
+            <div className="flex flex-col items-end gap-2">
+              {settings.enableBadges && headerBadges.length > 0 ? (
+                <div className="flex flex-wrap items-center justify-end gap-1">
+                  {headerBadges.map((b) => (
+                    <div
+                      key={b.id}
+                      className="flex h-6 w-6 items-center justify-center rounded-full border border-border/50 bg-card/80 shadow-sm"
+                      title={b.name}
+                    >
+                      <DynamicIcon
+                        name={b.icon}
+                        className="h-3.5 w-3.5"
+                        style={b.accentColor ? { color: b.accentColor } : undefined}
+                      />
+                    </div>
+                  ))}
+                  {totalUniqueBadges > headerBadges.length ? (
+                    <span className="text-[9px] font-bold uppercase tracking-widest opacity-60">
+                      +{totalUniqueBadges - headerBadges.length}
+                    </span>
+                  ) : null}
+                </div>
               ) : null}
-              {studentHouse ? <HouseBadge house={studentHouse} size="sm" /> : null}
-              {(student.customEmojiUrl || effectiveTheme?.emoji) &&
-                (student.customEmojiUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={student.customEmojiUrl}
-                    alt=""
-                    className="theme-animated-emoji h-8 w-8 shrink-0 object-contain"
-                  />
-                ) : (
-                  <span className="theme-animated-emoji text-2xl leading-none">{effectiveTheme?.emoji ?? ''}</span>
-                ))}
-            </>
+              <StudentKioskLogoutControls
+                themed={{ active: !!effectiveTheme }}
+                primaryForeground={primaryForeground}
+                isKioskLocked={isKioskLocked}
+                logoutTimer={logoutTimer}
+                onLogout={handleManualLogout}
+              />
+            </div>
           }
         />
-        {student.nickname?.trim() ||
-        (settings.enableBadges && headerBadges.length > 0) ||
-        (studentSeesWelcomePage(settings, student) && schoolId) ? (
+        {student.nickname?.trim() ? (
           <div className="flex w-full shrink-0 flex-wrap items-center gap-2 px-0.5">
-            {student.nickname?.trim() ? (
-              <p
-                className="truncate text-[10px] font-bold uppercase tracking-[0.2em] opacity-60"
-                style={{ color: effectiveTheme ? 'var(--theme-page-text)' : undefined }}
-              >
-                {student.nickname.trim()}
-              </p>
-            ) : null}
-            {settings.enableBadges && headerBadges.length > 0 ? (
-              <div className="flex flex-wrap items-center gap-1">
-                {headerBadges.map((b) => (
-                  <div
-                    key={b.id}
-                    className="flex h-6 w-6 items-center justify-center rounded-full border border-border/50 bg-card/80 shadow-sm"
-                  >
-                    <DynamicIcon
-                      name={b.icon}
-                      className="h-3.5 w-3.5"
-                      style={b.accentColor ? { color: b.accentColor } : undefined}
-                    />
-                  </div>
-                ))}
-                {totalUniqueBadges > headerBadges.length ? (
-                  <span className="text-[9px] font-bold uppercase tracking-widest opacity-60">
-                    +{totalUniqueBadges - headerBadges.length}
-                  </span>
-                ) : null}
-              </div>
-            ) : null}
-            {studentSeesWelcomePage(settings, student) && schoolId ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-8 gap-1 rounded-full text-[10px] font-bold uppercase tracking-widest"
-                style={
-                  activeTheme
-                    ? {
-                        borderColor: 'var(--theme-primary)',
-                        backgroundColor: 'transparent',
-                        color: 'var(--theme-primary)',
-                      }
-                    : undefined
-                }
-                asChild
-              >
-                <Link href={`/${schoolId}/student/welcome`}>
-                  <Sparkles className="h-3.5 w-3.5 shrink-0 opacity-90" aria-hidden />
-                  Welcome styles
-                </Link>
-              </Button>
-            ) : null}
+            <p
+              className="truncate text-[10px] font-bold uppercase tracking-[0.2em] opacity-60"
+              style={{ color: effectiveTheme ? 'var(--theme-page-text)' : undefined }}
+            >
+              {student.nickname.trim()}
+            </p>
           </div>
         ) : null}
 
 
+        <div className="relative z-10 flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
         <div
           className={cn(
             'relative z-10 flex min-h-0 w-full min-w-0 flex-1 flex-col gap-4 overflow-hidden pb-[max(0.75rem,env(safe-area-inset-bottom))]',
             '[@media(max-height:760px)]:gap-3 [@media(max-height:760px)]:pb-2',
+            fullPrizeShopOpen && 'hidden',
           )}
         >
           {libraryPillarOn && schoolId && overdueLibraryBooks.length > 0 ? (
@@ -1518,7 +1415,7 @@ function StudentDashboardInner({
           <div
             className={cn(
               'grid min-h-0 w-full min-w-0 flex-1 gap-4 overflow-hidden xl:gap-5',
-              'grid-cols-1 lg:grid-cols-[minmax(200px,240px)_minmax(0,1fr)_minmax(200px,240px)] lg:items-stretch lg:content-start',
+              'grid-cols-1 lg:grid-cols-[minmax(260px,300px)_minmax(0,1fr)_minmax(200px,240px)] lg:items-stretch lg:content-start',
               '[@media(max-height:760px)]:gap-2',
             )}
           >
@@ -1532,19 +1429,20 @@ function StudentDashboardInner({
             </p>
             <div
               ref={rewardGridRef}
-              className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overflow-x-hidden pr-0.5 scroll-pb-2"
+              className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overflow-x-hidden pr-0.5 scroll-pb-2"
             >
               {prizesLoading
                 ? [...Array(4)].map((_, i) => (
-                    <Skeleton key={i} className="min-h-[9.5rem] w-full flex-1 rounded-xl" />
+                    <Skeleton key={i} className="min-h-[15rem] w-full shrink-0 rounded-2xl" />
                   ))
                 : eligibleRewards.map((reward) => (
-                    <EligibleRewardCard
+                    <StudentPrizeShopCard
                       key={reward.id}
-                      reward={reward}
+                      prize={reward}
+                      studentPoints={student.points ?? 0}
                       themed={!!effectiveTheme}
                       primaryForeground={primaryForeground}
-                      grow
+                      wholeCardClick
                       onRedeem={() => {
                         playSound('click');
                         setConfirmingPrize(reward);
@@ -1552,36 +1450,19 @@ function StudentDashboardInner({
                     />
                   ))}
             </div>
-            <Button
-              asChild
-              className={cn(
-                'h-10 w-full shrink-0 text-[10px] font-black uppercase tracking-wide shadow-md',
-                !activeTheme && 'bg-gradient-to-r from-primary to-primary/90',
-              )}
-              style={
-                activeTheme
-                  ? {
-                      backgroundColor: 'var(--theme-primary)',
-                      color: primaryForeground,
-                    }
-                  : undefined
-              }
-            >
-              <Link
-                href={`/${schoolId}/prize?student=${encodeURIComponent(student.id)}`}
-                onClick={() => playSound('click')}
-                className="flex items-center justify-center gap-1.5"
-              >
-                <Gift className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                More prizes
-              </Link>
-            </Button>
+            <StudentKioskMorePrizesButton
+              themed={{ active: !!effectiveTheme }}
+              primaryForeground={primaryForeground}
+              schoolId={schoolId}
+              studentId={student.id}
+              onClick={openFullPrizeShop}
+            />
           </aside>
 
           {/* Center: redeem coupon (primary focus) */}
           <div
             className={cn(
-              'order-1 flex min-h-0 flex-col gap-3 lg:order-2 [@media(max-height:760px)]:gap-2',
+              'order-1 flex min-h-0 flex-col gap-3 lg:order-2 lg:justify-center [@media(max-height:760px)]:gap-2',
               studentKioskCenterStackClass,
             )}
           >
@@ -1595,24 +1476,9 @@ function StudentDashboardInner({
             showCameraCoupon={showCameraCoupon}
             couponSectionEnabled={couponSectionEnabled}
             onRedeemCoupon={() => void handleRedeemCoupon()}
-            onLogout={handleManualLogout}
-            isKioskLocked={isKioskLocked}
-            logoutTimer={logoutTimer}
             videoRef={videoRef}
             hasCameraPermission={hasCameraPermission}
           />
-
-            {schoolId ? (
-              <StudentKioskActivityPreview
-                schoolId={schoolId}
-                studentId={student.id}
-                themed={!!effectiveTheme}
-                onViewAll={() => {
-                  playSound('click');
-                  setActivityDialogOpen(true);
-                }}
-              />
-            ) : null}
 
             <EarnedBadgesShowcase
               student={student}
@@ -1632,11 +1498,24 @@ function StudentDashboardInner({
                 themed={!!effectiveTheme}
               />
             ) : null}
+            {profileExtrasBlock}
             <StudentKioskPointCategoriesPanel
               themed={!!effectiveTheme}
               totals={pointTypeTotals}
               footer={portalRaffleFooter}
             />
+            {schoolId ? (
+              <StudentKioskActivityPreview
+                schoolId={schoolId}
+                studentId={student.id}
+                themed={!!effectiveTheme}
+                variant="sidebar"
+                onViewAll={() => {
+                  playSound('click');
+                  setActivityDialogOpen(true);
+                }}
+              />
+            ) : null}
           </aside>
 
           <div className="order-4 flex min-h-0 min-w-0 flex-col gap-2 overflow-hidden lg:hidden [@media(max-height:760px)]:gap-1.5">
@@ -1648,25 +1527,40 @@ function StudentDashboardInner({
                 themed={!!effectiveTheme}
               />
             ) : null}
+            {profileExtrasBlock}
             <StudentKioskPointCategoriesPanel
               themed={!!effectiveTheme}
               totals={pointTypeTotals}
               footer={portalRaffleFooter}
             />
+            {schoolId ? (
+              <StudentKioskActivityPreview
+                schoolId={schoolId}
+                studentId={student.id}
+                themed={!!effectiveTheme}
+                variant="sidebar"
+                onViewAll={() => {
+                  playSound('click');
+                  setActivityDialogOpen(true);
+                }}
+              />
+            ) : null}
             <p className="shrink-0 text-center text-xs font-black uppercase tracking-[0.2em] text-muted-foreground sm:text-sm">
               Eligible prizes
             </p>
-            <div className="grid min-h-0 flex-1 grid-cols-2 gap-2 overflow-y-auto pb-2">
+            <div className="grid min-h-0 flex-1 grid-cols-2 gap-4 overflow-y-auto pb-2">
               {prizesLoading
                 ? [...Array(6)].map((_, i) => (
-                    <Skeleton key={`m-${i}`} className="min-h-[6.5rem] w-full rounded-xl" />
+                    <Skeleton key={`m-${i}`} className="min-h-[15rem] w-full shrink-0 rounded-2xl" />
                   ))
                 : eligibleRewards.map((reward) => (
-                    <EligibleRewardCard
+                    <StudentPrizeShopCard
                       key={reward.id}
-                      reward={reward}
+                      prize={reward}
+                      studentPoints={student.points ?? 0}
                       themed={!!effectiveTheme}
                       primaryForeground={primaryForeground}
+                      wholeCardClick
                       onRedeem={() => {
                         playSound('click');
                         setConfirmingPrize(reward);
@@ -1697,30 +1591,13 @@ function StudentDashboardInner({
                 </div>
               ) : null}
             </div>
-            <Button
-              asChild
-              className={cn(
-                'h-10 w-full shrink-0 text-[10px] font-black uppercase tracking-wide',
-                !activeTheme && 'bg-gradient-to-r from-primary to-primary/90',
-              )}
-              style={
-                activeTheme
-                  ? {
-                      backgroundColor: 'var(--theme-primary)',
-                      color: primaryForeground,
-                    }
-                  : undefined
-              }
-            >
-              <Link
-                href={`/${schoolId}/prize?student=${encodeURIComponent(student.id)}`}
-                onClick={() => playSound('click')}
-                className="flex items-center justify-center gap-1.5"
-              >
-                <Gift className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                More prizes
-              </Link>
-            </Button>
+            <StudentKioskMorePrizesButton
+              themed={{ active: !!effectiveTheme }}
+              primaryForeground={primaryForeground}
+              schoolId={schoolId}
+              studentId={student.id}
+              onClick={openFullPrizeShop}
+            />
           </div>
           </div>
 
@@ -1925,6 +1802,24 @@ function StudentDashboardInner({
             </Dialog>
 
         </div>
+
+        <div
+          className={cn(
+            'relative z-10 flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden',
+            !fullPrizeShopOpen && 'hidden',
+          )}
+          aria-hidden={!fullPrizeShopOpen}
+        >
+          <PrizeDashboard
+            embedded
+            studentId={student.id}
+            onDone={onDone}
+            onRequestExit={handleManualLogout}
+            onBackToKiosk={closeFullPrizeShop}
+          />
+        </div>
+        </div>
+
         </div>
 
         {welcomeBackdropActive && (

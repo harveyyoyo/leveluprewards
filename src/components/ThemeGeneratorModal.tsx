@@ -570,6 +570,7 @@ export function ThemeGeneratorModal({
                     <DialogDescription>
                         Describe a theme and let AI generate a custom look. Themes can include gradients/patterns, and even “animated vibe” ideas (moving colors or playful motion like an emoji popping in/out).
                         After generating, you can also fine‑tune specific parts like the emoji and colors.
+                        Use fonts that are easy to read on kiosk screens—clear sans-serif typefaces work best; avoid decorative, script, or ultra-narrow fonts.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -673,6 +674,9 @@ export function ThemeGeneratorModal({
                                                     <Wand2 className="w-4 h-4" />
                                                 </Button>
                                             </div>
+                                            <p className="text-[11px] leading-snug text-muted-foreground">
+                                                Tip: Don&apos;t use fonts that are hard to read. Stick to simple, legible typefaces students can scan quickly on the kiosk.
+                                            </p>
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-2 gap-3 items-end">

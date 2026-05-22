@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Download, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -24,8 +25,24 @@ export function OfficeGradeReportView({
   studentLabelById,
   classNameById,
 }: OfficeGradeReportViewProps) {
+  const searchParams = useSearchParams();
   const { term: activeTerm } = useOfficeTerm(schoolId);
   const [term, setTerm] = useState(activeTerm);
+  const [classFilter, setClassFilter] = useState('all');
+  const [studentFilter, setStudentFilter] = useState('all');
+  const [groupByStudent, setGroupByStudent] = useState(false);
+
+  useEffect(() => {
+    setTerm(activeTerm);
+  }, [activeTerm]);
+
+  useEffect(() => {
+    const sid = searchParams.get('student')?.trim();
+    if (sid) {
+      setStudentFilter(sid);
+      setGroupByStudent(true);
+    }
+  }, [searchParams]);
 
   const terms = useMemo(() => {
     const set = new Set(entries.map((e) => e.termLabel));
@@ -33,9 +50,23 @@ export function OfficeGradeReportView({
     return Array.from(set).sort();
   }, [entries, activeTerm]);
 
+  const classOptions = useMemo(() => {
+    const ids = new Set<string>();
+    for (const e of entries) {
+      if (e.classId) ids.add(e.classId);
+    }
+    return Array.from(ids)
+      .map((id) => ({ id, name: classNameById.get(id) ?? id }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [entries, classNameById]);
+
   const rows = useMemo(() => {
     return entries
-      .filter((e) => e.termLabel === term)
+      .filter((e) => {
+        if (e.termLabel !== term) return false;
+        if (classFilter !== 'all' && e.classId !== classFilter) return false;
+        return true;
+      })
       .slice()
       .sort((a, b) => {
         const sa = studentLabelById.get(a.studentId) ?? '';
@@ -43,7 +74,21 @@ export function OfficeGradeReportView({
         if (sa !== sb) return sa.localeCompare(sb);
         return a.subject.localeCompare(b.subject);
       });
-  }, [entries, term, studentLabelById]);
+  }, [entries, term, classFilter, studentFilter, studentLabelById]);
+
+  const groupedByStudent = useMemo(() => {
+    const map = new Map<string, OfficeGradeEntry[]>();
+    for (const row of rows) {
+      const list = map.get(row.studentId) ?? [];
+      list.push(row);
+      map.set(row.studentId, list);
+    }
+    return Array.from(map.entries()).sort((a, b) => {
+      const la = studentLabelById.get(a[0]) ?? '';
+      const lb = studentLabelById.get(b[0]) ?? '';
+      return la.localeCompare(lb);
+    });
+  }, [rows, studentLabelById]);
 
   const displaySchool = schoolName?.trim() || schoolId;
 
@@ -84,6 +129,33 @@ export function OfficeGradeReportView({
               </SelectContent>
             </Select>
           </div>
+          {classOptions.length > 0 ? (
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold uppercase text-muted-foreground">Class</Label>
+              <Select value={classFilter} onValueChange={setClassFilter}>
+                <SelectTrigger className="w-36 h-9 rounded-lg">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All classes</SelectItem>
+                  {classOptions.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null}
+          <Button
+            type="button"
+            variant={groupByStudent ? 'default' : 'outline'}
+            size="sm"
+            className="rounded-lg h-9"
+            onClick={() => setGroupByStudent((v) => !v)}
+          >
+            By student
+          </Button>
           <Button
             type="button"
             variant="outline"
@@ -101,6 +173,10 @@ export function OfficeGradeReportView({
         </div>
       </div>
 
+      <p className="text-xs text-muted-foreground no-print">
+        {rows.length} grade {rows.length === 1 ? 'row' : 'rows'} for {term}
+      </p>
+
       <article className="rounded-2xl border bg-white p-6 shadow-sm print:border-0 print:shadow-none print:p-0 dark:bg-slate-900 dark:border-slate-800">
         <header className="border-b pb-4 mb-4 print:mb-3">
           <p className="text-xs font-bold uppercase tracking-widest text-teal-800 dark:text-teal-300">School Office</p>
@@ -109,6 +185,27 @@ export function OfficeGradeReportView({
         </header>
         {rows.length === 0 ? (
           <p className="text-sm text-muted-foreground">No grades recorded for this term.</p>
+        ) : groupByStudent ? (
+          <div className="space-y-6">
+            {groupedByStudent.map(([studentId, studentRows]) => (
+              <section key={studentId} className="break-inside-avoid">
+                <h2 className="text-sm font-bold border-b pb-1 mb-2">
+                  {studentLabelById.get(studentId) ?? 'Student'}
+                  <span className="ml-2 font-normal text-muted-foreground">
+                    {(studentRows[0]?.classId && classNameById.get(studentRows[0].classId)) || ''}
+                  </span>
+                </h2>
+                <ul className="space-y-1 text-sm">
+                  {studentRows.map((row) => (
+                    <li key={row.id} className="flex justify-between gap-4">
+                      <span>{row.subject}</span>
+                      <span className="font-medium">{formatGradeDisplay(row)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ))}
+          </div>
         ) : (
           <table className="w-full text-sm">
             <thead>

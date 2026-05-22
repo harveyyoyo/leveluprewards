@@ -99,7 +99,6 @@ export function AdminHouseHallOfFamePanel({ schoolId }: { schoolId: string }) {
       </div>
 
       <ContentSectionTreeNav
-        branchLabel="House Hall of Fame"
         items={[
           { id: 'settings', label: 'Display Settings' },
           { id: 'preview', label: 'Live TV Preview' },
@@ -118,7 +117,8 @@ export function AdminHouseHallOfFamePanel({ schoolId }: { schoolId: string }) {
             <div>
               <p className="text-sm font-bold text-foreground">House standings only</p>
               <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                Point totals follow your Houses tab: linked to student rewards or manual house scores.
+                Point totals follow the Houses tab. When linked to student rewards, standings roll up from LevelUp; when
+                off, house points are given manually on Rosters &amp; Points.
               </p>
             </div>
           </div>

@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from 'react';
 import { OfficeStudentsView } from '@/components/office/OfficeStudentsView';
 import { useOfficePortalData } from '@/components/office/OfficePortalGate';
 import { useOfficeSharedData } from '@/lib/office/useOfficeSharedData';
@@ -15,15 +16,17 @@ export default function OfficeStudentsPage() {
   if (!schoolId) return null;
 
   return (
-    <OfficeStudentsView
-      schoolId={schoolId}
-      students={shared.students}
-      classes={shared.classes}
-      classNameById={shared.classNameById}
-      gradeEntries={gradeEntries}
-      billingAccounts={billingAccounts}
-      activeTerm={term}
-      isLoading={shared.isLoading}
-    />
+    <Suspense fallback={<p className="text-sm text-muted-foreground">Loading students…</p>}>
+      <OfficeStudentsView
+        schoolId={schoolId}
+        students={shared.students}
+        classes={shared.classes}
+        classNameById={shared.classNameById}
+        gradeEntries={gradeEntries}
+        billingAccounts={billingAccounts}
+        activeTerm={term}
+        isLoading={shared.isLoading}
+      />
+    </Suspense>
   );
 }

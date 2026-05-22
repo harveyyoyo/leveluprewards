@@ -160,7 +160,7 @@ export function HouseHallOfFameCard({
                   <span className="w-5 shrink-0 text-center text-xs font-black tabular-nums text-muted-foreground">
                     {house.rank}
                   </span>
-                  <HouseBadge house={house} size="sm" className="max-w-[9rem] justify-center truncate" />
+                  <span className="truncate text-base font-bold text-foreground">{house.name}</span>
                 </div>
                 <div className="shrink-0 text-right">
                   <p className="text-sm font-black tabular-nums text-foreground">{formatPoints(points)}</p>

@@ -9,6 +9,7 @@ import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
 import { isAllowedDeveloperGoogleUser } from '@/lib/developerAccess';
+import { isGoogleSignedInUser } from '@/lib/googleSchoolAccess';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import Logo from '@/components/Logo';
@@ -53,6 +54,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
   const lastAutoFocusedRef = useRef<null | 'schoolId' | 'passcode'>(null);
   const developerAutoLoginAttemptedRef = useRef(false);
   const developerLoginCompletedUidRef = useRef<string | null>(null);
+  const googleSchoolAutoAttemptedRef = useRef(false);
   const schoolLoginIntentRef = useRef(false);
   const { login, isInitialized, isUserLoading, loginState } = useAppContext();
   const { toast } = useToast();
@@ -239,6 +241,33 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
     firebaseUser,
   ]);
 
+  useEffect(() => {
+    if (!mounted || !isInitialized || isUserLoading || isDeveloperOnly || isDeveloper) return;
+    if (!hasGoogleUser || !schoolId.trim() || googleSchoolAutoAttemptedRef.current) return;
+    if (schoolLoginIntentRef.current || isSubmitting) return;
+
+    googleSchoolAutoAttemptedRef.current = true;
+    const sid = schoolId.trim().toLowerCase();
+    void (async () => {
+      schoolLoginIntentRef.current = true;
+      clearPendingDeveloperLogin();
+      setIsSubmitting(true);
+      try {
+        const result = await login('school', { schoolId: sid, passcode: '' });
+        if (!result.ok) {
+          googleSchoolAutoAttemptedRef.current = false;
+          schoolLoginIntentRef.current = false;
+          return;
+        }
+        playSound('login');
+        router.push(`/${sid}/portal`);
+      } finally {
+        setIsSubmitting(false);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted, isInitialized, isUserLoading, isDeveloperOnly, isDeveloper, hasGoogleUser, schoolId, isSubmitting]);
+
   const handleDeveloperPrimaryAction = () => {
     if (allowDevPasscodeLogin && developerPasscode.trim()) {
       void handleDeveloperPasscodeLogin();
@@ -388,7 +417,18 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
   const handleSchoolEntry = async () => {
     if (isSubmitting) return;
     const sid = schoolId.trim().toLowerCase();
-    if (!sid || !schoolPasscode.trim()) {
+    const passcode = schoolPasscode.trim();
+    if (!sid) {
+      playSound('error');
+      triggerShake();
+      toast({
+        variant: 'destructive',
+        title: 'Login failed',
+        description: 'Please enter a School ID.',
+      });
+      return;
+    }
+    if (!passcode && !hasGoogleUser) {
       playSound('error');
       triggerShake();
       toast({
@@ -404,7 +444,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
     clearPendingDeveloperLogin();
     setIsSubmitting(true);
     try {
-      const result = await login('school', { schoolId: sid, passcode: schoolPasscode.trim() });
+      const result = await login('school', { schoolId: sid, passcode });
       if (!result.ok) {
         playSound('error');
         triggerShake();
@@ -558,6 +598,13 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
               </div>
             )}
             {(!isDeveloperOnly && !isDeveloper) && (
+              hasGoogleUser ? (
+                <p className="text-xs text-muted-foreground leading-relaxed rounded-xl border border-border/70 bg-background/60 px-4 py-3">
+                  Signed in with Google as{' '}
+                  <span className="font-mono text-foreground">{googleEmail || 'your account'}</span>.
+                  {' '}If you already have access to this school, continue without a passcode.
+                </p>
+              ) : (
               <div className="space-y-2">
                 <Label htmlFor="passcode" className="text-xs font-semibold text-muted-foreground">
                   Access Passcode
@@ -572,6 +619,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
                   autoComplete="current-password"
                 />
               </div>
+              )
             )}
             <div className="pt-4 flex flex-col gap-3">
               {(isSubmitting || isGoogleSigningIn) && (isDeveloperOnly || isDeveloper) ? (

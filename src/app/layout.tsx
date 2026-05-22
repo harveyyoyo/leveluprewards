@@ -1,9 +1,11 @@
 import type { Metadata } from 'next';
+import { headers } from 'next/headers';
 
 import { AppProvider } from "@/components/AppProvider";
 import { FirebaseClientProvider } from '@/firebase';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import LayoutClientWrapper from "@/components/LayoutClientWrapper";
+import { isOfficeHostname, OFFICE_CHROME_REQUEST_HEADER } from '@/lib/officeRouting';
 import "./globals.css";
 
 
@@ -50,13 +52,25 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const headerList = await headers();
+  const requestHost = headerList.get('x-forwarded-host') ?? headerList.get('host') ?? '';
+  const isOfficeHost = isOfficeHostname(requestHost);
+  const officeChromeFromMiddleware =
+    headerList.get(OFFICE_CHROME_REQUEST_HEADER) === 'hidden';
+  const hideGlobalHeader = officeChromeFromMiddleware || isOfficeHost;
+
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      data-office-portal={hideGlobalHeader ? '' : undefined}
+      data-hide-global-header={hideGlobalHeader ? '' : undefined}
+    >
       <head>
         <meta name="theme-color" content="#13a58d" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -96,7 +110,10 @@ export default function RootLayout({
           <ErrorBoundary name="RootFirebaseProvider">
             <FirebaseClientProvider>
               <AppProvider>
-                <LayoutClientWrapper>
+                <LayoutClientWrapper
+                  isOfficeHost={isOfficeHost}
+                  hideGlobalHeader={hideGlobalHeader}
+                >
                   {children}
                 </LayoutClientWrapper>
               </AppProvider>

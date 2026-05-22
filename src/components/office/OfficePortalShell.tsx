@@ -7,6 +7,19 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { OFFICE_NAV_ITEMS, officeNavIdFromPath } from '@/lib/office/officeNav';
+import { useOfficeTerm } from '@/lib/office/useOfficeTerm';
+import {
+  OFFICE_MAIN_PANE_CLASS,
+  OFFICE_MAIN_ZOOM,
+  OFFICE_SIDEBAR_PANE_CLASS,
+} from '@/lib/office/officeTheme';
+
+function getInitials(name: string | null | undefined): string {
+  if (!name?.trim()) return '?';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  return name.trim().slice(0, 2).toUpperCase();
+}
 
 type OfficePortalShellProps = {
   schoolId: string;
@@ -22,12 +35,15 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const displaySchool = schoolName?.trim() || schoolId;
+  const activeNav = OFFICE_NAV_ITEMS.find((i) => i.id === activeId);
+  const { term: workingTerm } = useOfficeTerm(schoolId);
 
   return (
     <div className="min-h-screen bg-[#f4f7f9] text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <div className="flex min-h-screen">
         <aside
           className={cn(
+            OFFICE_SIDEBAR_PANE_CLASS,
             'fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-teal-900/10 bg-[#0f3d4a] text-white shadow-xl transition-transform lg:static lg:translate-x-0',
             mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
           )}
@@ -68,8 +84,8 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
                 >
                   <Icon className={cn('mt-0.5 h-5 w-5 shrink-0', active ? 'text-teal-200' : 'text-teal-300/70')} />
                   <span>
-                    <span className="block text-sm font-semibold">{item.label}</span>
-                    <span className="block text-[11px] leading-snug text-teal-100/60">{item.description}</span>
+                    <span className="block text-base font-semibold leading-snug">{item.label}</span>
+                    <span className="block text-xs leading-snug text-teal-100/60">{item.description}</span>
                   </span>
                 </Link>
               );
@@ -77,7 +93,14 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
           </nav>
 
           <div className="space-y-2 border-t border-white/10 p-4">
-            {userName ? <p className="truncate px-2 text-xs text-teal-100/70">Signed in as {userName}</p> : null}
+            {userName ? (
+              <div className="flex items-center gap-2.5 px-2">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-teal-400/20 text-[10px] font-bold text-teal-200">
+                  {getInitials(userName)}
+                </div>
+                <p className="truncate text-xs text-teal-100/70">{userName}</p>
+              </div>
+            ) : null}
             <Button
               type="button"
               variant="ghost"
@@ -93,6 +116,10 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
             >
               Back to main portal
             </Link>
+            <p className="px-2 pt-1 text-[10px] text-teal-200/50 text-center">
+              v{process.env.NEXT_PUBLIC_VERSION}
+              {process.env.NEXT_PUBLIC_BUILD_TIME ? ` · ${process.env.NEXT_PUBLIC_BUILD_TIME}` : ''}
+            </p>
           </div>
         </aside>
 
@@ -105,7 +132,10 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
           />
         ) : null}
 
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div
+          className={cn('flex min-w-0 flex-1 flex-col', OFFICE_MAIN_PANE_CLASS)}
+          style={{ zoom: OFFICE_MAIN_ZOOM }}
+        >
           <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-slate-200/80 bg-white/90 px-4 py-3 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/90">
             <Button
               type="button"
@@ -118,12 +148,12 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
               <Menu className="h-5 w-5" />
             </Button>
             <div className="min-w-0 flex-1">
-              <h1 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">
-                {OFFICE_NAV_ITEMS.find((i) => i.id === activeId)?.label ?? 'School Office'}
+              <h1 className="text-base font-bold tracking-tight text-slate-900 dark:text-white">
+                {activeNav?.label ?? 'School Office'}
               </h1>
-              <p className="text-xs text-muted-foreground">
-                Grades & billing · shared roster only · v{process.env.NEXT_PUBLIC_VERSION}
-                {process.env.NEXT_PUBLIC_BUILD_TIME ? ` · ${process.env.NEXT_PUBLIC_BUILD_TIME}` : ''}
+              <p className="text-xs text-muted-foreground truncate">
+                {activeNav?.description ?? 'Grades & billing'}
+                {workingTerm ? ` · Term ${workingTerm}` : ''}
               </p>
             </div>
           </header>

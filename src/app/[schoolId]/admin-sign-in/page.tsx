@@ -2,10 +2,12 @@
 
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { ShieldCheck, ArrowLeft, Loader2 } from 'lucide-react';
 
 import { useAppContext } from '@/components/AppProvider';
+import { useFirebase } from '@/firebase';
+import { isGoogleSignedInUser } from '@/lib/googleSchoolAccess';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -62,8 +64,10 @@ function AdminSignInContent() {
   const playSound = useArcadeSound();
   const { toast } = useToast();
   const { login, isInitialized, schoolId: activeSchoolId, loginState } = useAppContext();
+  const { user: firebaseUser } = useFirebase();
   const [passcode, setPasscode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [googleAutoAttempted, setGoogleAutoAttempted] = useState(false);
 
   const schoolId = useMemo(
     () => (params.schoolId || activeSchoolId || '').trim().toLowerCase(),
@@ -78,7 +82,9 @@ function AdminSignInContent() {
   }, [schoolId, loginState]);
 
   const handleSubmit = async () => {
-    if (!schoolId || !passcode.trim()) {
+    if (!schoolId) return;
+    const trimmedPasscode = passcode.trim();
+    if (!trimmedPasscode && !isGoogleSignedInUser(firebaseUser)) {
       playSound('error');
       toast({
         variant: 'destructive',
@@ -89,7 +95,7 @@ function AdminSignInContent() {
     }
     setIsSubmitting(true);
     try {
-      const authResult = await login('admin', { schoolId, passcode: passcode.trim() });
+      const authResult = await login('admin', { schoolId, passcode: trimmedPasscode });
       if (!authResult.ok) {
         playSound('error');
         toast({
@@ -107,6 +113,34 @@ function AdminSignInContent() {
       setIsSubmitting(false);
     }
   };
+
+  useEffect(() => {
+    if (!isInitialized || !schoolId || googleAutoAttempted || isSubmitting) return;
+    if (!isGoogleSignedInUser(firebaseUser)) return;
+    setGoogleAutoAttempted(true);
+    void (async () => {
+      setIsSubmitting(true);
+      try {
+        const authResult = await login('admin', { schoolId, passcode: '' });
+        if (!authResult.ok) return;
+        playSound('login');
+        const next = destinationAfterAdminLogin(searchParams.get('redirect'), schoolId);
+        router.replace(next ?? `/${schoolId}/admin`);
+      } finally {
+        setIsSubmitting(false);
+      }
+    })();
+  }, [
+    firebaseUser,
+    googleAutoAttempted,
+    isInitialized,
+    isSubmitting,
+    login,
+    playSound,
+    router,
+    schoolId,
+    searchParams,
+  ]);
 
   if (!isInitialized) {
     return (
@@ -131,6 +165,11 @@ function AdminSignInContent() {
           </div>
         </CardHeader>
         <CardContent className="space-y-5">
+          {isGoogleSignedInUser(firebaseUser) && (
+            <p className="text-xs text-muted-foreground leading-relaxed rounded-xl border border-border/70 bg-muted/30 px-4 py-3">
+              Signed in with Google. If you already have admin access, we&apos;ll open the dashboard automatically.
+            </p>
+          )}
           <form
             className="space-y-4"
             onSubmit={(e) => {
@@ -151,7 +190,8 @@ function AdminSignInContent() {
                 onChange={(e) => setPasscode(e.target.value)}
                 className="h-12 rounded-xl font-mono tracking-[0.35em] text-center"
                 autoComplete="current-password"
-                autoFocus
+                autoFocus={!isGoogleSignedInUser(firebaseUser)}
+                placeholder={isGoogleSignedInUser(firebaseUser) ? 'Only needed for first-time access' : undefined}
               />
             </div>
 

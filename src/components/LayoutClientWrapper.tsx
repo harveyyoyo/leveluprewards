@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import { isKioskPortraitDisplay } from '@/lib/kioskPortraitLayout';
 import { ConfirmProvider } from '@/components/providers/ConfirmProvider';
 import { isMarketingLandingPath } from '@/lib/marketingLandings';
+import { shouldHideGlobalAppChrome } from '@/lib/officeRouting';
 
 // Lazy-load heavy, non-critical UI components to reduce initial JS bundle.
 // AnimatedSiteBackground: 68 KB (30+ theme layer components)
@@ -38,6 +39,10 @@ const SERVICE_WORKER_PAGE_CACHE = 'levelup-offline-v1-pages';
 
 interface LayoutClientWrapperProps {
     children: React.ReactNode;
+    /** Set from root layout when request host is `office.*` (clean URLs omit `/office`). */
+    isOfficeHost?: boolean;
+    /** Set from middleware + root layout for `/{school}/office` and office host. */
+    hideGlobalHeader?: boolean;
 }
 
 /** Next.js requires `useSearchParams()` to sit under `<Suspense>` or dev SSR/recovery can loop with “missing required error components”. */
@@ -54,7 +59,11 @@ function LayoutChromeSuspenseFallback() {
     );
 }
 
-function LayoutClientWrapperInner({ children }: LayoutClientWrapperProps) {
+function LayoutClientWrapperInner({
+    children,
+    isOfficeHost = false,
+    hideGlobalHeader = false,
+}: LayoutClientWrapperProps) {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
@@ -93,8 +102,11 @@ function LayoutClientWrapperInner({ children }: LayoutClientWrapperProps) {
     const kioskPortraitLayout = isKioskPortraitDisplay(settings) && isKioskPortraitRoute;
     const showStudentHomeHeader =
       isStudentHomePage && settings.studentPortalShowHeader === true;
+    const browserHost = typeof window !== 'undefined' ? window.location.host : '';
+    const hideOfficeChrome =
+      isOfficeHost || shouldHideGlobalAppChrome(pathname, browserHost);
     const hideAppChrome =
-      isLoginPage || isSignInPage || isMarketingLandingPath(pathname);
+      isLoginPage || isSignInPage || isMarketingLandingPath(pathname) || hideOfficeChrome;
     const useHoverKioskHeader =
       isStudentKioskPage && !hideAppChrome && !showStudentHomeHeader;
     /** Staff portal “home” routes: same shell as admin (full-width `<main>`, inner pages use `max-w-7xl`). */
@@ -420,10 +432,19 @@ function LayoutClientWrapperInner({ children }: LayoutClientWrapperProps) {
     );
 }
 
-export default function LayoutClientWrapper({ children }: LayoutClientWrapperProps) {
+export default function LayoutClientWrapper({
+    children,
+    isOfficeHost,
+    hideGlobalHeader,
+}: LayoutClientWrapperProps) {
     return (
         <Suspense fallback={<LayoutChromeSuspenseFallback />}>
-            <LayoutClientWrapperInner>{children}</LayoutClientWrapperInner>
+            <LayoutClientWrapperInner
+                isOfficeHost={isOfficeHost}
+                hideGlobalHeader={hideGlobalHeader}
+            >
+                {children}
+            </LayoutClientWrapperInner>
         </Suspense>
     );
 }

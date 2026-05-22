@@ -17,9 +17,6 @@ import {
   FlaskConical,
   Search,
   ArrowRightLeft,
-  Trophy,
-  Link2,
-  PenLine,
   Minus,
   Plus as PlusIcon,
   Sparkles,
@@ -28,7 +25,6 @@ import { HouseSetupWizard } from '@/app/[schoolId]/admin/sections/HouseSetupWiza
 import { ContentSectionTreeNav } from '@/components/ui/content-section-tree-nav';
 import { AdminHouseHallOfFamePanel } from '@/app/[schoolId]/admin/sections/AdminHouseHallOfFamePanel';
 import {
-  buildHouseHallOfFameHref,
   housePointsSourceSettingsPatch,
   isHouseStudentPointsRollupEnabled,
   resolveHousePointsSource,
@@ -70,9 +66,9 @@ import {
   type HouseStandingsChartFormat,
   HOUSE_STANDINGS_FORMAT_OPTIONS,
 } from '@/components/houses/HouseStandingsChartBlock';
+import { HouseIdeasPanel } from '@/components/houses/HouseIdeasPanel';
 import { HouseStandingsInlineCell } from '@/components/houses/HouseStandingsInlineCell';
 import { buildHouseStandingsRows } from '@/lib/houseStandings';
-import { resolveAppAbsoluteUrl } from '@/lib/appUrl';
 import type { House, Student, Teacher } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useSettings } from '@/components/providers/SettingsProvider';
@@ -314,9 +310,6 @@ export function AdminHousesTab({
     return `/${schoolId}/house-sorting?${params.toString()}`;
   }, [schoolId, unassignedStudents]);
 
-  const houseHallOfFameHref = useMemo(() => buildHouseHallOfFameHref(schoolId, settings), [schoolId, settings]);
-  const houseHallOfFameLaunchUrl = useMemo(() => resolveAppAbsoluteUrl(houseHallOfFameHref), [houseHallOfFameHref]);
-
   const standingsRows = useMemo(
     () => buildHouseStandingsRows(sortedHouses, students ?? []),
     [sortedHouses, students],
@@ -369,7 +362,7 @@ export function AdminHousesTab({
             </CardTitle>
           </Helper>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-nowrap items-center gap-2 overflow-x-auto">
           <TabWalkthroughHeaderAction />
           <Button
             variant="default"
@@ -377,12 +370,6 @@ export function AdminHousesTab({
             onClick={() => setWizardOpen(true)}
           >
             <Sparkles className="mr-2 h-4 w-4" /> Setup wizard
-          </Button>
-          <Button variant="outline" className="rounded-xl" asChild>
-            <a href={houseHallOfFameLaunchUrl} target="_blank" rel="noopener noreferrer">
-              <Trophy className="mr-2 h-4 w-4" /> House Hall of Fame
-              <ExternalLink className="ml-1.5 h-3.5 w-3.5 opacity-60" />
-            </a>
           </Button>
           <Button variant="outline" className="rounded-xl" asChild>
             <Link href={sortingHref} target="_blank" rel="noopener noreferrer">
@@ -403,18 +390,22 @@ export function AdminHousesTab({
             )}
             Populate sample
           </Button>
-          {studentPointsRollup ? (
+          {sortedHouses.length > 0 ? (
             <Button
               variant="outline"
-              className="rounded-xl"
-              disabled={busy !== null || sortedHouses.length === 0}
+              className="rounded-xl shrink-0"
+              disabled={busy !== null}
               onClick={() => void runSyncTotals()}
             >
-              {busy === 'sync' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+              {busy === 'sync' ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="mr-2 h-4 w-4" />
+              )}
               Sync from students
             </Button>
           ) : null}
-          <Button className="rounded-xl" onClick={() => openEditor(null)}>
+          <Button className="rounded-xl shrink-0" onClick={() => openEditor(null)}>
             <Plus className="mr-2 h-4 w-4" /> Add house
           </Button>
         </div>
@@ -422,7 +413,6 @@ export function AdminHousesTab({
 
       <CardContent className="space-y-6">
         <ContentSectionTreeNav
-          branchLabel="Houses"
           items={[
             { id: 'rosters', label: 'Rosters & Points' },
             { id: 'hallOfFame', label: 'House Hall of Fame' },
@@ -436,57 +426,27 @@ export function AdminHousesTab({
           <AdminHouseHallOfFamePanel schoolId={schoolId} />
         ) : (
         <>
-        <div className="space-y-3 rounded-2xl border bg-muted/20 p-4">
-          <div>
-            <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-              House points source
-            </Label>
-            <p className="text-xs text-muted-foreground mt-1">
-              Choose whether house standings follow the student rewards system or use separate manual house scores.
-            </p>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <button
-              type="button"
-              onClick={() => updateSettings(housePointsSourceSettingsPatch('studentRollup'))}
-              className={cn(
-                'rounded-2xl border p-4 text-left transition-all',
-                housePointsSource === 'studentRollup'
-                  ? 'border-primary ring-2 ring-primary/20 bg-primary/[0.04]'
-                  : 'border-border bg-card hover:bg-muted/30',
-              )}
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <Link2 className="h-4 w-4 text-primary" aria-hidden />
-                <span className="text-sm font-bold">Linked to student rewards</span>
-              </div>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                When teachers award points or students redeem coupons, each house total updates automatically. Use Sync from students to rebuild totals.
+        <div className="space-y-4 rounded-2xl border bg-muted/20 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                Link house totals to student rewards
+              </Label>
+              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                {studentPointsRollup
+                  ? "On: each house score follows its students' LevelUp points (awards and redemptions update houses automatically). Use Sync from students above the list if totals look wrong."
+                  : 'Off: give house points manually on this tab using +/- on each row. Student LevelUp balances will not change house standings.'}
               </p>
-            </button>
-            <button
-              type="button"
-              onClick={() => updateSettings(housePointsSourceSettingsPatch('manual'))}
-              className={cn(
-                'rounded-2xl border p-4 text-left transition-all',
-                housePointsSource === 'manual'
-                  ? 'border-amber-500 ring-2 ring-amber-500/20 bg-amber-500/[0.04]'
-                  : 'border-border bg-card hover:bg-muted/30',
-              )}
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <PenLine className="h-4 w-4 text-amber-600" aria-hidden />
-                <span className="text-sm font-bold">Manual house points</span>
-              </div>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                House scores are edited here only—spirit events, sports days, or house challenges without changing student balances.
-              </p>
-            </button>
+            </div>
+            <Switch
+              checked={studentPointsRollup}
+              onCheckedChange={(checked) =>
+                updateSettings(housePointsSourceSettingsPatch(checked ? 'studentRollup' : 'manual'))
+              }
+              aria-label="Link house totals to student rewards"
+            />
           </div>
-        </div>
-
-        <div className="grid gap-4 rounded-2xl border bg-muted/20 p-4 sm:grid-cols-2">
-          <div className="flex items-center justify-between gap-3 sm:col-span-2">
+          <div className="flex items-center justify-between gap-3 border-t border-border/50 pt-4">
             <div>
               <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
                 Show house on student kiosk
@@ -499,6 +459,18 @@ export function AdminHousesTab({
             />
           </div>
         </div>
+
+        <HouseIdeasPanel
+          linkedToStudentRewards={studentPointsRollup}
+          hasHouses={sortedHouses.length > 0}
+          unassignedCount={unassignedStudents.length}
+          sortingHref={sortingHref}
+          onSetupWizard={() => setWizardOpen(true)}
+          onPopulateSample={() => setSampleDialogOpen(true)}
+          onHallOfFame={() => setMainSection('hallOfFame')}
+          onSync={sortedHouses.length > 0 ? () => void runSyncTotals() : undefined}
+          syncBusy={busy === 'sync'}
+        />
 
         {unassignedStudents.length > 0 && sortedHouses.length > 0 ? (
           <div className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm">
@@ -566,6 +538,20 @@ export function AdminHousesTab({
                     </SelectContent>
                   </Select>
                 ) : null}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-xl"
+                  disabled={busy !== null}
+                  onClick={() => void runSyncTotals()}
+                >
+                  {busy === 'sync' ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                  )}
+                  Sync from students
+                </Button>
                 <Button className="rounded-xl" size="sm" onClick={() => openEditor(null)}>
                   <Plus className="mr-2 h-4 w-4" /> Add house
                 </Button>
@@ -583,7 +569,7 @@ export function AdminHousesTab({
 
           <ul className="space-y-4 pr-1">
             <AdminRecordListHeader
-              gridClassName="grid-cols-[36px_minmax(120px,1fr)_minmax(110px,1.2fr)_80px_80px_72px_40px_40px]"
+              gridClassName="grid-cols-[40px_minmax(140px,1.2fr)_minmax(110px,1.2fr)_80px_80px_72px_40px_40px]"
               columns={[
                 { label: '#' },
                 { label: 'House' },
@@ -612,14 +598,31 @@ export function AdminHousesTab({
                   key={house.id}
                   className="flex flex-col overflow-hidden rounded-2xl border border-primary/20 bg-secondary/45 transition-all hover:border-primary/40"
                 >
-                  <div className="grid grid-cols-[36px_minmax(120px,1fr)_minmax(110px,1.2fr)_80px_80px_72px_40px_40px] items-center gap-2 p-3">
-                    <span className="text-center text-xs font-black tabular-nums text-muted-foreground">
+                  <div className="grid grid-cols-[40px_minmax(140px,1.2fr)_minmax(110px,1.2fr)_80px_80px_72px_40px_40px] items-center gap-2 p-3">
+                    <span className="text-center text-sm font-black tabular-nums text-muted-foreground">
                       {row.rank}
                     </span>
-                    <div className="flex min-w-0 items-center gap-2">
-                      <HouseBadge house={house} size="sm" />
+                    <div className="flex min-w-0 flex-col gap-0.5">
+                      <div className="flex min-w-0 items-center gap-2">
+                        {house.emoji ? (
+                          <span className="shrink-0 text-xl leading-none" aria-hidden>
+                            {house.emoji}
+                          </span>
+                        ) : (
+                          <span
+                            className="h-3 w-3 shrink-0 rounded-full border"
+                            style={{ backgroundColor: house.color, borderColor: `${house.color}88` }}
+                            aria-hidden
+                          />
+                        )}
+                        <span className="truncate text-lg font-bold leading-tight text-foreground">
+                          {house.name}
+                        </span>
+                      </div>
                       {house.value ? (
-                        <span className="truncate text-[10px] font-medium text-muted-foreground">{house.value}</span>
+                        <span className="truncate text-sm font-semibold text-muted-foreground pl-0.5">
+                          {house.value}
+                        </span>
                       ) : null}
                     </div>
                     <HouseStandingsInlineCell row={row} />
@@ -989,7 +992,8 @@ export function AdminHousesTab({
                 </div>
               </div>
               <p className="text-xs text-muted-foreground">
-                Manual house points do not change student balances. Lifetime should be at least the current total.
+                These scores are for house standings only and do not change student LevelUp balances. Lifetime should be
+                at least the current total.
               </p>
             </div>
           ) : null}
