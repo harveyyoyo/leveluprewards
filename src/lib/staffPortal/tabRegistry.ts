@@ -32,6 +32,22 @@ function adminAddonHidden(settings: Settings, tabValue: string): boolean {
   return (settings.adminHiddenAddOnTabs || []).includes(tabValue);
 }
 
+/**
+ * Staff portal tab model (one registry; two portals):
+ *
+ * - **Core** tabs always belong in the main nav row when enabled for that role.
+ * - **Add-on** tabs: optional in the nav row when pinned via **Add more**.
+ * - **Admin** pins school-management tabs (Insights, Houses, …) and toggles school config flags.
+ * - **Teachers** pin their own tabs (Raffle, Goals, Attendance, …); admins do not gate teacher nav.
+ *   Pinning a teacher tab can turn on student-facing flags (e.g. raffle on the kiosk).
+ *
+ * | Tab value        | Admin | Teacher | Notes |
+ * |------------------|:-----:|:-------:|-------|
+ * | raffle, homework, generated-coupons | — | add-on | Teacher-operational |
+ * | attendance, goals | add-on | add-on | Admin config + teacher daily use |
+ * | insights, houses, … | add-on | — | Admin-only |
+ */
+
 /** All staff portal tabs (admin + teacher + shared add-ons). */
 export const STAFF_PORTAL_TAB_REGISTRY: StaffPortalTabDef[] = [
   // —— Admin core ——
@@ -111,15 +127,6 @@ export const STAFF_PORTAL_TAB_REGISTRY: StaffPortalTabDef[] = [
     roles: ['teacher'],
     isEnabled: () => true,
   },
-  {
-    value: 'raffle',
-    label: 'Raffle',
-    icon: Dices,
-    kind: 'core',
-    roles: ['teacher'],
-    isEnabled: (s) => !!s.enableWeeklyRaffle,
-  },
-
   // —— Admin add-ons (feature tabs) ——
   {
     value: 'insights',
@@ -138,7 +145,7 @@ export const STAFF_PORTAL_TAB_REGISTRY: StaffPortalTabDef[] = [
     isEnabled: (s, role) => {
       if (role === 'teacher') {
         if (teacherAddonHidden(s, 'attendance')) return false;
-        return (s.payAttendance ?? true) && !!s.enableAttendance;
+        return s.payAttendance ?? true;
       }
       return (s.payAttendance ?? true) && (!!s.enableAttendance || !!s.enableClassSignIn);
     },
@@ -190,8 +197,23 @@ export const STAFF_PORTAL_TAB_REGISTRY: StaffPortalTabDef[] = [
     kind: 'addon',
     roles: ['admin', 'teacher'],
     isEnabled: (s, role) => {
-      if (role === 'teacher' && teacherAddonHidden(s, 'goals')) return false;
+      if (role === 'teacher') {
+        if (teacherAddonHidden(s, 'goals')) return false;
+        return s.payRewards ?? true;
+      }
       return !!s.enableGoals;
+    },
+  },
+  {
+    value: 'raffle',
+    label: 'Raffle',
+    icon: Dices,
+    kind: 'addon',
+    roles: ['teacher'],
+    isEnabled: (s, role) => {
+      if (role !== 'teacher') return false;
+      if (teacherAddonHidden(s, 'raffle')) return false;
+      return s.payRewards ?? true;
     },
   },
   {
@@ -241,19 +263,21 @@ export const STAFF_PORTAL_TAB_REGISTRY: StaffPortalTabDef[] = [
     kind: 'addon',
     roles: ['teacher'],
     isEnabled: (s, role) => {
-      if (role === 'teacher' && teacherAddonHidden(s, 'homework')) return false;
-      return !!s.enableHomework;
+      if (role !== 'teacher') return false;
+      if (teacherAddonHidden(s, 'homework')) return false;
+      return s.payHomework ?? true;
     },
   },
   {
     value: 'generated-coupons',
-    label: 'Coupons',
+    label: 'My coupons',
     icon: Ticket,
     kind: 'addon',
     roles: ['teacher'],
     isEnabled: (s, role) => {
-      if (role === 'teacher' && teacherAddonHidden(s, 'generated-coupons')) return false;
-      return !!s.enableTeacherGeneratedCouponsTab;
+      if (role !== 'teacher') return false;
+      if (teacherAddonHidden(s, 'generated-coupons')) return false;
+      return true;
     },
   },
   {
@@ -265,6 +289,36 @@ export const STAFF_PORTAL_TAB_REGISTRY: StaffPortalTabDef[] = [
     isEnabled: (_s, role) => role === 'admin',
   },
 ];
+
+/** When a teacher pins a tab, enable student/school flags needed for that feature. */
+export function staffPortalTeacherPinSideEffects(
+  tabValue: string,
+  pinned: boolean,
+): Partial<Settings> {
+  if (!pinned) return {};
+  switch (tabValue) {
+    case 'raffle':
+      return { payRewards: true, enableWeeklyRaffle: true };
+    case 'goals':
+      return { enableGoals: true };
+    case 'attendance':
+      return { payAttendance: true, enableAttendance: true, enableClassSignIn: true };
+    case 'homework':
+      return { payHomework: true, enableHomework: true };
+    case 'generated-coupons':
+      return { enableTeacherGeneratedCouponsTab: true };
+    default:
+      return {};
+  }
+}
+
+/** Whether an admin add-on tab is enabled — keep admin/page.tsx `isOn` in sync via this helper. */
+export function staffPortalAdminAddOnIsOn(settings: Settings, tabValue: string): boolean {
+  const def = STAFF_PORTAL_TAB_REGISTRY.find(
+    (t) => t.value === tabValue && t.kind === 'addon' && t.roles.includes('admin'),
+  );
+  return def ? def.isEnabled(settings, 'admin') : false;
+}
 
 export function staffPortalTabsForRole(
   role: StaffPortalRole,

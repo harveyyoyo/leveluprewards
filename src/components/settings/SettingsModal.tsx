@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirebase } from '@/firebase';
-import { isAllowedAdminGoogleUser, loginSchoolAdmin } from '@/lib/adminGoogleAccess';
+import { canBypassSchoolAdminPasscode, loginSchoolAdmin } from '@/lib/adminGoogleAccess';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
     Dialog,
@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { NumericKeypad } from '@/components/ui/NumericKeypad';
 import { Textarea } from '@/components/ui/textarea';
 import {
     Select,
@@ -40,6 +41,7 @@ import { normalizeDisplayModePreference } from '@/lib/displayMode';
 import type { StudentTheme } from '@/lib/types';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useToast } from '@/hooks/use-toast';
+import { isStudentKioskUiContext } from '@/lib/studentKioskRoute';
 import { VendingMotorPanel } from '@/components/VendingMotorPanel';
 import { ANIMATED_BACKGROUND_STYLES, type AnimatedBackgroundStyle } from '@/lib/animatedBackdrop';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
@@ -48,7 +50,7 @@ import { WELCOME_GREETING_STYLES } from '@/components/WelcomeGreeting';
 import { IdCardPrinterSettingsSection } from '@/components/settings/IdCardPrinterSettingsSection';
 import { PRODUCT_PILLAR_LABELS } from '@/lib/productPillars';
 import { OfficePortalEntryLink } from '@/components/office/OfficePortalEntryLink';
-type SettingsView = 'hub' | 'interface' | 'security' | 'features' | 'pillars';
+type SettingsView = 'hub' | 'interface' | 'security' | 'features' | 'pillars' | 'device';
 
 function parseSettingsViewFromQuery(value: string | null): SettingsView | null {
     if (value === 'hub') return 'hub';
@@ -78,56 +80,6 @@ const INTERFACE_SECTION_NAV = [
     { id: 'settings-interface-motion', label: 'Motion' },
     { id: 'settings-interface-layout', label: 'Layout' },
 ] as const;
-
-/** Settings keys that correspond to Admin main-row add-on tabs (see admin/page.tsx addOnTabDefs). */
-const ADD_ON_TAB_FOR_SETTINGS_KEY: Record<string, string> = {
-    enableAdminAnalytics: 'insights',
-    enableClassLeaderboard: 'halloffame',
-    payLibrary: 'library',
-    enableAchievements: 'bonuspoints',
-    enableBadges: 'category-badges',
-    enableGoals: 'goals',
-    enableNotifications: 'notifications',
-    bulletinEnabled: 'bulletinboard',
-};
-
-/** Keep pinned add-on tabs in sync when feature switches change in Settings (otherwise the tab stays off the bar until pinned manually). */
-function applyAdminAddOnTabPinSync(next: AppSettings, key: string, value: unknown): AppSettings {
-    if (key === 'enableAttendance' || key === 'enableClassSignIn' || key === 'payAttendance') {
-        const tab = 'attendance';
-        const hidden = next.adminHiddenAddOnTabs || [];
-        const pinned = next.adminPinnedAddOnTabs || [];
-        const on = (next.payAttendance ?? true) && (!!next.enableAttendance || !!next.enableClassSignIn);
-        if (on) {
-            return {
-                ...next,
-                adminHiddenAddOnTabs: hidden.filter((x) => x !== tab),
-                adminPinnedAddOnTabs: Array.from(new Set([...pinned, tab])),
-            };
-        }
-        return {
-            ...next,
-            adminPinnedAddOnTabs: pinned.filter((x) => x !== tab),
-        };
-    }
-
-    const tab = ADD_ON_TAB_FOR_SETTINGS_KEY[key];
-    if (!tab || typeof value !== 'boolean') return next;
-
-    const hidden = next.adminHiddenAddOnTabs || [];
-    const pinned = next.adminPinnedAddOnTabs || [];
-    if (value) {
-        return {
-            ...next,
-            adminHiddenAddOnTabs: hidden.filter((x) => x !== tab),
-            adminPinnedAddOnTabs: Array.from(new Set([...pinned, tab])),
-        };
-    }
-    return {
-        ...next,
-        adminPinnedAddOnTabs: pinned.filter((x) => x !== tab),
-    };
-}
 
 function SettingsSectionJumpNav({
     sections,
@@ -250,7 +202,7 @@ export function SettingsModal() {
         schoolId,
     } = useAppContext();
     const { user: firebaseUser } = useFirebase();
-    const canBypassAdminPasscode = isAllowedAdminGoogleUser(firebaseUser);
+    const canBypassAdminPasscode = canBypassSchoolAdminPasscode(firebaseUser);
     const canOpenSettings = loginState === 'admin' || loginState === 'developer' || loginState === 'teacher';
     const canManageSchoolSettings =
         isAdmin || loginState === 'admin' || loginState === 'developer';
@@ -268,6 +220,7 @@ export function SettingsModal() {
     const [previewMode, setPreviewMode] = useState<PreviewMode>(isAdmin ? 'draft' : 'live');
     const [featureQuery, setFeatureQuery] = useState('');
     const [featuresEnabledOnly, setFeaturesEnabledOnly] = useState(false);
+    const [selectedProfileId, setSelectedProfileId] = useState('');
     const local = draft ?? settings;
     const pathname = usePathname();
     const router = useRouter();
@@ -287,6 +240,9 @@ export function SettingsModal() {
             setDraft(cloneSettings(settingsPreferences));
             setView(initialView ?? 'hub');
             setPreviewMode(canManageSchoolSettings ? 'draft' : 'live');
+            if (typeof window !== 'undefined') {
+                setSelectedProfileId(localStorage.getItem('current_kiosk_profile_id') || '');
+            }
         },
         [settingsPreferences, canManageSchoolSettings],
     );
@@ -383,7 +339,6 @@ export function SettingsModal() {
             if (key === 'payAttendance' && value === false) {
                 next = { ...next, enableClassSignIn: false, enableAttendance: false };
             }
-            next = applyAdminAddOnTabPinSync(next, key, value);
             return next;
         });
 
@@ -442,6 +397,7 @@ export function SettingsModal() {
         security: 'Settings',
         features: 'Settings',
         pillars: 'Product Pillars',
+        device: 'Kiosk Device Setup',
     };
 
     const openSettingsView = useCallback(
@@ -565,24 +521,27 @@ export function SettingsModal() {
                     <DialogTitle className="font-headline font-black tracking-tight">Admin passcode</DialogTitle>
                     <DialogDescription>Enter the admin passcode for this school to open Admin tools.</DialogDescription>
                 </DialogHeader>
-                <div className="space-y-2">
-                    <Label htmlFor="admin-passcode-settings" className="text-xs font-semibold text-muted-foreground">
-                        Passcode
-                    </Label>
-                    <Input
-                        id="admin-passcode-settings"
-                        type="password"
-                        value={adminPasscode}
-                        onChange={(e) => setAdminPasscode(e.target.value)}
-                        className="h-12 rounded-xl font-mono tracking-[0.35em] text-center"
-                        autoComplete="current-password"
-                        autoFocus
-                        onKeyDown={(e) => {
-                            if (e.key !== 'Enter') return;
-                            e.preventDefault();
-                            void handleAdminUnlockForSettings();
-                        }}
-                    />
+                <div className="space-y-4 py-2">
+                    <div className="space-y-2">
+                        <Label htmlFor="admin-passcode-settings" className="text-xs font-semibold text-muted-foreground">
+                            Passcode
+                        </Label>
+                        <Input
+                            id="admin-passcode-settings"
+                            type="password"
+                            value={adminPasscode}
+                            onChange={(e) => setAdminPasscode(e.target.value)}
+                            className="h-12 rounded-xl font-mono tracking-[0.35em] text-center"
+                            autoComplete="current-password"
+                            autoFocus
+                            onKeyDown={(e) => {
+                                if (e.key !== 'Enter') return;
+                                e.preventDefault();
+                                void handleAdminUnlockForSettings();
+                            }}
+                        />
+                    </div>
+                    <NumericKeypad value={adminPasscode} onChange={setAdminPasscode} />
                 </div>
                 <DialogFooter className="gap-2 sm:gap-0">
                     <Button
@@ -757,6 +716,31 @@ export function SettingsModal() {
                                     </div>
                                     <span className="font-black text-emerald-900 dark:text-emerald-100">Product Pillars</span>
                                     <span className="text-xs leading-snug text-emerald-800/90 dark:text-emerald-200/80">Select active paid plan products</span>
+                                </button>
+                            )}
+                            {isStudentKioskUiContext(loginState, pathname, schoolId) && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setView('device');
+                                        if (local.soundEnabled) playSound('click');
+                                    }}
+                                    className={cn(
+                                        'flex flex-col items-start gap-2 rounded-2xl border-2 p-4 text-left transition-all',
+                                        'border-amber-200 dark:border-amber-900/50 bg-amber-50/80 dark:bg-amber-950/20',
+                                        'hover:bg-amber-100/80 dark:hover:bg-amber-950/35 sm:col-span-2',
+                                    )}
+                                >
+                                    <div className="flex w-full items-start justify-between gap-2">
+                                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white shadow-inner">
+                                            <Smartphone className="h-5 w-5" />
+                                        </span>
+                                        <ChevronRight className="h-5 w-5 shrink-0 text-amber-700/50 dark:text-amber-400/50" aria-hidden />
+                                    </div>
+                                    <span className="font-black text-amber-900 dark:text-amber-100">Kiosk device setup</span>
+                                    <span className="text-xs leading-snug text-amber-800/90 dark:text-amber-200/80">
+                                        Link this physical screen to a centralized Kiosk Profile (Portrait layout, sound options, active login tabs, etc.)
+                                    </span>
                                 </button>
                             )}
                         </div>
@@ -1790,7 +1774,7 @@ export function SettingsModal() {
                                             if (!prev) return prev;
                                             const next = { ...prev };
                                             const keys = [
-                                                'enableTeacherBudgets', 'enableHomework', 'enableBulkPoints',
+                                                'enableTeacherBudgets', 'enableBulkPoints',
                                                 'enableTeacherCharts',
                                                 'enableStudentWelcomeBackScreen', 'enableStudentWelcome', 'enableFaceLogin', 'enableQrLogin',
                                                 'enablePrizeImages', 'enableWishlist', 'kioskSponsorEnabled',
@@ -1813,7 +1797,7 @@ export function SettingsModal() {
                                             if (!prev) return prev;
                                             const next = { ...prev };
                                             const keys = [
-                                                'enableTeacherBudgets', 'enableHomework', 'enableBulkPoints',
+                                                'enableTeacherBudgets', 'enableBulkPoints',
                                                 'enableTeacherCharts',
                                                 'enableStudentWelcomeBackScreen', 'enableStudentWelcome', 'enableFaceLogin', 'enableQrLogin',
                                                 'enablePrizeImages', 'enableWishlist', 'kioskSponsorEnabled',
@@ -1850,27 +1834,6 @@ export function SettingsModal() {
                                     label="Teacher Budgets"
                                     desc="Give each teacher a monthly points allowance so they can’t overspend when printing coupons or awarding points."
                                     icon={<Users className="w-5 h-5" />}
-                                    settings={local}
-                                    onToggle={handleToggle}
-                                    isImplemented={true}
-                                    isAdmin={isAdmin}
-                                />
-                                <FeatureRow
-                                    id="enableHomework"
-                                    label="Homework Rewards"
-                                    desc="Allow teacher-side homework rewards. Students do not see homework in the portal."
-                                    icon={<BookOpen className="w-5 h-5" />}
-                                    settings={local}
-                                    onToggle={handleToggle}
-                                    isImplemented={true}
-                                    isAdmin={isAdmin}
-                                    blockHint={!(local.payHomework ?? true) ? 'Turn on the Homework product pillar in Settings → Product Pillars first.' : undefined}
-                                />
-                                <FeatureRow
-                                    id="enableTeacherGeneratedCouponsTab"
-                                    label="Teacher Generated Coupons Tab"
-                                    desc="Add an optional Teacher portal tab called “Coupons” that shows coupons generated by the signed-in teacher."
-                                    icon={<Ticket className="w-5 h-5" />}
                                     settings={local}
                                     onToggle={handleToggle}
                                     isImplemented={true}
@@ -2187,6 +2150,85 @@ export function SettingsModal() {
                             </div>
                             </FeatureFilterContext.Provider>
                         </div>
+                )}
+
+                {view === 'device' && (
+                    <div className="space-y-6 pb-2 -mx-1 px-1">
+                        <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 border border-slate-100 dark:border-slate-800/50 space-y-4">
+                            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-amber-500 dark:text-amber-400 pb-1 flex items-center gap-2">
+                                <Smartphone className="w-3.5 h-3.5" /> Kiosk Device Setup
+                            </p>
+                            <p className="text-xs text-muted-foreground leading-normal">
+                                Link this physical device to a specific kiosk layout configuration profile. This determines what tabs, colors, and graphics options are applied to this screen.
+                            </p>
+                            
+                            {(() => {
+                                const profiles = Object.values(local.kioskProfiles || {});
+                                if (profiles.length === 0) {
+                                    return (
+                                        <div className="rounded-xl border border-amber-200/50 bg-amber-50/50 dark:bg-amber-950/20 p-4 text-center">
+                                            <Smartphone className="w-8 h-8 text-amber-500 mx-auto mb-2 opacity-60" />
+                                            <p className="text-sm font-bold text-amber-800 dark:text-amber-300">No Kiosk Profiles Found</p>
+                                            <p className="text-xs text-amber-600/90 dark:text-amber-400/90 mt-1 max-w-sm mx-auto leading-relaxed">
+                                                Go to the <strong>Admin Portal &rarr; Branding &rarr; Kiosk Device Profiles</strong> tab to create profile configurations first, then link them here.
+                                            </p>
+                                        </div>
+                                    );
+                                }
+
+                                return (
+                                    <div className="space-y-4">
+                                        <div className="space-y-1.5">
+                                            <Label htmlFor="deviceKioskProfile" className="text-xs font-bold">
+                                                Select Layout Profile
+                                            </Label>
+                                            <Select
+                                                value={selectedProfileId || '__none__'}
+                                                onValueChange={(val) => {
+                                                    setSelectedProfileId(val === '__none__' ? '' : val);
+                                                    if (local.soundEnabled) playSound('click');
+                                                }}
+                                            >
+                                                <SelectTrigger id="deviceKioskProfile" className="rounded-xl">
+                                                    <SelectValue placeholder="Select a profile..." />
+                                                </SelectTrigger>
+                                                <SelectContent className="z-[310]">
+                                                    <SelectItem value="__none__">Default (School General Settings)</SelectItem>
+                                                    {profiles.map((p) => (
+                                                        <SelectItem key={p.id} value={p.id}>
+                                                            {p.name}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        <Button
+                                            type="button"
+                                            className="w-full rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold"
+                                            onClick={() => {
+                                                if (selectedProfileId) {
+                                                    localStorage.setItem('current_kiosk_profile_id', selectedProfileId);
+                                                } else {
+                                                    localStorage.removeItem('current_kiosk_profile_id');
+                                                }
+                                                if (local.soundEnabled) playSound('click');
+                                                toast({
+                                                    title: 'Profile linked successfully',
+                                                    description: 'The physical device is now linked. Reloading to apply settings...',
+                                                });
+                                                setTimeout(() => {
+                                                    window.location.reload();
+                                                }, 1500);
+                                            }}
+                                        >
+                                            Link Device &amp; Reload
+                                        </Button>
+                                    </div>
+                                );
+                            })()}
+                        </div>
+                    </div>
                 )}
 
                 </div>

@@ -7,7 +7,10 @@ import { patchDemoMarketingSettings } from './lib/demo-marketing-settings.mjs';
 patchDemoMarketingSettings()
   .then((ok) => {
     if (!ok) {
-      console.error('FIREBASE_SERVICE_ACCOUNT_KEY missing in .env.local');
+      console.error(
+        'No Firebase credentials: set FIREBASE_SERVICE_ACCOUNT_KEY in .env.local, ' +
+          'FIREBASE_SERVICE_ACCOUNT_KEY_FILE, or use gcloud application-default login.',
+      );
       process.exit(1);
     }
   })

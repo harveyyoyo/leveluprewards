@@ -1,0 +1,12 @@
+page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:3000/schoolabc/portal
+Call log:
+  - navigating to "http://127.0.0.1:3000/schoolabc/portal", waiting until "domcontentloaded"
+
+page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:3000/schoolabc/portal
+Call log:
+  - navigating to "http://127.0.0.1:3000/schoolabc/portal", waiting until "domcontentloaded"
+
+    at prepare (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:1588:18)
+    at recordClipReady (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:854:15)
+    at async captureLibrary (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:1873:26)
+    at async main (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:2038:5)

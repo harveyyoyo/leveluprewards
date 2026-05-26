@@ -20,6 +20,9 @@ export type AwardCategoriesPanelProps = {
   onAddCategory?: () => void;
   onEditCategory?: (category: Category) => void;
   onDeleteCategory?: (categoryId: string) => void;
+  /** When set, only matching rows show edit (overrides admin-only edit). */
+  canEditCategory?: (category: Category) => boolean;
+  canDeleteCategory?: (category: Category) => boolean;
   showWalkthrough?: boolean;
 };
 
@@ -33,11 +36,15 @@ export function AwardCategoriesPanel({
   onAddCategory,
   onEditCategory,
   onDeleteCategory,
+  canEditCategory,
+  canDeleteCategory,
   showWalkthrough = true,
 }: AwardCategoriesPanelProps) {
   const isAdmin = mode === 'admin';
-  const canEdit = isAdmin && onEditCategory;
-  const canDelete = isAdmin && onDeleteCategory;
+  const rowCanEdit = (c: Category) =>
+    Boolean(onEditCategory) && (canEditCategory ? canEditCategory(c) : isAdmin);
+  const rowCanDelete = (c: Category) =>
+    Boolean(onDeleteCategory) && (canDeleteCategory ? canDeleteCategory(c) : isAdmin);
   const canAdd = Boolean(onAddCategory);
   const showCreatedBy = isAdmin;
 
@@ -117,13 +124,13 @@ export function AwardCategoriesPanel({
                   : 'grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[minmax(160px,1fr)_76px]',
               )}
             >
-              {canEdit ? (
+              {rowCanEdit(c) ? (
                 <div className="order-3 flex items-center md:order-none">
                   <Button
                     variant="outline"
                     size="sm"
                     className="h-8 gap-1.5 rounded-lg border-primary/20 bg-background hover:bg-primary/5 text-primary font-semibold"
-                    onClick={() => onEditCategory(c)}
+                    onClick={() => onEditCategory?.(c)}
                   >
                     <Edit className="h-3.5 w-3.5" />
                     Edit
@@ -142,13 +149,13 @@ export function AwardCategoriesPanel({
                   {c.teacherId ? teachers?.find((t) => t.id === c.teacherId)?.name || 'Unknown' : 'Admin'}
                 </div>
               ) : null}
-              {canDelete ? (
+              {rowCanDelete(c) ? (
                 <div className="order-3 flex items-center justify-end md:order-none">
                   <Button
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 text-destructive hover:bg-destructive/10 rounded-lg"
-                    onClick={() => onDeleteCategory(c.id)}
+                    onClick={() => onDeleteCategory?.(c.id)}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </Button>

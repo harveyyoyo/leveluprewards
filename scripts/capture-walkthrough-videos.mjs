@@ -1608,7 +1608,7 @@ const LIBRARY_VARIANTS = [
     trim: { tailSec: 4.5, maxDurationSec: 5 },
     prepare: async (page) => {
       const ok = await gotoAdminTab(page, localOrigin(), 'Raffle');
-      if (!ok) throw new Error('Admin Raffle tab not visible (enable Weekly Raffle in settings)');
+      if (!ok) throw new Error('Admin Raffle tab not visible (pin from Add more)');
     },
     record: async (page) => {
       const ok = await gotoAdminTab(page, localOrigin(), 'Raffle');
@@ -1962,8 +1962,7 @@ async function captureFeaturePromo() {
     const patched = await patchDemoMarketingSettings();
     if (!patched) {
       console.warn(
-        '  ⚠ FIREBASE_SERVICE_ACCOUNT_KEY not set — raffle capture may fail until you run:\n' +
-          '    node scripts/enable-demo-marketing-settings.mjs\n',
+        '  ⚠ FIREBASE_SERVICE_ACCOUNT_KEY not set — optional demo settings patch skipped\n',
       );
     }
   } catch (e) {

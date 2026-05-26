@@ -83,7 +83,9 @@ interface Settings {
     // Analytics
     enableTeacherCharts: boolean;
     enableAdminAnalytics: boolean;
-    /** Raffle (Teacher portal): convert points into raffle entries. */
+    /**
+     * School raffle on the student kiosk. Teachers turn this on by pinning Raffle in their Add more.
+     */
     enableWeeklyRaffle: boolean;
     // Social & Communication
     enableNotifications: boolean;
@@ -361,6 +363,10 @@ interface Settings {
     adminExtraTabOrder?: string[];
     /** Teacher portal: hides specific add-on tabs without turning off features (optional soft-hide). */
     teacherHiddenAddOnTabs?: string[];
+    /** Teacher portal: optional add-on tabs pinned into the main tab row (per teacher device / school settings). */
+    teacherPinnedAddOnTabs?: string[];
+    /** Teacher portal: persisted main tab order (core + pinned add-ons). */
+    teacherMainTabOrder?: string[];
 
     // Hall of Fame (big screen defaults)
     hallOfFameRankType?: 'students' | 'classes' | 'houses' | 'goals';
@@ -381,6 +387,18 @@ interface Settings {
     houseStandingsChartFormat?: 'bars' | 'columns' | 'line' | 'pie';
     /** Admin Houses tab: whether the standings preview panel is expanded. */
     houseStandingsPreviewOpen?: boolean;
+
+    // Kiosk Multiple Profiles
+    kioskProfileId?: string;
+    kioskProfiles?: Record<string, KioskProfile>;
+}
+
+export interface KioskProfile {
+    id: string;
+    name: string;
+    createdAt: number;
+    updatedAt: number;
+    settings: Partial<Settings>;
 }
 
 /** Settings with display mode resolved for rendering (`web` | `app` only). */
@@ -612,6 +630,8 @@ const defaultSettings: Settings = {
     adminMainTabOrder: [],
     adminExtraTabOrder: [],
     teacherHiddenAddOnTabs: [],
+    teacherPinnedAddOnTabs: [],
+    teacherMainTabOrder: [],
 
     hallOfFameRankType: 'students',
     hallOfFameSortBy: 'lifetimePoints',
@@ -620,6 +640,8 @@ const defaultSettings: Settings = {
     hallOfFamePodiumSize: 3,
     hallOfFameAutoScroll: false,
     hallOfFameGridLayout: true,
+    kioskProfileId: undefined,
+    kioskProfiles: {},
 };
 
 const publicLoginSettings: Partial<Settings> = {
@@ -813,6 +835,26 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                 localStorage.removeItem(legacySchoolKey);
             }
         }
+
+        let activeProfileId: string | null = null;
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            const queryProfileId = params.get('kioskProfileId');
+            if (queryProfileId) {
+                activeProfileId = queryProfileId;
+                localStorage.setItem('current_kiosk_profile_id', queryProfileId);
+                try {
+                    const url = new URL(window.location.href);
+                    url.searchParams.delete('kioskProfileId');
+                    window.history.replaceState({}, '', url.pathname + url.search);
+                } catch (e) {
+                    console.error('Failed to clean kioskProfileId from URL', e);
+                }
+            } else {
+                activeProfileId = localStorage.getItem('current_kiosk_profile_id');
+            }
+        }
+
         const remoteSettings =
             schoolId && stableRemoteAppSettingsJson
                 ? (JSON.parse(stableRemoteAppSettingsJson) as Partial<Settings>)
@@ -828,7 +870,25 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
         if (remoteSettings || saved) {
             try {
-                const parsed = remoteSettings ? { ...remoteSettings } : JSON.parse(saved || '{}');
+                let parsed = remoteSettings ? { ...remoteSettings } : JSON.parse(saved || '{}');
+
+                if (isStudentKioskUiContext(loginState, pathname, schoolId)) {
+                    if (activeProfileId) {
+                        parsed.kioskProfileId = activeProfileId;
+                        const profile = parsed.kioskProfiles?.[activeProfileId];
+                        if (profile && profile.settings) {
+                            parsed = {
+                                ...parsed,
+                                ...profile.settings,
+                                kioskProfileId: activeProfileId,
+                                kioskProfiles: parsed.kioskProfiles,
+                            };
+                        }
+                    } else {
+                        parsed.kioskProfileId = undefined;
+                    }
+                }
+
                 if (parsed.graphicMode === 'arcade') {
                     parsed.graphicMode = 'graphics';
                 }

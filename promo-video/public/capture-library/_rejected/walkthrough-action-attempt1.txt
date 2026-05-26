@@ -1,0 +1,7 @@
+UNKNOWN: unknown error, copyfile 'C:\Users\Administrator\capture-temp\_out-walkthrough-action.mp4' -> 'C:\Users\Administrator\school arcade reward antigravity\studio\promo-video\public\walkthrough-action.mp4'
+Error: UNKNOWN: unknown error, copyfile 'C:\Users\Administrator\capture-temp\_out-walkthrough-action.mp4' -> 'C:\Users\Administrator\school arcade reward antigravity\studio\promo-video\public\walkthrough-action.mp4'
+    at Object.copyFileSync (node:fs:3097:11)
+    at recordClipReady (file:///C:/Users/Administrator/school%20arcade%20reward%20antigravity/studio/scripts/capture-walkthrough-videos.mjs:663:10)
+    at async Object.capture (file:///C:/Users/Administrator/school%20arcade%20reward%20antigravity/studio/scripts/capture-walkthrough-videos.mjs:821:7)
+    at async capturePromoSimple (file:///C:/Users/Administrator/school%20arcade%20reward%20antigravity/studio/scripts/capture-walkthrough-videos.mjs:1468:5)
+    at async main (file:///C:/Users/Administrator/school%20arcade%20reward%20antigravity/studio/scripts/capture-walkthrough-videos.mjs:1502:5)

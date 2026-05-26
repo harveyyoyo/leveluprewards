@@ -1,0 +1,7 @@
+Admin Raffle tab not visible (enable Weekly Raffle in settings)
+Error: Admin Raffle tab not visible (enable Weekly Raffle in settings)
+    at prepare (file:///C:/Users/Administrator/school%20arcade%20reward%20antigravity/studio/scripts/capture-walkthrough-videos.mjs:1611:22)
+    at async recordClipReady (file:///C:/Users/Administrator/school%20arcade%20reward%20antigravity/studio/scripts/capture-walkthrough-videos.mjs:854:9)
+    at async captureLibrary (file:///C:/Users/Administrator/school%20arcade%20reward%20antigravity/studio/scripts/capture-walkthrough-videos.mjs:1873:26)
+    at async captureFeaturePromo (file:///C:/Users/Administrator/school%20arcade%20reward%20antigravity/studio/scripts/capture-walkthrough-videos.mjs:1979:3)
+    at async main (file:///C:/Users/Administrator/school%20arcade%20reward%20antigravity/studio/scripts/capture-walkthrough-videos.mjs:2033:5)

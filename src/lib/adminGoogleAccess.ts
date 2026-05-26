@@ -2,6 +2,7 @@ import type { User } from 'firebase/auth';
 
 import type { LoginResult } from '@/lib/loginResult';
 import { isAllowedDeveloperGoogleUser } from '@/lib/developerAccess';
+import { isGoogleSignedInUser } from '@/lib/googleSchoolAccess';
 
 /**
  * Trusted Google accounts (developer email allowlist) may provision school admin
@@ -9,6 +10,11 @@ import { isAllowedDeveloperGoogleUser } from '@/lib/developerAccess';
  */
 export function isAllowedAdminGoogleUser(user: User | null | undefined): boolean {
   return isAllowedDeveloperGoogleUser(user);
+}
+
+/** Google sign-in may attempt admin login without a passcode (server verifies existing admin role or allowlist). */
+export function canBypassSchoolAdminPasscode(user: User | null | undefined): boolean {
+  return isGoogleSignedInUser(user);
 }
 
 type AdminLoginFn = (
@@ -28,7 +34,7 @@ export async function loginSchoolAdmin(
   if (trimmed) {
     return login('admin', { schoolId: sid, passcode: trimmed });
   }
-  if (isAllowedAdminGoogleUser(user)) {
+  if (canBypassSchoolAdminPasscode(user)) {
     return login('admin', { schoolId: sid, passcode: '' });
   }
   return { ok: false, message: 'Enter the admin passcode to continue.' };

@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { NumericKeypad } from '@/components/ui/NumericKeypad';
 import { doc } from 'firebase/firestore';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { rainbowByIndex, rainbowForPortalId } from '@/lib/rainbowNav';
@@ -543,56 +544,59 @@ export default function PortalPage() {
                                 {adminDestination === 'teacher' ? 'the Teacher Portal with admin access' : 'the Admin dashboard'}.
                             </DialogDescription>
                         </DialogHeader>
-                        <div className="space-y-2">
-                            <Label htmlFor="admin-passcode" className="text-xs font-semibold text-muted-foreground">
-                                Passcode
-                            </Label>
-                            <Input
-                                id="admin-passcode"
-                                type="password"
-                                value={adminPasscode}
-                                onChange={(e) => setAdminPasscode(e.target.value)}
-                                className="h-12 rounded-xl font-mono tracking-[0.35em] text-center"
-                                autoComplete="current-password"
-                                autoFocus
-                                onKeyDown={(e) => {
-                                    if (e.key !== 'Enter') return;
-                                    e.preventDefault();
-                                    if (adminSubmitting) return;
-                                    if (!schoolId) return;
-                                    void (async () => {
-                                        if (!adminPasscode.trim()) {
-                                            playSound('error');
-                                            toast({
-                                                variant: 'destructive',
-                                                title: 'Missing passcode',
-                                                description: 'Enter the admin passcode to continue.',
-                                            });
-                                            return;
-                                        }
-                                        setAdminSubmitting(true);
-                                        const authResult = await login('admin', { schoolId, passcode: adminPasscode.trim() });
-                                        if (!authResult.ok) {
-                                            setAdminSubmitting(false);
-                                            playSound('error');
-                                            toast({
-                                                variant: 'destructive',
-                                                title: 'Login failed',
-                                                description: authResult.message,
-                                            });
-                                            setAdminPasscode('');
-                                            return;
-                                        }
-                                        playSound('login');
-                                        setAdminDialogOpen(false);
-                                        router.replace(
-                                            adminDestination === 'teacher'
-                                                ? `/${schoolId}/admin?view=teacher`
-                                                : `/${schoolId}/admin`,
-                                        );
-                                    })();
-                                }}
-                            />
+                        <div className="space-y-4 py-2">
+                            <div className="space-y-2">
+                                <Label htmlFor="admin-passcode" className="text-xs font-semibold text-muted-foreground">
+                                    Passcode
+                                </Label>
+                                <Input
+                                    id="admin-passcode"
+                                    type="password"
+                                    value={adminPasscode}
+                                    onChange={(e) => setAdminPasscode(e.target.value)}
+                                    className="h-12 rounded-xl font-mono tracking-[0.35em] text-center"
+                                    autoComplete="current-password"
+                                    autoFocus
+                                    onKeyDown={(e) => {
+                                        if (e.key !== 'Enter') return;
+                                        e.preventDefault();
+                                        if (adminSubmitting) return;
+                                        if (!schoolId) return;
+                                        void (async () => {
+                                            if (!adminPasscode.trim()) {
+                                                playSound('error');
+                                                toast({
+                                                    variant: 'destructive',
+                                                    title: 'Missing passcode',
+                                                    description: 'Enter the admin passcode to continue.',
+                                                });
+                                                return;
+                                            }
+                                            setAdminSubmitting(true);
+                                            const authResult = await login('admin', { schoolId, passcode: adminPasscode.trim() });
+                                            if (!authResult.ok) {
+                                                setAdminSubmitting(false);
+                                                playSound('error');
+                                                toast({
+                                                    variant: 'destructive',
+                                                    title: 'Login failed',
+                                                    description: authResult.message,
+                                                });
+                                                setAdminPasscode('');
+                                                return;
+                                            }
+                                            playSound('login');
+                                            setAdminDialogOpen(false);
+                                            router.replace(
+                                                adminDestination === 'teacher'
+                                                    ? `/${schoolId}/admin?view=teacher`
+                                                    : `/${schoolId}/admin`,
+                                            );
+                                        })();
+                                    }}
+                                />
+                            </div>
+                            <NumericKeypad value={adminPasscode} onChange={setAdminPasscode} />
                         </div>
                         <DialogFooter className="gap-2 sm:gap-0">
                             <Button
@@ -703,8 +707,32 @@ export default function PortalPage() {
                                 type="button"
                                 variant="outline"
                                 className="w-full rounded-xl font-bold"
+                                disabled={adminSubmitting}
                                 onClick={() => {
                                     playSound('click');
+                                    if (canBypassAdminPasscode) {
+                                        void (async () => {
+                                            setAdminSubmitting(true);
+                                            const ok = await loginAsAdminViaGoogle();
+                                            setAdminSubmitting(false);
+                                            if (!ok) {
+                                                playSound('error');
+                                                toast({
+                                                    variant: 'destructive',
+                                                    title: 'Admin sign-in failed',
+                                                    description:
+                                                        'Could not sign in with your Google account. Try again or use the admin passcode.',
+                                                });
+                                                setAdminDestination('teacher');
+                                                setAdminDialogOpen(true);
+                                                return;
+                                            }
+                                            playSound('login');
+                                            setTeacherDialogOpen(false);
+                                            router.replace(`/${schoolId}/admin?view=teacher`);
+                                        })();
+                                        return;
+                                    }
                                     setTeacherDialogOpen(false);
                                     setAdminDestination('teacher');
                                     router.prefetch(`/${schoolId}/admin?view=teacher`);
@@ -742,68 +770,71 @@ export default function PortalPage() {
                                     </p>
                                 )}
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="teacher-passcode" className="text-xs font-semibold text-muted-foreground">
-                                    Passcode
-                                </Label>
-                                <Input
-                                    id="teacher-passcode"
-                                    type="password"
-                                    value={teacherPasscode}
-                                    onChange={(e) => setTeacherPasscode(e.target.value)}
-                                    className="h-12 rounded-xl font-mono tracking-[0.25em] text-center"
-                                    autoComplete="current-password"
-                                    onKeyDown={(e) => {
-                                        if (e.key !== 'Enter') return;
-                                        e.preventDefault();
-                                        if (teacherSubmitting) return;
-                                        if (!schoolId) return;
-                                        void (async () => {
-                                            const passcode = teacherPasscode.trim();
-                                            if (!selectedTeacherKey || !passcode) {
-                                                playSound('error');
-                                                toast({
-                                                    variant: 'destructive',
-                                                    title: 'Missing info',
-                                                    description: 'Select your name and enter a passcode to continue.',
+                             <div className="space-y-4 py-2">
+                                <div className="space-y-2">
+                                    <Label htmlFor="teacher-passcode" className="text-xs font-semibold text-muted-foreground">
+                                        Passcode
+                                    </Label>
+                                    <Input
+                                        id="teacher-passcode"
+                                        type="password"
+                                        value={teacherPasscode}
+                                        onChange={(e) => setTeacherPasscode(e.target.value)}
+                                        className="h-12 rounded-xl font-mono tracking-[0.25em] text-center"
+                                        autoComplete="current-password"
+                                        onKeyDown={(e) => {
+                                            if (e.key !== 'Enter') return;
+                                            e.preventDefault();
+                                            if (teacherSubmitting) return;
+                                            if (!schoolId) return;
+                                            void (async () => {
+                                                const passcode = teacherPasscode.trim();
+                                                if (!selectedTeacherKey || !passcode) {
+                                                    playSound('error');
+                                                    toast({
+                                                        variant: 'destructive',
+                                                        title: 'Missing info',
+                                                        description: 'Select your name and enter a passcode to continue.',
+                                                    });
+                                                    return;
+                                                }
+                                                const selected = staffOptions.find((o) => staffLoginKey(o) === selectedTeacherKey);
+                                                if (!selected) {
+                                                    playSound('error');
+                                                    toast({
+                                                        variant: 'destructive',
+                                                        title: 'Choose a staff account from the list',
+                                                        description: 'Please select your name again.',
+                                                    });
+                                                    return;
+                                                }
+                                                setTeacherSubmitting(true);
+                                                const authResult = await login(selected.type, {
+                                                    schoolId,
+                                                    username: selected.username,
+                                                    passcode,
+                                                    teacherName: selected.label,
+                                                    teacherDocId: selected.type === 'teacher' ? selected.sourceId || selected.id.replace(/^teacher:/, '') : undefined,
                                                 });
-                                                return;
-                                            }
-                                            const selected = staffOptions.find((o) => staffLoginKey(o) === selectedTeacherKey);
-                                            if (!selected) {
-                                                playSound('error');
-                                                toast({
-                                                    variant: 'destructive',
-                                                    title: 'Choose a staff account from the list',
-                                                    description: 'Please select your name again.',
-                                                });
-                                                return;
-                                            }
-                                            setTeacherSubmitting(true);
-                                            const authResult = await login(selected.type, {
-                                                schoolId,
-                                                username: selected.username,
-                                                passcode,
-                                                teacherName: selected.label,
-                                                teacherDocId: selected.type === 'teacher' ? selected.sourceId || selected.id.replace(/^teacher:/, '') : undefined,
-                                            });
-                                            if (!authResult.ok) {
-                                                setTeacherSubmitting(false);
-                                                playSound('error');
-                                                toast({
-                                                    variant: 'destructive',
-                                                    title: 'Login failed',
-                                                    description: authResult.message,
-                                                });
-                                                setTeacherPasscode('');
-                                                return;
-                                            }
-                                            playSound('login');
-                                            setTeacherDialogOpen(false);
-                                            router.push(staffLandingPath(schoolId, selected.type));
-                                        })();
-                                    }}
-                                />
+                                                if (!authResult.ok) {
+                                                    setTeacherSubmitting(false);
+                                                    playSound('error');
+                                                    toast({
+                                                        variant: 'destructive',
+                                                        title: 'Login failed',
+                                                        description: authResult.message,
+                                                    });
+                                                    setTeacherPasscode('');
+                                                    return;
+                                                }
+                                                playSound('login');
+                                                setTeacherDialogOpen(false);
+                                                router.push(staffLandingPath(schoolId, selected.type));
+                                            })();
+                                        }}
+                                    />
+                                </div>
+                                <NumericKeypad value={teacherPasscode} onChange={setTeacherPasscode} />
                             </div>
                         </div>
 

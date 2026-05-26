@@ -23,9 +23,11 @@ interface CategoryModalProps {
     isOpen: boolean;
     setIsOpen: (isOpen: boolean) => void;
     category: Category | null;
+    /** When creating a category from the teacher portal, assign ownership to this teacher. */
+    defaultTeacherId?: string;
 }
 
-export function CategoryModal({ isOpen, setIsOpen, category }: CategoryModalProps) {
+export function CategoryModal({ isOpen, setIsOpen, category, defaultTeacherId }: CategoryModalProps) {
     const { addCategory, updateCategory, categories } = useAppContext();
     const [name, setName] = useState('');
     const [points, setPoints] = useState('10');
@@ -77,7 +79,13 @@ export function CategoryModal({ isOpen, setIsOpen, category }: CategoryModalProp
             playSound('success');
             toast({ title: 'Category updated!' });
         } else {
-            const newCategory = { name, points: pointsValue, color, rubricLevels: rubricLevels.length > 0 ? rubricLevels : undefined };
+            const newCategory = {
+                name,
+                points: pointsValue,
+                color,
+                rubricLevels: rubricLevels.length > 0 ? rubricLevels : undefined,
+                ...(defaultTeacherId ? { teacherId: defaultTeacherId } : {}),
+            };
             await addCategory(newCategory);
             playSound('success');
             toast({ title: 'Category added!' });

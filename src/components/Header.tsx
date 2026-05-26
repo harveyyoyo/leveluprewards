@@ -1,5 +1,5 @@
 'use client';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, usePathname, useSearchParams } from 'next/navigation';
 import { doc } from 'firebase/firestore';
 import {
@@ -38,6 +38,32 @@ import { portalHoverTextClass, portalTextClass, type PortalColorKey } from '@/li
 import { getLevelUpLogoHref } from '@/lib/appBranding';
 import { shouldHideGlobalAppChrome } from '@/lib/officeRouting';
 
+function schoolNameCacheKey(schoolId: string) {
+  return `levelup_school_name_${schoolId.trim().toLowerCase()}`;
+}
+
+function readCachedSchoolName(schoolId: string | null): string | null {
+  if (!schoolId || typeof window === 'undefined') return null;
+  try {
+    const value = sessionStorage.getItem(schoolNameCacheKey(schoolId));
+    return value?.trim() || null;
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedSchoolName(schoolId: string, name: string) {
+  try {
+    sessionStorage.setItem(schoolNameCacheKey(schoolId), name.trim());
+  } catch {
+    // ignore quota / private mode
+  }
+}
+
+function formatSchoolIdSlug(schoolId: string) {
+  return schoolId.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+}
+
 export default function Header() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -48,11 +74,33 @@ export default function Header() {
   const { firestore } = useFirebase();
   const schoolDocRef = useSchoolMetadataDocRef();
 
-  const { data: schoolData } = useDoc<{ name: string; logoUrl?: string }>(schoolDocRef);
+  const { data: schoolData, isLoading: isSchoolMetaLoading } = useDoc<{ name: string; logoUrl?: string }>(
+    schoolDocRef,
+  );
   const schoolId = contextSchoolId ?? params?.schoolId ?? null;
-  const schoolName =
-    schoolData?.name ||
-    (schoolId ? schoolId.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()) : '');
+  const [cachedSchoolName, setCachedSchoolName] = useState<string | null>(() => readCachedSchoolName(schoolId));
+
+  useEffect(() => {
+    setCachedSchoolName(readCachedSchoolName(schoolId));
+  }, [schoolId]);
+
+  useEffect(() => {
+    const name = schoolData?.name?.trim();
+    if (!name || !schoolId) return;
+    writeCachedSchoolName(schoolId, name);
+    setCachedSchoolName(name);
+  }, [schoolData?.name, schoolId]);
+
+  const schoolName = useMemo(() => {
+    const fromDoc = schoolData?.name?.trim();
+    if (fromDoc) return fromDoc;
+    // Avoid flashing the URL slug (e.g. "yty") while Firestore is still loading.
+    if (isSchoolMetaLoading) return cachedSchoolName ?? '';
+    if (cachedSchoolName) return cachedSchoolName;
+    return schoolId ? formatSchoolIdSlug(schoolId) : '';
+  }, [schoolData?.name, isSchoolMetaLoading, cachedSchoolName, schoolId]);
+
+  const isSchoolNamePending = Boolean(schoolId && isSchoolMetaLoading && !schoolName.trim());
 
   const appConfigDocRef = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -186,7 +234,7 @@ export default function Header() {
     return null;
   }
 
-  const centerLabel = schoolName;
+  const centerLabel = schoolName.trim();
   /** Portal lives only under `/{schoolId}/portal`; there is no app root `/portal` page. */
   const centerHref = schoolId ? `/${schoolId}/portal` : '/';
   const logoLink = getLevelUpLogoHref();
@@ -203,6 +251,89 @@ export default function Header() {
   if (settings.payLibrary ?? true) paidProducts.push('Library');
   const paidProductsLabel = paidProducts.join(' • ');
 
+  /** Long school names wrap; header row must grow (fixed h-20 + absolute center caused top clipping). */
+  const headerSchoolNameClass =
+    'min-w-0 break-words font-headline font-bold text-foreground [overflow-wrap:anywhere] leading-tight line-clamp-2 sm:line-clamp-3 text-[clamp(0.9375rem,3.2vw,1.75rem)] sm:text-[clamp(1.0625rem,3.8vw,2.25rem)]';
+
+  const syncStatusDot = (
+    <div
+      className="flex h-9 w-9 shrink-0 items-center justify-center"
+      title={syncStatusDescription}
+      role="status"
+      aria-live="polite"
+    >
+      <span className="relative flex h-2.5 w-2.5">
+        {syncStatus === 'synced' && (
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75" />
+        )}
+        {syncStatus === 'syncing' && (
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-60" />
+        )}
+        <span
+          className={cn(
+            'relative inline-flex h-full w-full rounded-full',
+            syncStatus === 'synced'
+              ? 'bg-emerald-500'
+              : syncStatus === 'syncing'
+                ? 'bg-amber-400 animate-pulse'
+                : syncStatus === 'offline'
+                  ? 'bg-red-500'
+                  : 'bg-slate-400',
+          )}
+        />
+      </span>
+    </div>
+  );
+
+  const schoolNameBlock = (align: 'left' | 'center') => (
+    <span
+      className={cn(
+        'inline-flex max-w-full min-w-0 items-center gap-2 sm:gap-2.5',
+        align === 'center' ? 'flex-col justify-center text-center sm:flex-row' : 'flex-row text-left',
+      )}
+    >
+      {schoolData?.logoUrl && (
+        <span
+          className={cn(
+            'inline-flex h-9 w-auto max-w-[96px] shrink-0 items-center justify-center sm:max-w-[120px]',
+            settings.logoDropShadow === 'sm' && 'drop-shadow-sm',
+            settings.logoDropShadow === 'md' && 'drop-shadow-md',
+            settings.logoDropShadow === 'lg' && 'drop-shadow-xl',
+            settings.logoDropShadow === 'none' && 'drop-shadow-none',
+          )}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={schoolData.logoUrl}
+            alt=""
+            className={cn(
+              'h-full w-auto object-contain',
+              settings.logoDisplayMode === 'cover' && 'w-full object-cover',
+              settings.logoBorderRadius === 'sm' && 'rounded-sm',
+              settings.logoBorderRadius === 'md' && 'rounded-md',
+              settings.logoBorderRadius === 'lg' && 'rounded-2xl',
+              settings.logoBorderRadius === 'full' && 'rounded-full',
+              settings.logoBorderRadius === 'none' && 'rounded-none',
+            )}
+          />
+        </span>
+      )}
+      {isSchoolNamePending ? (
+        <span
+          className="inline-block h-[1.05em] w-[min(11rem,58vw)] max-w-full animate-pulse rounded-md bg-muted"
+          aria-hidden
+        />
+      ) : (
+        <span
+          className={cn(headerSchoolNameClass, align === 'center' && 'text-center')}
+          title={centerLabel || undefined}
+        >
+          {centerLabel}
+        </span>
+      )}
+    </span>
+  );
+
   // --- APP MODE HEADER ---
   if (settings.displayMode === 'app') {
     return (
@@ -210,9 +341,8 @@ export default function Header() {
         <div className="mx-auto w-full max-w-7xl px-4 md:px-8">
         <header
           className={cn(
-            'no-print relative z-20 mb-2 flex w-full min-w-0 items-center justify-between rounded-b-2xl border border-border/10 border-t-0',
-            'bg-card/95 pt-3 shadow-[0_4px_20px_hsl(var(--primary)/0.08)] backdrop-blur-md sm:mb-3 sm:rounded-b-3xl sm:pb-4 sm:pt-4',
-            'pb-3',
+            'no-print relative z-20 mb-2 grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2 rounded-b-2xl border border-border/10 border-t-0',
+            'bg-card/95 px-1 py-2 shadow-[0_4px_20px_hsl(var(--primary)/0.08)] backdrop-blur-md sm:mb-3 sm:gap-x-3 sm:rounded-b-3xl sm:px-2 sm:py-3',
           )}
         >
           <div className="relative z-10 flex shrink-0 justify-start">
@@ -227,52 +357,63 @@ export default function Header() {
               </Link>
             )}
           </div>
-          {schoolId && (
-            <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-16 sm:px-24 md:px-32">
-              <span
-                className="w-full max-w-full text-center font-school font-black text-foreground font-bold [overflow-wrap:anywhere] line-clamp-2 sm:line-clamp-3 text-[clamp(1.125rem,4.5vw,1.875rem)] sm:text-[clamp(1.25rem,5vw,2.25rem)]"
-                title={centerLabel}
-              >
-                {centerLabel}
-              </span>
-            </div>
-          )}
-          <div className="relative z-10 flex shrink-0 items-center justify-end gap-1 sm:gap-2">
-            {schoolId && loginState !== 'loggedOut' && (
-              <div
-                className="flex h-8 w-6 items-center justify-center sm:h-9 sm:w-9"
-                title={syncStatusDescription}
-              >
-                <span className="relative flex h-2.5 w-2.5">
-                  {syncStatus === 'synced' && <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75" />}
-                  <span
-                    className={cn(
-                      'relative inline-flex h-full w-full rounded-full',
-                      syncStatus === 'synced'
-                        ? 'bg-emerald-500'
-                        : syncStatus === 'syncing'
-                          ? 'bg-amber-400 animate-pulse'
-                          : syncStatus === 'offline'
-                            ? 'bg-red-500'
-                            : 'bg-slate-400',
-                    )}
-                  />
+          {schoolId ? (
+            <div className="pointer-events-none z-0 flex min-w-0 items-center justify-center px-2 sm:px-4">
+              {isSchoolNamePending ? (
+                <span
+                  className="inline-block h-[1.05em] w-[min(11rem,58vw)] max-w-full animate-pulse rounded-md bg-muted"
+                  aria-hidden
+                />
+              ) : (
+                <span
+                  className={cn('w-full max-w-full font-school font-black', headerSchoolNameClass)}
+                  title={centerLabel || undefined}
+                >
+                  {centerLabel}
                 </span>
-              </div>
+              )}
+            </div>
+          ) : (
+            <div aria-hidden="true" />
+          )}
+          <div className="relative z-10 flex shrink-0 items-center justify-end gap-0.5 sm:gap-1">
+            {isInitialized ? syncStatusDot : null}
+
+            {loginState !== 'student' && loginState !== 'loggedOut' && !isSchoolGateSession && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 shrink-0 rounded-xl text-primary"
+                    aria-label="Account"
+                  >
+                    <User className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Account</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="gap-2 font-semibold" onClick={handleLogout}>
+                    {isDeveloperSupportSession ? <ArrowRightLeft className="h-4 w-4" /> : <LogOut className="h-4 w-4" />}
+                    {isDeveloperSupportSession ? 'End support session' : 'Sign out'}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
-            {canLogout && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9 rounded-xl text-slate-500 hover:bg-primary/10 hover:text-primary"
-                aria-label={isDeveloperSupportSession ? 'End support session' : 'Sign out'}
-                title={isDeveloperSupportSession ? 'End support session' : 'Sign out'}
-                onClick={handleLogout}
+
+            {schoolId ? (
+              <Link
+                href={webHomeHref}
+                data-home-button="true"
+                className="rounded-xl p-2 text-slate-500 hover:text-primary hover:bg-primary/10 transition-all active:scale-90 flex items-center shrink-0"
+                aria-label="Home"
+                title="Home"
               >
-                {isDeveloperSupportSession ? <ArrowRightLeft className="h-5 w-5" /> : <LogOut className="h-5 w-5" />}
-              </Button>
-            )}
+                <Home className="h-5 w-5" />
+              </Link>
+            ) : null}
+
             <SettingsModal />
           </div>
         </header>
@@ -295,9 +436,9 @@ export default function Header() {
             'sm:mb-3 sm:rounded-b-3xl',
           )}
         >
-      <div className="relative h-20 min-w-0 w-full px-3 sm:px-5">
+      <div className="grid min-h-20 min-w-0 w-full grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] items-center gap-x-2 gap-y-1 px-3 py-2 sm:gap-x-3 sm:px-5 sm:py-3">
         {/* Left: Branding */}
-        <div className="absolute inset-y-0 left-3 z-10 flex min-w-0 shrink-0 items-center gap-1 sm:left-5 sm:gap-4">
+        <div className="z-10 flex min-w-0 shrink-0 items-center justify-self-start gap-1 sm:gap-4">
           <div className={cn("items-center gap-1 sm:gap-4", schoolId ? "hidden sm:flex" : "flex")}>
             <Link href={logoLink} className="flex items-center gap-1 sm:gap-4 pl-0.5 group" data-home-button="true">
             {appLogoUrl ? (
@@ -336,116 +477,55 @@ export default function Header() {
         </div>
         </div>
 
-        {/* Center: school name — absolutely centered in the full header width */}
+        {/* Center: school name — in document flow so multi-line names expand the header */}
         {schoolId ? (
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-[clamp(5.5rem,24vw,20rem)] sm:px-[clamp(7rem,28vw,22rem)]">
-            <span className="inline-flex max-w-full min-w-0 items-center justify-center gap-2 sm:gap-3 text-center">
-              {schoolData?.logoUrl && (
-                <span className={cn(
-                  "inline-flex h-10 w-auto max-w-[200px] shrink-0 items-center justify-center transition-all duration-300",
-                  settings.logoDropShadow === 'sm' && 'drop-shadow-sm',
-                  settings.logoDropShadow === 'md' && 'drop-shadow-md',
-                  settings.logoDropShadow === 'lg' && 'drop-shadow-xl',
-                  settings.logoDropShadow === 'none' && 'drop-shadow-none',
-                )}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={schoolData.logoUrl}
-                    alt="Logo"
-                    className={cn(
-                      "h-full w-auto object-contain transition-all duration-300",
-                      settings.logoDisplayMode === 'cover' && 'w-full object-cover',
-                      settings.logoBorderRadius === 'sm' && 'rounded-sm',
-                      settings.logoBorderRadius === 'md' && 'rounded-md',
-                      settings.logoBorderRadius === 'lg' && 'rounded-2xl',
-                      settings.logoBorderRadius === 'full' && 'rounded-full',
-                      settings.logoBorderRadius === 'none' && 'rounded-none',
-                    )}
-                  />
-                </span>
-              )}
-              <span
-                className="min-w-0 break-words font-headline font-bold text-foreground [overflow-wrap:anywhere] line-clamp-2 text-[clamp(1rem,4.5vw,2.25rem)] sm:text-[clamp(1.25rem,5vw,2.75rem)] xl:text-[clamp(1.5rem,4vw,2.75rem)]"
-                title={centerLabel}
-              >
-                {centerLabel}
-              </span>
-            </span>
+          <div className="pointer-events-none z-0 flex min-w-0 items-center justify-center justify-self-center px-1 sm:px-2">
+            {schoolNameBlock('center')}
           </div>
-        ) : null}
+        ) : (
+          <div aria-hidden="true" />
+        )}
 
         {/* Right: Actions */}
-        <div className="absolute inset-y-0 right-0 z-10 flex shrink-0 items-center justify-end gap-1 sm:gap-2 min-w-0">
-          {isInitialized && (
-            <>
-                <div
-                  className={cn(
-                    'flex items-center gap-1 px-1.5 sm:px-2.5 py-1 rounded-full shadow-sm shrink-0',
-                    syncStatus === 'synced' && 'bg-emerald-500',
-                    syncStatus === 'syncing' && 'bg-amber-500',
-                    syncStatus === 'offline' && 'bg-red-600',
-                    syncStatus === 'error' && 'bg-slate-600',
-                  )}
-                  title={syncStatusDescription}
-                  role="status"
-                  aria-live="polite"
+        <div className="z-10 flex min-w-0 shrink-0 items-center justify-end justify-self-end gap-0.5 sm:gap-1">
+          {isInitialized ? syncStatusDot : null}
+
+          {loginState !== 'student' && loginState !== 'loggedOut' && !isSchoolGateSession && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 shrink-0 rounded-xl text-primary"
+                  aria-label="Account"
                 >
-                  <span className="relative flex h-1.5 w-1.5">
-                    {syncStatus === 'synced' && (
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
-                    )}
-                    {syncStatus === 'syncing' && (
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-60" />
-                    )}
-                    <span
-                      className={cn(
-                        'relative inline-flex h-1.5 w-1.5 rounded-full',
-                        syncStatus === 'synced' || syncStatus === 'offline'
-                          ? 'bg-white'
-                          : syncStatus === 'syncing'
-                            ? 'bg-white animate-pulse'
-                            : 'bg-slate-200',
-                      )}
-                    />
-                  </span>
-                  <span className="text-[10px] font-black uppercase tracking-widest text-white leading-none">
-                    {syncStatus === 'synced' ? 'LIVE' : syncStatus}
-                  </span>
-                </div>
-
-              {loginState !== 'student' && loginState !== 'loggedOut' && !isSchoolGateSession && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="font-bold gap-1 sm:gap-2 h-10 sm:h-12 px-2 sm:px-4 rounded-xl text-primary shrink-0">
-                      <User className="w-4 h-4 sm:w-5 sm:h-5" />
-                      <span className="hidden sm:inline">
-                        {userName || (loginState === 'admin' ? 'Admin' : loginState === 'teacher' ? 'Teacher' : 'School')}
-                      </span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Account</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem className="gap-2 font-semibold" onClick={handleLogout}>
-                      {isDeveloperSupportSession ? <ArrowRightLeft className="h-4 w-4" /> : <LogOut className="h-4 w-4" />}
-                      {isDeveloperSupportSession ? 'End support session' : 'Sign out'}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-
-              <div className="h-6 sm:h-8 w-px bg-primary/20 shrink-0" />
-
-              <Link href={webHomeHref} data-home-button="true" className="rounded-xl p-2 sm:p-3 text-slate-500 hover:text-primary hover:bg-primary/10 transition-all active:scale-90 flex items-center gap-1 sm:gap-2 shrink-0">
-                <Home className="h-5 w-5 sm:h-6 sm:w-6" />
-                <span className="hidden sm:inline font-bold">Home</span>
-              </Link>
-
-              <div className="h-6 sm:h-8 w-px bg-primary/20 shrink-0" />
-
-              <SettingsModal />
-            </>
+                  <User className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Account</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="gap-2 font-semibold" onClick={handleLogout}>
+                  {isDeveloperSupportSession ? <ArrowRightLeft className="h-4 w-4" /> : <LogOut className="h-4 w-4" />}
+                  {isDeveloperSupportSession ? 'End support session' : 'Sign out'}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
+
+          {schoolId ? (
+            <Link
+              href={webHomeHref}
+              data-home-button="true"
+              className="rounded-xl p-2 text-slate-500 hover:text-primary hover:bg-primary/10 transition-all active:scale-90 flex items-center shrink-0"
+              aria-label="Home"
+              title="Home"
+            >
+              <Home className="h-5 w-5" />
+            </Link>
+          ) : null}
+
+          <SettingsModal />
         </div>
       </div>
         </header>

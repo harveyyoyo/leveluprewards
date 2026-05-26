@@ -18,6 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { lookupStudentPortal, verifyStudentPortal } from '@/lib/studentPortalClient';
 import { getReadableErrorMessage } from '@/lib/errorMessage';
 import { scanMismatchAtStudentLogin } from '@/lib/scanMismatch';
+import { NumericKeypad } from '@/components/ui/NumericKeypad';
 
 type Props = {
   schoolId: string;
@@ -152,27 +153,36 @@ export function StudentPortalLogin({
       </Card>
 
       <Dialog open={passcodeOpen} onOpenChange={setPasscodeOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Enter your portal passcode</DialogTitle>
             <DialogDescription>
               Your school gave you a personal passcode for home access. It is separate from your card ID.
             </DialogDescription>
           </DialogHeader>
-          <Input
-            type="password"
-            inputMode="numeric"
-            autoComplete="off"
-            value={passcode}
-            onChange={(e) => setPasscode(e.target.value)}
-            placeholder="Passcode"
-            className="font-mono text-center text-lg tracking-widest"
-            autoFocus
-          />
+          <div className="space-y-4 py-2">
+            <Input
+              type="password"
+              inputMode="numeric"
+              autoComplete="off"
+              value={passcode}
+              onChange={(e) => setPasscode(e.target.value)}
+              placeholder="Passcode"
+              className="font-mono text-center text-lg tracking-widest h-12 rounded-xl"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && passcode.trim() && pendingStudentId) {
+                  e.preventDefault();
+                  void finishVerify(pendingStudentId, passcode);
+                }
+              }}
+            />
+            <NumericKeypad value={passcode} onChange={setPasscode} />
+          </div>
           <DialogFooter>
             <Button
               type="button"
-              className="w-full"
+              className="w-full h-12 rounded-xl font-bold text-base"
               disabled={busy || !passcode.trim() || !pendingStudentId}
               onClick={() => pendingStudentId && void finishVerify(pendingStudentId, passcode)}
             >

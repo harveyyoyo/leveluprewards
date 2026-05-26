@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { NumericKeypad } from '@/components/ui/NumericKeypad';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirebase } from '@/firebase';
 import { loginSchoolAdmin } from '@/lib/adminGoogleAccess';
@@ -121,7 +122,7 @@ export function LibraryStaffExitDialog({
               Librarian
             </TabsTrigger>
           </TabsList>
-          <TabsContent value="admin" className="space-y-3 mt-3">
+          <TabsContent value="admin" className="space-y-4 mt-3">
             <div className="space-y-2">
               <Label htmlFor="lib-exit-admin-pass">Admin passcode</Label>
               <Input
@@ -135,13 +136,14 @@ export function LibraryStaffExitDialog({
                 }}
               />
             </div>
+            <NumericKeypad value={adminPasscode} onChange={setAdminPasscode} />
             <DialogFooter className="sm:justify-start">
               <Button type="button" className="rounded-xl w-full" disabled={busy} onClick={() => void handleAdminExit()}>
                 Unlock
               </Button>
             </DialogFooter>
           </TabsContent>
-          <TabsContent value="librarian" className="space-y-3 mt-3">
+          <TabsContent value="librarian" className="space-y-4 mt-3">
             <div className="space-y-2">
               <Label htmlFor="lib-exit-lib-user">Username</Label>
               <Input
@@ -164,6 +166,7 @@ export function LibraryStaffExitDialog({
                 }}
               />
             </div>
+            <NumericKeypad value={librarianPasscode} onChange={setLibrarianPasscode} />
             <DialogFooter className="sm:justify-start">
               <Button
                 type="button"

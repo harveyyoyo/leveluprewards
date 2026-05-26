@@ -16,7 +16,7 @@ import {
    Users, Gift, BookOpen, Trash2, Edit, UploadCloud, Printer, LayoutDashboard, Database,
    Settings, History, Award, CheckCircle, Tag, Trophy, ArrowRight, Loader2, Play, ShieldCheck,
    User, Upload, Download, Activity, Zap, Clock, Palette, Wand2, TableProperties,
-   FileText, Bell, Target, Megaphone, ChevronDown, X, Plug, GraduationCap, Home,
+   FileText, Bell, Target, Megaphone, ChevronDown, X, Plug, GraduationCap, Home, Ticket,
    PanelLeft, Rows3,
  } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -99,7 +99,7 @@ import { StudentIdCard } from '@/components/StudentIdCard';
 import { IdCardPrintSetupDialog } from '@/components/admin/IdCardPrintSetupDialog';
 import { AdminMainTabsList } from '@/components/admin/AdminMainTabsList';
 import { staffPortalTabTriggerClassName } from '@/components/staff/staffPortalNavStyles';
-import { staffPortalCoreTabs } from '@/lib/staffPortal';
+import { staffPortalAdminAddOnIsOn, staffPortalCoreTabs } from '@/lib/staffPortal';
 import { TeacherStaffPortalDashboard } from '@/components/staff/TeacherStaffPortalDashboard';
 import { AchievementModal } from '@/components/AchievementModal';
 import { BadgeModal } from '@/components/BadgeModal';
@@ -549,7 +549,7 @@ function AdminDashboardInner() {
         value: 'insights',
         label: 'Insights',
         icon: Activity,
-        isOn: (s) => !!s.enableAdminAnalytics || (s.payRewards ?? true),
+        isOn: (s) => staffPortalAdminAddOnIsOn(s, 'insights'),
         enable: () => updateSettings({ enableAdminAnalytics: true, adminHiddenAddOnTabs: removeHidden('insights') }),
         disable: () =>
           updateSettings({
@@ -562,8 +562,7 @@ function AdminDashboardInner() {
         value: 'attendance',
         label: 'Attendance',
         icon: Clock,
-        isOn: (s) =>
-          (s.payAttendance ?? true) && (!!s.enableAttendance || !!s.enableClassSignIn),
+        isOn: (s) => staffPortalAdminAddOnIsOn(s, 'attendance'),
         enable: () =>
           updateSettings({
             payAttendance: true,
@@ -583,7 +582,7 @@ function AdminDashboardInner() {
         value: 'halloffame',
         label: 'Hall of Fame',
         icon: Trophy,
-        isOn: (s) => !!s.enableClassLeaderboard,
+        isOn: (s) => staffPortalAdminAddOnIsOn(s, 'halloffame'),
         enable: () => updateSettings({ enableClassLeaderboard: true, adminHiddenAddOnTabs: removeHidden('halloffame') }),
         disable: () => updateSettings({ enableClassLeaderboard: false, adminHiddenAddOnTabs: removeHidden('halloffame'), adminPinnedAddOnTabs: removePinned('halloffame') }),
       },
@@ -592,7 +591,7 @@ function AdminDashboardInner() {
         label: 'Bulletin',
         icon: Megaphone,
         /** Match default-on semantics (omit/false only disables). */
-        isOn: (s) => s.bulletinEnabled !== false,
+        isOn: (s) => staffPortalAdminAddOnIsOn(s, 'bulletinboard'),
         enable: () => updateSettings({ bulletinEnabled: true, adminHiddenAddOnTabs: removeHidden('bulletinboard') }),
         disable: () => updateSettings({ bulletinEnabled: false, adminHiddenAddOnTabs: removeHidden('bulletinboard'), adminPinnedAddOnTabs: removePinned('bulletinboard') }),
       },
@@ -600,7 +599,7 @@ function AdminDashboardInner() {
         value: 'library',
         label: 'Library',
         icon: BookOpen,
-        isOn: (s) => (s.payLibrary ?? true),
+        isOn: (s) => staffPortalAdminAddOnIsOn(s, 'library'),
         enable: () => updateSettings({ payLibrary: true, adminHiddenAddOnTabs: removeHidden('library') }),
         disable: () => updateSettings({ payLibrary: false, adminHiddenAddOnTabs: removeHidden('library'), adminPinnedAddOnTabs: removePinned('library') }),
       },
@@ -616,7 +615,7 @@ function AdminDashboardInner() {
         value: 'category-badges',
         label: 'Badges',
         icon: Award,
-        isOn: (s) => !!s.enableBadges,
+        isOn: (s) => staffPortalAdminAddOnIsOn(s, 'category-badges'),
         enable: () => updateSettings({ enableBadges: true, adminHiddenAddOnTabs: removeHidden('category-badges') }),
         disable: () => updateSettings({ enableBadges: false, adminHiddenAddOnTabs: removeHidden('category-badges'), adminPinnedAddOnTabs: removePinned('category-badges') }),
       },
@@ -624,7 +623,7 @@ function AdminDashboardInner() {
         value: 'goals',
         label: 'Goals',
         icon: Target,
-        isOn: (s) => !!s.enableGoals,
+        isOn: (s) => staffPortalAdminAddOnIsOn(s, 'goals'),
         enable: () => updateSettings({ enableGoals: true, adminHiddenAddOnTabs: removeHidden('goals') }),
         disable: () => updateSettings({ enableGoals: false, adminHiddenAddOnTabs: removeHidden('goals'), adminPinnedAddOnTabs: removePinned('goals') }),
       },
@@ -632,7 +631,7 @@ function AdminDashboardInner() {
         value: 'houses',
         label: 'Houses',
         icon: Home,
-        isOn: (s) => !!s.enableHouses,
+        isOn: (s) => staffPortalAdminAddOnIsOn(s, 'houses'),
         enable: () => updateSettings({ enableHouses: true, adminHiddenAddOnTabs: removeHidden('houses') }),
         disable: () =>
           updateSettings({
@@ -645,7 +644,7 @@ function AdminDashboardInner() {
         value: 'notifications',
         label: 'Notifications',
         icon: Bell,
-        isOn: (s) => !!s.enableNotifications,
+        isOn: (s) => staffPortalAdminAddOnIsOn(s, 'notifications'),
         enable: () => updateSettings({ enableNotifications: true, adminHiddenAddOnTabs: removeHidden('notifications') }),
         disable: () => updateSettings({ enableNotifications: false, adminHiddenAddOnTabs: removeHidden('notifications'), adminPinnedAddOnTabs: removePinned('notifications') }),
       },
@@ -653,7 +652,7 @@ function AdminDashboardInner() {
         value: 'branding',
         label: 'Branding',
         icon: Palette,
-        isOn: () => !hiddenNow.includes('branding'),
+        isOn: (s) => staffPortalAdminAddOnIsOn(s, 'branding'),
         enable: () => updateSettings({ adminHiddenAddOnTabs: removeHidden('branding') }),
         disable: () => updateSettings({ adminHiddenAddOnTabs: addHidden('branding'), adminPinnedAddOnTabs: removePinned('branding') }),
       },
@@ -661,7 +660,7 @@ function AdminDashboardInner() {
         value: 'integrations',
         label: 'Integrations',
         icon: Plug,
-        isOn: () => !hiddenNow.includes('integrations'),
+        isOn: (s) => staffPortalAdminAddOnIsOn(s, 'integrations'),
         enable: () => updateSettings({ adminHiddenAddOnTabs: removeHidden('integrations') }),
         disable: () =>
           updateSettings({
@@ -674,7 +673,7 @@ function AdminDashboardInner() {
         label: 'Student home portal',
         icon: GraduationCap,
         /** Tab visibility only — portal on/off is the switch inside the tab (`enableStudentPortal`). */
-        isOn: () => !hiddenNow.includes('student-portal'),
+        isOn: (s) => staffPortalAdminAddOnIsOn(s, 'student-portal'),
         enable: () => updateSettings({ adminHiddenAddOnTabs: removeHidden('student-portal') }),
         disable: () =>
           updateSettings({

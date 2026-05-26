@@ -291,7 +291,11 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses, cre
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
               <div className="space-y-1 min-w-0">
                 <Label htmlFor="prize-teacher">Teacher restriction</Label>
-                <Select value={teacherId || 'all'} onValueChange={(v) => setTeacherId(v === 'all' ? '' : v)}>
+                <Select
+                  value={teacherId || 'all'}
+                  onValueChange={(v) => setTeacherId(v === 'all' ? '' : v)}
+                  disabled={!!creatorTeacherId}
+                >
                   <SelectTrigger id="prize-teacher" className="h-10 w-full">
                     <SelectValue placeholder="School-wide" />
                   </SelectTrigger>

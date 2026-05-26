@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAppContext } from '@/components/AppProvider';
 import { useDoc, useFirestore, useMemoFirebase, useFirebase } from '@/firebase';
-import { isAllowedAdminGoogleUser, loginSchoolAdmin } from '@/lib/adminGoogleAccess';
+import { canBypassSchoolAdminPasscode, loginSchoolAdmin } from '@/lib/adminGoogleAccess';
 import { useToast } from '@/hooks/use-toast';
 import { LogIn, LogOut, UserCheck, Loader2, ShieldCheck } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -110,7 +110,7 @@ function TeacherPrinter(props: { teacherName: string; teacherId: string; onLogou
 export default function TeacherPage() {
     const { loginState, isInitialized, schoolId: activeSchoolId, login, logout, isAdmin, isTeacher, userName, userId, teacherDocId } = useAppContext();
     const { user: firebaseUser } = useFirebase();
-    const canBypassAdminPasscode = isAllowedAdminGoogleUser(firebaseUser);
+    const canBypassAdminPasscode = canBypassSchoolAdminPasscode(firebaseUser);
     const params = useParams<{ schoolId: string }>();
     const router = useRouter();
     const pathname = usePathname();

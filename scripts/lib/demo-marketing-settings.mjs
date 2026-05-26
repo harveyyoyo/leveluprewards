@@ -2,9 +2,13 @@
  * Patches demo school appSettings for marketing captures (raffle, houses, etc.).
  */
 import admin from 'firebase-admin';
+import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+
+const FIREBASE_PROJECT_ID =
+  process.env.FIREBASE_PROJECT_ID || 'studio-1273073612-71183';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '../..');
@@ -27,30 +31,32 @@ export const DEMO_MARKETING_APP_SETTINGS_PATCH = {
 };
 
 export function loadEnvLocal() {
-  const envPath = path.join(ROOT, '.env.local');
-  if (!fs.existsSync(envPath)) return;
-  for (const line of fs.readFileSync(envPath, 'utf8').split('\n')) {
-    const t = line.trim();
-    if (!t || t.startsWith('#')) continue;
-    const i = t.indexOf('=');
-    if (i < 0) continue;
-    const key = t.slice(0, i).trim();
-    let val = t.slice(i + 1).trim();
-    if (
-      (val.startsWith('"') && val.endsWith('"')) ||
-      (val.startsWith("'") && val.endsWith("'"))
-    ) {
-      val = val.slice(1, -1);
-    }
-    if (!process.env[key]) process.env[key] = val;
-  }
+  dotenv.config({ path: path.join(ROOT, '.env') });
+  dotenv.config({ path: path.join(ROOT, '.env.local'), override: true });
 }
 
 function initAdmin() {
   if (admin.apps.length) return;
-  const raw = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-  if (!raw) throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY missing in .env.local');
-  admin.initializeApp({ credential: admin.credential.cert(JSON.parse(raw)) });
+  const raw = process.env.FIREBASE_SERVICE_ACCOUNT_KEY?.trim();
+  const keyFile = process.env.FIREBASE_SERVICE_ACCOUNT_KEY_FILE?.trim();
+  const appOptions = { projectId: FIREBASE_PROJECT_ID };
+  if (raw) {
+    admin.initializeApp({
+      ...appOptions,
+      credential: admin.credential.cert(JSON.parse(raw)),
+    });
+    return;
+  }
+  if (keyFile && fs.existsSync(keyFile)) {
+    const json = fs.readFileSync(keyFile, 'utf8');
+    admin.initializeApp({
+      ...appOptions,
+      credential: admin.credential.cert(JSON.parse(json)),
+    });
+    return;
+  }
+  // gcloud ADC or GOOGLE_APPLICATION_CREDENTIALS
+  admin.initializeApp(appOptions);
 }
 
 /**
@@ -58,8 +64,11 @@ function initAdmin() {
  */
 export async function patchDemoMarketingSettings() {
   loadEnvLocal();
-  if (!process.env.FIREBASE_SERVICE_ACCOUNT_KEY) return false;
-  initAdmin();
+  try {
+    initAdmin();
+  } catch {
+    return false;
+  }
   const db = admin.firestore();
   const schools = (process.env.DEMO_SCHOOL_ID || 'schoolabc')
     .split(',')

@@ -26,7 +26,7 @@ import {
     clearSchoolGateCookie,
 } from '@/lib/auth/syncFirebaseSessionCookie';
 import { sanitizeInternalNextPath } from '@/lib/auth/internalNextRedirect';
-import { isAllowedAdminGoogleUser } from '@/lib/adminGoogleAccess';
+import { canBypassSchoolAdminPasscode } from '@/lib/adminGoogleAccess';
 import { isAllowedDeveloperGoogleUser } from '@/lib/developerAccess';
 import { isStudentKioskRoute } from '@/lib/studentKioskRoute';
 import { verifyStaffDeskLogin } from '@/lib/staffDeskLogin';
@@ -940,7 +940,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 const lowerSchoolId = credentials.schoolId.trim().toLowerCase();
                 const passcodeTrimmed = (credentials.passcode ?? '').trim();
                 const googleAdminBypass =
-                    type === 'admin' && isAllowedAdminGoogleUser(auth.currentUser) && passcodeTrimmed.length === 0;
+                    type === 'admin' && canBypassSchoolAdminPasscode(auth.currentUser) && passcodeTrimmed.length === 0;
                 if (type === 'admin' && passcodeTrimmed.length === 0 && !googleAdminBypass) {
                     return loginErr('Enter the admin passcode to continue.');
                 }

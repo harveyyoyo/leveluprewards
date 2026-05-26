@@ -67,7 +67,13 @@ export type TeacherPrizeListItem =
 export function buildTeacherPrizeListItems(prizes: Prize[], teacherId: string): TeacherPrizeListItem[] {
   const byPoints = (a: Prize, b: Prize) => (a.points ?? 0) - (b.points ?? 0);
   const yours = prizes.filter((p) => isTeacherPrizeCreator(p, teacherId)).sort(byPoints);
-  const rest = prizes.filter((p) => !isTeacherPrizeCreator(p, teacherId)).sort(byPoints);
+  const rest = prizes
+    .filter(
+      (p) =>
+        !isTeacherPrizeCreator(p, teacherId) &&
+        (isPrizeSchoolWideTeachers(p) || teacherListedOnPrize(p, teacherId)),
+    )
+    .sort(byPoints);
   const out: TeacherPrizeListItem[] = [];
 
   if (yours.length > 0) {

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useAppContext } from '@/components/AppProvider';
 import { useFirebase } from '@/firebase';
-import { isAllowedAdminGoogleUser, loginSchoolAdmin } from '@/lib/adminGoogleAccess';
+import { canBypassSchoolAdminPasscode, loginSchoolAdmin } from '@/lib/adminGoogleAccess';
 
 type UseAdminGooglePasscodeBypassOptions = {
   schoolId: string | null | undefined;
@@ -15,7 +15,8 @@ type UseAdminGooglePasscodeBypassOptions = {
 };
 
 /**
- * Auto-provisions school admin for allowlisted Google accounts (no admin passcode).
+ * Google sign-in can open school admin without a passcode when the server confirms access.
+ * Auto-login only runs for accounts that can bypass (signed in with Google).
  */
 export function useAdminGooglePasscodeBypass({
   schoolId,
@@ -29,7 +30,7 @@ export function useAdminGooglePasscodeBypass({
   const [googleAutoLoginExhausted, setGoogleAutoLoginExhausted] = useState(false);
   const attemptedRef = useRef(false);
 
-  const canBypassAdminPasscode = isAllowedAdminGoogleUser(user);
+  const canBypassAdminPasscode = canBypassSchoolAdminPasscode(user);
 
   const loginAsAdminViaGoogle = useCallback(async (): Promise<boolean> => {
     const sid = schoolId?.trim().toLowerCase();

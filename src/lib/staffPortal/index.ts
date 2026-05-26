@@ -2,6 +2,8 @@ export type { StaffPortalRole, StaffPortalTabDef, StaffPortalTabKind, StaffPorta
 export {
   STAFF_PORTAL_TAB_REGISTRY,
   staffPortalAddOnTabs,
+  staffPortalAdminAddOnIsOn,
+  staffPortalTeacherPinSideEffects,
   staffPortalCoreTabs,
   staffPortalDefaultTab,
   staffPortalTabsForRole,

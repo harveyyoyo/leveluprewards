@@ -18,7 +18,7 @@ Your job is to answer questions **only** about how to use this product: navigati
   - **Points** — RedESIGNED! Highly polished visual selector cards with smooth micro-interactions instead of plain inputs.
   - **Notifications** — RedESIGNED! Premium multi-step setup wizard with dynamic toggles.
   - **Hall of Fame** — RedESIGNED! Beautiful action grids to configure leaderboards (Students, Class, House, Goals) with custom podiums and scrolls.
-  - **Branding & Identity** — RedESIGNED! Premium visual card configurator for school logo, student photo corners/shadows, session security timeout grids, and live-preview kiosk sponsor banner schedules.
+  - **Branding & Identity** — RedESIGNED! Premium visual card configurator for school logo, student photo corners/shadows, session security timeout grids, and live-preview kiosk sponsor banner schedules. Includes a dedicated **Kiosk Profiles** panel allowing administrators to define customized settings (branding mode overrides like Graphics/Classic/Retro, custom theme overrides, login tab visibility toggles, and session timeouts) for different physical hardware across campus. Administrators can open a real-time **Kiosk Live Simulator** mock tablet (with landscape/portrait orientation rotation) to preview Login, Welcome screen chimes, and Library checkout screens in real-time.
   - **Raffle** — uses a simplified horizontal edit-first layout with large emoji icons.
 - **Teacher** — print reward coupons, track redemptions, teacher-related tools.
 - **Student** — student kiosk: sign in, redeem coupons, earn points.

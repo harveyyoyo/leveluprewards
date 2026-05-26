@@ -17,6 +17,13 @@ import {
   RotateCcw,
   Check,
   Calendar,
+  Smartphone,
+  Plus,
+  Copy,
+  Edit3,
+  Eye,
+  EyeOff,
+  Monitor,
 } from 'lucide-react';
 import type { DocumentReference, Firestore } from 'firebase/firestore';
 import { updateDoc, setDoc } from 'firebase/firestore';
@@ -29,7 +36,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Helper } from '@/components/ui/helper';
-import { useSettings } from '@/components/providers/SettingsProvider';
+import { useSettings, type Settings, type KioskProfile } from '@/components/providers/SettingsProvider';
 import { ThemeGeneratorModal } from '@/components/ThemeGeneratorModal';
 import { normalizeStudentTheme } from '@/lib/themeContrast';
 import type { StudentTheme } from '@/lib/types';
@@ -84,7 +91,18 @@ export function AdminBrandingTab({
   const [newSponsorSpeed, setNewSponsorSpeed] = useState<'slow' | 'normal' | 'fast' | 'very_fast' | 'static'>('normal');
   const [newSponsorPosition, setNewSponsorPosition] = useState<'top' | 'bottom'>('bottom');
   const [newSponsorIcon, setNewSponsorIcon] = useState('🎉');
-  const [section, setSection] = useState<'logo' | 'photos' | 'theme' | 'sessions' | 'sponsor'>('logo');
+  const [section, setSection] = useState<'logo' | 'photos' | 'theme' | 'sessions' | 'sponsor' | 'kiosk_profiles'>('logo');
+
+  // Kiosk Profile Management States
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [newProfileName, setNewProfileName] = useState('');
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingProfileId, setEditingProfileId] = useState('');
+  const [editingProfileName, setEditingProfileName] = useState('');
+  const [editingProfileSettings, setEditingProfileSettings] = useState<Partial<Settings>>({});
+  const [activePreviewProfileId, setActivePreviewProfileId] = useState<string | null>(null);
+  const [simulatorOrientation, setSimulatorOrientation] = useState<'portrait' | 'landscape'>('portrait');
+  const [simulatorScreen, setSimulatorScreen] = useState<'login' | 'welcome' | 'checkout'>('login');
 
   const handleSchoolDefaultThemeSave = (theme: StudentTheme) => {
     const normalized = normalizeStudentTheme(theme);
@@ -111,6 +129,7 @@ export function AdminBrandingTab({
           { id: 'theme', label: 'ID Card Theme' },
           { id: 'sessions', label: 'Session Timeouts' },
           { id: 'sponsor', label: 'Sponsor Banner' },
+          { id: 'kiosk_profiles', label: 'Kiosk Profiles' },
         ]}
         value={section}
         onValueChange={(id) => setSection(id as typeof section)}
@@ -1049,6 +1068,788 @@ export function AdminBrandingTab({
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* 6. KIOSK PROFILES */}
+      {section === 'kiosk_profiles' && (
+        <>
+          <Card className="border-0 bg-background shadow-lg rounded-3xl overflow-hidden">
+          <CardHeader className="p-6 md:p-8 border-b bg-gradient-to-r from-muted/50 via-background to-muted/20">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <CardTitle className="text-xl font-black tracking-tight flex items-center gap-3">
+                <Smartphone className="w-5 h-5 text-amber-500" />
+                Kiosk Layout Profiles
+              </CardTitle>
+              <Button
+                onClick={() => {
+                  setNewProfileName('');
+                  setIsCreateDialogOpen(true);
+                  playSound?.('click');
+                }}
+                className="rounded-xl font-bold bg-amber-600 hover:bg-amber-700 text-white flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" /> Create Profile
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="p-6 md:p-8 space-y-6">
+            <div className="text-xs text-muted-foreground leading-relaxed max-w-2xl bg-amber-50/50 dark:bg-amber-950/10 border border-amber-200/50 dark:border-amber-900/30 rounded-2xl p-4">
+              <p className="font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5 mb-1">
+                💡 Managing Multiple Physical Kiosks
+              </p>
+              By default, all kiosk screens use your general school settings. Define distinct profiles below (e.g. <em>&ldquo;Portrait Lobby Kiosk&rdquo;</em> vs <em>&ldquo;Landscape Gym Tablet&rdquo;</em>) to enforce specific layout behaviors, active login tabs, sounds, or visual schemes on different screens.
+            </div>
+
+            {(() => {
+              const profiles = Object.values(settings.kioskProfiles || {});
+              if (profiles.length === 0) {
+                return (
+                  <div className="text-center py-12 border border-dashed rounded-3xl bg-muted/10">
+                    <Smartphone className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-40 animate-pulse" />
+                    <p className="text-sm font-bold text-muted-foreground">No custom profiles defined yet</p>
+                    <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
+                      Click the &ldquo;Create Profile&rdquo; button above to create your first customized layout override.
+                    </p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
+                  {/* Profiles List Column */}
+                  <div className={cn("space-y-4", activePreviewProfileId ? "lg:col-span-3" : "lg:col-span-5")}>
+                    <div className={cn("grid gap-4", activePreviewProfileId ? "grid-cols-1 xl:grid-cols-2" : "grid-cols-1 md:grid-cols-2 xl:grid-cols-3")}>
+                      {profiles.map((p) => {
+                        const setupUrl = typeof window !== 'undefined'
+                          ? `${window.location.origin}/${schoolId}/student?kioskProfileId=${p.id}`
+                          : `/${schoolId}/student?kioskProfileId=${p.id}`;
+                        const isCurrentlyPreviewed = activePreviewProfileId === p.id;
+
+                        return (
+                          <div
+                            key={p.id}
+                            className={cn(
+                              "rounded-3xl border p-5 space-y-4 hover:shadow-md transition-all relative overflow-hidden group",
+                              isCurrentlyPreviewed 
+                                ? "border-amber-500 bg-amber-50/5 dark:bg-amber-950/10 shadow-sm ring-1 ring-amber-500/20" 
+                                : "border-border/80 bg-card"
+                            )}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <h3 className="font-black text-sm text-card-foreground flex items-center gap-2">
+                                  <span className={cn("w-2.5 h-2.5 rounded-full transition-colors", isCurrentlyPreviewed ? "bg-amber-500 animate-pulse" : "bg-muted-foreground/40")} />
+                                  {p.name}
+                                </h3>
+                                <p className="text-[10px] text-muted-foreground mt-0.5">
+                                  ID: <span className="font-mono text-muted-foreground/80">{p.id}</span>
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 rounded-lg hover:bg-muted"
+                                  title="Edit settings"
+                                  onClick={() => {
+                                    setEditingProfileId(p.id);
+                                    setEditingProfileName(p.name);
+                                    setEditingProfileSettings(p.settings || {});
+                                    setIsEditDialogOpen(true);
+                                    playSound?.('click');
+                                  }}
+                                >
+                                  <Edit3 className="w-3.5 h-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 rounded-lg hover:bg-destructive/10 text-destructive"
+                                  title="Delete profile"
+                                  onClick={() => {
+                                    if (confirm(`Are you sure you want to delete the profile "${p.name}"? Devices using this profile will fall back to default school settings.`)) {
+                                      const nextProfiles = { ...(settings.kioskProfiles || {}) };
+                                      delete nextProfiles[p.id];
+                                      updateSettings({ kioskProfiles: nextProfiles });
+                                      if (activePreviewProfileId === p.id) {
+                                        setActivePreviewProfileId(null);
+                                      }
+                                      playSound?.('click');
+                                      toast({
+                                        title: 'Profile deleted',
+                                        description: `Kiosk profile "${p.name}" has been removed.`,
+                                      });
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </Button>
+                              </div>
+                            </div>
+
+                            <div className="bg-muted/30 dark:bg-muted/10 rounded-2xl p-3 text-[11px] space-y-1.5 border">
+                              <p className="text-[9px] uppercase tracking-wider font-black text-muted-foreground mb-1">
+                                Configuration Overrides
+                              </p>
+                              <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-muted-foreground">
+                                <div>
+                                  Mode:{' '}
+                                  <span className="font-bold text-foreground capitalize">
+                                    {p.settings?.graphicMode || 'General Default'}
+                                  </span>
+                                </div>
+                                <div>
+                                  Color:{' '}
+                                  <span className="font-bold text-foreground capitalize">
+                                    {p.settings?.colorScheme || 'General Default'}
+                                  </span>
+                                </div>
+                                <div>
+                                  Dark Mode:{' '}
+                                  <span className="font-bold text-foreground">
+                                    {p.settings?.darkMode === undefined
+                                      ? 'General Default'
+                                      : p.settings.darkMode
+                                      ? 'On'
+                                      : 'Off'}
+                                  </span>
+                                </div>
+                                <div>
+                                  Sounds:{' '}
+                                  <span className="font-bold text-foreground">
+                                    {p.settings?.soundEnabled === undefined
+                                      ? 'General Default'
+                                      : p.settings.soundEnabled
+                                      ? 'On'
+                                      : 'Off'}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex gap-2 pt-1">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className="flex-1 text-xs font-bold rounded-xl h-9 hover:bg-muted flex items-center justify-center gap-1.5"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(setupUrl);
+                                  toast({
+                                      title: 'URL copied',
+                                      description: 'Open this link on any kiosk browser to set it up.',
+                                  });
+                                  playSound?.('success');
+                                }}
+                              >
+                                <Copy className="w-3 h-3" /> Copy Link
+                              </Button>
+                              <Button
+                                type="button"
+                                variant={isCurrentlyPreviewed ? "secondary" : "outline"}
+                                className={cn(
+                                  "text-xs font-bold rounded-xl h-9 px-3 flex items-center gap-1.5",
+                                  isCurrentlyPreviewed && "bg-amber-100 hover:bg-amber-200 text-amber-900 border-transparent dark:bg-amber-900/30 dark:text-amber-300"
+                                )}
+                                onClick={() => {
+                                  if (isCurrentlyPreviewed) {
+                                    setActivePreviewProfileId(null);
+                                  } else {
+                                    setActivePreviewProfileId(p.id);
+                                  }
+                                  playSound?.('click');
+                                }}
+                              >
+                                {isCurrentlyPreviewed ? (
+                                  <>
+                                    <EyeOff className="w-3.5 h-3.5" /> Close Live
+                                  </>
+                                ) : (
+                                  <>
+                                    <Eye className="w-3.5 h-3.5" /> Live View
+                                  </>
+                                )}
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className="text-xs font-bold rounded-xl h-9 hover:bg-muted px-2.5"
+                                title="Open full preview in new tab"
+                                onClick={() => {
+                                  window.open(setupUrl, '_blank');
+                                  playSound?.('click');
+                                }}
+                              >
+                                Preview
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Right Live Simulator Column */}
+                  {activePreviewProfileId && (() => {
+                    const p = settings.kioskProfiles?.[activePreviewProfileId];
+                    if (!p) return null;
+
+                    const activeTheme = p.settings?.colorScheme || settings.colorScheme || 'default';
+                    const activeMode = (p.settings?.graphicMode || settings.graphicMode || 'graphics') as string;
+                    const isDark = p.settings?.darkMode !== undefined ? p.settings.darkMode : !!settings.darkMode;
+
+                    // Compute background gradient class based on selected theme
+                    let themeBgClass = "from-slate-700 via-slate-800 to-slate-900 text-slate-100";
+                    if (activeTheme === 'rose') {
+                      themeBgClass = "from-pink-500 via-fuchsia-600 to-violet-700 text-white";
+                    } else if (activeTheme === 'sunset') {
+                      themeBgClass = "from-amber-500 via-orange-600 to-rose-700 text-white";
+                    } else if (activeTheme === 'ocean') {
+                      themeBgClass = "from-cyan-500 via-blue-600 to-indigo-700 text-white";
+                    } else if (activeTheme === 'mint') {
+                      themeBgClass = "from-emerald-500 via-green-600 to-teal-700 text-white";
+                    }
+
+                    const scanEnabled = p.settings?.kioskLoginTabScanEnabled !== false;
+                    const faceEnabled = p.settings?.kioskLoginTabFaceEnabled === true;
+                    const cardEnabled = p.settings?.kioskLoginTabCardEnabled !== false;
+                    const typeEnabled = p.settings?.kioskLoginTabTypeEnabled !== false;
+
+                    return (
+                      <Card className="lg:col-span-2 border bg-background/50 backdrop-blur-md shadow-xl rounded-3xl sticky top-6 border-border/40 overflow-hidden">
+                        <CardHeader className="p-5 border-b bg-muted/40">
+                          <div className="flex items-center justify-between gap-3">
+                            <CardTitle className="text-sm font-black flex items-center gap-2">
+                              <Monitor className="w-4 h-4 text-amber-500" />
+                              Kiosk Live Simulator
+                            </CardTitle>
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+                              ONLINE
+                            </span>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="p-5 space-y-5">
+                          {/* Simulator Options Deck */}
+                          <div className="space-y-3 bg-muted/30 rounded-2xl p-3.5 border text-xs">
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-muted-foreground">Orientation:</span>
+                              <div className="flex rounded-lg bg-background p-0.5 border">
+                                <button
+                                  type="button"
+                                  onClick={() => setSimulatorOrientation('portrait')}
+                                  className={cn(
+                                    "px-2.5 py-1 rounded-md font-bold text-[10px]",
+                                    simulatorOrientation === 'portrait' ? "bg-amber-500 text-white shadow-sm" : "hover:bg-muted"
+                                  )}
+                                >
+                                  Portrait
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setSimulatorOrientation('landscape')}
+                                  className={cn(
+                                    "px-2.5 py-1 rounded-md font-bold text-[10px]",
+                                    simulatorOrientation === 'landscape' ? "bg-amber-500 text-white shadow-sm" : "hover:bg-muted"
+                                  )}
+                                >
+                                  Landscape
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-muted-foreground">Mock View:</span>
+                              <div className="flex rounded-lg bg-background p-0.5 border">
+                                <button
+                                  type="button"
+                                  onClick={() => setSimulatorScreen('login')}
+                                  className={cn(
+                                    "px-2.5 py-1 rounded-md font-bold text-[10px]",
+                                    simulatorScreen === 'login' ? "bg-primary text-primary-foreground shadow-sm" : "hover:bg-muted"
+                                  )}
+                                >
+                                  Login
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setSimulatorScreen('welcome')}
+                                  className={cn(
+                                    "px-2.5 py-1 rounded-md font-bold text-[10px]",
+                                    simulatorScreen === 'welcome' ? "bg-primary text-primary-foreground shadow-sm" : "hover:bg-muted"
+                                  )}
+                                >
+                                  Welcome
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setSimulatorScreen('checkout')}
+                                  className={cn(
+                                    "px-2.5 py-1 rounded-md font-bold text-[10px]",
+                                    simulatorScreen === 'checkout' ? "bg-primary text-primary-foreground shadow-sm" : "hover:bg-muted"
+                                  )}
+                                >
+                                  Checkout
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Device Hardware Mockup */}
+                          <div className="py-4 flex justify-center bg-slate-950/5 dark:bg-slate-950/20 rounded-3xl border border-dashed p-6">
+                            <div
+                              className={cn(
+                                "relative bg-slate-900 border-[10px] border-slate-950 shadow-2xl rounded-[2.2rem] overflow-hidden transition-all duration-500 ease-in-out flex flex-col",
+                                simulatorOrientation === 'portrait' ? "w-[240px] aspect-[9/16]" : "w-full max-w-[380px] aspect-[16/9]"
+                              )}
+                            >
+                              {/* Screen Glares / Lens */}
+                              <div className="absolute top-2 left-1/2 -translate-x-1/2 w-16 h-3 bg-slate-950 rounded-full z-20 flex items-center justify-center gap-1.5 px-3">
+                                <span className="w-1.5 h-1.5 rounded-full bg-blue-900" />
+                                <span className="w-1 h-1 rounded-full bg-slate-800" />
+                              </div>
+
+                              {/* Live Screen Simulated Content */}
+                              <div
+                                className={cn(
+                                  "flex-1 relative overflow-hidden flex flex-col p-4 select-none font-sans text-left",
+                                  themeBgClass,
+                                  isDark ? "dark bg-slate-950" : ""
+                                )}
+                              >
+                                {/* Retro scanlines overlay */}
+                                {activeMode === 'retro' && (
+                                  <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.15)_50%)] bg-[size:100%_4px] opacity-30 z-10" />
+                                )}
+
+                                {/* Header block */}
+                                <div className="flex items-center justify-between border-b border-white/20 pb-2 mb-3 z-10">
+                                  <div className="flex items-center gap-1.5">
+                                    <div className="w-5 h-5 rounded-full bg-white/25 border border-white/30 flex items-center justify-center font-black text-[9px]">
+                                      🏫
+                                    </div>
+                                    <div className="leading-none">
+                                      <h4 className="text-[10px] font-black truncate max-w-[100px] tracking-tight">Kiosk Screen</h4>
+                                      <p className="text-[7px] opacity-70">Active Overrides</p>
+                                    </div>
+                                  </div>
+                                  <div className="text-[7px] bg-white/20 px-1.5 py-0.5 rounded-md font-bold">
+                                    {activeTheme.toUpperCase()}
+                                  </div>
+                                </div>
+
+                                {/* Main Inner Content Display */}
+                                <div className="flex-1 flex flex-col justify-center items-center text-center space-y-2 z-10">
+                                  {simulatorScreen === 'login' && (
+                                    <>
+                                      <p className="text-[9px] font-black tracking-wide uppercase opacity-90">
+                                        Scan Passcode to Login
+                                      </p>
+                                      
+                                      {/* QR scanner mockup */}
+                                      {scanEnabled && (
+                                        <div className="relative w-20 h-20 border-2 border-white/40 rounded-xl bg-black/15 flex items-center justify-center overflow-hidden">
+                                          <div className="w-14 h-14 border border-dashed border-white/50 rounded-lg flex items-center justify-center opacity-70">
+                                            📱
+                                          </div>
+                                          {/* Scanning Laser Line */}
+                                          <div className="absolute left-0 w-full h-[2px] bg-emerald-400 shadow-[0_0_8px_#34d399] animate-bounce top-2" />
+                                        </div>
+                                      )}
+
+                                      {/* Face viewfinder mockup */}
+                                      {!scanEnabled && faceEnabled && (
+                                        <div className="relative w-20 h-20 rounded-full border-2 border-dashed border-cyan-400/60 bg-black/15 flex items-center justify-center overflow-hidden">
+                                          <div className="w-12 h-14 rounded-full border border-cyan-400/30 opacity-70 flex items-center justify-center text-base animate-pulse">
+                                            👤
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      {/* Default card keypad */}
+                                      {!scanEnabled && !faceEnabled && (
+                                        <div className="grid grid-cols-3 gap-1 w-20">
+                                          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
+                                            <div key={n} className="w-6 h-5 rounded bg-white/20 text-[8px] flex items-center justify-center font-bold">
+                                              {n}
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
+
+                                      {/* Small tab bar mockup */}
+                                      <div className="flex gap-1 bg-white/10 rounded-lg p-0.5 text-[7px] border border-white/15">
+                                        {scanEnabled && <span className="px-1 py-0.5 rounded bg-white/20 font-bold">QR</span>}
+                                        {faceEnabled && <span className="px-1 py-0.5 rounded bg-white/20 font-bold">Face</span>}
+                                        {cardEnabled && <span className="px-1 py-0.5 rounded bg-white/20 font-bold font-mono">Card</span>}
+                                        {typeEnabled && <span className="px-1 py-0.5 rounded bg-white/20 font-bold">Name</span>}
+                                      </div>
+                                    </>
+                                  )}
+
+                                  {simulatorScreen === 'welcome' && (
+                                    <div className="space-y-1.5 animate-in zoom-in-95 duration-300">
+                                      <div className="text-2xl animate-bounce">👋</div>
+                                      <h3 className="text-xs font-black tracking-tight leading-none">
+                                        Welcome back, Alex!
+                                      </h3>
+                                      <p className="text-[8px] opacity-80 leading-none">Your account is linked.</p>
+                                      
+                                      <div className="inline-block bg-white/20 border border-white/30 px-2.5 py-1 rounded-xl text-[10px] font-black tracking-tight shadow-sm text-yellow-300 dark:text-yellow-200 mt-2">
+                                        +10 POINTS!
+                                      </div>
+                                      
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          playSound?.('success');
+                                          toast({
+                                            title: "🔊 Audio Triggered",
+                                            description: `Simulated kiosk login sound chime played.`
+                                          });
+                                        }}
+                                        className="block mt-3 mx-auto text-[7px] font-black uppercase tracking-wider bg-black/30 hover:bg-black/45 border border-white/20 px-2 py-1 rounded-md text-white active:scale-95 transition-transform"
+                                      >
+                                        📣 Trigger Audio
+                                      </button>
+                                    </div>
+                                  )}
+
+                                  {simulatorScreen === 'checkout' && (
+                                    <div className="space-y-2 py-1">
+                                      <div className="text-xl animate-pulse">📚</div>
+                                      <p className="text-[8px] font-bold opacity-90 max-w-[120px] mx-auto leading-tight">
+                                        Scan Library Book UPC or Student ID Card
+                                      </p>
+                                      <div className="w-16 h-8 bg-white/20 rounded-md border border-white/25 flex flex-col justify-between p-1 mx-auto">
+                                        <div className="flex justify-between h-4 items-center">
+                                          {[...Array(8)].map((_, i) => (
+                                            <div key={i} className="w-[1.5px] bg-white h-full" style={{ width: i % 3 === 0 ? '3px' : '1px' }} />
+                                          ))}
+                                        </div>
+                                        <span className="text-[5px] font-mono opacity-80 leading-none text-center">978019852</span>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Footer footer */}
+                                <div className="text-[7px] text-center opacity-60 border-t border-white/10 pt-1.5 mt-2 z-10 flex items-center justify-between">
+                                  <span>👤 Student Screen</span>
+                                  <span>Mode: {activeMode.toUpperCase()}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })()}
+                </div>
+              );
+            })()}
+          </CardContent>
+        </Card>
+
+      {/* Create Profile Dialog */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="sm:max-w-md rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-black">Create Kiosk Profile</DialogTitle>
+            <DialogDescription className="text-xs">
+              Give this kiosk layout override configuration a recognizable name (e.g. Portrait Front Gate).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="createProfileName" className="text-xs font-bold">Profile Name</Label>
+              <Input
+                id="createProfileName"
+                placeholder="e.g. Portraits Lobby Screen"
+                className="rounded-xl h-10"
+                value={newProfileName}
+                onChange={(e) => setNewProfileName(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsCreateDialogOpen(false)}
+              className="rounded-xl font-bold"
+            >
+              Cancel
+            </Button>
+            <Button
+              className="bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold"
+              disabled={!newProfileName.trim()}
+              onClick={() => {
+                const nextId = 'kp_' + Math.random().toString(36).substring(2, 11);
+                const nextProfiles: Record<string, KioskProfile> = {
+                  ...(settings.kioskProfiles || {}),
+                  [nextId]: {
+                    id: nextId,
+                    name: newProfileName.trim(),
+                    createdAt: Date.now(),
+                    updatedAt: Date.now(),
+                    settings: {
+                      graphicMode: 'graphics' as const,
+                      colorScheme: 'default' as const,
+                      kioskLoginTabScanEnabled: true,
+                      kioskLoginTabFaceEnabled: true,
+                      kioskLoginTabCardEnabled: true,
+                      kioskLoginTabTypeEnabled: true,
+                      soundEnabled: true,
+                      kioskSessionTimeoutSec: 45,
+                    },
+                  } as KioskProfile,
+                };
+                updateSettings({ kioskProfiles: nextProfiles });
+                setIsCreateDialogOpen(false);
+                setNewProfileName('');
+                playSound?.('success');
+                toast({
+                  title: 'Profile created',
+                  description: `Kiosk profile "${newProfileName}" was created successfully.`,
+                });
+              }}
+            >
+              Create &amp; Configure
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Profile Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-xl rounded-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-black flex items-center gap-2">
+              <Smartphone className="w-5 h-5 text-amber-500" />
+              Configure Kiosk Settings: {editingProfileName}
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Customize settings specifically for this device group profile. Unconfigured options fall back to school defaults.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="editProfileName" className="text-xs font-bold">Profile Name</Label>
+              <Input
+                id="editProfileName"
+                className="rounded-xl h-10"
+                value={editingProfileName}
+                onChange={(e) => setEditingProfileName(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-4 border-t pt-4">
+              <h4 className="text-xs font-black uppercase tracking-widest text-muted-foreground">
+                Look &amp; Feel Overrides
+              </h4>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold">Graphic Mode</Label>
+                  <Select
+                    value={editingProfileSettings.graphicMode || 'graphics'}
+                    onValueChange={(val) =>
+                      setEditingProfileSettings((prev) => ({
+                        ...prev,
+                        graphicMode: val as any,
+                      }))
+                    }
+                  >
+                    <SelectTrigger className="rounded-xl h-10">
+                      <SelectValue placeholder="Graphics mode..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="graphics">Graphics (Full Animations)</SelectItem>
+                      <SelectItem value="classic">Classic (Reduced Graphics)</SelectItem>
+                      <SelectItem value="retro">Retro Arcade Style</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold">Color Theme</Label>
+                  <Select
+                    value={editingProfileSettings.colorScheme || 'default'}
+                    onValueChange={(val) =>
+                      setEditingProfileSettings((prev) => ({
+                        ...prev,
+                        colorScheme: val as any,
+                      }))
+                    }
+                  >
+                    <SelectTrigger className="rounded-xl h-10">
+                      <SelectValue placeholder="Theme color..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="default">Arcade Orange</SelectItem>
+                      <SelectItem value="candy">Sweet Candy Pink</SelectItem>
+                      <SelectItem value="sunset">Sunset Gold</SelectItem>
+                      <SelectItem value="ocean">Deep Ocean Blue</SelectItem>
+                      <SelectItem value="forest">Forest Moss Green</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between border bg-muted/20 rounded-2xl p-3.5">
+                <div className="space-y-0.5">
+                  <Label className="text-xs font-bold">Force Dark Mode</Label>
+                  <p className="text-[10px] text-muted-foreground">Force this kiosk interface to stay in night mode.</p>
+                </div>
+                <Switch
+                  checked={!!editingProfileSettings.darkMode}
+                  onCheckedChange={(val) =>
+                    setEditingProfileSettings((prev) => ({
+                      ...prev,
+                      darkMode: val,
+                    }))
+                  }
+                />
+              </div>
+
+              <div className="flex items-center justify-between border bg-muted/20 rounded-2xl p-3.5">
+                <div className="space-y-0.5">
+                  <Label className="text-xs font-bold">Auditory Feedback (Sounds)</Label>
+                  <p className="text-[10px] text-muted-foreground">Play custom chimes and arcade sounds on interactions.</p>
+                </div>
+                <Switch
+                  checked={editingProfileSettings.soundEnabled !== false}
+                  onCheckedChange={(val) =>
+                    setEditingProfileSettings((prev) => ({
+                      ...prev,
+                      soundEnabled: val,
+                    }))
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="space-y-4 border-t pt-4">
+              <h4 className="text-xs font-black uppercase tracking-widest text-muted-foreground">
+                Active Student Login Tabs
+              </h4>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex items-center justify-between border rounded-2xl p-3 text-xs">
+                  <span className="font-bold">Scan Badge (QR)</span>
+                  <Switch
+                    checked={editingProfileSettings.kioskLoginTabScanEnabled !== false}
+                    onCheckedChange={(val) =>
+                      setEditingProfileSettings((prev) => ({
+                        ...prev,
+                        kioskLoginTabScanEnabled: val,
+                      }))
+                    }
+                  />
+                </div>
+
+                <div className="flex items-center justify-between border rounded-2xl p-3 text-xs">
+                  <span className="font-bold">Face Login (Camera)</span>
+                  <Switch
+                    checked={editingProfileSettings.kioskLoginTabFaceEnabled !== false}
+                    onCheckedChange={(val) =>
+                      setEditingProfileSettings((prev) => ({
+                        ...prev,
+                        kioskLoginTabFaceEnabled: val,
+                      }))
+                    }
+                  />
+                </div>
+
+                <div className="flex items-center justify-between border rounded-2xl p-3 text-xs">
+                  <span className="font-bold">Enter Card ID</span>
+                  <Switch
+                    checked={editingProfileSettings.kioskLoginTabCardEnabled !== false}
+                    onCheckedChange={(val) =>
+                      setEditingProfileSettings((prev) => ({
+                        ...prev,
+                        kioskLoginTabCardEnabled: val,
+                      }))
+                    }
+                  />
+                </div>
+
+                <div className="flex items-center justify-between border rounded-2xl p-3 text-xs">
+                  <span className="font-bold">Type Student Name</span>
+                  <Switch
+                    checked={editingProfileSettings.kioskLoginTabTypeEnabled !== false}
+                    onCheckedChange={(val) =>
+                      setEditingProfileSettings((prev) => ({
+                        ...prev,
+                        kioskLoginTabTypeEnabled: val,
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4 border-t pt-4">
+              <h4 className="text-xs font-black uppercase tracking-widest text-muted-foreground">
+                Session Constraints
+              </h4>
+
+              <div className="flex items-center justify-between gap-4 border rounded-2xl p-3 text-xs">
+                <div className="space-y-0.5">
+                  <span className="font-bold block">Auto Logout Timeout</span>
+                  <span className="text-[10px] text-muted-foreground">Log student out after idle time (seconds).</span>
+                </div>
+                <Input
+                  type="number"
+                  className="w-20 rounded-lg text-center h-8 font-bold"
+                  value={editingProfileSettings.kioskSessionTimeoutSec ?? 45}
+                  onChange={(e) =>
+                    setEditingProfileSettings((prev) => ({
+                      ...prev,
+                      kioskSessionTimeoutSec: parseInt(e.target.value) || 45,
+                    }))
+                  }
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 border-t pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setIsEditDialogOpen(false)}
+              className="rounded-xl font-bold"
+            >
+              Cancel
+            </Button>
+            <Button
+              className="bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold"
+              onClick={() => {
+                const nextProfiles = {
+                  ...(settings.kioskProfiles || {}),
+                  [editingProfileId]: {
+                    id: editingProfileId,
+                    name: editingProfileName.trim(),
+                    createdAt: settings.kioskProfiles?.[editingProfileId]?.createdAt || Date.now(),
+                    updatedAt: Date.now(),
+                    settings: editingProfileSettings as any,
+                  },
+                };
+                updateSettings({ kioskProfiles: nextProfiles });
+                setIsEditDialogOpen(false);
+                playSound?.('success');
+                toast({
+                  title: 'Profile updated',
+                  description: `Kiosk profile "${editingProfileName}" was saved successfully.`,
+                });
+              }}
+            >
+              Save Configuration
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+        </>
       )}
     </div>
   );

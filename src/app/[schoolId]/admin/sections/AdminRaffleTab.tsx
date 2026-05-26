@@ -42,10 +42,12 @@ export function AdminRaffleTab({
   students,
   /** When false, raffle rules are read-only (e.g. secretary coupon-only mode). */
   canEditSettings = true,
+  operatorName,
 }: {
   schoolId: string;
   students: Student[];
   canEditSettings?: boolean;
+  operatorName?: string;
 }) {
   const { toast } = useToast();
   const { settings, updateSettings } = useSettings();
@@ -167,6 +169,7 @@ export function AdminRaffleTab({
       setIsSavingDeduction(true);
       try {
         const now = Date.now();
+        const suffix = operatorName ? ` — drawn by ${operatorName}` : '';
         await runTransaction(firestore, async (tx) => {
           // Firestore requires every read before any write in a transaction.
           const readResults: {
@@ -188,12 +191,13 @@ export function AdminRaffleTab({
             tx.update(studentRef, { points: next });
 
             const activityRef = doc(collection(studentRef, 'activities'));
+            const baseDesc = isGeneralRaffle
+              ? 'Raffle (general)'
+              : oneEntryPerStudent
+                ? `Raffle (equal odds): 1 × ${pointsPerTicket} pts`
+                : `Raffle tickets (${r.fullTickets} × ${pointsPerTicket})`;
             tx.set(activityRef, {
-              desc: isGeneralRaffle
-                ? 'Raffle (general)'
-                : oneEntryPerStudent
-                  ? `Raffle (equal odds): 1 × ${pointsPerTicket} pts`
-                  : `Raffle tickets (${r.fullTickets} × ${pointsPerTicket})`,
+              desc: `${baseDesc}${suffix}`,
               amount: -r.deductPoints,
               date: now,
             });
@@ -218,7 +222,7 @@ export function AdminRaffleTab({
         setIsSavingDeduction(false);
       }
     },
-    [deductOnPull, entries, firestore, isGeneralRaffle, oneEntryPerStudent, pointsPerTicket, schoolId, toast],
+    [deductOnPull, entries, firestore, isGeneralRaffle, oneEntryPerStudent, pointsPerTicket, schoolId, toast, operatorName],
   );
 
   const displayRafflePointsPerTicket = Number.isFinite(storedPpt) ? Math.max(0, Math.floor(storedPpt)) : 25;

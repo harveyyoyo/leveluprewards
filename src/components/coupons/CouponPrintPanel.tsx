@@ -40,10 +40,22 @@ import {
   type CouponPrintPageSize,
 } from '@/lib/couponPrint';
 import { buildRedemptionPrintNote } from '@/lib/couponRedemptionRules';
+import {
+  remainingTeacherBudgetPoints,
+  resolveTeacherBudgetPeriod,
+  teacherBudgetRemainingPhrase,
+} from '@/lib/teacherBudget';
 import type { Category, Class, Coupon, CouponRedemptionScope, Teacher } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 const MAX_COUPON_PRINT_SHEETS = 100;
+
+export type CouponPrintRedemptionUi = 'admin' | 'teacher';
+
+export type CouponPrintTeacherBudgetOptions = {
+  currentTeacher: Teacher | null;
+  onBudgetSpend: (totalCost: number) => Promise<void>;
+};
 
 export type CouponPrintPanelProps = {
   schoolId: string;
@@ -52,6 +64,16 @@ export type CouponPrintPanelProps = {
   teachers: Teacher[] | null | undefined;
   issuerDisplayName?: string;
   className?: string;
+  redemptionUi?: CouponPrintRedemptionUi;
+  /** Teacher doc id for creator-scoped coupons and quick-add categories. */
+  creatorTeacherId?: string;
+  /** Limits class pickers (teacher roster / secretary subset). */
+  classFilterList?: Class[];
+  newCategoryTeacherId?: string;
+  hideQuickAddCategory?: boolean;
+  isGraphic?: boolean;
+  printAccentColor?: string;
+  teacherBudget?: CouponPrintTeacherBudgetOptions;
 };
 
 function localTodayYmd(): string {
@@ -66,15 +88,24 @@ export function CouponPrintPanel({
   teachers,
   issuerDisplayName = 'Admin',
   className,
+  redemptionUi = 'admin',
+  creatorTeacherId,
+  classFilterList,
+  newCategoryTeacherId,
+  hideQuickAddCategory = false,
+  isGraphic = false,
+  printAccentColor,
+  teacherBudget,
 }: CouponPrintPanelProps) {
   const { addCoupons, setCouponsToPrint, addCategory } = useAppContext();
   const { settings } = useSettings();
   const { toast } = useToast();
   const playSound = useArcadeSound();
 
+  const isTeacherRedemption = redemptionUi === 'teacher';
   const teacherName = issuerDisplayName.trim() || 'Admin';
   const categoryList = useMemo(() => categories ?? [], [categories]);
-  const classList = useMemo(() => classes ?? [], [classes]);
+  const classList = useMemo(() => classFilterList ?? classes ?? [], [classFilterList, classes]);
   const teacherList = useMemo(() => teachers ?? [], [teachers]);
 
   const [printCategoryId, setPrintCategoryId] = useState('');
@@ -83,7 +114,9 @@ export function CouponPrintPanel({
   const [printExpiresOn, setPrintExpiresOn] = useState('');
   const [printSheetCount, setPrintSheetCount] = useState('1');
   const [printCouponsPerPage, setPrintCouponsPerPage] = useState<CouponPrintPageSize>(COUPONS_PER_PRINT_PAGE);
-  const [printRedemptionScope, setPrintRedemptionScope] = useState<CouponRedemptionScope>('school');
+  const [printRedemptionScope, setPrintRedemptionScope] = useState<CouponRedemptionScope>(() =>
+    isTeacherRedemption ? 'creator' : 'school',
+  );
   const [printScopeClassIds, setPrintScopeClassIds] = useState<string[]>([]);
   const [printScopeTeacherIds, setPrintScopeTeacherIds] = useState<string[]>([]);
   const [isPrintCategoryDialogOpen, setIsPrintCategoryDialogOpen] = useState(false);
@@ -112,6 +145,13 @@ export function CouponPrintPanel({
     const valid = new Set(teacherList.map((t) => t.id));
     setPrintScopeTeacherIds((prev) => prev.filter((id) => valid.has(id)));
   }, [teacherList]);
+
+  useEffect(() => {
+    if (!isTeacherRedemption) return;
+    if (printRedemptionScope === 'school' || printRedemptionScope === 'teachers') {
+      setPrintRedemptionScope('creator');
+    }
+  }, [isTeacherRedemption, printRedemptionScope]);
 
   const computeStartsAt = useCallback(() => {
     if (!printStartsOn) return undefined;
@@ -154,6 +194,7 @@ export function CouponPrintPanel({
       name: newPrintCategoryName,
       points,
       color: pickDistinctCategoryColor(used),
+      ...(newCategoryTeacherId ? { teacherId: newCategoryTeacherId } : {}),
     });
     if (newCategory) {
       setPrintCategoryId(newCategory.id);
@@ -203,6 +244,27 @@ export function CouponPrintPanel({
       return;
     }
 
+    const totalCost = value * couponCount;
+    if (
+      isTeacherRedemption &&
+      teacherBudget &&
+      settings.enableTeacherBudgets &&
+      teacherBudget.currentTeacher &&
+      teacherBudget.currentTeacher.monthlyBudget !== undefined
+    ) {
+      const remaining = remainingTeacherBudgetPoints(teacherBudget.currentTeacher);
+      if (remaining !== null && totalCost > remaining) {
+        const phrase = teacherBudgetRemainingPhrase(resolveTeacherBudgetPeriod(teacherBudget.currentTeacher));
+        playSound('error');
+        toast({
+          variant: 'destructive',
+          title: 'Budget Exceeded',
+          description: `Generating these coupons requires ${totalCost} pts, but you only have ${remaining.toLocaleString()} pts remaining ${phrase}.`,
+        });
+        return;
+      }
+    }
+
     if (printExpiresOn && printExpiresOn < localTodayYmd()) {
       playSound('error');
       toast({
@@ -223,23 +285,44 @@ export function CouponPrintPanel({
       return;
     }
 
-    if (printRedemptionScope === 'classes' && printScopeClassIds.length === 0) {
-      playSound('error');
-      toast({
-        variant: 'destructive',
-        title: 'Select classes',
-        description: 'Choose at least one class, or switch assignment to schoolwide or teachers.',
-      });
-      return;
-    }
-    if (printRedemptionScope === 'teachers' && printScopeTeacherIds.length === 0) {
-      playSound('error');
-      toast({
-        variant: 'destructive',
-        title: 'Select teachers',
-        description: 'Choose at least one teacher, or switch assignment to schoolwide or classes.',
-      });
-      return;
+    if (isTeacherRedemption) {
+      if (printRedemptionScope === 'classes' && printScopeClassIds.length === 0) {
+        playSound('error');
+        toast({
+          variant: 'destructive',
+          title: 'Select classes',
+          description: 'Choose at least one class, or switch redemption to “Only my students”.',
+        });
+        return;
+      }
+      if (printRedemptionScope === 'creator' && !creatorTeacherId) {
+        playSound('error');
+        toast({
+          variant: 'destructive',
+          title: 'Profile not ready',
+          description: 'Wait for your teacher profile to load, then try again.',
+        });
+        return;
+      }
+    } else {
+      if (printRedemptionScope === 'classes' && printScopeClassIds.length === 0) {
+        playSound('error');
+        toast({
+          variant: 'destructive',
+          title: 'Select classes',
+          description: 'Choose at least one class, or switch assignment to schoolwide or teachers.',
+        });
+        return;
+      }
+      if (printRedemptionScope === 'teachers' && printScopeTeacherIds.length === 0) {
+        playSound('error');
+        toast({
+          variant: 'destructive',
+          title: 'Select teachers',
+          description: 'Choose at least one teacher, or switch assignment to schoolwide or classes.',
+        });
+        return;
+      }
     }
 
     const startsAt = computeStartsAt();
@@ -256,14 +339,21 @@ export function CouponPrintPanel({
 
     const codes = generateUniqueCouponCodes(couponCount);
     const scopeExtra: Partial<Pick<Coupon, 'redemptionScope' | 'allowedClassIds' | 'allowedTeacherIds'>> =
-      printRedemptionScope === 'classes'
-        ? { redemptionScope: 'classes', allowedClassIds: [...printScopeClassIds] }
-        : printRedemptionScope === 'teachers'
-          ? { redemptionScope: 'teachers', allowedTeacherIds: [...printScopeTeacherIds] }
-          : { redemptionScope: 'school' };
+      isTeacherRedemption
+        ? printRedemptionScope === 'classes'
+          ? { redemptionScope: 'classes', allowedClassIds: [...printScopeClassIds] }
+          : { redemptionScope: 'creator' }
+        : printRedemptionScope === 'classes'
+          ? { redemptionScope: 'classes', allowedClassIds: [...printScopeClassIds] }
+          : printRedemptionScope === 'teachers'
+            ? { redemptionScope: 'teachers', allowedTeacherIds: [...printScopeTeacherIds] }
+            : { redemptionScope: 'school' };
 
-    const redemptionScopeForNote: CouponRedemptionScope =
-      printRedemptionScope === 'classes' || printRedemptionScope === 'teachers'
+    const redemptionScopeForNote: CouponRedemptionScope = isTeacherRedemption
+      ? printRedemptionScope === 'classes' || printRedemptionScope === 'creator'
+        ? printRedemptionScope
+        : 'creator'
+      : printRedemptionScope === 'classes' || printRedemptionScope === 'teachers'
         ? printRedemptionScope
         : 'school';
 
@@ -289,6 +379,7 @@ export function CouponPrintPanel({
       used: false,
       createdAt: Date.now(),
       color: selectedCategory.color,
+      ...(isTeacherRedemption && creatorTeacherId ? { createdByTeacherId: creatorTeacherId } : {}),
       ...scopeExtra,
       ...(redemptionPrintNote ? { redemptionPrintNote } : {}),
       ...(startsAt !== undefined ? { startsAt } : {}),
@@ -296,6 +387,14 @@ export function CouponPrintPanel({
     }));
 
     await addCoupons(couponsToCreate);
+    if (
+      isTeacherRedemption &&
+      teacherBudget &&
+      settings.enableTeacherBudgets &&
+      teacherBudget.currentTeacher
+    ) {
+      await teacherBudget.onBudgetSpend(totalCost);
+    }
     setCouponsToPrint(couponsToCreate, { couponsPerPage: printCouponsPerPage });
     playSound('success');
     toast({
@@ -305,8 +404,11 @@ export function CouponPrintPanel({
   };
 
   const selectedCategoryForPreview = categoryList.find((c) => c.id === printCategoryId);
-  const redemptionPreviewScope: CouponRedemptionScope =
-    printRedemptionScope === 'classes' || printRedemptionScope === 'teachers'
+  const redemptionPreviewScope: CouponRedemptionScope = isTeacherRedemption
+    ? printRedemptionScope === 'classes' || printRedemptionScope === 'creator'
+      ? printRedemptionScope
+      : 'creator'
+    : printRedemptionScope === 'classes' || printRedemptionScope === 'teachers'
       ? printRedemptionScope
       : 'school';
   const redemptionPreviewNote = buildRedemptionPrintNote({
@@ -322,15 +424,19 @@ export function CouponPrintPanel({
       .map((t) => t.name),
   });
   const previewScopeFields = useMemo<
-    Partial<Pick<Coupon, 'redemptionScope' | 'allowedClassIds' | 'allowedTeacherIds'>>
+    Partial<Pick<Coupon, 'redemptionScope' | 'allowedClassIds' | 'allowedTeacherIds' | 'createdByTeacherId'>>
   >(
     () =>
-      printRedemptionScope === 'classes'
-        ? { redemptionScope: 'classes' as const, allowedClassIds: [...printScopeClassIds] }
-        : printRedemptionScope === 'teachers'
-          ? { redemptionScope: 'teachers' as const, allowedTeacherIds: [...printScopeTeacherIds] }
-          : { redemptionScope: 'school' as const },
-    [printRedemptionScope, printScopeClassIds, printScopeTeacherIds],
+      isTeacherRedemption
+        ? printRedemptionScope === 'classes'
+          ? { redemptionScope: 'classes' as const, allowedClassIds: [...printScopeClassIds] }
+          : { redemptionScope: 'creator' as const }
+        : printRedemptionScope === 'classes'
+          ? { redemptionScope: 'classes' as const, allowedClassIds: [...printScopeClassIds] }
+          : printRedemptionScope === 'teachers'
+            ? { redemptionScope: 'teachers' as const, allowedTeacherIds: [...printScopeTeacherIds] }
+            : { redemptionScope: 'school' as const },
+    [isTeacherRedemption, printRedemptionScope, printScopeClassIds, printScopeTeacherIds],
   );
 
   const previewStartsAt = computeStartsAt();
@@ -346,6 +452,7 @@ export function CouponPrintPanel({
       used: false,
       createdAt: Date.now(),
       color: selectedCategoryForPreview?.color,
+      ...(isTeacherRedemption && creatorTeacherId ? { createdByTeacherId: creatorTeacherId } : {}),
       ...previewScopeFields,
       ...(redemptionPreviewNote ? { redemptionPrintNote: redemptionPreviewNote } : {}),
       ...(previewStartsAt !== undefined ? { startsAt: previewStartsAt } : {}),
@@ -359,6 +466,8 @@ export function CouponPrintPanel({
       redemptionPreviewNote,
       previewStartsAt,
       previewExpiresAt,
+      isTeacherRedemption,
+      creatorTeacherId,
     ],
   );
 
@@ -368,13 +477,45 @@ export function CouponPrintPanel({
   );
 
   const totalCoupons = (parseInt(printSheetCount, 10) || 0) * printCouponsPerPage;
+  const budgetTeacher = teacherBudget?.currentTeacher ?? null;
+  const printValueNum = parseInt(printValue, 10) || 0;
+  const budgetHint =
+    isTeacherRedemption &&
+    settings.enableTeacherBudgets &&
+    budgetTeacher?.monthlyBudget !== undefined &&
+    printValueNum > 0
+      ? ` | ${(totalCoupons * printValueNum).toLocaleString()} pts from budget`
+      : null;
+
+  const fieldClass = cn(
+    'h-12 rounded-xl transition-all',
+    isGraphic ? 'bg-foreground/5 border-white/10 text-foreground focus:ring-chart-1/20' : 'bg-slate-50 border-slate-200',
+  );
+  const labelClass = cn(
+    'text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1',
+    isGraphic ? 'text-muted-foreground' : 'text-slate-500',
+  );
 
   return (
-    <Card className={cn('w-full border-t-4 border-primary shadow-md overflow-hidden', className)}>
+    <Card
+      className={cn(
+        'w-full border-t-4 shadow-md overflow-hidden',
+        isGraphic
+          ? 'bg-card/60 backdrop-blur-2xl border-chart-1 shadow-[0_20px_50px_rgba(0,0,0,0.1)]'
+          : 'border-primary',
+        className,
+      )}
+    >
       <CardHeader className="p-4 md:p-6">
         <Helper content="Generate printable coupons for student kiosk redemption. Choose 10 or 30 coupons per letter page, set how many sheets to print, and match each cell to the preview layout.">
           <CardTitle className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-primary/10 text-primary" aria-hidden>
+            <div
+              className={cn(
+                'p-2 rounded-xl',
+                isGraphic ? 'bg-chart-1/20 text-chart-1' : 'bg-primary/10 text-primary',
+              )}
+              aria-hidden
+            >
               <Printer className="w-6 h-6" />
             </div>
             Print coupons
@@ -399,12 +540,10 @@ export function CouponPrintPanel({
             <div className="flex-1 w-full space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 <div className="space-y-2 md:col-span-1">
-                  <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">
-                    Incentive Category
-                  </Label>
+                  <Label className={labelClass}>Incentive Category</Label>
                   <div className="flex items-center gap-2">
                     <Select value={printCategoryId} onValueChange={setPrintCategoryId}>
-                      <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-slate-200">
+                      <SelectTrigger className={fieldClass}>
                         <SelectValue placeholder="Select..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -415,12 +554,13 @@ export function CouponPrintPanel({
                         ))}
                       </SelectContent>
                     </Select>
+                    {!hideQuickAddCategory && (
                     <Dialog open={isPrintCategoryDialogOpen} onOpenChange={setIsPrintCategoryDialogOpen}>
                       <DialogTrigger asChild>
                         <Button
                           variant="outline"
                           size="icon"
-                          className="h-12 w-12 rounded-xl shrink-0 bg-slate-50 border-slate-200"
+                          className={cn('h-12 w-12 rounded-xl shrink-0', fieldClass)}
                           type="button"
                         >
                           <Plus className="h-4 w-4" />
@@ -468,28 +608,25 @@ export function CouponPrintPanel({
                         </DialogFooter>
                       </DialogContent>
                     </Dialog>
+                    )}
                   </div>
                 </div>
                 <div className="space-y-2 md:col-span-1">
-                  <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">
-                    Point Value
-                  </Label>
+                  <Label className={labelClass}>Point Value</Label>
                   <Input
                     type="number"
                     value={printValue}
                     onChange={(e) => setPrintValue(e.target.value)}
-                    className="h-12 rounded-xl text-lg font-black bg-slate-50 border-slate-200"
+                    className={cn('text-lg font-black', fieldClass)}
                   />
                 </div>
                 <div className="space-y-2 md:col-span-1">
-                  <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">
-                    Coupons per page
-                  </Label>
+                  <Label className={labelClass}>Coupons per page</Label>
                   <Select
                     value={String(printCouponsPerPage)}
                     onValueChange={(value) => setPrintCouponsPerPage(normalizeCouponPrintPageSize(Number(value)))}
                   >
-                    <SelectTrigger className="h-12 rounded-xl text-lg font-black bg-slate-50 border-slate-200">
+                    <SelectTrigger className={cn('text-lg font-black', fieldClass)}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -502,45 +639,47 @@ export function CouponPrintPanel({
                   </Select>
                 </div>
                 <div className="space-y-2 md:col-span-1">
-                  <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">
-                    Sheets
-                  </Label>
+                  <Label className={labelClass}>Sheets</Label>
                   <Input
                     type="number"
                     min={1}
                     max={MAX_COUPON_PRINT_SHEETS}
                     value={printSheetCount}
                     onChange={(e) => setPrintSheetCount(e.target.value)}
-                    className="h-12 rounded-xl text-lg font-black bg-slate-50 border-slate-200"
+                    className={cn('text-lg font-black', fieldClass)}
                   />
-                  <p className="text-[11px] text-muted-foreground px-0.5">Total: {totalCoupons} coupons</p>
+                  <p className="text-[11px] text-muted-foreground px-0.5">
+                    Total: {totalCoupons} coupons{budgetHint}
+                  </p>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">
-                    Valid from (optional)
-                  </Label>
+                  <Label className={labelClass}>Valid from (optional)</Label>
                   <Input
                     type="date"
                     value={printStartsOn}
                     onChange={(e) => setPrintStartsOn(e.target.value)}
-                    className="h-12 rounded-xl text-xs font-bold tracking-widest bg-slate-50 border-slate-200"
+                    className={cn('text-xs font-bold tracking-widest', fieldClass)}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">
-                    Expiration (optional)
-                  </Label>
+                  <Label className={labelClass}>Expiration (optional)</Label>
                   <Input
                     type="date"
                     min={localTodayYmd()}
                     value={printExpiresOn}
                     onChange={(e) => setPrintExpiresOn(e.target.value)}
-                    className="h-12 rounded-xl text-xs font-bold tracking-widest bg-slate-50 border-slate-200"
+                    className={cn('text-xs font-bold tracking-widest', fieldClass)}
                   />
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-border/60 bg-muted/10 p-4 space-y-4">
+              {!isTeacherRedemption && (
+              <div
+                className={cn(
+                  'rounded-2xl border p-4 space-y-4',
+                  isGraphic ? 'border-white/10 bg-foreground/5' : 'border-border/60 bg-muted/10',
+                )}
+              >
                 <Label className="text-xs font-semibold uppercase tracking-wide ml-0.5 text-muted-foreground">
                   Assign redemption to
                 </Label>
@@ -552,7 +691,12 @@ export function CouponPrintPanel({
                   onValueChange={(v) => setPrintRedemptionScope(v as CouponRedemptionScope)}
                   className="grid gap-3 sm:grid-cols-3"
                 >
-                  <div className="flex items-start gap-2 rounded-xl border p-3 bg-background/80">
+                  <div
+                    className={cn(
+                      'flex items-start gap-2 rounded-xl border p-3',
+                      isGraphic ? 'border-white/10 bg-card/40' : 'bg-background/80',
+                    )}
+                  >
                     <RadioGroupItem value="school" id="admin-crs-school" className="mt-1" />
                     <label htmlFor="admin-crs-school" className="text-sm leading-snug cursor-pointer">
                       <span className="font-bold">Schoolwide</span>
@@ -561,7 +705,12 @@ export function CouponPrintPanel({
                       </span>
                     </label>
                   </div>
-                  <div className="flex items-start gap-2 rounded-xl border p-3 bg-background/80">
+                  <div
+                    className={cn(
+                      'flex items-start gap-2 rounded-xl border p-3',
+                      isGraphic ? 'border-white/10 bg-card/40' : 'bg-background/80',
+                    )}
+                  >
                     <RadioGroupItem value="classes" id="admin-crs-classes" className="mt-1" />
                     <label htmlFor="admin-crs-classes" className="text-sm leading-snug cursor-pointer">
                       <span className="font-bold">Class(es)</span>
@@ -570,7 +719,12 @@ export function CouponPrintPanel({
                       </span>
                     </label>
                   </div>
-                  <div className="flex items-start gap-2 rounded-xl border p-3 bg-background/80">
+                  <div
+                    className={cn(
+                      'flex items-start gap-2 rounded-xl border p-3',
+                      isGraphic ? 'border-white/10 bg-card/40' : 'bg-background/80',
+                    )}
+                  >
                     <RadioGroupItem value="teachers" id="admin-crs-teachers" className="mt-1" />
                     <label htmlFor="admin-crs-teachers" className="text-sm leading-snug cursor-pointer">
                       <span className="font-bold">Teacher(s)</span>
@@ -583,7 +737,9 @@ export function CouponPrintPanel({
                 {printRedemptionScope === 'classes' && (
                   <div className="space-y-2">
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Classes</p>
-                    <ScrollArea className="h-40 rounded-xl border p-2 bg-background">
+                    <ScrollArea
+                      className={cn('h-40 rounded-xl border p-2', isGraphic ? 'border-white/10 bg-card/30' : 'bg-background')}
+                    >
                       <div className="space-y-2 pr-3">
                         {classList.map((cl) => (
                           <label key={cl.id} className="flex items-center gap-2 text-sm cursor-pointer">
@@ -608,7 +764,9 @@ export function CouponPrintPanel({
                 {printRedemptionScope === 'teachers' && (
                   <div className="space-y-2">
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Teachers</p>
-                    <ScrollArea className="h-40 rounded-xl border p-2 bg-background">
+                    <ScrollArea
+                      className={cn('h-40 rounded-xl border p-2', isGraphic ? 'border-white/10 bg-card/30' : 'bg-background')}
+                    >
                       <div className="space-y-2 pr-3">
                         {sortedTeachers.map((t) => (
                           <label key={t.id} className="flex items-center gap-2 text-sm cursor-pointer">
@@ -631,11 +789,92 @@ export function CouponPrintPanel({
                   </div>
                 )}
               </div>
+              )}
+
+              {isTeacherRedemption && (
+              <div
+                className={cn(
+                  'rounded-2xl border p-4 space-y-4',
+                  isGraphic ? 'border-white/10 bg-foreground/5' : 'border-border/60 bg-muted/10',
+                )}
+              >
+                <Label className="text-xs font-semibold uppercase tracking-wide ml-0.5 text-muted-foreground">
+                  Who can redeem these codes
+                </Label>
+                <RadioGroup
+                  value={printRedemptionScope}
+                  onValueChange={(v) => setPrintRedemptionScope(v as CouponRedemptionScope)}
+                  className="grid gap-3 sm:grid-cols-2"
+                >
+                  <div
+                    className={cn(
+                      'flex items-start gap-2 rounded-xl border p-3',
+                      isGraphic ? 'border-white/10 bg-card/40' : 'bg-background/80',
+                    )}
+                  >
+                    <RadioGroupItem value="creator" id="crs-creator" className="mt-1" />
+                    <label htmlFor="crs-creator" className="text-sm leading-snug cursor-pointer">
+                      <span className="font-bold">Only my students</span>
+                      <span className="block text-xs mt-0.5 text-muted-foreground">
+                        Students on your roster (by class primary teacher or explicit assignment) can redeem.
+                      </span>
+                    </label>
+                  </div>
+                  <div
+                    className={cn(
+                      'flex items-start gap-2 rounded-xl border p-3',
+                      isGraphic ? 'border-white/10 bg-card/40' : 'bg-background/80',
+                    )}
+                  >
+                    <RadioGroupItem value="classes" id="crs-classes" className="mt-1" />
+                    <label htmlFor="crs-classes" className="text-sm leading-snug cursor-pointer">
+                      <span className="font-bold">Selected classes</span>
+                      <span className="block text-xs mt-0.5 text-muted-foreground">
+                        Only students in the classes you pick below (your classes and roster).
+                      </span>
+                    </label>
+                  </div>
+                </RadioGroup>
+                {printRedemptionScope === 'classes' && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Classes</p>
+                    <ScrollArea
+                      className={cn('h-40 rounded-xl border p-2', isGraphic ? 'border-white/10 bg-card/30' : 'bg-background')}
+                    >
+                      <div className="space-y-2 pr-3">
+                        {classList.map((cl) => (
+                          <label key={cl.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                            <Checkbox
+                              checked={printScopeClassIds.includes(cl.id)}
+                              onCheckedChange={(ch: boolean | 'indeterminate') =>
+                                setPrintScopeClassIds((prev) =>
+                                  ch === true ? [...prev, cl.id] : prev.filter((id) => id !== cl.id),
+                                )
+                              }
+                            />
+                            <span>{cl.name}</span>
+                          </label>
+                        ))}
+                        {classList.length === 0 && (
+                          <p className="text-xs text-muted-foreground px-1 py-2">
+                            No classes linked to you yet. Claim a class under Attendance or ask an admin to set a primary teacher.
+                          </p>
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </div>
+                )}
+              </div>
+              )}
 
               <Button
                 type="button"
                 onClick={() => void handlePrintSheet()}
-                className="w-full font-black text-lg uppercase tracking-widest h-16 rounded-2xl shadow-xl transition-all active:scale-95 group bg-primary text-primary-foreground hover:bg-primary/90"
+                className={cn(
+                  'w-full font-black text-lg uppercase tracking-widest h-16 rounded-2xl shadow-xl transition-all active:scale-95 group',
+                  printAccentColor ? 'text-white' : 'bg-primary text-primary-foreground hover:bg-primary/90',
+                )}
+                style={printAccentColor ? { backgroundColor: printAccentColor } : undefined}
               >
                 <Printer className="w-6 h-6 mr-3 group-hover:scale-110 transition-transform" />
                 Generate &amp; print
@@ -643,14 +882,20 @@ export function CouponPrintPanel({
             </div>
 
             <div className="w-full lg:w-80 lg:sticky lg:top-8 shrink-0">
-              <div className="rounded-2xl border p-6 flex flex-col items-center shadow-sm bg-slate-50/50 border-slate-200">
+              <div
+                className={cn(
+                  'rounded-2xl border p-6 flex flex-col items-center shadow-sm',
+                  isGraphic ? 'bg-card/40 border-white/10' : 'bg-slate-50/50 border-slate-200',
+                )}
+              >
                 <p className="text-[10px] font-bold uppercase tracking-widest mb-6 text-muted-foreground opacity-70">
                   Print Preview
                 </p>
                 <div
                   className={cn(
-                    'coupon-print-preview-shell coupon-print-match-wrapper rounded-2xl border shadow-2xl border-border/40 bg-slate-100/80',
+                    'coupon-print-preview-shell coupon-print-match-wrapper rounded-2xl border shadow-2xl',
                     printCouponsPerPage === 30 && 'coupon-print-match-wrapper--30',
+                    isGraphic ? 'border-white/10 bg-foreground/5' : 'border-border/40 bg-slate-100/80',
                   )}
                 >
                   <CouponPreview coupon={previewCoupon} schoolId={schoolId} />

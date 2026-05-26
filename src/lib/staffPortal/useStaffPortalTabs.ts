@@ -92,7 +92,10 @@ export function useStaffPortalTabs(options: UseStaffPortalTabsOptions): UseStaff
     }
 
     if (role === 'teacher') {
-      const main = orderTabs([...core], mainTabOrder);
+      const pinnedSet = new Set(pinnedAddOnValues);
+      const pinnedExtras = addOnViews.filter((t) => pinnedSet.has(t.value));
+      const availableMain = [...core, ...pinnedExtras];
+      const main = orderTabs(availableMain, mainTabOrder);
       const mainValues = new Set(main.map((t) => t.value));
       const addMore = addOnViews.filter((t) => !mainValues.has(t.value));
       return {
