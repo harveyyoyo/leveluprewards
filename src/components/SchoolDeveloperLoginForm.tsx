@@ -396,10 +396,23 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
     }
   };
 
+  /** Password managers can fill the input without firing React `onChange`; read the DOM as fallback. */
+  const resolveSchoolPasscode = () => {
+    const fromState = schoolPasscode.trim();
+    if (fromState) return fromState;
+    const fromDom = passcodeRef.current?.value?.trim() ?? '';
+    if (fromDom && fromDom !== schoolPasscode) {
+      setSchoolPasscode(fromDom);
+    }
+    return fromDom;
+  };
+
+  const passcodeFieldVisible = !hasGoogleUser || !!googleSchoolLoginError;
+
   const handleSchoolEntry = async () => {
     if (isSubmitting) return;
     const sid = schoolId.trim().toLowerCase();
-    const passcode = schoolPasscode.trim();
+    const passcode = resolveSchoolPasscode();
     if (!sid) {
       playSound('error');
       triggerShake();
@@ -417,6 +430,16 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
         variant: 'destructive',
         title: 'Login failed',
         description: 'Please enter a School ID and passcode.',
+      });
+      return;
+    }
+    if (!passcode && passcodeFieldVisible) {
+      playSound('error');
+      triggerShake();
+      toast({
+        variant: 'destructive',
+        title: 'Login failed',
+        description: 'Enter the school access passcode to continue.',
       });
       return;
     }
@@ -622,12 +645,15 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
                   )}
                   <input
                     id="passcode"
+                    name="school-access-passcode"
                     type="password"
                     ref={passcodeRef}
                     className="w-full h-12 rounded-xl px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-all font-mono tracking-[0.35em] text-center bg-background border border-border text-foreground"
                     value={schoolPasscode}
                     onChange={(e) => setSchoolPasscode(e.target.value)}
-                    autoComplete="current-password"
+                    onInput={(e) => setSchoolPasscode(e.currentTarget.value)}
+                    autoComplete="off"
+                    inputMode="numeric"
                   />
                 </div>
               )
