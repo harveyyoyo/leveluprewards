@@ -5,6 +5,7 @@ import {
   isOfficeHostname,
   isOfficeSchoolScopedPath,
   officeHostInternalRewritePath,
+  officeHostRedirectPath,
   shouldHideGlobalAppChrome,
 } from './officeRouting';
 
@@ -34,6 +35,12 @@ describe('office routing', () => {
     expect(isOfficeHostname('office.leveluprewards.app')).toBe(true);
     expect(isOfficeHostname('office.localhost:3000')).toBe(true);
     expect(isOfficeHostname('portal.leveluprewards.app')).toBe(false);
+  });
+
+  it('routes office host root to the office entry page', () => {
+    expect(officeHostRedirectPath('/')).toBe('/office-bootstrap');
+    expect(officeHostRedirectPath('/yeshiva')).toBeNull();
+    expect(officeHostRedirectPath('/office-bootstrap')).toBeNull();
   });
 
   it('rewrites public office paths to internal routes', () => {

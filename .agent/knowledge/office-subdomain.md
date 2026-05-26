@@ -14,6 +14,7 @@
 
 ## Behaviour
 
+- `https://office.leveluprewards.app/` → `/office-bootstrap` (School Office entry: school picker or resume session).
 - `/{school}/office/…` on main or portal host **redirects** to `https://office.leveluprewards.app/{school}/…`
 - Office host rewrites internally to `/{school}/office/…` Next routes.
 - Portal → Office uses `GET /api/auth/office-handoff/redirect?school=…` (requires portal session + office/admin gate scope).

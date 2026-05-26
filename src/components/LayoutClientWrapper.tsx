@@ -78,6 +78,7 @@ function LayoutClientWrapperInner({
       pathname === '/contact' ||
       pathname === '/login' ||
       pathname === '/portal' ||
+      pathname === '/office-bootstrap' ||
       pathname === '/developer' ||
       (typeof pathname === 'string' && pathname.includes('/student/welcome')) ||
       pathname.startsWith('/s/');

@@ -26,6 +26,19 @@ describe('officePublicUrl', () => {
     expect(officePortalHandoffHref('yeshiva')).toBe('/yeshiva/office');
   });
 
+  it('uses clean paths on office.localhost without canonical env', () => {
+    for (const key of envKeys) {
+      delete process.env[key];
+    }
+    const locationSpy = vi.spyOn(window, 'location', 'get').mockReturnValue({
+      ...window.location,
+      host: 'office.localhost:3000',
+    } as Location);
+    expect(officePublicHref('Yeshiva', 'grades')).toBe('/yeshiva/grades');
+    expect(officePortalEntryHref('yeshiva')).toBe('/yeshiva');
+    locationSpy.mockRestore();
+  });
+
   it('uses office subdomain for public links and handoff API for portal entry', () => {
     process.env.NEXT_PUBLIC_OFFICE_CANONICAL_HOST = 'office.leveluprewards.app';
     const locationSpy = vi.spyOn(window, 'location', 'get').mockReturnValue({

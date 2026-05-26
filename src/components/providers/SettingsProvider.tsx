@@ -790,6 +790,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     const isPublicLoginRoute =
         pathname === '/' ||
         pathname === '/portal' ||
+        pathname === '/office-bootstrap' ||
         pathname === '/login' ||
         (typeof pathname === 'string' && pathname.startsWith('/s/'));
 

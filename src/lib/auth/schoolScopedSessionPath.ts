@@ -1,6 +1,7 @@
 /** First path segment is never a school id for these roots. */
 const RESERVED_FIRST = new Set([
   'login',
+  'office-bootstrap',
   'api',
   'developer',
   's',

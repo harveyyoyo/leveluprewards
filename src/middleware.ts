@@ -27,7 +27,7 @@ import {
   isOfficeHostname,
   OFFICE_CHROME_REQUEST_HEADER,
   officeHostInternalRewritePath,
-  officeHostPortalRedirectUrl,
+  officeHostRedirectPath,
 } from '@/lib/officeRouting';
 import { officePublicHref } from '@/lib/officePublicUrl';
 
@@ -121,15 +121,15 @@ export async function middleware(request: NextRequest) {
     return redirect;
   }
 
-  const officePortalUrl = officeHostPortalRedirectUrl(
-    pathname,
-    forwardedHost,
-    request.nextUrl.protocol,
-  );
-  if (officePortalUrl) {
-    const redirect = NextResponse.redirect(officePortalUrl);
-    applySecurityHeaders(redirect);
-    return redirect;
+  if (isOfficeHostname(forwardedHost)) {
+    const officePath = officeHostRedirectPath(pathname);
+    if (officePath && officePath !== pathname) {
+      const url = request.nextUrl.clone();
+      url.pathname = officePath;
+      const redirect = NextResponse.redirect(url);
+      applySecurityHeaders(redirect);
+      return redirect;
+    }
   }
 
   if (isPortalHostname(forwardedHost)) {

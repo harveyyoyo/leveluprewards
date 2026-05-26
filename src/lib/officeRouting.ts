@@ -168,21 +168,9 @@ export function canonicalOfficeRedirectUrl(
   return target;
 }
 
-/** Office host root → portal entry. */
-export function officeHostPortalRedirectUrl(
-  pathname: string,
-  rawCurrentHost: string | null | undefined,
-  protocol: string,
-): URL | null {
-  if (!isOfficeHostname(rawCurrentHost)) return null;
-  if (pathname !== '/' && pathname !== '') return null;
-
-  const portalHost =
-    process.env.PORTAL_CANONICAL_HOST ||
-    process.env.NEXT_PUBLIC_PORTAL_CANONICAL_HOST ||
-    '';
-  if (!portalHost.trim()) return null;
-
-  const scheme = portalHost.includes('localhost') ? 'http:' : protocol || 'https:';
-  return new URL(`${scheme}//${normalizeHostWithPort(portalHost)}/portal`);
+/** Office host root → School Office entry (school picker / session redirect). */
+export function officeHostRedirectPath(pathname: string): string | null {
+  const parts = pathname.split('/').filter(Boolean);
+  if (parts.length === 0) return '/office-bootstrap';
+  return null;
 }

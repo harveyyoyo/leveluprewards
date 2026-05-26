@@ -40,6 +40,9 @@ export function officePublicHref(schoolId: string, segment: OfficePublicSegment 
   if (origin) {
     return segment ? `${origin}/${school}/${segment}` : `${origin}/${school}`;
   }
+  if (typeof window !== 'undefined' && isOfficeHostname(window.location.host)) {
+    return segment ? `/${school}/${segment}` : `/${school}`;
+  }
   return segment ? `/${school}/office/${segment}` : `/${school}/office`;
 }
 
