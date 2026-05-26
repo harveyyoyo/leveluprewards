@@ -13,12 +13,12 @@ vi.mock('@/lib/server/firebaseAdminAuth', () => ({
 }));
 
 function sessionPostRequest() {
-  return new NextRequest('https://levelupenterprises.education/api/auth/session', {
+  return new NextRequest('https://leveluprewards.app/api/auth/session', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Host: 'levelupenterprises.education',
-      Origin: 'https://levelupenterprises.education',
+      Host: 'leveluprewards.app',
+      Origin: 'https://leveluprewards.app',
     },
     body: JSON.stringify({ idToken: 'firebase-id-token' }),
   });

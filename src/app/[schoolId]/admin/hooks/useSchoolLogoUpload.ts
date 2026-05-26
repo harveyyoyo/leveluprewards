@@ -11,6 +11,12 @@ import { schoolPublicDocRef } from '@/lib/schoolPublic';
 import { httpsCallable, type Functions } from 'firebase/functions';
 import type { SoundEffect } from '@/hooks/useArcadeSound';
 import type { useToast } from '@/hooks/use-toast';
+import {
+  isAllowedLogoFile,
+  isSvgLogoFile,
+  LOGO_UPLOAD_MAX_BYTES,
+  resolveLogoContentType,
+} from '@/lib/logoUpload';
 
 type ToastFn = ReturnType<typeof useToast>['toast'];
 type PlaySoundFn = (sound: SoundEffect) => void;
@@ -33,9 +39,6 @@ export interface UseSchoolLogoUploadDeps {
   toast: ToastFn;
   playSound: PlaySoundFn;
 }
-
-const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
-const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
 
 /**
  * Owns the three pieces of state that drive the "School logo" section of
@@ -84,67 +87,8 @@ export function useSchoolLogoUpload({
     return out;
   }, [schoolLogoUrl, schoolLogoHistory, logoPreviewUrl]);
 
-  const handleLogoUpload = useCallback(
-    async (e: ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-
-      if (!schoolId) {
-        playSound('error');
-        toast({
-          variant: 'destructive',
-          title: 'Cannot upload logo',
-          description: 'No school selected. Refresh the page and log in again.',
-        });
-        e.target.value = '';
-        return;
-      }
-      if (!functions) {
-        playSound('error');
-        toast({
-          variant: 'destructive',
-          title: 'Cannot upload logo',
-          description: 'Server connection is not available. Refresh the page and try again.',
-        });
-        e.target.value = '';
-        return;
-      }
-
-      if (!ALLOWED_TYPES.includes(file.type)) {
-        playSound('error');
-        toast({
-          variant: 'destructive',
-          title: 'Unsupported file type',
-          description: 'Please use PNG, JPG, or WebP. Your file appears to be a different format.',
-        });
-        e.target.value = '';
-        return;
-      }
-      if (file.size > MAX_SIZE_BYTES) {
-        playSound('error');
-        toast({
-          variant: 'destructive',
-          title: 'File too large',
-          description: 'Logo must be under 10MB. Try compressing or resizing the image.',
-        });
-        e.target.value = '';
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onload = () => {
-        setCropLogoSrc(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-      // Reset the input so selecting the same file again re-fires onChange.
-      e.target.value = '';
-    },
-    [schoolId, functions, playSound, toast],
-  );
-
-  const handleCropComplete = useCallback(
-    async (croppedBlob: Blob) => {
-      setCropLogoSrc(null);
+  const uploadLogoBlob = useCallback(
+    async (blob: Blob, fileName?: string) => {
       if (!schoolId || !functions) return;
 
       try {
@@ -159,7 +103,7 @@ export function useSchoolLogoUpload({
             resolve(base64 || '');
           };
           reader.onerror = () => reject(reader.error);
-          reader.readAsDataURL(croppedBlob);
+          reader.readAsDataURL(blob);
         });
 
         const uploadLogo = httpsCallable<
@@ -169,7 +113,7 @@ export function useSchoolLogoUpload({
         const res = await uploadLogo({
           schoolId,
           imageBase64,
-          contentType: croppedBlob.type || 'image/jpeg',
+          contentType: resolveLogoContentType(blob, fileName) || 'image/jpeg',
         });
 
         const data = res.data;
@@ -202,7 +146,7 @@ export function useSchoolLogoUpload({
         } else if (code === 'functions/permission-denied') {
           description = 'You need admin access to update the school logo.';
         } else if (code === 'functions/invalid-argument') {
-          description = message || 'Invalid image. Use PNG, JPG, or WebP under 10MB.';
+          description = message || 'Invalid image. Use PNG, JPG, WebP, or SVG under 10MB.';
         } else if (!message || message === 'undefined') {
           description = 'Could not save the logo. Try again or use a smaller image.';
         }
@@ -216,6 +160,77 @@ export function useSchoolLogoUpload({
       }
     },
     [schoolId, functions, playSound, toast],
+  );
+
+  const handleLogoUpload = useCallback(
+    async (e: ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      if (!schoolId) {
+        playSound('error');
+        toast({
+          variant: 'destructive',
+          title: 'Cannot upload logo',
+          description: 'No school selected. Refresh the page and log in again.',
+        });
+        e.target.value = '';
+        return;
+      }
+      if (!functions) {
+        playSound('error');
+        toast({
+          variant: 'destructive',
+          title: 'Cannot upload logo',
+          description: 'Server connection is not available. Refresh the page and try again.',
+        });
+        e.target.value = '';
+        return;
+      }
+
+      if (!isAllowedLogoFile(file)) {
+        playSound('error');
+        toast({
+          variant: 'destructive',
+          title: 'Unsupported file type',
+          description: 'Please use PNG, JPG, WebP, or SVG. Your file appears to be a different format.',
+        });
+        e.target.value = '';
+        return;
+      }
+      if (file.size > LOGO_UPLOAD_MAX_BYTES) {
+        playSound('error');
+        toast({
+          variant: 'destructive',
+          title: 'File too large',
+          description: 'Logo must be under 10MB. Try compressing or resizing the image.',
+        });
+        e.target.value = '';
+        return;
+      }
+
+      e.target.value = '';
+
+      if (isSvgLogoFile(file)) {
+        await uploadLogoBlob(file, file.name);
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        setCropLogoSrc(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    },
+    [schoolId, functions, playSound, toast, uploadLogoBlob],
+  );
+
+  const handleCropComplete = useCallback(
+    async (croppedBlob: Blob) => {
+      setCropLogoSrc(null);
+      await uploadLogoBlob(croppedBlob);
+    },
+    [uploadLogoBlob],
   );
 
   const handleRemoveLogo = useCallback(async () => {

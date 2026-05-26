@@ -248,7 +248,7 @@ export function AdminBrandingTab({
                       id="school-logo"
                       type="file"
                       className="text-xs rounded-xl shadow-sm cursor-pointer bg-muted/20 file:font-semibold"
-                      accept="image/png,image/jpeg,image/jpg,image/webp"
+                      accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml,.svg"
                       onChange={handleLogoUpload}
                       disabled={!schoolId || isLogoUploading}
                     />
@@ -259,7 +259,7 @@ export function AdminBrandingTab({
                     )}
                   </div>
                   <p className="text-[11px] text-muted-foreground leading-relaxed">
-                    Supported extensions: PNG, JPG, JPEG, and WebP under 10MB. We recommend uploading high-contrast square shapes (min. 256x256px).
+                    Supported extensions: PNG, JPG, JPEG, WebP, and SVG under 10MB. Raster logos can be cropped after upload; SVG uploads as-is. We recommend high-contrast square shapes (min. 256×256px for raster).
                   </p>
                 </div>
 

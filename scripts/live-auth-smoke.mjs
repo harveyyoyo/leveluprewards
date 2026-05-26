@@ -1,6 +1,6 @@
 import { chromium } from '@playwright/test';
 
-const DEFAULT_BASE_URL = 'https://levelupenterprises.education';
+const DEFAULT_BASE_URL = 'https://leveluprewards.app';
 const DEFAULT_FIREBASE_API_KEY = 'AIzaSyBUH3r37IqZkJ9SmvWaaAJ5HU29Wa_hJLY';
 
 const baseUrl = (process.env.LIVE_AUTH_BASE_URL || DEFAULT_BASE_URL).replace(/\/+$/, '');

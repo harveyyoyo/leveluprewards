@@ -87,14 +87,14 @@ jobs:
       - name: Run live uptime check against production
         run: npm run test:live-uptime
         env:
-          LIVE_UPTIME_BASE_URL: https://levelupenterprises.education
+          LIVE_UPTIME_BASE_URL: https://leveluprewards.app
           LIVE_UPTIME_SCHOOL_ID: yeshiva
           LIVE_UPTIME_PORTAL_MODE: any
 
       - name: Run live auth smoke against production
         run: npm run test:live-auth
         env:
-          LIVE_AUTH_BASE_URL: https://levelupenterprises.education
+          LIVE_AUTH_BASE_URL: https://leveluprewards.app
           LIVE_AUTH_SCHOOL_ID: yeshiva
           LIVE_AUTH_PASSCODE: ${{ secrets.LIVE_AUTH_PASSCODE || '1234' }}
 

@@ -143,6 +143,21 @@ describe('useSchoolLogoUpload', () => {
         expect.objectContaining({ variant: 'destructive', title: 'Cannot upload logo' }),
       );
     });
+
+    it('uploads SVG directly without opening the cropper', async () => {
+      callableMock.mockResolvedValue({ data: { logoUrl: 'https://cdn/logo.svg' } });
+      const deps = makeDeps();
+      const { result } = renderHook(() => useSchoolLogoUpload(deps));
+
+      const file = new File(['<svg></svg>'], 'logo.svg', { type: 'image/svg+xml' });
+      await act(async () => {
+        await result.current.handleLogoUpload(fakeChangeEvent(file));
+      });
+
+      expect(result.current.cropLogoSrc).toBeNull();
+      expect(callableMock).toHaveBeenCalled();
+      await waitFor(() => expect(result.current.logoPreviewUrl).toBe('https://cdn/logo.svg'));
+    });
   });
 
   describe('handleRemoveLogo', () => {

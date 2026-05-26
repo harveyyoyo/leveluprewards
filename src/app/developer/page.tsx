@@ -47,6 +47,13 @@ import { httpsCallable } from 'firebase/functions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ImageCropper } from '@/components/ImageCropper';
+import {
+  isAllowedLogoFile,
+  isSvgLogoFile,
+  LOGO_UPLOAD_ACCEPT,
+  LOGO_UPLOAD_MAX_BYTES,
+  resolveLogoContentType,
+} from '@/lib/logoUpload';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -299,20 +306,17 @@ export default function DeveloperPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
-    const maxSizeBytes = 10 * 1024 * 1024; // 10MB
-
-    if (!allowedTypes.includes(file.type)) {
+    if (!isAllowedLogoFile(file)) {
       playSound('error');
       toast({
         variant: 'destructive',
         title: 'Unsupported file type',
-        description: 'Please use PNG, JPG, or WebP.',
+        description: 'Please use PNG, JPG, WebP, or SVG.',
       });
       e.target.value = '';
       return;
     }
-    if (file.size > maxSizeBytes) {
+    if (file.size > LOGO_UPLOAD_MAX_BYTES) {
       playSound('error');
       toast({
         variant: 'destructive',
@@ -323,13 +327,19 @@ export default function DeveloperPage() {
       return;
     }
 
+    e.target.value = '';
+
+    if (isSvgLogoFile(file)) {
+      await processAppLogoUpload(file);
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = () => {
       setCropImageSrc(reader.result as string);
       setPendingLogoFile(file);
     };
     reader.readAsDataURL(file);
-    e.target.value = '';
   };
 
   const processAppLogoUpload = async (blob: Blob) => {
@@ -360,7 +370,7 @@ export default function DeveloperPage() {
       const uploadLogo = httpsCallable<{ imageBase64: string; contentType: string }, { logoUrl: string }>(functions, 'uploadAppLogo');
       const res = await uploadLogo({
         imageBase64,
-        contentType: blob.type,
+        contentType: resolveLogoContentType(blob, pendingLogoFile?.name),
       });
 
       const data = res.data;
@@ -1086,12 +1096,12 @@ export default function DeveloperPage() {
                         {isAppLogoUploading ? 'Uploading…' : 'Upload new image'}
                       </Button>
                       <p className="text-xs text-muted-foreground">
-                        PNG, JPG, or WebP · up to 5 MB · you can crop to a square after choosing a file.
+                        PNG, JPG, WebP, or SVG · up to 10 MB · raster files can be cropped to a square after choosing.
                       </p>
                       <input
                         ref={appLogoInputRef}
                         type="file"
-                        accept="image/png,image/jpeg,image/jpg,image/webp"
+                        accept={LOGO_UPLOAD_ACCEPT}
                         className="sr-only"
                         tabIndex={-1}
                         onChange={handleAppLogoUpload}

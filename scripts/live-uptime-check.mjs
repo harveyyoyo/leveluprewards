@@ -1,4 +1,4 @@
-const DEFAULT_BASE_URL = 'https://levelupenterprises.education';
+const DEFAULT_BASE_URL = 'https://leveluprewards.app';
 
 const baseUrl = (process.env.LIVE_UPTIME_BASE_URL || process.env.LIVE_AUTH_BASE_URL || DEFAULT_BASE_URL).replace(
   /\/+$/,

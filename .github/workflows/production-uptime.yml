@@ -6,7 +6,7 @@ on:
       base_url:
         description: 'Production base URL'
         required: false
-        default: 'https://levelupenterprises.education'
+        default: 'https://leveluprewards.app'
       school_id:
         description: 'Canary school id'
         required: false
@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
-      LIVE_UPTIME_BASE_URL: ${{ github.event.inputs.base_url || 'https://levelupenterprises.education' }}
+      LIVE_UPTIME_BASE_URL: ${{ github.event.inputs.base_url || 'https://leveluprewards.app' }}
       LIVE_UPTIME_SCHOOL_ID: ${{ github.event.inputs.school_id || 'yeshiva' }}
       LIVE_UPTIME_PORTAL_MODE: public
 

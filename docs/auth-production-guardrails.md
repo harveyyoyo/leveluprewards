@@ -23,7 +23,7 @@ The smoke test uses the live site, creates an anonymous Firebase test user, veri
 Default smoke target:
 
 ```bash
-LIVE_AUTH_BASE_URL=https://levelupenterprises.education
+LIVE_AUTH_BASE_URL=https://leveluprewards.app
 LIVE_AUTH_SCHOOL_ID=yeshiva
 LIVE_AUTH_PASSCODE=1234
 ```
@@ -48,7 +48,7 @@ The `Production Uptime` GitHub Actions workflow runs this once daily and can als
 manually. Override targets with:
 
 ```bash
-LIVE_UPTIME_BASE_URL=https://levelupenterprises.education
+LIVE_UPTIME_BASE_URL=https://leveluprewards.app
 LIVE_UPTIME_SCHOOL_ID=yeshiva
 LIVE_UPTIME_PORTAL_MODE=public
 ```
