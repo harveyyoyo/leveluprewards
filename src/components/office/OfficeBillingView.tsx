@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { collection, doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { Button } from '@/components/ui/button';
@@ -168,7 +168,7 @@ export function OfficeBillingView({
     setSaveAsDraft(false);
   };
 
-  const openNewInvoice = (accountId?: string, preset?: Partial<OfficeInvoice>) => {
+  const openNewInvoice = useCallback((accountId?: string, preset?: Partial<OfficeInvoice>) => {
     setEditInvoiceId(null);
     setInvoiceAccountId(accountId ?? accounts[0]?.id ?? '');
     setInvoiceLabel(preset?.label ?? '');
@@ -176,7 +176,7 @@ export function OfficeBillingView({
     setInvoiceDue(preset?.dueDate ?? defaultDueDateIso());
     setSaveAsDraft(false);
     setInvoiceOpen(true);
-  };
+  }, [accounts]);
 
   const openEditInvoice = (inv: OfficeInvoice) => {
     if (inv.status === 'paid' || inv.status === 'void') return;
@@ -195,7 +195,7 @@ export function OfficeBillingView({
     openedInvoiceFromQuery.current = true;
     const accountId = searchParams.get('account')?.trim();
     openNewInvoice(accountId || undefined);
-  }, [searchParams, isLoading, accounts.length]);
+  }, [searchParams, isLoading, accounts.length, openNewInvoice]);
 
   const openNewAccount = () => {
     resetAccountForm();

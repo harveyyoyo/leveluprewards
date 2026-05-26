@@ -1168,7 +1168,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             console.error('Developer support session failed', e);
             return false;
         }
-    }, [auth.currentUser, functions]);
+    }, [auth.currentUser, firestore, functions]);
 
     const value = useMemo(
         () => ({

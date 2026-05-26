@@ -65,32 +65,14 @@ function AdminMainTabsListVertical({
   );
 }
 
-/**
- * Admin main tabs: horizontal row with scroll centering, or vertical sidebar stack.
- */
-export function AdminMainTabsList({
+function AdminMainTabsListHorizontal({
   className,
   children,
   activeTabValue,
-  orientation = 'horizontal',
   autoScrollActiveTab = true,
   endAction,
   ...props
 }: AdminMainTabsListProps) {
-  if (orientation === 'vertical') {
-    return (
-      <AdminMainTabsListVertical
-        className={className}
-        activeTabValue={activeTabValue}
-        autoScrollActiveTab={autoScrollActiveTab}
-        endAction={endAction}
-        {...props}
-      >
-        {children}
-      </AdminMainTabsListVertical>
-    );
-  }
-
   const listRef = React.useRef<HTMLDivElement>(null);
   const [hasOverflow, setHasOverflow] = React.useState(false);
   const [canScrollLeft, setCanScrollLeft] = React.useState(false);
@@ -281,5 +263,44 @@ export function AdminMainTabsList({
         </div>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * Admin main tabs: horizontal row with scroll centering, or vertical sidebar stack.
+ */
+export function AdminMainTabsList({
+  className,
+  children,
+  activeTabValue,
+  orientation = 'horizontal',
+  autoScrollActiveTab = true,
+  endAction,
+  ...props
+}: AdminMainTabsListProps) {
+  if (orientation === 'vertical') {
+    return (
+      <AdminMainTabsListVertical
+        className={className}
+        activeTabValue={activeTabValue}
+        autoScrollActiveTab={autoScrollActiveTab}
+        endAction={endAction}
+        {...props}
+      >
+        {children}
+      </AdminMainTabsListVertical>
+    );
+  }
+
+  return (
+    <AdminMainTabsListHorizontal
+      className={className}
+      activeTabValue={activeTabValue}
+      autoScrollActiveTab={autoScrollActiveTab}
+      endAction={endAction}
+      {...props}
+    >
+      {children}
+    </AdminMainTabsListHorizontal>
   );
 }

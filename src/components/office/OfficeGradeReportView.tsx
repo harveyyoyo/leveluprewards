@@ -58,7 +58,7 @@ export function OfficeGradeReportView({
         schoolDefaultTerm: settings?.defaultActiveTerm,
         configuredTerms,
       }),
-    [entries, term, activeTerm, settings?.defaultActiveTerm, configuredTerms],
+    [entries, term, settings?.defaultActiveTerm, configuredTerms],
   );
 
   const classOptions = useMemo(() => {

@@ -760,7 +760,7 @@ function AdminDashboardInner() {
     }
 
     return out;
-  }, [loginState, pinnedAddOnTabs, settings.adminMainTabOrder]);
+  }, [loginState, pinnedAddOnTabs, settings]);
 
   const adminNavSidebar = settings.adminNavLayout === 'sidebar';
   const adminTabTriggerClassName = staffPortalTabTriggerClassName(adminNavSidebar);
