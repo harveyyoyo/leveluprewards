@@ -529,7 +529,12 @@ service cloud.firestore {
           && resource.data.schoolId is string
           && isAdmin(resource.data.schoolId)
         );
-      allow write: if false;
+      allow write: if isDeveloper()
+        || (
+          isAuth()
+          && request.resource.data.schoolId is string
+          && canAccessOffice(request.resource.data.schoolId)
+        );
     }
 
     match /whatsapp/{waId} {
@@ -539,7 +544,12 @@ service cloud.firestore {
           && resource.data.schoolId is string
           && isAdmin(resource.data.schoolId)
         );
-      allow write: if false;
+      allow write: if isDeveloper()
+        || (
+          isAuth()
+          && request.resource.data.schoolId is string
+          && canAccessOffice(request.resource.data.schoolId)
+        );
     }
 
     // Public marketing contact form (written via Admin SDK only).

@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, useMemo, useEffect } from 'react';
 import {
   BookOpen,
   CreditCard,
@@ -36,6 +36,7 @@ import type {
   OfficeTeacher,
 } from '@/lib/office/types';
 import { useFirestore } from '@/firebase';
+import { cn } from '@/lib/utils';
 
 type OfficeAiImportSectionProps = {
   schoolId: string;
@@ -71,9 +72,198 @@ export function OfficeAiImportSection({
   const [aiImporting, setAiImporting] = useState(false);
   const [aiSnapshot, setAiSnapshot] = useState<ParsedOfficeSnapshot | null>(null);
   const [upsertStudents, setUpsertStudents] = useState(true);
+  const [activeDiffTab, setActiveDiffTab] = useState<'students' | 'classes' | 'grades' | 'billingAccounts' | 'invoices' | 'staffAccounts' | 'teachers'>('students');
+
+  const diffData = useMemo(() => {
+    if (!aiSnapshot) return null;
+
+    // 1. Classes Diff
+    const existingClassNames = new Set(classes.map((c) => c.name.trim().toLowerCase()));
+    const classDiffs = (aiSnapshot.classes ?? []).map((c) => {
+      const name = c.name.trim();
+      const exists = existingClassNames.has(name.toLowerCase());
+      return {
+        name,
+        status: exists ? 'skip' : 'new',
+        message: exists ? `Class "${name}" already exists.` : `Create new class "${name}".`,
+      };
+    });
+
+    // 2. Teachers Diff
+    const existingTeacherNames = new Set(teachers.map((t) => t.name.trim().toLowerCase()));
+    const teacherDiffs = (aiSnapshot.teachers ?? []).map((t) => {
+      const name = t.name.trim();
+      const exists = existingTeacherNames.has(name.toLowerCase());
+      return {
+        name,
+        status: exists ? 'skip' : 'new',
+        message: exists ? `Teacher "${name}" already exists.` : `Create new teacher "${name}"${t.email ? ` with email ${t.email}` : ''}.`,
+      };
+    });
+
+    // 3. Students Diff
+    const existingStudentNames = new Set(students.map((s) => getOfficeStudentFullName(s).toLowerCase()));
+    const studentByName = new Map(students.map((s) => [getOfficeStudentFullName(s).toLowerCase(), s]));
+
+    const studentDiffs = (aiSnapshot.students ?? []).map((row) => {
+      const name = getOfficeStudentFullName({
+        firstName: row.firstName,
+        lastName: row.lastName,
+        nickname: row.nickname ?? null,
+      });
+      const key = name.toLowerCase();
+      const exists = existingStudentNames.has(key);
+      const existingObj = exists ? studentByName.get(key) : null;
+
+      let message = '';
+      let status: 'new' | 'merge' | 'skip' = 'new';
+
+      if (exists && existingObj) {
+        status = upsertStudents ? 'merge' : 'skip';
+        const updates: string[] = [];
+        if (!existingObj.nickname?.trim() && row.nickname) updates.push(`nickname "${row.nickname}"`);
+        if (!existingObj.classId && row.className) updates.push(`homeroom "${row.className}"`);
+        if (!existingObj.teacherId?.trim() && row.teacherName) updates.push(`teacher "${row.teacherName}"`);
+        if (!existingObj.notes?.trim() && row.notes) updates.push(`notes "${row.notes}"`);
+
+        if (updates.length > 0) {
+          message = `Merge: will populate missing ${updates.join(', ')}.`;
+        } else {
+          message = `Already up to date. No updates needed.`;
+          status = 'skip';
+        }
+      } else {
+        message = `Create new student in homeroom "${row.className || 'None'}".`;
+      }
+
+      return {
+        name,
+        status,
+        message,
+      };
+    });
+
+    // 4. Grades Diff
+    const existingGradeKeys = new Set(
+      gradeEntries.map((e) => `${e.studentId}|${e.termLabel}|${e.subject.toLowerCase()}`)
+    );
+    const studentIdByName = new Map(
+      students.map((s) => [getOfficeStudentFullName(s).toLowerCase(), s.id])
+    );
+    // Include newly parsed students
+    (aiSnapshot.students ?? []).forEach((row, idx) => {
+      const fullName = getOfficeStudentFullName({
+        firstName: row.firstName,
+        lastName: row.lastName,
+        nickname: row.nickname ?? null,
+      }).toLowerCase();
+      if (!studentIdByName.has(fullName)) {
+        studentIdByName.set(fullName, `new-student-${idx}`);
+      }
+    });
+
+    const gradeDiffs = (aiSnapshot.grades ?? []).map((row) => {
+      const studentId = studentIdByName.get(row.studentName.toLowerCase());
+      const gradeStr = row.letterGrade || (row.numericGrade != null ? `${row.numericGrade}%` : 'N/A');
+      
+      let status: 'new' | 'skip' = 'new';
+      let message = '';
+
+      if (!studentId) {
+        status = 'skip';
+        message = `Skip: Student "${row.studentName}" not found in current list or import roster.`;
+      } else {
+        const dedupeKey = `${studentId}|${row.termLabel}|${row.subject.toLowerCase()}`;
+        if (existingGradeKeys.has(dedupeKey)) {
+          status = 'skip';
+          message = `Skip: ${row.subject} grade for ${row.studentName} in ${row.termLabel} already exists.`;
+        } else {
+          message = `Add grade of ${gradeStr} for ${row.studentName} in ${row.subject} (${row.termLabel}).`;
+        }
+      }
+
+      return {
+        name: `${row.studentName} · ${row.subject}`,
+        status,
+        message,
+      };
+    });
+
+    // 5. Billing Accounts Diff
+    const existingFamilyNames = new Set(billingAccounts.map((a) => a.familyName.trim().toLowerCase()));
+    const billingDiffs = (aiSnapshot.billingAccounts ?? []).map((row) => {
+      const name = `${row.familyName} Family`;
+      const exists = existingFamilyNames.has(row.familyName.trim().toLowerCase());
+      return {
+        name,
+        status: exists ? 'skip' : 'new',
+        message: exists
+          ? `Billing account already exists.`
+          : `Create new family account with ${row.studentNames?.length ?? 0} linked students.`,
+      };
+    });
+
+    // 6. Invoices Diff
+    const familyExistsMap = new Set(billingAccounts.map((a) => a.familyName.trim().toLowerCase()));
+    (aiSnapshot.billingAccounts ?? []).forEach((b) => familyExistsMap.add(b.familyName.trim().toLowerCase()));
+
+    const invoiceDiffs = (aiSnapshot.invoices ?? []).map((row) => {
+      const name = `${row.label} · $${(row.amountCents / 100).toFixed(2)}`;
+      const hasFamily = familyExistsMap.has(row.familyName.trim().toLowerCase());
+      
+      let status: 'new' | 'skip' = 'new';
+      let message = '';
+
+      if (!hasFamily) {
+        status = 'skip';
+        message = `Error: Family billing account "${row.familyName}" missing and not in import roster.`;
+      } else {
+        message = `Generate invoice for family "${row.familyName}" due ${row.dueDate || 'immediately'}.`;
+      }
+
+      return {
+        name,
+        status,
+        message,
+      };
+    });
+
+    // 7. Staff Diff
+    const staffDiffs = (aiSnapshot.staffAccounts ?? []).map((row) => {
+      return {
+        name: row.displayName,
+        status: 'new' as const,
+        message: `Create new office desk login "${row.username}".`,
+      };
+    });
+
+    return {
+      classes: classDiffs,
+      teachers: teacherDiffs,
+      students: studentDiffs,
+      grades: gradeDiffs,
+      billingAccounts: billingDiffs,
+      invoices: invoiceDiffs,
+      staffAccounts: staffDiffs,
+    };
+  }, [aiSnapshot, classes, teachers, students, gradeEntries, billingAccounts, upsertStudents]);
 
   const classNames = classes.map((c) => c.name);
   const studentNames = students.map((s) => getOfficeStudentFullName(s));
+
+  const counts = aiSnapshot ? officeSnapshotCounts(aiSnapshot) : {};
+
+  useEffect(() => {
+    if (aiSnapshot) {
+      const keys = ['students', 'classes', 'grades', 'billingAccounts', 'invoices', 'staffAccounts'] as const;
+      for (const k of keys) {
+        if (counts[k]) {
+          setActiveDiffTab(k);
+          break;
+        }
+      }
+    }
+  }, [aiSnapshot, counts]);
 
   const resetAi = () => {
     setAiPaste('');
@@ -202,7 +392,6 @@ export function OfficeAiImportSection({
     }
   };
 
-  const counts = aiSnapshot ? officeSnapshotCounts(aiSnapshot) : {};
   const previewTotal = aiSnapshot ? totalOfficeSnapshotItems(aiSnapshot) : 0;
 
   return (
@@ -322,44 +511,119 @@ export function OfficeAiImportSection({
         </div>
 
         {previewTotal > 0 && aiSnapshot ? (
-          <div className="space-y-3 rounded-xl border bg-muted/30 p-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Preview</p>
-            <div className="flex flex-wrap gap-2 text-xs">
-              {counts.classes ? (
-                <span className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5">
-                  <BookOpen className="h-3 w-3" /> {counts.classes} classes
-                </span>
-              ) : null}
-              {counts.students ? (
-                <span className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5">
-                  <Users className="h-3 w-3" /> {counts.students} students
-                </span>
-              ) : null}
-              {counts.grades ? (
-                <span className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5">
-                  <GraduationCap className="h-3 w-3" /> {counts.grades} grades
-                </span>
-              ) : null}
-              {counts.billingAccounts ? (
-                <span className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5">
-                  <CreditCard className="h-3 w-3" /> {counts.billingAccounts} billing
-                </span>
-              ) : null}
-              {counts.invoices ? (
-                <span className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5">
-                  <FileSpreadsheet className="h-3 w-3" /> {counts.invoices} invoices
-                </span>
-              ) : null}
-              {counts.staffAccounts ? (
-                <span className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5">
-                  <Headset className="h-3 w-3" /> {counts.staffAccounts} staff
-                </span>
-              ) : null}
-              {counts.settings ? (
-                <span className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5">
-                  Settings
-                </span>
-              ) : null}
+          <div className="space-y-4 rounded-xl border bg-muted/30 p-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Preview Summary</p>
+              <div className="flex flex-wrap gap-2 text-xs mt-2">
+                {counts.classes ? (
+                  <span className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5">
+                    <BookOpen className="h-3 w-3" /> {counts.classes} classes
+                  </span>
+                ) : null}
+                {counts.students ? (
+                  <span className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5">
+                    <Users className="h-3 w-3" /> {counts.students} students
+                  </span>
+                ) : null}
+                {counts.grades ? (
+                  <span className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5">
+                    <GraduationCap className="h-3 w-3" /> {counts.grades} grades
+                  </span>
+                ) : null}
+                {counts.billingAccounts ? (
+                  <span className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5">
+                    <CreditCard className="h-3 w-3" /> {counts.billingAccounts} billing
+                  </span>
+                ) : null}
+                {counts.invoices ? (
+                  <span className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5">
+                    <FileSpreadsheet className="h-3 w-3" /> {counts.invoices} invoices
+                  </span>
+                ) : null}
+                {counts.staffAccounts ? (
+                  <span className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5">
+                    <Headset className="h-3 w-3" /> {counts.staffAccounts} staff
+                  </span>
+                ) : null}
+                {counts.settings ? (
+                  <span className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5">
+                    Settings
+                  </span>
+                ) : null}
+              </div>
+            </div>
+
+            {/* AI Dry-Run Difference Panel */}
+            <div className="rounded-xl border bg-white p-4 shadow-sm dark:bg-slate-950 dark:border-slate-800">
+              <p className="text-xs font-bold uppercase tracking-wider text-teal-800 dark:text-teal-400 mb-3">
+                AI Dry-Run Diff Panel
+              </p>
+              
+              {/* Tab Toggles */}
+              <div className="flex flex-wrap gap-1 border-b pb-2 mb-3">
+                {([
+                  { key: 'students', label: 'Students', count: counts.students || 0 },
+                  { key: 'classes', label: 'Classes', count: counts.classes || 0 },
+                  { key: 'grades', label: 'Grades', count: counts.grades || 0 },
+                  { key: 'billingAccounts', label: 'Billing Accounts', count: counts.billingAccounts || 0 },
+                  { key: 'invoices', label: 'Invoices', count: counts.invoices || 0 },
+                  { key: 'staffAccounts', label: 'Staff Logins', count: counts.staffAccounts || 0 },
+                ] as const).map((tab) => {
+                  if (tab.count === 0) return null;
+                  return (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onClick={() => setActiveDiffTab(tab.key)}
+                      className={cn(
+                        "px-2.5 py-1 text-xs font-medium rounded-lg transition-all",
+                        activeDiffTab === tab.key
+                          ? "bg-teal-700 text-white dark:bg-teal-600 shadow-sm"
+                          : "hover:bg-slate-100 text-muted-foreground hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                      )}
+                    >
+                      {tab.label} ({tab.count})
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Tab Contents */}
+              <div className="max-h-[220px] overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                {diffData && diffData[activeDiffTab] && diffData[activeDiffTab].length > 0 ? (
+                  diffData[activeDiffTab].map((item, idx) => (
+                    <div
+                      key={idx}
+                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2 rounded-lg border bg-slate-50/50 dark:bg-slate-900/30 text-[11px] leading-relaxed transition-all hover:bg-slate-50 dark:hover:bg-slate-900/50"
+                    >
+                      <div className="flex flex-col gap-0.5">
+                        <span className="font-semibold text-slate-800 dark:text-slate-200">
+                          {item.name}
+                        </span>
+                        <span className="text-muted-foreground">
+                          {item.message}
+                        </span>
+                      </div>
+                      <span
+                        className={cn(
+                          "inline-flex self-start sm:self-center px-1.5 py-0.5 font-bold uppercase tracking-wider rounded text-[9px] border",
+                          item.status === 'new'
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-300 dark:border-emerald-900/30"
+                            : item.status === 'merge'
+                            ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/20 dark:text-blue-300 dark:border-blue-900/30"
+                            : "bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700/50"
+                        )}
+                      >
+                        {item.status}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-muted-foreground py-2 text-center">
+                    Select an active category above to review import details.
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         ) : null}

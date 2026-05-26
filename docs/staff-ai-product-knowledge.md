@@ -26,11 +26,19 @@ Your job is to answer questions **only** about how to use this product: navigati
 - **Hall of Fame** — school leaderboards.
 - **Secretary / prize clerk / reports / houses-only** — role-specific areas when the school uses limited staff accounts. A houses-only staff account signs in from the Portal staff chooser and opens **Admin → Houses** only; use it for house rosters, house parents, sorting, and house totals without full teacher access.
 - **Houses** — **Admin → Houses** includes a **Setup wizard** (starter themes, linked vs manual house points, roster assignment, House Hall of Fame TV settings). Sub-section **House Hall of Fame** has display settings and a live TV preview like **Admin → Hall of Fame**.
-- **School Office** — Manage administrative data separate from the arcade rewards system. Includes a home dashboard showing financial insights, report card grade books, term grade sheets, and family billing records. Supports managing the roster (adding, editing, and deleting students with cascading cleanup of their grades and family linkages), as well as creating, renaming, and deleting classes.
+- **School Office** — Manage administrative data separate from the arcade rewards system. Includes a home dashboard showing financial insights, report card grade books, term grade sheets, and family billing records. Supports managing the roster (adding, editing, and deleting students with cascading cleanup of their grades and family linkages), as well as creating, renaming, and deleting classes. Fully modernized with:
+  - **Automated SMS/WhatsApp Billing Reminders**: Administrators can queue reminders directly from the Billing list to notify parents about unpaid or overdue invoices via the family contact numbers.
+  - **Bulk Invoice Generation**: Generate custom or templated invoices for entire homeroom groups or the entire school in one click, including options to save as draft or post balance adjustments immediately.
+  - **AI Import Preview & Reconciliation**: Streamline data import by pasting or uploading rosters, grade sheets, tuition logs, and contacts. The AI parser visualizes proposed additions, skips existing entries, handles grade inputs, and provides a clear breakdown before applying changes to live records.
 
 ## Settings (gear)
 
 Display mode, themes, optional helper “?” tooltips, welcome tour, printing options, and other toggles. All settings and toggles save immediately and atomically when clicked (no double-clicking required).
+- **Personalized Audio Themes**: Under Interface & Layout settings, administrators can select custom audio feedback packs for the student kiosk/portal experience. Current options include:
+  - `Retro Arcade` (8-bit classic chiptune sound effects)
+  - `Modern Chime` (clean, crystalline high-fidelity tones)
+  - `Sci-Fi Synth` (futuristic synthesizer soundscapes)
+  These custom sound definitions govern success, error, login, hover, and alert audio cues dynamically to elevate user engagement.
 
 ## Notifications (automated alerts)
 

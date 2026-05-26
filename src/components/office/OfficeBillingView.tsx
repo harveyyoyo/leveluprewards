@@ -15,7 +15,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useSearchParams } from 'next/navigation';
-import { Copy, Download, Mail, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Copy, Download, Mail, Pencil, Plus, Trash2, Wand2, Phone, MessageSquare, AlertCircle } from 'lucide-react';
 import { useOfficeUrlSync } from '@/lib/office/useOfficeUrlSync';
 import { useOfficeSettings } from '@/lib/office/useOfficeSettings';
 import { OfficeFamilyStatementButton } from '@/components/office/OfficeFamilyStatement';
@@ -35,7 +35,7 @@ import { OfficeQuickChips } from '@/components/office/OfficeQuickChips';
 import { OfficeEmptyState } from '@/components/office/OfficeEmptyState';
 import { OfficeLoadingRows } from '@/components/office/OfficeLoadingRows';
 import { CreditCard } from 'lucide-react';
-import type { OfficeBillingAccount, OfficeInvoice, OfficePaymentMethod } from '@/lib/office/types';
+import type { OfficeBillingAccount, OfficeInvoice, OfficePaymentMethod, OfficeInvoiceStatus } from '@/lib/office/types';
 import type { OfficeStudent } from '@/lib/office/types';
 import { cn } from '@/lib/utils';
 
@@ -46,6 +46,7 @@ type OfficeBillingViewProps = {
   accounts: OfficeBillingAccount[];
   invoices: OfficeInvoice[];
   isLoading: boolean;
+  classNameById?: Map<string, string>;
 };
 
 export function OfficeBillingView({
@@ -55,6 +56,7 @@ export function OfficeBillingView({
   accounts,
   invoices,
   isLoading,
+  classNameById,
 }: OfficeBillingViewProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -83,6 +85,24 @@ export function OfficeBillingView({
   const [payTarget, setPayTarget] = useState<OfficeInvoice | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<OfficePaymentMethod>('check');
   const [paymentNote, setPaymentNote] = useState('');
+
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkTargetHomeroom, setBulkTargetHomeroom] = useState('all');
+  const [bulkLabel, setBulkLabel] = useState('');
+  const [bulkAmount, setBulkAmount] = useState('');
+  const [bulkDue, setBulkDue] = useState(defaultDueDateIso());
+  const [bulkSaveAsDraft, setBulkSaveAsDraft] = useState(false);
+
+  const homeroomNames = useMemo(() => {
+    const set = new Set<string>();
+    for (const s of students) {
+      const clsName = (s.classId && classNameById?.get(s.classId)) || '';
+      if (clsName.trim()) {
+        set.add(clsName.trim());
+      }
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [students, classNameById]);
 
   const invoiceLabelSuggestions = useMemo(() => {
     const set = new Set(['Tuition', 'Registration', 'Activities', 'Lunch', 'Supplies']);
@@ -214,6 +234,138 @@ export function OfficeBillingView({
 
   const toggleStudent = (id: string) => {
     setSelectedStudentIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
+  const handleBulkInvoicing = async () => {
+    if (!firestore || !bulkLabel.trim() || !bulkAmount) {
+      toast({ variant: 'destructive', title: 'Label and amount are required.' });
+      return;
+    }
+    const cents = parseUsdToCents(bulkAmount);
+    if (cents == null) {
+      toast({ variant: 'destructive', title: 'Enter a valid dollar amount.' });
+      return;
+    }
+    const due = bulkDue || new Date().toISOString().slice(0, 10);
+    setBusy(true);
+
+    try {
+      const targetClassStudents = students.filter((s) => {
+        if (bulkTargetHomeroom === 'all') return true;
+        const clsName = (s.classId && classNameById?.get(s.classId)) || '';
+        return clsName === bulkTargetHomeroom;
+      });
+
+      const studentIdsInTarget = new Set(targetClassStudents.map((s) => s.id));
+
+      const targetAccounts = accounts.filter((a) => {
+        if (bulkTargetHomeroom === 'all') return true;
+        return a.studentIds.some((id) => studentIdsInTarget.has(id));
+      });
+
+      if (targetAccounts.length === 0) {
+        toast({
+          variant: 'destructive',
+          title: 'No target accounts found',
+          description: 'No billing accounts have students linked in the selected homeroom.',
+        });
+        setBusy(false);
+        return;
+      }
+
+      const status: OfficeInvoiceStatus = bulkSaveAsDraft ? 'draft' : 'sent';
+      const createdCount = targetAccounts.length;
+      let totalAmountCents = createdCount * cents;
+
+      const promises = targetAccounts.map(async (account) => {
+        const invoiceRef = doc(collection(firestore, 'schools', schoolId, 'officeInvoices'));
+        const invoiceDoc = {
+          accountId: account.id,
+          label: bulkLabel.trim(),
+          amountCents: cents,
+          dueDate: due,
+          status,
+          createdAt: Date.now(),
+        };
+        await setDoc(invoiceRef, invoiceDoc);
+
+        if (status === 'sent') {
+          const nextInvoices: OfficeInvoice[] = [
+            ...invoices,
+            {
+              id: invoiceRef.id,
+              ...invoiceDoc,
+            },
+          ];
+          await updateDoc(doc(firestore, 'schools', schoolId, 'officeBillingAccounts', account.id), {
+            balanceCents: (account.balanceCents || 0) + cents,
+            status: billingStatusForAccount(account.id, nextInvoices, account.status),
+            updatedAt: Date.now(),
+          });
+        }
+      });
+
+      await Promise.all(promises);
+
+      toast({
+        title: 'Bulk invoicing complete',
+        description: `Successfully generated ${createdCount} invoices totaling $${(totalAmountCents / 100).toFixed(2)}.`,
+      });
+
+      setBulkOpen(false);
+      setBulkLabel('');
+      setBulkAmount('');
+      setBulkDue(defaultDueDateIso());
+      setBulkSaveAsDraft(false);
+    } catch (e) {
+      toast({
+        variant: 'destructive',
+        title: 'Bulk invoicing failed',
+        description: (e as Error).message,
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleSendTextAlert = async (inv: OfficeInvoice, account: OfficeBillingAccount, channel: 'sms' | 'whatsapp') => {
+    const phone = account.contactPhone?.trim();
+    if (!phone) {
+      toast({
+        variant: 'destructive',
+        title: 'No phone number',
+        description: `Please edit the billing account for the ${account.familyName} family to add a contact phone number first.`,
+      });
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const message = `Hi ${account.familyName}, this is a reminder that invoice "${inv.label}" ($${(inv.amountCents / 100).toFixed(2)}) for your student(s) is currently unpaid. Due date: ${inv.dueDate}. Please login or contact the office to clear the balance. Thank you!`;
+      
+      const collName = channel === 'sms' ? 'sms' : 'whatsapp';
+      const ref = doc(collection(firestore, collName));
+      await setDoc(ref, {
+        to: phone,
+        body: message,
+        schoolId,
+        createdAt: Date.now(),
+        status: 'pending',
+      });
+
+      toast({
+        title: `${channel === 'sms' ? 'SMS' : 'WhatsApp'} Alert Queued`,
+        description: `Reminder successfully queued for dispatch to ${phone}.`,
+      });
+    } catch (e) {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to queue alert',
+        description: (e as Error).message,
+      });
+    } finally {
+      setBusy(false);
+    }
   };
 
   const handleSaveAccount = async () => {
@@ -477,6 +629,10 @@ export function OfficeBillingView({
             <Plus className="h-4 w-4" />
             New account
           </Button>
+          <Button variant="outline" className="rounded-xl gap-2 border-teal-200/80 bg-teal-50/30 text-teal-800 hover:bg-teal-100 hover:text-teal-900 dark:border-teal-900/50 dark:bg-teal-950/20 dark:text-teal-300 dark:hover:bg-teal-900/40" onClick={() => setBulkOpen(true)} disabled={accounts.length === 0}>
+            <Wand2 className="h-4 w-4" />
+            Bulk invoice
+          </Button>
           <Button className="rounded-xl gap-2" onClick={() => openNewInvoice()} disabled={accounts.length === 0}>
             <Plus className="h-4 w-4" />
             New invoice
@@ -661,6 +817,32 @@ export function OfficeBillingView({
                                     Remind
                                   </a>
                                 </Button>
+                              ) : null}
+                              {inv.status === 'sent' ? (
+                                <>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 rounded-lg gap-1 border-emerald-200 bg-emerald-50/20 text-emerald-800 hover:bg-emerald-100 hover:text-emerald-950 dark:border-emerald-900/50 dark:bg-emerald-950/20 dark:text-emerald-300 dark:hover:bg-emerald-900/40"
+                                    onClick={() => void handleSendTextAlert(inv, account, 'sms')}
+                                    title="Send SMS billing reminder to parents"
+                                  >
+                                    <Phone className="h-3 w-3" />
+                                    SMS
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 rounded-lg gap-1 border-teal-200 bg-teal-50/20 text-teal-800 hover:bg-teal-100 hover:text-teal-950 dark:border-teal-900/50 dark:bg-teal-950/20 dark:text-teal-300 dark:hover:bg-teal-900/40"
+                                    onClick={() => void handleSendTextAlert(inv, account, 'whatsapp')}
+                                    title="Send WhatsApp billing reminder to parents"
+                                  >
+                                    <MessageSquare className="h-3 w-3" />
+                                    WhatsApp
+                                  </Button>
+                                </>
                               ) : null}
                               <Button
                                 type="button"
@@ -918,6 +1100,110 @@ export function OfficeBillingView({
             </Button>
             <Button onClick={() => void handleSaveInvoice()} disabled={busy}>
               {editInvoiceId ? 'Save changes' : 'Create invoice'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={bulkOpen}
+        onOpenChange={(open) => {
+          setBulkOpen(open);
+          if (!open) {
+            setBulkLabel('');
+            setBulkAmount('');
+            setBulkDue(defaultDueDateIso());
+            setBulkSaveAsDraft(false);
+          }
+        }}
+      >
+        <DialogContent className="max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-teal-800 dark:text-teal-300">
+              <Wand2 className="h-5 w-5" />
+              Bulk Invoice Wizard
+            </DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-2">
+            <div className="space-y-2">
+              <Label>Target Homeroom / Class</Label>
+              <Select value={bulkTargetHomeroom} onValueChange={setBulkTargetHomeroom}>
+                <SelectTrigger className="rounded-xl">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Accounts (Direct)</SelectItem>
+                  {homeroomNames.map((name) => (
+                    <SelectItem key={name} value={name}>
+                      Homeroom: {name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-muted-foreground">
+                Invoices will be batch generated for each billing account linked to students in the selected class.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Invoice Description / Label</Label>
+              <Input
+                value={bulkLabel}
+                onChange={(e) => setBulkLabel(e.target.value)}
+                placeholder="Field Trip Fee, Tech Levy, etc."
+                className="rounded-xl"
+              />
+              <OfficeQuickChips
+                options={invoiceLabelSuggestions.slice(0, 6)}
+                value={bulkLabel}
+                onSelect={setBulkLabel}
+              />
+            </div>
+
+            <label className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+              <input
+                type="checkbox"
+                checked={bulkSaveAsDraft}
+                onChange={(e) => setBulkSaveAsDraft(e.target.checked)}
+                className="h-4 w-4 accent-teal-700"
+              />
+              Save as draft (won&apos;t apply to family balances immediately)
+            </label>
+
+            <div className="grid grid-cols-2 gap-3 mt-1">
+              <div className="space-y-2">
+                <Label>Amount (USD)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={bulkAmount}
+                  onChange={(e) => setBulkAmount(e.target.value)}
+                  placeholder="25.00"
+                  className="rounded-xl"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Due date</Label>
+                <Input
+                  type="date"
+                  value={bulkDue}
+                  onChange={(e) => setBulkDue(e.target.value)}
+                  className="rounded-xl"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="mt-2">
+            <Button variant="outline" className="rounded-xl" onClick={() => setBulkOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              className="rounded-xl bg-teal-700 hover:bg-teal-800 text-white dark:bg-teal-600 dark:hover:bg-teal-700"
+              onClick={() => void handleBulkInvoicing()}
+              disabled={busy || !bulkLabel.trim() || !bulkAmount}
+            >
+              Generate Invoices
             </Button>
           </DialogFooter>
         </DialogContent>

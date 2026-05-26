@@ -1230,6 +1230,35 @@ export function SettingsModal() {
                                      </p>
                                  </div>
 
+                                 {interfaceRole === 'student' && (
+                                     <div className="space-y-2 mt-4 pt-4 border-t border-border/40">
+                                         <div className="flex items-center gap-2">
+                                             <Volume2 className="w-4 h-4 text-muted-foreground shrink-0" />
+                                             <div className="min-w-0">
+                                                 <span className="text-sm font-bold">Personalized Audio Theme</span>
+                                                 <p className="text-[10px] text-muted-foreground font-medium leading-snug mt-0.5">
+                                                     Choose the synthesizer sound pack for student logins, hovers, and rewards.
+                                                 </p>
+                                             </div>
+                                         </div>
+                                         <Select
+                                             value={(local as any).studentAudioTheme || 'retro_arcade'}
+                                             onValueChange={(val) => {
+                                                 handleToggle('studentAudioTheme', val);
+                                             }}
+                                         >
+                                             <SelectTrigger className="w-full h-11 rounded-xl">
+                                                 <SelectValue placeholder="Select sound pack" />
+                                             </SelectTrigger>
+                                             <SelectContent className="z-[290]">
+                                                 <SelectItem value="retro_arcade">👾 Retro Arcade (Classic 8-bit)</SelectItem>
+                                                 <SelectItem value="modern_chime">🔔 Modern Chime (Crystalline Bells)</SelectItem>
+                                                 <SelectItem value="sci_fi_synth">🚀 Sci-Fi Synth (Futuristic Lasers)</SelectItem>
+                                             </SelectContent>
+                                         </Select>
+                                     </div>
+                                 )}
+
                                  {isAdmin && interfaceRole === 'global' ? (
                                      <div className="space-y-2 mt-4 pt-4 border-t border-border/40">
                                          <div className="flex items-center gap-2">

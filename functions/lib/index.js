@@ -1808,7 +1808,7 @@ exports.awardSpecialDayPoints = functions.https.onCall(async (data, context) => 
 // Callable: Upload school logo (server-side to avoid client Storage hangs)
 // ========================================================================
 const LOGO_MAX_BYTES = 10 * 1024 * 1024; // 10MB
-const LOGO_ALLOWED_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+const LOGO_ALLOWED_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp", "image/svg+xml"];
 const STUDENT_PHOTO_MAX_BYTES = 5 * 1024 * 1024; // 5MB
 const STUDENT_PHOTO_ALLOWED_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
 const STUDENT_CUSTOM_EMOJI_MAX_BYTES = 2 * 1024 * 1024; // 2MB
@@ -1830,7 +1830,7 @@ exports.uploadSchoolLogo = functions.https.onCall(async (data, context) => {
         }
         const contentType = typeof data.contentType === "string" ? data.contentType.trim().toLowerCase() : "";
         if (!LOGO_ALLOWED_TYPES.includes(contentType)) {
-            throw new functions.https.HttpsError("invalid-argument", "contentType must be image/png, image/jpeg, or image/webp.");
+            throw new functions.https.HttpsError("invalid-argument", "contentType must be image/png, image/jpeg, image/webp, or image/svg+xml.");
         }
         let buffer;
         try {
@@ -1906,7 +1906,7 @@ exports.uploadAppLogo = functions.https.onCall(async (data, context) => {
         }
         const contentType = typeof data.contentType === "string" ? data.contentType.trim().toLowerCase() : "";
         if (!LOGO_ALLOWED_TYPES.includes(contentType)) {
-            throw new functions.https.HttpsError("invalid-argument", "contentType must be image/png, image/jpeg, or image/webp.");
+            throw new functions.https.HttpsError("invalid-argument", "contentType must be image/png, image/jpeg, image/webp, or image/svg+xml.");
         }
         let buffer;
         try {

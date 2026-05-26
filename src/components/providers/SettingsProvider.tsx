@@ -339,6 +339,7 @@ interface Settings {
     studentDarkModeColorized?: boolean;
     studentEnableAnimatedBackground?: boolean;
     studentAnimatedBackgroundStyle?: string;
+    studentAudioTheme?: 'retro_arcade' | 'modern_chime' | 'sci_fi_synth';
 
     // Teacher Portal Interface overrides (set by admin)
     teacherDisplayMode?: DisplayModePreference;

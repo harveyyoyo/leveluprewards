@@ -22,6 +22,7 @@ export default function OfficeBillingPage() {
         accounts={billingAccounts}
         invoices={invoices}
         isLoading={shared.isLoading}
+        classNameById={shared.classNameById}
       />
     </Suspense>
   );
