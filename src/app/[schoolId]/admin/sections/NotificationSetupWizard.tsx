@@ -29,6 +29,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import type { Settings } from '@/components/providers/SettingsProvider';
+import { useToast } from '@/hooks/use-toast';
 
 export type NotificationRecipient = 'parents' | 'students' | 'staff';
 
@@ -211,6 +212,7 @@ export function NotificationSetupWizard({
   notificationsEnabled,
   updateSettings,
 }: Props) {
+  const { toast } = useToast();
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<NotificationWizardDraft>(defaultDraft);
 
@@ -221,8 +223,14 @@ export function NotificationSetupWizard({
 
   const reset = useCallback(() => {
     setStep(0);
-    setDraft(initialDraft ?? defaultDraft());
-  }, [initialDraft]);
+    const base = initialDraft ?? defaultDraft();
+    const triggerValid =
+      base.trigger !== null && triggers.some((t) => t.id === base.trigger);
+    setDraft({
+      ...base,
+      trigger: triggerValid ? base.trigger : null,
+    });
+  }, [initialDraft, triggers]);
 
   useEffect(() => {
     if (open) reset();
@@ -252,6 +260,10 @@ export function NotificationSetupWizard({
   const finish = () => {
     if (!draft.trigger || !notificationsEnabled) return;
     applyNotificationWizard(draft, updateSettings);
+    toast({
+      title: 'Notification turned on',
+      description: `${triggerLabel(draft.trigger)} alerts for ${recipientLabel(draft.recipients)}.`,
+    });
     onOpenChange(false);
   };
 
@@ -294,8 +306,8 @@ export function NotificationSetupWizard({
         {step === 0 && (
           <div>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              We&apos;ll walk you through four quick choices: who gets the alert, what triggers it, and how it&apos;s
-              delivered. You can add more notifications anytime.
+              We&apos;ll walk you through who gets the alert, what triggers it, and how it&apos;s delivered. Run the
+              wizard again anytime to add another alert type.
             </p>
             <ul className="text-sm space-y-2 mt-3">
               <li className="flex items-center gap-2">

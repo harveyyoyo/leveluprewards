@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { SchoolDeveloperLoginForm } from '@/components/SchoolDeveloperLoginForm';
+import { useAuth } from '@/components/providers/AuthProvider';
 
 function readLoginUrlState(): { school: string; changeSchool: boolean } {
   if (typeof window === 'undefined') return { school: '', changeSchool: false };
@@ -23,9 +24,11 @@ function readLoginUrlState(): { school: string; changeSchool: boolean } {
  */
 export default function LoginPage() {
   const pathname = usePathname();
+  const { clearSchoolChooserSession } = useAuth();
   const [schoolFromQuery, setSchoolFromQuery] = useState('');
   const [changeSchool, setChangeSchool] = useState(false);
   const [initialSchoolId, setInitialSchoolId] = useState<string | undefined>(undefined);
+  const changeSchoolResetDoneRef = useRef(false);
 
   useEffect(() => {
     const read = () => {
@@ -40,17 +43,14 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (changeSchool) {
-      try {
-        localStorage.removeItem('loginState');
-        localStorage.removeItem('schoolId');
-        localStorage.removeItem('userName');
-        localStorage.removeItem('teacherDocId');
-      } catch {
-        // Ignore storage errors; the visible form still lets the user choose a school.
+      if (!changeSchoolResetDoneRef.current) {
+        changeSchoolResetDoneRef.current = true;
+        clearSchoolChooserSession();
       }
       setInitialSchoolId(undefined);
       return;
     }
+    changeSchoolResetDoneRef.current = false;
 
     if (schoolFromQuery) {
       setInitialSchoolId(schoolFromQuery);
@@ -80,7 +80,7 @@ export default function LoginPage() {
 
     const inferred = (fromReferrer || fromStorage).trim().toLowerCase();
     if (inferred) setInitialSchoolId(inferred);
-  }, [changeSchool, schoolFromQuery]);
+  }, [changeSchool, clearSchoolChooserSession, schoolFromQuery]);
 
   return (
     <SchoolDeveloperLoginForm

@@ -1,0 +1,166 @@
+{
+  "variantId": "warm",
+  "timing": {
+    "introEnd": 260,
+    "segmentEnds": [
+      468,
+      664,
+      923,
+      1088,
+      1262,
+      1468,
+      1635,
+      1828,
+      2046,
+      2205,
+      2354,
+      2571,
+      2743,
+      2915
+    ],
+    "total": 3309
+  },
+  "narration": [
+    {
+      "id": "intro",
+      "label": "Intro",
+      "text": "Hi — this is a feature tour of LevelUp: the tools for points, prizes, ID cards, raffles, and more.",
+      "file": "voiceover/feature/warm/intro.mp3",
+      "startFrame": 14,
+      "durationFrames": 236
+    },
+    {
+      "id": "kiosk",
+      "label": "Kiosk",
+      "text": "Kids sign in at the kiosk in seconds, usually with a quick scan.",
+      "file": "voiceover/feature/warm/kiosk.mp3",
+      "startFrame": 262,
+      "durationFrames": 194
+    },
+    {
+      "id": "idCards",
+      "label": "ID cards",
+      "text": "You can preview and print student ID cards right from the admin portal.",
+      "file": "voiceover/feature/warm/idCards.mp3",
+      "startFrame": 468,
+      "durationFrames": 184
+    },
+    {
+      "id": "themes",
+      "label": "Themes",
+      "text": "Design themes in minutes — describe the look, adjust colors, and preview it on student ID cards.",
+      "file": "voiceover/feature/warm/themes.mp3",
+      "startFrame": 664,
+      "durationFrames": 247
+    },
+    {
+      "id": "prizes",
+      "label": "Prizes",
+      "text": "They pick prizes they actually care about from the shop.",
+      "file": "voiceover/feature/warm/prizes.mp3",
+      "startFrame": 923,
+      "durationFrames": 153
+    },
+    {
+      "id": "coupons",
+      "label": "Coupons",
+      "text": "Teachers print coupons when you want to reward on the spot.",
+      "file": "voiceover/feature/warm/coupons.mp3",
+      "startFrame": 1088,
+      "durationFrames": 162
+    },
+    {
+      "id": "raffle",
+      "label": "Raffle",
+      "text": "Raffles are a fun Friday ritual — tickets from points they already earned.",
+      "file": "voiceover/feature/warm/raffle.mp3",
+      "startFrame": 1262,
+      "durationFrames": 194
+    },
+    {
+      "id": "houses",
+      "label": "Houses",
+      "text": "Houses help homerooms and teams cheer for each other.",
+      "file": "voiceover/feature/warm/houses.mp3",
+      "startFrame": 1468,
+      "durationFrames": 155
+    },
+    {
+      "id": "hallOfFame",
+      "label": "Hall of Fame",
+      "text": "Hall of Fame boards make shout-outs visible in the cafeteria or gym.",
+      "file": "voiceover/feature/warm/hallOfFame.mp3",
+      "startFrame": 1635,
+      "durationFrames": 181
+    },
+    {
+      "id": "notifications",
+      "label": "Notifications",
+      "text": "Notifications mean fewer surprises about low stock or big milestones.",
+      "file": "voiceover/feature/warm/notifications.mp3",
+      "startFrame": 1828,
+      "durationFrames": 206
+    },
+    {
+      "id": "bulletin",
+      "label": "Bulletin",
+      "text": "Bulletin boards keep families and students in the loop.",
+      "file": "voiceover/feature/warm/bulletin.mp3",
+      "startFrame": 2046,
+      "durationFrames": 147
+    },
+    {
+      "id": "library",
+      "label": "Library",
+      "text": "Library tools track checkouts right beside rewards.",
+      "file": "voiceover/feature/warm/library.mp3",
+      "startFrame": 2205,
+      "durationFrames": 137
+    },
+    {
+      "id": "badges",
+      "label": "Badges",
+      "text": "Badges and goals give quiet students a way to shine.",
+      "file": "voiceover/feature/warm/badges.mp3",
+      "startFrame": 2354,
+      "durationFrames": 205
+    },
+    {
+      "id": "analytics",
+      "label": "Analytics",
+      "text": "Reports help you see who is engaging and where to help.",
+      "file": "voiceover/feature/warm/analytics.mp3",
+      "startFrame": 2571,
+      "durationFrames": 160
+    },
+    {
+      "id": "attendance",
+      "label": "Attendance",
+      "text": "Attendance options connect sign-in to how you already take roll.",
+      "file": "voiceover/feature/warm/attendance.mp3",
+      "startFrame": 2743,
+      "durationFrames": 160
+    },
+    {
+      "id": "outro",
+      "label": "Outro",
+      "text": "That is LevelUp — kind to kids, clear for teachers, and calm for the front office. We would love to show your school.",
+      "file": "voiceover/feature/warm/outro.mp3",
+      "startFrame": 2915,
+      "durationFrames": 304
+    }
+  ],
+  "copy": {
+    "introEyebrow": "Feature showcase",
+    "introTagline": "See what LevelUp includes",
+    "montageTitle": "Features your school will use",
+    "montageSubtitle": "Student · Teacher · Admin",
+    "outroHeadline": "Ready for your school?",
+    "outroSubline": "Demo schools available · Scan-first kiosk"
+  },
+  "ttsVoice": "coral",
+  "musicVolume": 0.22,
+  "musicDuckRatio": 0.28,
+  "musicStyle": "calm",
+  "musicSrc": "background-music.mp3"
+}

@@ -6,10 +6,9 @@ import {
   setDoc,
   type Firestore,
 } from 'firebase/firestore';
-import type { Class, StaffAccount, Student, Teacher } from '@/lib/types';
+import type { Class, Student, Teacher } from '@/lib/types';
 import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
 import { schoolPublicDocRef } from '@/lib/schoolPublic';
-import { buildStaffDirectory, syncSchoolStaffDirectory } from '@/lib/syncSchoolStaffDirectory';
 import {
   seedOfficeDemoDataForSchool,
   type OfficeDemoSeedPayload,
@@ -91,13 +90,8 @@ export async function populateDemoOfficeDataForSchool(
     { merge: true },
   );
 
-  const staffSnap = await getDocs(collection(firestore, 'schools', cleanId, 'staffAccounts'));
-  const staffAccounts = staffSnap.docs.map((d) => ({ id: d.id, ...d.data() })) as StaffAccount[];
-  const staffDirectory = buildStaffDirectory(teachers, staffAccounts);
-  await syncSchoolStaffDirectory(firestore, cleanId, teachers, staffAccounts);
-
   return {
     ...payload,
-    staffDirectoryCount: staffDirectory.length,
+    staffDirectoryCount: payload.staffAccounts.length,
   };
 }

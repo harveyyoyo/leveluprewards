@@ -47,6 +47,15 @@ html[data-office-portal] .office-main-pane .text-lg {
   line-height: 1.375rem !important;
 }
 
+/* Centered site frame — not full widescreen viewport. */
+html[data-office-portal] .office-layout-pane {
+  box-sizing: border-box;
+}
+
+html[data-office-portal] .office-content-pane {
+  box-sizing: border-box;
+}
+
 @supports not (zoom: 1) {
   html[data-office-portal] .office-main-pane {
     transform: scale(var(--office-main-zoom, 0.7777777778));

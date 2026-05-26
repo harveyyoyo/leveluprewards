@@ -14,7 +14,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import type { Coupon, Category, Teacher, Student, Class, HistoryItem, Prize, AttendanceSettings, AttendanceLogEntry, AttendanceScheduleSlot, AttendanceRewardRule, CouponRedemptionScope, HomeworkAssignment } from '@/lib/types';
 import type { LucideIcon } from 'lucide-react';
-import { ArrowLeft, Printer, Plus, LogIn, LogOut, UserCheck, Award, User, Search, Users, Minus, Gift, Loader2, Trash2, Edit, Filter, Ticket, Clock, History, FileText, BookOpen, Target, X, Dices, Settings as SettingsGear, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Printer, Plus, LogIn, LogOut, UserCheck, Award, User, Search, Users, Minus, Gift, Loader2, Trash2, Edit, Filter, Ticket, Clock, History, FileText, BookOpen, Target, X, Dices } from 'lucide-react';
 import { useSettings, type Settings } from '@/components/providers/SettingsProvider';
 import { PrinterReminderCallout } from '@/components/PrinterReminderCallout';
 import {
@@ -38,13 +38,9 @@ import { countPendingTeacherAwards } from '@/lib/pendingTeacherAwards';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { StaffPortalNav } from '@/components/staff/StaffPortalNav';
+import { TeacherPortalTabPane } from '@/components/staff/TeacherPortalTabPane';
+import { staffPortalTabIsValid, useStaffPortalTabs } from '@/lib/staffPortal';
 import { Switch } from '@/components/ui/switch';
 
 import DynamicIcon from '@/components/DynamicIcon';
@@ -87,12 +83,8 @@ import { formatStudentPointTypes } from '@/lib/studentPointTypes';
 /** Max sheets per run. Bounded for sensible printer jobs and UI. */
 const MAX_COUPON_PRINT_SHEETS = 100;
 const teacherPortalTabContentClassName =
-    // Match admin portal scroll/placement: tab content fills the available flex height and owns vertical scrolling.
-    'animate-in fade-in slide-in-from-bottom-2 duration-300 transition-opacity h-full min-h-0 w-full overflow-y-auto overflow-x-hidden pb-6 pr-1';
+    'mt-0 h-full min-h-0 w-full overflow-y-auto overflow-x-hidden pb-6 pr-1 data-[state=active]:animate-none motion-reduce:animate-none';
 const teacherPortalPanelClassName = 'w-full max-w-7xl mx-auto';
-/** Matches admin portal main `TabsTrigger` styling for visual parity. */
-const teacherPortalMainTabTriggerClassName =
-    'rounded-xl px-4 py-2 font-bold flex items-center gap-2 text-sm text-foreground transition-all whitespace-nowrap data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:ring-2 data-[state=active]:ring-primary/25';
 
 
 function TeacherHomeworkTab({ schoolId, teacherId, students, classes }: { schoolId: string; teacherId: string; students: Student[]; classes: Class[] }) {
@@ -1942,7 +1934,20 @@ function TeacherAttendanceRewardsPanel({
     );
 }
 
-export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretaryMode = false }: { teacherName: string, teacherId: string, onLogout: () => void, secretaryMode?: boolean }) {
+export function TeacherPrinterInner({
+    teacherName,
+    teacherId,
+    onLogout,
+    secretaryMode = false,
+    /** Render inside unified `/admin` staff shell (no duplicate page header). */
+    embedded = false,
+}: {
+    teacherName: string;
+    teacherId: string;
+    onLogout: () => void;
+    secretaryMode?: boolean;
+    embedded?: boolean;
+}) {
     const { updateTeacher, addCoupons, setCouponsToPrint, addCategory, schoolId, addPrize, updatePrize, deletePrize, getTeacherAttendanceConfig, setTeacherAttendanceConfig, listTeacherAttendanceLog, categories: globalCategories, isAdmin, isTeacher } = useAppContext();
     /** Admin using the teacher portal can act on the whole school (like secretary data scope) while keeping teacher tabs/tools. */
     const schoolWideTeacherScope = secretaryMode || isAdmin;
@@ -1955,60 +1960,24 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
     const animBackdrop = globalAnimatedBackdropActive(settings);
     const playSound = useArcadeSound();
 
-    const raffleTabEnabled = useMemo(
-        () => !secretaryMode && !!settings.enableWeeklyRaffle,
-        [secretaryMode, settings.enableWeeklyRaffle],
+    const staffPortalRole = secretaryMode ? 'secretary' : 'teacher';
+    const teacherNavSidebar = settings.adminNavLayout === 'sidebar';
+    const { mainTabs, addMoreTabs, allTabValues, defaultTab } = useStaffPortalTabs({
+        role: staffPortalRole,
+        settings,
+    });
+    const teacherTabEnabled = useMemo(
+        () => (tabId: string) => allTabValues.includes(tabId),
+        [allTabValues],
     );
 
-    const teacherAttendanceTabEnabled = useMemo(
-        () => !secretaryMode && (settings.payAttendance ?? true) && !!settings.enableAttendance,
-        [secretaryMode, settings.payAttendance, settings.enableAttendance],
-    );
-    const teacherGoalsTabEnabled = useMemo(
-        () => !secretaryMode && !!settings.enableGoals,
-        [secretaryMode, settings.enableGoals],
-    );
-    const teacherHomeworkTabEnabled = useMemo(
-        () => !secretaryMode && !!settings.enableHomework,
-        [secretaryMode, settings.enableHomework],
-    );
-
-    const teacherGeneratedCouponsTabEnabled = useMemo(
-        () => !secretaryMode && !!settings.enableTeacherGeneratedCouponsTab,
-        [secretaryMode, settings.enableTeacherGeneratedCouponsTab],
-    );
-
-    const [activeTeacherTab, setActiveTeacherTab] = useState('coupons');
+    const [activeTeacherTab, setActiveTeacherTab] = useState(defaultTab);
     const [pendingTeacherAwardCount, setPendingTeacherAwardCount] = useState(0);
 
-    useEffect(() => {
-        if (secretaryMode) return;
-        const basicTabs = new Set<string>([
-            'roster',
-            'classes',
-            'coupons',
-            'prizes',
-            'redemptions',
-            'reports',
-        ]);
-        if (raffleTabEnabled) basicTabs.add('raffle');
-        if (teacherAttendanceTabEnabled) basicTabs.add('attendance');
-        if (teacherGoalsTabEnabled) basicTabs.add('goals');
-        if (teacherHomeworkTabEnabled) basicTabs.add('homework');
-        if (teacherGeneratedCouponsTabEnabled) basicTabs.add('generated-coupons');
-        if (!basicTabs.has(activeTeacherTab)) {
-            const timer = setTimeout(() => setActiveTeacherTab('coupons'), 100);
-            return () => clearTimeout(timer);
-        }
-    }, [
-        secretaryMode,
-        activeTeacherTab,
-        raffleTabEnabled,
-        teacherAttendanceTabEnabled,
-        teacherGoalsTabEnabled,
-        teacherHomeworkTabEnabled,
-        teacherGeneratedCouponsTabEnabled,
-    ]);
+    const resolvedTeacherTab = useMemo(() => {
+        if (secretaryMode) return 'coupons';
+        return staffPortalTabIsValid(activeTeacherTab, allTabValues) ? activeTeacherTab : defaultTab;
+    }, [secretaryMode, activeTeacherTab, allTabValues, defaultTab]);
 
     useEffect(() => {
         if (!schoolId || secretaryMode) {
@@ -2438,25 +2407,6 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
 
     const { teacherDocId, userId } = useAppContext();
 
-    // Debugging logs to help troubleshoot missing students
-    useEffect(() => {
-        if (studentsLoading) return;
-        console.log('[TeacherPortal] Debug Info:', {
-            schoolId,
-            teacherId,
-            isAdmin,
-            isTeacher,
-            secretaryMode,
-            schoolWideTeacherScope,
-            studentsCount: students?.length ?? 0,
-            classesCount: classes?.length ?? 0,
-            teacherDocFound: !!currentTeacher,
-            studentsInScopeCount: studentsForTeacherActions.length,
-            teacherDocIdContext: teacherDocId,
-            userId
-        });
-    }, [studentsLoading, schoolId, teacherId, isAdmin, isTeacher, secretaryMode, schoolWideTeacherScope, students, classes, currentTeacher, studentsForTeacherActions, teacherDocId, userId]);
-
     // Wait until the teachers collection has emitted at least once (`teachers` becomes an array).
     // Otherwise students can finish loading first and we briefly show this card while `currentTeacher` is still unresolved.
     const teacherProfileReady = teachers !== null && !teachersLoading;
@@ -2493,11 +2443,18 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
     return (
         <TooltipProvider>
             <div
-                className="min-h-screen bg-background transition-colors duration-500 relative overflow-x-hidden font-sans flex min-h-0 flex-col"
-                style={appearanceVarsForSurface(settings, 'print') as React.CSSProperties}
+                className={cn(
+                    'bg-background transition-colors duration-500 relative overflow-x-hidden font-sans flex min-h-0 flex-col',
+                    embedded ? 'flex-1 w-full' : 'min-h-screen',
+                )}
+                style={
+                    embedded
+                        ? undefined
+                        : (appearanceVarsForSurface(settings, 'print') as React.CSSProperties)
+                }
             >
                 {/* Local orbs/noise only when global animated backdrop is off */}
-                {isGraphic && !animBackdrop && (
+                {!embedded && isGraphic && !animBackdrop && (
                     <>
                         <div className="pointer-events-none fixed inset-0 opacity-[0.03] z-0" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
                         <div className="pointer-events-none fixed -top-24 -left-24 h-[500px] w-[500px] rounded-full bg-chart-1/10 blur-[120px] z-0 animate-pulse-slow" />
@@ -2508,8 +2465,9 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
 
                 <div
                     className={cn(
-                        'mx-auto flex w-full max-w-7xl flex-1 min-h-0 flex-col gap-6 p-4 md:p-8 relative z-10',
-                        settings.displayMode === 'app' && 'pb-24'
+                        'mx-auto flex w-full flex-1 min-h-0 flex-col gap-6 relative z-10',
+                        embedded ? 'max-w-none p-0' : 'max-w-7xl p-4 md:p-8',
+                        settings.displayMode === 'app' && !embedded && 'pb-24',
                     )}
                 >
                     {pendingTeacherAwardCount > 0 && !secretaryMode ? (
@@ -2521,16 +2479,17 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                             {pendingTeacherAwardCount} batch{pendingTeacherAwardCount === 1 ? '' : 'es'} will sync when you are online.
                         </div>
                     ) : null}
+                    {!embedded ? (
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                         <Helper content={secretaryMode ? 'Generate coupon sheets for teachers to hand out. You cannot award points or edit prizes from here.' : 'Use Points to print coupon sheets from school categories, or open Manually Add or Deduct Points for direct changes without a printed coupon. Prizes, attendance, and reports are also here.'}>
                             <div>
                                 <h2 className="text-2xl font-bold tracking-tight" style={{ color: teacherAccent }}>
-                                    {secretaryMode ? 'Secretary - coupon printing' : 'Teacher Portal'}
+                                    {secretaryMode ? 'Secretary - coupon printing' : 'Staff Portal — Teacher'}
                                 </h2>
                                 <p className="text-muted-foreground">
                                     {secretaryMode
                                         ? 'Create printable coupon batches using the school\'s incentive categories.'
-                                        : 'Print point coupons from the Points tab, use Manually Add or Deduct Points when you need direct changes, and run reports—all from this portal.'}
+                                        : 'Same navigation as the admin portal, with only the tabs you need. Award points, manage your classes, and run reports.'}
                                 </p>
                                 {teacherName ? (
                                     <p className="text-sm text-muted-foreground mt-1">
@@ -2556,174 +2515,42 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                             )}
                         </div>
                     </div>
+                    ) : settings.enableTeacherBudgets && currentTeacher?.monthlyBudget !== undefined ? (
+                        <p className="text-sm text-muted-foreground">
+                            {(remainingTeacherBudgetPoints(currentTeacher) ?? 0).toLocaleString()} pts remaining{' '}
+                            {teacherBudgetRemainingPhrase(resolveTeacherBudgetPeriod(currentTeacher))}
+                        </p>
+                    ) : null}
 
                     <div className="flex min-h-0 w-full flex-1 flex-col">
                         <Tabs
-                            value={secretaryMode ? 'coupons' : activeTeacherTab}
+                            value={resolvedTeacherTab}
                             onValueChange={(v) => {
                                 if (!secretaryMode) setActiveTeacherTab(v);
                             }}
-                            className="flex min-h-0 w-full flex-1 flex-col gap-6"
+                            className={cn(
+                                'flex min-h-0 w-full flex-1 gap-6',
+                                teacherNavSidebar ? 'flex-col lg:flex-row lg:items-start' : 'flex-col',
+                            )}
                         >
-                        {!secretaryMode && (
-                            <div className="flex w-full flex-col gap-4">
-                                <div className="w-full md:hidden">
-                                    <Label htmlFor="teacher-portal-section" className="sr-only">
-                                        Teacher portal section
-                                    </Label>
-                                    <Select value={activeTeacherTab} onValueChange={setActiveTeacherTab}>
-                                        <SelectTrigger
-                                            id="teacher-portal-section"
-                                            className="h-12 w-full rounded-xl font-bold"
-                                            aria-label="Teacher portal section"
-                                        >
-                                            <SelectValue placeholder="Choose a section" />
-                                        </SelectTrigger>
-                                        <SelectContent position="popper" className="max-h-[min(70vh,440px)]">
-                                            <SelectItem value="roster">Students</SelectItem>
-                                            <SelectItem value="classes">Classes</SelectItem>
-                                            <SelectItem value="coupons">Points</SelectItem>
-                                            <SelectItem value="prizes">Prizes</SelectItem>
-                                            <SelectItem value="redemptions">Redemptions</SelectItem>
-                                            <SelectItem value="reports">Reports</SelectItem>
-                                            {raffleTabEnabled && <SelectItem value="raffle">Raffle</SelectItem>}
-                                            {teacherAttendanceTabEnabled && (
-                                                <SelectItem value="attendance">Attendance</SelectItem>
-                                            )}
-                                            {teacherGoalsTabEnabled && <SelectItem value="goals">Goals</SelectItem>}
-                                            {teacherHomeworkTabEnabled && (
-                                                <SelectItem value="homework">Homework</SelectItem>
-                                            )}
-                                            {teacherGeneratedCouponsTabEnabled && (
-                                                <SelectItem value="generated-coupons">Coupons</SelectItem>
-                                            )}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div
-                                    className={cn(
-                                        'hidden w-full flex-col gap-4 md:flex',
-                                        settings.displayMode === 'app'
-                                            ? 'overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0'
-                                            : '',
-                                    )}
-                                >
-                                    <div
-                                        className={cn(
-                                            settings.displayMode === 'app'
-                                                ? 'flex justify-center overflow-x-auto'
-                                                : 'w-full',
-                                        )}
-                                    >
-                                    <TabsList
-                                        className={cn(
-                                            'bg-muted/50 p-1.5 rounded-2xl border shadow-sm h-auto',
-                                            settings.displayMode === 'app'
-                                                ? 'inline-flex w-max sm:mx-auto flex-nowrap gap-x-1'
-                                                : 'flex flex-wrap justify-center gap-x-1 gap-y-1 w-full',
-                                        )}
-                                        aria-label="Teacher portal sections"
-                                    >
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <button
-                                                    type="button"
-                                                    className="rounded-xl px-3 py-2 font-bold inline-flex items-center gap-2 text-sm text-foreground border bg-muted/40 hover:bg-muted/60 transition-all shrink-0"
-                                                    title="Add more tabs"
-                                                    aria-label="Add more"
-                                                >
-                                                    <SettingsGear className="w-4 h-4" aria-hidden />
-                                                    Add more
-                                                    <ChevronDown className="w-4 h-4 opacity-70" aria-hidden />
-                                                </button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="start" className="min-w-[220px]">
-                                                <div className="px-2 py-2">
-                                                    <span className="text-[10px] font-black uppercase text-muted-foreground tracking-wider">
-                                                        Feature tabs
-                                                    </span>
-                                                </div>
-                                                <DropdownMenuSeparator />
-                                                {!teacherAttendanceTabEnabled &&
-                                                    !teacherGoalsTabEnabled &&
-                                                    !teacherHomeworkTabEnabled &&
-                                                    !teacherGeneratedCouponsTabEnabled && (
-                                                        <DropdownMenuItem disabled className="text-xs text-muted-foreground">
-                                                            No optional features are enabled for your school.
-                                                        </DropdownMenuItem>
-                                                    )}
-                                                {teacherAttendanceTabEnabled && (
-                                                    <DropdownMenuItem
-                                                        className="gap-2 font-semibold"
-                                                        onSelect={() => setActiveTeacherTab('attendance')}
-                                                    >
-                                                        <Clock className="h-4 w-4 opacity-75" aria-hidden />
-                                                        Attendance
-                                                    </DropdownMenuItem>
-                                                )}
-                                                {teacherGoalsTabEnabled && (
-                                                    <DropdownMenuItem
-                                                        className="gap-2 font-semibold"
-                                                        onSelect={() => setActiveTeacherTab('goals')}
-                                                    >
-                                                        <Target className="h-4 w-4 opacity-75" aria-hidden />
-                                                        Goals
-                                                    </DropdownMenuItem>
-                                                )}
-                                                {teacherHomeworkTabEnabled && (
-                                                    <DropdownMenuItem
-                                                        className="gap-2 font-semibold"
-                                                        onSelect={() => setActiveTeacherTab('homework')}
-                                                    >
-                                                        <BookOpen className="h-4 w-4 opacity-75" aria-hidden />
-                                                        Homework
-                                                    </DropdownMenuItem>
-                                                )}
-                                                {teacherGeneratedCouponsTabEnabled && (
-                                                    <DropdownMenuItem
-                                                        className="gap-2 font-semibold"
-                                                        onSelect={() => setActiveTeacherTab('generated-coupons')}
-                                                    >
-                                                        <Ticket className="h-4 w-4 opacity-75" aria-hidden />
-                                                        Coupons
-                                                    </DropdownMenuItem>
-                                                )}
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                        <TabsTrigger value="roster" className={teacherPortalMainTabTriggerClassName} title="Students">
-                                            <Users className="w-4 h-4 shrink-0" /> Students
-                                        </TabsTrigger>
-                                        <TabsTrigger value="classes" className={teacherPortalMainTabTriggerClassName} title="Classes">
-                                            <BookOpen className="w-4 h-4 shrink-0" /> Classes
-                                        </TabsTrigger>
-                                        <TabsTrigger value="coupons" className={teacherPortalMainTabTriggerClassName} title="Points">
-                                            <Ticket className="w-4 h-4 shrink-0" /> Points
-                                        </TabsTrigger>
-                                        <TabsTrigger value="prizes" className={teacherPortalMainTabTriggerClassName} title="Prizes">
-                                            <Gift className="w-4 h-4 shrink-0" /> Prizes
-                                        </TabsTrigger>
-                                        <TabsTrigger value="redemptions" className={teacherPortalMainTabTriggerClassName} title="Redemptions">
-                                            <History className="w-4 h-4 shrink-0" /> Redemptions
-                                        </TabsTrigger>
-                                        <TabsTrigger value="reports" className={teacherPortalMainTabTriggerClassName} title="Reports">
-                                            <FileText className="w-4 h-4 shrink-0" /> Reports
-                                        </TabsTrigger>
-                                        {raffleTabEnabled && (
-                                            <TabsTrigger value="raffle" className={teacherPortalMainTabTriggerClassName} title="Raffle">
-                                                <Dices className="w-4 h-4 shrink-0" /> Raffle
-                                            </TabsTrigger>
-                                        )}
-                                    </TabsList>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
+                        {!secretaryMode ? (
+                            <StaffPortalNav
+                                role="teacher"
+                                activeTab={resolvedTeacherTab}
+                                onTabChange={setActiveTeacherTab}
+                                mainTabs={mainTabs}
+                                addMoreTabs={addMoreTabs}
+                                navLayout={teacherNavSidebar ? 'sidebar' : 'top'}
+                                className={teacherNavSidebar ? 'lg:w-60 lg:shrink-0' : undefined}
+                            />
+                        ) : null}
 
+                            <div className={cn('min-h-0 w-full flex-1', teacherNavSidebar && 'min-w-0')}>
                             <TabWalkthroughProvider
                                 scope="teacher"
-                                tabId={secretaryMode ? 'coupons' : activeTeacherTab}
+                                tabId={resolvedTeacherTab}
                             >
-                            <TabsContent value="coupons" className={teacherPortalTabContentClassName}>
+                            <TeacherPortalTabPane tabId="coupons" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
                                 <div className={teacherPortalPanelClassName}>
                                 {!secretaryMode && (
                                     <Dialog open={isPrintCategoryDialogOpen} onOpenChange={setIsPrintCategoryDialogOpen}>
@@ -3111,9 +2938,10 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                     }
                                 />
                                 </div>
-                            </TabsContent>
+                            </TeacherPortalTabPane>
 
-                            <TabsContent value="generated-coupons" className={teacherPortalTabContentClassName}>
+                            {teacherTabEnabled('generated-coupons') && (
+                            <TeacherPortalTabPane tabId="generated-coupons" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
                                 <div className={teacherPortalPanelClassName}>
                                     <MyCoupons
                                         schoolId={schoolId!}
@@ -3122,10 +2950,11 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                         students={studentsForTeacherActions}
                                     />
                                 </div>
-                            </TabsContent>
+                            </TeacherPortalTabPane>
+                            )}
 
 
-                            <TabsContent value="roster" className={teacherPortalTabContentClassName}>
+                            <TeacherPortalTabPane tabId="roster" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
                                 <div className={teacherPortalPanelClassName}>
                                     <TeacherRosterTab
                                         teacherId={teacherId}
@@ -3135,9 +2964,9 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                         isGraphic={isGraphic}
                                     />
                                 </div>
-                            </TabsContent>
+                            </TeacherPortalTabPane>
 
-                            <TabsContent value="classes" className={teacherPortalTabContentClassName}>
+                            <TeacherPortalTabPane tabId="classes" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
                                 <div className={teacherPortalPanelClassName}>
                                     <TeacherClassesTab
                                         teacherId={teacherId}
@@ -3145,10 +2974,10 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                         isGraphic={isGraphic}
                                     />
                                 </div>
-                            </TabsContent>
+                            </TeacherPortalTabPane>
 
-                            {(settings.payAttendance ?? true) && settings.enableAttendance && (
-                            <TabsContent value="attendance" className={teacherPortalTabContentClassName}>
+                            {teacherTabEnabled('attendance') && (
+                            <TeacherPortalTabPane tabId="attendance" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
                                 <div className={teacherPortalPanelClassName}>
                                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-muted/30 px-4 py-3 mb-6">
                                     <p className="text-sm text-muted-foreground max-w-prose">
@@ -3189,10 +3018,10 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                     </Card>
                                 </div>
                                 </div>
-                            </TabsContent>
+                            </TeacherPortalTabPane>
                             )}
 
-                            <TabsContent value="prizes" className={teacherPortalTabContentClassName}>
+                            <TeacherPortalTabPane tabId="prizes" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
                                 <div className={teacherPortalPanelClassName}>
                                 <div className="grid grid-cols-1 gap-8">
                                     <div className="w-full">
@@ -3200,17 +3029,17 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                     </div>
                                 </div>
                                 </div>
-                            </TabsContent>
+                            </TeacherPortalTabPane>
 
-                            <TabsContent value="redemptions" className={teacherPortalTabContentClassName}>
+                            <TeacherPortalTabPane tabId="redemptions" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
                                 <div className={teacherPortalPanelClassName}>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                     <RecentRedemptions schoolId={schoolId!} students={studentsForTeacherActions} classes={classes || []} teacherId={teacherId} />
                                 </div>
                                 </div>
-                            </TabsContent>
+                            </TeacherPortalTabPane>
 
-                            <TabsContent value="reports" className={teacherPortalTabContentClassName}>
+                            <TeacherPortalTabPane tabId="reports" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
                                 <div className={teacherPortalPanelClassName}>
                                     <div className="w-full">
                                         <SchoolReportsPanel
@@ -3228,10 +3057,10 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                         />
                                     </div>
                                 </div>
-                                </TabsContent>
+                                </TeacherPortalTabPane>
 
-                            {raffleTabEnabled && (
-                                <TabsContent value="raffle" className={teacherPortalTabContentClassName}>
+                            {teacherTabEnabled('raffle') && (
+                                <TeacherPortalTabPane tabId="raffle" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
                                     <div className={teacherPortalPanelClassName}>
                                         <AdminRaffleTab
                                             schoolId={schoolId!}
@@ -3239,11 +3068,11 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                             canEditSettings={!secretaryMode}
                                         />
                                     </div>
-                                </TabsContent>
+                                </TeacherPortalTabPane>
                             )}
 
-                                {settings.enableGoals && (
-                                    <TabsContent value="goals" className={teacherPortalTabContentClassName}>
+                                {teacherTabEnabled('goals') && (
+                                    <TeacherPortalTabPane tabId="goals" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
                                         <div className={teacherPortalPanelClassName}>
                                             <GoalsManager
                                                 schoolId={schoolId!}
@@ -3257,18 +3086,19 @@ export function TeacherPrinterInner({ teacherName, teacherId, onLogout, secretar
                                                 isGraphic={isGraphic}
                                             />
                                         </div>
-                                    </TabsContent>
+                                    </TeacherPortalTabPane>
                                 )}
 
-                            {settings.enableHomework && (
-                                <TabsContent value="homework" className={teacherPortalTabContentClassName}>
+                            {teacherTabEnabled('homework') && (
+                                <TeacherPortalTabPane tabId="homework" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
                                 <div className={teacherPortalPanelClassName}>
                                     <TeacherHomeworkTab schoolId={schoolId!} teacherId={teacherId} students={studentsForTeacherActions} classes={classesForTeacherUi} />
                                 </div>
-                            </TabsContent>
+                            </TeacherPortalTabPane>
                             )}
 
                             </TabWalkthroughProvider>
+                            </div>
                         </Tabs>
                     </div>
                 </div>

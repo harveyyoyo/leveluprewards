@@ -2,75 +2,45 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>LevelUp Feature — School Library</title>
+    <title>LevelUp — School Library</title>
     <script src="/marketing/flyer-embed.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Literata:wght@600;700&family=Source+Sans+3:wght@500;600;700&display=swap" rel="stylesheet" />
-    <style>
-      * { box-sizing: border-box; margin: 0; padding: 0; }
-      @page { size: letter; margin: 0; }
-      html, body {
-        width: 8.5in; min-height: 11in; font-family: 'Source Sans 3', system-ui, sans-serif;
-        background: #ecfdf5; color: #064e3b;
-        -webkit-print-color-adjust: exact; print-color-adjust: exact;
-      }
-      html.embed .hint { display: none !important; }
-      .flyer {
-        width: 8.5in; min-height: 11in; background: #fff;
-        padding: 0.44in 0.5in; display: flex; flex-direction: column;
-        border-top: 8px solid #059669;
-      }
-      .chip { font-size: 0.1in; font-weight: 700; color: #059669; letter-spacing: 0.12em; text-transform: uppercase; }
-      h1 { font-family: Literata, serif; font-size: 0.44in; font-weight: 700; margin-top: 0.1in; color: #065f46; }
-      .sub { font-size: 0.135in; line-height: 1.5; color: #047857; margin-top: 0.12in; max-width: 6.6in; }
-      .flow { display: flex; justify-content: space-between; align-items: center; margin-top: 0.22in; gap: 0.08in; }
-      .step { flex: 1; text-align: center; padding: 0.12in 0.06in; background: #ecfdf5; border-radius: 10px; border: 1px solid #6ee7b7; }
-      .step .n { font-size: 0.18in; font-weight: 800; color: #059669; }
-      .step p { font-size: 0.09in; font-weight: 600; margin-top: 0.04in; color: #065f46; }
-      .arrow { color: #6ee7b7; font-size: 0.16in; font-weight: 800; }
-      .bullets { margin-top: 0.18in; columns: 2; column-gap: 0.2in; }
-      .bullets li { font-size: 0.105in; line-height: 1.45; color: #334155; margin-bottom: 0.08in; margin-left: 0.14in; }
-      .img { margin-top: 0.14in; border: 1px solid #a7f3d0; border-radius: 10px; overflow: hidden; }
-      .img img { width: 100%; display: block; }
-      .cta { margin-top: auto; padding-top: 0.14in; font-weight: 700; font-size: 0.11in; color: #059669; }
-      .foot { font-size: 0.075in; color: #6b7280; margin-top: 0.08in; }
-      .hint { position: fixed; bottom: 12px; right: 12px; padding: 8px 12px; background: #059669; color: #fff; font: 700 12px system-ui; }
-    </style>
   </head>
   <body>
-    <p class="hint">Ctrl+P → Letter</p>
+    <p class="hint">Ctrl+P → Letter, backgrounds on</p>
     <article class="flyer">
-      <p class="chip">LevelUp feature</p>
-      <h1>School Library</h1>
-      <p class="sub">
-        Check out books from your catalog, track due dates, and tie returns to your rewards economy—
-        late fees or on-time bonuses can flow through PBIS points.
-      </p>
-      <div class="flow" aria-label="Library flow">
-        <div class="step"><div class="n">1</div><p>Check out</p></div>
-        <span class="arrow">→</span>
-        <div class="step"><div class="n">2</div><p>Track loan</p></div>
-        <span class="arrow">→</span>
-        <div class="step"><div class="n">3</div><p>Return</p></div>
-        <span class="arrow">→</span>
-        <div class="step"><div class="n">4</div><p>Points adjust</p></div>
+      <div class="stripe" aria-hidden="true"></div>
+      <header class="top">
+        <img src="/logo.png" alt="LevelUp logo" class="flyer-brand-logo" width="80" height="80" />
+        <h1>LEVEL UP<em>Feature</em></h1>
+        <p class="tagline">Library</p>
+      </header>
+      <h2 class="mega">Library checkout<br /><span>meets points.</span></h2>
+      <p class="sub">Due dates, late fees, and on-time bonuses tied to your rewards economy—optional module for media centers.</p>
+      <section class="blocks">
+        <div class="block"><h3>Checkout</h3><p>Track books and materials.</p></div>
+        <div class="block"><h3>Due dates</h3><p>Automated reminders.</p></div>
+        <div class="block"><h3>Bonuses</h3><p>On-time return rewards.</p></div>
+        <div class="block"><h3>Reports</h3><p>Staff visibility in admin.</p></div>
+      </section>
+      
+      <div class="img-wrap">
+        <img src="/marketing/screenshots/admin-library.png" alt="Library admin" width="1200" height="600" loading="lazy" />
       </div>
-      <ul class="bullets">
-        <li>Configurable loan period (default 14 days)</li>
-        <li>Librarian station + optional student self-checkout portal</li>
-        <li>Late fees via app points or isolated library points</li>
-        <li>On-time return bonuses (optional)</li>
-        <li>Library activity notifications for staff</li>
-      </ul>
-      <div class="img">
-        <img src="/marketing/screenshots/admin-library.png" alt="School library checkout" width="800" height="480" />
-      </div>
-      <p class="cta">Librarian role in staff portal · <a href="https://leveluprewards.app" style="color:#059669">leveluprewards.app</a></p>
+      <footer class="bottom">
+        <div class="cta">
+          LIBRARY + PBIS
+          <small>Optional add-on</small>
+        </div>
+        <div class="urls">
+          <a href="https://leveluprewards.app">leveluprewards.app</a>
+          <a href="mailto:contact@leveluprewards.app">contact@leveluprewards.app</a>
+        </div>
+      </footer>
       <footer class="flyer-footer">
         <p class="flyer-footer__vendor">Approved NYC Department of Education (DOE) vendor</p>
         <p class="flyer-footer__links"><a href="https://leveluprewards.app">leveluprewards.app</a> · <a href="mailto:contact@leveluprewards.app">contact@leveluprewards.app</a></p>
         <p class="flyer-footer__copy">© 2026 LevelUp EdTech Enterprises LLC</p>
       </footer>
-
-      </article>
+    </article>
   </body>
 </html>

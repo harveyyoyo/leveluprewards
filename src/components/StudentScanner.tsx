@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
+import { KioskWedgeCameraAssist } from '@/components/kiosk/KioskWedgeCameraAssist';
 import { useAppContext } from '@/components/AppProvider';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useToast } from '@/hooks/use-toast';
@@ -650,7 +651,18 @@ export function StudentScanner({
         }
     }, [isActive, loginTab]);
 
+    const wedgeDemoCameraActive =
+        isActive && cardEnabled && loginTab === 'nfc' && settings.kioskWedgeDemoCameraEnabled === true;
+
     return (
+        <>
+        <KioskWedgeCameraAssist
+            active={wedgeDemoCameraActive}
+            onScan={(code) => void handleLookup(code)}
+            onError={(err) => {
+                toast({ variant: 'destructive', title: 'Demo camera', description: err });
+            }}
+        />
         <div className={cn(
             "w-full max-w-md rounded-[2.5rem] p-4 transition-all duration-700 relative z-10 [@media(max-height:720px)]:max-w-sm [@media(max-height:720px)]:rounded-3xl [@media(max-height:720px)]:p-3",
             isGraphic ? 'bg-card/90 backdrop-blur-2xl border border-border shadow-xl shadow-primary/10' : 'bg-card shadow-lg border border-border'
@@ -801,5 +813,6 @@ export function StudentScanner({
                 </Tabs>
             </div>
         </div>
+        </>
     );
 }

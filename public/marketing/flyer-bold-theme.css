@@ -1,0 +1,259 @@
+/* LevelUp marketing flyers — Bold Navy theme (matches flyer-bold.html) */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800;900&display=swap');
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+@page { size: letter; margin: 0; }
+
+html,
+body {
+  width: 8.5in;
+  min-height: 11in;
+  font-family: Outfit, system-ui, sans-serif;
+  background: #0a1628;
+  color: #fff;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+html.embed .hint { display: none !important; }
+
+.flyer {
+  width: 8.5in;
+  min-height: 11in;
+  background: #102a45;
+  padding: 0.5in;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+.flyer--compact { padding: 0.42in 0.48in; }
+
+.stripe {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 2.2in;
+  height: 100%;
+  background: linear-gradient(180deg, #7dd3fc 0%, #38bdf8 40%, transparent 100%);
+  opacity: 0.15;
+  transform: skewX(-8deg) translateX(0.4in);
+  pointer-events: none;
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  gap: 0.2in;
+  position: relative;
+  z-index: 1;
+}
+
+.top .tagline {
+  margin-left: auto;
+  font-size: 0.085in;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #7dd3fc;
+  text-align: right;
+  line-height: 1.35;
+}
+
+.top h1 {
+  font-size: 0.38in;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.top h1 em {
+  font-style: normal;
+  color: #7dd3fc;
+  display: block;
+  font-size: 0.14in;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  margin-top: 0.06in;
+}
+
+.mega {
+  position: relative;
+  z-index: 1;
+  margin-top: 0.28in;
+  font-size: 0.58in;
+  font-weight: 900;
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+  max-width: 7.2in;
+}
+
+.flyer--compact .mega {
+  font-size: 0.46in;
+  margin-top: 0.18in;
+}
+
+.mega span { color: #7dd3fc; }
+
+.sub {
+  position: relative;
+  z-index: 1;
+  margin-top: 0.14in;
+  font-size: 0.155in;
+  font-weight: 500;
+  line-height: 1.45;
+  color: #cbd5e1;
+  max-width: 6.8in;
+}
+
+.flyer--compact .sub {
+  font-size: 0.12in;
+  margin-top: 0.1in;
+}
+
+.blocks {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.1in;
+  margin-top: 0.2in;
+}
+
+.blocks--3 { grid-template-columns: repeat(3, 1fr); }
+
+.blocks--1 { grid-template-columns: 1fr; }
+
+.block {
+  background: rgba(255, 255, 255, 0.06);
+  border: 2px solid rgba(125, 211, 252, 0.35);
+  padding: 0.12in 0.14in;
+  border-radius: 8px;
+}
+
+.block h3 {
+  font-size: 0.12in;
+  font-weight: 800;
+  color: #7dd3fc;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.block p {
+  margin-top: 0.05in;
+  font-size: 0.1in;
+  line-height: 1.42;
+  color: #e2e8f0;
+}
+
+.block ul {
+  margin-top: 0.06in;
+  padding-left: 0.14in;
+  font-size: 0.095in;
+  line-height: 1.42;
+  color: #e2e8f0;
+}
+
+.note {
+  position: relative;
+  z-index: 1;
+  margin-top: 0.12in;
+  padding: 0.1in 0.12in;
+  background: rgba(125, 211, 252, 0.12);
+  border: 2px solid rgba(125, 211, 252, 0.35);
+  border-radius: 8px;
+  font-size: 0.095in;
+  line-height: 1.45;
+  color: #e2e8f0;
+}
+
+.note strong { color: #7dd3fc; }
+
+.img-wrap {
+  position: relative;
+  z-index: 1;
+  margin-top: 0.16in;
+  border: 3px solid #7dd3fc;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #0a1628;
+}
+
+.img-wrap img {
+  width: 100%;
+  display: block;
+  filter: contrast(1.05);
+  object-fit: contain;
+  object-position: top center;
+  max-height: 3.15in;
+}
+
+.img-wrap--dual {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.08in;
+  padding: 0.08in;
+  background: #0a1628;
+}
+
+.img-wrap--dual img {
+  max-height: 2.35in;
+  border-radius: 6px;
+  border: 1px solid rgba(125, 211, 252, 0.25);
+}
+
+.bottom {
+  position: relative;
+  z-index: 1;
+  margin-top: auto;
+  padding-top: 0.18in;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 0.16in;
+}
+
+.bottom .cta {
+  font-size: 0.18in;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.bottom .cta small {
+  display: block;
+  font-size: 0.1in;
+  font-weight: 600;
+  color: #94a3b8;
+  margin-top: 0.05in;
+}
+
+.urls {
+  text-align: right;
+  font-size: 0.11in;
+  font-weight: 700;
+}
+
+.urls a {
+  color: #7dd3fc;
+  text-decoration: none;
+  display: block;
+  margin-top: 0.04in;
+}
+
+.hint {
+  position: fixed;
+  bottom: 12px;
+  right: 12px;
+  padding: 8px 12px;
+  background: #7dd3fc;
+  color: #102a45;
+  font: 700 12px system-ui;
+  border-radius: 6px;
+}
+
+@media print {
+  .hint { display: none; }
+}

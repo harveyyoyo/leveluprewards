@@ -6,9 +6,15 @@ import { TabsList } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
+export type AdminMainTabsOrientation = 'horizontal' | 'vertical';
+
 type AdminMainTabsListProps = Omit<React.ComponentPropsWithoutRef<typeof TabsList>, 'children'> & {
   activeTabValue?: string;
-  /** Pinned controls (e.g. Add more) — fixed on the right, never scrolls with tabs. */
+  /** Horizontal row (default) or vertical sidebar stack. */
+  orientation?: AdminMainTabsOrientation;
+  /** Scroll active tab into view on change (can feel jumpy on staff portal). */
+  autoScrollActiveTab?: boolean;
+  /** Pinned controls (e.g. Add more) — end of row (horizontal) or bottom of stack (vertical). */
   endAction?: React.ReactNode;
   children: React.ReactNode;
 };
@@ -16,16 +22,75 @@ type AdminMainTabsListProps = Omit<React.ComponentPropsWithoutRef<typeof TabsLis
 const SCROLL_STEP_PX = 220;
 const FADE_WIDTH_PX = 48;
 
+function AdminMainTabsListVertical({
+  className,
+  children,
+  activeTabValue,
+  autoScrollActiveTab = true,
+  endAction,
+  ...props
+}: AdminMainTabsListProps) {
+  const listRef = React.useRef<HTMLDivElement>(null);
+
+  React.useLayoutEffect(() => {
+    if (!autoScrollActiveTab) return;
+    const list = listRef.current;
+    if (!list) return;
+    const active = list.querySelector<HTMLElement>('[data-state="active"]');
+    const tabEl = active?.closest<HTMLElement>('[draggable]') ?? active;
+    tabEl?.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+  }, [activeTabValue, autoScrollActiveTab, children]);
+
+  return (
+    <div
+      className={cn(
+        'flex w-full min-w-0 flex-col gap-2 rounded-2xl border bg-muted/50 p-2 shadow-sm lg:sticky lg:top-4 lg:max-h-[calc(100vh-6rem)]',
+        className,
+      )}
+    >
+      <TabsList
+        ref={listRef}
+        className={cn(
+          'flex h-auto w-full min-w-0 flex-col gap-1.5 rounded-xl border-0 bg-transparent p-0 shadow-none',
+          'items-stretch justify-start overflow-y-auto overflow-x-hidden',
+          '[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+        )}
+        aria-label="Admin portal sections"
+        {...props}
+      >
+        {children}
+      </TabsList>
+      {endAction ? <div className="shrink-0 border-t border-border/40 pt-2">{endAction}</div> : null}
+    </div>
+  );
+}
+
 /**
- * Admin main tab row: active tab stays centered in the scroll area; Add more on the right.
+ * Admin main tabs: horizontal row with scroll centering, or vertical sidebar stack.
  */
 export function AdminMainTabsList({
   className,
   children,
   activeTabValue,
+  orientation = 'horizontal',
+  autoScrollActiveTab = true,
   endAction,
   ...props
 }: AdminMainTabsListProps) {
+  if (orientation === 'vertical') {
+    return (
+      <AdminMainTabsListVertical
+        className={className}
+        activeTabValue={activeTabValue}
+        autoScrollActiveTab={autoScrollActiveTab}
+        endAction={endAction}
+        {...props}
+      >
+        {children}
+      </AdminMainTabsListVertical>
+    );
+  }
+
   const listRef = React.useRef<HTMLDivElement>(null);
   const [hasOverflow, setHasOverflow] = React.useState(false);
   const [canScrollLeft, setCanScrollLeft] = React.useState(false);
@@ -58,7 +123,6 @@ export function AdminMainTabsList({
 
       const tabEl = active.closest<HTMLElement>('[draggable]') ?? active;
 
-      // Measure with no edge padding so centering stays accurate.
       list.style.paddingLeft = '0px';
       list.style.paddingRight = '0px';
 
@@ -98,6 +162,10 @@ export function AdminMainTabsList({
   }, []);
 
   React.useLayoutEffect(() => {
+    if (!autoScrollActiveTab) {
+      updateScrollHints();
+      return;
+    }
     centerActiveTab('auto');
     const el = listRef.current;
     if (!el) return;
@@ -110,11 +178,12 @@ export function AdminMainTabsList({
       el.removeEventListener('scroll', updateScrollHints);
       ro.disconnect();
     };
-  }, [centerActiveTab, updateScrollHints, children]);
+  }, [autoScrollActiveTab, centerActiveTab, updateScrollHints, children]);
 
   React.useLayoutEffect(() => {
-    centerActiveTab('smooth');
-  }, [activeTabValue, centerActiveTab]);
+    if (!autoScrollActiveTab) return;
+    centerActiveTab('auto');
+  }, [activeTabValue, autoScrollActiveTab, centerActiveTab]);
 
   React.useLayoutEffect(() => {
     updateScrollHints();

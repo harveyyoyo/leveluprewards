@@ -1,6 +1,6 @@
 Student home sign-in unavailable on this environment
 Error: Student home sign-in unavailable on this environment
-    at prepare (file:///C:/Users/Administrator/school%20arcade%20reward%20antigravity/studio/scripts/capture-walkthrough-videos.mjs:1000:22)
-    at async recordClipReady (file:///C:/Users/Administrator/school%20arcade%20reward%20antigravity/studio/scripts/capture-walkthrough-videos.mjs:492:9)
-    at async captureLibrary (file:///C:/Users/Administrator/school%20arcade%20reward%20antigravity/studio/scripts/capture-walkthrough-videos.mjs:1206:26)
-    at async main (file:///C:/Users/Administrator/school%20arcade%20reward%20antigravity/studio/scripts/capture-walkthrough-videos.mjs:1289:5)
+    at prepare (file:///C:/Users/Administrator/school%20arcade%20reward%20antigravity/studio/scripts/capture-walkthrough-videos.mjs:1395:22)
+    at async recordClipReady (file:///C:/Users/Administrator/school%20arcade%20reward%20antigravity/studio/scripts/capture-walkthrough-videos.mjs:854:9)
+    at async captureLibrary (file:///C:/Users/Administrator/school%20arcade%20reward%20antigravity/studio/scripts/capture-walkthrough-videos.mjs:1873:26)
+    at async main (file:///C:/Users/Administrator/school%20arcade%20reward%20antigravity/studio/scripts/capture-walkthrough-videos.mjs:2038:5)

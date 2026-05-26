@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  officeAbsoluteHref,
   officePortalEntryHref,
   officePortalHandoffHref,
   officePublicHref,
@@ -36,6 +37,18 @@ describe('officePublicUrl', () => {
     expect(officePortalHandoffHref('yeshiva')).toBe(
       '/api/auth/office-handoff/redirect?school=yeshiva',
     );
+    locationSpy.mockRestore();
+  });
+
+  it('officeAbsoluteHref does not double-prefix when href is already absolute', () => {
+    process.env.NEXT_PUBLIC_OFFICE_CANONICAL_HOST = 'office.leveluprewards.app';
+    const locationSpy = vi.spyOn(window, 'location', 'get').mockReturnValue({
+      ...window.location,
+      host: 'leveluprewards.app',
+      origin: 'https://leveluprewards.app',
+    } as Location);
+    expect(officeAbsoluteHref('yeshiva')).toBe('https://office.leveluprewards.app/yeshiva');
+    expect(officeAbsoluteHref('yeshiva')).not.toContain('leveluprewards.app/https');
     locationSpy.mockRestore();
   });
 });

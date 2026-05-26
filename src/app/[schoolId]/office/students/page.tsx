@@ -21,7 +21,9 @@ export default function OfficeStudentsPage() {
         schoolId={schoolId}
         students={shared.students}
         classes={shared.classes}
+        teachers={shared.teachers}
         classNameById={shared.classNameById}
+        teacherNameById={shared.teacherNameById}
         gradeEntries={gradeEntries}
         billingAccounts={billingAccounts}
         activeTerm={term}

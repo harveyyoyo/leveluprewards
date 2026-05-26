@@ -50,10 +50,15 @@ function canUseRoute(pathname: string, routeSchoolId: string, loginState: string
     );
   }
 
-  // Allow school chooser through: Admin page shows the passcode gate until role is granted (same idea as /teacher).
-  // Prize desk staff use Admin → Prizes (same URL, no full admin passcode).
+  // Admin URL hosts full admin tools, prize desk, house coordinator, and the unified teacher staff portal.
   if (section === 'admin') {
-    return loginState === 'admin' || loginState === 'school' || loginState === 'prizeClerk' || loginState === 'houseCoordinator';
+    return (
+      loginState === 'admin' ||
+      loginState === 'school' ||
+      loginState === 'teacher' ||
+      loginState === 'prizeClerk' ||
+      loginState === 'houseCoordinator'
+    );
   }
   if (section === 'teacher') {
     // Allow reaching the staff sign-in screen while in a student/public session.
@@ -126,6 +131,10 @@ function SchoolSessionGateBody({
 
     const sessionSchool = schoolId?.trim().toLowerCase() ?? '';
     if (!sessionSchool || sessionSchool !== route) {
+      if (loginState === 'school' && sessionSchool && sessionSchool !== route) {
+        router.replace(`/login?school=${encodeURIComponent(route)}&changeSchool=1`);
+        return;
+      }
       // Student / school chooser sessions may restore schoolId shortly after navigation.
       if (loginState !== 'student' && loginState !== 'school') {
         router.replace(`/login?school=${encodeURIComponent(route)}`);
@@ -134,7 +143,13 @@ function SchoolSessionGateBody({
     }
 
     if (!canUseRoute(pathname, route, loginState)) {
-      router.replace(`/login?school=${encodeURIComponent(route)}`);
+      const fallback =
+        loginState === 'teacher'
+          ? `/${route}/admin`
+          : `/login?school=${encodeURIComponent(route)}`;
+      if (pathname !== fallback) {
+        router.replace(fallback);
+      }
     }
   }, [isInitialized, isStaffSignInLink, isUserLoading, login, loginState, schoolId, route, router, pathname]);
 

@@ -2,83 +2,45 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>LevelUp Feature — School Houses</title>
+    <title>LevelUp — School Houses</title>
     <script src="/marketing/flyer-embed.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet" />
-    <style>
-      * { box-sizing: border-box; margin: 0; padding: 0; }
-      @page { size: letter; margin: 0; }
-      html, body {
-        width: 8.5in; min-height: 11in; font-family: Outfit, system-ui, sans-serif;
-        background: #1e1b4b; color: #fff;
-        -webkit-print-color-adjust: exact; print-color-adjust: exact;
-      }
-      html.embed .hint { display: none !important; }
-      .flyer {
-        width: 8.5in; min-height: 11in;
-        background: linear-gradient(145deg, #312e81, #1e1b4b 55%, #0f0a30);
-        padding: 0.44in 0.5in; display: flex; flex-direction: column;
-      }
-      .chip {
-        align-self: flex-start; background: #fbbf24; color: #78350f;
-        font-size: 0.1in; font-weight: 800; padding: 0.06in 0.14in; border-radius: 999px;
-        text-transform: uppercase; letter-spacing: 0.1em;
-      }
-      h1 { font-size: 0.52in; font-weight: 900; line-height: 1; margin-top: 0.16in; }
-      h1 span { color: #a78bfa; }
-      .sub { font-size: 0.145in; color: #c4b5fd; line-height: 1.5; margin-top: 0.12in; max-width: 6.5in; }
-      .houses { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.1in; margin-top: 0.2in; }
-      .house {
-        text-align: center; padding: 0.14in 0.08in; border-radius: 12px;
-        border: 2px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.05);
-      }
-      .house .dot { width: 0.28in; height: 0.28in; border-radius: 50%; margin: 0 auto 0.08in; }
-      .house b { font-size: 0.11in; display: block; }
-      .house span { font-size: 0.085in; color: #a5b4fc; }
-      .list { margin-top: 0.18in; display: grid; grid-template-columns: 1fr 1fr; gap: 0.1in; }
-      .item { font-size: 0.105in; line-height: 1.4; color: #e0e7ff; padding-left: 0.14in; position: relative; }
-      .item::before { content: '◆'; position: absolute; left: 0; color: #fbbf24; font-size: 0.08in; top: 0.05in; }
-      .img { margin-top: 0.16in; border-radius: 12px; overflow: hidden; border: 2px solid #6366f1; }
-      .img img { width: 100%; display: block; }
-      .cta { margin-top: auto; padding-top: 0.16in; font-size: 0.12in; font-weight: 700; }
-      .cta a { color: #fde68a; text-decoration: none; }
-      .foot { font-size: 0.075in; color: #6366f1; margin-top: 0.08in; }
-      .hint { position: fixed; bottom: 12px; right: 12px; padding: 8px 12px; background: #4f46e5; color: #fff; font: 700 12px system-ui; }
-    </style>
   </head>
   <body>
     <p class="hint">Ctrl+P → Letter, backgrounds on</p>
     <article class="flyer">
-      <span class="chip">LevelUp feature</span>
-      <h1>School <span>Houses</span></h1>
-      <p class="sub">
-        Sort students into spirit houses, roll up teacher point awards to house totals, run a sorting ceremony,
-        and showcase winners on the Hall of Fame—Harry Potter energy, your PBIS rules.
-      </p>
-      <div class="houses" aria-hidden="true">
-        <div class="house"><div class="dot" style="background:#ef4444"></div><b>Ruby</b><span>House</span></div>
-        <div class="house"><div class="dot" style="background:#3b82f6"></div><b>Sapphire</b><span>House</span></div>
-        <div class="house"><div class="dot" style="background:#22c55e"></div><b>Emerald</b><span>House</span></div>
-        <div class="house"><div class="dot" style="background:#eab308"></div><b>Topaz</b><span>House</span></div>
+      <div class="stripe" aria-hidden="true"></div>
+      <header class="top">
+        <img src="/logo.png" alt="LevelUp logo" class="flyer-brand-logo" width="80" height="80" />
+        <h1>LEVEL UP<em>Feature</em></h1>
+        <p class="tagline">Houses</p>
+      </header>
+      <h2 class="mega">Spirit houses.<br /><span>Live rollups.</span></h2>
+      <p class="sub">Sorting ceremony, house parents, point rollups, and Hall of Fame integration—build belonging at scale.</p>
+      <section class="blocks">
+        <div class="block"><h3>Sort</h3><p>Assign students to houses.</p></div>
+        <div class="block"><h3>Roll up</h3><p>Aggregate points by house.</p></div>
+        <div class="block"><h3>Display</h3><p>Hallway TVs and leaderboards.</p></div>
+        <div class="block"><h3>Compete</h3><p>Healthy school-wide spirit.</p></div>
+      </section>
+      
+      <div class="img-wrap">
+        <img src="/marketing/screenshots/admin-houses.png" alt="School houses admin" width="1200" height="600" loading="lazy" />
       </div>
-      <div class="list">
-        <p class="item">Custom house names, colors, and mascots</p>
-        <p class="item">Assign house parents (teachers) per house</p>
-        <p class="item">Balanced auto-assign or manual roster moves</p>
-        <p class="item">Optional point rollup from every teacher award</p>
-        <p class="item">House badge on student kiosk header</p>
-        <p class="item">Sorting ceremony page for reveal events</p>
-      </div>
-      <div class="img">
-        <img src="/marketing/screenshots/admin-houses.png" alt="School houses admin" width="900" height="500" />
-      </div>
-      <p class="cta">Enable in Admin → Houses · <a href="https://leveluprewards.app">leveluprewards.app</a></p>
+      <footer class="bottom">
+        <div class="cta">
+          HOUSE COMPETITIONS
+          <small>PBIS with spirit</small>
+        </div>
+        <div class="urls">
+          <a href="https://leveluprewards.app">leveluprewards.app</a>
+          <a href="mailto:contact@leveluprewards.app">contact@leveluprewards.app</a>
+        </div>
+      </footer>
       <footer class="flyer-footer">
         <p class="flyer-footer__vendor">Approved NYC Department of Education (DOE) vendor</p>
         <p class="flyer-footer__links"><a href="https://leveluprewards.app">leveluprewards.app</a> · <a href="mailto:contact@leveluprewards.app">contact@leveluprewards.app</a></p>
         <p class="flyer-footer__copy">© 2026 LevelUp EdTech Enterprises LLC</p>
       </footer>
-
-      </article>
+    </article>
   </body>
 </html>

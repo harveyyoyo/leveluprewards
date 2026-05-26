@@ -76,7 +76,13 @@ export const LandscapeBackground: React.FC<{ totalFrames: number }> = ({
   );
 };
 
-export const LandscapeIntro: React.FC = () => {
+export const LandscapeIntro: React.FC<{
+  eyebrow?: string;
+  tagline?: string;
+}> = ({
+  eyebrow = "School Rewards System",
+  tagline = "Motivate · Reward · Elevate",
+}) => {
   const frame = useCurrentFrame();
   const { fps, width } = useVideoConfig();
   const titlePop = spring({
@@ -185,14 +191,20 @@ export const LandscapeIntro: React.FC = () => {
             opacity: subtitleIn,
           }}
         >
-          Motivate · Reward · Elevate
+          {tagline}
         </p>
       </div>
     </AbsoluteFill>
   );
 };
 
-export const LandscapeOutro: React.FC = () => {
+export const LandscapeOutro: React.FC<{
+  headline?: string;
+  subline?: string;
+}> = ({
+  headline = "Transform your classroom",
+  subline = "Teachers · Students · Admins — one portal.",
+}) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const scale = spring({
@@ -242,7 +254,7 @@ export const LandscapeOutro: React.FC = () => {
             WebkitTextFillColor: "transparent",
           }}
         >
-          Transform your classroom
+          {headline}
         </h2>
         <p
           style={{
@@ -253,7 +265,7 @@ export const LandscapeOutro: React.FC = () => {
             marginBottom: 48,
           }}
         >
-          Teachers · Students · Admins — one portal.
+          {subline}
         </p>
         <div
           style={{
@@ -279,16 +291,24 @@ export const LandscapeOutro: React.FC = () => {
 export const SegmentFlash: React.FC<{
   globalFrame: number;
   boundaries: number[];
-}> = ({ globalFrame, boundaries }) => {
-  const hit = boundaries.some((b) => globalFrame >= b && globalFrame < b + 5);
+  flashFrames?: number;
+}> = ({ globalFrame, boundaries, flashFrames = 5 }) => {
+  const hit = boundaries.some(
+    (b) => globalFrame >= b && globalFrame < b + flashFrames,
+  );
   if (!hit) return null;
   const local = boundaries.find(
-    (b) => globalFrame >= b && globalFrame < b + 5,
+    (b) => globalFrame >= b && globalFrame < b + flashFrames,
   )!;
-  const opacity = interpolate(globalFrame, [local, local + 5], [0.9, 0], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
+  const opacity = interpolate(
+    globalFrame,
+    [local, local + flashFrames],
+    [0.9, 0],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+    },
+  );
 
   return (
     <AbsoluteFill

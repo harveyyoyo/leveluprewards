@@ -69,7 +69,7 @@ function staffLandingPath(schoolId: string, type: StaffPortalLoginOption['type']
     if (type === 'librarian') return `/${schoolId}/librarian`;
     if (type === 'office') return `/${schoolId}/office`;
     if (type === 'houseCoordinator') return `/${schoolId}/admin`;
-    return `/${schoolId}/teacher`;
+    return `/${schoolId}/admin`;
 }
 
 function WhereToDrawnTitle({
@@ -267,9 +267,9 @@ export default function PortalPage() {
             ? [
                   {
                       id: 'print',
-                      href: `/${schoolId}/teacher`,
+                      href: `/${schoolId}/admin`,
                       title: 'Teacher Portal',
-                      description: 'Print point coupons, adjust points manually, customize categories, print reports, and add prizes.',
+                      description: 'Staff portal with teacher tabs — points, classes, prizes, and reports.',
                       icon: Printer,
                   },
               ]
@@ -370,10 +370,10 @@ export default function PortalPage() {
                         const rainbowColor = rainbowForPortalId(area.id, settings.colorScheme);
                         const needsAdminKioskHandoff = area.id === 'redeem' && loginState === 'admin';
                         const needsAdminPasscode = area.id === 'admin' && !isAdmin && !canBypassAdminPasscode;
-                        // School gate and admins pick staff (or continue as admin); signed-in teachers go straight through.
+                        // School gate, admins, and developers can pick staff (or continue as admin); signed-in teachers go straight through.
                         const needsTeacherLogin =
                             area.id === 'print' &&
-                            (loginState === 'school' || loginState === 'admin');
+                            (loginState === 'school' || loginState === 'admin' || loginState === 'developer');
                         const isAppDisplay = settings.displayMode === 'app';
                         const portalCard = (
                                 <motion.div
@@ -526,7 +526,11 @@ export default function PortalPage() {
                             setAdminSubmitting(false);
                             setAdminPasscode('');
                         } else if (schoolId) {
-                            router.prefetch(`/${schoolId}/${adminDestination}`);
+                            router.prefetch(
+                                adminDestination === 'teacher'
+                                    ? `/${schoolId}/admin?view=teacher`
+                                    : `/${schoolId}/admin`,
+                            );
                         }
                         setAdminDialogOpen(open);
                     }}
@@ -581,7 +585,11 @@ export default function PortalPage() {
                                         }
                                         playSound('login');
                                         setAdminDialogOpen(false);
-                                        router.replace(`/${schoolId}/${adminDestination}`);
+                                        router.replace(
+                                            adminDestination === 'teacher'
+                                                ? `/${schoolId}/admin?view=teacher`
+                                                : `/${schoolId}/admin`,
+                                        );
                                     })();
                                 }}
                             />
@@ -628,7 +636,11 @@ export default function PortalPage() {
                                         }
                                         playSound('login');
                                         setAdminDialogOpen(false);
-                                        router.replace(`/${schoolId}/${adminDestination}`);
+                                        router.replace(
+                                            adminDestination === 'teacher'
+                                                ? `/${schoolId}/admin?view=teacher`
+                                                : `/${schoolId}/admin`,
+                                        );
                                     })();
                                 }}
                             >
@@ -676,7 +688,7 @@ export default function PortalPage() {
                                         onClick={() => {
                                             playSound('click');
                                             setTeacherDialogOpen(false);
-                                            router.replace(`/${schoolId}/teacher?as=admin`);
+                                            router.replace(`/${schoolId}/admin?view=teacher`);
                                         }}
                                         disabled={teacherSubmitting}
                                     >
@@ -695,7 +707,7 @@ export default function PortalPage() {
                                     playSound('click');
                                     setTeacherDialogOpen(false);
                                     setAdminDestination('teacher');
-                                    router.prefetch(`/${schoolId}/teacher`);
+                                    router.prefetch(`/${schoolId}/admin?view=teacher`);
                                     setAdminDialogOpen(true);
                                 }}
                             >

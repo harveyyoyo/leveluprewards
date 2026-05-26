@@ -1,5 +1,16 @@
 (function () {
   try {
+    var isClassic =
+      typeof location !== 'undefined' &&
+      location.pathname.indexOf('/marketing/classic/') !== -1;
+
+    if (!isClassic) {
+      var bold = document.createElement('link');
+      bold.rel = 'stylesheet';
+      bold.href = '/marketing/flyer-bold-theme.css';
+      document.head.appendChild(bold);
+    }
+
     var link = document.createElement('link');
     link.rel = 'stylesheet';
     link.href = '/marketing/flyer-print.css';

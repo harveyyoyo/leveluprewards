@@ -111,10 +111,19 @@ export function HouseSetupWizard({
     if (open) reset();
   }, [open, reset]);
 
+  useEffect(() => {
+    if (step === 3 && unassignedCount === 0) {
+      setDraft((d) => (d.assignMode === 'skip' ? d : { ...d, assignMode: 'skip' }));
+    }
+  }, [step, unassignedCount]);
+
   const canGoNext = useMemo(() => {
-    if (step === 1 && draft.themeId !== 'skip' && !selectedTheme) return false;
+    if (step === 1) {
+      if (draft.themeId === 'skip' && houses.length === 0) return false;
+      if (draft.themeId !== 'skip' && !selectedTheme) return false;
+    }
     return true;
-  }, [step, draft.themeId, selectedTheme]);
+  }, [step, draft.themeId, selectedTheme, houses.length]);
 
   const stepTitle = useMemo(() => {
     switch (step) {
@@ -477,7 +486,7 @@ export function HouseSetupWizard({
                 </Link>
               </Button>
               <Button asChild variant="outline" className="rounded-xl flex-1">
-                <Link href={`/${schoolId}/house-sorting?mode=reveal`} target="_blank" rel="noopener noreferrer">
+                <Link href={`/${schoolId}/house-sorting`} target="_blank" rel="noopener noreferrer">
                   <Wand2 className="mr-2 h-4 w-4" />
                   Sorting ceremony
                 </Link>

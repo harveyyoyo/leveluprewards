@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { doc } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -68,7 +68,7 @@ function staffLandingPath(schoolId: string, type: StaffPortalLoginOption['type']
     if (type === 'librarian') return `/${schoolId}/librarian`;
     if (type === 'office') return officeStaffEntryHref(schoolId);
     if (type === 'houseCoordinator') return `/${schoolId}/admin`;
-    return `/${schoolId}/teacher`;
+    return `/${schoolId}/admin`;
 }
 
 function TeacherPrinterSkeleton() {
@@ -113,7 +113,9 @@ export default function TeacherPage() {
     const canBypassAdminPasscode = isAllowedAdminGoogleUser(firebaseUser);
     const params = useParams<{ schoolId: string }>();
     const router = useRouter();
+    const pathname = usePathname();
     const searchParams = useSearchParams();
+    const onTeacherRoute = pathname?.includes('/teacher') ?? false;
     const firestore = useFirestore();
     const { settings } = useSettings();
     const isGraphic = settings.graphicMode === 'graphics';
@@ -161,8 +163,8 @@ export default function TeacherPage() {
         [schoolPublic],
     );
 
-    useEffect(() => {
-        if (!isInitialized || !schoolId) return;
+    useLayoutEffect(() => {
+        if (!onTeacherRoute || !isInitialized || !schoolId) return;
         if (directAccountKey) return;
         if (loginState === 'secretary') {
             router.replace(`/${schoolId}/secretary`);
@@ -176,8 +178,25 @@ export default function TeacherPage() {
             router.replace(`/${schoolId}/office`);
         } else if (loginState === 'houseCoordinator') {
             router.replace(`/${schoolId}/admin`);
+        } else if (loginState === 'teacher') {
+            router.replace(`/${schoolId}/admin`);
+        } else if (
+            adminTeacherBypass &&
+            (loginState === 'admin' || loginState === 'developer') &&
+            isAdmin
+        ) {
+            router.replace(`/${schoolId}/admin?view=teacher`);
         }
-    }, [directAccountKey, isInitialized, loginState, schoolId, router]);
+    }, [
+        adminTeacherBypass,
+        directAccountKey,
+        isAdmin,
+        isInitialized,
+        loginState,
+        onTeacherRoute,
+        schoolId,
+        router,
+    ]);
 
     useEffect(() => {
         if (
@@ -246,6 +265,8 @@ export default function TeacherPage() {
                 const dest = staffLandingPath(schoolId, selected.type);
                 if (selected.type === 'office') {
                     window.location.assign(dest);
+                } else if (selected.type === 'teacher') {
+                    window.location.replace(dest);
                 } else {
                     router.replace(dest);
                 }
@@ -281,7 +302,7 @@ export default function TeacherPage() {
             }
             playSound('login');
             setAdminDialogOpen(false);
-            router.replace(`/${schoolId}/teacher?as=admin`);
+            router.replace(`/${schoolId}/admin?view=teacher`);
             return true;
         } finally {
             setAdminSubmitting(false);
@@ -304,10 +325,7 @@ export default function TeacherPage() {
         (adminTeacherBypass && (loginState === 'admin' || loginState === 'developer') && isAdmin);
 
     if (!directAccountKey && canOpenTeacherTools) {
-        const displayName =
-            userName || (loginState === 'admin' || loginState === 'developer' ? 'Admin' : 'Teacher');
-        const validTeacherId = teacherDocId || userId || '';
-        return <TeacherPrinter teacherName={displayName} teacherId={validTeacherId} onLogout={handleLogout} />;
+        return null;
     }
 
     const selectedOption = staffOptions.find((option) => staffLoginKey(option) === selectedLoginKey);
@@ -408,7 +426,7 @@ export default function TeacherPage() {
                                     className="w-full h-12 rounded-xl font-bold"
                                     onClick={() => {
                                         playSound('click');
-                                        router.replace(`/${schoolId}/teacher?as=admin`);
+                                        router.replace(`/${schoolId}/admin?view=teacher`);
                                     }}
                                     disabled={isSubmitting}
                                 >

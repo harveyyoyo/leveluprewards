@@ -1,0 +1,166 @@
+{
+  "variantId": "pro",
+  "timing": {
+    "introEnd": 332,
+    "segmentEnds": [
+      540,
+      788,
+      1023,
+      1214,
+      1388,
+      1586,
+      1766,
+      1961,
+      2170,
+      2350,
+      2556,
+      2721,
+      2898,
+      3089
+    ],
+    "total": 3497
+  },
+  "narration": [
+    {
+      "id": "intro",
+      "label": "Intro",
+      "text": "This walkthrough covers each LevelUp feature — kiosk, ID cards, themes, prizes, raffles, and admin modules.",
+      "file": "voiceover/feature/pro/intro.mp3",
+      "startFrame": 14,
+      "durationFrames": 308
+    },
+    {
+      "id": "kiosk",
+      "label": "Kiosk",
+      "text": "Kiosk sign-in supports card, type, and scan workflows.",
+      "file": "voiceover/feature/pro/kiosk.mp3",
+      "startFrame": 334,
+      "durationFrames": 194
+    },
+    {
+      "id": "idCards",
+      "label": "ID cards",
+      "text": "Student ID cards with admin preview, print layouts, and scan-ready barcodes.",
+      "file": "voiceover/feature/pro/idCards.mp3",
+      "startFrame": 540,
+      "durationFrames": 236
+    },
+    {
+      "id": "themes",
+      "label": "Themes",
+      "text": "The theme designer builds card styles from a prompt and color palette with a live preview.",
+      "file": "voiceover/feature/pro/themes.mp3",
+      "startFrame": 788,
+      "durationFrames": 223
+    },
+    {
+      "id": "prizes",
+      "label": "Prizes",
+      "text": "Configurable prize catalog with inventory awareness.",
+      "file": "voiceover/feature/pro/prizes.mp3",
+      "startFrame": 1023,
+      "durationFrames": 179
+    },
+    {
+      "id": "coupons",
+      "label": "Coupons",
+      "text": "Teachers issue printable coupons tied to point rules.",
+      "file": "voiceover/feature/pro/coupons.mp3",
+      "startFrame": 1214,
+      "durationFrames": 162
+    },
+    {
+      "id": "raffle",
+      "label": "Raffle",
+      "text": "Scheduled raffles with ticket rules and winner workflows.",
+      "file": "voiceover/feature/pro/raffle.mp3",
+      "startFrame": 1388,
+      "durationFrames": 186
+    },
+    {
+      "id": "houses",
+      "label": "Houses",
+      "text": "House sorting, team totals, and display options.",
+      "file": "voiceover/feature/pro/houses.mp3",
+      "startFrame": 1586,
+      "durationFrames": 168
+    },
+    {
+      "id": "hallOfFame",
+      "label": "Hall of Fame",
+      "text": "Public leaderboard displays for lifetime and period rankings.",
+      "file": "voiceover/feature/pro/hallOfFame.mp3",
+      "startFrame": 1766,
+      "durationFrames": 183
+    },
+    {
+      "id": "notifications",
+      "label": "Notifications",
+      "text": "Notification policies for staff, inventory, and milestones.",
+      "file": "voiceover/feature/pro/notifications.mp3",
+      "startFrame": 1961,
+      "durationFrames": 197
+    },
+    {
+      "id": "bulletin",
+      "label": "Bulletin",
+      "text": "Digital bulletin surfaces for announcements and media.",
+      "file": "voiceover/feature/pro/bulletin.mp3",
+      "startFrame": 2170,
+      "durationFrames": 168
+    },
+    {
+      "id": "library",
+      "label": "Library",
+      "text": "Library module for loans, fees, and return incentives.",
+      "file": "voiceover/feature/pro/library.mp3",
+      "startFrame": 2350,
+      "durationFrames": 194
+    },
+    {
+      "id": "badges",
+      "label": "Badges",
+      "text": "Achievement badges, goals, and category thresholds.",
+      "file": "voiceover/feature/pro/badges.mp3",
+      "startFrame": 2556,
+      "durationFrames": 153
+    },
+    {
+      "id": "analytics",
+      "label": "Analytics",
+      "text": "Administrative insights across students and classes.",
+      "file": "voiceover/feature/pro/analytics.mp3",
+      "startFrame": 2721,
+      "durationFrames": 165
+    },
+    {
+      "id": "attendance",
+      "label": "Attendance",
+      "text": "Attendance capture integrated with kiosk sign-in.",
+      "file": "voiceover/feature/pro/attendance.mp3",
+      "startFrame": 2898,
+      "durationFrames": 179
+    },
+    {
+      "id": "outro",
+      "label": "Outro",
+      "text": "LevelUp reduces tool sprawl while keeping students on scan-first hardware. Request a walkthrough for your district.",
+      "file": "voiceover/feature/pro/outro.mp3",
+      "startFrame": 3089,
+      "durationFrames": 318
+    }
+  ],
+  "copy": {
+    "introEyebrow": "Feature overview",
+    "introTagline": "Module-by-module walkthrough",
+    "montageTitle": "Platform features",
+    "montageSubtitle": "14 features · One system",
+    "outroHeadline": "Deploy with confidence",
+    "outroSubline": "Role-based access · Audit-friendly"
+  },
+  "ttsVoice": "sage",
+  "musicVolume": 0.22,
+  "musicDuckRatio": 0.28,
+  "musicStyle": "default",
+  "musicSrc": "background-music.mp3"
+}

@@ -5,6 +5,7 @@ import type {
   OfficeGradeEntry,
   OfficeInvoice,
   OfficeStudent,
+  OfficeTeacher,
 } from '@/lib/office/types';
 import { getSuggestedTermLabel } from '@/lib/office/officeUtils';
 
@@ -19,6 +20,7 @@ export type OfficeDemoSeedInput = {
 };
 
 export type OfficeDemoSeedPayload = {
+  officeTeachers: OfficeTeacher[];
   officeStudents: OfficeStudent[];
   officeClasses: OfficeClass[];
   gradeEntries: OfficeGradeEntry[];
@@ -111,13 +113,21 @@ export function buildOfficeDemoSeed(input: OfficeDemoSeedInput): OfficeDemoSeedP
     updatedAt: now,
   }));
 
+  const officeTeachers: OfficeTeacher[] = teacherNames.map((teacherName, index) => ({
+    id: `oteacher-${input.variant}-${index + 1}`,
+    name: teacherName,
+    email: null,
+    updatedAt: now,
+  }));
+
   const officeStudents: OfficeStudent[] = input.students.map((s) => ({
     id: s.id,
     firstName: s.firstName?.trim() || 'Student',
     lastName: s.lastName?.trim() || '',
     nickname: s.nickname?.trim() || null,
     classId: s.classId ?? null,
-    teacherName: teacherNames[hashToIndex(s.id, teacherNames.length)] ?? null,
+    teacherId: officeTeachers[hashToIndex(s.id, officeTeachers.length)]?.id ?? null,
+    teacherName: null,
     notes: null,
     updatedAt: now,
   }));
@@ -231,6 +241,7 @@ export function buildOfficeDemoSeed(input: OfficeDemoSeedInput): OfficeDemoSeedP
   }
 
   return {
+    officeTeachers,
     officeStudents,
     officeClasses,
     gradeEntries,

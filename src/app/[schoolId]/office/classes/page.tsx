@@ -24,6 +24,7 @@ export default function OfficeClassesPage() {
         schoolId={schoolId}
         students={shared.students}
         classes={shared.classes}
+        teacherNameById={shared.teacherNameById}
         isLoading={shared.isLoading}
         onSelectStudent={setSelected}
       />
@@ -37,6 +38,7 @@ export default function OfficeClassesPage() {
         billingAccounts={billingAccounts}
         activeTerm={term}
         classes={shared.classes}
+        teachers={shared.teachers}
       />
     </>
   );

@@ -13,9 +13,13 @@ export function hasVerifiedOfficeFirestoreAccess(params: {
   loginState: LoginState | string | null | undefined;
   isAdmin: boolean;
   isOffice: boolean;
+  /** When set, developer support at a school needs roles_admin (not just loginState). */
+  schoolId?: string | null;
 }): boolean {
-  const { loginState, isAdmin, isOffice } = params;
-  if (loginState === 'developer') return true;
+  const { loginState, isAdmin, isOffice, schoolId } = params;
+  if (loginState === 'developer') {
+    return schoolId?.trim() ? isAdmin : true;
+  }
   if (loginState === 'admin') return isAdmin;
   if (loginState === 'office') return isOffice;
   return false;

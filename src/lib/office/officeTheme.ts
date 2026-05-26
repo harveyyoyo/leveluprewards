@@ -13,6 +13,9 @@ export const OFFICE_MAIN_ZOOM = OFFICE_MAIN_FONT_PX / OFFICE_SIDEBAR_FONT_PX;
 export const OFFICE_PORTAL_DATA_ATTR = 'office-portal';
 export const OFFICE_SIDEBAR_PANE_CLASS = 'office-sidebar-pane';
 export const OFFICE_MAIN_PANE_CLASS = 'office-main-pane';
+export const OFFICE_CONTENT_PANE_CLASS = 'office-content-pane';
+/** Centered fixed-width site frame (sidebar + workspace), not full viewport. */
+export const OFFICE_LAYOUT_PANE_CLASS = 'office-layout-pane';
 
 export function applyOfficeRootScale(): void {
   if (typeof document === 'undefined') return;

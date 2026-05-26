@@ -64,6 +64,10 @@ service cloud.firestore {
       return isDeveloper() || isAdmin(schoolId) || isOffice(schoolId);
     }
 
+    function staffAccountIsOfficeRole(data) {
+      return data.role == 'office';
+    }
+
     // A student who has entered a school kiosk session via the Cloud Function.
     function hasKioskSession(schoolId) {
       return isAuth()
@@ -343,10 +347,21 @@ service cloud.firestore {
         allow update: if isAdmin(schoolId) || isTeacher(schoolId) || isLibrarian(schoolId) || isDeveloper() || isLibraryCheckoutUpdate();
       }
 
-      // Desk staff logins (admin-managed). School admins + platform developers
-      // (developer UI uses the same dashboard queries as admins).
+      // Desk staff logins. Admins manage all roles; office staff may manage office-role accounts only.
       match /staffAccounts/{accountId} {
-        allow read, write: if isAdmin(schoolId) || isDeveloper();
+        allow read: if isAdmin(schoolId) || isDeveloper() || isOffice(schoolId);
+        allow create: if isAdmin(schoolId) || isDeveloper()
+          || (isOffice(schoolId) && staffAccountIsOfficeRole(request.resource.data));
+        allow update: if isAdmin(schoolId) || isDeveloper()
+          || (isOffice(schoolId)
+            && staffAccountIsOfficeRole(resource.data)
+            && staffAccountIsOfficeRole(request.resource.data));
+        allow delete: if isAdmin(schoolId) || isDeveloper()
+          || (isOffice(schoolId) && staffAccountIsOfficeRole(resource.data));
+      }
+
+      match /officeSettings/{docId} {
+        allow read, write: if canAccessOffice(schoolId);
       }
       
       match /roles_admin/{uid} {
@@ -396,6 +411,10 @@ service cloud.firestore {
       }
 
       match /officeClasses/{classId} {
+        allow read, write: if canAccessOffice(schoolId);
+      }
+
+      match /officeTeachers/{teacherId} {
         allow read, write: if canAccessOffice(schoolId);
       }
 

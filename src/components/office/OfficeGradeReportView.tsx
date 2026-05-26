@@ -7,8 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { OfficeGradeEntry } from '@/lib/office/types';
-import { downloadCsv, formatGradeDisplay } from '@/lib/office/officeUtils';
+import { collectOfficeTermOptions, downloadCsv, formatGradeDisplay } from '@/lib/office/officeUtils';
 import { useOfficeTerm } from '@/lib/office/useOfficeTerm';
+import { useOfficeSettings } from '@/lib/office/useOfficeSettings';
 
 type OfficeGradeReportViewProps = {
   schoolId: string;
@@ -26,7 +27,8 @@ export function OfficeGradeReportView({
   classNameById,
 }: OfficeGradeReportViewProps) {
   const searchParams = useSearchParams();
-  const { term: activeTerm } = useOfficeTerm(schoolId);
+  const { term: activeTerm, configuredTerms } = useOfficeTerm(schoolId);
+  const { settings } = useOfficeSettings(schoolId);
   const [term, setTerm] = useState(activeTerm);
   const [classFilter, setClassFilter] = useState('all');
   const [studentFilter, setStudentFilter] = useState('all');
@@ -42,13 +44,22 @@ export function OfficeGradeReportView({
       setStudentFilter(sid);
       setGroupByStudent(true);
     }
+    const termParam = searchParams.get('term')?.trim();
+    if (termParam) {
+      setTerm(termParam);
+    }
   }, [searchParams]);
 
-  const terms = useMemo(() => {
-    const set = new Set(entries.map((e) => e.termLabel));
-    if (activeTerm) set.add(activeTerm);
-    return Array.from(set).sort();
-  }, [entries, activeTerm]);
+  const terms = useMemo(
+    () =>
+      collectOfficeTermOptions({
+        gradeEntries: entries,
+        activeTerm: term,
+        schoolDefaultTerm: settings?.defaultActiveTerm,
+        configuredTerms,
+      }),
+    [entries, term, activeTerm, settings?.defaultActiveTerm, configuredTerms],
+  );
 
   const classOptions = useMemo(() => {
     const ids = new Set<string>();

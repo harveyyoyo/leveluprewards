@@ -49,6 +49,11 @@ const nextConfig = {
         destination: '/level-up-arcade',
         permanent: true,
       },
+      {
+        source: '/promotions',
+        destination: '/flyers',
+        permanent: true,
+      },
     ];
   },
   experimental: {

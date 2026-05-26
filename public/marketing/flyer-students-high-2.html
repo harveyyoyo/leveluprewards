@@ -2,113 +2,45 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>LevelUp — Your School Record (9–12)</title>
+    <title>LevelUp — Do Good, Get Rewarded</title>
     <script src="/marketing/flyer-embed.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet" />
-    <style>
-      * { box-sizing: border-box; margin: 0; padding: 0; }
-      @page { size: letter; margin: 0; }
-      html, body {
-        width: 8.5in; min-height: 11in; font-family: Barlow, system-ui, sans-serif;
-        background: #0a0a0a; color: #f5f5f5;
-        -webkit-print-color-adjust: exact; print-color-adjust: exact;
-      }
-      html.embed .hint { display: none !important; }
-      .flyer {
-        width: 8.5in; min-height: 11in; background: #0a0a0a;
-        display: grid; grid-template-rows: auto 1fr auto;
-      }
-      /* Top stripe */
-      .stripe {
-        background: #16a34a; padding: 0.12in 0.5in;
-        display: flex; align-items: center; justify-content: space-between;
-      }
-      .stripe span { font-family: 'Barlow Condensed', sans-serif; font-size: 0.12in; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #fff; }
-      .stripe img { width: 0.42in; }
-      /* Body */
-      .body { padding: 0.36in 0.5in; display: flex; flex-direction: column; }
-      h1 {
-        font-family: 'Barlow Condensed', sans-serif; font-size: 0.56in; font-weight: 800;
-        letter-spacing: -0.02em; line-height: 0.95; text-transform: uppercase;
-      }
-      h1 em { font-style: normal; color: #16a34a; }
-      .sub { margin-top: 0.16in; font-size: 0.145in; line-height: 1.5; color: #a3a3a3; max-width: 6.5in; font-weight: 400; }
-      .split { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 0.22in; margin-top: 0.24in; }
-      .points-card {
-        background: #111; border: 1px solid #262626; border-radius: 12px; padding: 0.16in;
-      }
-      .points-card h3 { font-family: 'Barlow Condensed', sans-serif; font-size: 0.16in; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #16a34a; }
-      .reward-list { margin-top: 0.12in; display: flex; flex-direction: column; gap: 0.08in; }
-      .reward {
-        display: flex; justify-content: space-between; align-items: center;
-        padding: 0.08in 0; border-bottom: 1px solid #1f1f1f;
-        font-size: 0.105in; font-weight: 500;
-      }
-      .reward:last-child { border-bottom: none; }
-      .reward .cost { font-family: 'Barlow Condensed', sans-serif; font-size: 0.12in; font-weight: 700; color: #16a34a; }
-      .frame { border: 1px solid #262626; border-radius: 10px; overflow: hidden; }
-      .frame img { width: 100%; display: block; }
-      .quote {
-        margin-top: 0.18in; padding: 0.14in; background: #111; border-left: 3px solid #16a34a;
-        font-size: 0.115in; font-style: italic; line-height: 1.5; color: #d4d4d4; border-radius: 0 8px 8px 0;
-      }
-      /* Bottom bar */
-      .bottom {
-        background: #111; padding: 0.14in 0.5in;
-        display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.1in;
-        border-top: 1px solid #1f1f1f;
-      }
-      .bottom p { font-size: 0.105in; font-weight: 500; color: #a3a3a3; }
-      .bottom a { color: #4ade80; font-weight: 600; font-size: 0.11in; text-decoration: none; }
-      .foot { font-size: 0.075in; color: #525252; }
-      .hint { position: fixed; bottom: 12px; right: 12px; padding: 8px 12px; background: #15803d; color: #fff; font: 700 12px system-ui; }
-    </style>
   </head>
   <body>
     <p class="hint">Ctrl+P → Letter, backgrounds on</p>
     <article class="flyer">
-      <div class="stripe">
-        <span>Grades 9–12 · LevelUp Rewards</span>
-        <img src="/marketing/screenshots/kiosk-rewards-shop.png" alt="LevelUp" width="42" height="42" />
+      <div class="stripe" aria-hidden="true"></div>
+      <header class="top">
+        <img src="/logo.png" alt="LevelUp logo" class="flyer-brand-logo" width="80" height="80" />
+        <h1>LEVEL UP<em>Grades 9–12</em></h1>
+        
+      </header>
+      <h2 class="mega">Do good.<br /><span>Get rewarded.</span></h2>
+      <p class="sub">Points map to real privileges—check your balance at the kiosk and redeem when you are ready.</p>
+      <section class="blocks">
+        <div class="block"><h3>Show up</h3><p>Attendance and on-time arrival.</p></div>
+        <div class="block"><h3>Lead</h3><p>Integrity and follow-through.</p></div>
+        <div class="block"><h3>Earn</h3><p>Teachers award in seconds.</p></div>
+        <div class="block"><h3>Redeem</h3><p>Shop, passes, weekly prizes.</p></div>
+      </section>
+      
+      <div class="img-wrap">
+        <img src="/marketing/screenshots/kiosk-rewards-shop.png" alt="Rewards shop" width="1200" height="600" loading="lazy" />
       </div>
-      <div class="body">
-        <h1>Do good.<br />Get <em>rewarded.</em></h1>
-        <p class="sub">
-          LevelUp turns your daily choices—being on time, helping out, meeting goals—into
-          a points balance you control. No chasing teachers. No forgotten passes. Just a transparent
-          system that respects how high schoolers actually work.
-        </p>
-        <div class="split">
-          <div class="points-card">
-            <h3>Redeem your points</h3>
-            <div class="reward-list">
-              <div class="reward"><span>Free period pass</span><span class="cost">200 pts</span></div>
-              <div class="reward"><span>Homework extension</span><span class="cost">150 pts</span></div>
-              <div class="reward"><span>Early lunch privilege</span><span class="cost">80 pts</span></div>
-              <div class="reward"><span>School store credit</span><span class="cost">50 pts</span></div>
-              <div class="reward"><span>Event front-row seat</span><span class="cost">120 pts</span></div>
-            </div>
-          </div>
-          <div class="frame">
-            <img src="/marketing/screenshots/kiosk-rewards-shop.png" alt="Rewards shop" width="800" height="600" />
-          </div>
+      <footer class="bottom">
+        <div class="cta">
+          POINTS THAT MATTER
+          <small>Scan your ID at the kiosk</small>
         </div>
-        <p class="quote">
-          "It actually feels fair — everyone earns based on what they do, not who the teacher likes."
-        </p>
-      </div>
-      <div class="bottom">
-        <p>Sign in at your school kiosk or ask your admin for portal access.</p>
-        <div style="text-align:right">
+        <div class="urls">
           <a href="https://leveluprewards.app">leveluprewards.app</a>
-          </div>
-      </div>
+          <a href="mailto:contact@leveluprewards.app">contact@leveluprewards.app</a>
+        </div>
+      </footer>
       <footer class="flyer-footer">
         <p class="flyer-footer__vendor">Approved NYC Department of Education (DOE) vendor</p>
         <p class="flyer-footer__links"><a href="https://leveluprewards.app">leveluprewards.app</a> · <a href="mailto:contact@leveluprewards.app">contact@leveluprewards.app</a></p>
         <p class="flyer-footer__copy">© 2026 LevelUp EdTech Enterprises LLC</p>
       </footer>
-
     </article>
   </body>
 </html>

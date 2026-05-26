@@ -2,110 +2,45 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>LevelUp Feature — Weekly Raffle</title>
+    <title>LevelUp — Weekly Raffle</title>
     <script src="/marketing/flyer-embed.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet" />
-    <style>
-      * { box-sizing: border-box; margin: 0; padding: 0; }
-      @page { size: letter; margin: 0; }
-      html, body {
-        width: 8.5in; min-height: 11in; font-family: Outfit, system-ui, sans-serif;
-        background: #0c0a09; color: #fafaf9;
-        -webkit-print-color-adjust: exact; print-color-adjust: exact;
-      }
-      html.embed .hint { display: none !important; }
-      .flyer {
-        width: 8.5in; min-height: 11in;
-        background: radial-gradient(circle at 50% 0%, #78350f44, transparent 50%), #0c0a09;
-        padding: 0.44in 0.5in; display: flex; flex-direction: column;
-        border: 4px solid #f59e0b;
-      }
-      .chip { font-size: 0.1in; font-weight: 800; color: #fbbf24; letter-spacing: 0.14em; text-transform: uppercase; }
-      h1 { font-size: 0.5in; font-weight: 900; margin-top: 0.12in; line-height: 1; }
-      h1 em { font-style: normal; color: #f59e0b; }
-      .sub { font-size: 0.14in; color: #a8a29e; line-height: 1.5; margin-top: 0.12in; max-width: 6.4in; }
-      .modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.1in; margin-top: 0.2in; }
-      .mode {
-        background: #1c1917; border: 2px solid #f59e0b; border-radius: 12px;
-        padding: 0.14in; text-align: center;
-      }
-      .mode .icon { font-size: 0.32in; }
-      .mode b { display: block; font-size: 0.12in; margin-top: 0.06in; color: #fbbf24; }
-      .mode span { font-size: 0.09in; color: #78716c; }
-      .rules { margin-top: 0.18in; background: #1c1917; border-radius: 12px; padding: 0.14in 0.16in; border: 1px solid #44403c; }
-      .rules h3 { font-size: 0.11in; color: #fbbf24; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.1in; }
-      .rules li { font-size: 0.105in; color: #d6d3d1; line-height: 1.45; margin-left: 0.16in; margin-bottom: 0.06in; }
-      .raffle-demo {
-        margin-top: 0.14in; display: grid; grid-template-columns: 1fr 1fr; gap: 0.12in;
-      }
-      .demo-panel {
-        background: #1c1917; border: 2px solid #f59e0b; border-radius: 12px;
-        padding: 0.16in; text-align: center; min-height: 1.4in;
-        display: flex; flex-direction: column; align-items: center; justify-content: center;
-      }
-      .demo-panel b { font-size: 0.11in; color: #fbbf24; margin-top: 0.08in; }
-      .wheel {
-        width: 0.9in; height: 0.9in; border-radius: 50%;
-        background: conic-gradient(#f59e0b 0 45deg, #1c1917 45deg 90deg, #f59e0b 90deg 135deg, #1c1917 135deg 180deg, #f59e0b 180deg 225deg, #1c1917 225deg 270deg, #f59e0b 270deg 315deg, #1c1917 315deg);
-        border: 3px solid #fbbf24; position: relative;
-      }
-      .wheel::after {
-        content: ''; position: absolute; top: -0.08in; left: 50%; transform: translateX(-50%);
-        border-left: 0.08in solid transparent; border-right: 0.08in solid transparent;
-        border-bottom: 0.12in solid #fbbf24;
-      }
-      .reels { display: flex; gap: 0.06in; }
-      .reel {
-        width: 0.22in; height: 0.7in; background: #292524; border: 2px solid #78716c;
-        border-radius: 6px; display: flex; align-items: center; justify-content: center;
-        font-size: 0.2in; font-weight: 900; color: #fbbf24;
-      }
-      .cta { margin-top: auto; padding-top: 0.14in; font-weight: 800; font-size: 0.12in; }
-      .cta a { color: #fbbf24; text-decoration: none; }
-      .foot { font-size: 0.075in; color: #57534e; margin-top: 0.08in; }
-      .hint { position: fixed; bottom: 12px; right: 12px; padding: 8px 12px; background: #d97706; color: #fff; font: 700 12px system-ui; }
-    </style>
   </head>
   <body>
     <p class="hint">Ctrl+P → Letter, backgrounds on</p>
     <article class="flyer">
-      <p class="chip">LevelUp feature</p>
-      <h1>Weekly <em>Raffle</em></h1>
-      <p class="sub">
-        Turn PBIS points into raffle tickets, then run a live draw with jackpot reels or a spin wheel—
-        configurable rules for your school assembly or staff meeting.
-      </p>
-      <section class="modes" aria-label="Draw modes">
-        <div class="mode"><div class="icon">🎰</div><b>Jackpot</b><span>Reel machine</span></div>
-        <div class="mode"><div class="icon">🎡</div><b>Spin wheel</b><span>Weighted entries</span></div>
-        <div class="mode"><div class="icon">🎱</div><b>Loto cage</b><span>Assembly draw</span></div>
+      <div class="stripe" aria-hidden="true"></div>
+      <header class="top">
+        <img src="/logo.png" alt="LevelUp logo" class="flyer-brand-logo" width="80" height="80" />
+        <h1>LEVEL UP<em>Feature</em></h1>
+        <p class="tagline">Raffle</p>
+      </header>
+      <h2 class="mega">Points become<br /><span>raffle tickets.</span></h2>
+      <p class="sub">Run a live draw with jackpot reels or a spin wheel—configurable rules for assemblies or staff meetings.</p>
+      <section class="blocks">
+        <div class="block"><h3>Jackpot</h3><p>Reel-style draw.</p></div>
+        <div class="block"><h3>Spin wheel</h3><p>Weighted entries.</p></div>
+        <div class="block"><h3>Tickets</h3><p>Convert points with clear rules.</p></div>
+        <div class="block"><h3>Live</h3><p>Assembly-ready experience.</p></div>
       </section>
-      <section class="rules">
-        <h3>Admin controls</h3>
-        <ul>
-          <li>Points per ticket (e.g. 25 pts = 1 entry) or general raffle (one entry per student)</li>
-          <li>Equal odds mode vs. ticket count scales with points</li>
-          <li>Optional point deduction after the winning pull</li>
-          <li>Students see ticket count on portal when raffle is active</li>
-        </ul>
-      </section>
-      <div class="raffle-demo" aria-hidden="true">
-        <div class="demo-panel">
-          <div class="reels"><span class="reel">7</span><span class="reel">★</span><span class="reel">3</span></div>
-          <b>Jackpot reels</b>
-        </div>
-        <div class="demo-panel">
-          <div class="wheel"></div>
-          <b>Spin wheel</b>
-        </div>
+      
+      <div class="img-wrap">
+        <img src="/marketing/screenshots/teacher-raffle.png" alt="Teacher raffle tools" width="1200" height="600" loading="lazy" />
       </div>
-      <p class="cta">Enable Weekly Raffle in settings · Teacher portal draw · <a href="https://leveluprewards.app">leveluprewards.app</a></p>
+      <footer class="bottom">
+        <div class="cta">
+          RAFFLE MOMENTS
+          <small>Weekly energy boost</small>
+        </div>
+        <div class="urls">
+          <a href="https://leveluprewards.app">leveluprewards.app</a>
+          <a href="mailto:contact@leveluprewards.app">contact@leveluprewards.app</a>
+        </div>
+      </footer>
       <footer class="flyer-footer">
         <p class="flyer-footer__vendor">Approved NYC Department of Education (DOE) vendor</p>
         <p class="flyer-footer__links"><a href="https://leveluprewards.app">leveluprewards.app</a> · <a href="mailto:contact@leveluprewards.app">contact@leveluprewards.app</a></p>
         <p class="flyer-footer__copy">© 2026 LevelUp EdTech Enterprises LLC</p>
       </footer>
-
-      </article>
+    </article>
   </body>
 </html>

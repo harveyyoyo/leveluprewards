@@ -1,6 +1,6 @@
 {
-  "capturedAt": "2026-05-19T12:26:15.787Z",
-  "base": "https://portal.leveluprewards.app",
+  "capturedAt": "2026-05-26T04:46:01.589Z",
+  "base": "http://127.0.0.1:3000",
   "school": "schoolabc",
   "variants": [
     {
@@ -60,8 +60,8 @@
     {
       "category": "student-kiosk",
       "name": "kiosk-prizes-hover",
-      "path": "capture-library\\student-kiosk\\kiosk-prizes-hover.mp4",
-      "status": "ok"
+      "status": "failed",
+      "error": "Kiosk not signed in"
     },
     {
       "category": "student-kiosk",
@@ -90,44 +90,110 @@
     {
       "category": "teacher",
       "name": "teacher-students-roster",
-      "path": "capture-library\\teacher\\teacher-students-roster.mp4",
-      "status": "ok"
+      "status": "failed",
+      "error": "locator.waitFor: Timeout 90000ms exceeded.\nCall log:\n  - waiting for getByRole('heading', { name: /Teacher Portal/i }) to be visible\n"
     },
     {
       "category": "teacher",
       "name": "teacher-classes-tab",
-      "path": "capture-library\\teacher\\teacher-classes-tab.mp4",
-      "status": "ok"
+      "status": "failed",
+      "error": "locator.waitFor: Timeout 90000ms exceeded.\nCall log:\n  - waiting for getByRole('heading', { name: /Teacher Portal/i }) to be visible\n"
     },
     {
       "category": "teacher",
       "name": "teacher-tabs-cycle",
-      "path": "capture-library\\teacher\\teacher-tabs-cycle.mp4",
-      "status": "ok"
+      "status": "failed",
+      "error": "locator.waitFor: Timeout 90000ms exceeded.\nCall log:\n  - waiting for getByRole('heading', { name: /Teacher Portal/i }) to be visible\n"
     },
     {
       "category": "teacher",
       "name": "teacher-points-tab",
-      "path": "capture-library\\teacher\\teacher-points-tab.mp4",
-      "status": "ok"
+      "status": "failed",
+      "error": "locator.waitFor: Timeout 90000ms exceeded.\nCall log:\n  - waiting for getByRole('heading', { name: /Teacher Portal/i }) to be visible\n"
     },
     {
       "category": "action",
       "name": "action-print-coupons",
-      "path": "capture-library\\action\\action-print-coupons.mp4",
-      "status": "ok"
+      "status": "failed",
+      "error": "locator.waitFor: Timeout 90000ms exceeded.\nCall log:\n  - waiting for getByRole('heading', { name: /Teacher Portal/i }) to be visible\n"
     },
     {
       "category": "action",
       "name": "action-print-preview-hold",
-      "path": "capture-library\\action\\action-print-preview-hold.mp4",
-      "status": "ok"
+      "status": "failed",
+      "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:3000/schoolabc/teacher\nCall log:\n  - navigating to \"http://127.0.0.1:3000/schoolabc/teacher\", waiting until \"domcontentloaded\"\n"
+    },
+    {
+      "category": "admin",
+      "name": "admin-id-card-preview",
+      "status": "failed",
+      "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:3000/schoolabc/admin\nCall log:\n  - navigating to \"http://127.0.0.1:3000/schoolabc/admin\", waiting until \"domcontentloaded\"\n"
+    },
+    {
+      "category": "features",
+      "name": "admin-branding-theme",
+      "status": "failed",
+      "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:3000/schoolabc/admin\nCall log:\n  - navigating to \"http://127.0.0.1:3000/schoolabc/admin\", waiting until \"domcontentloaded\"\n"
     },
     {
       "category": "portal",
       "name": "portal-student-home-link",
-      "path": "capture-library\\portal\\portal-student-home-link.mp4",
-      "status": "ok"
+      "status": "failed",
+      "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:3000/schoolabc/portal\nCall log:\n  - navigating to \"http://127.0.0.1:3000/schoolabc/portal\", waiting until \"domcontentloaded\"\n"
+    },
+    {
+      "category": "features",
+      "name": "teacher-raffle",
+      "status": "failed",
+      "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:3000/schoolabc/admin\nCall log:\n  - navigating to \"http://127.0.0.1:3000/schoolabc/admin\", waiting until \"domcontentloaded\"\n"
+    },
+    {
+      "category": "features",
+      "name": "hall-of-fame",
+      "status": "failed",
+      "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:3000/schoolabc/hall-of-fame?fullscreen=1\nCall log:\n  - navigating to \"http://127.0.0.1:3000/schoolabc/hall-of-fame?fullscreen=1\", waiting until \"domcontentloaded\"\n"
+    },
+    {
+      "category": "features",
+      "name": "bulletin-board",
+      "status": "failed",
+      "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:3000/schoolabc/bulletin-board\nCall log:\n  - navigating to \"http://127.0.0.1:3000/schoolabc/bulletin-board\", waiting until \"domcontentloaded\"\n"
+    },
+    {
+      "category": "features",
+      "name": "admin-houses",
+      "status": "failed",
+      "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:3000/schoolabc/admin\nCall log:\n  - navigating to \"http://127.0.0.1:3000/schoolabc/admin\", waiting until \"domcontentloaded\"\n"
+    },
+    {
+      "category": "features",
+      "name": "admin-notifications",
+      "status": "failed",
+      "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:3000/schoolabc/admin\nCall log:\n  - navigating to \"http://127.0.0.1:3000/schoolabc/admin\", waiting until \"domcontentloaded\"\n"
+    },
+    {
+      "category": "features",
+      "name": "admin-library",
+      "status": "failed",
+      "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:3000/schoolabc/admin\nCall log:\n  - navigating to \"http://127.0.0.1:3000/schoolabc/admin\", waiting until \"domcontentloaded\"\n"
+    },
+    {
+      "category": "features",
+      "name": "admin-badges",
+      "status": "failed",
+      "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:3000/schoolabc/admin\nCall log:\n  - navigating to \"http://127.0.0.1:3000/schoolabc/admin\", waiting until \"domcontentloaded\"\n"
+    },
+    {
+      "category": "features",
+      "name": "admin-stats",
+      "status": "failed",
+      "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:3000/schoolabc/admin\nCall log:\n  - navigating to \"http://127.0.0.1:3000/schoolabc/admin\", waiting until \"domcontentloaded\"\n"
+    },
+    {
+      "category": "features",
+      "name": "admin-attendance",
+      "status": "failed",
+      "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:3000/schoolabc/admin\nCall log:\n  - navigating to \"http://127.0.0.1:3000/schoolabc/admin\", waiting until \"domcontentloaded\"\n"
     }
   ]
 }

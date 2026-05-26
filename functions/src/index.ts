@@ -139,6 +139,7 @@ async function hasExistingSchoolPortalAccess(
       "prizeClerk",
       "reports",
       "librarian",
+      "office",
       "houseCoordinator",
     ])
   ) {
@@ -167,7 +168,7 @@ async function ensureAnonymousPortalSession(schoolId: string, uid: string): Prom
 async function hasSchoolRole(
   schoolId: string,
   uid: string,
-  roles: Array<"admin" | "teacher" | "secretary" | "prizeClerk" | "reports" | "librarian" | "houseCoordinator">
+  roles: Array<"admin" | "teacher" | "secretary" | "prizeClerk" | "reports" | "librarian" | "office" | "houseCoordinator">
 ): Promise<boolean> {
   const db = admin.firestore();
   const roleCollections: Record<string, string> = {
@@ -177,6 +178,7 @@ async function hasSchoolRole(
     prizeClerk: "roles_prizeClerk",
     reports: "roles_reports",
     librarian: "roles_librarian",
+    office: "roles_office",
     houseCoordinator: "roles_houseCoordinator",
   };
   const snaps = await Promise.all(
@@ -922,14 +924,18 @@ exports.startDeveloperSupportSession = functions.https.onCall(
     }
 
     const now = Date.now();
-    const sessionRef = schoolRef.collection("supportSessions").doc(`${now}_${context.auth!.uid}`);
+    const uid = context.auth!.uid;
+    const sessionRef = schoolRef.collection("supportSessions").doc(`${now}_${uid}`);
     await sessionRef.set({
-      developerUid: context.auth!.uid,
+      developerUid: uid,
       startedAt: now,
       schoolId,
       userAgent: context.rawRequest.get("user-agent") || "",
       status: "started",
     });
+
+    // School Office and admin tools read Firestore via roles_admin — provision for this school.
+    await schoolRef.collection("roles_admin").doc(uid).set({ role: "admin" }, { merge: true });
 
     return { success: true, sessionId: sessionRef.id };
   }

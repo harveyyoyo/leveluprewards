@@ -20,6 +20,7 @@ import dynamic from 'next/dynamic';
 import type { StudentFoundMeta } from '@/components/StudentScanner';
 import { LevelUpKioskLogo } from '@/components/LevelUpKioskLogo';
 import { KioskSponsorBanner } from '@/components/KioskSponsorBanner';
+import { KioskWedgeCameraAssist } from '@/components/kiosk/KioskWedgeCameraAssist';
 
 // ~32 KB (plus @vladmandic/face-api on the face tab). Load only when the
 // kiosk actually needs to scan a student.
@@ -1239,9 +1240,22 @@ function StudentDashboardInner({
     />
   );
 
+  const wedgeDemoCameraActive =
+    settings.kioskWedgeDemoCameraEnabled === true &&
+    showManualCoupon &&
+    showRedeem &&
+    couponSectionEnabled;
+
   return (
     <TooltipProvider>
       <>
+      <KioskWedgeCameraAssist
+        active={wedgeDemoCameraActive}
+        onScan={(code) => void handleRedeemCoupon(code)}
+        onError={(err) => {
+          toast({ variant: 'destructive', title: 'Demo camera', description: err });
+        }}
+      />
       <div
         className={cn(
           // Lock the dashboard to the viewport so inner panes scroll

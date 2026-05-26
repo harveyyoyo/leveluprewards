@@ -27,7 +27,17 @@ export function OfficeHandoffBootstrap() {
 
     const metaToken = searchParams.get('meta')?.trim() || '';
     const customToken = searchParams.get('ct')?.trim() || '';
-    if (!metaToken || !customToken || !auth) return;
+
+    if (!metaToken || !customToken) {
+      const clean = new URL(pathname || '/', window.location.origin);
+      clean.searchParams.delete('officeHandoff');
+      clean.searchParams.delete('meta');
+      clean.searchParams.delete('ct');
+      router.replace(clean.pathname + (clean.search || ''));
+      return;
+    }
+
+    if (!auth) return;
 
     started.current = true;
 

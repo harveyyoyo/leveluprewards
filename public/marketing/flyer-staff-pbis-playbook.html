@@ -2,170 +2,45 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>LevelUp - PBIS Staff Playbook</title>
+    <title>LevelUp — PBIS Staff Playbook</title>
     <script src="/marketing/flyer-embed.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800;900&family=Space+Grotesk:wght@700;800&display=swap" rel="stylesheet" />
-    <style>
-      * { box-sizing: border-box; margin: 0; padding: 0; }
-      @page { size: letter; margin: 0; }
-      html, body {
-        width: 8.5in; min-height: 11in;
-        font-family: Inter, system-ui, sans-serif;
-        background: #111827; color: #f9fafb;
-        -webkit-print-color-adjust: exact; print-color-adjust: exact;
-      }
-      html.embed .hint { display: none !important; }
-      .flyer {
-        width: 8.5in; min-height: 11in;
-        padding: 0.42in 0.5in; display: flex; flex-direction: column;
-        background:
-          linear-gradient(90deg, rgba(190, 242, 100, 0.12) 1px, transparent 1px),
-          linear-gradient(180deg, rgba(190, 242, 100, 0.12) 1px, transparent 1px),
-          #111827;
-        background-size: 0.28in 0.28in;
-      }
-      .bar {
-        display: flex; justify-content: space-between; align-items: center;
-        border-bottom: 2px solid #bef264; padding-bottom: 0.12in;
-      }
-      .bar span {
-        font-size: 0.1in; font-weight: 900; letter-spacing: 0.14em;
-        text-transform: uppercase; color: #bef264;
-      }
-      .bar b { font-size: 0.1in; color: #d1d5db; }
-      h1 {
-        font-family: "Space Grotesk", Inter, sans-serif;
-        font-size: 0.48in; line-height: 1; margin-top: 0.18in; font-weight: 800;
-      }
-      h1 span { color: #bef264; }
-      .intro {
-        margin-top: 0.12in; max-width: 6.7in; font-size: 0.135in;
-        line-height: 1.52; color: #d1d5db;
-      }
-      .matrix {
-        margin-top: 0.22in; display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.12in;
-      }
-      .card {
-        background: #f9fafb; color: #111827; border-radius: 8px;
-        padding: 0.14in; border-top: 6px solid #bef264;
-      }
-      .card h2 {
-        font-family: "Space Grotesk", Inter, sans-serif;
-        font-size: 0.17in; line-height: 1.05; margin-bottom: 0.07in;
-      }
-      .card p { font-size: 0.095in; line-height: 1.42; color: #4b5563; font-weight: 600; }
-      .strip {
-        margin-top: 0.18in; display: grid; grid-template-columns: 1fr 1fr;
-        gap: 0.14in; align-items: center;
-      }
-      .shot {
-        border: 2px solid #bef264; border-radius: 10px; overflow: hidden;
-        background: #000; box-shadow: 0 14px 28px rgba(0,0,0,0.25);
-      }
-      .shot img { width: 100%; display: block; }
-      .rules {
-        background: rgba(17, 24, 39, 0.92);
-        border: 1px solid rgba(190, 242, 100, 0.45);
-        border-radius: 10px; padding: 0.15in;
-      }
-      .rules h2 {
-        font-family: "Space Grotesk", Inter, sans-serif;
-        font-size: 0.2in; color: #bef264; margin-bottom: 0.1in;
-      }
-      .rules li {
-        margin-left: 0.16in; margin-bottom: 0.08in;
-        font-size: 0.105in; line-height: 1.38; color: #e5e7eb;
-      }
-      .phrases {
-        margin-top: 0.18in; background: #f9fafb; color: #111827;
-        border-radius: 10px; padding: 0.16in;
-      }
-      .phrases h2 {
-        font-family: "Space Grotesk", Inter, sans-serif;
-        font-size: 0.18in; margin-bottom: 0.1in;
-      }
-      .phrase-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.1in; }
-      .phrase-grid p {
-        font-size: 0.092in; line-height: 1.38; font-weight: 700;
-        background: #ecfccb; padding: 0.1in; border-radius: 8px;
-      }
-      .cta {
-        margin-top: auto; padding-top: 0.16in;
-        display: flex; justify-content: space-between; gap: 0.16in;
-        font-size: 0.11in; font-weight: 800; color: #d1d5db;
-      }
-      .cta a { color: #bef264; text-decoration: none; }
-      .foot { font-size: 0.075in; color: #9ca3af; margin-top: 0.08in; }
-      .hint {
-        position: fixed; bottom: 12px; right: 12px;
-        padding: 8px 12px; background: #365314; color: #fff;
-        font: 700 12px system-ui;
-      }
-    </style>
   </head>
   <body>
-    <p class="hint">Ctrl+P -> Letter, backgrounds on</p>
+    <p class="hint">Ctrl+P → Letter, backgrounds on</p>
     <article class="flyer">
-      <header class="bar">
-        <span>LevelUp PBIS staff playbook</span>
-        <b>Consistent recognition, campus-wide</b>
+      <div class="stripe" aria-hidden="true"></div>
+      <header class="top">
+        <img src="/logo.png" alt="LevelUp logo" class="flyer-brand-logo" width="80" height="80" />
+        <h1>LEVEL UP<em>Staff playbook</em></h1>
+        <p class="tagline">PBIS</p>
       </header>
-
-      <h1>Make expectations<br /><span>visible, repeatable, fair.</span></h1>
-      <p class="intro">
-        A rewards platform only works when adults use the same language and students understand the target.
-        LevelUp gives your team a shared rhythm for recognizing behavior and tracking follow-through.
-      </p>
-
-      <section class="matrix" aria-label="PBIS practice areas">
-        <div class="card">
-          <h2>Define it</h2>
-          <p>Post the behavior, name it out loud, and connect points to school values.</p>
-        </div>
-        <div class="card">
-          <h2>Recognize it</h2>
-          <p>Award points during real moments, not only at the end of the day.</p>
-        </div>
-        <div class="card">
-          <h2>Review it</h2>
-          <p>Use dashboards and redemption logs to tune routines with your PBIS lead.</p>
-        </div>
+      <h2 class="mega">Make expectations<br /><span>visible and fair.</span></h2>
+      <p class="sub">Consistent language, fast recognition, and clear redemption routines—so every adult reinforces the same culture.</p>
+      <section class="blocks">
+        <div class="block"><h3>Teach</h3><p>Post 2–3 weekly focus behaviors.</p></div>
+        <div class="block"><h3>Catch</h3><p>Award small points often—not only perfect days.</p></div>
+        <div class="block"><h3>Celebrate</h3><p>Use raffle moments for quick energy.</p></div>
+        <div class="block"><h3>Review</h3><p>Check admin stats for consistency gaps.</p></div>
       </section>
-
-      <section class="strip" aria-label="Schoolwide playbook">
-        <div class="rules">
-          <h2>Shared staff norms</h2>
-          <ul>
-            <li>Reward the behavior you can describe in one sentence.</li>
-            <li>Keep point amounts predictable across classrooms.</li>
-            <li>Make redemptions visible so students trust the economy.</li>
-            <li>Use reports to spot students who need more positive contact.</li>
-          </ul>
+      
+      <div class="img-wrap">
+        <img src="/marketing/screenshots/admin-stats.png" alt="Admin dashboard statistics" width="1200" height="600" loading="lazy" />
+      </div>
+      <footer class="bottom">
+        <div class="cta">
+          LEVEL UP PBIS
+          <small>Consistency beats intensity</small>
         </div>
-        <div class="shot">
-          <img src="/marketing/screenshots/admin-stats.png" alt="LevelUp admin dashboard statistics" width="900" height="500" />
+        <div class="urls">
+          <a href="https://leveluprewards.app">leveluprewards.app</a>
+          <a href="mailto:contact@leveluprewards.app">contact@leveluprewards.app</a>
         </div>
-      </section>
-
-      <section class="phrases" aria-label="Recognition phrases">
-        <h2>Recognition language that travels</h2>
-        <div class="phrase-grid">
-          <p>"That showed respect because you made space for another voice."</p>
-          <p>"You chose responsibility by getting started before the timer."</p>
-          <p>"That teamwork helped the group finish stronger."</p>
-        </div>
-      </section>
-
-      <p class="cta">
-        Built for classrooms, hallways, assemblies, and family communication.
-        <a href="https://leveluprewards.app">leveluprewards.app</a>
-      </p>
+      </footer>
       <footer class="flyer-footer">
         <p class="flyer-footer__vendor">Approved NYC Department of Education (DOE) vendor</p>
         <p class="flyer-footer__links"><a href="https://leveluprewards.app">leveluprewards.app</a> · <a href="mailto:contact@leveluprewards.app">contact@leveluprewards.app</a></p>
         <p class="flyer-footer__copy">© 2026 LevelUp EdTech Enterprises LLC</p>
       </footer>
-
-      </article>
+    </article>
   </body>
 </html>

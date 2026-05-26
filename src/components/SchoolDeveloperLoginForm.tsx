@@ -25,9 +25,15 @@ import {
   signOut,
 } from 'firebase/auth';
 import { Loader2 } from 'lucide-react';
-
-/** Set before Google redirect sign-in so we only auto-complete developer login when intended. */
-const PENDING_DEVELOPER_LOGIN_KEY = 'levelup:pendingDeveloperLogin';
+import {
+  clearGoogleRedirectAttempt,
+  clearPendingDeveloperGoogleRedirect,
+  markGoogleRedirectAttempt,
+  markPendingDeveloperGoogleRedirect,
+  PENDING_DEVELOPER_LOGIN_KEY,
+  shouldThrottleGoogleRedirect,
+} from '@/lib/googleAuthRedirect';
+import { navigateAfterSchoolLogin } from '@/lib/auth/syncFirebaseSessionCookie';
 
 export type SchoolDeveloperLoginFormMode = 'full' | 'developer-only';
 
@@ -46,6 +52,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
   const [isShaking, setIsShaking] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleSigningIn, setIsGoogleSigningIn] = useState(false);
+  const [googleSchoolLoginError, setGoogleSchoolLoginError] = useState<string | null>(null);
   const [googleSignInBlocked, setGoogleSignInBlocked] = useState<null | 'operation-not-allowed'>(
     null,
   );
@@ -54,7 +61,6 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
   const lastAutoFocusedRef = useRef<null | 'schoolId' | 'passcode'>(null);
   const developerAutoLoginAttemptedRef = useRef(false);
   const developerLoginCompletedUidRef = useRef<string | null>(null);
-  const googleSchoolAutoAttemptedRef = useRef(false);
   const schoolLoginIntentRef = useRef(false);
   const { login, isInitialized, isUserLoading, loginState } = useAppContext();
   const { toast } = useToast();
@@ -86,22 +92,6 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
     isDeveloperOnly ||
     (typeof sessionStorage !== 'undefined' &&
       sessionStorage.getItem(PENDING_DEVELOPER_LOGIN_KEY) === 'true');
-
-  const clearPendingDeveloperLogin = () => {
-    try {
-      sessionStorage.removeItem(PENDING_DEVELOPER_LOGIN_KEY);
-    } catch {
-      // ignore
-    }
-  };
-
-  const markPendingDeveloperLogin = () => {
-    try {
-      sessionStorage.setItem(PENDING_DEVELOPER_LOGIN_KEY, 'true');
-    } catch {
-      // ignore
-    }
-  };
 
   useEffect(() => {
     if (!mounted || typeof window === 'undefined') return;
@@ -197,13 +187,16 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
       }
       if (result.ok) {
         developerLoginCompletedUidRef.current = firebaseUser.uid;
-        clearPendingDeveloperLogin();
+        clearPendingDeveloperGoogleRedirect();
+        clearGoogleRedirectAttempt();
         playSound('login');
         if (pathname !== '/developer') {
           router.push('/developer');
         }
       } else {
         developerAutoLoginAttemptedRef.current = false;
+        clearPendingDeveloperGoogleRedirect();
+        clearGoogleRedirectAttempt();
         playSound('error');
         triggerShake();
         toast({
@@ -242,31 +235,8 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
   ]);
 
   useEffect(() => {
-    if (!mounted || !isInitialized || isUserLoading || isDeveloperOnly || isDeveloper) return;
-    if (!hasGoogleUser || !schoolId.trim() || googleSchoolAutoAttemptedRef.current) return;
-    if (schoolLoginIntentRef.current || isSubmitting) return;
-
-    googleSchoolAutoAttemptedRef.current = true;
-    const sid = schoolId.trim().toLowerCase();
-    void (async () => {
-      schoolLoginIntentRef.current = true;
-      clearPendingDeveloperLogin();
-      setIsSubmitting(true);
-      try {
-        const result = await login('school', { schoolId: sid, passcode: '' });
-        if (!result.ok) {
-          googleSchoolAutoAttemptedRef.current = false;
-          schoolLoginIntentRef.current = false;
-          return;
-        }
-        playSound('login');
-        router.push(`/${sid}/portal`);
-      } finally {
-        setIsSubmitting(false);
-      }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mounted, isInitialized, isUserLoading, isDeveloperOnly, isDeveloper, hasGoogleUser, schoolId, isSubmitting]);
+    setGoogleSchoolLoginError(null);
+  }, [schoolId]);
 
   const handleDeveloperPrimaryAction = () => {
     if (allowDevPasscodeLogin && developerPasscode.trim()) {
@@ -311,6 +281,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
             throw linkErr;
           })
         : await signInWithPopup(auth, provider);
+      clearGoogleRedirectAttempt();
       playSound('success');
       const allowed = isAllowedDeveloperGoogleUser(result.user);
       toast({
@@ -346,10 +317,21 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
         code === 'auth/operation-not-supported-in-this-environment';
 
       if (shouldRedirect) {
+        if (shouldThrottleGoogleRedirect()) {
+          playSound('error');
+          toast({
+            variant: 'destructive',
+            title: 'Google sign-in still starting',
+            description:
+              'Wait a few seconds for the previous Google redirect to finish, or refresh the page and try again.',
+          });
+          return;
+        }
         try {
           if (isDeveloperOnly || isDeveloper) {
-            markPendingDeveloperLogin();
+            markPendingDeveloperGoogleRedirect();
           }
+          markGoogleRedirectAttempt();
           const provider = new GoogleAuthProvider();
           provider.setCustomParameters({ prompt: 'select_account' });
           if (auth.currentUser?.isAnonymous) {
@@ -441,11 +423,15 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
 
     playSound('click');
     schoolLoginIntentRef.current = true;
-    clearPendingDeveloperLogin();
+    clearPendingDeveloperGoogleRedirect();
+    setGoogleSchoolLoginError(null);
     setIsSubmitting(true);
     try {
       const result = await login('school', { schoolId: sid, passcode });
       if (!result.ok) {
+        if (hasGoogleUser && !passcode) {
+          setGoogleSchoolLoginError(result.message);
+        }
         playSound('error');
         triggerShake();
         toast({
@@ -457,7 +443,25 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
       }
 
       playSound('login');
-      router.push(`/${sid}/portal`);
+      if (!auth) {
+        toast({
+          variant: 'destructive',
+          title: 'Secure session could not start',
+          description: 'Firebase auth is still loading. Refresh the page and try again.',
+        });
+        return;
+      }
+      const navigated = await navigateAfterSchoolLogin(auth, sid);
+      if (!navigated) {
+        playSound('error');
+        triggerShake();
+        toast({
+          variant: 'destructive',
+          title: 'Secure session could not start',
+          description:
+            'Your school was accepted, but this browser could not open a secure session. Please try again.',
+        });
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -598,27 +602,34 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
               </div>
             )}
             {(!isDeveloperOnly && !isDeveloper) && (
-              hasGoogleUser ? (
+              hasGoogleUser && !googleSchoolLoginError ? (
                 <p className="text-xs text-muted-foreground leading-relaxed rounded-xl border border-border/70 bg-background/60 px-4 py-3">
                   Signed in with Google as{' '}
                   <span className="font-mono text-foreground">{googleEmail || 'your account'}</span>.
                   {' '}If you already have access to this school, continue without a passcode.
                 </p>
               ) : (
-              <div className="space-y-2">
-                <Label htmlFor="passcode" className="text-xs font-semibold text-muted-foreground">
-                  Access Passcode
-                </Label>
-                <input
-                  id="passcode"
-                  type="password"
-                  ref={passcodeRef}
-                  className="w-full h-12 rounded-xl px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-all font-mono tracking-[0.35em] text-center bg-background border border-border text-foreground"
-                  value={schoolPasscode}
-                  onChange={(e) => setSchoolPasscode(e.target.value)}
-                  autoComplete="current-password"
-                />
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="passcode" className="text-xs font-semibold text-muted-foreground">
+                    Access Passcode
+                  </Label>
+                  {googleSchoolLoginError && (
+                    <p className="text-xs text-muted-foreground leading-relaxed rounded-xl border border-border/70 bg-background/60 px-4 py-3">
+                      Signed in with Google as{' '}
+                      <span className="font-mono text-foreground">{googleEmail || 'your account'}</span>, but we
+                      could not find existing access for this school. Enter the school passcode to continue.
+                    </p>
+                  )}
+                  <input
+                    id="passcode"
+                    type="password"
+                    ref={passcodeRef}
+                    className="w-full h-12 rounded-xl px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-all font-mono tracking-[0.35em] text-center bg-background border border-border text-foreground"
+                    value={schoolPasscode}
+                    onChange={(e) => setSchoolPasscode(e.target.value)}
+                    autoComplete="current-password"
+                  />
+                </div>
               )
             )}
             <div className="pt-4 flex flex-col gap-3">

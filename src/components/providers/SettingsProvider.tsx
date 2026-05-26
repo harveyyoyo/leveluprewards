@@ -261,6 +261,11 @@ interface Settings {
      * off = hide coupon redemption; manual = USB scanner (default); camera = webcam scan.
      */
     kioskCouponRedemptionInput?: 'off' | 'manual' | 'camera' | 'both';
+    /**
+     * When true, wedge-mode kiosk screens can scan via the front camera (for demos without a USB scanner).
+     * Independent of the "Camera coupon scan" setting. Default off.
+     */
+    kioskWedgeDemoCameraEnabled?: boolean;
     // Sponsor Banner (displayed at the bottom/top of student kiosk screens)
     kioskSponsorEnabled: boolean;
     kioskSponsorMessage: string;
@@ -348,6 +353,8 @@ interface Settings {
     adminHiddenAddOnTabs?: string[];
     /** Admin-only UI preference: pins enabled add-on tabs into the main Admin tab row. */
     adminPinnedAddOnTabs?: string[];
+    /** Admin-only UI preference: main section tabs across the top (default) or down the left sidebar. */
+    adminNavLayout?: 'top' | 'sidebar';
     /** Admin-only UI preference: persists the main Admin tab order (including pinned add-ons). */
     adminMainTabOrder?: string[];
     /** Admin-only UI preference: persists the Extra features row order (unpinned add-ons). */
@@ -560,6 +567,7 @@ const defaultSettings: Settings = {
     kioskCouponRedemptionManualEnabled: true,
     kioskCouponRedemptionCameraEnabled: false,
     kioskCouponRedemptionInput: 'manual',
+    kioskWedgeDemoCameraEnabled: false,
     kioskSponsorEnabled: false,
     kioskSponsorMessage: '',
     kioskSponsorLogoUrl: '',
@@ -600,6 +608,7 @@ const defaultSettings: Settings = {
     expertMode: false,
     adminHiddenAddOnTabs: [],
     adminPinnedAddOnTabs: [],
+    adminNavLayout: 'top',
     adminMainTabOrder: [],
     adminExtraTabOrder: [],
     teacherHiddenAddOnTabs: [],

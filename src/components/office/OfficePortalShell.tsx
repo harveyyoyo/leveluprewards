@@ -2,13 +2,17 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Building2, LogOut, Menu, X } from 'lucide-react';
+import { Building2, LogOut, Maximize2, Menu, Minimize2, X } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { OFFICE_NAV_ITEMS, officeNavIdFromPath } from '@/lib/office/officeNav';
+import { schoolPortalHref } from '@/lib/officePublicUrl';
 import { useOfficeTerm } from '@/lib/office/useOfficeTerm';
+import { useOfficeLayoutMode } from '@/lib/office/useOfficeLayoutMode';
 import {
+  OFFICE_CONTENT_PANE_CLASS,
+  OFFICE_LAYOUT_PANE_CLASS,
   OFFICE_MAIN_PANE_CLASS,
   OFFICE_MAIN_ZOOM,
   OFFICE_SIDEBAR_PANE_CLASS,
@@ -37,14 +41,34 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
   const displaySchool = schoolName?.trim() || schoolId;
   const activeNav = OFFICE_NAV_ITEMS.find((i) => i.id === activeId);
   const { term: workingTerm } = useOfficeTerm(schoolId);
+  const { isWide, toggleLayoutMode } = useOfficeLayoutMode();
 
   return (
-    <div className="min-h-screen bg-[#f4f7f9] text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <div className="flex min-h-screen">
+    <div
+      className={cn(
+        'min-h-screen text-slate-900 dark:text-slate-100',
+        isWide ? 'bg-[#f4f7f9] dark:bg-slate-950' : 'bg-[#e8edf0] dark:bg-slate-950',
+      )}
+    >
+      <div
+        className={cn(
+          'flex min-h-screen',
+          !isWide && 'justify-center px-0 sm:px-6 lg:px-10 sm:py-6',
+        )}
+      >
+        <div
+          className={cn(
+            OFFICE_LAYOUT_PANE_CLASS,
+            'relative flex min-h-screen w-full flex-col overflow-hidden bg-[#f4f7f9] lg:flex-row dark:bg-slate-950',
+            isWide
+              ? 'max-w-none border-0 shadow-none'
+              : 'max-w-5xl shadow-none sm:min-h-[calc(100vh-3rem)] sm:rounded-2xl sm:border sm:border-slate-200/90 sm:shadow-xl dark:sm:border-slate-800',
+          )}
+        >
         <aside
           className={cn(
             OFFICE_SIDEBAR_PANE_CLASS,
-            'fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-teal-900/10 bg-[#0f3d4a] text-white shadow-xl transition-transform lg:static lg:translate-x-0',
+            'fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-teal-900/10 bg-[#0f3d4a] text-white shadow-xl transition-transform lg:static lg:inset-auto lg:z-0 lg:shrink-0 lg:translate-x-0',
             mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
           )}
         >
@@ -111,7 +135,7 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
               Sign out
             </Button>
             <Link
-              href={`/${schoolId}/portal`}
+              href={schoolPortalHref(schoolId)}
               className="block rounded-lg px-3 py-2 text-center text-xs text-teal-200/80 hover:bg-white/5"
             >
               Back to main portal
@@ -136,28 +160,49 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
           className={cn('flex min-w-0 flex-1 flex-col', OFFICE_MAIN_PANE_CLASS)}
           style={{ zoom: OFFICE_MAIN_ZOOM }}
         >
-          <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-slate-200/80 bg-white/90 px-4 py-3 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/90">
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className="lg:hidden"
-              onClick={() => setMobileOpen(true)}
-              aria-label="Open menu"
+          <header className="sticky top-0 z-20 border-b border-slate-200/80 bg-white/90 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/90">
+            <div
+              className={cn(
+                OFFICE_CONTENT_PANE_CLASS,
+                'flex w-full items-center gap-3 px-4 py-3 sm:px-6',
+              )}
             >
-              <Menu className="h-5 w-5" />
-            </Button>
-            <div className="min-w-0 flex-1">
-              <h1 className="text-base font-bold tracking-tight text-slate-900 dark:text-white">
-                {activeNav?.label ?? 'School Office'}
-              </h1>
-              <p className="text-xs text-muted-foreground truncate">
-                {activeNav?.description ?? 'Grades & billing'}
-                {workingTerm ? ` · Term ${workingTerm}` : ''}
-              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="lg:hidden"
+                onClick={() => setMobileOpen(true)}
+                aria-label="Open menu"
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+              <div className="min-w-0 flex-1">
+                <h1 className="text-base font-bold tracking-tight text-slate-900 dark:text-white">
+                  {activeNav?.label ?? 'School Office'}
+                </h1>
+                <p className="truncate text-xs text-muted-foreground">
+                  {activeNav?.description ?? 'Grades & billing'}
+                  {workingTerm ? ` · Term ${workingTerm}` : ''}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 shrink-0 rounded-lg"
+                onClick={toggleLayoutMode}
+                aria-label={isWide ? 'Use standard centered layout' : 'Use wide full-screen layout'}
+                title={isWide ? 'Standard layout' : 'Wide layout'}
+              >
+                {isWide ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+              </Button>
             </div>
           </header>
-          <main className="flex-1 p-4 sm:p-6 lg:p-8">{children}</main>
+          <main className="flex-1 py-4 sm:py-6">
+            <div className={cn(OFFICE_CONTENT_PANE_CLASS, 'w-full px-4 sm:px-6')}>{children}</div>
+          </main>
+        </div>
         </div>
       </div>
     </div>

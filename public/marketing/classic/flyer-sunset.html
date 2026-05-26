@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>LevelUp EDU — Sunset Flyer</title>
+    <script src="/marketing/flyer-embed.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet" />
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      @page { size: letter; margin: 0; }
+      html, body {
+        width: 8.5in; min-height: 11in; font-family: Nunito, system-ui, sans-serif;
+        background: #fff7ed; color: #431407;
+        -webkit-print-color-adjust: exact; print-color-adjust: exact;
+      }
+      html.embed .print-hint { display: none !important; }
+      .flyer {
+        min-height: 11in; width: 8.5in;
+        background: linear-gradient(165deg, #fff7ed 0%, #ffedd5 45%, #fed7aa 100%);
+        padding: 0.45in 0.5in; display: flex; flex-direction: column;
+      }
+      .head { display: flex; align-items: center; justify-content: space-between; }
+      .head img { width: 0.65in; height: 0.65in; border-radius: 12px; }
+      .head h1 { font-size: 0.3in; font-weight: 900; color: #c2410c; }
+      .head h1 span { display: block; font-size: 0.11in; color: #ea580c; letter-spacing: 0.15em; text-transform: uppercase; }
+      .pill { background: #ea580c; color: #fff; font-size: 0.1in; font-weight: 800; padding: 0.07in 0.14in; border-radius: 999px; }
+      .hero { margin-top: 0.24in; text-align: center; }
+      .hero h2 { font-size: 0.46in; font-weight: 900; line-height: 1.08; color: #9a3412; max-width: 6.8in; margin: 0 auto; }
+      .hero p { margin-top: 0.14in; font-size: 0.15in; line-height: 1.5; color: #78350f; max-width: 6.2in; margin-left: auto; margin-right: auto; }
+      .shot {
+        margin: 0.2in auto 0; max-width: 6.8in; padding: 0.1in; background: #fff;
+        border-radius: 16px; border: 2px solid #fdba74; box-shadow: 0 12px 28px rgba(234, 88, 12, 0.15);
+      }
+      .shot img { width: 100%; border-radius: 12px; display: block; }
+      .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 0.12in; margin-top: 0.2in; }
+      .card { background: #fff; border-radius: 12px; padding: 0.12in 0.14in; border: 1px solid #fed7aa; }
+      .card h3 { font-size: 0.12in; color: #ea580c; font-weight: 900; }
+      .card p { font-size: 0.1in; color: #92400e; line-height: 1.4; margin-top: 0.04in; }
+      .cta {
+        margin-top: auto; text-align: center; padding: 0.18in;
+        background: linear-gradient(90deg, #ea580c, #f59e0b); color: #fff; border-radius: 16px;
+      }
+      .cta h2 { font-size: 0.22in; font-weight: 900; }
+      .cta p { font-size: 0.11in; margin-top: 0.06in; opacity: 0.95; }
+      .cta a { color: #fff; font-weight: 800; font-size: 0.115in; text-decoration: underline; margin: 0 0.1in; }
+      .foot { text-align: center; font-size: 0.075in; color: #a16207; margin-top: 0.1in; }
+      .hint { position: fixed; bottom: 12px; right: 12px; padding: 8px 12px; background: #c2410c; color: #fff; font: 700 12px system-ui; border-radius: 8px; }
+    </style>
+  </head>
+  <body>
+    <p class="hint">Ctrl+P → Letter, backgrounds on</p>
+    <article class="flyer">
+      <header class="head">
+        <div style="display:flex;align-items:center;gap:0.14in">
+          <img src="/marketing/screenshots/hall-of-fame.png" alt="LevelUp" width="64" height="64" />
+          <h1>LevelUp <span>Rewards</span></h1>
+        </div>
+        <span class="pill">PBIS</span>
+      </header>
+      <section class="hero">
+        <h2>Celebrate every win—big or small.</h2>
+        <p>Help students feel proud of positive choices with points, rewards, and recognition your whole school can share.</p>
+        <div class="shot"><img src="/marketing/screenshots/hall-of-fame.png" alt="Hall of Fame" width="800" height="500" /></div>
+      </section>
+      <section class="cards">
+        <div class="card"><h3>Kiosk check-in</h3><p>Fast login and instant redemption.</p></div>
+        <div class="card"><h3>Teacher awards</h3><p>Coupons and points in seconds.</p></div>
+        <div class="card"><h3>Leaderboards</h3><p>Motivation that feels fair and fun.</p></div>
+        <div class="card"><h3>Prize shop</h3><p>Your catalog, your school culture.</p></div>
+      </section>
+      <section class="cta">
+        <h2>Bring LevelUp to your community night</h2>
+        <p>
+          <a href="https://leveluprewards.app">leveluprewards.app</a>
+          <a href="mailto:contact@leveluprewards.app">contact@leveluprewards.app</a>
+        </p>
+      </section>
+      <footer class="flyer-footer">
+        <p class="flyer-footer__vendor">Approved NYC Department of Education (DOE) vendor</p>
+        <p class="flyer-footer__links"><a href="https://leveluprewards.app">leveluprewards.app</a> · <a href="mailto:contact@leveluprewards.app">contact@leveluprewards.app</a></p>
+        <p class="flyer-footer__copy">© 2026 LevelUp EdTech Enterprises LLC</p>
+      </footer>
+
+      </article>
+  </body>
+</html>

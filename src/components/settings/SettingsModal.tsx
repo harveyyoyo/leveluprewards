@@ -31,7 +31,7 @@ import {
     Settings, Volume2, VolumeX, Monitor, Smartphone, ChevronRight,
     Shield, Moon, Sun, ArrowLeft, Palette, Zap, Trophy,
     BarChart3, MessageSquare, ShoppingBag, ShieldCheck, Star,
-    Users, Printer, LayoutDashboard, History, HelpCircle,
+    Users, Printer, LayoutDashboard, History, HelpCircle, PanelLeft, Rows3,
     Cpu, Cog, Lock, Sparkles, Trash2, RotateCcw, Smile, BookOpen, Tv,
     Layers, UsersRound, Ticket, Loader2
 } from 'lucide-react';
@@ -48,8 +48,16 @@ import { WELCOME_GREETING_STYLES } from '@/components/WelcomeGreeting';
 import { IdCardPrinterSettingsSection } from '@/components/settings/IdCardPrinterSettingsSection';
 import { PRODUCT_PILLAR_LABELS } from '@/lib/productPillars';
 import { OfficePortalEntryLink } from '@/components/office/OfficePortalEntryLink';
-
 type SettingsView = 'hub' | 'interface' | 'security' | 'features' | 'pillars';
+
+function parseSettingsViewFromQuery(value: string | null): SettingsView | null {
+    if (value === 'hub') return 'hub';
+    if (value === 'features') return 'features';
+    if (value === 'interface') return 'interface';
+    if (value === 'security') return 'security';
+    if (value === 'pillars') return 'pillars';
+    return null;
+}
 type RoleView = 'global' | 'student' | 'teacher';
 type PreviewMode = 'live' | 'draft';
 
@@ -244,6 +252,8 @@ export function SettingsModal() {
     const { user: firebaseUser } = useFirebase();
     const canBypassAdminPasscode = isAllowedAdminGoogleUser(firebaseUser);
     const canOpenSettings = loginState === 'admin' || loginState === 'developer' || loginState === 'teacher';
+    const canManageSchoolSettings =
+        isAdmin || loginState === 'admin' || loginState === 'developer';
     const { settings, settingsPreferences, updateSettings } = useSettings();
     const playSound = useArcadeSound();
     const { toast } = useToast();
@@ -251,7 +261,6 @@ export function SettingsModal() {
     const [adminDialogOpen, setAdminDialogOpen] = useState(false);
     const [adminPasscode, setAdminPasscode] = useState('');
     const [adminSubmitting, setAdminSubmitting] = useState(false);
-    const [openSettingsAfterAdminUnlock, setOpenSettingsAfterAdminUnlock] = useState(false);
     const [draft, setDraft] = useState<AppSettings | null>(null);
     const [view, setView] = useState<SettingsView>('hub');
     const [vendingSettingsOpen, setVendingSettingsOpen] = useState(false);
@@ -267,6 +276,8 @@ export function SettingsModal() {
     const committedRef = useRef(false);
     const isShortLinkKioskRoute = typeof pathname === 'string' && pathname.startsWith('/s/');
     const autoOpenedFromQueryRef = useRef(false);
+    const pendingSettingsViewRef = useRef<SettingsView | null>(null);
+    const lastEditorLoginStateRef = useRef(loginState);
 
     /** Must run whenever the modal opens (trigger, ?settings=, or window event) so draft/original refs stay in sync. */
     const beginSettingsSession = useCallback(
@@ -275,9 +286,9 @@ export function SettingsModal() {
             originalSettingsRef.current = cloneSettings(settingsPreferences);
             setDraft(cloneSettings(settingsPreferences));
             setView(initialView ?? 'hub');
-            setPreviewMode(isAdmin ? 'draft' : 'live');
+            setPreviewMode(canManageSchoolSettings ? 'draft' : 'live');
         },
-        [settingsPreferences, isAdmin],
+        [settingsPreferences, canManageSchoolSettings],
     );
 
     useLayoutEffect(() => {
@@ -288,6 +299,11 @@ export function SettingsModal() {
         if (!open || isAdmin || view !== 'security') return;
         setView('features');
     }, [open, isAdmin, view]);
+
+    useLayoutEffect(() => {
+        if (!open || canManageSchoolSettings || view !== 'pillars') return;
+        setView('hub');
+    }, [open, canManageSchoolSettings, view]);
 
     // In-app opener (avoids route transitions / layout jank).
     useEffect(() => {
@@ -303,11 +319,25 @@ export function SettingsModal() {
     }, [canOpenSettings, beginSettingsSession]);
 
     useEffect(() => {
-        if (!openSettingsAfterAdminUnlock || !isAdmin || adminDialogOpen) return;
-        setOpenSettingsAfterAdminUnlock(false);
-        beginSettingsSession('hub');
-        setOpen(true);
-    }, [adminDialogOpen, beginSettingsSession, isAdmin, openSettingsAfterAdminUnlock]);
+        if (canOpenSettings) return;
+        const requestedView = parseSettingsViewFromQuery(searchParams?.get('settings') ?? null);
+        if (requestedView) pendingSettingsViewRef.current = requestedView;
+    }, [canOpenSettings, searchParams]);
+
+    useEffect(() => {
+        if (!open) {
+            lastEditorLoginStateRef.current = loginState;
+            return;
+        }
+        const wasKioskSchoolSession =
+            lastEditorLoginStateRef.current === 'school' || lastEditorLoginStateRef.current === 'student';
+        const nowStaffEditor = loginState === 'admin' || loginState === 'developer';
+        lastEditorLoginStateRef.current = loginState;
+        if (!wasKioskSchoolSession || !nowStaffEditor) return;
+        originalSettingsRef.current = cloneSettings(settingsPreferences);
+        setDraft(cloneSettings(settingsPreferences));
+        setPreviewMode('draft');
+    }, [open, loginState, settingsPreferences]);
 
     const canLivePreviewInterfaceRole = useMemo(() => {
         if (interfaceRole === 'global') return true;
@@ -454,15 +484,9 @@ export function SettingsModal() {
         if (!requested) return;
         if (autoOpenedFromQueryRef.current) return;
 
-        const requestedView = ((): SettingsView | null => {
-            if (requested === 'hub') return 'hub';
-            if (requested === 'features') return 'features';
-            if (requested === 'interface') return 'interface';
-            if (requested === 'security') return 'security';
-            if (requested === 'pillars') return 'pillars';
-            return null;
-        })();
+        const requestedView = parseSettingsViewFromQuery(requested);
         if (!requestedView) return;
+        if (requestedView === 'pillars' && !canManageSchoolSettings) return;
 
         autoOpenedFromQueryRef.current = true;
         beginSettingsSession(requestedView);
@@ -476,7 +500,7 @@ export function SettingsModal() {
                 // ignore
             }
         });
-    }, [canOpenSettings, pathname, router, searchParams, beginSettingsSession]);
+    }, [canManageSchoolSettings, canOpenSettings, pathname, router, searchParams, beginSettingsSession]);
 
     // If the user closes/cancels, revert any live-previewed changes.
     useEffect(() => {
@@ -516,7 +540,7 @@ export function SettingsModal() {
         }
 
         playSound('login');
-        setOpenSettingsAfterAdminUnlock(true);
+        setOpen(true);
         setAdminSubmitting(false);
         setAdminDialogOpen(false);
     }, [adminPasscode, adminSubmitting, firebaseUser, login, playSound, schoolId, toast]);
@@ -712,7 +736,7 @@ export function SettingsModal() {
                                     Sessions, printing, kiosk options, shop features, and more
                                 </span>
                             </button>
-                            {isAdmin && (
+                            {canManageSchoolSettings && (
                                 <button
                                     type="button"
                                     onClick={() => {
@@ -1221,6 +1245,45 @@ export function SettingsModal() {
                                          Auto uses app layout on tablets and phones, web on larger screens. Web and App always use that layout.
                                      </p>
                                  </div>
+
+                                 {isAdmin && interfaceRole === 'global' ? (
+                                     <div className="space-y-2 mt-4 pt-4 border-t border-border/40">
+                                         <div className="flex items-center gap-2">
+                                             <PanelLeft className="w-4 h-4 text-muted-foreground shrink-0" />
+                                             <div className="min-w-0">
+                                                 <span className="text-sm font-bold">Admin section tabs</span>
+                                                 <p className="text-[10px] text-muted-foreground font-medium leading-snug mt-0.5">
+                                                     Top row (default) or a vertical list on the left on large screens.
+                                                 </p>
+                                             </div>
+                                         </div>
+                                         <div className="flex items-center justify-between bg-muted/40 p-1.5 rounded-2xl border border-border/50">
+                                             {(['top', 'sidebar'] as const).map((layout) => {
+                                                 const active = (local.adminNavLayout ?? 'top') === layout;
+                                                 return (
+                                                     <button
+                                                         key={layout}
+                                                         type="button"
+                                                         onClick={() => handleToggle('adminNavLayout', layout)}
+                                                         className={cn(
+                                                             'flex flex-1 items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all',
+                                                             active
+                                                                 ? 'bg-background text-foreground shadow-sm border border-border/50'
+                                                                 : 'text-muted-foreground hover:text-foreground',
+                                                         )}
+                                                     >
+                                                         {layout === 'top' ? (
+                                                             <Rows3 className="h-3.5 w-3.5" aria-hidden />
+                                                         ) : (
+                                                             <PanelLeft className="h-3.5 w-3.5" aria-hidden />
+                                                         )}
+                                                         {layout === 'top' ? 'Top' : 'Side'}
+                                                     </button>
+                                                 );
+                                             })}
+                                         </div>
+                                     </div>
+                                 ) : null}
                             </div>
                                 </div>
                             </div>
@@ -1404,6 +1467,22 @@ export function SettingsModal() {
                                                 handleToggle('kioskCouponRedemptionManualEnabled', !checked);
                                                 handleToggle('kioskCouponRedemptionInput', checked ? 'camera' : 'manual');
                                             }}
+                                            disabled={!isAdmin}
+                                        />
+                                    </div>
+
+                                    <div className="flex items-center justify-between border-t border-slate-200/60 dark:border-slate-700/50 pt-4">
+                                        <div className="flex flex-col pr-4">
+                                            <span className="text-sm font-bold">Demo camera (wedge mode)</span>
+                                            <p className="text-[11px] text-muted-foreground">
+                                                Off by default. While USB wedge scanning stays on, allow the front camera to read barcodes for demos (Show camera on the kiosk page). Does not change coupon or login scan tabs.
+                                            </p>
+                                        </div>
+                                        <Switch
+                                            checked={local.kioskWedgeDemoCameraEnabled === true}
+                                            onCheckedChange={(checked) =>
+                                                handleToggle('kioskWedgeDemoCameraEnabled', checked)
+                                            }
                                             disabled={!isAdmin}
                                         />
                                     </div>

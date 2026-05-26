@@ -1,12 +1,23 @@
-/** Office pillar data — separate from rewards arcade collections. */
+/** School Office pillar data (grades, billing, roster). Separate from rewards `students` / `teachers`. */
 
-/** Office-only roster (not live-linked to rewards `students`). */
+/** Homeroom / classroom teacher in School Office (not rewards `teachers`). */
+export type OfficeTeacher = {
+  id: string;
+  name: string;
+  email?: string | null;
+  updatedAt: number;
+};
+
+/** Office student roster. */
 export type OfficeStudent = {
   id: string;
   firstName: string;
   lastName: string;
   nickname?: string | null;
   classId?: string | null;
+  /** Assigned homeroom teacher (`officeTeachers` doc id). */
+  teacherId?: string | null;
+  /** Legacy free-text; prefer `teacherId`. Kept for old rows and CSV until migrated. */
   teacherName?: string | null;
   notes?: string | null;
   updatedAt: number;
@@ -47,6 +58,8 @@ export type OfficeBillingAccount = {
 
 export type OfficeInvoiceStatus = 'draft' | 'sent' | 'paid' | 'void';
 
+export type OfficePaymentMethod = 'cash' | 'check' | 'card' | 'transfer' | 'other';
+
 export type OfficeInvoice = {
   id: string;
   accountId: string;
@@ -56,6 +69,9 @@ export type OfficeInvoice = {
   status: OfficeInvoiceStatus;
   createdAt: number;
   paidAt?: number | null;
+  /** How payment was recorded when marked paid outside Stripe. */
+  paymentMethod?: OfficePaymentMethod | null;
+  paymentNote?: string | null;
 };
 
 export type OfficeGradeEntryInput = Omit<OfficeGradeEntry, 'id' | 'updatedAt' | 'updatedBy'>;
@@ -63,3 +79,13 @@ export type OfficeGradeEntryInput = Omit<OfficeGradeEntry, 'id' | 'updatedAt' | 
 export type OfficeBillingAccountInput = Omit<OfficeBillingAccount, 'id' | 'updatedAt'>;
 
 export type OfficeInvoiceInput = Omit<OfficeInvoice, 'id' | 'createdAt' | 'paidAt'>;
+
+/** School-wide School Office preferences (`schools/{id}/officeSettings/config`). */
+export type OfficeSettings = {
+  defaultActiveTerm?: string | null;
+  statementSchoolName?: string | null;
+  /** School-defined term labels (e.g. Fall 2026) — appear in working-term dropdowns before any grades exist. */
+  configuredTerms?: string[] | null;
+  updatedAt: number;
+  updatedBy?: string | null;
+};

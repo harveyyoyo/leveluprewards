@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>LevelUp — Elementary Students</title>
+    <script src="/marketing/flyer-embed.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Nunito:wght@700;800&display=swap" rel="stylesheet" />
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      @page { size: letter; margin: 0; }
+      html, body {
+        width: 8.5in; min-height: 11in; font-family: Nunito, system-ui, sans-serif;
+        background: #fef3c7; color: #713f12;
+        -webkit-print-color-adjust: exact; print-color-adjust: exact;
+      }
+      html.embed .hint { display: none !important; }
+      .flyer {
+        width: 8.5in; min-height: 11in;
+        background: linear-gradient(160deg, #fef9c3 0%, #fde68a 35%, #fbcfe8 70%, #bfdbfe 100%);
+        padding: 0.42in 0.48in; display: flex; flex-direction: column;
+      }
+      .badge {
+        align-self: center; background: #fff; border: 3px solid #f59e0b;
+        border-radius: 999px; padding: 0.06in 0.2in; font-family: Fredoka, sans-serif;
+        font-size: 0.12in; font-weight: 700; color: #b45309;
+      }
+      .head { margin-top: 0.16in; display: flex; align-items: center; justify-content: center; gap: 0.14in; }
+      .head img { width: 0.72in; border-radius: 16px; border: 4px solid #fff; box-shadow: 0 6px 0 #f59e0b; }
+      .head h1 { font-family: Fredoka, sans-serif; font-size: 0.38in; color: #7c2d12; line-height: 1.1; }
+      .hero { text-align: center; margin-top: 0.2in; }
+      .hero h2 {
+        font-family: Fredoka, sans-serif; font-size: 0.5in; line-height: 1.05;
+        color: #be185d; text-shadow: 2px 2px 0 #fff;
+      }
+      .hero p { margin-top: 0.12in; font-size: 0.16in; font-weight: 800; color: #92400e; max-width: 6.4in; margin-left: auto; margin-right: auto; }
+      .stars { margin-top: 0.1in; font-size: 0.22in; letter-spacing: 0.08in; }
+      .shot {
+        margin: 0.18in auto 0; max-width: 6.6in; padding: 0.12in; background: #fff;
+        border-radius: 24px; border: 4px dashed #f472b6; transform: rotate(-1deg);
+      }
+      .shot img { width: 100%; border-radius: 16px; display: block; }
+      .fun { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.1in; margin-top: 0.18in; }
+      .fun div {
+        background: #fff; border-radius: 16px; padding: 0.12in; text-align: center;
+        border: 3px solid #a78bfa; font-family: Fredoka, sans-serif;
+      }
+      .fun b { display: block; font-size: 0.13in; color: #6d28d9; }
+      .fun span { font-size: 0.09in; font-weight: 800; color: #78716c; }
+      .cta {
+        margin-top: auto; text-align: center; background: #7c3aed; color: #fff;
+        border-radius: 20px; padding: 0.16in; border: 4px solid #fff;
+        box-shadow: 0 6px 0 #5b21b6;
+      }
+      .cta p { font-size: 0.14in; font-weight: 800; }
+      .cta small { display: block; margin-top: 0.06in; font-size: 0.1in; opacity: 0.95; }
+      .foot { text-align: center; font-size: 0.075in; margin-top: 0.1in; color: #a16207; }
+      .hint { position: fixed; bottom: 12px; right: 12px; padding: 8px 12px; background: #7c3aed; color: #fff; font: 700 12px system-ui; border-radius: 8px; }
+    </style>
+  </head>
+  <body>
+    <p class="hint">Ctrl+P → Letter, backgrounds on</p>
+    <article class="flyer">
+      <span class="badge">Grades K–5</span>
+      <header class="head">
+        <img src="/marketing/screenshots/kiosk-welcome.png" alt="LevelUp" width="70" height="70" />
+        <h1>LevelUp<br />Rewards</h1>
+      </header>
+      <section class="hero">
+        <p class="stars">★ ★ ★ ★ ★</p>
+        <h2>Be kind. Earn stars. Pick a prize!</h2>
+        <p>When you make great choices, you get points to spend in the prize shop—just like a treasure chest at school.</p>
+      </section>
+      <div class="shot">
+        <img src="/marketing/screenshots/kiosk-welcome.png" alt="Welcome screen" width="800" height="500" />
+      </div>
+      <section class="fun">
+        <div><b>Scan in</b><span>Card or ID</span></div>
+        <div><b>See stars</b><span>Your points</span></div>
+        <div><b>Pick prizes</b><span>Stickers &amp; more</span></div>
+      </section>
+      <section class="cta">
+        <p>Ask your teacher about LevelUp!</p>
+        <small>leveluprewards.app · Grades K–5</small>
+      </section>
+      <footer class="flyer-footer">
+        <p class="flyer-footer__vendor">Approved NYC Department of Education (DOE) vendor</p>
+        <p class="flyer-footer__links"><a href="https://leveluprewards.app">leveluprewards.app</a> · <a href="mailto:contact@leveluprewards.app">contact@leveluprewards.app</a></p>
+        <p class="flyer-footer__copy">© 2026 LevelUp EdTech Enterprises LLC</p>
+      </footer>
+
+      </article>
+  </body>
+</html>

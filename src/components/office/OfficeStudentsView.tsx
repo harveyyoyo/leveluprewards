@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useOfficeUrlSync } from '@/lib/office/useOfficeUrlSync';
 import { Download } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -9,12 +10,14 @@ import { Button } from '@/components/ui/button';
 import { OfficeSearchInput } from '@/components/office/OfficeSearchInput';
 import { OfficeStudentSheet } from '@/components/office/OfficeStudentSheet';
 import { OfficeRosterManager } from '@/components/office/OfficeRosterManager';
-import type { OfficeBillingAccount, OfficeClass, OfficeGradeEntry, OfficeStudent } from '@/lib/office/types';
+import type { OfficeBillingAccount, OfficeClass, OfficeGradeEntry, OfficeStudent, OfficeTeacher } from '@/lib/office/types';
 import {
   billingAccountForStudent,
   exportOfficeStudentsCsv,
   getOfficeStudentFullName,
   getOfficeStudentLabel,
+  getOfficeTeacherLabel,
+  officeStudentHasTeacher,
   studentIdsWithGradesForTerm,
 } from '@/lib/office/officeUtils';
 import { OfficeEmptyState } from '@/components/office/OfficeEmptyState';
@@ -24,13 +27,15 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
 type SortKey = 'name-asc' | 'name-desc' | 'class';
-type RosterFilter = 'all' | 'missing-grades' | 'no-billing' | 'unassigned';
+type RosterFilter = 'all' | 'missing-grades' | 'no-billing' | 'unassigned' | 'no-teacher';
 
 type OfficeStudentsViewProps = {
   schoolId: string;
   students: OfficeStudent[];
   classes: OfficeClass[];
+  teachers: OfficeTeacher[];
   classNameById: Map<string, string>;
+  teacherNameById: Map<string, string>;
   gradeEntries: OfficeGradeEntry[];
   billingAccounts: OfficeBillingAccount[];
   activeTerm: string;
@@ -41,7 +46,9 @@ export function OfficeStudentsView({
   schoolId,
   students,
   classes,
+  teachers,
   classNameById,
+  teacherNameById,
   gradeEntries,
   billingAccounts,
   activeTerm,
@@ -75,6 +82,7 @@ export function OfficeStudentsView({
     const q = query.trim().toLowerCase();
     const list = students.filter((s) => {
       if (rosterFilter === 'unassigned' && s.classId) return false;
+      if (rosterFilter === 'no-teacher' && officeStudentHasTeacher(s)) return false;
       if (rosterFilter === 'missing-grades' && gradedForTerm.has(s.id)) return false;
       if (rosterFilter === 'no-billing' && billingAccountForStudent(billingAccounts, s.id)) return false;
       if (classFilter === '__unassigned__' && s.classId) return false;
@@ -100,7 +108,7 @@ export function OfficeStudentsView({
 
   useEffect(() => {
     const f = searchParams.get('filter')?.trim();
-    if (f === 'missing-grades' || f === 'no-billing' || f === 'unassigned') {
+    if (f === 'missing-grades' || f === 'no-billing' || f === 'unassigned' || f === 'no-teacher') {
       setRosterFilter(f);
       if (f === 'unassigned') setClassFilter('__unassigned__');
     }
@@ -117,7 +125,18 @@ export function OfficeStudentsView({
     }
   }, [searchParams, students, isLoading]);
 
+  useOfficeUrlSync({
+    filter: rosterFilter === 'all' ? undefined : rosterFilter,
+    student: selected?.id,
+    class:
+      classFilter === 'all' || classFilter === '__unassigned__' ? undefined : classFilter,
+  });
+
   const unassignedCount = useMemo(() => students.filter((s) => !s.classId).length, [students]);
+  const noTeacherCount = useMemo(
+    () => students.filter((s) => !officeStudentHasTeacher(s)).length,
+    [students],
+  );
 
   const rosterFilterOptions: { id: RosterFilter; label: string }[] = [
     { id: 'all', label: 'All' },
@@ -126,6 +145,9 @@ export function OfficeStudentsView({
       : []),
     ...(noBillingCount > 0 ? [{ id: 'no-billing' as const, label: `No billing (${noBillingCount})` }] : []),
     ...(unassignedCount > 0 ? [{ id: 'unassigned' as const, label: `Unassigned (${unassignedCount})` }] : []),
+    ...(noTeacherCount > 0
+      ? [{ id: 'no-teacher' as const, label: `No teacher (${noTeacherCount})` }]
+      : []),
   ];
 
   if (isLoading) {
@@ -138,20 +160,17 @@ export function OfficeStudentsView({
         <OfficeEmptyState
           icon={Users}
           title="No office students yet"
-          description="Add students manually or import once from the rewards roster (admin)."
+          description="Add students manually or import a CSV roster."
         />
-        <OfficeRosterManager schoolId={schoolId} classes={classes} />
+        <OfficeRosterManager schoolId={schoolId} classes={classes} teachers={teachers} />
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">
-        Office roster is separate from rewards arcade students. Add students here or import once from rewards (admin).
-      </p>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <OfficeRosterManager schoolId={schoolId} classes={classes} />
+        <OfficeRosterManager schoolId={schoolId} classes={classes} teachers={teachers} />
         <Button
           type="button"
           variant="outline"
@@ -159,7 +178,7 @@ export function OfficeStudentsView({
           className="rounded-xl gap-2"
           disabled={students.length === 0}
           onClick={() => {
-            exportOfficeStudentsCsv(schoolId, filtered, classNameById);
+            exportOfficeStudentsCsv(schoolId, filtered, classNameById, teacherNameById);
             toast({ title: 'Roster exported', description: `${filtered.length} rows.` });
           }}
         >
@@ -254,7 +273,9 @@ export function OfficeStudentsView({
                 <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">
                   {(s.classId && classNameById.get(s.classId)) || '—'}
                 </td>
-                <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{s.teacherName || '—'}</td>
+                <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">
+                  {getOfficeTeacherLabel(s, teacherNameById) || '—'}
+                </td>
                 <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">
                   {billingAccountForStudent(billingAccounts, s.id)?.familyName ?? '—'}
                 </td>
@@ -276,7 +297,7 @@ export function OfficeStudentsView({
         {filtered.length === 0 ? (
           <p className="p-8 text-center text-sm text-muted-foreground">
             {students.length === 0
-              ? 'No office students yet. Add students or import from rewards (admin).'
+              ? 'No office students yet. Add students or import a CSV.'
               : 'No students match your filters.'}
           </p>
         ) : null}
@@ -292,6 +313,7 @@ export function OfficeStudentsView({
         billingAccounts={billingAccounts}
         activeTerm={activeTerm}
         classes={classes}
+        teachers={teachers}
       />
     </div>
   );

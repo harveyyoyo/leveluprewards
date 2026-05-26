@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>LevelUp — For Principals: School Culture</title>
+    <script src="/marketing/flyer-embed.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@700;800&family=Karla:wght@400;600;700&display=swap" rel="stylesheet" />
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      @page { size: letter; margin: 0; }
+      html, body {
+        width: 8.5in; min-height: 11in; font-family: Karla, system-ui, sans-serif;
+        background: #fff; color: #1c1917;
+        -webkit-print-color-adjust: exact; print-color-adjust: exact;
+      }
+      html.embed .hint { display: none !important; }
+      .flyer { width: 8.5in; min-height: 11in; display: grid; grid-template-rows: 1.6in 1fr auto; }
+      /* Hero band */
+      .hero-band {
+        background: #881337;
+        padding: 0 0.5in; display: flex; align-items: center; justify-content: space-between;
+      }
+      .hero-band-text h1 {
+        font-family: Fraunces, serif; font-size: 0.32in; font-weight: 800; color: #fff;
+        line-height: 1.1;
+      }
+      .hero-band-text p { font-size: 0.11in; color: #fda4af; font-weight: 600; margin-top: 0.06in; }
+      .hero-band img { width: 0.7in; opacity: 0.95; }
+      /* Body */
+      .content { padding: 0.3in 0.5in; display: flex; flex-direction: column; }
+      h2 {
+        font-family: Fraunces, serif; font-size: 0.3in; font-weight: 800; line-height: 1.2;
+        color: #881337;
+      }
+      .intro { font-size: 0.125in; line-height: 1.55; color: #57534e; margin-top: 0.12in; max-width: 7in; }
+      .pillars {
+        display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.1in; margin-top: 0.2in;
+      }
+      .pillar {
+        background: #fff1f2; border-top: 3px solid #881337;
+        padding: 0.12in; border-radius: 0 0 10px 10px;
+      }
+      .pillar h3 { font-size: 0.12in; font-weight: 700; color: #881337; }
+      .pillar p { font-size: 0.095in; line-height: 1.4; color: #57534e; margin-top: 0.05in; }
+      .evidence {
+        margin-top: 0.18in; display: grid; grid-template-columns: 1fr 1fr; gap: 0.14in;
+      }
+      .evidence-box { background: #fafaf9; border: 1px solid #e7e5e4; border-radius: 10px; padding: 0.14in; }
+      .evidence-box h4 { font-size: 0.1in; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #881337; margin-bottom: 0.08in; }
+      .evidence-box p { font-size: 0.1in; line-height: 1.45; color: #78716c; }
+      .shot { margin-top: 0.14in; border: 1px solid #e7e5e4; border-radius: 10px; overflow: hidden; }
+      .shot img { width: 100%; display: block; }
+      /* Footer */
+      .footer-band {
+        background: #1c1917; padding: 0.14in 0.5in;
+        display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.1in;
+      }
+      .footer-band p { font-size: 0.1in; color: #a8a29e; font-weight: 500; }
+      .footer-band a { color: #fda4af; font-weight: 700; text-decoration: none; font-size: 0.11in; }
+      .hint { position: fixed; bottom: 12px; right: 12px; padding: 8px 12px; background: #881337; color: #fff; font: 700 12px system-ui; }
+    </style>
+  </head>
+  <body>
+    <p class="hint">Ctrl+P → Letter, backgrounds on</p>
+    <article class="flyer">
+      <div class="hero-band">
+        <div class="hero-band-text">
+          <h1>Build the school<br />culture you envision.</h1>
+          <p>LevelUp EDU — for principals who lead with purpose</p>
+        </div>
+        <img src="/marketing/screenshots/hall-of-fame.png" alt="LevelUp" width="68" height="68" />
+      </div>
+
+      <div class="content">
+        <h2>Culture doesn't happen by accident. It's engineered.</h2>
+        <p class="intro">
+          Positive school culture requires consistent recognition, fair systems, and visible progress.
+          LevelUp gives your staff the tools to reinforce the behaviors you want—school-wide—while
+          you monitor the data and guide the mission.
+        </p>
+        <section class="pillars" aria-label="Culture pillars">
+          <div class="pillar">
+            <h3>Consistency</h3>
+            <p>Every teacher awards points the same way. Coupons are tracked—no more favoritism gaps.</p>
+          </div>
+          <div class="pillar">
+            <h3>Recognition</h3>
+            <p>Students see their balance, rank, and achievements. Visible wins drive intrinsic motivation.</p>
+          </div>
+          <div class="pillar">
+            <h3>Accountability</h3>
+            <p>Redemption logs and usage telemetry show you exactly how the system is being used.</p>
+          </div>
+        </section>
+        <div class="evidence">
+          <div class="evidence-box">
+            <h4>What staff tell us</h4>
+            <p>"I can award points during the lesson without breaking the flow — it takes two seconds."</p>
+          </div>
+          <div class="evidence-box">
+            <h4>What students say</h4>
+            <p>"The points feel real because I can actually trade them for something I want."</p>
+          </div>
+        </div>
+        <div class="shot">
+          <img src="/marketing/screenshots/hall-of-fame.png" alt="Hall of Fame leaderboard" width="900" height="450" />
+        </div>
+      </div>
+
+      <div class="footer-band">
+        <p>Schedule a culture-focused walkthrough for your leadership team.</p>
+        <a href="mailto:contact@leveluprewards.app">contact@leveluprewards.app</a>
+      </div>
+      <footer class="flyer-footer">
+        <p class="flyer-footer__vendor">Approved NYC Department of Education (DOE) vendor</p>
+        <p class="flyer-footer__links"><a href="https://leveluprewards.app">leveluprewards.app</a> · <a href="mailto:contact@leveluprewards.app">contact@leveluprewards.app</a></p>
+        <p class="flyer-footer__copy">© 2026 LevelUp EdTech Enterprises LLC</p>
+      </footer>
+
+    </article>
+  </body>
+</html>

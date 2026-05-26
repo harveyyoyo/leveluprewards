@@ -23,6 +23,7 @@ import {
     syncFirebaseSessionCookie,
     syncSchoolGateCookie,
     clearFirebaseSessionCookieSync,
+    clearSchoolGateCookie,
 } from '@/lib/auth/syncFirebaseSessionCookie';
 import { sanitizeInternalNextPath } from '@/lib/auth/internalNextRedirect';
 import { isAllowedAdminGoogleUser } from '@/lib/adminGoogleAccess';
@@ -45,17 +46,27 @@ export type LoginState =
     | 'office'
     | 'houseCoordinator';
 
+const ROLE_DOC_RESTORE_TIMEOUT_MS = 8_000;
+
 /** Prefer server read on restore; offline or transient errors fall back to persistent local cache. */
 async function getRoleDocForSessionRestore(
     roleRef: DocumentReference<DocumentData>,
 ): Promise<DocumentSnapshot<DocumentData>> {
+    const readCached = () => getDoc(roleRef);
     if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-        return getDoc(roleRef);
+        return readCached();
     }
     try {
-        return await getDocFromServer(roleRef);
+        const fromServer = getDocFromServer(roleRef);
+        const timedOut = new Promise<null>((resolve) => {
+            window.setTimeout(() => resolve(null), ROLE_DOC_RESTORE_TIMEOUT_MS);
+        });
+        const winner = await Promise.race([fromServer.then((d) => d as DocumentSnapshot<DocumentData> | null), timedOut]);
+        if (winner) return winner;
+        console.warn('AuthProvider: role doc server read timed out; using cache.');
+        return readCached();
     } catch {
-        return getDoc(roleRef);
+        return readCached();
     }
 }
 
@@ -87,6 +98,8 @@ interface AuthContextType {
         credentials: { schoolId?: string; passcode?: string; username?: string; teacherName?: string; teacherDocId?: string; staffRole?: 'secretary' | 'prizeClerk' | 'reports' | 'librarian' | 'office' | 'houseCoordinator'; }
     ) => Promise<LoginResult>;
     startDeveloperSupportSession: (schoolId: string) => Promise<boolean>;
+    /** Clears school chooser session only (keeps Firebase / Google sign-in). Used by `/login?changeSchool=1`. */
+    clearSchoolChooserSession: () => void;
     logout: (options?: LogoutOptions) => void;
     setUserName: (name: string | null) => void;
     isKioskLocked: boolean;
@@ -102,6 +115,23 @@ const AuthContext = createContext<AuthContextType | null>(null);
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const DEVELOPER_SUPPORT_SESSION_KEY = 'developerSupportSession';
 const SESSION_SYNC_FAILED_EVENT = 'levelup:session-sync-failed';
+const CALLABLE_TIMEOUT_MS = 25_000;
+
+function withCallableTimeout<T>(promise: Promise<T>, message: string): Promise<T> {
+    return new Promise((resolve, reject) => {
+        const timer = window.setTimeout(() => reject(new Error(message)), CALLABLE_TIMEOUT_MS);
+        promise.then(
+            (value) => {
+                window.clearTimeout(timer);
+                resolve(value);
+            },
+            (error) => {
+                window.clearTimeout(timer);
+                reject(error);
+            },
+        );
+    });
+}
 
 function reportSessionSyncFailure(phase: 'firebase-session' | 'school-gate') {
     console.error(`Auth session sync failed during ${phase}.`);
@@ -290,11 +320,63 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     }, [loginState, returnToSchoolSession, router, schoolId]);
 
+    const clearSchoolChooserSession = useCallback(() => {
+        setIsAdmin(false);
+        setIsTeacher(false);
+        setIsSecretary(false);
+        setIsPrizeClerk(false);
+        setIsReports(false);
+        setIsLibrarian(false);
+        setIsOffice(false);
+        setIsHouseCoordinator(false);
+        setIsKioskLocked(false);
+        setUserName(null);
+        setUserId(auth.currentUser?.uid ?? null);
+        setTeacherDocId(null);
+        setSchoolId(null);
+        setLoginState('loggedOut');
+        localStorage.removeItem('loginState');
+        localStorage.removeItem('schoolId');
+        localStorage.removeItem('userName');
+        localStorage.removeItem('teacherDocId');
+        localStorage.removeItem(DEVELOPER_SUPPORT_SESSION_KEY);
+        void clearSchoolGateCookie();
+    }, [auth]);
+
     // Auto-logout logic moved to AppContextBridge in AppProvider.tsx to allow for configurable timeouts from SettingsProvider.
 
     useLayoutEffect(() => {
         setIsMounted(true);
     }, []);
+
+    /** If client JS is slow or hydration stalls, do not block the shell forever. */
+    useEffect(() => {
+        const id = window.setTimeout(() => {
+            setIsMounted((prev) => {
+                if (!prev) {
+                    console.warn('AuthProvider: mount failsafe fired; rendering app shell.');
+                }
+                return true;
+            });
+        }, 2_500);
+        return () => window.clearTimeout(id);
+    }, []);
+
+    /** Covers slow Firebase bootstrap when restore effect cannot schedule its own failsafe yet. */
+    useEffect(() => {
+        if (!isMounted) return;
+        const id = window.setTimeout(() => {
+            setIsInitialized((prev) => {
+                if (!prev) {
+                    console.warn(
+                        'AuthProvider: global init failsafe fired; unblocking portal and school routes.',
+                    );
+                }
+                return true;
+            });
+        }, 20_000);
+        return () => window.clearTimeout(id);
+    }, [isMounted]);
 
     useEffect(() => {
         if (!isMounted || isUserLoading || !firestore || !auth) {
@@ -326,14 +408,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
                 if (savedState === 'developer') {
                     setLoginState('developer');
-                    setIsAdmin(true);
                     setIsTeacher(false);
                     setIsSecretary(false);
                     setIsPrizeClerk(false);
                     setIsReports(false);
+                    setIsOffice(false);
                     setUserName(savedName || (savedDeveloperSupportSession ? 'Developer support' : 'Developer'));
                     if (auth.currentUser) {
                         setUserId(auth.currentUser.uid);
+                        if (savedDeveloperSupportSession) {
+                            try {
+                                const adminRoleRef = doc(
+                                    firestore,
+                                    'schools',
+                                    savedSchoolId,
+                                    'roles_admin',
+                                    auth.currentUser.uid,
+                                );
+                                const adminDoc = await getRoleDocForSessionRestore(adminRoleRef);
+                                setIsAdmin(adminDoc.exists() && adminDoc.data().role === 'admin');
+                            } catch {
+                                setIsAdmin(false);
+                            }
+                        } else {
+                            setIsAdmin(true);
+                        }
+                    } else {
+                        setIsAdmin(!savedDeveloperSupportSession);
                     }
                 } else if (savedState === 'school' || savedState === 'student') {
                     if (savedState === 'student') {
@@ -772,11 +873,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 }
                 try {
                     const verifyAccess = httpsCallable(functions, 'verifySchoolAccessPasscode');
-                    await verifyAccess({ schoolId: lowerSchoolId, passcode: credentials.passcode?.trim() || '' });
+                    await withCallableTimeout(
+                        verifyAccess({
+                            schoolId: lowerSchoolId,
+                            passcode: credentials.passcode?.trim() || '',
+                        }),
+                        'School sign-in timed out. Check your connection and try again.',
+                    );
                 } catch (e) {
                     console.error('School access login failed', e);
+                    const timedOut =
+                        e instanceof Error &&
+                        e.message === 'School sign-in timed out. Check your connection and try again.';
                     return loginErr(
-                        messageFromVerifySchoolAccessError(e, 'Invalid School ID or passcode.'),
+                        timedOut
+                            ? e.message
+                            : messageFromVerifySchoolAccessError(e, 'Invalid School ID or passcode.'),
                     );
                 }
                 setSchoolId(lowerSchoolId);
@@ -1028,6 +1140,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
             const startSupportSession = httpsCallable(functions, 'startDeveloperSupportSession');
             await startSupportSession({ schoolId: lowerSchoolId });
+            const adminRoleRef = doc(firestore, 'schools', lowerSchoolId, 'roles_admin', auth.currentUser.uid);
+            const roleData = await waitForReadableRole(adminRoleRef, 'admin', {
+                quick: isPublicSampleSchoolId(lowerSchoolId),
+            });
+            if (!roleData) {
+                throw new Error('Could not confirm school admin role for support session.');
+            }
             setSchoolId(lowerSchoolId);
             setLoginState('developer');
             setIsAdmin(true);
@@ -1035,6 +1154,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setIsSecretary(false);
             setIsPrizeClerk(false);
             setIsReports(false);
+            setIsOffice(false);
             setUserName('Developer support');
             setUserId(auth.currentUser.uid);
             setTeacherDocId(null);
@@ -1074,6 +1194,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             studentKioskSessionError,
             login,
             startDeveloperSupportSession,
+            clearSchoolChooserSession,
             logout,
             setUserName
         }),
@@ -1100,6 +1221,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             studentKioskSessionError,
             login,
             startDeveloperSupportSession,
+            clearSchoolChooserSession,
             logout,
             setUserName,
         ]

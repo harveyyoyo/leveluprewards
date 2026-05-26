@@ -1,7 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useOfficeUrlSync } from '@/lib/office/useOfficeUrlSync';
+import { OfficeCsvImportDialog } from '@/components/office/OfficeCsvImportDialog';
 import { collection, doc, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { Button } from '@/components/ui/button';
@@ -15,9 +17,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Download, Layers, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ChevronRight, Download, Layers, Pencil, Plus, Trash2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { OfficeSearchInput } from '@/components/office/OfficeSearchInput';
+import { OfficeWorkingTermSelect } from '@/components/office/OfficeWorkingTermSelect';
 import type { OfficeGradeEntry, OfficeStudent } from '@/lib/office/types';
 import { OfficeQuickChips } from '@/components/office/OfficeQuickChips';
 import { OfficeEmptyState } from '@/components/office/OfficeEmptyState';
@@ -26,11 +30,12 @@ import {
   downloadCsv,
   formatGradeDisplay,
   getOfficeStudentFullName,
-  getSuggestedTermLabel,
+  collectOfficeTermOptions,
   studentsWithoutGradesForTerm,
   uniqueGradeSubjects,
 } from '@/lib/office/officeUtils';
 import { useOfficeTerm } from '@/lib/office/useOfficeTerm';
+import { useOfficeSettings } from '@/lib/office/useOfficeSettings';
 import { officePublicHref } from '@/lib/officePublicUrl';
 import Link from 'next/link';
 
@@ -65,7 +70,8 @@ export function OfficeGradesView({
   const firestore = useFirestore();
   const searchParams = useSearchParams();
   const { toast } = useToast();
-  const { term: activeTerm, setTerm: setActiveTerm } = useOfficeTerm(schoolId);
+  const { term: activeTerm, setTerm: setActiveTerm, configuredTerms } = useOfficeTerm(schoolId);
+  const { settings } = useOfficeSettings(schoolId);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<GradeForm>({
@@ -85,12 +91,18 @@ export function OfficeGradesView({
   const [bulkSubject, setBulkSubject] = useState('');
   const [bulkLetter, setBulkLetter] = useState('');
   const [bulkNumeric, setBulkNumeric] = useState('');
+  const [expandedStudentId, setExpandedStudentId] = useState<string | null>(null);
 
-  const terms = useMemo(() => {
-    const set = new Set(entries.map((e) => e.termLabel));
-    if (activeTerm) set.add(activeTerm);
-    return Array.from(set).sort();
-  }, [entries, activeTerm]);
+  const filterTermOptions = useMemo(
+    () =>
+      collectOfficeTermOptions({
+        gradeEntries: entries,
+        activeTerm,
+        schoolDefaultTerm: settings?.defaultActiveTerm,
+        configuredTerms,
+      }),
+    [entries, activeTerm, settings?.defaultActiveTerm, configuredTerms],
+  );
 
   const classOptions = useMemo(() => {
     const ids = new Set(students.map((s) => s.classId).filter(Boolean) as string[]);
@@ -135,6 +147,32 @@ export function OfficeGradesView({
     });
   }, [filtered, studentLabelById]);
 
+  const groupedByStudent = useMemo(() => {
+    const map = new Map<string, OfficeGradeEntry[]>();
+    for (const row of sorted) {
+      const list = map.get(row.studentId) ?? [];
+      list.push(row);
+      map.set(row.studentId, list);
+    }
+    return Array.from(map.entries())
+      .map(([studentId, grades]) => {
+        const student = students.find((s) => s.id === studentId);
+        const classId = grades[0]?.classId ?? student?.classId ?? null;
+        const ordered = grades.slice().sort((a, b) => {
+          const termCmp = a.termLabel.localeCompare(b.termLabel);
+          if (termCmp !== 0) return termCmp;
+          return a.subject.localeCompare(b.subject);
+        });
+        return {
+          studentId,
+          label: studentLabelById.get(studentId) ?? 'Unknown',
+          classId,
+          grades: ordered,
+        };
+      })
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [sorted, students, studentLabelById]);
+
   const openAdd = useCallback((presetStudentId?: string, presetTerm?: string) => {
     setEditingId(null);
     setForm({
@@ -147,6 +185,20 @@ export function OfficeGradesView({
     });
     setDialogOpen(true);
   }, [activeTerm]);
+
+  useEffect(() => {
+    const term = searchParams.get('term')?.trim();
+    if (term) setFilterTerm(term);
+    const cls = searchParams.get('class')?.trim();
+    if (cls && (cls === 'all' || classOptions.some((c) => c.id === cls))) {
+      setFilterClass(cls);
+    }
+  }, [searchParams, classOptions]);
+
+  useOfficeUrlSync({
+    term: filterTerm !== 'all' ? filterTerm : undefined,
+    class: filterClass !== 'all' ? filterClass : undefined,
+  });
 
   const openedFromQuery = useRef(false);
   useEffect(() => {
@@ -318,6 +370,13 @@ export function OfficeGradesView({
             <Download className="h-4 w-4" />
             Export CSV
           </Button>
+          <OfficeCsvImportDialog
+            schoolId={schoolId}
+            mode="grades"
+            students={students}
+            userName={userName}
+            disabled={students.length === 0}
+          />
           {missingForTerm.length > 0 ? (
             <Button variant="outline" className="rounded-xl gap-2" onClick={() => setBulkOpen(true)}>
               <Layers className="h-4 w-4" />
@@ -376,7 +435,7 @@ export function OfficeGradesView({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All terms</SelectItem>
-              {terms.map((t) => (
+              {filterTermOptions.map((t) => (
                 <SelectItem key={t} value={t}>
                   {t}
                 </SelectItem>
@@ -400,31 +459,22 @@ export function OfficeGradesView({
             </SelectContent>
           </Select>
         </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs font-semibold uppercase text-muted-foreground">Set working term</Label>
-          <div className="flex gap-2">
-            <Input
-              value={activeTerm}
-              onChange={(e) => setActiveTerm(e.target.value)}
-              className="h-9 w-36 rounded-lg"
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-9 rounded-lg text-xs"
-              onClick={() => setActiveTerm(getSuggestedTermLabel())}
-            >
-              This season
-            </Button>
-          </div>
-        </div>
+        <OfficeWorkingTermSelect
+          label="Working term"
+          value={activeTerm}
+          onValueChange={setActiveTerm}
+          gradeEntries={entries}
+          schoolDefaultTerm={settings?.defaultActiveTerm}
+          configuredTerms={configuredTerms}
+          id="office-grades-working-term"
+        />
       </div>
 
       <p className="text-xs text-muted-foreground">
-        {sorted.length === entries.length
-          ? `${entries.length} grade ${entries.length === 1 ? 'entry' : 'entries'}`
-          : `${sorted.length} of ${entries.length} entries`}
+        {groupedByStudent.length} student{groupedByStudent.length === 1 ? '' : 's'}
+        {sorted.length !== entries.length
+          ? ` · ${sorted.length} of ${entries.length} grade entries`
+          : ` · ${sorted.length} grade ${sorted.length === 1 ? 'entry' : 'entries'}`}
       </p>
 
       {showMissingPanel && missingForTerm.length > 0 ? (
@@ -476,47 +526,120 @@ export function OfficeGradesView({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-slate-50 text-left text-xs font-bold uppercase tracking-wide text-muted-foreground dark:bg-slate-800/50">
+                <th className="w-10 px-2 py-3" aria-label="Expand" />
                 <th className="px-4 py-3">Student</th>
                 <th className="px-4 py-3 hidden sm:table-cell">Class</th>
-                <th className="px-4 py-3">Term</th>
-                <th className="px-4 py-3">Subject</th>
-                <th className="px-4 py-3">Grade</th>
-                <th className="px-4 py-3 w-24" />
+                <th className="px-4 py-3 hidden md:table-cell">Grades</th>
+                <th className="px-4 py-3 w-28" />
               </tr>
             </thead>
             <tbody>
-              {sorted.map((row) => (
-                <tr
-                  key={row.id}
-                  className="border-b border-slate-100 last:border-0 dark:border-slate-800 cursor-pointer hover:bg-teal-50/50 dark:hover:bg-teal-950/20"
-                  onClick={() => openEdit(row)}
-                >
-                  <td className="px-4 py-3 font-medium">{studentLabelById.get(row.studentId) ?? 'Unknown'}</td>
-                  <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">
-                    {(row.classId && classNameById.get(row.classId)) || '—'}
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">{row.termLabel}</td>
-                  <td className="px-4 py-3">{row.subject}</td>
-                  <td className="px-4 py-3">{formatGradeDisplay(row)}</td>
-                  <td className="px-4 py-2" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex gap-1">
-                      <Button type="button" variant="ghost" size="icon" onClick={() => openEdit(row)} aria-label="Edit grade">
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="text-destructive"
-                        onClick={() => void handleDelete(row.id)}
-                        aria-label="Delete grade"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {groupedByStudent.map((group) => {
+                const open = expandedStudentId === group.studentId;
+                const classLabel = (group.classId && classNameById.get(group.classId)) || '—';
+                const summary = group.grades
+                  .map((g) => `${g.subject} ${formatGradeDisplay(g)}`.trim())
+                  .join(' · ');
+                return (
+                  <Fragment key={group.studentId}>
+                    <tr
+                      className={cn(
+                        'border-b border-slate-100 dark:border-slate-800 cursor-pointer hover:bg-teal-50/50 dark:hover:bg-teal-950/20',
+                        open && 'bg-teal-50/40 dark:bg-teal-950/25',
+                      )}
+                      onClick={() => setExpandedStudentId(open ? null : group.studentId)}
+                    >
+                      <td className="px-2 py-3 text-center">
+                        <ChevronRight
+                          className={cn(
+                            'mx-auto h-4 w-4 text-muted-foreground transition-transform',
+                            open && 'rotate-90',
+                          )}
+                          aria-hidden
+                        />
+                      </td>
+                      <td className="px-4 py-3 font-medium">{group.label}</td>
+                      <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">{classLabel}</td>
+                      <td className="px-4 py-3 text-muted-foreground hidden md:table-cell max-w-xs truncate">
+                        {open ? (
+                          <span className="text-xs">
+                            {group.grades.length} {group.grades.length === 1 ? 'entry' : 'entries'}
+                          </span>
+                        ) : (
+                          <span className="text-xs" title={summary}>
+                            {group.grades.length} {group.grades.length === 1 ? 'subject' : 'subjects'}
+                            {summary ? ` — ${summary}` : ''}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 rounded-lg text-xs"
+                            onClick={() =>
+                              openAdd(
+                                group.studentId,
+                                filterTerm !== 'all' ? filterTerm : activeTerm,
+                              )
+                            }
+                          >
+                            <Plus className="h-3.5 w-3.5 mr-1" />
+                            Add
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                    {open
+                      ? group.grades.map((row) => (
+                          <tr
+                            key={row.id}
+                            className="border-b border-slate-100 bg-slate-50/70 last:border-0 dark:border-slate-800 dark:bg-slate-800/40"
+                          >
+                            <td className="w-10" />
+                            <td className="px-4 py-2 pl-8">
+                              <span className="font-medium">{row.subject}</span>
+                              <span className="text-xs text-muted-foreground ml-2">{row.termLabel}</span>
+                            </td>
+                            <td className="px-4 py-2 hidden sm:table-cell" />
+                            <td className="px-4 py-2 font-semibold text-teal-800 dark:text-teal-300 hidden md:table-cell">
+                              {formatGradeDisplay(row)}
+                            </td>
+                            <td className="px-4 py-2">
+                              <div className="flex justify-end gap-1">
+                                <span className="font-semibold text-teal-800 dark:text-teal-300 md:hidden mr-1">
+                                  {formatGradeDisplay(row)}
+                                </span>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => openEdit(row)}
+                                  aria-label="Edit grade"
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-destructive"
+                                  onClick={() => void handleDelete(row.id)}
+                                  aria-label="Delete grade"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      : null}
+                  </Fragment>
+                );
+              })}
             </tbody>
           </table>
           {sorted.length === 0 ? (
@@ -610,12 +733,16 @@ export function OfficeGradesView({
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>Term</Label>
-                <Input
+                <OfficeWorkingTermSelect
+                  label="Term"
+                  layout="stacked"
                   value={form.termLabel}
-                  onChange={(e) => setForm((f) => ({ ...f, termLabel: e.target.value }))}
-                  placeholder="e.g. Q1 2025"
-                  className="rounded-xl"
+                  onValueChange={(termLabel) => setForm((f) => ({ ...f, termLabel }))}
+                  gradeEntries={entries}
+                  schoolDefaultTerm={settings?.defaultActiveTerm}
+                  configuredTerms={configuredTerms}
+                  id="office-grade-form-term"
+                  triggerClassName="max-w-none rounded-xl"
                 />
               </div>
               <div className="space-y-2">

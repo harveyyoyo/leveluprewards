@@ -86,7 +86,8 @@ function AdminSignInContent() {
     router.replace(next ?? `/${schoolId}/admin`);
   }, [router, schoolId, searchParams]);
 
-  const { canBypassAdminPasscode, isAutoLoggingIn } = useAdminGooglePasscodeBypass({
+  const { canBypassAdminPasscode, isAutoLoggingIn, googleAutoLoginExhausted } =
+    useAdminGooglePasscodeBypass({
     schoolId,
     onSuccess: redirectAfterAdminLogin,
     onError: (message) => {
@@ -131,7 +132,11 @@ function AdminSignInContent() {
     }
   };
 
-  if (!isInitialized || isAutoLoggingIn || (canBypassAdminPasscode && !isAdmin)) {
+  if (
+    !isInitialized ||
+    isAutoLoggingIn ||
+    (canBypassAdminPasscode && !isAdmin && !googleAutoLoginExhausted)
+  ) {
     return (
       <div className="min-h-[calc(100vh-5rem)] flex items-center justify-center p-8">
         <Button disabled variant="ghost" size="lg" className="text-muted-foreground">

@@ -1,0 +1,166 @@
+{
+  "variantId": "hype",
+  "timing": {
+    "introEnd": 362,
+    "segmentEnds": [
+      542,
+      720,
+      976,
+      1150,
+      1296,
+      1437,
+      1588,
+      1732,
+      1883,
+      2027,
+      2191,
+      2332,
+      2472,
+      2607
+    ],
+    "total": 3010
+  },
+  "narration": [
+    {
+      "id": "intro",
+      "label": "Intro",
+      "text": "Feature tour time — every LevelUp module, fast — kiosk, cards, themes, prizes, raffles, admin tools.",
+      "file": "voiceover/feature/hype/intro.mp3",
+      "startFrame": 14,
+      "durationFrames": 338
+    },
+    {
+      "id": "kiosk",
+      "label": "Kiosk",
+      "text": "Kiosk check-in — boom — balance on screen.",
+      "file": "voiceover/feature/hype/kiosk.mp3",
+      "startFrame": 364,
+      "durationFrames": 166
+    },
+    {
+      "id": "idCards",
+      "label": "ID cards",
+      "text": "ID cards — preview, print, scan — done.",
+      "file": "voiceover/feature/hype/idCards.mp3",
+      "startFrame": 542,
+      "durationFrames": 166
+    },
+    {
+      "id": "themes",
+      "label": "Themes",
+      "text": "Build a theme — prompt, gradient, colors — card preview updates as you go.",
+      "file": "voiceover/feature/hype/themes.mp3",
+      "startFrame": 720,
+      "durationFrames": 244
+    },
+    {
+      "id": "prizes",
+      "label": "Prizes",
+      "text": "Prize shop — scroll, tap, redeem.",
+      "file": "voiceover/feature/hype/prizes.mp3",
+      "startFrame": 976,
+      "durationFrames": 162
+    },
+    {
+      "id": "coupons",
+      "label": "Coupons",
+      "text": "Teachers — print coupons — done.",
+      "file": "voiceover/feature/hype/coupons.mp3",
+      "startFrame": 1150,
+      "durationFrames": 134
+    },
+    {
+      "id": "raffle",
+      "label": "Raffle",
+      "text": "Raffle week — tickets flying — winners loud.",
+      "file": "voiceover/feature/hype/raffle.mp3",
+      "startFrame": 1296,
+      "durationFrames": 129
+    },
+    {
+      "id": "houses",
+      "label": "Houses",
+      "text": "Houses — team colors — scoreboards lit.",
+      "file": "voiceover/feature/hype/houses.mp3",
+      "startFrame": 1437,
+      "durationFrames": 139
+    },
+    {
+      "id": "hallOfFame",
+      "label": "Hall of Fame",
+      "text": "Hall of Fame — legends on the wall.",
+      "file": "voiceover/feature/hype/hallOfFame.mp3",
+      "startFrame": 1588,
+      "durationFrames": 132
+    },
+    {
+      "id": "notifications",
+      "label": "Notifications",
+      "text": "Notifications — ping — staff stays ahead.",
+      "file": "voiceover/feature/hype/notifications.mp3",
+      "startFrame": 1732,
+      "durationFrames": 139
+    },
+    {
+      "id": "bulletin",
+      "label": "Bulletin",
+      "text": "Bulletin — headlines — hype in the hallway.",
+      "file": "voiceover/feature/hype/bulletin.mp3",
+      "startFrame": 1883,
+      "durationFrames": 132
+    },
+    {
+      "id": "library",
+      "label": "Library",
+      "text": "Library — check out — earn while you read.",
+      "file": "voiceover/feature/hype/library.mp3",
+      "startFrame": 2027,
+      "durationFrames": 152
+    },
+    {
+      "id": "badges",
+      "label": "Badges",
+      "text": "Badges — unlock — flex the streak.",
+      "file": "voiceover/feature/hype/badges.mp3",
+      "startFrame": 2191,
+      "durationFrames": 129
+    },
+    {
+      "id": "analytics",
+      "label": "Analytics",
+      "text": "Insights — charts — know what hits.",
+      "file": "voiceover/feature/hype/analytics.mp3",
+      "startFrame": 2332,
+      "durationFrames": 128
+    },
+    {
+      "id": "attendance",
+      "label": "Attendance",
+      "text": "Attendance — sign in — counted.",
+      "file": "voiceover/feature/hype/attendance.mp3",
+      "startFrame": 2472,
+      "durationFrames": 123
+    },
+    {
+      "id": "outro",
+      "label": "Outro",
+      "text": "Stack it all with LevelUp — scan-first, synced live, built for schools that want energy. Let us run.",
+      "file": "voiceover/feature/hype/outro.mp3",
+      "startFrame": 2607,
+      "durationFrames": 313
+    }
+  ],
+  "copy": {
+    "introEyebrow": "FEATURE TOUR",
+    "introTagline": "Everything LevelUp does",
+    "montageTitle": "Feature stack",
+    "montageSubtitle": "Real screens · Real tools",
+    "outroHeadline": "Go all in",
+    "outroSubline": "Kiosk · Raffle · HoF · More"
+  },
+  "ttsVoice": "ash",
+  "musicVolume": 0.26,
+  "musicDuckRatio": 0.28,
+  "musicStyle": "upbeat",
+  "musicSrc": "background-music.mp3"
+}

@@ -2,9 +2,8 @@
 
 import { useState } from 'react';
 import { collection, doc, setDoc } from 'firebase/firestore';
-import { Download, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useFirestore } from '@/firebase';
-import { useAppContext } from '@/components/AppProvider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,17 +16,18 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import type { OfficeClass, OfficeStudent } from '@/lib/office/types';
-import { importRewardsRosterToOffice } from '@/lib/office/importRewardsRoster';
+import type { OfficeClass, OfficeStudent, OfficeTeacher } from '@/lib/office/types';
+import { OfficeCsvImportDialog } from '@/components/office/OfficeCsvImportDialog';
+import { OfficeTeacherSelect } from '@/components/office/OfficeTeacherSelect';
 
 type OfficeRosterManagerProps = {
   schoolId: string;
   classes: OfficeClass[];
+  teachers: OfficeTeacher[];
 };
 
-export function OfficeRosterManager({ schoolId, classes }: OfficeRosterManagerProps) {
+export function OfficeRosterManager({ schoolId, classes, teachers }: OfficeRosterManagerProps) {
   const firestore = useFirestore();
-  const { isAdmin } = useAppContext();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -35,7 +35,7 @@ export function OfficeRosterManager({ schoolId, classes }: OfficeRosterManagerPr
   const [lastName, setLastName] = useState('');
   const [nickname, setNickname] = useState('');
   const [classId, setClassId] = useState('');
-  const [teacherName, setTeacherName] = useState('');
+  const [teacherId, setTeacherId] = useState('');
   const [addAnother, setAddAnother] = useState(false);
 
   const reset = () => {
@@ -43,24 +43,7 @@ export function OfficeRosterManager({ schoolId, classes }: OfficeRosterManagerPr
     setLastName('');
     setNickname('');
     setClassId('');
-    setTeacherName('');
-  };
-
-  const handleImport = async () => {
-    if (!firestore || !isAdmin) return;
-    if (!confirm('Copy the current rewards roster into School Office? This does not keep syncing.')) return;
-    setBusy(true);
-    try {
-      const result = await importRewardsRosterToOffice(firestore, schoolId);
-      toast({
-        title: 'Roster imported',
-        description: `${result.students} students and ${result.classes} classes copied.`,
-      });
-    } catch (e) {
-      toast({ variant: 'destructive', title: 'Import failed', description: (e as Error).message });
-    } finally {
-      setBusy(false);
-    }
+    setTeacherId('');
   };
 
   const handleSave = async () => {
@@ -75,7 +58,8 @@ export function OfficeRosterManager({ schoolId, classes }: OfficeRosterManagerPr
         lastName: lastName.trim(),
         nickname: nickname.trim() || null,
         classId: classId || null,
-        teacherName: teacherName.trim() || null,
+        teacherId: teacherId || null,
+        teacherName: null,
         notes: null,
         updatedAt: Date.now(),
       };
@@ -96,12 +80,13 @@ export function OfficeRosterManager({ schoolId, classes }: OfficeRosterManagerPr
 
   return (
     <div className="flex flex-wrap gap-2">
-      {isAdmin ? (
-        <Button type="button" variant="outline" className="rounded-xl gap-2" disabled={busy} onClick={() => void handleImport()}>
-          <Download className="h-4 w-4" />
-          Import from rewards
-        </Button>
-      ) : null}
+      <OfficeCsvImportDialog
+        schoolId={schoolId}
+        mode="students"
+        classes={classes}
+        teachers={teachers}
+        disabled={busy}
+      />
       <Button type="button" className="rounded-xl gap-2" onClick={() => setOpen(true)}>
         <Plus className="h-4 w-4" />
         Add student
@@ -149,17 +134,12 @@ export function OfficeRosterManager({ schoolId, classes }: OfficeRosterManagerPr
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label>Teacher (optional)</Label>
-              <Input
-                value={teacherName}
-                onChange={(e) => setTeacherName(e.target.value)}
-                className="rounded-xl"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') void handleSave();
-                }}
-              />
-            </div>
+            <OfficeTeacherSelect
+              schoolId={schoolId}
+              teachers={teachers}
+              value={teacherId}
+              onChange={setTeacherId}
+            />
             <label className="flex items-center gap-2 text-sm text-muted-foreground">
               <input
                 type="checkbox"

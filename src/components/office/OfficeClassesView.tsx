@@ -1,6 +1,10 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import { officePublicHref } from '@/lib/officePublicUrl';
+import { useOfficeUrlSync } from '@/lib/office/useOfficeUrlSync';
 import { ChevronRight, Download, Plus, Pencil, Trash2 } from 'lucide-react';
 import { doc, setDoc, updateDoc, writeBatch, collection } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
@@ -23,7 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { downloadCsv, getOfficeStudentFullName, getOfficeStudentLabel } from '@/lib/office/officeUtils';
+import { downloadCsv, getOfficeStudentFullName, getOfficeStudentLabel, getOfficeTeacherLabel } from '@/lib/office/officeUtils';
 import { OfficeSearchInput } from '@/components/office/OfficeSearchInput';
 import { OfficeLoadingRows } from '@/components/office/OfficeLoadingRows';
 import { cn } from '@/lib/utils';
@@ -32,11 +36,19 @@ type OfficeClassesViewProps = {
   schoolId: string;
   students: OfficeStudent[];
   classes: OfficeClass[];
+  teacherNameById: Map<string, string>;
   isLoading: boolean;
   onSelectStudent?: (student: OfficeStudent) => void;
 };
 
-export function OfficeClassesView({ schoolId, students, classes, isLoading, onSelectStudent }: OfficeClassesViewProps) {
+export function OfficeClassesView({
+  schoolId,
+  students,
+  classes,
+  teacherNameById,
+  isLoading,
+  onSelectStudent,
+}: OfficeClassesViewProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
 
@@ -44,16 +56,42 @@ export function OfficeClassesView({ schoolId, students, classes, isLoading, onSe
     const rows: string[][] = [];
     for (const s of students) {
       const cls = classes.find((c) => c.id === s.classId);
-      rows.push([cls?.name ?? 'Unassigned', getOfficeStudentFullName(s), s.teacherName ?? '']);
+      rows.push([cls?.name ?? 'Unassigned', getOfficeStudentFullName(s), getOfficeTeacherLabel(s, teacherNameById)]);
     }
     rows.sort((a, b) => a[0].localeCompare(b[0]) || a[1].localeCompare(b[1]));
     downloadCsv(`classes-roster-${schoolId}.csv`, ['Class', 'Student', 'Teacher'], rows);
     toast({ title: 'Exported', description: `${rows.length} students.` });
   };
 
+  const searchParams = useSearchParams();
+  const openedFromQuery = useRef(false);
   const [query, setQuery] = useState('');
   const [expandedClassId, setExpandedClassId] = useState<string | null>(null);
   const [expandAll, setExpandAll] = useState(false);
+  const [highlightStudentId, setHighlightStudentId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (openedFromQuery.current || isLoading) return;
+    const classId = searchParams.get('class')?.trim();
+    const studentId = searchParams.get('student')?.trim();
+    if (classId && classes.some((c) => c.id === classId)) {
+      openedFromQuery.current = true;
+      setExpandedClassId(classId);
+      if (studentId && students.some((s) => s.id === studentId)) {
+        setHighlightStudentId(studentId);
+      }
+    } else if (studentId && students.some((s) => s.id === studentId)) {
+      openedFromQuery.current = true;
+      const s = students.find((st) => st.id === studentId);
+      if (s?.classId) setExpandedClassId(s.classId);
+      setHighlightStudentId(studentId);
+    }
+  }, [searchParams, classes, students, isLoading]);
+
+  useOfficeUrlSync({
+    class: expandedClassId ?? undefined,
+    student: highlightStudentId ?? undefined,
+  });
 
   // Class Dialog State
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -254,7 +292,11 @@ export function OfficeClassesView({ schoolId, students, classes, isLoading, onSe
             <div key={cls.id} className="overflow-hidden rounded-2xl border bg-white shadow-sm dark:bg-slate-900 dark:border-slate-800">
               <div
                 className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-muted/40 transition-colors cursor-pointer"
-                onClick={() => setExpandedClassId(open ? null : cls.id)}
+                onClick={() => {
+                  const next = open ? null : cls.id;
+                  setExpandedClassId(next);
+                  if (!next) setHighlightStudentId(null);
+                }}
               >
                 <span>
                   <span className="font-semibold text-foreground">{cls.name}</span>
@@ -293,15 +335,32 @@ export function OfficeClassesView({ schoolId, students, classes, isLoading, onSe
                   {list.map((s) => (
                     <li
                       key={s.id}
-                      className="flex flex-wrap items-center gap-2 px-4 py-2 border-b border-slate-100 last:border-0 dark:border-slate-800"
+                      className={cn(
+                        'flex flex-wrap items-center gap-2 px-4 py-2 border-b border-slate-100 last:border-0 dark:border-slate-800',
+                        highlightStudentId === s.id && 'bg-teal-50/80 dark:bg-teal-950/30',
+                      )}
                     >
-                      <button
-                        type="button"
-                        className="min-w-0 flex-1 text-left text-sm font-medium hover:text-teal-800 dark:hover:text-teal-300"
-                        onClick={() => onSelectStudent?.(s)}
-                      >
-                        {getOfficeStudentLabel(s)} {s.lastName}
-                      </button>
+                      {onSelectStudent ? (
+                        <button
+                          type="button"
+                          className="min-w-0 flex-1 text-left text-sm font-medium hover:text-teal-800 dark:hover:text-teal-300"
+                          onClick={() => {
+                            setHighlightStudentId(s.id);
+                            setExpandedClassId(cls.id === '__unassigned__' ? null : cls.id);
+                            onSelectStudent(s);
+                          }}
+                        >
+                          {getOfficeStudentLabel(s)} {s.lastName}
+                        </button>
+                      ) : (
+                        <Link
+                          href={`${officePublicHref(schoolId, 'students')}?student=${encodeURIComponent(s.id)}`}
+                          className="min-w-0 flex-1 text-sm font-medium hover:text-teal-800 dark:hover:text-teal-300"
+                          onClick={() => setHighlightStudentId(s.id)}
+                        >
+                          {getOfficeStudentLabel(s)} {s.lastName}
+                        </Link>
+                      )}
                       <Select
                         value={s.classId || '__none__'}
                         onValueChange={(v) => void assignStudentToClass(s, v)}

@@ -21,6 +21,7 @@ export type {
 } from '@/lib/office/officeDemoSeedFactory';
 
 export const OFFICE_DEMO_COLLECTIONS = [
+  'officeTeachers',
   'officeStudents',
   'officeClasses',
   'officeGradeEntries',
@@ -53,6 +54,10 @@ export async function writeOfficeDemoSeedToFirestore(
   const school = schoolId.trim().toLowerCase();
   const ops: Array<{ collection: OfficeDemoWritableCollection; id: string; data: object }> = [];
 
+  for (const t of payload.officeTeachers) {
+    const { id, ...data } = t;
+    ops.push({ collection: 'officeTeachers', id, data });
+  }
   for (const c of payload.officeClasses) {
     const { id, ...data } = c;
     ops.push({ collection: 'officeClasses', id, data });

@@ -14,7 +14,9 @@ describe('buildOfficeDemoSeed', () => {
 
   it('mirrors roster and creates grades and billing', () => {
     const payload = buildOfficeDemoSeed({ variant: 'schoolabc', students, classes });
+    expect(payload.officeTeachers.length).toBeGreaterThan(0);
     expect(payload.officeStudents).toHaveLength(3);
+    expect(payload.officeStudents.every((s) => s.teacherId)).toBe(true);
     expect(payload.officeClasses).toHaveLength(2);
     expect(payload.gradeEntries.length).toBeGreaterThan(0);
     expect(payload.billingAccounts.length).toBeGreaterThan(0);

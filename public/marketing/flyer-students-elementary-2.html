@@ -2,150 +2,45 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>LevelUp — Quest Board (K–5)</title>
+    <title>LevelUp — Quest Board</title>
     <script src="/marketing/flyer-embed.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet" />
-    <style>
-      * { box-sizing: border-box; margin: 0; padding: 0; }
-      @page { size: letter; margin: 0; }
-      html, body {
-        width: 8.5in; min-height: 11in; font-family: Nunito, system-ui, sans-serif;
-        background: #1e1b4b; color: #fff;
-        -webkit-print-color-adjust: exact; print-color-adjust: exact;
-      }
-      html.embed .hint { display: none !important; }
-      .flyer {
-        width: 8.5in; min-height: 11in;
-        background: linear-gradient(180deg, #312e81 0%, #1e1b4b 50%, #0f0a30 100%);
-        position: relative; overflow: hidden;
-        padding: 0.4in 0.48in; display: flex; flex-direction: column;
-      }
-      /* Starfield dots */
-      .stars-bg {
-        position: absolute; inset: 0; pointer-events: none;
-        background-image:
-          radial-gradient(1.5px 1.5px at 12% 18%, #fff8 0%, transparent 100%),
-          radial-gradient(1.5px 1.5px at 35% 8%,  #fff6 0%, transparent 100%),
-          radial-gradient(1px   1px   at 62% 14%, #fff5 0%, transparent 100%),
-          radial-gradient(2px   2px   at 80% 22%, #fff7 0%, transparent 100%),
-          radial-gradient(1px   1px   at 90% 5%,  #fff4 0%, transparent 100%),
-          radial-gradient(1.5px 1.5px at 5%  55%, #fff4 0%, transparent 100%),
-          radial-gradient(1px   1px   at 50% 60%, #fff3 0%, transparent 100%),
-          radial-gradient(2px   2px   at 72% 48%, #fff5 0%, transparent 100%);
-      }
-      /* Banner */
-      .banner {
-        align-self: center; position: relative; z-index: 1;
-        background: #fbbf24; color: #78350f; border-radius: 999px;
-        padding: 0.06in 0.22in; font-family: 'Baloo 2', sans-serif;
-        font-size: 0.115in; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;
-        box-shadow: 0 4px 0 #d97706;
-      }
-      .head {
-        position: relative; z-index: 1; margin-top: 0.18in;
-        display: flex; align-items: center; justify-content: center; gap: 0.16in;
-      }
-      .head img {
-        width: 0.72in; border: 4px solid #fbbf24; border-radius: 16px;
-        box-shadow: 0 0 20px rgba(251, 191, 36, 0.5);
-      }
-      .head-text h1 {
-        font-family: 'Baloo 2', sans-serif; font-size: 0.36in; font-weight: 800; line-height: 1.05;
-        background: linear-gradient(90deg, #fde68a, #fbbf24); -webkit-background-clip: text;
-        background-clip: text; color: transparent;
-      }
-      .head-text p { font-size: 0.1in; color: #a5b4fc; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
-      .quest-board {
-        position: relative; z-index: 1; margin-top: 0.22in;
-        background: rgba(255,255,255,0.06); border: 2px solid #818cf8;
-        border-radius: 16px; padding: 0.18in 0.2in;
-      }
-      .quest-title {
-        font-family: 'Baloo 2', sans-serif; font-size: 0.13in; font-weight: 800;
-        text-transform: uppercase; letter-spacing: 0.12em; color: #818cf8; margin-bottom: 0.12in;
-        display: flex; align-items: center; gap: 0.08in;
-      }
-      .quest-title::before { content: '📋'; font-size: 0.14in; }
-      .quests { display: flex; flex-direction: column; gap: 0.08in; }
-      .quest {
-        display: flex; align-items: center; gap: 0.12in;
-        background: rgba(129, 140, 248, 0.12); border: 1px solid rgba(129,140,248,0.3);
-        border-radius: 10px; padding: 0.1in 0.12in;
-      }
-      .quest .icon { font-size: 0.2in; flex-shrink: 0; }
-      .quest h3 { font-size: 0.115in; font-weight: 800; color: #e0e7ff; }
-      .quest p { font-size: 0.095in; color: #a5b4fc; line-height: 1.35; }
-      .pts { margin-left: auto; flex-shrink: 0; font-family: 'Baloo 2', sans-serif; font-size: 0.12in; font-weight: 800; color: #fbbf24; }
-      .shot {
-        position: relative; z-index: 1; margin-top: 0.18in;
-        border: 3px solid #818cf8; border-radius: 14px; overflow: hidden;
-        box-shadow: 0 0 30px rgba(129, 140, 248, 0.3);
-      }
-      .shot img { width: 100%; display: block; }
-      .cta {
-        position: relative; z-index: 1; margin-top: auto; margin-top: 0.16in;
-        text-align: center; padding: 0.16in;
-        background: linear-gradient(90deg, #4f46e5, #7c3aed); border-radius: 14px;
-        border: 2px solid #818cf8;
-      }
-      .cta h2 { font-family: 'Baloo 2', sans-serif; font-size: 0.2in; font-weight: 800; }
-      .cta p { font-size: 0.1in; opacity: 0.9; margin-top: 0.05in; }
-      .cta a { color: #fde68a; font-weight: 800; font-size: 0.11in; text-decoration: none; }
-      .foot { text-align: center; font-size: 0.075in; color: #475569; margin-top: 0.1in; position: relative; z-index:1; }
-      .hint { position: fixed; bottom: 12px; right: 12px; padding: 8px 12px; background: #4f46e5; color: #fff; font: 700 12px system-ui; border-radius: 8px; }
-    </style>
   </head>
   <body>
     <p class="hint">Ctrl+P → Letter, backgrounds on</p>
     <article class="flyer">
-      <div class="stars-bg" aria-hidden="true"></div>
-      <span class="banner">Grades K–5 · Quest Board</span>
-      <header class="head">
-        <img src="/marketing/screenshots/kiosk-welcome.png" alt="LevelUp" width="70" height="70" />
-        <div class="head-text">
-          <h1>LevelUp Rewards</h1>
-          <p>Your school adventure starts here</p>
-        </div>
+      <div class="stripe" aria-hidden="true"></div>
+      <header class="top">
+        <img src="/logo.png" alt="LevelUp logo" class="flyer-brand-logo" width="80" height="80" />
+        <h1>LEVEL UP<em>Grades K–5</em></h1>
+        <p class="tagline">Adventure</p>
       </header>
-      <section class="quest-board" aria-label="Sample quests">
-        <div class="quest-title">Today's Quests</div>
-        <div class="quests">
-          <div class="quest">
-            <span class="icon">🤝</span>
-            <div><h3>Kind Neighbor</h3><p>Help a classmate without being asked.</p></div>
-            <span class="pts">+5 pts</span>
-          </div>
-          <div class="quest">
-            <span class="icon">📚</span>
-            <div><h3>Reading Champion</h3><p>Finish your reading log this week.</p></div>
-            <span class="pts">+10 pts</span>
-          </div>
-          <div class="quest">
-            <span class="icon">⏰</span>
-            <div><h3>On Time Hero</h3><p>Arrive to class ready every day this week.</p></div>
-            <span class="pts">+8 pts</span>
-          </div>
-          <div class="quest">
-            <span class="icon">🧹</span>
-            <div><h3>Tidy Team Member</h3><p>Keep your space and shared areas clean.</p></div>
-            <span class="pts">+3 pts</span>
-          </div>
-        </div>
+      <h2 class="mega">Complete quests.<br /><span>Earn rewards.</span></h2>
+      <p class="sub">Each positive choice adds points—scan your card to see your quest progress and pick your next prize.</p>
+      <section class="blocks">
+        <div class="block"><h3>Quest 1</h3><p>Morning scan at the kiosk.</p></div>
+        <div class="block"><h3>Quest 2</h3><p>Show respect in class.</p></div>
+        <div class="block"><h3>Quest 3</h3><p>Help a classmate.</p></div>
+        <div class="block"><h3>Boss prize</h3><p>Save up for the big redemption.</p></div>
       </section>
-      <div class="shot">
-        <img src="/marketing/screenshots/kiosk-welcome.png" alt="LevelUp welcome screen" width="800" height="480" />
+      
+      <div class="img-wrap">
+        <img src="/marketing/screenshots/kiosk-welcome.png" alt="Kiosk welcome screen" width="1200" height="600" loading="lazy" />
       </div>
-      <section class="cta">
-        <h2>Collect points · Unlock prizes</h2>
-        <p>Scan your card at the kiosk and see your treasure chest grow!</p>
-        <p style="margin-top:0.08in"><a href="https://leveluprewards.app">leveluprewards.app</a></p>
-      </section>
+      <footer class="bottom">
+        <div class="cta">
+          START YOUR QUEST
+          <small>Scan every morning</small>
+        </div>
+        <div class="urls">
+          <a href="https://leveluprewards.app">leveluprewards.app</a>
+          <a href="mailto:contact@leveluprewards.app">contact@leveluprewards.app</a>
+        </div>
+      </footer>
       <footer class="flyer-footer">
         <p class="flyer-footer__vendor">Approved NYC Department of Education (DOE) vendor</p>
         <p class="flyer-footer__links"><a href="https://leveluprewards.app">leveluprewards.app</a> · <a href="mailto:contact@leveluprewards.app">contact@leveluprewards.app</a></p>
         <p class="flyer-footer__copy">© 2026 LevelUp EdTech Enterprises LLC</p>
       </footer>
-
-      </article>
+    </article>
   </body>
 </html>

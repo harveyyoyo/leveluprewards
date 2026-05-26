@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
-/** US Letter at 96dpi — used to scale iframe snapshots on the promotions grid. */
+/** US Letter at 96dpi — used to scale iframe snapshots on the flyers grid. */
 const FLYER_WIDTH_PX = 816;
 const FLYER_HEIGHT_PX = 1056;
 const SNAPSHOT_SCALE = 0.26;

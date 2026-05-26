@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>LevelUp EDU — Scholastic Flyer</title>
+    <script src="/marketing/flyer-embed.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=PT+Sans:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      @page { size: letter; margin: 0; }
+      html, body {
+        width: 8.5in; min-height: 11in;
+        font-family: 'PT Sans', system-ui, sans-serif;
+        background: #e8eaf2; color: #1e293b;
+        -webkit-print-color-adjust: exact; print-color-adjust: exact;
+      }
+      .flyer {
+        width: 8.5in; min-height: 11in; background: #f0f2f7;
+        padding: 0.45in 0.5in 0.4in;
+        display: flex; flex-direction: column;
+      }
+      .head {
+        display: flex; align-items: center; justify-content: space-between;
+        padding-bottom: 0.2in; border-bottom: 3px solid #7986cb;
+      }
+      .brand { display: flex; align-items: center; gap: 0.14in; }
+      .brand img { width: 0.7in; height: 0.7in; }
+      .brand h1 {
+        font-family: 'Playfair Display', serif;
+        font-size: 0.34in; font-weight: 800; color: #3949ab; line-height: 1;
+      }
+      .brand h1 span { display: block; font-family: 'PT Sans', sans-serif; font-size: 0.11in; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: #5c6bc0; margin-top: 0.04in; }
+      .badge {
+        padding: 0.08in 0.16in; background: #7986cb; color: #fff;
+        font-size: 0.1in; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; border-radius: 4px;
+      }
+      .hero { text-align: center; padding: 0.28in 0 0.2in; }
+      .hero h2 {
+        font-family: 'Playfair Display', serif;
+        font-size: 0.44in; font-weight: 800; color: #283593; line-height: 1.1;
+        max-width: 6.8in; margin: 0 auto;
+      }
+      .hero p { margin-top: 0.14in; font-size: 0.155in; line-height: 1.5; color: #475569; max-width: 6.4in; margin-left: auto; margin-right: auto; }
+      .shot {
+        margin: 0.2in auto 0; max-width: 7in; padding: 0.1in;
+        background: #fff; border-radius: 12px; border: 1px solid #c5cae9;
+        box-shadow: 0 8px 24px rgba(57, 73, 171, 0.12);
+      }
+      .shot img { width: 100%; border-radius: 8px; display: block; }
+      .grid {
+        display: grid; grid-template-columns: 1fr 1fr; gap: 0.14in;
+        margin-top: 0.22in;
+      }
+      .card {
+        background: #fff; border: 1px solid #c5cae9; border-radius: 10px;
+        padding: 0.14in 0.16in; border-left: 4px solid #7986cb;
+      }
+      .card h3 { font-size: 0.14in; font-weight: 700; color: #3949ab; margin-bottom: 0.05in; }
+      .card p { font-size: 0.105in; line-height: 1.4; color: #64748b; }
+      .stats {
+        display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.08in;
+        margin-top: 0.18in; text-align: center;
+      }
+      .stats div { background: #fff; border-radius: 8px; padding: 0.1in 0.06in; border: 1px solid #e8eaf6; }
+      .stats strong { display: block; font-size: 0.15in; color: #5c6bc0; }
+      .stats span { font-size: 0.08in; text-transform: uppercase; letter-spacing: 0.06em; color: #94a3b8; font-weight: 700; }
+      .cta {
+        margin-top: auto; padding-top: 0.2in; text-align: center;
+        background: #7986cb; color: #fff; border-radius: 12px; padding: 0.18in 0.22in;
+      }
+      .cta h2 { font-family: 'Playfair Display', serif; font-size: 0.24in; }
+      .cta p { margin-top: 0.08in; font-size: 0.11in; opacity: 0.95; }
+      .cta a { color: #e8eaf6; font-weight: 700; text-decoration: none; font-size: 0.12in; }
+      .cta .links { margin-top: 0.12in; display: flex; flex-wrap: wrap; justify-content: center; gap: 0.16in; }
+      .foot { margin-top: 0.1in; text-align: center; font-size: 0.075in; color: #94a3b8; }
+      .hint { position: fixed; bottom: 12px; right: 12px; padding: 8px 12px; background: #3949ab; color: #fff; font: 600 12px system-ui; border-radius: 8px; }
+      html.embed .hint { display: none !important; }
+      @media print { .hint { display: none; } }
+    </style>
+  </head>
+  <body>
+    <p class="hint">Ctrl+P → Letter, backgrounds on</p>
+    <article class="flyer">
+      <header class="head">
+        <div class="brand">
+          <img src="/marketing/screenshots/kiosk-welcome.png" alt="LevelUp" width="72" height="72" />
+          <h1>LevelUp <span>School Rewards</span></h1>
+        </div>
+        <span class="badge">PBIS Ready</span>
+      </header>
+      <section class="hero">
+        <h2>Positive behavior deserves a reward students can feel.</h2>
+        <p>
+          LevelUp EDU helps schools run PBIS with points, coupons, leaderboards, and a rewards shop—synced in the cloud for kiosks, teachers, and admins.
+        </p>
+        <div class="shot">
+          <img src="/marketing/screenshots/kiosk-welcome.png" alt="LevelUp welcome screen" width="800" height="500" />
+        </div>
+      </section>
+      <section class="grid">
+        <div class="card"><h3>Student kiosk</h3><p>NFC, barcode, or ID login—check balances and redeem prizes instantly.</p></div>
+        <div class="card"><h3>Teacher station</h3><p>One-tap coupons and printable codes for any behavior goal.</p></div>
+        <div class="card"><h3>Hall of Fame</h3><p>School-wide leaderboards that motivate healthy competition.</p></div>
+        <div class="card"><h3>Rewards shop</h3><p>Custom catalog: passes, privileges, and prizes your school defines.</p></div>
+      </section>
+      <section class="stats">
+        <div><strong>1-Tap</strong><span>Awards</span></div>
+        <div><strong>4 Ways</strong><span>Check-in</span></div>
+        <div><strong>Cloud</strong><span>Sync</span></div>
+        <div><strong>Live</strong><span>Reports</span></div>
+      </section>
+      <section class="cta">
+        <h2>Ready to bring LevelUp to your school?</h2>
+        <p>Request a demo or sign in with your school token.</p>
+        <div class="links">
+          <a href="https://leveluprewards.app">leveluprewards.app</a>
+          <a href="https://portal.leveluprewards.app">portal.leveluprewards.app</a>
+          <a href="mailto:contact@leveluprewards.app">contact@leveluprewards.app</a>
+        </div>
+      </section>
+      <footer class="flyer-footer">
+        <p class="flyer-footer__vendor">Approved NYC Department of Education (DOE) vendor</p>
+        <p class="flyer-footer__links"><a href="https://leveluprewards.app">leveluprewards.app</a> · <a href="mailto:contact@leveluprewards.app">contact@leveluprewards.app</a></p>
+        <p class="flyer-footer__copy">© 2026 LevelUp EdTech Enterprises LLC</p>
+      </footer>
+
+      </article>
+  </body>
+</html>

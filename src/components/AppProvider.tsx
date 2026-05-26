@@ -56,6 +56,7 @@ interface AppContextType {
   syncStatus: 'synced' | 'syncing' | 'offline' | 'error';
   login: (type: 'school' | 'developer' | 'student' | 'teacher' | 'admin' | 'secretary' | 'prizeClerk' | 'reports' | 'librarian' | 'office' | 'houseCoordinator', credentials: { schoolId?: string; passcode?: string; username?: string; teacherName?: string; teacherDocId?: string; staffRole?: 'secretary' | 'prizeClerk' | 'reports' | 'librarian' | 'office' | 'houseCoordinator'; }) => Promise<LoginResult>;
   startDeveloperSupportSession: (schoolId: string) => Promise<boolean>;
+  clearSchoolChooserSession: () => void;
   logout: (options?: LogoutOptions) => void;
   setUserName: (name: string | null) => void;
   isKioskLocked: boolean;

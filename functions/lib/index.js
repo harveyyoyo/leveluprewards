@@ -111,6 +111,43 @@ function isAllowedGoogleAdminBypass(context) {
     return (0, googleAllowlist_1.isAllowedGoogleEmailOnAllowlist)(email, developerGoogleEmailAllowlist());
 }
 // Demo schools should authenticate like any other school (no passcode bypass).
+function isGoogleAuthenticated(context) {
+    var _a, _b, _c;
+    return ((_c = (_b = (_a = context.auth) === null || _a === void 0 ? void 0 : _a.token) === null || _b === void 0 ? void 0 : _b.firebase) === null || _c === void 0 ? void 0 : _c.sign_in_provider) === "google.com";
+}
+async function hasExistingSchoolPortalAccess(schoolId, uid, context) {
+    const db = admin.firestore();
+    if (await hasSchoolRole(schoolId, uid, [
+        "admin",
+        "teacher",
+        "secretary",
+        "prizeClerk",
+        "reports",
+        "librarian",
+        "office",
+        "houseCoordinator",
+    ])) {
+        return true;
+    }
+    const portalSnap = await db
+        .collection("schools")
+        .doc(schoolId)
+        .collection("anonymousPortalSessions")
+        .doc(uid)
+        .get();
+    if (portalSnap.exists)
+        return true;
+    return isDeveloper(context);
+}
+async function ensureAnonymousPortalSession(schoolId, uid) {
+    const db = admin.firestore();
+    await db
+        .collection("schools")
+        .doc(schoolId)
+        .collection("anonymousPortalSessions")
+        .doc(uid)
+        .set({ grantedAt: firestore_1.FieldValue.serverTimestamp() }, { merge: true });
+}
 async function hasSchoolRole(schoolId, uid, roles) {
     const db = admin.firestore();
     const roleCollections = {
@@ -120,6 +157,7 @@ async function hasSchoolRole(schoolId, uid, roles) {
         prizeClerk: "roles_prizeClerk",
         reports: "roles_reports",
         librarian: "roles_librarian",
+        office: "roles_office",
         houseCoordinator: "roles_houseCoordinator",
     };
     const snaps = await Promise.all(roles.map((role) => db.collection("schools").doc(schoolId).collection(roleCollections[role]).doc(uid).get()));
@@ -577,6 +615,7 @@ exports.scheduledFullBackup = functions
 // Callable: Verify school passcode (used by login and student logout)
 // ========================================================================
 exports.verifySchoolPasscode = functions.https.onCall(async (data, context) => {
+    var _a;
     requireAuth(context);
     requireString(data.schoolId, "schoolId");
     const schoolId = String(data.schoolId).trim().toLowerCase();
@@ -586,9 +625,17 @@ exports.verifySchoolPasscode = functions.https.onCall(async (data, context) => {
     if (!schoolDoc.exists) {
         throw new functions.https.HttpsError("not-found", "School not found.");
     }
+    const uid = context.auth.uid;
+    const adminRoleRef = db.collection("schools").doc(schoolId).collection("roles_admin").doc(uid);
     const googleAdminBypass = isAllowedGoogleAdminBypass(context);
     if (!googleAdminBypass) {
         if (passcode.length === 0) {
+            if (isGoogleAuthenticated(context)) {
+                const existingAdmin = await adminRoleRef.get();
+                if (existingAdmin.exists && ((_a = existingAdmin.data()) === null || _a === void 0 ? void 0 : _a.role) === "admin") {
+                    return { success: true };
+                }
+            }
             throw new functions.https.HttpsError("invalid-argument", "A valid passcode is required.");
         }
         const schoolData = schoolDoc.data();
@@ -601,7 +648,6 @@ exports.verifySchoolPasscode = functions.https.onCall(async (data, context) => {
         }
     }
     // Provision admin role using the Admin SDK (path must match client: schools/{schoolId}/roles_admin/{uid})
-    const adminRoleRef = db.collection("schools").doc(schoolId).collection("roles_admin").doc(context.auth.uid);
     await adminRoleRef.set({ role: 'admin' });
     return { success: true };
 });
@@ -612,15 +658,20 @@ exports.verifySchoolPasscode = functions.https.onCall(async (data, context) => {
 exports.verifySchoolAccessPasscode = functions.https.onCall(async (data, context) => {
     requireAuth(context);
     requireString(data.schoolId, "schoolId");
-    if (typeof data.passcode !== "string" || data.passcode.length === 0) {
-        throw new functions.https.HttpsError("invalid-argument", "A valid passcode is required.");
-    }
     const schoolId = String(data.schoolId).trim().toLowerCase();
-    const passcode = String(data.passcode).trim();
+    const passcode = typeof data.passcode === "string" ? String(data.passcode).trim() : "";
     const db = admin.firestore();
     const schoolDoc = await db.collection("schools").doc(schoolId).get();
     if (!schoolDoc.exists) {
         throw new functions.https.HttpsError("not-found", "School not found.");
+    }
+    const uid = context.auth.uid;
+    if (passcode.length === 0) {
+        if (isGoogleAuthenticated(context) && (await hasExistingSchoolPortalAccess(schoolId, uid, context))) {
+            await ensureAnonymousPortalSession(schoolId, uid);
+            return { success: true };
+        }
+        throw new functions.https.HttpsError("invalid-argument", "A valid passcode is required.");
     }
     const schoolData = schoolDoc.data();
     const expected = schoolAccessPasscodeFrom(schoolData);
@@ -631,13 +682,7 @@ exports.verifySchoolAccessPasscode = functions.https.onCall(async (data, context
         throw new functions.https.HttpsError("permission-denied", "Invalid passcode.");
     }
     // Lets the Next.js edge gate mint a school-scoped cookie after verifying the same passcode server-side.
-    const uid = context.auth.uid;
-    await db
-        .collection("schools")
-        .doc(schoolId)
-        .collection("anonymousPortalSessions")
-        .doc(uid)
-        .set({ grantedAt: firestore_1.FieldValue.serverTimestamp() }, { merge: true });
+    await ensureAnonymousPortalSession(schoolId, uid);
     return { success: true };
 });
 // ========================================================================
@@ -689,14 +734,17 @@ exports.startDeveloperSupportSession = functions.https.onCall(async (data, conte
         throw new functions.https.HttpsError("not-found", `School "${schoolId}" was not found.`);
     }
     const now = Date.now();
-    const sessionRef = schoolRef.collection("supportSessions").doc(`${now}_${context.auth.uid}`);
+    const uid = context.auth.uid;
+    const sessionRef = schoolRef.collection("supportSessions").doc(`${now}_${uid}`);
     await sessionRef.set({
-        developerUid: context.auth.uid,
+        developerUid: uid,
         startedAt: now,
         schoolId,
         userAgent: context.rawRequest.get("user-agent") || "",
         status: "started",
     });
+    // School Office and admin tools read Firestore via roles_admin — provision for this school.
+    await schoolRef.collection("roles_admin").doc(uid).set({ role: "admin" }, { merge: true });
     return { success: true, sessionId: sessionRef.id };
 });
 /** Callable: create or repair a school shell using the Admin SDK. */
@@ -2056,13 +2104,24 @@ exports.uploadStudentCustomEmoji = functions.https.onCall(async (data, context) 
 // Callable: Verify teacher username and passcode
 // ========================================================================
 exports.verifyTeacherPasscode = functions.https.onCall(async (data, context) => {
+    var _a;
     requireAuth(context);
     requireString(data.schoolId, "schoolId");
-    requireString(data.username, "username");
-    requireString(data.passcode, "passcode");
+    const passcode = typeof data.passcode === "string" ? String(data.passcode).trim() : "";
+    const schoolId = String(data.schoolId).trim().toLowerCase();
     const db = admin.firestore();
+    const uid = context.auth.uid;
+    const teacherRoleRef = db.collection("schools").doc(schoolId).collection("roles_teacher").doc(uid);
+    const existingTeacher = await teacherRoleRef.get();
+    if (passcode.length === 0) {
+        if (isGoogleAuthenticated(context) && existingTeacher.exists && ((_a = existingTeacher.data()) === null || _a === void 0 ? void 0 : _a.role) === "teacher") {
+            return { success: true };
+        }
+        throw new functions.https.HttpsError("invalid-argument", "A valid passcode is required.");
+    }
+    requireString(data.username, "username");
     // Find teacher by username in the teachers subcollection
-    const teachersSnap = await db.collection("schools").doc(data.schoolId).collection("teachers")
+    const teachersSnap = await db.collection("schools").doc(schoolId).collection("teachers")
         .where("username", "==", data.username)
         .limit(1)
         .get();
@@ -2072,12 +2131,11 @@ exports.verifyTeacherPasscode = functions.https.onCall(async (data, context) => 
     const teacherDoc = teachersSnap.docs[0];
     const teacherData = teacherDoc.data();
     // Check if the passcode matches
-    if (teacherData.passcode !== data.passcode) {
+    if (teacherData.passcode !== passcode) {
         throw new functions.https.HttpsError("permission-denied", "Invalid teacher passcode.");
     }
     // Provision only the teacher role. Firestore rules grant narrow teacher
     // permissions from this document instead of relying on admin escalation.
-    const teacherRoleRef = db.collection("schools").doc(data.schoolId).collection("roles_teacher").doc(context.auth.uid);
     await teacherRoleRef.set({ role: 'teacher', teacherId: teacherDoc.id });
     return { success: true };
 });
@@ -2139,16 +2197,38 @@ exports.getStaffPortalLoginOptions = functions.https.onCall(async (data, context
 // Callable: Verify staff (secretary / prize clerk / reports) username + passcode
 // ========================================================================
 exports.verifyStaffAccountPasscode = functions.https.onCall(async (data, context) => {
+    var _a;
     requireAuth(context);
     requireString(data.schoolId, "schoolId");
-    requireString(data.username, "username");
-    requireString(data.passcode, "passcode");
+    const passcode = typeof data.passcode === "string" ? String(data.passcode).trim() : "";
     const role = data.role;
     if (role !== "secretary" && role !== "prizeClerk" && role !== "reports" && role !== "librarian" && role !== "office" && role !== "houseCoordinator") {
         throw new functions.https.HttpsError("invalid-argument", "role must be 'secretary', 'prizeClerk', 'reports', 'librarian', 'office', or 'houseCoordinator'.");
     }
     const db = admin.firestore();
     const schoolId = String(data.schoolId).trim().toLowerCase();
+    const uid = context.auth.uid;
+    const roleCollection = role === "secretary"
+        ? "roles_secretary"
+        : role === "prizeClerk"
+            ? "roles_prizeClerk"
+            : role === "librarian"
+                ? "roles_librarian"
+                : role === "office"
+                    ? "roles_office"
+                    : role === "houseCoordinator"
+                        ? "roles_houseCoordinator"
+                        : "roles_reports";
+    const existingRoleRef = db.collection("schools").doc(schoolId).collection(roleCollection).doc(uid);
+    const existingRole = await existingRoleRef.get();
+    if (passcode.length === 0) {
+        if (isGoogleAuthenticated(context) && existingRole.exists && ((_a = existingRole.data()) === null || _a === void 0 ? void 0 : _a.role) === role) {
+            return { success: true, displayName: role, roles: [role] };
+        }
+        requireString(data.username, "username");
+        throw new functions.https.HttpsError("invalid-argument", "A valid passcode is required.");
+    }
+    requireString(data.username, "username");
     const username = String(data.username).trim().toLowerCase();
     const accountsSnap = await db
         .collection("schools")
@@ -2160,7 +2240,7 @@ exports.verifyStaffAccountPasscode = functions.https.onCall(async (data, context
     const match = accountsSnap.docs.find((d) => {
         const row = d.data();
         const roles = Array.isArray(row.roles) && row.roles.length > 0 ? row.roles : [row.role];
-        return roles.includes(role) && row.passcode === data.passcode;
+        return roles.includes(role) && row.passcode === passcode;
     });
     if (!match) {
         throw new functions.https.HttpsError("permission-denied", "Invalid staff login.");

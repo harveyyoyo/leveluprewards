@@ -1,0 +1,166 @@
+{
+  "variantId": "epic",
+  "timing": {
+    "introEnd": 259,
+    "segmentEnds": [
+      464,
+      649,
+      922,
+      1105,
+      1288,
+      1470,
+      1656,
+      1880,
+      2073,
+      2268,
+      2414,
+      2568,
+      2720,
+      2874
+    ],
+    "total": 3182
+  },
+  "narration": [
+    {
+      "id": "intro",
+      "label": "Intro",
+      "text": "This is a feature tour of LevelUp — every major tool schools use for rewards, recognition, and motivation.",
+      "file": "voiceover/feature/epic/intro.mp3",
+      "startFrame": 14,
+      "durationFrames": 235
+    },
+    {
+      "id": "kiosk",
+      "label": "Kiosk",
+      "text": "Students step up to the kiosk, scan in, and see their world of points instantly.",
+      "file": "voiceover/feature/epic/kiosk.mp3",
+      "startFrame": 261,
+      "durationFrames": 191
+    },
+    {
+      "id": "idCards",
+      "label": "ID cards",
+      "text": "Every student gets a digital ID card you can preview, print, and scan at the kiosk.",
+      "file": "voiceover/feature/epic/idCards.mp3",
+      "startFrame": 464,
+      "durationFrames": 173
+    },
+    {
+      "id": "themes",
+      "label": "Themes",
+      "text": "Create a student card theme — type a prompt, choose colors and gradients, and watch the ID card preview update live.",
+      "file": "voiceover/feature/epic/themes.mp3",
+      "startFrame": 649,
+      "durationFrames": 261
+    },
+    {
+      "id": "prizes",
+      "label": "Prizes",
+      "text": "The prize shop turns effort into something they can hold in their hands.",
+      "file": "voiceover/feature/epic/prizes.mp3",
+      "startFrame": 922,
+      "durationFrames": 171
+    },
+    {
+      "id": "coupons",
+      "label": "Coupons",
+      "text": "Teachers print reward coupons without breaking stride in the classroom.",
+      "file": "voiceover/feature/epic/coupons.mp3",
+      "startFrame": 1105,
+      "durationFrames": 171
+    },
+    {
+      "id": "raffle",
+      "label": "Raffle",
+      "text": "Weekly raffles transform everyday points into electric, school-wide moments.",
+      "file": "voiceover/feature/epic/raffle.mp3",
+      "startFrame": 1288,
+      "durationFrames": 170
+    },
+    {
+      "id": "houses",
+      "label": "Houses",
+      "text": "House competitions unite grades in friendly rivalry that lasts all year.",
+      "file": "voiceover/feature/epic/houses.mp3",
+      "startFrame": 1470,
+      "durationFrames": 174
+    },
+    {
+      "id": "hallOfFame",
+      "label": "Hall of Fame",
+      "text": "The Hall of Fame celebrates leaders on a display the whole school can see.",
+      "file": "voiceover/feature/epic/hallOfFame.mp3",
+      "startFrame": 1656,
+      "durationFrames": 212
+    },
+    {
+      "id": "notifications",
+      "label": "Notifications",
+      "text": "Smart notifications keep staff ahead of inventory, milestones, and surprises.",
+      "file": "voiceover/feature/epic/notifications.mp3",
+      "startFrame": 1880,
+      "durationFrames": 181
+    },
+    {
+      "id": "bulletin",
+      "label": "Bulletin",
+      "text": "The bulletin board broadcasts pride, news, and momentum.",
+      "file": "voiceover/feature/epic/bulletin.mp3",
+      "startFrame": 2073,
+      "durationFrames": 183
+    },
+    {
+      "id": "library",
+      "label": "Library",
+      "text": "Library checkout weaves reading into the same rewards story.",
+      "file": "voiceover/feature/epic/library.mp3",
+      "startFrame": 2268,
+      "durationFrames": 134
+    },
+    {
+      "id": "badges",
+      "label": "Badges",
+      "text": "Badges and goals give every student a path to be recognized.",
+      "file": "voiceover/feature/epic/badges.mp3",
+      "startFrame": 2414,
+      "durationFrames": 142
+    },
+    {
+      "id": "analytics",
+      "label": "Analytics",
+      "text": "Insights reveal what is working — class by class, week by week.",
+      "file": "voiceover/feature/epic/analytics.mp3",
+      "startFrame": 2568,
+      "durationFrames": 140
+    },
+    {
+      "id": "attendance",
+      "label": "Attendance",
+      "text": "Attendance ties the kiosk to how your school already runs the day.",
+      "file": "voiceover/feature/epic/attendance.mp3",
+      "startFrame": 2720,
+      "durationFrames": 142
+    },
+    {
+      "id": "outro",
+      "label": "Outro",
+      "text": "LevelUp — one platform, countless ways to motivate. Welcome to what school rewards can be.",
+      "file": "voiceover/feature/epic/outro.mp3",
+      "startFrame": 2874,
+      "durationFrames": 218
+    }
+  ],
+  "copy": {
+    "introEyebrow": "Feature showcase",
+    "introTagline": "Every major feature in one platform",
+    "montageTitle": "Features that power your school",
+    "montageSubtitle": "Kiosk · Rewards · Admin tools · Displays",
+    "outroHeadline": "Built for real schools",
+    "outroSubline": "Scan-first · Live sync · Built for students"
+  },
+  "ttsVoice": "marin",
+  "musicVolume": 0.24,
+  "musicDuckRatio": 0.28,
+  "musicStyle": "cinematic",
+  "musicSrc": "background-music.mp3"
+}

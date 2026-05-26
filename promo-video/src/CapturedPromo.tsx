@@ -3,6 +3,7 @@ import { Video } from "@remotion/media";
 import {
   AbsoluteFill,
   Sequence,
+  Series,
   interpolate,
   spring,
   staticFile,
@@ -46,7 +47,6 @@ const ClipVideo: React.FC<{
 };
 
 const segmentLabel = (globalFrame: number) => {
-  if (globalFrame < T.loginEnd) return "Sign in";
   if (globalFrame < T.selectorEnd) return "Choose your portal";
   if (globalFrame < T.studentKioskEnd) return "Student kiosk";
   if (globalFrame < T.studentHomeEnd) return "Student home";
@@ -74,12 +74,12 @@ const WalkthroughMontage: React.FC = () => {
   });
 
   const montageStart = T.introEnd;
-  const loginDur = T.loginEnd - montageStart;
-  const selectorDur = T.selectorEnd - T.loginEnd;
+  const selectorDur = T.selectorEnd - montageStart;
   const kioskDur = T.studentKioskEnd - T.selectorEnd;
   const homeDur = T.studentHomeEnd - T.studentKioskEnd;
   const dashboardDur = T.dashboardEnd - T.studentHomeEnd;
   const actionDur = T.actionEnd - T.dashboardEnd;
+  const premountFor = Math.round(1 * fps);
 
   return (
     <AbsoluteFill
@@ -135,33 +135,23 @@ const WalkthroughMontage: React.FC = () => {
         tiltX={tiltX}
         tiltY={tiltY}
       >
-        <Sequence from={0} durationInFrames={loginDur}>
-          <ClipVideo clip={CLIPS.login} />
-        </Sequence>
-        <Sequence from={loginDur} durationInFrames={selectorDur}>
-          <ClipVideo clip={CLIPS.selector} />
-        </Sequence>
-        <Sequence from={loginDur + selectorDur} durationInFrames={kioskDur}>
-          <ClipVideo clip={CLIPS.studentKiosk} />
-        </Sequence>
-        <Sequence
-          from={loginDur + selectorDur + kioskDur}
-          durationInFrames={homeDur}
-        >
-          <ClipVideo clip={CLIPS.studentHome} />
-        </Sequence>
-        <Sequence
-          from={loginDur + selectorDur + kioskDur + homeDur}
-          durationInFrames={dashboardDur}
-        >
-          <ClipVideo clip={CLIPS.dashboard} />
-        </Sequence>
-        <Sequence
-          from={loginDur + selectorDur + kioskDur + homeDur + dashboardDur}
-          durationInFrames={actionDur}
-        >
-          <ClipVideo clip={CLIPS.action} />
-        </Sequence>
+        <Series>
+          <Series.Sequence durationInFrames={selectorDur} premountFor={premountFor}>
+            <ClipVideo clip={CLIPS.selector} />
+          </Series.Sequence>
+          <Series.Sequence durationInFrames={kioskDur} premountFor={premountFor}>
+            <ClipVideo clip={CLIPS.studentKiosk} />
+          </Series.Sequence>
+          <Series.Sequence durationInFrames={homeDur} premountFor={premountFor}>
+            <ClipVideo clip={CLIPS.studentHome} />
+          </Series.Sequence>
+          <Series.Sequence durationInFrames={dashboardDur} premountFor={premountFor}>
+            <ClipVideo clip={CLIPS.dashboard} />
+          </Series.Sequence>
+          <Series.Sequence durationInFrames={actionDur} premountFor={premountFor}>
+            <ClipVideo clip={CLIPS.action} />
+          </Series.Sequence>
+        </Series>
       </DeviceChrome>
 
       {CALLOUTS.map((callout) => (

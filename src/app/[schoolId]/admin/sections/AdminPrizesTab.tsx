@@ -172,6 +172,7 @@ export function AdminPrizesTab({
   const canGoNext = useMemo(() => {
     if (wizardStep === 1) return wName.trim().length > 0;
     if (wizardStep === 2) return !Number.isNaN(parseInt(wPoints, 10)) && parseInt(wPoints, 10) >= 0;
+    if (wizardStep === 4) return wName.trim().length > 0;
     return true;
   }, [wizardStep, wName, wPoints]);
 

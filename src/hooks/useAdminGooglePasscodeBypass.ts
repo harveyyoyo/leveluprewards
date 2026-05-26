@@ -26,6 +26,7 @@ export function useAdminGooglePasscodeBypass({
   const { login, isAdmin, isInitialized } = useAppContext();
   const { user, isUserLoading } = useFirebase();
   const [isAutoLoggingIn, setIsAutoLoggingIn] = useState(false);
+  const [googleAutoLoginExhausted, setGoogleAutoLoginExhausted] = useState(false);
   const attemptedRef = useRef(false);
 
   const canBypassAdminPasscode = isAllowedAdminGoogleUser(user);
@@ -51,7 +52,9 @@ export function useAdminGooglePasscodeBypass({
     if (!autoLogin || attemptedRef.current) return;
     if (!isInitialized || isUserLoading || isAdmin || !schoolId || !canBypassAdminPasscode) return;
     attemptedRef.current = true;
-    void loginAsAdminViaGoogle();
+    void loginAsAdminViaGoogle().then((ok) => {
+      if (!ok) setGoogleAutoLoginExhausted(true);
+    });
   }, [
     autoLogin,
     canBypassAdminPasscode,
@@ -65,6 +68,7 @@ export function useAdminGooglePasscodeBypass({
   return {
     canBypassAdminPasscode,
     isAutoLoggingIn,
+    googleAutoLoginExhausted,
     loginAsAdminViaGoogle,
   };
 }

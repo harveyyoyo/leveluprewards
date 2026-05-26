@@ -192,7 +192,9 @@ export default function Header() {
   const logoLink = getLevelUpLogoHref();
   const webHomeHref = schoolId ? centerHref : '/';
   const isDeveloperSupportSession = loginState === 'developer' && !!schoolId;
-  const canLogout = loginState !== 'loggedOut' && loginState !== 'student';
+  const isSchoolGateSession = loginState === 'school' && !!schoolId;
+  const canLogout =
+    loginState !== 'loggedOut' && loginState !== 'student' && !isSchoolGateSession;
 
   const paidProducts: string[] = [];
   if (settings.payRewards ?? true) paidProducts.push('Rewards');
@@ -227,17 +229,12 @@ export default function Header() {
           </div>
           {schoolId && (
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-16 sm:px-24 md:px-32">
-              <Link
-                href={centerHref}
-                className="pointer-events-auto flex w-full max-w-full flex-col items-center gap-1 text-center no-underline font-school font-black"
+              <span
+                className="w-full max-w-full text-center font-school font-black text-foreground font-bold [overflow-wrap:anywhere] line-clamp-2 sm:line-clamp-3 text-[clamp(1.125rem,4.5vw,1.875rem)] sm:text-[clamp(1.25rem,5vw,2.25rem)]"
+                title={centerLabel}
               >
-                <span
-                  className="w-full min-w-0 break-words text-foreground font-bold [overflow-wrap:anywhere] line-clamp-2 sm:line-clamp-3 text-[clamp(1.125rem,4.5vw,1.875rem)] sm:text-[clamp(1.25rem,5vw,2.25rem)]"
-                  title={centerLabel}
-                >
-                  {centerLabel}
-                </span>
-              </Link>
+                {centerLabel}
+              </span>
             </div>
           )}
           <div className="relative z-10 flex shrink-0 items-center justify-end gap-1 sm:gap-2">
@@ -342,40 +339,38 @@ export default function Header() {
         {/* Center: school name — absolutely centered in the full header width */}
         {schoolId ? (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-[clamp(5.5rem,24vw,20rem)] sm:px-[clamp(7rem,28vw,22rem)]">
-            <Link href={centerHref} className="pointer-events-auto flex w-full max-w-full justify-center text-center no-underline">
-              <span className="inline-flex max-w-full min-w-0 items-center justify-center gap-2 sm:gap-3">
-                {schoolData?.logoUrl && (
-                  <span className={cn(
-                    "inline-flex h-10 w-auto max-w-[200px] shrink-0 items-center justify-center transition-all duration-300",
-                    settings.logoDropShadow === 'sm' && 'drop-shadow-sm',
-                    settings.logoDropShadow === 'md' && 'drop-shadow-md',
-                    settings.logoDropShadow === 'lg' && 'drop-shadow-xl',
-                    settings.logoDropShadow === 'none' && 'drop-shadow-none',
-                  )}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={schoolData.logoUrl}
-                      alt="Logo"
-                      className={cn(
-                        "h-full w-auto object-contain transition-all duration-300",
-                        settings.logoDisplayMode === 'cover' && 'w-full object-cover',
-                        settings.logoBorderRadius === 'sm' && 'rounded-sm',
-                        settings.logoBorderRadius === 'md' && 'rounded-md',
-                        settings.logoBorderRadius === 'lg' && 'rounded-2xl',
-                        settings.logoBorderRadius === 'full' && 'rounded-full',
-                        settings.logoBorderRadius === 'none' && 'rounded-none',
-                      )}
-                    />
-                  </span>
-                )}
-                <span
-                  className="min-w-0 break-words text-center font-headline font-bold text-foreground [overflow-wrap:anywhere] line-clamp-2 text-[clamp(1rem,4.5vw,2.25rem)] sm:text-[clamp(1.25rem,5vw,2.75rem)] xl:text-[clamp(1.5rem,4vw,2.75rem)]"
-                  title={centerLabel}
-                >
-                  {centerLabel}
+            <span className="inline-flex max-w-full min-w-0 items-center justify-center gap-2 sm:gap-3 text-center">
+              {schoolData?.logoUrl && (
+                <span className={cn(
+                  "inline-flex h-10 w-auto max-w-[200px] shrink-0 items-center justify-center transition-all duration-300",
+                  settings.logoDropShadow === 'sm' && 'drop-shadow-sm',
+                  settings.logoDropShadow === 'md' && 'drop-shadow-md',
+                  settings.logoDropShadow === 'lg' && 'drop-shadow-xl',
+                  settings.logoDropShadow === 'none' && 'drop-shadow-none',
+                )}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={schoolData.logoUrl}
+                    alt="Logo"
+                    className={cn(
+                      "h-full w-auto object-contain transition-all duration-300",
+                      settings.logoDisplayMode === 'cover' && 'w-full object-cover',
+                      settings.logoBorderRadius === 'sm' && 'rounded-sm',
+                      settings.logoBorderRadius === 'md' && 'rounded-md',
+                      settings.logoBorderRadius === 'lg' && 'rounded-2xl',
+                      settings.logoBorderRadius === 'full' && 'rounded-full',
+                      settings.logoBorderRadius === 'none' && 'rounded-none',
+                    )}
+                  />
                 </span>
+              )}
+              <span
+                className="min-w-0 break-words font-headline font-bold text-foreground [overflow-wrap:anywhere] line-clamp-2 text-[clamp(1rem,4.5vw,2.25rem)] sm:text-[clamp(1.25rem,5vw,2.75rem)] xl:text-[clamp(1.5rem,4vw,2.75rem)]"
+                title={centerLabel}
+              >
+                {centerLabel}
               </span>
-            </Link>
+            </span>
           </div>
         ) : null}
 
@@ -418,7 +413,7 @@ export default function Header() {
                   </span>
                 </div>
 
-              {loginState !== 'student' && loginState !== 'loggedOut' && (
+              {loginState !== 'student' && loginState !== 'loggedOut' && !isSchoolGateSession && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="font-bold gap-1 sm:gap-2 h-10 sm:h-12 px-2 sm:px-4 rounded-xl text-primary shrink-0">

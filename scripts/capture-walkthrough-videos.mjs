@@ -30,9 +30,12 @@ const OUT_DIR = path.join(ROOT, 'promo-video', 'public');
 const LIBRARY_DIR = path.join(OUT_DIR, 'capture-library');
 const RAW_DIR = path.join(OUT_DIR, '_capture-raw');
 const REJECTED_DIR = path.join(LIBRARY_DIR, '_rejected');
-const AUTH_DIR = path.join(OUT_DIR, '.capture-auth');
+// Allow overriding to avoid Windows path/lock quirks (especially with spaces in repo paths).
+const AUTH_DIR = path.resolve(process.env.CAPTURE_AUTH_DIR || path.join(OUT_DIR, '.capture-auth'));
 const SCHOOL_AUTH = path.join(AUTH_DIR, 'school.json');
 const TEACHER_AUTH = path.join(AUTH_DIR, 'teacher.json');
+const ADMIN_AUTH = path.join(AUTH_DIR, 'admin.json');
+const ADMIN_PASSCODE = process.env.DEMO_ADMIN_PASSCODE || '1234';
 
 const PRODUCTION_PORTAL = 'https://portal.leveluprewards.app';
 const LOCAL_DEV = 'http://localhost:3000';
@@ -98,7 +101,8 @@ const STUDENT_PORTAL_PASSCODE = (
   process.env.DEMO_STUDENT_PORTAL_PASSCODE || '1234'
 ).trim();
 
-const VIEWPORT = { width: 1280, height: 720 };
+/** Wide enough for admin main tabs row (not mobile select only). */
+const VIEWPORT = { width: 1400, height: 900 };
 const MAX_CAPTURE_ATTEMPTS = 3;
 
 /** Visible failure copy — reject takes that show these */
@@ -129,8 +133,42 @@ function ensureFfmpeg() {
   }
 }
 
+function probeVideoDuration(filePath) {
+  const out = execFileSync(
+    'ffprobe',
+    [
+      '-v',
+      'error',
+      '-show_entries',
+      'format=duration',
+      '-of',
+      'default=noprint_wrappers=1:nokey=1',
+      filePath,
+    ],
+    { encoding: 'utf8' },
+  );
+  const n = parseFloat(String(out).trim());
+  return Number.isFinite(n) ? n : 0;
+}
+
 function localOrigin() {
   return new URL(BASE).origin;
+}
+
+/** localhost and 127.0.0.1 are equivalent for saved Playwright auth. */
+function normalizeCaptureOrigin(origin) {
+  if (!origin) return origin;
+  if (!USE_LOCAL_DEV()) return origin;
+  try {
+    const u = new URL(origin);
+    if (u.hostname === '127.0.0.1' || u.hostname === 'localhost') {
+      u.hostname = '127.0.0.1';
+      return u.origin;
+    }
+  } catch {
+    /* ignore */
+  }
+  return origin;
 }
 
 async function forceLocalOrigin(page) {
@@ -144,14 +182,33 @@ async function forceLocalOrigin(page) {
 function rewriteStorageStateOrigin(authPath) {
   if (!fs.existsSync(authPath)) return;
   const data = JSON.parse(fs.readFileSync(authPath, 'utf8'));
-  const targetOrigin = localOrigin();
+  const targetOrigin = normalizeCaptureOrigin(localOrigin());
   if (Array.isArray(data.origins)) {
     data.origins = data.origins.map((entry) => ({
       ...entry,
-      origin: entry.origin?.includes('leveluprewards.app') ? targetOrigin : entry.origin,
+      origin:
+        entry.origin?.includes('leveluprewards.app') || USE_LOCAL_DEV()
+          ? targetOrigin
+          : entry.origin,
     }));
   }
   fs.writeFileSync(authPath, JSON.stringify(data, null, 2));
+}
+
+function storageStateOrigin(authPath) {
+  if (!fs.existsSync(authPath)) return '';
+  try {
+    const data = JSON.parse(fs.readFileSync(authPath, 'utf8'));
+    return normalizeCaptureOrigin(data.origins?.[0]?.origin ?? '');
+  } catch {
+    return '';
+  }
+}
+
+/** Saved auth from localhost does not apply on production (and vice versa). */
+function authNeedsRefresh(authPath) {
+  if (!fs.existsSync(authPath)) return true;
+  return storageStateOrigin(authPath) !== normalizeCaptureOrigin(localOrigin());
 }
 
 function appOrigin(page) {
@@ -226,7 +283,25 @@ async function waitForPortalHub(page) {
 }
 
 async function waitForTeacherReady(page) {
-  await page.waitForURL((url) => url.pathname.includes('/teacher'), { timeout: 60000 });
+  // Local dev can take a while to compile the teacher bundle; don't wait for full "load".
+  await page.waitForURL(
+    (url) => url.pathname.includes('/teacher') || url.pathname.includes('/admin'),
+    {
+      timeout: USE_LOCAL_DEV() ? 150000 : 90000,
+      waitUntil: 'domcontentloaded',
+    },
+  );
+  if (page.url().includes('/admin') && !page.url().includes('/teacher')) {
+    await page.goto(`${localOrigin()}/${SCHOOL}/teacher`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 30000,
+    });
+    await forceLocalOrigin(page);
+    await page.waitForURL((url) => url.pathname.includes('/teacher'), {
+      timeout: 60000,
+      waitUntil: 'domcontentloaded',
+    });
+  }
   await waitNoAppLoading(page);
   await page
     .getByRole('heading', { name: /Teacher Portal/i })
@@ -293,6 +368,19 @@ async function openTeacherPortal(page, origin) {
   await page.locator('#teacher-passcode').fill(TEACHER_PASSCODE);
   await page.getByRole('button', { name: /^Continue$/i }).click();
   await forceLocalOrigin(page);
+  await page
+    .waitForURL(
+      (url) => url.pathname.includes('/teacher') || url.pathname.includes('/admin'),
+      { timeout: 60000, waitUntil: 'domcontentloaded' },
+    )
+    .catch(() => {});
+  if (page.url().includes('/admin') && !page.url().includes('/teacher')) {
+    await page.goto(`${origin}/${SCHOOL}/teacher`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 30000,
+    });
+    await forceLocalOrigin(page);
+  }
   await waitForTeacherReady(page);
 }
 
@@ -313,12 +401,29 @@ async function waitForStudentKioskReady(page) {
   );
   await forceLocalOrigin(page);
   await waitNoAppLoading(page);
-  await page
-    .getByText(
-      /Please scan your card|System Ready|LEVEL UP|Student Identification|Identify Student/i,
-    )
-    .first()
-    .waitFor({ state: 'visible', timeout: 90000 });
+
+  const kioskReady =
+    /Please scan your card|System Ready|LEVEL UP|Student Identification|Identify Student|Enter your Student ID|Manual Entry/i;
+
+  await page.waitForFunction(
+    () => {
+      const t = document.body?.innerText ?? '';
+      if (/Check-in Unavailable/i.test(t)) return true;
+      return /Please scan your card|System Ready|LEVEL UP|Student Identification|Identify Student|Enter your Student ID|Manual Entry/i.test(
+        t,
+      );
+    },
+    { timeout: 120000, polling: 500 },
+  );
+
+  const body = await pageBodyText(page);
+  if (/Check-in Unavailable/i.test(body)) {
+    throw new Error(`Student kiosk unavailable: ${body.slice(0, 280)}`);
+  }
+  if (!kioskReady.test(body)) {
+    throw new Error('Student kiosk UI did not reach ready state');
+  }
+
   await ensureStudentKioskTypeTab(page);
   await sleep(400);
 }
@@ -461,6 +566,255 @@ async function ensureTeacherAuth(browser) {
   console.log(`  auth: teacher session saved (${localOrigin()})`);
 }
 
+async function isAdminPasscodeGate(page) {
+  return page
+    .getByRole('button', { name: /Enter Dashboard/i })
+    .isVisible({ timeout: 2500 })
+    .catch(() => false);
+}
+
+async function submitAdminPasscodeGate(page) {
+  const pass = page.locator('input[name="adminPasscode"], input[type="password"]').first();
+  await pass.waitFor({ state: 'visible', timeout: 15000 });
+  await pass.fill(ADMIN_PASSCODE);
+  await page.getByRole('button', { name: /Enter Dashboard/i }).click();
+  await waitNoAppLoading(page);
+  await sleep(2000);
+}
+
+async function adminDashboardReady(page) {
+  const tablist = page.getByRole('tablist', { name: /Admin portal main tabs/i });
+  if (await tablist.isVisible({ timeout: 5000 }).catch(() => false)) return true;
+  const mobile = page.getByLabel(/Admin portal section/i);
+  if (await mobile.isVisible({ timeout: 3000 }).catch(() => false)) return true;
+  return /Add Student|Manage students/i.test(await pageBodyText(page));
+}
+
+async function adminLogin(page) {
+  const origin = localOrigin();
+  if (!page.url().includes('/portal')) {
+    await schoolLogin(page);
+  }
+  await page.goto(`${origin}/${SCHOOL}/admin`, {
+    waitUntil: 'domcontentloaded',
+    timeout: 30000,
+  });
+  await forceLocalOrigin(page);
+  await waitNoAppLoading(page);
+  if (await isAdminPasscodeGate(page)) {
+    await submitAdminPasscodeGate(page);
+  } else if (page.url().includes('admin-sign-in')) {
+    await page.locator('input[type="password"]').first().fill(ADMIN_PASSCODE);
+    await page.locator('form').getByRole('button').first().click();
+    await sleep(3500);
+    await page.goto(`${origin}/${SCHOOL}/admin`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 30000,
+    });
+    await waitNoAppLoading(page);
+    if (await isAdminPasscodeGate(page)) await submitAdminPasscodeGate(page);
+  }
+  const cancel = page.getByRole('button', { name: /^Cancel$/i }).first();
+  if (await cancel.isVisible({ timeout: 3000 }).catch(() => false)) {
+    await cancel.click();
+  }
+  await page
+    .waitForFunction(() => /Add Student|Manage students|Admin portal/i.test(document.body?.innerText ?? ''), {
+      timeout: 120000,
+      polling: 400,
+    })
+    .catch(() => {});
+  await sleep(600);
+}
+
+async function gotoAdmin(page, origin) {
+  await page.goto(`${origin}/${SCHOOL}/admin`, {
+    waitUntil: 'domcontentloaded',
+    timeout: 30000,
+  });
+  await forceLocalOrigin(page);
+  await waitNoAppLoading(page);
+  if (page.url().includes('admin-sign-in') || (await isAdminPasscodeGate(page))) {
+    await adminLogin(page);
+  } else if (!(await adminDashboardReady(page))) {
+    await adminLogin(page);
+  }
+  await sleep(400);
+}
+
+async function gotoTeacherTab(page, origin, tabLabel) {
+  await gotoTeacher(page, origin);
+  const pattern = new RegExp(tabLabel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+  const tab = page.getByRole('tab', { name: pattern }).first();
+  await tab.waitFor({ state: 'visible', timeout: 20000 });
+  await tab.click({ timeout: 20000 });
+  await waitNoAppLoading(page);
+  await sleep(900);
+}
+
+async function ensureAdminAddOnTab(page, label) {
+  const addMore = page.getByRole('button', { name: /^Add more$/i }).first();
+  if (!(await addMore.isVisible({ timeout: 8000 }).catch(() => false))) return false;
+  await addMore.click();
+  await sleep(400);
+  const item = page
+    .getByRole('menuitemcheckbox', { name: new RegExp(label, 'i') })
+    .first();
+  if (await item.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if ((await item.getAttribute('aria-checked')) !== 'true') await item.click();
+    await sleep(800);
+  }
+  await page.keyboard.press('Escape').catch(() => {});
+  await sleep(500);
+  return true;
+}
+
+/** Tab labels include icon whitespace — do not anchor with ^$. */
+function adminTabLocator(page, tabLabel) {
+  const pattern = new RegExp(tabLabel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+  const scoped = page
+    .getByRole('tablist', { name: /Admin portal main tabs/i })
+    .getByRole('tab', { name: pattern })
+    .first();
+  return scoped.or(page.getByRole('tab', { name: pattern }).first());
+}
+
+async function openBrandingThemeDesigner(page) {
+  const themeNav = page.getByRole('tab', { name: /ID Card Theme/i }).first();
+  await themeNav.waitFor({ state: 'visible', timeout: 20000 });
+  await themeNav.click();
+  await sleep(700);
+  const themeBtn = page
+    .getByRole('button', { name: /Configure Brand Theme|Customize Theme/i })
+    .first();
+  await themeBtn.waitFor({ state: 'visible', timeout: 20000 });
+  await themeBtn.click();
+  const designer = page.getByRole('dialog').filter({ hasText: /Generate theme/i });
+  await designer.waitFor({ state: 'visible', timeout: 25000 });
+  return designer;
+}
+
+/** Show theme being created: prompt entry + gradient/colors updating live preview. */
+async function demonstrateThemeCreation(page) {
+  const designer = await openBrandingThemeDesigner(page);
+  const prompt = designer.locator('#prompt');
+  await prompt.click();
+  await prompt.fill('');
+  await prompt.pressSequentially('School spirit navy blue and gold accents', { delay: 35 });
+  await sleep(500);
+
+  const styleMode = designer.locator('#theme-bg-style-mode');
+  if (await styleMode.isVisible({ timeout: 5000 }).catch(() => false)) {
+    await styleMode.click();
+    await page.getByRole('option', { name: /^Gradient$/i }).first().click();
+    await sleep(600);
+  }
+
+  const primaryPicker = designer
+    .locator('label')
+    .filter({ hasText: /^Primary$/i })
+    .locator('input[type="color"]');
+  const accentPicker = designer
+    .locator('label')
+    .filter({ hasText: /^Accent$/i })
+    .locator('input[type="color"]');
+
+  if (await primaryPicker.count()) {
+    await primaryPicker.evaluate((el) => {
+      el.value = '#1e3a8a';
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await sleep(700);
+  }
+  if (await accentPicker.count()) {
+    await accentPicker.evaluate((el) => {
+      el.value = '#eab308';
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await sleep(900);
+  }
+
+  const generateBtn = designer.getByRole('button', { name: /^Generate$/i }).first();
+  if (await generateBtn.isEnabled().catch(() => false)) {
+    await generateBtn.click();
+    await sleep(1200);
+  }
+
+  await designer.getByText(/Student Portal Preview|Fine.?tune|Gradient/i).first().waitFor({
+    state: 'visible',
+    timeout: 20000,
+  });
+  await sleep(1600);
+}
+
+const ADMIN_ADDON_TAB_LABELS = [
+  'Branding',
+  'Raffle',
+  'Houses',
+  'Notifications',
+  'Library',
+  'Badges',
+  'Insights',
+  'Attendance',
+  'Hall of Fame',
+  'Bulletin',
+  'Goals',
+  'Bonus Points',
+];
+
+async function ensurePromoAdminAddOnTabs(page) {
+  for (const label of ADMIN_ADDON_TAB_LABELS) {
+    await ensureAdminAddOnTab(page, label);
+  }
+}
+
+async function gotoAdminTab(page, origin, tabLabel) {
+  await gotoAdmin(page, origin);
+  if (await isAdminPasscodeGate(page)) await submitAdminPasscodeGate(page);
+  const needsAddOn = ADMIN_ADDON_TAB_LABELS.some(
+    (name) => name.toLowerCase() === tabLabel.toLowerCase(),
+  );
+  if (needsAddOn) await ensureAdminAddOnTab(page, tabLabel);
+
+  const tab = adminTabLocator(page, tabLabel);
+  if (await tab.isVisible({ timeout: 20000 }).catch(() => false)) {
+    await tab.scrollIntoViewIfNeeded({ timeout: 15000 }).catch(() => {});
+    await tab.click({ timeout: 20000 });
+    await waitNoAppLoading(page);
+    await sleep(1200);
+    return true;
+  }
+
+  const mobile = page.getByLabel(/Admin portal section/i);
+  if (await mobile.isVisible({ timeout: 5000 }).catch(() => false)) {
+    await mobile.click();
+    const option = page.getByRole('option', { name: new RegExp(tabLabel, 'i') }).first();
+    if (await option.isVisible({ timeout: 8000 }).catch(() => false)) {
+      await option.click();
+      await waitNoAppLoading(page);
+      await sleep(1200);
+      return true;
+    }
+  }
+
+  return false;
+}
+
+async function ensureAdminAuth(browser) {
+  fs.mkdirSync(AUTH_DIR, { recursive: true });
+  await ensureSchoolAuth(browser);
+  const ctx = await browser.newContext({ viewport: VIEWPORT, storageState: SCHOOL_AUTH });
+  const page = await ctx.newPage();
+  await adminLogin(page);
+  await ensurePromoAdminAddOnTabs(page);
+  await ctx.storageState({ path: ADMIN_AUTH, indexedDB: true });
+  if (USE_LOCAL_DEV()) rewriteStorageStateOrigin(ADMIN_AUTH);
+  await ctx.close();
+  console.log(`  auth: admin session saved (${localOrigin()})`);
+}
+
 async function recordClipReady({
   file,
   outputPath,
@@ -550,13 +904,21 @@ async function recordClipReady({
       );
       try { fs.unlinkSync(webmPath); } catch {}
 
+      let ss = trimOpts.startSec ?? 0;
+      let duration = trimOpts.maxDurationSec;
+      if (trimOpts.tailSec) {
+        const fullDur = probeVideoDuration(trimmedPath);
+        ss = Math.max(0, fullDur - trimOpts.tailSec);
+        duration = Math.min(trimOpts.maxDurationSec, trimOpts.tailSec);
+      }
+
       execFileSync(
         'ffmpeg',
         [
           '-y',
-          '-ss', String(trimOpts.startSec),
+          '-ss', String(ss),
           '-i', trimmedPath,
-          '-t', String(trimOpts.maxDurationSec),
+          '-t', String(duration),
           '-c:v', 'libx264',
           '-preset', 'fast',
           '-crf', '23',
@@ -1159,6 +1521,65 @@ const LIBRARY_VARIANTS = [
     },
   },
   {
+    category: 'admin',
+    name: 'admin-id-card-preview',
+    storageState: ADMIN_AUTH,
+    /** Recording includes admin login — keep only the last seconds (ID dialog). */
+    trim: { tailSec: 4.5, maxDurationSec: 5 },
+    prepare: async (page) => {
+      const ok = await gotoAdminTab(page, localOrigin(), 'Students');
+      if (!ok) throw new Error('Admin Students tab not visible');
+      const idBtn = page.locator('button[title="Preview ID Card"]').first();
+      await idBtn.scrollIntoViewIfNeeded();
+      await idBtn.click({ timeout: 15000 });
+      await page.getByRole('dialog', { name: /ID Card Preview/i }).waitFor({ state: 'visible', timeout: 20000 });
+      await page.locator('.student-id-card-screen-preview').waitFor({ state: 'visible', timeout: 20000 });
+    },
+    record: async (page) => {
+      const ok = await gotoAdminTab(page, localOrigin(), 'Students');
+      if (!ok) throw new Error('Admin Students tab not visible');
+      const idBtn = page.locator('button[title="Preview ID Card"]').first();
+      await idBtn.scrollIntoViewIfNeeded();
+      await idBtn.click({ timeout: 15000 });
+      await page.getByRole('dialog', { name: /ID Card Preview/i }).waitFor({ state: 'visible', timeout: 20000 });
+      await page.locator('.student-id-card-screen-preview').waitFor({ state: 'visible', timeout: 20000 });
+      await sleep(2800);
+    },
+    validate: async (page) => {
+      const visible = await page
+        .locator('.student-id-card-screen-preview')
+        .isVisible()
+        .catch(() => false);
+      if (!visible) throw new Error('Student ID card preview not visible in dialog');
+    },
+  },
+  {
+    category: 'features',
+    name: 'admin-branding-theme',
+    storageState: ADMIN_AUTH,
+    trim: { tailSec: 7.5, maxDurationSec: 7.5 },
+    prepare: async (page) => {
+      const ok = await gotoAdminTab(page, localOrigin(), 'Branding');
+      if (!ok) throw new Error('Admin Branding tab not visible');
+      await demonstrateThemeCreation(page);
+    },
+    record: async (page) => {
+      const ok = await gotoAdminTab(page, localOrigin(), 'Branding');
+      if (!ok) throw new Error('Admin Branding tab not visible');
+      await demonstrateThemeCreation(page);
+      await sleep(800);
+    },
+    validate: async (page) => {
+      const t = await pageBodyText(page);
+      if (!/Generate theme/i.test(t)) {
+        throw new Error('Theme designer modal not visible');
+      }
+      if (!/Student Portal Preview|Fine.?tune|Gradient|Prompt/i.test(t)) {
+        throw new Error('Theme creation UI not visible');
+      }
+    },
+  },
+  {
     category: 'portal',
     name: 'portal-student-home-link',
     storageState: SCHOOL_AUTH,
@@ -1177,6 +1598,186 @@ const LIBRARY_VARIANTS = [
       } else {
         await page.mouse.move(640, 400);
         await sleep(800);
+      }
+    },
+  },
+  {
+    category: 'features',
+    name: 'teacher-raffle',
+    storageState: ADMIN_AUTH,
+    trim: { tailSec: 4.5, maxDurationSec: 5 },
+    prepare: async (page) => {
+      const ok = await gotoAdminTab(page, localOrigin(), 'Raffle');
+      if (!ok) throw new Error('Admin Raffle tab not visible (enable Weekly Raffle in settings)');
+    },
+    record: async (page) => {
+      const ok = await gotoAdminTab(page, localOrigin(), 'Raffle');
+      if (!ok) throw new Error('Admin Raffle tab not visible');
+      await sleep(1400);
+    },
+    validate: async (page) => {
+      if (!/Raffle|Ticket|Winner|Draw|Jackpot|Spin/i.test(await pageBodyText(page))) {
+        throw new Error('Raffle UI not visible');
+      }
+    },
+  },
+  {
+    category: 'features',
+    name: 'hall-of-fame',
+    storageState: SCHOOL_AUTH,
+    trim: { startSec: 0.6, maxDurationSec: 5.5 },
+    prepare: async (page) => {
+      await page.goto(`${localOrigin()}/${SCHOOL}/hall-of-fame?fullscreen=1`, {
+        waitUntil: 'domcontentloaded',
+        timeout: 30000,
+      });
+      await waitNoAppLoading(page);
+    },
+    record: async (page) => {
+      await page.goto(`${localOrigin()}/${SCHOOL}/hall-of-fame?fullscreen=1`, {
+        waitUntil: 'domcontentloaded',
+        timeout: 30000,
+      });
+      await waitNoAppLoading(page);
+      await sleep(1200);
+      await page.mouse.move(640, 360);
+      await sleep(800);
+    },
+  },
+  {
+    category: 'features',
+    name: 'bulletin-board',
+    storageState: SCHOOL_AUTH,
+    trim: { startSec: 0.4, maxDurationSec: 5 },
+    prepare: async (page) => {
+      await page.goto(`${localOrigin()}/${SCHOOL}/bulletin-board`, {
+        waitUntil: 'domcontentloaded',
+        timeout: 30000,
+      });
+      await waitNoAppLoading(page);
+    },
+    record: async (page) => {
+      await page.goto(`${localOrigin()}/${SCHOOL}/bulletin-board`, {
+        waitUntil: 'domcontentloaded',
+        timeout: 30000,
+      });
+      await waitNoAppLoading(page);
+      await sleep(1400);
+    },
+  },
+  {
+    category: 'features',
+    name: 'admin-houses',
+    storageState: ADMIN_AUTH,
+    trim: { tailSec: 4.5, maxDurationSec: 5 },
+    prepare: async (page) => {
+      const ok = await gotoAdminTab(page, localOrigin(), 'Houses');
+      if (!ok) throw new Error('Admin Houses tab not visible');
+    },
+    record: async (page) => {
+      const ok = await gotoAdminTab(page, localOrigin(), 'Houses');
+      if (!ok) throw new Error('Admin Houses tab not visible');
+      await sleep(1400);
+    },
+    validate: async (page) => {
+      if (!/House|Sorting|Students/i.test(await pageBodyText(page))) {
+        throw new Error('Houses UI not visible');
+      }
+    },
+  },
+  {
+    category: 'features',
+    name: 'admin-notifications',
+    storageState: ADMIN_AUTH,
+    trim: { tailSec: 4.5, maxDurationSec: 5 },
+    prepare: async (page) => {
+      const ok = await gotoAdminTab(page, localOrigin(), 'Notifications');
+      if (!ok) throw new Error('Admin Notifications tab not visible');
+    },
+    record: async (page) => {
+      const ok = await gotoAdminTab(page, localOrigin(), 'Notifications');
+      if (!ok) throw new Error('Admin Notifications tab not visible');
+      await sleep(1400);
+    },
+    validate: async (page) => {
+      if (!/Notification|Alert|Inventory/i.test(await pageBodyText(page))) {
+        throw new Error('Notifications UI not visible');
+      }
+    },
+  },
+  {
+    category: 'features',
+    name: 'admin-library',
+    storageState: ADMIN_AUTH,
+    trim: { tailSec: 4.5, maxDurationSec: 5 },
+    prepare: async (page) => {
+      const ok = await gotoAdminTab(page, localOrigin(), 'Library');
+      if (!ok) throw new Error('Admin Library tab not visible');
+    },
+    record: async (page) => {
+      const ok = await gotoAdminTab(page, localOrigin(), 'Library');
+      if (!ok) throw new Error('Admin Library tab not visible');
+      await sleep(1400);
+    },
+    validate: async (page) => {
+      if (!/Library|Checkout|Book/i.test(await pageBodyText(page))) {
+        throw new Error('Library UI not visible');
+      }
+    },
+  },
+  {
+    category: 'features',
+    name: 'admin-badges',
+    storageState: ADMIN_AUTH,
+    trim: { tailSec: 4.5, maxDurationSec: 5 },
+    prepare: async (page) => {
+      const ok = await gotoAdminTab(page, localOrigin(), 'Badges');
+      if (!ok) throw new Error('Admin Badges tab not visible');
+    },
+    record: async (page) => {
+      const ok = await gotoAdminTab(page, localOrigin(), 'Badges');
+      if (!ok) throw new Error('Admin Badges tab not visible');
+      await sleep(1400);
+    },
+    validate: async (page) => {
+      if (!/Badge|Goal|Milestone/i.test(await pageBodyText(page))) {
+        throw new Error('Badges UI not visible');
+      }
+    },
+  },
+  {
+    category: 'features',
+    name: 'admin-stats',
+    storageState: ADMIN_AUTH,
+    trim: { tailSec: 4.5, maxDurationSec: 5 },
+    prepare: async (page) => {
+      const ok = await gotoAdminTab(page, localOrigin(), 'Insights');
+      if (!ok) await gotoAdminTab(page, localOrigin(), 'Students');
+    },
+    record: async (page) => {
+      const ok = await gotoAdminTab(page, localOrigin(), 'Insights');
+      if (!ok) await gotoAdminTab(page, localOrigin(), 'Students');
+      await page.mouse.move(640, 380);
+      await sleep(1100);
+    },
+  },
+  {
+    category: 'features',
+    name: 'admin-attendance',
+    storageState: ADMIN_AUTH,
+    trim: { tailSec: 4.5, maxDurationSec: 5 },
+    prepare: async (page) => {
+      const ok = await gotoAdminTab(page, localOrigin(), 'Attendance');
+      if (!ok) throw new Error('Admin Attendance tab not visible');
+    },
+    record: async (page) => {
+      const ok = await gotoAdminTab(page, localOrigin(), 'Attendance');
+      if (!ok) throw new Error('Admin Attendance tab not visible');
+      await sleep(1400);
+    },
+    validate: async (page) => {
+      if (!/Attendance|Sign.?in|Present/i.test(await pageBodyText(page))) {
+        throw new Error('Attendance UI not visible');
       }
     },
   },
@@ -1212,11 +1813,41 @@ async function captureLibraryVariant(variant) {
   });
 }
 
-async function captureLibrary({ categoryFilter } = {}) {
+/** Clips for the simple widescreen promo (fresh captures) */
+const PROMO_SIMPLE_LIBRARY = [
+  'admin/admin-id-card-preview',
+  'student-kiosk/kiosk-card-tab',
+  'student-kiosk/kiosk-signin-rewards',
+  'student-kiosk/kiosk-prizes-hover',
+  'student-kiosk/kiosk-type-entry',
+  'action/action-print-coupons',
+];
+
+/** Clips for long feature showcase promos */
+const PROMO_FEATURE_LIBRARY = [
+  'admin/admin-id-card-preview',
+  'features/admin-branding-theme',
+  'features/teacher-raffle',
+  'features/hall-of-fame',
+  'features/bulletin-board',
+  'features/admin-houses',
+  'features/admin-notifications',
+  'features/admin-library',
+  'features/admin-badges',
+  'features/admin-stats',
+  'features/admin-attendance',
+];
+
+async function captureLibrary({ categoryFilter, nameFilter } = {}) {
   fs.mkdirSync(LIBRARY_DIR, { recursive: true });
-  const variants = categoryFilter
-    ? LIBRARY_VARIANTS.filter((v) => v.category.includes(categoryFilter))
-    : LIBRARY_VARIANTS;
+  let variants = LIBRARY_VARIANTS;
+  if (nameFilter?.length) {
+    variants = variants.filter((v) =>
+      nameFilter.includes(`${v.category}/${v.name}`),
+    );
+  } else if (categoryFilter) {
+    variants = variants.filter((v) => v.category.includes(categoryFilter));
+  }
 
   const manifest = {
     capturedAt: new Date().toISOString(),
@@ -1228,8 +1859,11 @@ async function captureLibrary({ categoryFilter } = {}) {
   const browser = await chromium.launch({ headless: true });
   const needsTeacher = variants.some((v) => v.storageState === TEACHER_AUTH);
   const needsSchool = variants.some((v) => v.storageState === SCHOOL_AUTH);
-  if (needsTeacher && !fs.existsSync(TEACHER_AUTH)) await ensureTeacherAuth(browser);
-  else if (needsSchool && !fs.existsSync(SCHOOL_AUTH)) await ensureSchoolAuth(browser);
+  const needsAdmin = variants.some((v) => v.storageState === ADMIN_AUTH);
+  const refreshAuth = process.argv.includes('--refresh-auth');
+  if (needsSchool && (refreshAuth || authNeedsRefresh(SCHOOL_AUTH))) await ensureSchoolAuth(browser);
+  if (needsTeacher && (refreshAuth || authNeedsRefresh(TEACHER_AUTH))) await ensureTeacherAuth(browser);
+  if (needsAdmin && (refreshAuth || authNeedsRefresh(ADMIN_AUTH))) await ensureAdminAuth(browser);
   await browser.close();
 
   let ok = 0;
@@ -1257,10 +1891,14 @@ async function captureLibrary({ categoryFilter } = {}) {
     }
   }
 
-  fs.writeFileSync(
-    path.join(LIBRARY_DIR, 'manifest.json'),
-    JSON.stringify(manifest, null, 2),
-  );
+  try {
+    fs.writeFileSync(
+      path.join(LIBRARY_DIR, 'manifest.json'),
+      JSON.stringify(manifest, null, 2),
+    );
+  } catch (err) {
+    console.warn(`⚠ Could not write capture manifest: ${err.message}`);
+  }
   console.log(`\nLibrary: ${ok} captured, ${fail} failed → ${LIBRARY_DIR}`);
   console.log('Browse: promo-video/public/capture-library/<category>/*.mp4\n');
 }
@@ -1317,9 +1955,52 @@ function concatFastWalkthrough() {
   console.log('✓ walkthrough-fast.mp4 (concat)');
 }
 
+async function captureFeaturePromo() {
+  console.log('\n=== Long feature promo — addon screen captures ===\n');
+  try {
+    const { patchDemoMarketingSettings } = await import('./lib/demo-marketing-settings.mjs');
+    const patched = await patchDemoMarketingSettings();
+    if (!patched) {
+      console.warn(
+        '  ⚠ FIREBASE_SERVICE_ACCOUNT_KEY not set — raffle capture may fail until you run:\n' +
+          '    node scripts/enable-demo-marketing-settings.mjs\n',
+      );
+    }
+  } catch (e) {
+    console.warn(`  ⚠ Could not patch demo school settings: ${e.message}`);
+  }
+  const clipFilter = process.argv.find((a) => a.startsWith('--clip='))?.split('=')[1];
+  const nameFilter = clipFilter
+    ? PROMO_FEATURE_LIBRARY.filter((name) => name.includes(clipFilter))
+    : PROMO_FEATURE_LIBRARY;
+  if (!nameFilter.length) {
+    throw new Error(`No feature promo library clips match --clip=${clipFilter}`);
+  }
+  await captureLibrary({ nameFilter });
+  console.log('\n✓ Feature clips ready under capture-library/features/\n');
+}
+
+async function capturePromoSimple() {
+  console.log('\n=== Simple widescreen promo — fresh library captures ===\n');
+  await captureLibrary({ nameFilter: PROMO_SIMPLE_LIBRARY });
+
+  const actionClip = CLIPS.find((c) => c.file === 'walkthrough-action.mp4');
+  if (actionClip) {
+    console.log('\nRecording walkthrough-action.mp4 (teacher print backup)...\n');
+    const browser = await chromium.launch({ headless: true });
+    if (authNeedsRefresh(TEACHER_AUTH)) await ensureTeacherAuth(browser);
+    await browser.close();
+    await actionClip.capture();
+  }
+
+  console.log('\n✓ Promo clips ready under promo-video/public/capture-library/\n');
+}
+
 async function main() {
   const concatOnly = process.argv.includes('--concat-only');
   const libraryMode = process.argv.includes('--library');
+  const promoSimple = process.argv.includes('--promo-simple');
+  const featurePromo = process.argv.includes('--feature-promo');
   const promoteDefaults = process.argv.includes('--promote-defaults');
   const categoryFilter = process.argv.find((a) => a.startsWith('--category='))?.split('=')[1];
 
@@ -1342,6 +2023,16 @@ async function main() {
   BASE = reachable;
 
   console.log(`Using capture base: ${BASE}\n`);
+
+  if (promoSimple) {
+    await capturePromoSimple();
+    return;
+  }
+
+  if (featurePromo) {
+    await captureFeaturePromo();
+    return;
+  }
 
   if (libraryMode) {
     await captureLibrary({ categoryFilter });
@@ -1373,11 +2064,8 @@ async function main() {
   const needsTeacher = clips.some((c) => c.storageState === TEACHER_AUTH);
   const needsSchool = clips.some((c) => c.storageState === SCHOOL_AUTH);
 
-  if (needsTeacher && !fs.existsSync(TEACHER_AUTH)) {
-    await ensureTeacherAuth(browser);
-  } else if (needsSchool && !fs.existsSync(SCHOOL_AUTH)) {
-    await ensureSchoolAuth(browser);
-  }
+  if (needsSchool && authNeedsRefresh(SCHOOL_AUTH)) await ensureSchoolAuth(browser);
+  if (needsTeacher && authNeedsRefresh(TEACHER_AUTH)) await ensureTeacherAuth(browser);
   await browser.close();
 
   for (const clip of clips) {

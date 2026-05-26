@@ -5,6 +5,7 @@ import { OfficeDashboard } from '@/components/office/OfficeDashboard';
 import { useOfficePortalData } from '@/components/office/OfficePortalGate';
 import { useOfficeSharedData } from '@/lib/office/useOfficeSharedData';
 import { useOfficeTerm } from '@/lib/office/useOfficeTerm';
+import { useOfficeSettings } from '@/lib/office/useOfficeSettings';
 import { buildOfficeDashboardInsights } from '@/lib/office/officeUtils';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirestore } from '@/firebase';
@@ -18,7 +19,8 @@ export default function OfficeHomePage() {
   const { schoolId, isAdmin, loginState } = useAppContext();
   const { gradeEntries, billingAccounts, invoices, isOfficeDataLoading } = useOfficePortalData();
   const shared = useOfficeSharedData(schoolId, true);
-  const { term, setTerm, suggestedTerm } = useOfficeTerm(schoolId);
+  const { term, setTerm, configuredTerms } = useOfficeTerm(schoolId);
+  const { settings } = useOfficeSettings(schoolId);
   const [isPopulatingDemoData, setIsPopulatingDemoData] = useState(false);
 
   const insights = useMemo(
@@ -79,6 +81,7 @@ export default function OfficeHomePage() {
       schoolId={schoolId}
       studentCount={shared.students.length}
       classCount={shared.classes.length}
+      teacherCount={shared.teachers.length}
       insights={insights}
       studentLabelById={shared.studentLabelById}
       accountNameById={accountNameById}
@@ -87,7 +90,9 @@ export default function OfficeHomePage() {
       onPopulateDemoData={() => void handlePopulateDemoData()}
       activeTerm={term}
       onActiveTermChange={setTerm}
-      suggestedTerm={suggestedTerm}
+      gradeEntries={gradeEntries}
+      schoolDefaultTerm={settings?.defaultActiveTerm}
+      configuredTerms={configuredTerms}
     />
   );
 }

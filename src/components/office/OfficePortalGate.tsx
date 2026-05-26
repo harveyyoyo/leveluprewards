@@ -21,6 +21,7 @@ import {
   hasOfficePortalLoginIntent,
   hasVerifiedOfficeFirestoreAccess,
 } from '@/lib/office/officeAccess';
+import { schoolPortalHref } from '@/lib/officePublicUrl';
 
 type OfficePortalData = {
   gradeEntries: OfficeGradeEntry[];
@@ -76,8 +77,15 @@ export function OfficePortalGate({ children }: { children: React.ReactNode }) {
   const { data: schoolMeta } = useDoc<{ name?: string }>(schoolDocRef);
 
   const pillarOn = isOfficePillarOn(settings);
-  const handoffPending = searchParams?.get('officeHandoff') === '1';
-  const roleVerified = hasVerifiedOfficeFirestoreAccess({ loginState, isAdmin, isOffice });
+  const handoffPending =
+    searchParams?.get('officeHandoff') === '1' &&
+    Boolean(searchParams?.get('meta')?.trim() && searchParams?.get('ct')?.trim());
+  const roleVerified = hasVerifiedOfficeFirestoreAccess({
+    loginState,
+    isAdmin,
+    isOffice,
+    schoolId: routeSchoolId || sessionSchoolId,
+  });
   const wantsOfficePortal = hasOfficePortalLoginIntent(loginState);
   const canAccess = pillarOn && roleVerified && !handoffPending;
   const canLoadOfficeData = canAccess && !!firestore && !!routeSchoolId;
@@ -188,7 +196,7 @@ export function OfficePortalGate({ children }: { children: React.ReactNode }) {
           </CardHeader>
           <CardContent>
             <Button asChild variant="outline" className="rounded-xl">
-              <a href={`/${routeSchoolId}/portal`}>Back to portal</a>
+              <a href={schoolPortalHref(routeSchoolId)}>Back to portal</a>
             </Button>
           </CardContent>
         </Card>

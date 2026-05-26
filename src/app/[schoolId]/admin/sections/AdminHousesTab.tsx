@@ -301,14 +301,7 @@ export function AdminHousesTab({
     setTransferStudent(null);
   };
 
-  const sortingHref = useMemo(() => {
-    const params = new URLSearchParams();
-    if (unassignedStudents.length > 0) {
-      params.set('studentIds', unassignedStudents.map((s) => s.id).join(','));
-    }
-    params.set('mode', 'reveal');
-    return `/${schoolId}/house-sorting?${params.toString()}`;
-  }, [schoolId, unassignedStudents]);
+  const sortingHref = `/${schoolId}/house-sorting`;
 
   const standingsRows = useMemo(
     () => buildHouseStandingsRows(sortedHouses, students ?? []),

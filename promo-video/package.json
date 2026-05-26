@@ -6,17 +6,21 @@
   "license": "UNLICENSED",
   "private": true,
   "dependencies": {
-    "@remotion/cli": "4.0.463",
-    "@remotion/google-fonts": "4.0.463",
-    "@remotion/media": "4.0.463",
-    "@remotion/tailwind-v4": "4.0.463",
+    "@remotion/cli": "4.0.465",
+    "@remotion/google-fonts": "4.0.465",
+    "@remotion/media": "4.0.465",
+    "@remotion/player": "4.0.465",
+    "@remotion/tailwind-v4": "4.0.465",
+    "@remotion/zod-types": "4.0.465",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "remotion": "4.0.463",
-    "tailwindcss": "4.0.0"
+    "remotion": "4.0.465",
+    "tailwindcss": "4.0.0",
+    "zod": "4.3.6"
   },
   "devDependencies": {
-    "@remotion/eslint-config-flat": "4.0.463",
+    "@vitejs/plugin-react": "^4.3.4",
+    "@remotion/eslint-config-flat": "4.0.465",
     "@types/react": "19.2.7",
     "@types/web": "0.0.166",
     "eslint": "9.19.0",
@@ -25,9 +29,24 @@
   },
   "scripts": {
     "dev": "remotion studio --port=3333",
+    "editor": "vite --config editor/vite.config.ts",
     "build": "remotion bundle",
     "upgrade": "remotion upgrade",
-    "lint": "eslint src && tsc"
+    "lint": "eslint src && tsc",
+    "render:teaser": "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/run-below-normal.ps1 -Command \"npx remotion render src/index.ts TeaserPromo ../assets/levelup-promo-teaser.mp4 --concurrency=1\"",
+    "render:square": "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/run-below-normal.ps1 -Command \"npx remotion render src/index.ts SquarePromo ../assets/levelup-promo-square.mp4 --concurrency=1\"",
+    "render:extended": "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/run-below-normal.ps1 -Command \"npx remotion render src/index.ts ExtendedPromo30 ../assets/levelup-promo-30s.mp4 --concurrency=1\"",
+    "generate:voiceover": "node ../scripts/generate-widescreen-voiceover.mjs",
+    "render:widescreen": "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/run-below-normal.ps1 -Command \"npx remotion render src/index.ts WidescreenPromo ../assets/levelup-promo-widescreen.mp4 --concurrency=1\"",
+    "render:widescreen:props": "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/run-below-normal.ps1 -Command \"npx remotion render src/index.ts WidescreenPromo ../assets/levelup-promo-widescreen.mp4 --props=./widescreen-promo-props.json --concurrency=1\"",
+    "render:widescreen:voice": "npm run generate:voiceover && npm run render:widescreen",
+    "render:feature:epic": "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/run-below-normal.ps1 -Command \"npx remotion render src/index.ts FeaturePromoEpic ../assets/levelup-promo-feature-epic.mp4 --props=./feature-promo-props/epic.json --concurrency=1\"",
+    "render:feature:warm": "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/run-below-normal.ps1 -Command \"npx remotion render src/index.ts FeaturePromoWarm ../assets/levelup-promo-feature-warm.mp4 --props=./feature-promo-props/warm.json --concurrency=1\"",
+    "render:feature:pro": "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/run-below-normal.ps1 -Command \"npx remotion render src/index.ts FeaturePromoPro ../assets/levelup-promo-feature-pro.mp4 --props=./feature-promo-props/pro.json --concurrency=1\"",
+    "render:feature:hype": "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/run-below-normal.ps1 -Command \"npx remotion render src/index.ts FeaturePromoHype ../assets/levelup-promo-feature-hype.mp4 --props=./feature-promo-props/hype.json --concurrency=1\"",
+    "render:feature:story": "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/run-below-normal.ps1 -Command \"npx remotion render src/index.ts FeaturePromoStory ../assets/levelup-promo-feature-story.mp4 --props=./feature-promo-props/story.json --concurrency=1\"",
+    "render:feature:all": "npm run render:feature:epic && npm run render:feature:warm && npm run render:feature:pro && npm run render:feature:hype && npm run render:feature:story",
+    "render:new": "npm run render:teaser && npm run render:square && npm run render:extended"
   },
   "sideEffects": [
     "*.css"

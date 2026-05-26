@@ -2,93 +2,45 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>LevelUp — Middle School Students</title>
+    <title>LevelUp — Middle School</title>
     <script src="/marketing/flyer-embed.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
-    <style>
-      * { box-sizing: border-box; margin: 0; padding: 0; }
-      @page { size: letter; margin: 0; }
-      html, body {
-        width: 8.5in; min-height: 11in; font-family: 'Space Grotesk', system-ui, sans-serif;
-        background: #1e1b4b; color: #e2e8f0;
-        -webkit-print-color-adjust: exact; print-color-adjust: exact;
-      }
-      html.embed .hint { display: none !important; }
-      .flyer {
-        width: 8.5in; min-height: 11in; background: #0f172a;
-        background-image: radial-gradient(circle at 80% 10%, #7c3aed55, transparent 45%),
-          radial-gradient(circle at 10% 90%, #06b6d455, transparent 40%);
-        padding: 0.44in 0.5in; display: flex; flex-direction: column;
-      }
-      .tag {
-        font-size: 0.1in; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase;
-        color: #22d3ee; text-align: center;
-      }
-      .head { display: flex; align-items: center; gap: 0.16in; margin-top: 0.12in; }
-      .head img { width: 0.58in; }
-      .head h1 { font-family: Syne, sans-serif; font-size: 0.32in; font-weight: 800; }
-      .head h1 span { color: #a78bfa; }
-      .hero { margin-top: 0.22in; }
-      .hero h2 {
-        font-family: Syne, sans-serif; font-size: 0.48in; font-weight: 800; line-height: 1.05;
-        background: linear-gradient(90deg, #c4b5fd, #22d3ee); -webkit-background-clip: text;
-        background-clip: text; color: transparent;
-      }
-      .hero p { margin-top: 0.14in; font-size: 0.15in; line-height: 1.5; color: #94a3b8; max-width: 6.5in; }
-      .img { margin-top: 0.18in; border-radius: 14px; overflow: hidden; border: 2px solid #4c1d95; }
-      .img img { width: 100%; display: block; }
-      .perks { display: grid; grid-template-columns: 1fr 1fr; gap: 0.1in; margin-top: 0.16in; }
-      .perk {
-        padding: 0.12in; border-radius: 12px; background: rgba(255,255,255,0.04);
-        border: 1px solid rgba(167, 139, 250, 0.35);
-      }
-      .perk h3 { font-size: 0.12in; font-weight: 700; color: #c4b5fd; }
-      .perk p { font-size: 0.1in; color: #94a3b8; margin-top: 0.04in; line-height: 1.4; }
-      .lb {
-        margin-top: 0.14in; padding: 0.12in 0.14in; border-radius: 12px;
-        background: linear-gradient(90deg, rgba(124,58,237,0.35), rgba(6,182,212,0.2));
-        border: 1px solid #7c3aed; font-size: 0.11in; font-weight: 700; text-align: center;
-      }
-      .cta { margin-top: auto; padding-top: 0.18in; text-align: center; }
-      .cta a { color: #22d3ee; font-weight: 700; font-size: 0.12in; text-decoration: none; }
-      .foot { margin-top: 0.1in; text-align: center; font-size: 0.075in; color: #64748b; }
-      .hint { position: fixed; bottom: 12px; right: 12px; padding: 8px 12px; background: #7c3aed; color: #fff; font: 700 12px system-ui; }
-    </style>
   </head>
   <body>
     <p class="hint">Ctrl+P → Letter, backgrounds on</p>
     <article class="flyer">
-      <p class="tag">Grades 6–8</p>
-      <header class="head">
-        <img src="/marketing/screenshots/hall-of-fame.png" alt="LevelUp" width="56" height="56" />
-        <h1>LevelUp <span>MS</span></h1>
+      <div class="stripe" aria-hidden="true"></div>
+      <header class="top">
+        <img src="/logo.png" alt="LevelUp logo" class="flyer-brand-logo" width="80" height="80" />
+        <h1>LEVEL UP<em>Grades 6–8</em></h1>
+        <p class="tagline">Students</p>
       </header>
-      <section class="hero">
-        <h2>Climb the board. Flex your streak.</h2>
-        <p>
-          Earn points for showing up ready, helping others, and staying on task—then trade them for
-          privileges, gear, and bragging rights on the school leaderboard.
-        </p>
+      <h2 class="mega">Climb the ranks.<br /><span>Earn real rewards.</span></h2>
+      <p class="sub">Track points, streaks, and leaderboard standing—redeem privileges and prizes that feel right for middle school.</p>
+      <section class="blocks">
+        <div class="block"><h3>Leaderboard</h3><p>See where you stand school-wide.</p></div>
+        <div class="block"><h3>Streaks</h3><p>Consistent choices multiply points.</p></div>
+        <div class="block"><h3>Shop</h3><p>Redeem for gear, passes, and more.</p></div>
+        <div class="block"><h3>Scan fast</h3><p>Kiosk check-in between classes.</p></div>
       </section>
-      <div class="img">
-        <img src="/marketing/screenshots/hall-of-fame.png" alt="Leaderboard" width="800" height="500" />
+      
+      <div class="img-wrap">
+        <img src="/marketing/screenshots/hall-of-fame.png" alt="Leaderboard" width="1200" height="600" loading="lazy" />
       </div>
-      <section class="perks">
-        <div class="perk"><h3>Quick check-in</h3><p>ID, barcode, or card—no long lines.</p></div>
-        <div class="perk"><h3>Real prizes</h3><p>Homework passes, lunch perks, more.</p></div>
-        <div class="perk"><h3>Fair competition</h3><p>Class and school-wide ranks.</p></div>
-        <div class="perk"><h3>Your progress</h3><p>Track levels and daily wins.</p></div>
-      </section>
-      <p class="lb">Top of the Hall of Fame? That could be you.</p>
-      <footer class="cta">
-        <a href="https://leveluprewards.app">leveluprewards.app</a>
-        </footer>
+      <footer class="bottom">
+        <div class="cta">
+          LEVEL UP YOUR RANK
+          <small>Hallway display ready</small>
+        </div>
+        <div class="urls">
+          <a href="https://leveluprewards.app">leveluprewards.app</a>
+          <a href="mailto:contact@leveluprewards.app">contact@leveluprewards.app</a>
+        </div>
+      </footer>
       <footer class="flyer-footer">
         <p class="flyer-footer__vendor">Approved NYC Department of Education (DOE) vendor</p>
         <p class="flyer-footer__links"><a href="https://leveluprewards.app">leveluprewards.app</a> · <a href="mailto:contact@leveluprewards.app">contact@leveluprewards.app</a></p>
         <p class="flyer-footer__copy">© 2026 LevelUp EdTech Enterprises LLC</p>
       </footer>
-
     </article>
   </body>
 </html>

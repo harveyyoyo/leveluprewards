@@ -14,13 +14,17 @@
   object-position: top center;
 }
 
+/* App wordmark (`public/logo.png`) — headers only; not feature screenshots */
+.flyer-brand-logo,
 .logo img,
 .brand img,
-header img,
-.top img,
 .brand-row img,
-.head img,
-header > img:not(.shot img) {
+.head-brand img,
+header .brand img,
+.top-bar .brand img,
+.logo-block img,
+.title-bar .brand-logo-wrap img,
+.hero-brand img {
   width: auto !important;
   max-width: 0.85in;
   max-height: 0.75in;
@@ -35,6 +39,9 @@ header > img:not(.shot img) {
   text-align: center;
   line-height: 1.45;
   flex-shrink: 0;
+  color: #94a3b8;
+  position: relative;
+  z-index: 1;
 }
 .flyer-footer__vendor {
   font-weight: 800;
@@ -48,7 +55,7 @@ header > img:not(.shot img) {
   font-weight: 600;
 }
 .flyer-footer__links a {
-  color: inherit;
+  color: #7dd3fc;
   text-decoration: underline;
   text-underline-offset: 2px;
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { doc, updateDoc, writeBatch } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -10,9 +10,16 @@ import Link from 'next/link';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { formatCents } from '@/lib/office/officeNav';
-import { officePublicHref } from '@/lib/officePublicUrl';
-import { billingAccountForStudent, formatGradeDisplay, gradesForStudent, getOfficeStudentFullName } from '@/lib/office/officeUtils';
-import type { OfficeBillingAccount, OfficeGradeEntry, OfficeStudent, OfficeClass } from '@/lib/office/types';
+import { officeAbsoluteHref, officePublicHref } from '@/lib/officePublicUrl';
+import {
+  billingAccountForStudent,
+  formatGradeDisplay,
+  getOfficeTeacherLabel,
+  gradesForStudent,
+  getOfficeStudentFullName,
+} from '@/lib/office/officeUtils';
+import type { OfficeBillingAccount, OfficeGradeEntry, OfficeStudent, OfficeClass, OfficeTeacher } from '@/lib/office/types';
+import { OfficeTeacherSelect } from '@/components/office/OfficeTeacherSelect';
 
 type OfficeStudentSheetProps = {
   schoolId: string;
@@ -24,6 +31,7 @@ type OfficeStudentSheetProps = {
   billingAccounts: OfficeBillingAccount[];
   activeTerm: string;
   classes?: OfficeClass[];
+  teachers?: OfficeTeacher[];
 };
 
 export function OfficeStudentSheet({
@@ -36,16 +44,19 @@ export function OfficeStudentSheet({
   billingAccounts,
   activeTerm,
   classes = [],
+  teachers = [],
 }: OfficeStudentSheetProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
+
+  const teacherNameById = useMemo(() => new Map(teachers.map((t) => [t.id, t.name])), [teachers]);
 
   const [isEditing, setIsEditing] = useState(false);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [nickname, setNickname] = useState('');
   const [classId, setClassId] = useState('');
-  const [teacherName, setTeacherName] = useState('');
+  const [teacherId, setTeacherId] = useState('');
   const [notes, setNotes] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -55,7 +66,7 @@ export function OfficeStudentSheet({
       setLastName(student.lastName ?? '');
       setNickname(student.nickname ?? '');
       setClassId(student.classId ?? '');
-      setTeacherName(student.teacherName ?? '');
+      setTeacherId(student.teacherId ?? '');
       setNotes(student.notes ?? '');
     }
     setIsEditing(false);
@@ -84,7 +95,8 @@ export function OfficeStudentSheet({
         lastName: lastName.trim(),
         nickname: nickname.trim() || null,
         classId: classId || null,
-        teacherName: teacherName.trim() || null,
+        teacherId: teacherId || null,
+        teacherName: null,
         notes: notes.trim() || null,
         updatedAt: Date.now(),
       });
@@ -161,6 +173,20 @@ export function OfficeStudentSheet({
                   type="button"
                   variant="ghost"
                   size="icon"
+                  className="h-8 w-8 rounded-lg hover:bg-muted/60"
+                  aria-label="Copy link to student"
+                  onClick={() => {
+                    const url = `${officeAbsoluteHref(schoolId, 'students')}?student=${encodeURIComponent(student.id)}`;
+                    void navigator.clipboard.writeText(url);
+                    toast({ title: 'Copied student link' });
+                  }}
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
                   onClick={() => setIsEditing(true)}
                   className="h-8 w-8 rounded-lg hover:bg-muted/60"
                   aria-label="Edit student"
@@ -173,7 +199,9 @@ export function OfficeStudentSheet({
           {!isEditing && (
             <SheetDescription>
               {classLabel || 'No class'}
-              {student.teacherName ? ` · ${student.teacherName}` : ''}
+              {getOfficeTeacherLabel(student, teacherNameById)
+                ? ` · ${getOfficeTeacherLabel(student, teacherNameById)}`
+                : ''}
             </SheetDescription>
           )}
         </SheetHeader>
@@ -213,10 +241,12 @@ export function OfficeStudentSheet({
               </Select>
             </div>
 
-            <div className="space-y-1.5">
-              <Label>Teacher (optional)</Label>
-              <Input value={teacherName} onChange={(e) => setTeacherName(e.target.value)} className="rounded-xl" />
-            </div>
+            <OfficeTeacherSelect
+              schoolId={schoolId}
+              teachers={teachers}
+              value={teacherId}
+              onChange={setTeacherId}
+            />
 
             <div className="space-y-1.5">
               <Label>Notes (optional)</Label>
@@ -330,9 +360,6 @@ export function OfficeStudentSheet({
               </section>
             )}
 
-            <p className="text-xs text-muted-foreground">
-              This student is in the office roster only. Rewards arcade data is not linked automatically.
-            </p>
           </div>
         )}
       </SheetContent>

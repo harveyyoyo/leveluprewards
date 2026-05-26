@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
+import { useParams } from 'next/navigation';
 import { collection, doc, updateDoc } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { useAppContext } from '@/components/AppProvider';
@@ -10,21 +10,15 @@ import type { House, Student } from '@/lib/types';
 import { HouseBadge } from '@/components/houses/HouseBadge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Loader2, Sparkles } from 'lucide-react';
+import { Check, Loader2, Sparkles } from 'lucide-react';
 import Link from 'next/link';
-
-type SortMode = 'reveal' | 'instant-balanced' | 'instant-random';
 
 export default function HouseSortingPage() {
   const params = useParams();
-  const searchParams = useSearchParams();
   const schoolId = String(params.schoolId || '');
   const firestore = useFirestore();
   const { loginState } = useAppContext();
   const { settings } = useSettings();
-
-  const mode = (searchParams.get('mode') as SortMode) || 'reveal';
-  const studentIdsParam = searchParams.get('studentIds') || '';
 
   const housesQuery = useMemoFirebase(
     () => (schoolId ? collection(firestore, 'schools', schoolId, 'houses') : null),
@@ -42,52 +36,20 @@ export default function HouseSortingPage() {
     [houses],
   );
 
-  const queue = useMemo(() => {
-    const ids = studentIdsParam
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
-    const roster = students || [];
-    if (ids.length > 0) {
-      return ids
-        .map((id) => roster.find((s) => s.id === id))
-        .filter((s): s is Student => !!s && !s.houseId);
-    }
-    return roster.filter((s) => !s.houseId);
-  }, [studentIdsParam, students]);
+  const queue = useMemo(
+    () =>
+      (students || [])
+        .filter((s) => !s.houseId)
+        .sort((a, b) => a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName)),
+    [students],
+  );
 
   const [index, setIndex] = useState(0);
   const [assignments, setAssignments] = useState<Record<string, string>>({});
+  const [selectedHouseId, setSelectedHouseId] = useState<string | null>(null);
   const [revealed, setRevealed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
-
-  const pickHouseForStudent = useCallback(
-    (studentId: string, modePick: 'balanced' | 'random') => {
-      if (sortedHouses.length === 0) return null;
-      if (modePick === 'random') {
-        return sortedHouses[Math.floor(Math.random() * sortedHouses.length)];
-      }
-      const counts = new Map(sortedHouses.map((h) => [h.id, 0]));
-      for (const hid of Object.values(assignments)) {
-        counts.set(hid, (counts.get(hid) ?? 0) + 1);
-      }
-      for (const s of students || []) {
-        if (s.houseId) counts.set(s.houseId, (counts.get(s.houseId) ?? 0) + 1);
-      }
-      let pick = sortedHouses[0];
-      let min = Number.POSITIVE_INFINITY;
-      for (const h of sortedHouses) {
-        const c = counts.get(h.id) ?? 0;
-        if (c < min) {
-          min = c;
-          pick = h;
-        }
-      }
-      return pick;
-    },
-    [sortedHouses, assignments, students],
-  );
 
   const commitAssignments = async (map: Record<string, string>) => {
     if (!firestore || !schoolId) return;
@@ -107,29 +69,19 @@ export default function HouseSortingPage() {
     }
   };
 
-  useEffect(() => {
-    if (mode === 'reveal' || sortedHouses.length === 0 || queue.length === 0) return;
-    const map: Record<string, string> = {};
-    const pickMode = mode === 'instant-random' ? 'random' : 'balanced';
-    for (const s of queue) {
-      const house = pickHouseForStudent(s.id, pickMode);
-      if (house) map[s.id] = house.id;
-    }
-    void commitAssignments(map);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, sortedHouses.length, queue.length]);
-
   const currentStudent = queue[index];
   const currentHouse =
     currentStudent && assignments[currentStudent.id]
       ? sortedHouses.find((h) => h.id === assignments[currentStudent.id])
       : null;
 
+  useEffect(() => {
+    setSelectedHouseId(null);
+  }, [currentStudent?.id]);
+
   const revealNext = () => {
-    if (!currentStudent || sortedHouses.length === 0) return;
-    const house = pickHouseForStudent(currentStudent.id, 'balanced');
-    if (!house) return;
-    setAssignments((prev) => ({ ...prev, [currentStudent.id]: house.id }));
+    if (!currentStudent || !selectedHouseId) return;
+    setAssignments((prev) => ({ ...prev, [currentStudent.id]: selectedHouseId }));
     setRevealed(true);
   };
 
@@ -193,7 +145,7 @@ export default function HouseSortingPage() {
         <p className="text-white/70 max-w-md">
           {done
             ? 'Students have been assigned. Close this tab or return to Admin → Houses.'
-            : 'All selected students already belong to a house.'}
+            : 'All students already belong to a house.'}
         </p>
         <Button variant="secondary" asChild>
           <Link href={`/${schoolId}/admin`}>Back to Admin</Link>
@@ -202,19 +154,16 @@ export default function HouseSortingPage() {
     );
   }
 
-  if (mode !== 'reveal') {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-8">
-        {busy ? <Loader2 className="h-10 w-10 animate-spin" /> : <p className="font-bold">Assigning houses…</p>}
-      </div>
-    );
-  }
+  const accentColor =
+    currentHouse?.color ??
+    (selectedHouseId ? sortedHouses.find((h) => h.id === selectedHouseId)?.color : undefined) ??
+    '#7c3aed';
 
   return (
     <div
       className="min-h-screen flex flex-col items-center justify-center p-6 text-center text-white"
       style={{
-        background: `radial-gradient(circle at 50% 20%, ${currentHouse?.color ?? '#7c3aed'}55, #0f0720 70%)`,
+        background: `radial-gradient(circle at 50% 20%, ${accentColor}55, #0f0720 70%)`,
       }}
     >
       <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white/60 mb-4">
@@ -223,29 +172,67 @@ export default function HouseSortingPage() {
       <h1 className="text-4xl sm:text-6xl font-black uppercase tracking-tight mb-2">
         House sorting
       </h1>
-      <p className="text-white/70 mb-10">
+      <p className="text-white/70 mb-2">
         Student {index + 1} of {queue.length}
+      </p>
+      <p className="text-xs text-white/50 mb-8 max-w-md">
+        Choose a house, reveal to the room, then go to the next student. Saves when you finish.
       </p>
 
       {!revealed ? (
-        <div className="space-y-6 max-w-lg">
-          <p className="text-2xl font-bold">
+        <div className="space-y-8 max-w-2xl w-full">
+          <p className="text-2xl sm:text-3xl font-bold">
             {currentStudent?.firstName} {currentStudent?.lastName}
           </p>
+
+          <div className="space-y-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.35em] text-white/50">
+              Choose house
+            </p>
+            <div className="flex flex-wrap justify-center gap-3">
+              {sortedHouses.map((house) => {
+                const selected = selectedHouseId === house.id;
+                return (
+                  <button
+                    key={house.id}
+                    type="button"
+                    onClick={() => setSelectedHouseId(house.id)}
+                    className={cn(
+                      'relative rounded-2xl border-2 px-4 py-3 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80',
+                      selected
+                        ? 'border-white bg-white/15 scale-105 shadow-lg'
+                        : 'border-white/20 bg-white/5 hover:border-white/40 hover:bg-white/10',
+                    )}
+                    style={selected ? { borderColor: house.color, boxShadow: `0 0 24px ${house.color}44` } : undefined}
+                    aria-pressed={selected}
+                    aria-label={`Assign to ${house.name}`}
+                  >
+                    <HouseBadge house={house} size="lg" className="text-sm" />
+                    {selected ? (
+                      <span
+                        className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-white text-violet-900 shadow"
+                        aria-hidden
+                      >
+                        <Check className="h-3.5 w-3.5" />
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <Button
             size="lg"
             className="rounded-full px-10 py-6 text-lg font-black uppercase tracking-widest"
             onClick={revealNext}
+            disabled={!selectedHouseId}
           >
             Reveal house
           </Button>
         </div>
       ) : (
-        <div
-          className={cn(
-            'space-y-6 animate-in zoom-in-95 duration-500',
-          )}
-        >
+        <div className={cn('space-y-6 animate-in zoom-in-95 duration-500')}>
           <p className="text-xl font-bold text-white/90">{currentStudent?.firstName} belongs to</p>
           {currentHouse ? <HouseBadge house={currentHouse} size="lg" className="text-sm scale-125" /> : null}
           {currentHouse?.motto ? (

@@ -116,14 +116,16 @@ export function IntroWizard() {
     }
   }, [isWizardEnabled]);
 
-  // Auto-advance logic: if we reach the target of the NEXT step, move forward.
-  // This helps when the current step is a "navigation" step (hideNext: true).
+  // Auto-advance only on navigation steps (hideNext). Otherwise several admin steps
+  // sharing `/admin` would skip ahead before the user reads them.
   useEffect(() => {
     if (!isWizardEnabled || !pathname) return;
-    
+
+    const current = steps[stepIndex];
+    if (!current?.hideNext) return;
+
     const nextStep = steps[stepIndex + 1];
     if (nextStep && (pathname === nextStep.target || pathname.endsWith(nextStep.target))) {
-      // If we landed on the next step's target, advance.
       setStepIndex(stepIndex + 1);
       window.localStorage.setItem('arcade_intro_wizard_step', String(stepIndex + 1));
     }

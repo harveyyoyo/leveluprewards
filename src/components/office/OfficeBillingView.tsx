@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { collection, doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,9 @@ import {
 } from '@/components/ui/dialog';
 import { useSearchParams } from 'next/navigation';
 import { Copy, Download, Mail, Pencil, Plus, Trash2 } from 'lucide-react';
+import { useOfficeUrlSync } from '@/lib/office/useOfficeUrlSync';
+import { useOfficeSettings } from '@/lib/office/useOfficeSettings';
+import { OfficeFamilyStatementButton } from '@/components/office/OfficeFamilyStatement';
 import { useToast } from '@/hooks/use-toast';
 import { formatCents } from '@/lib/office/officeNav';
 import {
@@ -32,7 +35,7 @@ import { OfficeQuickChips } from '@/components/office/OfficeQuickChips';
 import { OfficeEmptyState } from '@/components/office/OfficeEmptyState';
 import { OfficeLoadingRows } from '@/components/office/OfficeLoadingRows';
 import { CreditCard } from 'lucide-react';
-import type { OfficeBillingAccount, OfficeInvoice } from '@/lib/office/types';
+import type { OfficeBillingAccount, OfficeInvoice, OfficePaymentMethod } from '@/lib/office/types';
 import type { OfficeStudent } from '@/lib/office/types';
 import { cn } from '@/lib/utils';
 
@@ -55,6 +58,7 @@ export function OfficeBillingView({
 }: OfficeBillingViewProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const { settings: officeSettings } = useOfficeSettings(schoolId);
   const [accountOpen, setAccountOpen] = useState(false);
   const [invoiceOpen, setInvoiceOpen] = useState(false);
   const [familyName, setFamilyName] = useState('');
@@ -68,11 +72,17 @@ export function OfficeBillingView({
   const [invoiceFilter, setInvoiceFilter] = useState<'all' | 'overdue' | 'open' | 'due-soon'>('all');
   const [saveAsDraft, setSaveAsDraft] = useState(false);
   const searchParams = useSearchParams();
+  const openedInvoiceFromQuery = useRef(false);
   const [editAccountId, setEditAccountId] = useState<string | null>(null);
   const [contactEmail, setContactEmail] = useState('');
   const [contactPhone, setContactPhone] = useState('');
   const [accountNotes, setAccountNotes] = useState('');
   const [accountStudentSearch, setAccountStudentSearch] = useState('');
+  const [editInvoiceId, setEditInvoiceId] = useState<string | null>(null);
+  const [payOpen, setPayOpen] = useState(false);
+  const [payTarget, setPayTarget] = useState<OfficeInvoice | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<OfficePaymentMethod>('check');
+  const [paymentNote, setPaymentNote] = useState('');
 
   const invoiceLabelSuggestions = useMemo(() => {
     const set = new Set(['Tuition', 'Registration', 'Activities', 'Lunch', 'Supplies']);
@@ -146,7 +156,20 @@ export function OfficeBillingView({
     }
   }, [searchParams]);
 
+  useOfficeUrlSync({
+    filter: invoiceFilter === 'all' ? undefined : invoiceFilter,
+  });
+
+  const resetInvoiceForm = () => {
+    setEditInvoiceId(null);
+    setInvoiceLabel('');
+    setInvoiceAmount('');
+    setInvoiceDue('');
+    setSaveAsDraft(false);
+  };
+
   const openNewInvoice = (accountId?: string, preset?: Partial<OfficeInvoice>) => {
+    setEditInvoiceId(null);
     setInvoiceAccountId(accountId ?? accounts[0]?.id ?? '');
     setInvoiceLabel(preset?.label ?? '');
     setInvoiceAmount(preset ? String((preset.amountCents || 0) / 100) : '');
@@ -154,6 +177,25 @@ export function OfficeBillingView({
     setSaveAsDraft(false);
     setInvoiceOpen(true);
   };
+
+  const openEditInvoice = (inv: OfficeInvoice) => {
+    if (inv.status === 'paid' || inv.status === 'void') return;
+    setEditInvoiceId(inv.id);
+    setInvoiceAccountId(inv.accountId);
+    setInvoiceLabel(inv.label);
+    setInvoiceAmount(String((inv.amountCents || 0) / 100));
+    setInvoiceDue(inv.dueDate);
+    setSaveAsDraft(inv.status === 'draft');
+    setInvoiceOpen(true);
+  };
+
+  useEffect(() => {
+    if (isLoading || openedInvoiceFromQuery.current) return;
+    if (searchParams.get('action')?.trim() !== 'new-invoice') return;
+    openedInvoiceFromQuery.current = true;
+    const accountId = searchParams.get('account')?.trim();
+    openNewInvoice(accountId || undefined);
+  }, [searchParams, isLoading, accounts.length]);
 
   const openNewAccount = () => {
     resetAccountForm();
@@ -224,46 +266,80 @@ export function OfficeBillingView({
       toast({ variant: 'destructive', title: 'Enter a valid dollar amount.' });
       return;
     }
+    const due = invoiceDue || new Date().toISOString().slice(0, 10);
     setBusy(true);
     try {
-      const ref = doc(collection(firestore, 'schools', schoolId, 'officeInvoices'));
-      const status = saveAsDraft ? 'draft' : 'sent';
-      await setDoc(ref, {
-        accountId: invoiceAccountId,
-        label: invoiceLabel.trim(),
-        amountCents: cents,
-        dueDate: invoiceDue || new Date().toISOString().slice(0, 10),
-        status,
-        createdAt: Date.now(),
-      });
-      const account = accounts.find((a) => a.id === invoiceAccountId);
-      if (account && !saveAsDraft) {
-        const due = invoiceDue || new Date().toISOString().slice(0, 10);
-        const nextInvoices: OfficeInvoice[] = [
-          ...invoices,
-          {
-            id: ref.id,
-            accountId: invoiceAccountId,
-            label: invoiceLabel.trim(),
-            amountCents: cents,
-            dueDate: due,
-            status,
-            createdAt: Date.now(),
-          },
-        ];
-        await updateDoc(doc(firestore, 'schools', schoolId, 'officeBillingAccounts', invoiceAccountId), {
-          balanceCents: (account.balanceCents || 0) + cents,
-          status: billingStatusForAccount(invoiceAccountId, nextInvoices, account.status),
-          updatedAt: Date.now(),
+      if (editInvoiceId) {
+        const existing = invoices.find((i) => i.id === editInvoiceId);
+        if (!existing) throw new Error('Invoice not found');
+        const status = saveAsDraft ? 'draft' : existing.status === 'draft' && !saveAsDraft ? 'sent' : existing.status;
+        await updateDoc(doc(firestore, 'schools', schoolId, 'officeInvoices', editInvoiceId), {
+          label: invoiceLabel.trim(),
+          amountCents: cents,
+          dueDate: due,
+          status,
         });
+        const account = accounts.find((a) => a.id === existing.accountId);
+        if (account) {
+          const nextInvoices = invoices.map((i) =>
+            i.id === editInvoiceId
+              ? { ...i, label: invoiceLabel.trim(), amountCents: cents, dueDate: due, status }
+              : i,
+          );
+          let balanceCents = account.balanceCents || 0;
+          if (existing.status === 'sent') {
+            balanceCents = Math.max(0, balanceCents + (cents - existing.amountCents));
+          } else if (status === 'sent' && existing.status === 'draft') {
+            balanceCents += cents;
+          }
+          await updateDoc(doc(firestore, 'schools', schoolId, 'officeBillingAccounts', existing.accountId), {
+            balanceCents,
+            status: billingStatusForAccount(existing.accountId, nextInvoices, account.status),
+            updatedAt: Date.now(),
+          });
+        }
+        toast({ title: 'Invoice updated' });
+      } else {
+        const ref = doc(collection(firestore, 'schools', schoolId, 'officeInvoices'));
+        const status = saveAsDraft ? 'draft' : 'sent';
+        await setDoc(ref, {
+          accountId: invoiceAccountId,
+          label: invoiceLabel.trim(),
+          amountCents: cents,
+          dueDate: due,
+          status,
+          createdAt: Date.now(),
+        });
+        const account = accounts.find((a) => a.id === invoiceAccountId);
+        if (account && !saveAsDraft) {
+          const nextInvoices: OfficeInvoice[] = [
+            ...invoices,
+            {
+              id: ref.id,
+              accountId: invoiceAccountId,
+              label: invoiceLabel.trim(),
+              amountCents: cents,
+              dueDate: due,
+              status,
+              createdAt: Date.now(),
+            },
+          ];
+          await updateDoc(doc(firestore, 'schools', schoolId, 'officeBillingAccounts', invoiceAccountId), {
+            balanceCents: (account.balanceCents || 0) + cents,
+            status: billingStatusForAccount(invoiceAccountId, nextInvoices, account.status),
+            updatedAt: Date.now(),
+          });
+        }
+        toast({ title: saveAsDraft ? 'Draft saved' : 'Invoice created' });
       }
-      toast({ title: saveAsDraft ? 'Draft saved' : 'Invoice created' });
       setInvoiceOpen(false);
-      setInvoiceLabel('');
-      setInvoiceAmount('');
-      setInvoiceDue('');
+      resetInvoiceForm();
     } catch (e) {
-      toast({ variant: 'destructive', title: 'Could not create invoice', description: (e as Error).message });
+      toast({
+        variant: 'destructive',
+        title: editInvoiceId ? 'Could not update invoice' : 'Could not create invoice',
+        description: (e as Error).message,
+      });
     } finally {
       setBusy(false);
     }
@@ -315,12 +391,21 @@ export function OfficeBillingView({
     }
   };
 
-  const markPaid = async (inv: OfficeInvoice) => {
+  const openRecordPayment = (inv: OfficeInvoice) => {
+    setPayTarget(inv);
+    setPaymentMethod('check');
+    setPaymentNote('');
+    setPayOpen(true);
+  };
+
+  const markPaid = async (inv: OfficeInvoice, method: OfficePaymentMethod, note: string) => {
     if (!firestore) return;
     try {
       await updateDoc(doc(firestore, 'schools', schoolId, 'officeInvoices', inv.id), {
         status: 'paid',
         paidAt: Date.now(),
+        paymentMethod: method,
+        paymentNote: note.trim() || null,
       });
       const account = accounts.find((a) => a.id === inv.accountId);
       if (account) {
@@ -333,15 +418,19 @@ export function OfficeBillingView({
           updatedAt: Date.now(),
         });
       }
-      toast({ title: 'Marked as paid' });
+      toast({ title: 'Payment recorded' });
+      setPayOpen(false);
+      setPayTarget(null);
     } catch (e) {
       toast({ variant: 'destructive', title: 'Update failed', description: (e as Error).message });
     }
   };
 
   const exportBillingCsv = () => {
+    const visibleIds = new Set(filteredAccounts.map((a) => a.id));
+    const source = invoices.filter((inv) => visibleIds.has(inv.accountId));
     const rows: string[][] = [];
-    for (const inv of invoices) {
+    for (const inv of source) {
       const account = accounts.find((a) => a.id === inv.accountId);
       rows.push([
         account?.familyName ?? '',
@@ -353,7 +442,13 @@ export function OfficeBillingView({
       ]);
     }
     downloadCsv(`billing-${schoolId}.csv`, ['Account', 'Description', 'Amount', 'Due', 'Status', 'Overdue'], rows);
-    toast({ title: 'Exported', description: `${rows.length} invoice rows.` });
+    toast({
+      title: 'Exported',
+      description:
+        visibleIds.size < accounts.length
+          ? `${rows.length} invoice rows (current filter).`
+          : `${rows.length} invoice rows.`,
+    });
   };
 
   const handleDeleteAccount = async (id: string) => {
@@ -370,7 +465,8 @@ export function OfficeBillingView({
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-muted-foreground max-w-xl">
-          Family accounts and invoices live in the office pillar only. Tuition and fees are tracked here.
+          Family accounts and invoices live in the office pillar only. Record check, cash, or transfer payments here;
+          online card payments (Stripe) can be added later.
         </p>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" className="rounded-xl gap-2" onClick={exportBillingCsv} disabled={invoices.length === 0}>
@@ -473,6 +569,14 @@ export function OfficeBillingView({
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-1">
+                    <OfficeFamilyStatementButton
+                      account={account}
+                      invoices={invoices}
+                      studentLabels={account.studentIds
+                        .map((id) => studentLabelById.get(id))
+                        .filter((x): x is string => Boolean(x))}
+                      statementSchoolName={officeSettings?.statementSchoolName}
+                    />
                     <Button
                       type="button"
                       variant="outline"
@@ -573,8 +677,26 @@ export function OfficeBillingView({
                               >
                                 <Copy className="h-3 w-3" />
                               </Button>
-                              <Button type="button" size="sm" variant="outline" className="h-7 rounded-lg" onClick={() => void markPaid(inv)}>
-                                Mark paid
+                              {inv.status === 'draft' || inv.status === 'sent' ? (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7 rounded-lg"
+                                  onClick={() => openEditInvoice(inv)}
+                                  aria-label="Edit invoice"
+                                >
+                                  <Pencil className="h-3 w-3" />
+                                </Button>
+                              ) : null}
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="h-7 rounded-lg"
+                                onClick={() => openRecordPayment(inv)}
+                              >
+                                Record payment
                               </Button>
                               <Button
                                 type="button"
@@ -675,25 +797,71 @@ export function OfficeBillingView({
         </DialogContent>
       </Dialog>
 
+      <Dialog open={payOpen} onOpenChange={setPayOpen}>
+        <DialogContent className="max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Record payment</DialogTitle>
+          </DialogHeader>
+          {payTarget ? (
+            <p className="text-sm text-muted-foreground">
+              {payTarget.label} · {formatCents(payTarget.amountCents)}
+            </p>
+          ) : null}
+          <div className="grid gap-4 py-2">
+            <div className="space-y-2">
+              <Label>Payment method</Label>
+              <Select value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as OfficePaymentMethod)}>
+                <SelectTrigger className="rounded-xl">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="check">Check</SelectItem>
+                  <SelectItem value="cash">Cash</SelectItem>
+                  <SelectItem value="card">Card (manual)</SelectItem>
+                  <SelectItem value="transfer">Bank transfer</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Note (optional)</Label>
+              <Input
+                value={paymentNote}
+                onChange={(e) => setPaymentNote(e.target.value)}
+                placeholder="Check #1042, paid in office…"
+                className="rounded-xl"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPayOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              disabled={busy || !payTarget}
+              onClick={() => payTarget && void markPaid(payTarget, paymentMethod, paymentNote)}
+            >
+              Mark paid
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog
         open={invoiceOpen}
         onOpenChange={(open) => {
           setInvoiceOpen(open);
-          if (!open) {
-            setInvoiceLabel('');
-            setInvoiceAmount('');
-            setInvoiceDue('');
-          }
+          if (!open) resetInvoiceForm();
         }}
       >
         <DialogContent className="max-w-md rounded-2xl">
           <DialogHeader>
-            <DialogTitle>New invoice</DialogTitle>
+            <DialogTitle>{editInvoiceId ? 'Edit invoice' : 'New invoice'}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-2">
             <div className="space-y-2">
               <Label>Account</Label>
-              <Select value={invoiceAccountId} onValueChange={setInvoiceAccountId}>
+              <Select value={invoiceAccountId} onValueChange={setInvoiceAccountId} disabled={!!editInvoiceId}>
                 <SelectTrigger className="rounded-xl">
                   <SelectValue placeholder="Choose account" />
                 </SelectTrigger>
@@ -715,15 +883,17 @@ export function OfficeBillingView({
                 onSelect={setInvoiceLabel}
               />
             </div>
-            <label className="flex items-center gap-2 text-sm text-muted-foreground">
-              <input
-                type="checkbox"
-                checked={saveAsDraft}
-                onChange={(e) => setSaveAsDraft(e.target.checked)}
-                className="h-4 w-4 accent-teal-700"
-              />
-              Save as draft (won&apos;t add to balance until sent)
-            </label>
+            {!editInvoiceId ? (
+              <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={saveAsDraft}
+                  onChange={(e) => setSaveAsDraft(e.target.checked)}
+                  className="h-4 w-4 accent-teal-700"
+                />
+                Save as draft (won&apos;t add to balance until sent)
+              </label>
+            ) : null}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label>Amount (USD)</Label>
@@ -747,7 +917,7 @@ export function OfficeBillingView({
               Cancel
             </Button>
             <Button onClick={() => void handleSaveInvoice()} disabled={busy}>
-              Create invoice
+              {editInvoiceId ? 'Save changes' : 'Create invoice'}
             </Button>
           </DialogFooter>
         </DialogContent>

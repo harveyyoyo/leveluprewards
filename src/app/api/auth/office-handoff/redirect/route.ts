@@ -11,6 +11,7 @@ import { isLocalDevHost, requestBrowserOrigin } from '@/lib/portalRouting';
 import { signOfficeHandoffMeta } from '@/lib/auth/officeHandoff';
 import { resolveOfficeHandoffAccess } from '@/lib/auth/resolveOfficeHandoffAccess';
 import { getFirebaseAdminAuth } from '@/lib/server/firebaseAdminAuth';
+import { provisionSchoolStaffRole } from '@/lib/server/provisionSchoolStaffRole';
 import { authCookieFlags } from '@/lib/auth/authCookieOptions';
 import { jsonError } from '@/lib/server/apiSecurity';
 
@@ -40,15 +41,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(loginBase);
   }
 
-  if (localDev) {
-    return NextResponse.redirect(new URL(`/${schoolRaw}/office`, origin));
-  }
-
-  const officeHost = canonicalOfficeHost();
-  if (!officeHost) {
-    return NextResponse.redirect(new URL(`/${schoolRaw}/office`, origin));
-  }
-
   const verified = await verifyFirebaseAuthJwt(fbRaw);
   const uid = verified?.sub;
   if (!uid) {
@@ -65,6 +57,20 @@ export async function GET(req: NextRequest) {
   const access = await resolveOfficeHandoffAccess(uid, schoolRaw, gateScopes);
   if (!access) {
     return jsonError(403, 'Office access is not enabled for this account.');
+  }
+
+  try {
+    if (access.loginState === 'admin' || access.loginState === 'office') {
+      await provisionSchoolStaffRole(schoolRaw, uid, access.loginState);
+    }
+  } catch (e) {
+    console.error('[office-handoff/redirect] role provision failed:', e);
+    return jsonError(503, 'Could not prepare office permissions.');
+  }
+
+  const officeHost = canonicalOfficeHost();
+  if (localDev || !officeHost) {
+    return NextResponse.redirect(new URL(`/${schoolRaw}/office`, origin));
   }
 
   const { loginState, userName } = access;

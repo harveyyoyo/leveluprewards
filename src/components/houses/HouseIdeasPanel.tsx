@@ -36,7 +36,7 @@ const BASE_IDEAS: HouseIdea[] = [
     id: 'sorting',
     icon: Wand2,
     title: 'Hold a sorting ceremony',
-    detail: 'Reveal each student’s house on a big screen—great for the first week or new enrollments.',
+    detail: 'Pick each student’s house, then reveal on a big screen—great for the first week or new enrollments.',
   },
   {
     id: 'tv',

@@ -1,0 +1,17 @@
+---
+description: School Office must stay separate from Rewards (points/prizes) data and code paths
+globs:
+  - src/components/office/**
+  - src/lib/office/**
+  - src/app/**/office/**
+  - firestore.rules
+---
+
+# Office ↔ Rewards separation
+
+Read `.agent/knowledge/office-rewards-separation.md` before changing School Office.
+
+- Use only `office*` Firestore collections and types under `src/lib/office/`.
+- Never import from or write to rewards roster collections (`students`, `classes`, `teachers`) in office code.
+- Homeroom/classroom teachers for grades are `officeTeachers` + `officeStudents.teacherId`, not rewards `teachers`.
+- Do not reintroduce rewards roster sync/import into office without an explicit migration design.

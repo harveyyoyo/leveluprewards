@@ -48,6 +48,29 @@ export async function clearFirebaseSessionCookie(): Promise<void> {
   }
 }
 
+export async function clearSchoolGateCookie(): Promise<void> {
+  try {
+    await fetch('/api/auth/school-gate', {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+  } catch {
+    // ignore
+  }
+}
+
+/** Mint edge cookies, then hard-navigate so middleware sees them on first paint. */
+export async function navigateAfterSchoolLogin(auth: Auth, schoolId: string): Promise<boolean> {
+  const sid = schoolId.trim().toLowerCase();
+  if (!sid) return false;
+  const okFb = await syncFirebaseSessionCookie(auth);
+  if (!okFb) return false;
+  const okGate = await syncSchoolGateCookie(auth, sid);
+  if (!okGate) return false;
+  window.location.assign(`/${sid}/portal`);
+  return true;
+}
+
 /** Best-effort clear before navigation (logout); avoids blocking on `await`. */
 export function clearFirebaseSessionCookieSync(): void {
   try {

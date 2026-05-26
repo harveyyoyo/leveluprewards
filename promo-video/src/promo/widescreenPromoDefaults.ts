@@ -1,0 +1,67 @@
+import type { WidescreenPromoProps } from "./widescreenPromoSchema";
+
+/** Default props — regenerate: npm run generate:voiceover:widescreen */
+export const defaultWidescreenPromoProps: WidescreenPromoProps = {
+  timing: {
+    introEnd: 239,
+    selectorEnd: 329,
+    studentKioskEnd: 241,
+    studentHomeEnd: 602,
+    dashboardEnd: 736,
+    actionEnd: 906,
+    total: 966,
+  },
+  narration: [
+    {
+      id: "intro",
+      label: "Welcome",
+      text: "LevelUp is school rewards built around students — scan in, earn points, redeem prizes.",
+      file: "voiceover/widescreen/intro.mp3",
+      startFrame: 14,
+      durationFrames: 213,
+    },
+    {
+      id: "home",
+      label: "Kiosk sign-in",
+      text: "Students sign in at the kiosk and see their points in seconds.",
+      file: "voiceover/widescreen/home.mp3",
+      startFrame: 241,
+      durationFrames: 172,
+    },
+    {
+      id: "selector",
+      label: "ID cards",
+      text: "Every student gets a digital ID card, ready to print or scan.",
+      file: "voiceover/widescreen/selector.mp3",
+      startFrame: 427,
+      durationFrames: 161,
+    },
+    {
+      id: "dashboard",
+      label: "Prize shop",
+      text: "They pick prizes from the shop — scan to redeem.",
+      file: "voiceover/widescreen/dashboard.mp3",
+      startFrame: 602,
+      durationFrames: 120,
+    },
+    {
+      id: "outro",
+      label: "Scan only",
+      text: "No keyboard, mouse, or touchscreen required. LevelUp runs on scans.",
+      file: "voiceover/widescreen/outro.mp3",
+      startFrame: 736,
+      durationFrames: 170,
+    }
+  ],
+  copy: {
+    introEyebrow: "Welcome to LevelUp",
+    introTagline: "Rewards built for scanning",
+    outroHeadline: "Scanning only",
+    outroSubline: "No keyboard · No mouse · No touchscreen",
+  },
+  ttsVoice: "marin",
+  musicVolume: 0.24,
+  musicDuckRatio: 0.28,
+  musicStyle: "cinematic",
+  musicSrc: "background-music.mp3",
+};

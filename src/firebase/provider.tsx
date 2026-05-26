@@ -6,7 +6,18 @@ import { Firestore } from 'firebase/firestore';
 import { Auth, User, getRedirectResult, onAuthStateChanged, signInAnonymously } from 'firebase/auth';
 import { Functions } from 'firebase/functions';
 import { FirebaseStorage } from 'firebase/storage';
-import { FirebaseErrorListener } from '@/firebase/FirebaseErrorListener'
+import { FirebaseErrorListener } from '@/firebase/FirebaseErrorListener';
+import { hasPendingDeveloperGoogleRedirect } from '@/lib/googleAuthRedirect';
+
+const waitForAuthUser = async (auth: Auth, maxMs: number): Promise<User | null> => {
+  const stepMs = 100;
+  const attempts = Math.ceil(maxMs / stepMs);
+  for (let i = 0; i < attempts; i++) {
+    if (auth.currentUser) return auth.currentUser;
+    await new Promise((resolve) => setTimeout(resolve, stepMs));
+  }
+  return auth.currentUser;
+};
 
 interface FirebaseProviderProps {
   children: ReactNode;
@@ -103,10 +114,15 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     );
 
     void (async () => {
+      let redirectUser: User | null = null;
       try {
         // Must finish pending Google/OAuth redirects before anonymous sign-in.
         // Otherwise redirect credentials are lost and /developer Google login loops forever.
-        await getRedirectResult(auth);
+        const redirectResult = await getRedirectResult(auth);
+        redirectUser = redirectResult?.user ?? null;
+        if (redirectUser && !cancelled) {
+          setUserAuthState({ user: redirectUser, isUserLoading: false, userError: null });
+        }
       } catch (error) {
         console.error("FirebaseProvider: getRedirectResult failed:", error);
         if (!cancelled) {
@@ -121,19 +137,37 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       if (cancelled) return;
       bootstrapComplete = true;
 
-      if (!auth.currentUser) {
-        console.log("FirebaseProvider: No user found. Attempting anonymous sign-in...");
-        try {
-          await signInAnonymously(auth);
-        } catch (error) {
-          console.error("FirebaseProvider: Anonymous sign-in failed:", error);
-          if (!cancelled) {
-            setUserAuthState({
-              user: null,
-              isUserLoading: false,
-              userError: error instanceof Error ? error : new Error(String(error)),
-            });
-          }
+      if (auth.currentUser) {
+        return;
+      }
+
+      if (hasPendingDeveloperGoogleRedirect()) {
+        const waitedUser = await waitForAuthUser(auth, 5_000);
+        if (cancelled) return;
+        if (waitedUser) {
+          setUserAuthState({ user: waitedUser, isUserLoading: false, userError: null });
+          return;
+        }
+        console.warn(
+          'FirebaseProvider: pending Google redirect did not produce a signed-in user; continuing with anonymous bootstrap.',
+        );
+      }
+
+      if (auth.currentUser) {
+        return;
+      }
+
+      console.log("FirebaseProvider: No user found. Attempting anonymous sign-in...");
+      try {
+        await signInAnonymously(auth);
+      } catch (error) {
+        console.error("FirebaseProvider: Anonymous sign-in failed:", error);
+        if (!cancelled) {
+          setUserAuthState({
+            user: null,
+            isUserLoading: false,
+            userError: error instanceof Error ? error : new Error(String(error)),
+          });
         }
       }
     })();

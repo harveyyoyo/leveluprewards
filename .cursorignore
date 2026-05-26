@@ -1,0 +1,47 @@
+﻿# Cursor indexing / @-mention exclusions (gitignore-style patterns).
+# Keeps agents from scanning huge or generated folders. Source code stays indexed.
+
+# Dependencies & build output
+node_modules/
+**/node_modules/
+.next/
+out/
+build/
+.vercel/
+.firebase/
+functions/lib/
+
+# Generated / local-only
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+.genkit/
+.env*
+scratch/
+.local/
+
+# Large media (promo pipeline + shipped assets)
+assets/
+*.mp4
+*.mov
+*.webm
+*.mp3
+*.wav
+*.apng
+*.gif
+
+promo-video/public/capture-library/
+promo-video/public/voiceover/
+promo-video/public/music/
+
+# Face model weights (large binaries)
+public/face-api/model/
+
+# Tooling outputs
+tools/NanoBanana-PPT-Skills/venv/
+tools/NanoBanana-PPT-Skills/outputs/
+
+# Agent / codex logs
+codex-*.log
+.codex-*.log

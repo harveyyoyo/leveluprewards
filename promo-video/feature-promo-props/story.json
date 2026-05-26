@@ -1,0 +1,166 @@
+{
+  "variantId": "story",
+  "timing": {
+    "introEnd": 226,
+    "segmentEnds": [
+      380,
+      573,
+      838,
+      1003,
+      1141,
+      1295,
+      1454,
+      1621,
+      1788,
+      1931,
+      2077,
+      2244,
+      2401,
+      2542
+    ],
+    "total": 2864
+  },
+  "narration": [
+    {
+      "id": "intro",
+      "label": "Intro",
+      "text": "Walk through the features with us — from the morning kiosk to the admin tools that run the building.",
+      "file": "voiceover/feature/story/intro.mp3",
+      "startFrame": 14,
+      "durationFrames": 202
+    },
+    {
+      "id": "kiosk",
+      "label": "Kiosk",
+      "text": "By first period, students are scanning in at the kiosk.",
+      "file": "voiceover/feature/story/kiosk.mp3",
+      "startFrame": 228,
+      "durationFrames": 140
+    },
+    {
+      "id": "idCards",
+      "label": "ID cards",
+      "text": "The office already printed ID cards — students tap the same badge every day.",
+      "file": "voiceover/feature/story/idCards.mp3",
+      "startFrame": 380,
+      "durationFrames": 181
+    },
+    {
+      "id": "themes",
+      "label": "Themes",
+      "text": "An admin creates the card theme once — colors and gradients — and every student ID matches.",
+      "file": "voiceover/feature/story/themes.mp3",
+      "startFrame": 573,
+      "durationFrames": 253
+    },
+    {
+      "id": "prizes",
+      "label": "Prizes",
+      "text": "At lunch, someone cashes points for a prize they picked last week.",
+      "file": "voiceover/feature/story/prizes.mp3",
+      "startFrame": 838,
+      "durationFrames": 153
+    },
+    {
+      "id": "coupons",
+      "label": "Coupons",
+      "text": "A teacher prints a coupon for kindness caught in the hallway.",
+      "file": "voiceover/feature/story/coupons.mp3",
+      "startFrame": 1003,
+      "durationFrames": 126
+    },
+    {
+      "id": "raffle",
+      "label": "Raffle",
+      "text": "Friday assembly — raffle drums roll — tickets from all week.",
+      "file": "voiceover/feature/story/raffle.mp3",
+      "startFrame": 1141,
+      "durationFrames": 142
+    },
+    {
+      "id": "houses",
+      "label": "Houses",
+      "text": "House points tick up after the pep rally challenge.",
+      "file": "voiceover/feature/story/houses.mp3",
+      "startFrame": 1295,
+      "durationFrames": 147
+    },
+    {
+      "id": "hallOfFame",
+      "label": "Hall of Fame",
+      "text": "The Hall of Fame slide rotates new names at dismissal.",
+      "file": "voiceover/feature/story/hallOfFame.mp3",
+      "startFrame": 1454,
+      "durationFrames": 155
+    },
+    {
+      "id": "notifications",
+      "label": "Notifications",
+      "text": "Meanwhile, notifications flag a low prize shelf before Monday.",
+      "file": "voiceover/feature/story/notifications.mp3",
+      "startFrame": 1621,
+      "durationFrames": 155
+    },
+    {
+      "id": "bulletin",
+      "label": "Bulletin",
+      "text": "The bulletin board tells tomorrow’s spirit theme.",
+      "file": "voiceover/feature/story/bulletin.mp3",
+      "startFrame": 1788,
+      "durationFrames": 131
+    },
+    {
+      "id": "library",
+      "label": "Library",
+      "text": "Library returns earn a quiet bonus point before bus call.",
+      "file": "voiceover/feature/story/library.mp3",
+      "startFrame": 1931,
+      "durationFrames": 134
+    },
+    {
+      "id": "badges",
+      "label": "Badges",
+      "text": "A badge unlocks for the reader who finished the series.",
+      "file": "voiceover/feature/story/badges.mp3",
+      "startFrame": 2077,
+      "durationFrames": 155
+    },
+    {
+      "id": "analytics",
+      "label": "Analytics",
+      "text": "After buses leave, admin scans insights before heading home.",
+      "file": "voiceover/feature/story/analytics.mp3",
+      "startFrame": 2244,
+      "durationFrames": 145
+    },
+    {
+      "id": "attendance",
+      "label": "Attendance",
+      "text": "Attendance records from the kiosk are already in sync.",
+      "file": "voiceover/feature/story/attendance.mp3",
+      "startFrame": 2401,
+      "durationFrames": 129
+    },
+    {
+      "id": "outro",
+      "label": "Outro",
+      "text": "One day, one thread — LevelUp ties the moments together so motivation does not reset at 3 p.m.",
+      "file": "voiceover/feature/story/outro.mp3",
+      "startFrame": 2542,
+      "durationFrames": 232
+    }
+  ],
+  "copy": {
+    "introEyebrow": "Feature walkthrough",
+    "introTagline": "How the pieces connect",
+    "montageTitle": "Features in action",
+    "montageSubtitle": "Students first · Then the rest",
+    "outroHeadline": "Same system, whole day",
+    "outroSubline": "Motivation that lasts past homeroom"
+  },
+  "ttsVoice": "marin",
+  "musicVolume": 0.23,
+  "musicDuckRatio": 0.28,
+  "musicStyle": "calm",
+  "musicSrc": "background-music.mp3"
+}

@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useLayoutEffect, useMemo, useState, useRef, ChangeEvent, type ComponentType } from 'react';
 import { useConfirm } from '@/components/providers/ConfirmProvider';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirestore, useCollection, useMemoFirebase, useFunctions } from '@/firebase';
@@ -17,6 +17,7 @@ import {
    Settings, History, Award, CheckCircle, Tag, Trophy, ArrowRight, Loader2, Play, ShieldCheck,
    User, Upload, Download, Activity, Zap, Clock, Palette, Wand2, TableProperties,
    FileText, Bell, Target, Megaphone, ChevronDown, X, Plug, GraduationCap, Home,
+   PanelLeft, Rows3,
  } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -97,6 +98,9 @@ import { syncSchoolStaffDirectory } from '@/lib/syncSchoolStaffDirectory';
 import { StudentIdCard } from '@/components/StudentIdCard';
 import { IdCardPrintSetupDialog } from '@/components/admin/IdCardPrintSetupDialog';
 import { AdminMainTabsList } from '@/components/admin/AdminMainTabsList';
+import { staffPortalTabTriggerClassName } from '@/components/staff/staffPortalNavStyles';
+import { staffPortalCoreTabs } from '@/lib/staffPortal';
+import { TeacherStaffPortalDashboard } from '@/components/staff/TeacherStaffPortalDashboard';
 import { AchievementModal } from '@/components/AchievementModal';
 import { BadgeModal } from '@/components/BadgeModal';
 
@@ -717,14 +721,12 @@ function AdminDashboardInner() {
   };
 
   const orderedMainTabs = useMemo<AdminMainTabDef[]>(() => {
-    const base: AdminMainTabDef[] = [
-      { value: 'students', label: 'Students', icon: Users },
-      { value: 'classes', label: 'Classes', icon: BookOpen },
-      { value: 'teachers', label: 'Teachers & staff', icon: User },
-      { value: 'prizes', label: 'Prizes', icon: Gift },
-      { value: 'categories', label: 'Points', icon: Tag },
-      { value: 'reports', label: 'Reports', icon: FileText },
-    ];
+    const base: AdminMainTabDef[] = staffPortalCoreTabs('admin', settings).map((t) => ({
+      value: t.value,
+      label: t.label,
+      icon: t.icon,
+      title: t.title,
+    }));
 
     const pinnedExtras: AdminMainTabDef[] = pinnedAddOnTabs.map((t) => ({
       value: t.value,
@@ -759,6 +761,9 @@ function AdminDashboardInner() {
 
     return out;
   }, [loginState, pinnedAddOnTabs, settings.adminMainTabOrder]);
+
+  const adminNavSidebar = settings.adminNavLayout === 'sidebar';
+  const adminTabTriggerClassName = staffPortalTabTriggerClassName(adminNavSidebar);
 
   const mobileMoreTabOptions = useMemo(() => {
     const mainTabValues = new Set(orderedMainTabs.map((t) => t.value));
@@ -1546,7 +1551,8 @@ function AdminDashboardInner() {
     <TooltipProvider>
       <div
         className={cn(
-          "mx-auto flex h-full min-h-0 min-w-0 w-full max-w-7xl flex-col gap-6 p-4 md:p-8",
+          'mx-auto flex h-full min-h-0 min-w-0 w-full flex-col gap-6 p-4 md:p-8',
+          adminNavSidebar ? 'max-w-[100rem]' : 'max-w-7xl',
         )}
       >
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -1563,7 +1569,35 @@ function AdminDashboardInner() {
               </p>
             </div>
           </Helper>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:flex-wrap">
+            <div
+              className="flex items-center gap-0.5 rounded-xl border border-border/60 bg-muted/40 p-1"
+              role="group"
+              aria-label="Admin section tab layout"
+            >
+              <Button
+                type="button"
+                size="sm"
+                variant={adminNavSidebar ? 'ghost' : 'default'}
+                className="h-9 rounded-lg gap-1.5 px-3 text-xs font-bold"
+                onClick={() => updateSettings({ adminNavLayout: 'top' })}
+                aria-pressed={!adminNavSidebar}
+              >
+                <Rows3 className="h-3.5 w-3.5" aria-hidden />
+                Top tabs
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={adminNavSidebar ? 'default' : 'ghost'}
+                className="h-9 rounded-lg gap-1.5 px-3 text-xs font-bold"
+                onClick={() => updateSettings({ adminNavLayout: 'sidebar' })}
+                aria-pressed={adminNavSidebar}
+              >
+                <PanelLeft className="h-3.5 w-3.5" aria-hidden />
+                Side tabs
+              </Button>
+            </div>
             <Button
               type="button"
               variant="outline"
@@ -1613,11 +1647,19 @@ function AdminDashboardInner() {
             key={`admin-tabs-${schoolId ?? 'unknown'}`}
             value={activeMainTab}
             onValueChange={setActiveMainTab}
-            className="flex min-h-0 min-w-0 w-full flex-1 flex-col gap-6"
+            className={cn(
+              'flex min-h-0 min-w-0 w-full flex-1 gap-6',
+              adminNavSidebar ? 'flex-col lg:flex-row lg:items-start' : 'flex-col',
+            )}
           >
-          <div className="flex w-full min-w-0 flex-col gap-4">
+          <div
+            className={cn(
+              'flex w-full min-w-0 flex-col gap-4',
+              adminNavSidebar && 'lg:w-60 lg:shrink-0',
+            )}
+          >
             <div className="w-full min-w-0 space-y-3">
-              <div className="md:hidden">
+              <div className={adminNavSidebar ? 'lg:hidden' : 'md:hidden'}>
                 <Label htmlFor="admin-portal-section" className="sr-only">
                   Admin portal section
                 </Label>
@@ -1658,9 +1700,15 @@ function AdminDashboardInner() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="hidden md:block w-full min-w-0">
+              <div
+                className={cn(
+                  'w-full min-w-0',
+                  adminNavSidebar ? 'hidden lg:block' : 'hidden md:block',
+                )}
+              >
               <AdminMainTabsList
                 activeTabValue={activeMainTab}
+                orientation={adminNavSidebar ? 'vertical' : 'horizontal'}
                 style={{ ['--admin-accent' as any]: 'hsl(var(--primary))' }}
                 aria-label="Admin portal main tabs"
                 endAction={
@@ -1668,7 +1716,12 @@ function AdminDashboardInner() {
                     <DropdownMenuTrigger asChild>
                       <button
                         type="button"
-                        className="inline-flex h-full shrink-0 items-center gap-2 rounded-xl border bg-muted/40 px-3 py-2 text-sm font-bold text-foreground transition-all hover:bg-muted/60"
+                        className={cn(
+                          'inline-flex items-center gap-2 rounded-xl border bg-muted/40 px-3 py-2 text-sm font-bold text-foreground transition-all hover:bg-muted/60',
+                          adminNavSidebar
+                            ? 'h-10 w-full shrink-0 justify-center'
+                            : 'h-full shrink-0',
+                        )}
                         title="Add more tabs"
                         aria-label="Add more"
                       >
@@ -1756,7 +1809,10 @@ function AdminDashboardInner() {
                     <div
                       key={t.value}
                       draggable
-                      className="flex shrink-0 snap-center"
+                      className={cn(
+                        'flex shrink-0',
+                        adminNavSidebar ? 'w-full' : 'snap-center',
+                      )}
                       title={t.title ?? 'Drag to reorder'}
                       onDragStart={(e) => {
                         e.dataTransfer.setData('text/admin-main-tab', t.value);
@@ -1786,7 +1842,7 @@ function AdminDashboardInner() {
                     >
                       <TabsTrigger
                         value={t.value}
-                        className="rounded-xl px-4 py-2 font-bold flex items-center gap-2 text-sm text-foreground transition-all whitespace-nowrap data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:ring-2 data-[state=active]:ring-primary/25"
+                        className={adminTabTriggerClassName}
                         title={t.title}
                       >
                         <Icon className="w-4 h-4 shrink-0" /> {t.label}
@@ -1802,7 +1858,7 @@ function AdminDashboardInner() {
           </div>
 
           <TabWalkthroughProvider scope="admin" tabId={activeMainTab}>
-          <div className="min-h-0 w-full flex-1">
+          <div className={cn('min-h-0 w-full flex-1', adminNavSidebar && 'min-w-0')}>
           <TabsContent value="students" className={fittedAdminTabClassName}>
             <AdminStudentsTab
               schoolId={schoolId!}
@@ -3376,13 +3432,18 @@ function HouseCoordinatorDashboard() {
 }
 
 export default function AdminPage() {
-  const { loginState, isInitialized, isAdmin, isPrizeClerk, isHouseCoordinator, login, schoolId } = useAppContext();
+  const { loginState, isInitialized, isAdmin, isPrizeClerk, isHouseCoordinator, login, schoolId } =
+    useAppContext();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const teacherToolsView = searchParams.get('view') === 'teacher';
 
-  const { canBypassAdminPasscode, isAutoLoggingIn } = useAdminGooglePasscodeBypass({ schoolId });
+  const { isAutoLoggingIn } = useAdminGooglePasscodeBypass({ schoolId, autoLogin: false });
 
   const prizeDeskSession = loginState === 'prizeClerk' && isPrizeClerk;
   const houseCoordinatorSession = loginState === 'houseCoordinator' && isHouseCoordinator;
+  const teacherPortalSession = loginState === 'teacher';
+  const adminTeacherToolsSession = isAdmin && teacherToolsView;
 
   useEffect(() => {
     if (
@@ -3402,8 +3463,16 @@ export default function AdminPage() {
     return <AdminDashboardSkeleton />;
   }
 
+  if (teacherPortalSession || adminTeacherToolsSession) {
+    return (
+      <ErrorBoundary name="TeacherStaffPortal">
+        <TeacherStaffPortalDashboard adminViewingTeacherTools={adminTeacherToolsSession} />
+      </ErrorBoundary>
+    );
+  }
+
   if (!isAdmin && !prizeDeskSession && !houseCoordinatorSession) {
-    if (isAutoLoggingIn || (canBypassAdminPasscode && !isAdmin)) {
+    if (isAutoLoggingIn) {
       return <AdminDashboardSkeleton />;
     }
     return <AdminLogin onLogin={handleAdminLogin} />;

@@ -8,6 +8,7 @@ import {
 } from '@/lib/auth/schoolGateCookie';
 import { authCookieFlags } from '@/lib/auth/authCookieOptions';
 import { verifyOfficeHandoffMeta } from '@/lib/auth/officeHandoff';
+import { provisionSchoolStaffRole } from '@/lib/server/provisionSchoolStaffRole';
 import { jsonError } from '@/lib/server/apiSecurity';
 
 const SCHOOL_ID_RE = /^[\w-]{1,128}$/;
@@ -25,6 +26,15 @@ export async function GET(req: NextRequest) {
   const meta = await verifyOfficeHandoffMeta(metaToken);
   if (!meta || meta.schoolId !== schoolRaw) {
     return jsonError(403, 'Handoff expired or invalid.');
+  }
+
+  try {
+    if (meta.loginState === 'admin' || meta.loginState === 'office') {
+      await provisionSchoolStaffRole(schoolRaw, meta.uid, meta.loginState);
+    }
+  } catch (e) {
+    console.error('[office-handoff/complete] role provision failed:', e);
+    return jsonError(503, 'Could not prepare office permissions.');
   }
 
   const secret = getAuthGateSecret();

@@ -26,7 +26,7 @@ export type PromotionFlyer = {
 };
 
 export const FLYER_AUDIENCE_LABELS: Record<FlyerAudience, string> = {
-  general: 'All styles',
+  general: 'General layouts',
   staff: 'For teachers & staff',
   elementary: 'Elementary (K–5)',
   middle: 'Middle school (6–8)',
@@ -50,9 +50,9 @@ export const FLYER_AUDIENCE_ORDER: readonly FlyerAudience[] = [
 export const PROMOTION_FLYERS: readonly PromotionFlyer[] = [
   {
     id: 'arcade',
-    name: 'Arcade Neon',
+    name: 'Arcade Pitch',
     description:
-      'Dark cosmic layout with fuchsia and cyan glows—matches the LevelUp Arcade landing page.',
+      'Arcade energy pitch for PBIS, events, and school-wide engagement.',
     href: '/marketing/flyer-arcade.html',
     audience: 'general',
     preview: { border: 'border-fuchsia-500/30', tag: 'Arcade' },
@@ -60,9 +60,9 @@ export const PROMOTION_FLYERS: readonly PromotionFlyer[] = [
   },
   {
     id: 'scholastic',
-    name: 'Scholastic Indigo',
+    name: 'Scholastic Overview',
     description:
-      'Light, readable layout with indigo accents—ideal for bulletin boards and parent nights.',
+      'Parent-friendly overview of points, prizes, and school-wide progress.',
     href: '/marketing/flyer-scholastic.html',
     audience: 'general',
     preview: { border: 'border-indigo-300/50', tag: 'Classic' },
@@ -72,7 +72,7 @@ export const PROMOTION_FLYERS: readonly PromotionFlyer[] = [
     id: 'professional',
     name: 'Professional Brief',
     description:
-      'Clean white one-pager with structured sections—great for admin packets and procurement.',
+      'Admin and procurement overview with platform capabilities.',
     href: '/marketing/flyer-professional.html',
     audience: 'general',
     preview: { border: 'border-slate-400/40', tag: 'Admin' },
@@ -80,9 +80,9 @@ export const PROMOTION_FLYERS: readonly PromotionFlyer[] = [
   },
   {
     id: 'bold',
-    name: 'Bold Navy',
+    name: 'Bold Navy (Reference)',
     description:
-      'High-contrast navy and white with oversized type—stands out on doors and hallway displays.',
+      'Canonical Bold Navy flyer—navy background, sky accents, oversized headline, feature blocks.',
     href: '/marketing/flyer-bold.html',
     audience: 'general',
     preview: { border: 'border-sky-500/30', tag: 'Bold' },
@@ -90,9 +90,9 @@ export const PROMOTION_FLYERS: readonly PromotionFlyer[] = [
   },
   {
     id: 'sunset',
-    name: 'Sunset Warm',
+    name: 'Community Night',
     description:
-      'Warm coral and amber tones with a welcoming feel—great for open houses and community nights.',
+      'Open house and community night pitch with Hall of Fame highlight.',
     href: '/marketing/flyer-sunset.html',
     audience: 'general',
     preview: { border: 'border-orange-400/40', tag: 'Warm' },
@@ -100,9 +100,9 @@ export const PROMOTION_FLYERS: readonly PromotionFlyer[] = [
   },
   {
     id: 'retro',
-    name: 'Retro Pixel',
+    name: 'Hallway Poster',
     description:
-      '80s arcade grid and neon borders—eye-catching for student-facing hallways and fairs.',
+      'Bold Navy layout—student-facing scan-and-earn poster for hallways and fairs.',
     href: '/marketing/flyer-retro.html',
     audience: 'general',
     preview: { border: 'border-lime-400/40', tag: 'Retro' },
@@ -110,9 +110,9 @@ export const PROMOTION_FLYERS: readonly PromotionFlyer[] = [
   },
   {
     id: 'minimal',
-    name: 'Minimal Mono',
+    name: 'Quick Overview',
     description:
-      'Black-and-white editorial layout with generous whitespace—low ink, maximum clarity.',
+      'Short one-page overview of award, scan, track, and scale.',
     href: '/marketing/flyer-minimal.html',
     audience: 'general',
     preview: { border: 'border-white/25', tag: 'Minimal' },
@@ -137,6 +137,16 @@ export const PROMOTION_FLYERS: readonly PromotionFlyer[] = [
     audience: 'staff',
     preview: { border: 'border-lime-400/40', tag: 'Playbook' },
     tags: ['Staff', 'PBIS', 'Consistency'],
+  },
+  {
+    id: 'yeshiva-rebbeim-moros',
+    name: 'Yeshiva: Rebbeim & Moros Quickstart',
+    description:
+      'Yeshiva staff handout—derech eretz, middos tovos, fast recognition routine, and a live teacher-tool preview.',
+    href: '/marketing/flyer-yeshiva-rebbeim-moros.html',
+    audience: 'staff',
+    preview: { border: 'border-sky-300/40', tag: 'Yeshiva' },
+    tags: ['Yeshiva', 'Staff', 'Middos'],
   },
   {
     id: 'students-elementary',
@@ -167,6 +177,26 @@ export const PROMOTION_FLYERS: readonly PromotionFlyer[] = [
     audience: 'high',
     preview: { border: 'border-yellow-500/35', tag: '9–12' },
     tags: ['Students', '9–12', 'Autonomy'],
+  },
+  {
+    id: 'students-kiosk-hype',
+    name: 'Student Kiosk Hype',
+    description:
+      'Hallway & kiosk backdrop—Scan. Earn. Level Up! Morning scan steps, point stacking, and redemption prizes.',
+    href: '/marketing/flyer-students-kiosk-hype.html',
+    audience: 'general',
+    preview: { border: 'border-fuchsia-500/50', tag: 'Hype' },
+    tags: ['Students', 'Kiosk', 'Hallway'],
+  },
+  {
+    id: 'yeshiva-talmidim',
+    name: 'Yeshiva: Talmidim Scan & Earn',
+    description:
+      'Student-facing yeshiva flyer—morning scan, derech eretz, middos tovos, and redeemable rewards (no apps).',
+    href: '/marketing/flyer-yeshiva-talmidim.html',
+    audience: 'general',
+    preview: { border: 'border-amber-300/40', tag: 'Talmidim' },
+    tags: ['Yeshiva', 'Students', 'Kiosk'],
   },
   {
     id: 'principal-data',
@@ -259,6 +289,16 @@ export const PROMOTION_FLYERS: readonly PromotionFlyer[] = [
     tags: ['Families', 'Portal', 'At home'],
   },
   {
+    id: 'parents-privacy-security',
+    name: 'Parent: Privacy & Safety',
+    description:
+      'Newsletter-ready sheet—NYS § 2-d, no third-party ads, kiosk-only IDs, and positive-development focus.',
+    href: '/marketing/flyer-parents-privacy-security.html',
+    audience: 'parents',
+    preview: { border: 'border-teal-600/50', tag: 'Privacy' },
+    tags: ['Parents', 'Security', 'Newsletter'],
+  },
+  {
     id: 'principal-tech',
     name: 'Principal: Tech & Safety',
     description:
@@ -267,6 +307,66 @@ export const PROMOTION_FLYERS: readonly PromotionFlyer[] = [
     audience: 'principal',
     preview: { border: 'border-slate-500/50', tag: 'Safety' },
     tags: ['Principals', 'Security', 'Compliance'],
+  },
+  {
+    id: 'funding-overview',
+    name: 'Funding: Procurement Overview',
+    description:
+      'Universal how-to-buy sheet—NYC DOE vendor code, Title I/SIG, NYS nonpublic paths, and § 2-d compliance.',
+    href: '/marketing/flyer-funding-overview.html',
+    audience: 'principal',
+    preview: { border: 'border-sky-600/50', tag: 'Funding' },
+    tags: ['Procurement', 'DOE', 'Budget'],
+  },
+  {
+    id: 'funding-nyc-doe',
+    name: 'Funding: NYC DOE',
+    description:
+      'NYC public school procurement—vendor VS00109014, Title I, SIG, tax levy PO steps, and FAMIS guidance.',
+    href: '/marketing/flyer-funding-nyc-doe.html',
+    audience: 'principal',
+    preview: { border: 'border-blue-800/50', tag: 'NYC' },
+    tags: ['DOE', 'FAMIS', 'Title I'],
+  },
+  {
+    id: 'funding-nys-nonpublic',
+    name: 'Funding: NYS Nonpublic',
+    description:
+      'Yeshivas & day schools—Title IV Equitable Services, MSR attendance reimbursement, and NPSE safety grant.',
+    href: '/marketing/flyer-funding-nys-nonpublic.html',
+    audience: 'principal',
+    preview: { border: 'border-amber-700/50', tag: 'Private' },
+    tags: ['Nonpublic', 'MSR', 'NPSE'],
+  },
+  {
+    id: 'yeshiva-leadership',
+    name: 'Yeshiva: Leadership Brief',
+    description:
+      'Leadership one-pager—derech eretz + attendance + middos tovos outcomes with nonpublic procurement alignment.',
+    href: '/marketing/flyer-yeshiva-leadership.html',
+    audience: 'principal',
+    preview: { border: 'border-slate-400/40', tag: 'Yeshiva' },
+    tags: ['Yeshiva', 'Leadership', 'Nonpublic'],
+  },
+  {
+    id: 'funding-quick-reference',
+    name: 'Funding: Quick Reference',
+    description:
+      'Low-ink checklist and budget-bucket table for business managers—public and nonpublic streams on one page.',
+    href: '/marketing/flyer-funding-quick-reference.html',
+    audience: 'principal',
+    preview: { border: 'border-zinc-500/50', tag: 'Ref' },
+    tags: ['Procurement', 'Checklist', 'Print'],
+  },
+  {
+    id: 'it-kiosk-setup',
+    name: 'IT: Kiosk Setup Guide',
+    description:
+      'Leave-behind for school IT—hardware specs, Wi-Fi/Ethernet, Firebase pipeline, encryption, plug-and-play deploy.',
+    href: '/marketing/flyer-it-kiosk-setup.html',
+    audience: 'principal',
+    preview: { border: 'border-slate-600/50', tag: 'IT' },
+    tags: ['IT', 'Kiosk', 'Deployment'],
   },
   {
     id: 'feature-houses',
@@ -387,6 +487,16 @@ export const PROMOTION_FLYERS: readonly PromotionFlyer[] = [
     audience: 'features',
     preview: { border: 'border-pink-500/40', tag: 'Shop' },
     tags: ['Rewards', 'Inventory', 'Shop'],
+  },
+  {
+    id: 'feature-vending-machine',
+    name: 'Rewards Vending Machine',
+    description:
+      'Two optional hardware samples—full countertop unit and compact desktop smart vending—plus LevelUp logo, School Rewards branding, ID tap-in, and motor dispense.',
+    href: '/marketing/flyer-feature-vending-machine.html',
+    audience: 'features',
+    preview: { border: 'border-amber-600/40', tag: 'Vending' },
+    tags: ['Vending', 'Hardware', 'Optional', 'Desktop'],
   },
 ] as const;
 
