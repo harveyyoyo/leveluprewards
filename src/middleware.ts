@@ -32,7 +32,10 @@ import {
 import { officePublicHref } from '@/lib/officePublicUrl';
 
 function officeChromeRequestHeaders(request: NextRequest): Headers {
-  const forwardedHost = request.headers.get('x-forwarded-host') ?? request.headers.get('host');
+  const forwardedHost =
+    request.headers.get('x-fh-requested-host') ??
+    request.headers.get('x-forwarded-host') ??
+    request.headers.get('host');
   const headers = new Headers(request.headers);
   if (isOfficeChromeRequest(request.nextUrl.pathname, forwardedHost)) {
     headers.set(OFFICE_CHROME_REQUEST_HEADER, 'hidden');
@@ -75,7 +78,10 @@ function portalLoginRedirect(
   schoolId: string,
   nextPath: string,
 ): NextResponse {
-  const forwarded = request.headers.get('x-forwarded-host') ?? request.headers.get('host');
+  const forwarded =
+    request.headers.get('x-fh-requested-host') ??
+    request.headers.get('x-forwarded-host') ??
+    request.headers.get('host');
   const portalHost = canonicalPortalHost();
   const useCanonicalPortal = portalHost && !isLocalDevHost(forwarded);
   const loginBase = useCanonicalPortal
@@ -95,7 +101,10 @@ function portalLoginRedirect(
 
 export async function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
-  const forwardedHost = request.headers.get('x-forwarded-host') ?? request.headers.get('host');
+  const forwardedHost =
+    request.headers.get('x-fh-requested-host') ??
+    request.headers.get('x-forwarded-host') ??
+    request.headers.get('host');
 
   const canonicalPortalUrl = canonicalPortalRedirectUrl(
     pathname,

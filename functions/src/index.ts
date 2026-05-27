@@ -64,7 +64,8 @@ function requireString(value: unknown, name: string): asserts value is string {
 }
 
 function trimmedString(value: unknown): string {
-  return typeof value === "string" ? value.trim() : "";
+  if (value === null || value === undefined) return "";
+  return String(value).trim();
 }
 
 function maskRecipient(to: unknown): string {
@@ -2713,7 +2714,7 @@ exports.verifyStaffAccountPasscode = functions.https.onCall(
     requireString(data.username, "username");
     const username = String(data.username).trim().toLowerCase();
 
-    const accountsSnap = await db
+    let accountsSnap = await db
       .collection("schools")
       .doc(schoolId)
       .collection("staffAccounts")
@@ -2721,10 +2722,33 @@ exports.verifyStaffAccountPasscode = functions.https.onCall(
       .limit(5)
       .get();
 
+    if (accountsSnap.empty) {
+      const allAccountsSnap = await db
+        .collection("schools")
+        .doc(schoolId)
+        .collection("staffAccounts")
+        .get();
+
+      const matchedDocs = allAccountsSnap.docs.filter((d) => {
+        const u = String(d.data()?.username || "").trim().toLowerCase();
+        return u === username;
+      });
+
+      if (matchedDocs.length > 0) {
+        accountsSnap = {
+          docs: matchedDocs,
+          empty: false,
+          size: matchedDocs.length,
+        } as any;
+      }
+    }
+
     const match = accountsSnap.docs.find((d) => {
       const row = d.data() as { passcode?: string; role?: string; roles?: string[] };
       const roles = Array.isArray(row.roles) && row.roles.length > 0 ? row.roles : [row.role];
-      return roles.includes(role) && row.passcode === passcode;
+      const dbPasscode = row.passcode !== undefined && row.passcode !== null ? String(row.passcode).trim() : "";
+      const inputPasscode = passcode !== undefined && passcode !== null ? String(passcode).trim() : "";
+      return roles.includes(role) && dbPasscode === inputPasscode;
     });
 
     if (!match) {

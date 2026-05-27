@@ -58,7 +58,11 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const headerList = await headers();
-  const requestHost = headerList.get('x-forwarded-host') ?? headerList.get('host') ?? '';
+  const requestHost =
+    headerList.get('x-fh-requested-host') ??
+    headerList.get('x-forwarded-host') ??
+    headerList.get('host') ??
+    '';
   const isOfficeHost = isOfficeHostname(requestHost);
   const officeChromeFromMiddleware =
     headerList.get(OFFICE_CHROME_REQUEST_HEADER) === 'hidden';

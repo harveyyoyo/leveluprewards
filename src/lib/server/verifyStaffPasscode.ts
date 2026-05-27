@@ -38,7 +38,7 @@ export async function verifyStaffAccountPasscodeServer(
   passcode: string,
   role: StaffLoginRole,
 ): Promise<{ displayName: string; roles: StaffLoginRole[] }> {
-  const accountsSnap = await db
+  let accountsSnap = await db
     .collection('schools')
     .doc(schoolId)
     .collection('staffAccounts')
@@ -46,10 +46,38 @@ export async function verifyStaffAccountPasscodeServer(
     .limit(5)
     .get();
 
+  // Robust fallback: If query returns empty, fetch all staff accounts and match case-and-whitespace insensitively.
+  // This is completely safe since schools typically have under 10 desk staff accounts.
+  if (accountsSnap.empty) {
+    const allAccountsSnap = await db
+      .collection('schools')
+      .doc(schoolId)
+      .collection('staffAccounts')
+      .get();
+
+    const matchedDocs = allAccountsSnap.docs.filter((d) => {
+      const u = String(d.data()?.username || '').trim().toLowerCase();
+      return u === username.trim().toLowerCase();
+    });
+
+    if (matchedDocs.length > 0) {
+      accountsSnap = {
+        docs: matchedDocs,
+        empty: false,
+        size: matchedDocs.length,
+      } as any;
+    }
+  }
+
   const match = accountsSnap.docs.find((d) => {
     const row = d.data() as { passcode?: string; role?: string; roles?: string[] };
     const roles = Array.isArray(row.roles) && row.roles.length > 0 ? row.roles : [row.role];
-    return roles.includes(role) && row.passcode === passcode;
+    
+    // Coerce both database passcode and input passcode to strings and trim them
+    const dbPasscode = row.passcode !== undefined && row.passcode !== null ? String(row.passcode).trim() : '';
+    const inputPasscode = passcode !== undefined && passcode !== null ? String(passcode).trim() : '';
+    
+    return roles.includes(role) && dbPasscode === inputPasscode;
   });
 
   if (!match) {

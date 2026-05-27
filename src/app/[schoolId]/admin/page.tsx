@@ -123,6 +123,7 @@ import { AdminStudentsTab } from './sections/AdminStudentsTab';
 import { AdminLibraryTab } from './sections/AdminLibraryTab';
 import { budgetWindowKeyForDate } from '@/lib/teacherBudget';
 import { resolveIdCardPrintJobOptions } from '@/lib/idCardPrintCatalog';
+import { adminPerTabAppearanceProps, adminTabTriggerStyle } from '@/lib/adminTabColorScheme';
 
 const tabLoader = () => (
   <div className="animate-pulse h-64 w-full rounded-xl bg-muted/40" aria-hidden="true" />
@@ -763,6 +764,11 @@ function AdminDashboardInner() {
 
   const adminNavSidebar = settings.adminNavLayout === 'sidebar';
   const adminTabTriggerClassName = staffPortalTabTriggerClassName(adminNavSidebar);
+  const adminPerTabColors = !!settings.adminPerTabColorScheme;
+  const adminTabAppearance = useMemo(
+    () => adminPerTabAppearanceProps(settings, activeMainTab, adminPerTabColors),
+    [settings, activeMainTab, adminPerTabColors],
+  );
 
   const mobileMoreTabOptions = useMemo(() => {
     const mainTabValues = new Set(orderedMainTabs.map((t) => t.value));
@@ -1552,7 +1558,9 @@ function AdminDashboardInner() {
         className={cn(
           'mx-auto flex h-full min-h-0 min-w-0 w-full flex-col gap-6 p-4 md:p-8',
           adminNavSidebar ? 'max-w-[100rem]' : 'max-w-7xl',
+          adminPerTabColors && 'transition-[color,background-color] duration-300',
         )}
+        style={adminTabAppearance.style}
       >
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <Helper content="This page is for system administrators. It allows you to manage all school instances, create backups, and perform system-wide operations.">
@@ -1841,7 +1849,15 @@ function AdminDashboardInner() {
                     >
                       <TabsTrigger
                         value={t.value}
-                        className={adminTabTriggerClassName}
+                        className={cn(
+                          adminTabTriggerClassName,
+                          adminPerTabColors && 'border-solid data-[state=inactive]:shadow-none',
+                        )}
+                        style={
+                          adminPerTabColors
+                            ? adminTabTriggerStyle(t.value, settings, activeMainTab === t.value)
+                            : undefined
+                        }
                         title={t.title}
                       >
                         <Icon className="w-4 h-4 shrink-0" /> {t.label}

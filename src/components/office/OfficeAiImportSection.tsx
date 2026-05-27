@@ -251,7 +251,9 @@ export function OfficeAiImportSection({
   const classNames = classes.map((c) => c.name);
   const studentNames = students.map((s) => getOfficeStudentFullName(s));
 
-  const counts = aiSnapshot ? officeSnapshotCounts(aiSnapshot) : {};
+  const counts = useMemo(() => {
+    return aiSnapshot ? officeSnapshotCounts(aiSnapshot) : {};
+  }, [aiSnapshot]);
 
   useEffect(() => {
     if (aiSnapshot) {

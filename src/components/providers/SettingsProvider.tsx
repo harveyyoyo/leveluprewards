@@ -358,6 +358,8 @@ interface Settings {
     adminPinnedAddOnTabs?: string[];
     /** Admin-only UI preference: main section tabs across the top (default) or down the left sidebar. */
     adminNavLayout?: 'top' | 'sidebar';
+    /** When on, each admin section tab applies its own color scheme while you work in that tab. */
+    adminPerTabColorScheme?: boolean;
     /** Admin-only UI preference: persists the main Admin tab order (including pinned add-ons). */
     adminMainTabOrder?: string[];
     /** Admin-only UI preference: persists the Extra features row order (unpinned add-ons). */
@@ -628,6 +630,7 @@ const defaultSettings: Settings = {
     adminHiddenAddOnTabs: [],
     adminPinnedAddOnTabs: [],
     adminNavLayout: 'top',
+    adminPerTabColorScheme: false,
     adminMainTabOrder: [],
     adminExtraTabOrder: [],
     teacherHiddenAddOnTabs: [],

@@ -18,7 +18,13 @@ import { jsonError } from '@/lib/server/apiSecurity';
 const SCHOOL_ID_RE = /^[\w-]{1,128}$/;
 
 function requestHost(req: NextRequest): string {
-  return req.headers.get('x-forwarded-host') ?? req.headers.get('host') ?? req.nextUrl.host ?? '';
+  return (
+    req.headers.get('x-fh-requested-host') ??
+    req.headers.get('x-forwarded-host') ??
+    req.headers.get('host') ??
+    req.nextUrl.host ??
+    ''
+  );
 }
 
 /** GET: mint office handoff and redirect to office subdomain (portal → office). */

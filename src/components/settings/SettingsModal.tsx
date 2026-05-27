@@ -1295,6 +1295,21 @@ export function SettingsModal() {
                                                  );
                                              })}
                                          </div>
+                                         <div className="flex items-center justify-between gap-3 rounded-2xl border border-border/50 bg-muted/30 p-3 mt-3">
+                                             <div className="min-w-0">
+                                                 <span className="text-sm font-bold">Color per admin tab</span>
+                                                 <p className="text-[10px] text-muted-foreground font-medium leading-snug mt-0.5">
+                                                     Each admin tab shows a soft accent from your theme; the open section uses the same mild tint.
+                                                 </p>
+                                             </div>
+                                             <Switch
+                                                 checked={!!local.adminPerTabColorScheme}
+                                                 onCheckedChange={(checked) =>
+                                                     handleToggle('adminPerTabColorScheme', checked)
+                                                 }
+                                                 aria-label="Use a different color scheme per admin tab"
+                                             />
+                                         </div>
                                      </div>
                                  ) : null}
                             </div>

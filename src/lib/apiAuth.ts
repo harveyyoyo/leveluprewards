@@ -67,7 +67,7 @@ function sameOrigin(req: NextRequest): boolean {
   // set by the Firebase Hosting proxy so the origin check still passes in
   // production. Locally, `X-Forwarded-Host` is absent and we fall back to
   // the regular `Host` header which matches `Origin` already.
-  const forwardedHost = req.headers.get('x-forwarded-host');
+  const forwardedHost = req.headers.get('x-fh-requested-host') || req.headers.get('x-forwarded-host');
   const host = forwardedHost || req.headers.get('host');
   if (!host) return false;
 

@@ -246,11 +246,14 @@ export const useArcadeSound = () => {
     (synthRef as any).current = createSynth();
   }
 
+  const soundEnabled = settings.soundEnabled;
+  const studentAudioTheme = (settings as any).studentAudioTheme;
+
   const playSound = useCallback((sound: SoundEffect) => {
     // Only play sound if it's enabled in settings.
-    if (!settings.soundEnabled) return;
-    synthRef.current?.play(sound, (settings as any).studentAudioTheme || 'retro_arcade');
-  }, [settings.soundEnabled, (settings as any).studentAudioTheme]);
+    if (!soundEnabled) return;
+    synthRef.current?.play(sound, studentAudioTheme || 'retro_arcade');
+  }, [soundEnabled, studentAudioTheme]);
 
   return playSound;
 };

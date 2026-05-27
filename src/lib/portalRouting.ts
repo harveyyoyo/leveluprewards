@@ -122,6 +122,7 @@ export function requestBrowserOrigin(req: {
   nextUrl: { host: string; port: string; protocol: string };
 }): string {
   const raw =
+    req.headers.get('x-fh-requested-host') ??
     req.headers.get('x-forwarded-host') ??
     req.headers.get('host') ??
     req.nextUrl.host ??

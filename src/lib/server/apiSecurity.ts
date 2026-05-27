@@ -29,7 +29,7 @@ export function clientIp(req: NextRequest): string {
 export function sameOrigin(req: NextRequest): boolean {
   const origin = req.headers.get('origin');
   const referer = req.headers.get('referer');
-  const forwardedHost = req.headers.get('x-forwarded-host');
+  const forwardedHost = req.headers.get('x-fh-requested-host') || req.headers.get('x-forwarded-host');
   const host = forwardedHost || req.headers.get('host');
   if (!host) return false;
 
