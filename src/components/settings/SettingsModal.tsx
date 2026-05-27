@@ -478,28 +478,37 @@ export function SettingsModal() {
         handleOpenChange(false);
     };
 
-    const handleAdminUnlockForSettings = useCallback(async () => {
-        if (adminSubmitting || !schoolId) return;
+    const attemptAdminUnlockForSettings = useCallback(
+        async (passcode: string, options?: { openPasscodeDialogOnFail?: boolean }) => {
+            if (adminSubmitting || !schoolId) return;
 
-        setAdminSubmitting(true);
-        const authResult = await loginSchoolAdmin(login, firebaseUser, schoolId, adminPasscode);
-        if (!authResult.ok) {
+            setAdminSubmitting(true);
+            const authResult = await loginSchoolAdmin(login, firebaseUser, schoolId, passcode);
+            if (!authResult.ok) {
+                setAdminSubmitting(false);
+                playSound('error');
+                if (options?.openPasscodeDialogOnFail) {
+                    setAdminPasscode('');
+                    setAdminDialogOpen(true);
+                    return;
+                }
+                toast({
+                    variant: 'destructive',
+                    title: 'Login failed',
+                    description: authResult.message,
+                });
+                setAdminPasscode('');
+                return;
+            }
+
+            playSound('login');
+            beginSettingsSession('hub');
+            setOpen(true);
             setAdminSubmitting(false);
-            playSound('error');
-            toast({
-                variant: 'destructive',
-                title: 'Login failed',
-                description: authResult.message,
-            });
-            setAdminPasscode('');
-            return;
-        }
-
-        playSound('login');
-        setOpen(true);
-        setAdminSubmitting(false);
-        setAdminDialogOpen(false);
-    }, [adminPasscode, adminSubmitting, firebaseUser, login, playSound, schoolId, toast]);
+            setAdminDialogOpen(false);
+        },
+        [adminSubmitting, beginSettingsSession, firebaseUser, login, playSound, schoolId, toast],
+    );
 
     // For short-link kiosk entry routes, keep the UI minimal (and avoid showing settings).
     if (isShortLinkKioskRoute) return null;
@@ -537,7 +546,7 @@ export function SettingsModal() {
                             onKeyDown={(e) => {
                                 if (e.key !== 'Enter') return;
                                 e.preventDefault();
-                                void handleAdminUnlockForSettings();
+                                void attemptAdminUnlockForSettings(adminPasscode);
                             }}
                         />
                     </div>
@@ -558,7 +567,7 @@ export function SettingsModal() {
                         className="rounded-xl font-black"
                         disabled={adminSubmitting}
                         onClick={() => {
-                            void handleAdminUnlockForSettings();
+                            void attemptAdminUnlockForSettings(adminPasscode);
                         }}
                     >
                         {adminSubmitting ? (
@@ -602,7 +611,7 @@ export function SettingsModal() {
                         e.stopPropagation();
                         playSound('click');
                         if (canBypassAdminPasscode && schoolId) {
-                            void handleAdminUnlockForSettings();
+                            void attemptAdminUnlockForSettings('', { openPasscodeDialogOnFail: true });
                             return;
                         }
                         setAdminDialogOpen(true);

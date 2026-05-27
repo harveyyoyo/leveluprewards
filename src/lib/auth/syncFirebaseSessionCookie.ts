@@ -1,5 +1,6 @@
 import type { Auth } from 'firebase/auth';
 import { FIREBASE_SESSION_COOKIE_NAME } from '@/lib/auth/firebaseSessionCookie';
+import { sanitizeInternalNextPath } from '@/lib/auth/internalNextRedirect';
 
 export async function syncFirebaseSessionCookie(auth: Auth): Promise<boolean> {
   const user = auth.currentUser;
@@ -67,7 +68,24 @@ export async function navigateAfterSchoolLogin(auth: Auth, schoolId: string): Pr
   if (!okFb) return false;
   const okGate = await syncSchoolGateCookie(auth, sid);
   if (!okGate) return false;
-  window.location.assign(`/${sid}/portal`);
+
+  let nextUrl = `/${sid}/portal`;
+  if (typeof window !== 'undefined') {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const nextParam = params.get('next');
+      if (nextParam) {
+        const target = sanitizeInternalNextPath(nextParam, sid);
+        if (target) {
+          nextUrl = target;
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  window.location.assign(nextUrl);
   return true;
 }
 
