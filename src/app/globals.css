@@ -2068,7 +2068,7 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
     width: 8.5in !important;
     height: 11in !important;
     /* Avery 25395: match manufacturer sheet margins; asymmetric top/bottom nudges vertical fit. */
-    padding: 0.52in 0.6in 0.58in !important;
+    padding: 0.54in 0.6in 0.56in !important;
     box-sizing: border-box !important;
     position: relative !important;
     justify-content: center !important;
@@ -2080,9 +2080,9 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
 
   /* Slight shrink so card borders/rounding don't bleed past label die-cuts (top/bottom). */
   body.id-card-printing #student-id-print-wrapper .student-id-print-page .print-id-card {
-    width: 96% !important;
-    max-width: 96% !important;
-    max-height: 96% !important;
+    width: 97% !important;
+    max-width: 97% !important;
+    max-height: 97% !important;
   }
   
   .student-id-print-page:last-child {
