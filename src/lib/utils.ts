@@ -63,8 +63,8 @@ function normalizeHexColor(c: string) {
 }
 
 /**
- * Picks a palette color not currently in use. If all are used, falls back to a
- * random palette color (duplicates unavoidable past the palette size).
+ * Picks the next palette color not currently in use. If all are used, cycles
+ * through the palette (duplicates unavoidable past the palette size).
  */
 export function pickDistinctCategoryColor(usedColors: Array<string | undefined | null> = []): string {
   const used = new Set(
@@ -73,8 +73,8 @@ export function pickDistinctCategoryColor(usedColors: Array<string | undefined |
       .map((c) => normalizeHexColor(String(c)))
   );
   const available = CATEGORY_COLOR_PALETTE.filter((c) => !used.has(normalizeHexColor(c)));
-  const pool = available.length ? available : CATEGORY_COLOR_PALETTE;
-  return pool[Math.floor(Math.random() * pool.length)];
+  if (available.length > 0) return available[0];
+  return CATEGORY_COLOR_PALETTE[used.size % CATEGORY_COLOR_PALETTE.length];
 }
 
 export function getRandomColor(): string {

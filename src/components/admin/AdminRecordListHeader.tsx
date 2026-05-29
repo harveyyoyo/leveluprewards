@@ -1,4 +1,8 @@
 import type { CSSProperties } from 'react';
+import {
+  adminRecordListGridClassName,
+  adminRecordListGridCompactGapClassName,
+} from '@/components/admin/adminRecordListGrid';
 import { cn } from '@/lib/utils';
 
 export type AdminRecordListHeaderColumn = {
@@ -11,25 +15,42 @@ export type AdminRecordListHeaderColumn = {
 export function AdminRecordListHeader({
   columns,
   gridClassName,
+  gridColumns,
   className,
   style,
 }: {
   columns: AdminRecordListHeaderColumn[];
-  gridClassName: string;
+  /** Tailwind grid-cols-* (legacy) */
+  gridClassName?: string;
+  /** CSS grid-template-columns value; preferred for wide scrollable lists */
+  gridColumns?: string;
   className?: string;
   style?: CSSProperties;
 }) {
+  const gridStyle: CSSProperties | undefined = gridColumns
+    ? { ...style, ['--admin-list-cols' as string]: gridColumns }
+    : style;
+
   return (
-    <li className={cn('sticky top-0 z-10 rounded-xl border border-ring/30 bg-secondary px-3 py-2 shadow-sm backdrop-blur', className)}>
+    <li
+      className={cn(
+        'sticky top-0 z-10 w-full min-w-0 rounded-xl border border-ring/30 bg-secondary px-2 py-1.5 shadow-sm backdrop-blur',
+        className,
+      )}
+    >
       <div
         className={cn(
-          'grid w-full items-center gap-3 text-[10px] font-black uppercase tracking-[0.1em] text-secondary-foreground/80',
-          gridClassName,
+          'items-center text-[9px] font-black uppercase tracking-wide text-secondary-foreground/80',
+          adminRecordListGridCompactGapClassName,
+          gridColumns ? adminRecordListGridClassName : cn('grid w-full min-w-0', gridClassName),
         )}
-        style={style}
+        style={gridStyle}
       >
         {columns.map((column, idx) => (
-          <span key={column.id ?? `${column.label}-${idx}`} className={column.className}>
+          <span
+            key={column.id ?? `${column.label}-${idx}`}
+            className={cn('truncate', column.className)}
+          >
             {column.label}
           </span>
         ))}

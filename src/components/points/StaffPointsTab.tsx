@@ -24,7 +24,6 @@ export type StaffPointsTabProps = {
   issuerDisplayName?: string;
   isGraphic?: boolean;
   className?: string;
-  onRandomizeColors?: () => void | Promise<void>;
   onAddCategory?: () => void;
   onEditCategory?: (category: Category) => void;
   onDeleteCategory?: (categoryId: string) => void;
@@ -61,7 +60,6 @@ export function StaffPointsTab({
   issuerDisplayName = 'Admin',
   isGraphic = false,
   className,
-  onRandomizeColors,
   onAddCategory,
   onEditCategory,
   onDeleteCategory,
@@ -97,7 +95,6 @@ export function StaffPointsTab({
           mode={fullCategoryAdmin ? 'admin' : 'teacher'}
           isGraphic={isGraphic}
           showWalkthrough={variant === 'teacher'}
-          onRandomizeColors={fullCategoryAdmin ? onRandomizeColors : undefined}
           onAddCategory={onAddCategory}
           onEditCategory={onEditCategory}
           onDeleteCategory={onDeleteCategory}

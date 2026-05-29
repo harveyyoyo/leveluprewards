@@ -697,6 +697,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setStudentKioskSessionError(null);
             return;
         }
+        // Cloud Functions cannot register the kiosk while offline; local badge cache still works.
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            setStudentKioskSessionEstablished(true);
+            setStudentKioskSessionError(null);
+            return;
+        }
         setStudentKioskSessionEstablished(false);
         setStudentKioskSessionError(null);
         if (!isInitialized || !schoolId || !functions || !auth.currentUser) {

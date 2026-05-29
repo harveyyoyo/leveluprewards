@@ -39,7 +39,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { StaffPortalNav } from '@/components/staff/StaffPortalNav';
-import { staffPortalContentMaxWidthClass } from '@/components/staff/staffPortalNavStyles';
+import { staffPortalShellClassName } from '@/components/staff/staffPortalNavStyles';
 import { TeacherPortalAddMoreMenu } from '@/components/staff/TeacherPortalAddMoreMenu';
 import { TeacherPortalTabPane } from '@/components/staff/TeacherPortalTabPane';
 import { staffPortalTabIsValid, staffPortalTeacherPinSideEffects, useStaffPortalTabs } from '@/lib/staffPortal';
@@ -86,7 +86,7 @@ const MAX_COUPON_PRINT_SHEETS = 100;
 const teacherPortalTabContentClassName =
     'mt-0 h-full min-h-0 w-full overflow-y-auto overflow-x-hidden pb-6 pr-1 data-[state=active]:animate-none motion-reduce:animate-none';
 function teacherPortalPanelClassName(sidebar: boolean) {
-  return cn('w-full mx-auto', staffPortalContentMaxWidthClass(sidebar));
+  return cn('w-full', sidebar ? 'max-w-none' : 'mx-auto max-w-7xl');
 }
 
 
@@ -2151,7 +2151,7 @@ export function TeacherPrinterInner({
                         'mx-auto flex w-full flex-1 min-h-0 flex-col gap-6 relative z-10',
                         embedded
                             ? 'max-w-none p-0'
-                            : cn('p-4 md:p-8', staffPortalContentMaxWidthClass(teacherNavSidebar)),
+                            : staffPortalShellClassName(teacherNavSidebar),
                         settings.displayMode === 'app' && !embedded && 'pb-24',
                     )}
                 >

@@ -2,7 +2,7 @@ import { doc, setDoc, updateDoc, deleteDoc, Firestore } from 'firebase/firestore
 import type { Category, CategoryRubricLevel } from '../types';
 import { reportFirestorePermissionError } from '@/firebase/error-emitter';
 import { removeUndefined } from './helpers';
-import { getRandomColor } from '../utils';
+import { pickDistinctCategoryColor } from '../utils';
 
 export const addCategory = async (
   firestore: Firestore,
@@ -10,7 +10,7 @@ export const addCategory = async (
   categoryData: { name: string; points: number; color?: string; teacherId?: string; rubricLevels?: CategoryRubricLevel[] },
 ): Promise<Category> => {
   const newId = `cat_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-  const newCategory: Category = { ...categoryData, id: newId, color: categoryData.color || getRandomColor() };
+  const newCategory: Category = { ...categoryData, id: newId, color: categoryData.color || pickDistinctCategoryColor() };
   const categoryDocRef = doc(firestore, 'schools', schoolId, 'categories', newCategory.id);
   try {
     await setDoc(categoryDocRef, removeUndefined(newCategory as unknown as Record<string, unknown>));

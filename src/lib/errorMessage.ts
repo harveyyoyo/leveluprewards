@@ -45,6 +45,10 @@ const CRYPTIC_SINGLE_TOKEN_MESSAGES = new Set([
  */
 export const OFFLINE_USER_MESSAGE = 'Offline — nothing syncs until you reconnect.';
 
+/** Student kiosk sign-in when the device is offline and badge lookup cannot reach the server. */
+export const STUDENT_OFFLINE_SIGNIN_MESSAGE =
+  'No internet. If you have signed in on this device before, enter your student ID again. Otherwise reconnect and try again.';
+
 /**
  * Normalize Firebase/network errors so users see actionable messages.
  */

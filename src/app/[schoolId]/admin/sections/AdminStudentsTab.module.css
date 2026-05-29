@@ -1,5 +1,9 @@
 @media (min-width: 640px) {
   .studentsListGrid {
+    display: grid;
     grid-template-columns: var(--students-list-cols);
+    column-gap: 0.25rem;
+    width: 100%;
+    align-items: center;
   }
 }

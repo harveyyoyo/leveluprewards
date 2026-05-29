@@ -1,6 +1,6 @@
 'use client';
 
-import { Edit, Palette, Plus, Tag, Trash2 } from 'lucide-react';
+import { Edit, Plus, Tag, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Helper } from '@/components/ui/helper';
@@ -16,7 +16,6 @@ export type AwardCategoriesPanelProps = {
   mode?: 'admin' | 'teacher';
   className?: string;
   isGraphic?: boolean;
-  onRandomizeColors?: () => void | Promise<void>;
   onAddCategory?: () => void;
   onEditCategory?: (category: Category) => void;
   onDeleteCategory?: (categoryId: string) => void;
@@ -32,7 +31,6 @@ export function AwardCategoriesPanel({
   mode = 'admin',
   className,
   isGraphic = false,
-  onRandomizeColors,
   onAddCategory,
   onEditCategory,
   onDeleteCategory,
@@ -72,15 +70,6 @@ export function AwardCategoriesPanel({
         </div>
         <div className="flex w-full shrink-0 flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
           {showWalkthrough ? <TabWalkthroughHeaderAction className="shrink-0" /> : null}
-          {isAdmin && onRandomizeColors ? (
-            <Button
-              variant="outline"
-              className="min-w-[11rem] flex-1 rounded-xl sm:flex-none"
-              onClick={() => void onRandomizeColors()}
-            >
-              <Palette className="mr-2 h-4 w-4" /> Randomize Colors
-            </Button>
-          ) : null}
           {canAdd ? (
             <Button onClick={onAddCategory} className="min-w-[9rem] flex-1 rounded-xl sm:flex-none">
               <Plus className="mr-2 h-4 w-4" /> Add Category

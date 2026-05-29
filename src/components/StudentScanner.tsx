@@ -18,7 +18,8 @@ import { cn } from '@/lib/utils';
 import { useFirestore, useFunctions, useUser } from '@/firebase';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { useFaceDescriptor } from '@/hooks/useFaceDescriptor';
-import { getReadableErrorMessage, OFFLINE_USER_MESSAGE } from '@/lib/errorMessage';
+import { getReadableErrorMessage, STUDENT_OFFLINE_SIGNIN_MESSAGE } from '@/lib/errorMessage';
+import { lookupStudentId } from '@/lib/db/lookup';
 import { scanMismatchAtStudentLogin } from '@/lib/scanMismatch';
 import { findLibraryItemByUpc } from '@/lib/libraryOperations';
 import { normalizeLibraryUpc } from '@/lib/libraryScanCode';
@@ -428,45 +429,8 @@ export function StudentScanner({
             }
         }
 
-        if (isStudentKioskUiContext(loginState, pathname, schoolId)) {
-            if (studentKioskSessionError) {
-                playSound('error');
-                toast({
-                    variant: 'destructive',
-                    title: 'Kiosk Not Ready',
-                    description: studentKioskSessionError,
-                });
-                setNfcId('');
-                return;
-            }
-            if (!studentKioskSessionEstablished) {
-                playSound('error');
-                toast({
-                    variant: 'destructive',
-                    title: 'Still Connecting',
-                    description: 'Wait a moment for this kiosk to finish connecting, then scan or enter the student ID again.',
-                });
-                setNfcId('');
-                return;
-            }
-        }
-
-        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-            playSound('error');
-            toast({
-                variant: 'destructive',
-                title: 'Offline',
-                description: OFFLINE_USER_MESSAGE,
-            });
-            setNfcId('');
-            return;
-        }
-
         const badgeId = rawId.trim();
-        const runLookup = () => {
-            const lookup = httpsCallable(functions, 'lookupStudentByBadge');
-            return lookup({ schoolId, badgeId });
-        };
+        const isOffline = typeof navigator !== 'undefined' && navigator.onLine === false;
 
         const acceptStudent = (finalStudentId: string) => {
             const throttle = getStudentSignInThrottleStatus(
@@ -490,12 +454,72 @@ export function StudentScanner({
             return true;
         };
 
+        const tryLocalBadgeLookup = async (): Promise<string | null> => {
+            const cached = getCachedStudentLookup(schoolId, badgeId);
+            if (cached) return cached;
+            if (!firestore) return null;
+            try {
+                const fromFirestore = await lookupStudentId(firestore, schoolId, badgeId);
+                if (fromFirestore) {
+                    cacheStudentLookup(schoolId, badgeId, fromFirestore);
+                }
+                return fromFirestore;
+            } catch {
+                return null;
+            }
+        };
+
         const cachedStudentId = getCachedStudentLookup(schoolId, badgeId);
         if (cachedStudentId) {
             acceptStudent(cachedStudentId);
             setNfcId('');
             return;
         }
+
+        if (isStudentKioskUiContext(loginState, pathname, schoolId)) {
+            if (studentKioskSessionError) {
+                playSound('error');
+                toast({
+                    variant: 'destructive',
+                    title: 'Kiosk Not Ready',
+                    description: studentKioskSessionError,
+                });
+                setNfcId('');
+                return;
+            }
+            if (!studentKioskSessionEstablished && !isOffline) {
+                playSound('error');
+                toast({
+                    variant: 'destructive',
+                    title: 'Still Connecting',
+                    description: 'Wait a moment for this kiosk to finish connecting, then scan or enter the student ID again.',
+                });
+                setNfcId('');
+                return;
+            }
+        }
+
+        if (isOffline) {
+            const localId = await tryLocalBadgeLookup();
+            if (localId) {
+                acceptStudent(localId);
+                setNfcId('');
+                return;
+            }
+            playSound('error');
+            toast({
+                variant: 'destructive',
+                title: 'Offline',
+                description: STUDENT_OFFLINE_SIGNIN_MESSAGE,
+            });
+            setNfcId('');
+            return;
+        }
+
+        const runLookup = () => {
+            const lookup = httpsCallable(functions, 'lookupStudentByBadge');
+            return lookup({ schoolId, badgeId });
+        };
 
         const onSuccess = (data: { studentId?: unknown }) => {
             const finalStudentId = typeof data.studentId === 'string' ? data.studentId : null;
@@ -527,6 +551,13 @@ export function StudentScanner({
             const res = await runLookup();
             onSuccess(res.data as { studentId?: unknown });
         } catch (error) {
+            const localId = await tryLocalBadgeLookup();
+            if (localId) {
+                acceptStudent(localId);
+                setNfcId('');
+                return;
+            }
+
             const failure = getStudentLookupFailure(error, user, isUserLoading);
             // Any signed-in role can hit this if `kioskMembers` was never written (e.g. admin testing `/student`
             // without a prior student session). `enterSchoolKioskSession` registers the current UID for lookups.

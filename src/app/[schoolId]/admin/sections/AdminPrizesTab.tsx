@@ -21,6 +21,13 @@ import { prizeScanCodeFor } from '@/lib/prizeScanCode';
 import { useToast } from '@/hooks/use-toast';
 import { AutoCircularToggles } from '@/components/AutoCircularToggles';
 import { AdminRecordListHeader } from '@/components/admin/AdminRecordListHeader';
+import { AdminRecordListScroll } from '@/components/admin/AdminRecordListScroll';
+import {
+  PRIZES_LIST_GRID_COLS,
+  adminRecordListGridCompactGapClassName,
+  adminRecordListGridClassName,
+  adminRecordListGridStyle,
+} from '@/components/admin/adminRecordListGrid';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -75,8 +82,7 @@ export function AdminPrizesTab({
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardStep, setWizardStep] = useState(0);
 
-  const PRIZE_LIST_GRID =
-    'grid-cols-[40px_minmax(148px,168px)_minmax(140px,240px)_56px_72px_200px_44px_72px_72px_64px_96px]';
+  const prizeListGridStyle = adminRecordListGridStyle(PRIZES_LIST_GRID_COLS);
 
   const tablePrizes = useMemo(
     () => (prizes || []).filter((p) => !isAiSurpriseHiddenFromAdminGrid(p)),
@@ -229,8 +235,8 @@ export function AdminPrizesTab({
   }, [firestore, schoolId, tablePrizes, toast]);
 
   return (
-    <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden">
-      <CardHeader className="flex flex-row justify-between items-center py-6">
+    <Card className="w-full min-w-0 border-t-4 border-primary shadow-md">
+      <CardHeader className="flex flex-row flex-wrap justify-between items-center gap-3 py-4 px-4 sm:px-5">
         <Helper content="Items students redeem with points in the rewards shop. Set cost, stock, shop visibility, teacher or class access, vending motor, and print card options per item.">
           <CardTitle className="flex items-center gap-2">
             <Gift className="text-primary w-5 h-5" /> Rewards Shop
@@ -275,7 +281,7 @@ export function AdminPrizesTab({
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="min-w-0">
+      <CardContent className="min-w-0 overflow-visible px-3 pb-4 pt-0 sm:px-4">
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <Button
             type="button"
@@ -314,21 +320,21 @@ export function AdminPrizesTab({
             </Button>
           </div>
         ) : null}
-        <ul className="grid grid-cols-1 gap-4 min-w-0 overflow-x-hidden pr-2">
+        <AdminRecordListScroll>
+        <ul className="flex w-full min-w-0 flex-col gap-1.5">
           <AdminRecordListHeader
-            gridClassName={PRIZE_LIST_GRID}
+            gridColumns={PRIZES_LIST_GRID_COLS}
             columns={[
-              { label: 'Select', className: 'text-center' },
-              { label: 'Actions' },
-              { label: 'Item Name' },
-              { label: 'Cost', className: 'text-center' },
-              { label: 'Stock', className: 'text-center' },
-              { label: 'Shop Visibility', className: 'text-center' },
-              { label: 'Icon', className: 'text-center' },
-              { label: mode === 'teacher' ? 'School-Wide' : 'Teachers', className: 'text-center' },
-              { label: 'Class Access', className: 'text-center' },
-              { label: 'Motor', className: 'text-center' },
-              { label: 'Delete', className: 'text-right pr-1' },
+              { label: 'Sel', className: 'text-center' },
+              { label: 'Act' },
+              { label: 'Item' },
+              { label: 'Pts', className: 'text-center' },
+              { label: 'Qty', className: 'text-center' },
+              { label: 'Vis', className: 'text-center' },
+              { label: mode === 'teacher' ? 'All' : 'Tch', className: 'text-center' },
+              { label: 'Cls', className: 'text-center' },
+              { label: 'Mot', className: 'text-center' },
+              { label: 'Del', className: 'text-right' },
             ]}
           />
           {prizeListItems.map((item) =>
@@ -336,7 +342,7 @@ export function AdminPrizesTab({
               <li
                 key={item.id}
                 className={cn(
-                  'list-none w-full rounded-xl border border-dashed border-muted-foreground/30 bg-muted/25 px-4 py-3',
+                  'list-none w-full shrink-0 rounded-xl border border-dashed border-muted-foreground/30 bg-muted/25 px-4 py-3',
                   item.id === 'school-wide' && 'mt-2',
                 )}
                 role="presentation"
@@ -386,11 +392,13 @@ export function AdminPrizesTab({
                   <li
                     key={p.id}
                     className={cn(
-                      'grid items-center gap-x-2 rounded-2xl border bg-secondary/30 p-1.5 transition-all hover:bg-background group min-w-0',
-                      PRIZE_LIST_GRID,
+                      'items-center rounded-xl border bg-secondary/30 px-1 py-0.5 transition-all hover:bg-background group',
+                      adminRecordListGridCompactGapClassName,
+                      adminRecordListGridClassName,
                       selectedPrizeIds.has(p.id) && 'border-ring/45 bg-secondary',
                       rowDimmed && 'opacity-60',
                     )}
+                    style={prizeListGridStyle}
                   >
                     <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
                       <Checkbox
@@ -401,31 +409,31 @@ export function AdminPrizesTab({
                       />
                     </div>
                     {/* Edit + print */}
-                    <div className="flex flex-col gap-1 sm:flex-row sm:items-center">
+                    <div className="flex items-center justify-center gap-0.5">
                       {onEditPrize ? (
                         <Button
                           type="button"
                           variant="outline"
-                          size="sm"
-                          className="h-8 gap-1.5 rounded-lg border-primary/20 bg-background hover:bg-primary/5 text-primary font-semibold"
+                          size="icon"
+                          className="h-7 w-7 shrink-0 rounded-md border-primary/20 bg-background hover:bg-primary/5 text-primary"
                           disabled={!canEditFull}
+                          title="Edit"
+                          aria-label="Edit"
                           onClick={() => onEditPrize(p)}
                         >
-                          <Edit3 className="w-3.5 h-3.5" />
-                          Edit
+                          <Edit3 className="h-3.5 w-3.5" />
                         </Button>
                       ) : null}
                       <Button
                         type="button"
                         variant="outline"
-                        size="sm"
-                        className="h-8 gap-1 rounded-lg font-semibold"
-                        title="Print this prize card"
+                        size="icon"
+                        className="h-7 w-7 shrink-0 rounded-md"
+                        title="Print card"
                         aria-label={`Print card for ${p.name}`}
                         onClick={() => handlePrintOnePrizeCard(p)}
                       >
-                        <Printer className="w-3.5 h-3.5 shrink-0" />
-                        Print
+                        <Printer className="h-3.5 w-3.5 shrink-0" />
                       </Button>
                     </div>
 
@@ -433,7 +441,7 @@ export function AdminPrizesTab({
                     <div className="min-w-0 flex items-center gap-2">
                       <div
                         className={cn(
-                          'size-8 shrink-0 rounded-lg flex items-center justify-center bg-background border-2 relative overflow-hidden',
+                          'size-7 shrink-0 rounded-md flex items-center justify-center bg-background border relative overflow-hidden',
                           !p.inStock && 'opacity-40 grayscale',
                         )}
                         style={p.cardColor ? { borderColor: p.cardColor, backgroundColor: `${p.cardColor}22` } : undefined}
@@ -516,25 +524,21 @@ export function AdminPrizesTab({
                       <AutoCircularToggles
                         record={p}
                         defs={[
-                          { key: 'inStock', label: 'In Stock', shortLabel: 'In stock' },
-                          { key: 'offerPrintTicketOnRedeem', label: 'Offer print voucher', shortLabel: 'Print' }
+                          { key: 'inStock', label: 'In Stock', shortLabel: 'Stk' },
+                          { key: 'offerPrintTicketOnRedeem', label: 'Offer print voucher', shortLabel: 'Vch' },
                         ]}
                         wrap={false}
+                        toggleButtonClassName="h-6 w-6 sm:h-6 sm:w-6 text-[8px]"
                         onToggle={(key, val) => {
                           onUpdatePrize({ ...p, [key]: val });
                         }}
                       />
                     </div>
 
-                    {/* 6. Icon */}
-                    <div className="flex justify-center">
-                      <DynamicIcon name={p.icon || 'Gift'} className="w-5 h-5 text-muted-foreground/60" />
-                    </div>
-
-                    {/* 7. Teachers */}
+                    {/* 6. Teachers */}
                     <div className="flex flex-col gap-0.5">
                       {mode === 'teacher' ? (
-                        <div className="flex items-center justify-center h-8 rounded-md border bg-background">
+                        <div className="flex items-center justify-center h-7 rounded-md border bg-background">
                           <Switch
                             checked={schoolWideT}
                             disabled={!canEditFull}
@@ -554,7 +558,7 @@ export function AdminPrizesTab({
                             <Button
                               type="button"
                               variant="outline"
-                              className="h-8 w-full min-h-8 text-[10px] px-1 font-semibold"
+                              className="h-7 w-full min-h-7 text-[9px] px-0.5 font-semibold"
                               disabled={!canEditFull}
                             >
                               {restrictionIds.length === 0 ? 'All' : `${restrictionIds.length}`}
@@ -602,14 +606,14 @@ export function AdminPrizesTab({
                       )}
                     </div>
 
-                    {/* 8. Class */}
+                    {/* 7. Class */}
                     <div className="flex flex-col gap-0.5">
                       <Select
                         value={p.classId || 'all'}
                         disabled={!canEditFull}
                         onValueChange={(v) => onUpdatePrize({ ...p, classId: v === 'all' ? undefined : v })}
                       >
-                        <SelectTrigger className="h-8 min-h-8 text-[10px] px-1 w-full">
+                        <SelectTrigger className="h-7 min-h-7 text-[9px] px-0.5 w-full min-w-0">
                           <SelectValue placeholder="All" />
                         </SelectTrigger>
                         <SelectContent>
@@ -621,7 +625,7 @@ export function AdminPrizesTab({
                       </Select>
                     </div>
 
-                    {/* 9. Vending */}
+                    {/* 8. Vending */}
                     <div className="flex justify-center">
                       {vendingEnabled ? (
                         <Popover>
@@ -681,8 +685,8 @@ export function AdminPrizesTab({
                       ) : <div />}
                     </div>
 
-                    {/* 10. Delete/Remove */}
-                    <div className="flex items-center justify-end gap-0.5 pr-1">
+                    {/* 9. Delete/Remove */}
+                    <div className="flex items-center justify-end gap-0">
                       {canRemoveSelf && teacherId ? (
                         <Button
                           type="button"
@@ -718,6 +722,7 @@ export function AdminPrizesTab({
             ),
           )}
         </ul>
+        </AdminRecordListScroll>
       </CardContent>
       <Dialog open={wizardOpen} onOpenChange={(open) => { setWizardOpen(open); if (!open) resetWizard(); }}>
         <DialogContent>

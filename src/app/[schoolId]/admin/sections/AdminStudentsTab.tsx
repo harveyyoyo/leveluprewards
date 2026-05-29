@@ -51,6 +51,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Helper } from "@/components/ui/helper";
 import { AdminRecordListHeader } from "@/components/admin/AdminRecordListHeader";
+import { AdminRecordListScroll } from "@/components/admin/AdminRecordListScroll";
+import {
+  studentsListGridColumns,
+  adminRecordListGridCompactGapClassName,
+} from "@/components/admin/adminRecordListGrid";
 import { StudentBulkActionsMenu } from "@/components/admin/StudentBulkActionsMenu";
 import { StudentPointsTypeButton } from "@/components/admin/StudentPointsTypeButton";
 import { TabWalkthroughHeaderAction } from "@/components/tabWalkthrough/TabWalkthroughContext";
@@ -355,15 +360,17 @@ export function AdminStudentsTab({
     "Purge",
     "Delete",
   ];
-  const studentsListGridCols = `44px 44px minmax(260px, 1fr) repeat(${studentActionHeaderLabels.length}, minmax(2.25rem, auto))`;
+  const studentsListGridCols = studentsListGridColumns(
+    studentActionHeaderLabels.length,
+  );
   const studentsListGridStyle = {
     ["--students-list-cols" as string]: studentsListGridCols,
   } as CSSProperties;
   const hasBulkSelection = selectedStudentIds.size > 0;
   return (
     <>
-      <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden">
-        <CardHeader className="bg-secondary flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 py-8">
+      <Card className="w-full min-w-0 border-t-4 border-primary shadow-md">
+        <CardHeader className="bg-secondary flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 py-4 px-4 sm:px-5">
           <Helper content="Manage your enrollments, view student activity, and print ID cards. Points are awarded from the Teacher Portal.">
             <CardTitle className="text-2xl flex items-center gap-2 text-secondary-foreground">
               <Users className="text-ring w-6 h-6" /> Students
@@ -438,7 +445,7 @@ export function AdminStudentsTab({
             </div>
           </div>
         </CardHeader>
-        <CardContent className="p-6">
+        <CardContent className="min-w-0 px-3 pb-4 sm:px-4">
           <div className="mb-6 space-y-3">
             <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
               <div className="relative min-w-0 flex-1">
@@ -519,8 +526,8 @@ export function AdminStudentsTab({
           </div>
 
 
-          <div className="w-full overflow-x-auto">
-            <ul className="flex flex-col gap-1.5 pr-4">
+          <AdminRecordListScroll>
+            <ul className="flex w-full min-w-0 flex-col gap-1.5">
               {filteredStudents.length === 0 ? (
                 <li className="mb-2 rounded-xl border bg-secondary/60 p-4 text-sm text-muted-foreground">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -561,11 +568,7 @@ export function AdminStudentsTab({
               ) : null}
               {filteredStudents.length > 0 ? (
                 <AdminRecordListHeader
-                  gridClassName={cn(
-                    styles.studentsListGrid,
-                    "max-sm:grid-cols-1",
-                  )}
-                  style={studentsListGridStyle}
+                  gridColumns={studentsListGridCols}
                   columns={[
                     {
                       id: "hdr-select",
@@ -604,8 +607,9 @@ export function AdminStudentsTab({
                   <li
                     key={s.id}
                     className={cn(
-                      "flex flex-wrap items-center gap-3 py-2 px-3 rounded-xl border transition-all min-w-0 sm:grid sm:flex-nowrap sm:items-center",
+                      "flex flex-wrap items-center gap-2 py-1.5 px-2 rounded-xl border transition-all sm:grid sm:flex-nowrap sm:items-center",
                       styles.studentsListGrid,
+                      adminRecordListGridCompactGapClassName,
                       "cursor-pointer",
                       selectedStudentIds.has(s.id)
                         ? "bg-secondary border-ring/45 hover:bg-secondary"
@@ -845,7 +849,7 @@ export function AdminStudentsTab({
                 );
               })}
             </ul>
-          </div>
+          </AdminRecordListScroll>
         </CardContent>
       </Card>
       <AlertDialog

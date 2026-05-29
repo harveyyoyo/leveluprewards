@@ -23,6 +23,14 @@ import { cn, getStudentNickname } from '@/lib/utils';
 import { obfuscateField, deobfuscateField } from '@/lib/crypto';
 import type { Class, StaffAccount, StaffAccountRole, Student, Teacher } from '@/lib/types';
 import { AdminRecordListHeader } from '@/components/admin/AdminRecordListHeader';
+import { AdminRecordListScroll } from '@/components/admin/AdminRecordListScroll';
+import {
+  DESK_STAFF_LIST_GRID_COLS,
+  TEACHERS_LIST_GRID_COLS,
+  adminRecordListGridCompactGapClassName,
+  adminRecordListGridClassName,
+  adminRecordListGridStyle,
+} from '@/components/admin/adminRecordListGrid';
 import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 
 function staffRoleLabel(role: StaffAccountRole) {
@@ -52,11 +60,6 @@ function studentSortKey(a: Student, b: Student) {
 function studentRowLabel(s: Student) {
   return `${getStudentNickname(s)} ${s.lastName}`.trim();
 }
-
-/** Fluid columns so side-tab layout can use full width; minmax(0, fr) avoids grid overflow clipping. */
-const TEACHERS_LIST_GRID =
-  'grid-cols-[76px_minmax(8rem,1fr)_minmax(11rem,1.5fr)_104px_104px_88px_48px]';
-const DESK_STAFF_LIST_GRID = 'grid-cols-[76px_minmax(8rem,1fr)_minmax(11rem,1.5fr)_88px_48px]';
 
 export function AdminTeachersTab({
   teachers,
@@ -103,6 +106,8 @@ export function AdminTeachersTab({
   const [expandedClassesTeacherId, setExpandedClassesTeacherId] = useState('');
   const [expandedStudentsTeacherId, setExpandedStudentsTeacherId] = useState('');
 
+  const teachersListGridStyle = adminRecordListGridStyle(TEACHERS_LIST_GRID_COLS);
+  const deskStaffListGridStyle = adminRecordListGridStyle(DESK_STAFF_LIST_GRID_COLS);
 
   useEffect(() => {
     setOrigin(window.location.origin);
@@ -165,13 +170,13 @@ export function AdminTeachersTab({
     <Button
       type="button"
       variant="outline"
-      size="sm"
-      className="h-8 shrink-0 gap-1"
-      title="Copy personal sign-in link"
+      size="icon"
+      className="h-7 w-7 shrink-0 rounded-md"
+      title={copiedKey === key ? 'Copied' : 'Copy personal sign-in link'}
+      aria-label={copiedKey === key ? 'Copied link' : 'Copy sign-in link'}
       onClick={() => void copyStaffPortalUrl(key)}
     >
       <Copy className="h-3.5 w-3.5" />
-      {copiedKey === key ? 'Copied' : 'Link'}
     </Button>
   );
 
@@ -243,8 +248,8 @@ export function AdminTeachersTab({
   };
 
   return (
-    <Card className="w-full border-t-4 border-primary shadow-md">
-      <CardHeader className="flex flex-row justify-between items-center py-6">
+    <Card className="w-full min-w-0 border-t-4 border-primary shadow-md">
+      <CardHeader className="flex flex-row flex-wrap justify-between items-center gap-3 py-4 px-4 sm:px-5">
         <div>
           <Helper content="Full classroom staff who can print coupons and award points. Desk staff get limited coupon, prize, library, houses, office, or reports access. Expand Classes or Students on a row to manage scope.">
             <CardTitle className="flex items-center gap-2">
@@ -262,21 +267,20 @@ export function AdminTeachersTab({
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="space-y-8">
+      <CardContent className="min-w-0 space-y-6 px-3 pb-4 sm:px-4">
         <section className="space-y-3">
-          <div className="w-full min-w-0 overflow-x-auto scroll-px-4 [-webkit-overflow-scrolling:touch]">
-          <ul className="w-full space-y-2">
+          <AdminRecordListScroll>
+          <ul className="space-y-2">
             {teachers && teachers.length > 0 ? (
               <AdminRecordListHeader
-                gridClassName={TEACHERS_LIST_GRID}
+                gridColumns={TEACHERS_LIST_GRID_COLS}
                 columns={[
                   { label: 'Edit' },
-                  { label: 'Teacher Name' },
-                  { label: 'Login Username & Passcode' },
-                  { label: 'Classes', className: 'text-center' },
-                  { label: 'Students', className: 'text-center' },
-                  { label: 'Copy Link', className: 'text-center' },
-                  { label: 'Delete', className: 'text-right' },
+                  { label: 'Name' },
+                  { label: 'Login' },
+                  { label: 'Cls', className: 'text-center' },
+                  { label: 'Std', className: 'text-center' },
+                  { label: 'Act', className: 'text-right' },
                 ]}
               />
             ) : null}
@@ -288,38 +292,48 @@ export function AdminTeachersTab({
                 key={t.id}
                 className="rounded-2xl border bg-secondary/20 transition-colors hover:border-purple-200"
               >
-                <div className={cn('grid w-full items-center gap-3 px-3 py-2', TEACHERS_LIST_GRID)}>
+                <div
+                  className={cn(
+                    'items-center px-2 py-1.5',
+                    adminRecordListGridClassName,
+                    adminRecordListGridCompactGapClassName,
+                  )}
+                  style={teachersListGridStyle}
+                >
                   <div className="flex items-center">
                     <Button
                       variant="outline"
-                      size="sm"
-                      className="h-8 gap-1.5 rounded-lg border-primary/20 bg-background hover:bg-primary/5 text-primary font-semibold"
+                      size="icon"
+                      className="h-7 w-7 rounded-md border-primary/20 bg-background hover:bg-primary/5 text-primary"
                       onClick={() => onEditTeacher(t)}
                       title="Edit teacher"
+                      aria-label="Edit teacher"
                     >
                       <Edit className="h-3.5 w-3.5" />
-                      Edit
                     </Button>
                   </div>
                   <div className="truncate text-sm font-bold">{t.name}</div>
-                  <div className="truncate text-xs text-muted-foreground">
-                    <span>User: <span className="font-code text-foreground">{t.username}</span></span>
-                    <span className="px-1 text-border">|</span>
-                    <span>Pass: <span className="font-code text-foreground">{t.passcode}</span></span>
+                  <div
+                    className="truncate text-[10px] text-muted-foreground"
+                    title={`User: ${t.username} · Pass: ${t.passcode}`}
+                  >
+                    <span className="font-code text-foreground">{t.username}</span>
+                    <span className="px-0.5 text-border">·</span>
+                    <span className="font-code text-foreground">{t.passcode}</span>
                   </div>
                   <div className="flex items-center justify-center">
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      className="h-8 w-full justify-between gap-1 rounded-lg px-2 text-xs font-semibold"
+                      className="h-7 w-full min-w-0 justify-between gap-0.5 rounded-md px-1 text-[10px] font-semibold"
                       onClick={() => {
                         setExpandedClassesTeacherId((current) => (current === t.id ? '' : t.id));
                         setExpandedStudentsTeacherId('');
                       }}
                       title="Manage classes"
                     >
-                      <span className="truncate">Classes ({managedClasses.length})</span>
+                      <span className="truncate">{managedClasses.length}</span>
                       <ChevronDown
                         className={cn(
                           'h-3.5 w-3.5 shrink-0 transition-transform',
@@ -333,14 +347,14 @@ export function AdminTeachersTab({
                       type="button"
                       variant="outline"
                       size="sm"
-                      className="h-8 w-full justify-between gap-1 rounded-lg px-2 text-xs font-semibold"
+                      className="h-7 w-full min-w-0 justify-between gap-0.5 rounded-md px-1 text-[10px] font-semibold"
                       onClick={() => {
                         setExpandedStudentsTeacherId((current) => (current === t.id ? '' : t.id));
                         setExpandedClassesTeacherId('');
                       }}
                       title="Manage linked students"
                     >
-                      <span className="truncate">Students ({rows.length})</span>
+                      <span className="truncate">{rows.length}</span>
                       <ChevronDown
                         className={cn(
                           'h-3.5 w-3.5 shrink-0 transition-transform',
@@ -349,17 +363,17 @@ export function AdminTeachersTab({
                       />
                     </Button>
                   </div>
-                  <div className="flex items-center justify-center">
+                  <div className="flex items-center justify-end gap-0.5">
                     {renderCopyLinkButton(teacherPortalKey(t))}
-                  </div>
-                  <div className="flex items-center justify-end">
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                      className="h-7 w-7 shrink-0 text-destructive hover:bg-destructive/10"
                       onClick={() => onDeleteTeacher(t.id)}
+                      title="Delete teacher"
+                      aria-label="Delete teacher"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>
                 </div>
@@ -570,24 +584,23 @@ export function AdminTeachersTab({
             />
           )}
           </ul>
-          </div>
+          </AdminRecordListScroll>
         </section>
 
         <section className="space-y-3">
           <Helper content="Limited accounts for coupon sheets, prize redemption, houses, office, library, or reports.">
             <h3 className="font-bold">Desk staff</h3>
           </Helper>
-          <div className="w-full min-w-0 overflow-x-auto scroll-px-4 [-webkit-overflow-scrolling:touch]">
-          <ul className="w-full space-y-2">
+          <AdminRecordListScroll>
+          <ul className="space-y-2">
             {staffAccounts && staffAccounts.length > 0 ? (
               <AdminRecordListHeader
-                gridClassName={DESK_STAFF_LIST_GRID}
+                gridColumns={DESK_STAFF_LIST_GRID_COLS}
                 columns={[
                   { label: 'Edit' },
-                  { label: 'Staff Name' },
-                  { label: 'Role, Username & Passcode' },
-                  { label: 'Copy Link', className: 'text-center' },
-                  { label: 'Delete', className: 'text-right' },
+                  { label: 'Name' },
+                  { label: 'Login' },
+                  { label: 'Act', className: 'text-right' },
                 ]}
               />
             ) : null}
@@ -595,20 +608,22 @@ export function AdminTeachersTab({
               <li
                 key={account.id}
                 className={cn(
-                  'grid w-full items-center gap-3 rounded-xl border bg-secondary/20 px-3 py-2 transition-colors hover:border-primary/30',
-                  DESK_STAFF_LIST_GRID,
+                  'items-center rounded-xl border bg-secondary/20 px-2 py-1.5 transition-colors hover:border-primary/30',
+                  adminRecordListGridCompactGapClassName,
+                  adminRecordListGridClassName,
                 )}
+                style={deskStaffListGridStyle}
               >
                 <div className="flex items-center">
                   <Button
                     variant="outline"
-                    size="sm"
-                    className="h-8 gap-1.5 rounded-lg border-primary/20 bg-background hover:bg-primary/5 text-primary font-semibold"
+                    size="icon"
+                    className="h-7 w-7 rounded-md border-primary/20 bg-background hover:bg-primary/5 text-primary"
                     onClick={() => openEditDeskStaff(account)}
                     title="Edit staff"
+                    aria-label="Edit staff"
                   >
                     <Edit className="h-3.5 w-3.5" />
-                    Edit
                   </Button>
                 </div>
                 <div className="flex min-w-0 items-center gap-3">
@@ -617,24 +632,27 @@ export function AdminTeachersTab({
                   </div>
                   <span className="truncate text-sm font-bold">{account.displayName}</span>
                 </div>
-                <div className="truncate text-xs text-muted-foreground">
-                  <span>{(account.roles?.length ? account.roles : [account.role]).map(staffRoleLabel).join(', ')}</span>
-                  <span className="px-1 text-border">|</span>
-                  <span>User: <span className="font-code text-foreground">{account.username}</span></span>
-                  <span className="px-1 text-border">|</span>
-                  <span>Pass: <span className="font-code text-foreground">{account.passcode}</span></span>
+                <div
+                  className="truncate text-[10px] text-muted-foreground"
+                  title={`${(account.roles?.length ? account.roles : [account.role]).map(staffRoleLabel).join(', ')} · ${account.username} · ${account.passcode}`}
+                >
+                  <span className="truncate">{(account.roles?.length ? account.roles : [account.role]).map(staffRoleLabel).join(', ')}</span>
+                  <span className="px-0.5 text-border">·</span>
+                  <span className="font-code text-foreground">{account.username}</span>
+                  <span className="px-0.5 text-border">·</span>
+                  <span className="font-code text-foreground">{account.passcode}</span>
                 </div>
-                <div className="flex items-center justify-center">
+                <div className="flex items-center justify-end gap-0.5">
                   {renderCopyLinkButton(`${account.role}:${account.id}`)}
-                </div>
-                <div className="flex items-center justify-end">
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                    className="h-7 w-7 shrink-0 text-destructive hover:bg-destructive/10"
                     onClick={() => void onDeleteStaffAccount(account.id)}
+                    title="Delete staff"
+                    aria-label="Delete staff"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </div>
               </li>
@@ -649,7 +667,7 @@ export function AdminTeachersTab({
               />
             )}
           </ul>
-          </div>
+          </AdminRecordListScroll>
         </section>
 
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

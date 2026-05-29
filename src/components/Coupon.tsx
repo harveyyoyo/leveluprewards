@@ -1,15 +1,61 @@
 'use client';
 
+import { useLayoutEffect, useRef, useState } from 'react';
 import type { Coupon } from '@/lib/types';
 import { couponRedemptionLabelForPrint } from '@/lib/couponRedemptionRules';
 import { useSettings } from './providers/SettingsProvider';
 import { cn } from '@/lib/utils';
 import { APP_NAME } from '@/lib/appBranding';
+import { useSchoolDisplayName } from '@/hooks/useSchoolDisplayName';
+
+function CouponTitle({ text, compact }: { text: string; compact: boolean }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const textRef = useRef<HTMLSpanElement>(null);
+  const [scale, setScale] = useState(1);
+
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    const label = textRef.current;
+    if (!container || !label) return;
+
+    setScale(1);
+    const fit = () => {
+      const available = container.clientWidth;
+      const needed = label.scrollWidth;
+      if (available > 0 && needed > available) {
+        setScale(Math.max(0.62, available / needed));
+      }
+    };
+
+    fit();
+    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(fit) : null;
+    observer?.observe(container);
+    return () => observer?.disconnect();
+  }, [text, compact]);
+
+  return (
+    <div
+      ref={containerRef}
+      className={cn(
+        'coupon-title w-full max-w-full shrink-0 overflow-hidden text-center',
+        compact ? 'mb-[0.04em] text-[0.5em]' : 'mb-[0.08em] text-[0.5625em]',
+      )}
+    >
+      <span
+        ref={textRef}
+        className="inline-block whitespace-nowrap font-bold uppercase leading-none tracking-[0.04em]"
+        style={scale < 1 ? { transform: `scale(${scale})`, transformOrigin: 'top center' } : undefined}
+      >
+        {text}
+      </span>
+    </div>
+  );
+}
 
 export function Coupon({ coupon, schoolId, isNew = false }: { coupon: Coupon, schoolId?: string | null, isNew?: boolean }) {
   const { settings } = useSettings();
-  const schoolName = schoolId ? schoolId.replace(/_/g, ' ') : null;
-  const title = schoolName ? `${APP_NAME} - ${schoolName}` : APP_NAME;
+  const schoolDisplayName = useSchoolDisplayName(schoolId);
+  const title = schoolDisplayName ? `${APP_NAME} - ${schoolDisplayName}` : APP_NAME;
 
   const isColored = settings.enableColorPrinting && coupon.color;
   const redemptionLabel = couponRedemptionLabelForPrint(coupon);
@@ -33,9 +79,7 @@ export function Coupon({ coupon, schoolId, isNew = false }: { coupon: Coupon, sc
           NEW
         </div>
       )}
-      <div className={cn('coupon-title font-bold uppercase tracking-[0.18em] mb-[0.08em] leading-tight', hasLimitLine ? 'text-[0.5em]' : 'text-[0.5625em]')}>
-        {title}
-      </div>
+      <CouponTitle text={title} compact={hasLimitLine} />
       <div className={cn("coupon-main w-full flex items-center justify-center gap-[0.45em] border-y shrink-0", hasLimitLine ? 'py-[0.08em]' : 'py-[0.125em]', isColored ? 'border-[currentColor]/30' : 'border-slate-200')}>
         <div className="flex flex-col items-center leading-none">
           <span className="text-[1.125em] font-black text-black leading-none">{coupon.value}</span>

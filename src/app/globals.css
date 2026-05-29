@@ -2007,6 +2007,16 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
     margin-bottom: 0 !important;
   }
 
+  .print-coupon-wrapper .coupon-title,
+  .coupon-preview-container .coupon-title,
+  .coupon-print-match-wrapper .coupon-title {
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    letter-spacing: 0.04em !important;
+  }
+
   .coupon-print-page--30 .print-coupon-wrapper .coupon-main {
     padding-top: 0.04em !important;
     padding-bottom: 0.04em !important;
@@ -2062,7 +2072,8 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
   .student-id-print-page {
     display: grid !important;
     grid-template-columns: repeat(2, 3.33in) !important;
-    grid-template-rows: repeat(4, 2.33in) !important;
+    /* Slightly tighter rows than 2.33in Avery default — small step only. */
+    grid-template-rows: repeat(4, 2.28in) !important;
     column-gap: 0.16in !important;
     row-gap: 0 !important;
     width: 8.5in !important;
@@ -2078,13 +2089,6 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
     page-break-inside: avoid;
   }
 
-  /* Slight shrink so card borders/rounding don't bleed past label die-cuts (top/bottom). */
-  body.id-card-printing #student-id-print-wrapper .student-id-print-page .print-id-card {
-    width: 97% !important;
-    max-width: 97% !important;
-    max-height: 97% !important;
-  }
-  
   .student-id-print-page:last-child {
     page-break-after: auto;
   }
@@ -2226,6 +2230,20 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
     position: relative;
     border-radius: 12px !important;
     overflow: hidden !important;
+  }
+
+  /* After .print-id-card { width:100% } — shrink inside Avery 25395 die-cuts (borders + radius). */
+  body.id-card-printing #student-id-print-wrapper .student-id-print-page .print-id-card {
+    width: 91% !important;
+    max-width: 91% !important;
+    max-height: 91% !important;
+    padding: 10px 12px !important;
+  }
+
+  body.id-card-printing #student-id-print-wrapper .student-id-print-page .print-prize-id-card.print-id-card {
+    width: 90% !important;
+    max-width: 90% !important;
+    max-height: 90% !important;
   }
 
   .print-id-card--rectangular {

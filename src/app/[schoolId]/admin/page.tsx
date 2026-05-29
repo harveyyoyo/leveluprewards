@@ -67,7 +67,7 @@ import {
 import { StudentActivityModal } from '@/components/StudentActivityModal';
 import DynamicIcon from '@/components/DynamicIcon';
 import { Switch } from '@/components/ui/switch';
-import { cn, getStudentNickname, getRandomColor } from '@/lib/utils';
+import { cn, getStudentNickname } from '@/lib/utils';
 import { obfuscateField, deobfuscateField } from '@/lib/crypto';
 import {
   Tooltip,
@@ -99,7 +99,7 @@ import { StudentIdCard } from '@/components/StudentIdCard';
 import { IdCardPrintSetupDialog } from '@/components/admin/IdCardPrintSetupDialog';
 import { AdminMainTabsList } from '@/components/admin/AdminMainTabsList';
 import {
-  staffPortalContentMaxWidthClass,
+  staffPortalShellClassName,
   staffPortalTabTriggerClassName,
 } from '@/components/staff/staffPortalNavStyles';
 import { staffPortalAdminAddOnIsOn, staffPortalCoreTabs } from '@/lib/staffPortal';
@@ -284,7 +284,8 @@ function describeSnapshotImport(result: SchoolSnapshotImportResult): {
   return { title, description, variant };
 }
 
-const fittedAdminTabClassName = 'transition-opacity duration-150 h-full min-h-0 w-full overflow-y-auto overflow-x-auto pb-6';
+const fittedAdminTabClassName =
+  'transition-opacity duration-150 mt-0 w-full min-w-0 flex-col pb-6 focus-visible:outline-none';
 const scrollingAdminTabClassName = fittedAdminTabClassName;
 
 /** Mirrors the loaded admin shell: page header, tab row, default Students roster. */
@@ -1563,8 +1564,7 @@ function AdminDashboardInner() {
     <TooltipProvider>
       <div
         className={cn(
-          'mx-auto flex h-full min-h-0 min-w-0 w-full flex-col gap-6 p-4 md:p-8',
-          staffPortalContentMaxWidthClass(adminNavSidebar),
+          staffPortalShellClassName(adminNavSidebar),
           adminPerTabColors && 'transition-[color,background-color] duration-300',
         )}
         style={adminTabAppearance.style}
@@ -1660,14 +1660,22 @@ function AdminDashboardInner() {
           />
         ) : null}
 
-        <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col">
+        <div
+          className={cn(
+            'flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-visible',
+            adminNavSidebar &&
+              'w-full rounded-xl border border-border/70 bg-card shadow-sm',
+          )}
+        >
           <Tabs
             key={`admin-tabs-${schoolId ?? 'unknown'}`}
             value={activeMainTab}
             onValueChange={setActiveMainTab}
             className={cn(
-              'flex min-h-0 min-w-0 w-full flex-1 gap-6',
-              adminNavSidebar ? 'flex-col lg:flex-row lg:items-start' : 'flex-col',
+              'flex min-h-0 min-w-0 w-full flex-1 gap-3',
+              adminNavSidebar
+                ? 'flex-col p-1.5 sm:p-2 lg:flex-row lg:items-stretch lg:gap-3'
+                : 'flex-col gap-4 p-4 md:gap-6 md:p-6',
             )}
           >
           <div
@@ -1884,7 +1892,7 @@ function AdminDashboardInner() {
           </div>
 
           <TabWalkthroughProvider scope="admin" tabId={activeMainTab}>
-          <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col">
+          <div className="w-full min-w-0 flex-1">
           <TabsContent value="students" className={fittedAdminTabClassName}>
             <AdminStudentsTab
               schoolId={schoolId!}
@@ -2099,24 +2107,6 @@ function AdminDashboardInner() {
               classes={classes}
               students={students}
               schoolId={schoolId!}
-              onRandomizeColors={async () => {
-                const ok = await confirm({
-                  title: 'Randomize category colors?',
-                  description: 'Every existing category will get a new random color. You can always change each one manually after.',
-                  confirmLabel: 'Randomize',
-                });
-                if (!ok) return;
-                try {
-                  let count = 0;
-                  for (const c of categories || []) {
-                    await updateCategory({ ...c, color: getRandomColor() });
-                    count++;
-                  }
-                  toast({ title: "Colors Randomized", description: `Updated ${count} categories.` });
-                } catch (e) {
-                  toast({ variant: "destructive", title: "Failed to randomize colors" });
-                }
-              }}
               onAddCategory={() => handleOpenCategoryModal(null)}
               onEditCategory={(c) => handleOpenCategoryModal(c)}
               onDeleteCategory={async (id) => {

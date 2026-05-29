@@ -5,6 +5,14 @@ export function staffPortalContentMaxWidthClass(sidebar: boolean) {
   return sidebar ? 'max-w-none' : 'max-w-7xl';
 }
 
+/** Admin / teacher portal page shell — side tabs drop centered max-width frame. */
+export function staffPortalShellClassName(sidebar: boolean) {
+  return cn(
+    'flex h-full min-h-0 min-w-0 w-full flex-1 flex-col gap-6',
+    sidebar ? 'max-w-none px-2 py-3 sm:px-3 md:py-4' : 'mx-auto max-w-7xl p-4 md:p-8',
+  );
+}
+
 /** Main tab triggers — shared by admin dashboard and teacher staff portal on `/admin`. */
 export function staffPortalTabTriggerClassName(sidebar: boolean) {
   return cn(

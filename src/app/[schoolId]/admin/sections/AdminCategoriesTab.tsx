@@ -9,7 +9,6 @@ export function AdminCategoriesTab({
   classes,
   students,
   schoolId,
-  onRandomizeColors,
   onAddCategory,
   onEditCategory,
   onDeleteCategory,
@@ -19,7 +18,6 @@ export function AdminCategoriesTab({
   classes: Class[] | null | undefined;
   students: Student[] | null | undefined;
   schoolId: string;
-  onRandomizeColors: () => void | Promise<void>;
   onAddCategory: () => void;
   onEditCategory: (c: Category) => void;
   onDeleteCategory: (categoryId: string) => void;
@@ -32,7 +30,6 @@ export function AdminCategoriesTab({
       teachers={teachers}
       classes={classes}
       students={students}
-      onRandomizeColors={onRandomizeColors}
       onAddCategory={onAddCategory}
       onEditCategory={onEditCategory}
       onDeleteCategory={onDeleteCategory}
