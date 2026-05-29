@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useLayoutEffect, useMemo, useState, useRef, ChangeEvent, type ComponentType } from 'react';
 import { useConfirm } from '@/components/providers/ConfirmProvider';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirestore, useCollection, useMemoFirebase, useFunctions } from '@/firebase';
@@ -98,7 +98,10 @@ import { syncSchoolStaffDirectory } from '@/lib/syncSchoolStaffDirectory';
 import { StudentIdCard } from '@/components/StudentIdCard';
 import { IdCardPrintSetupDialog } from '@/components/admin/IdCardPrintSetupDialog';
 import { AdminMainTabsList } from '@/components/admin/AdminMainTabsList';
-import { staffPortalTabTriggerClassName } from '@/components/staff/staffPortalNavStyles';
+import {
+  staffPortalContentMaxWidthClass,
+  staffPortalTabTriggerClassName,
+} from '@/components/staff/staffPortalNavStyles';
 import { staffPortalAdminAddOnIsOn, staffPortalCoreTabs } from '@/lib/staffPortal';
 import { TeacherStaffPortalDashboard } from '@/components/staff/TeacherStaffPortalDashboard';
 import { AchievementModal } from '@/components/AchievementModal';
@@ -281,7 +284,7 @@ function describeSnapshotImport(result: SchoolSnapshotImportResult): {
   return { title, description, variant };
 }
 
-const fittedAdminTabClassName = 'transition-opacity duration-150 h-full min-h-0 w-full overflow-y-auto overflow-x-hidden pb-6';
+const fittedAdminTabClassName = 'transition-opacity duration-150 h-full min-h-0 w-full overflow-y-auto overflow-x-auto pb-6';
 const scrollingAdminTabClassName = fittedAdminTabClassName;
 
 /** Mirrors the loaded admin shell: page header, tab row, default Students roster. */
@@ -345,7 +348,7 @@ function AdminDashboardSkeleton() {
 function AdminDashboardInner() {
   const {
     loginState,
-    schoolId, setCouponsToPrint, deleteStudent,
+    schoolId: ctxSchoolId, setCouponsToPrint, deleteStudent,
     addClass, updateClass, deleteClass,
     addHouse, updateHouse, deleteHouse,
     deleteCategory, addCategory, updateCategory,
@@ -367,6 +370,10 @@ function AdminDashboardInner() {
     devRestoreFromBackup,
     devDownloadBackup,
   } = useAppContext();
+  const params = useParams<{ schoolId?: string }>();
+  const schoolId = (typeof params?.schoolId === 'string' && params.schoolId.trim())
+    ? params.schoolId.trim().toLowerCase()
+    : ctxSchoolId;
   const functions = useFunctions();
   const { toast } = useToast();
   const confirm = useConfirm();
@@ -1557,7 +1564,7 @@ function AdminDashboardInner() {
       <div
         className={cn(
           'mx-auto flex h-full min-h-0 min-w-0 w-full flex-col gap-6 p-4 md:p-8',
-          adminNavSidebar ? 'max-w-[100rem]' : 'max-w-7xl',
+          staffPortalContentMaxWidthClass(adminNavSidebar),
           adminPerTabColors && 'transition-[color,background-color] duration-300',
         )}
         style={adminTabAppearance.style}
@@ -1643,7 +1650,11 @@ function AdminDashboardInner() {
             students={idCardPrintJob.students}
             classes={idCardPrintJob.classes}
             onConfirm={(args) => {
-              setStudentsToPrint(args);
+              if (!schoolId) {
+                toast({ variant: 'destructive', title: 'Cannot print ID cards', description: 'Missing schoolId.' });
+                return;
+              }
+              setStudentsToPrint({ ...args, schoolId });
               setIdCardPrintJob(null);
             }}
           />
@@ -1873,7 +1884,7 @@ function AdminDashboardInner() {
           </div>
 
           <TabWalkthroughProvider scope="admin" tabId={activeMainTab}>
-          <div className={cn('min-h-0 w-full flex-1', adminNavSidebar && 'min-w-0')}>
+          <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col">
           <TabsContent value="students" className={fittedAdminTabClassName}>
             <AdminStudentsTab
               schoolId={schoolId!}
@@ -2190,6 +2201,7 @@ function AdminDashboardInner() {
               libraryItems={library}
               students={students}
               categories={categories}
+              schoolId={schoolId}
               getStudentName={getStudentName}
               onAddLibraryItem={handleAddLibraryItem}
               onEditLibraryItem={handleEditLibraryItem}
@@ -2635,9 +2647,14 @@ function AdminDashboardInner() {
                     // Close the preview first so it never ends up on the printout.
                     setIdPreviewStudent(null);
                     requestAnimationFrame(() => {
+                      if (!schoolId) {
+                        toast({ variant: 'destructive', title: 'Cannot print ID cards', description: 'Missing schoolId.' });
+                        return;
+                      }
                       setStudentsToPrint({
                         students: [s],
                         classes: classes ?? [],
+                        schoolId,
                         ...resolveIdCardPrintJobOptions(settings),
                       });
                     });
@@ -3347,7 +3364,11 @@ function AdminLogin({ onLogin }: { onLogin: (passcode: string) => Promise<boolea
 }
 
 function HouseCoordinatorDashboard() {
-  const { schoolId, addHouse, updateHouse, deleteHouse } = useAppContext();
+  const { schoolId: ctxSchoolId, addHouse, updateHouse, deleteHouse } = useAppContext();
+  const params = useParams<{ schoolId?: string }>();
+  const schoolId = (typeof params?.schoolId === 'string' && params.schoolId.trim())
+    ? params.schoolId.trim().toLowerCase()
+    : ctxSchoolId;
   const firestore = useFirestore();
   const { toast } = useToast();
 
@@ -3447,8 +3468,12 @@ function HouseCoordinatorDashboard() {
 }
 
 export default function AdminPage() {
-  const { loginState, isInitialized, isAdmin, isPrizeClerk, isHouseCoordinator, login, schoolId } =
+  const { loginState, isInitialized, isAdmin, isPrizeClerk, isHouseCoordinator, login, schoolId: ctxSchoolId } =
     useAppContext();
+  const params = useParams<{ schoolId?: string }>();
+  const schoolId = (typeof params?.schoolId === 'string' && params.schoolId.trim())
+    ? params.schoolId.trim().toLowerCase()
+    : ctxSchoolId;
   const router = useRouter();
   const searchParams = useSearchParams();
   const teacherToolsView = searchParams.get('view') === 'teacher';

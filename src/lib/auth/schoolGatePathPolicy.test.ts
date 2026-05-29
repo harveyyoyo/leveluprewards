@@ -23,6 +23,12 @@ describe('schoolPathAllowedByGate', () => {
     expect(schoolPathAllowedByGate(`/${sid}/teacher/print`, sid, new Set(['teacher']))).toBe(true);
   });
 
+  it('office root allows portal scope; subpaths need office or admin', () => {
+    expect(schoolPathAllowedByGate(`/${sid}/office`, sid, new Set(['portal']))).toBe(true);
+    expect(schoolPathAllowedByGate(`/${sid}/office/grades`, sid, new Set(['portal']))).toBe(false);
+    expect(schoolPathAllowedByGate(`/${sid}/office/grades`, sid, new Set(['office']))).toBe(true);
+  });
+
   it('hall of fame is staff-only', () => {
     expect(schoolPathAllowedByGate(`/${sid}/hall-of-fame`, sid, new Set(['kiosk']))).toBe(false);
     expect(schoolPathAllowedByGate(`/${sid}/hall-of-fame`, sid, new Set(['teacher']))).toBe(true);

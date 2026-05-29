@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -16,9 +16,12 @@ import { useSettings } from '@/components/providers/SettingsProvider';
 import type { Class, Prize, Student } from '@/lib/types';
 import { resolveIdCardPrintJobOptions } from '@/lib/idCardPrintCatalog';
 import { Printer } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-type StudentPrintConfirm = (args: { students: Student[]; classes: Class[]; printerType?: 'dtc4500e' }) => void;
-type PrizePrintConfirm = (args: { prizes: Prize[]; printerType?: 'dtc4500e' }) => void;
+type CornerStyle = 'rounded' | 'rectangular';
+type StudentPrintConfirm = (args: { students: Student[]; classes: Class[]; printerType?: 'dtc4500e'; cornerStyle?: CornerStyle }) => void;
+type PrizePrintConfirm = (args: { prizes: Prize[]; printerType?: 'dtc4500e'; cornerStyle?: CornerStyle }) => void;
 
 type IdCardPrintSetupDialogProps =
   | {
@@ -41,6 +44,7 @@ export function IdCardPrintSetupDialog(props: IdCardPrintSetupDialogProps) {
   const { open, onOpenChange } = props;
   const { toast } = useToast();
   const { settings } = useSettings();
+  const [cornerStyle, setCornerStyle] = useState<CornerStyle>(settings.idCardCornerStyle ?? 'rounded');
 
   const summaryLine = useMemo(() => {
     if (props.variant === 'prize') {
@@ -73,9 +77,9 @@ export function IdCardPrintSetupDialog(props: IdCardPrintSetupDialogProps) {
 
     const printerOptions = resolveIdCardPrintJobOptions(settings);
     if (props.variant === 'prize') {
-      props.onConfirm({ prizes: props.prizes, ...printerOptions });
+      props.onConfirm({ prizes: props.prizes, cornerStyle, ...printerOptions });
     } else {
-      props.onConfirm({ students: props.students, classes: props.classes, ...printerOptions });
+      props.onConfirm({ students: props.students, classes: props.classes, cornerStyle, ...printerOptions });
     }
   };
 
@@ -97,6 +101,24 @@ export function IdCardPrintSetupDialog(props: IdCardPrintSetupDialogProps) {
         </DialogHeader>
 
         <div className="space-y-4 py-1">
+          <div className="space-y-2">
+            <Label htmlFor="id-card-print-corners" className="text-[11px] font-semibold">
+              Card corners
+            </Label>
+            <Select value={cornerStyle} onValueChange={(v) => setCornerStyle(v === 'rectangular' ? 'rectangular' : 'rounded')}>
+              <SelectTrigger id="id-card-print-corners" className="rounded-xl">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="rounded">Rounded (ID card look)</SelectItem>
+                <SelectItem value="rectangular">Rectangular (easier to cut)</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground leading-snug">
+              This only affects this print run.
+            </p>
+          </div>
+
           {settings.printerReminderIdCards?.trim() ? (
             <Alert>
               <AlertTitle>School note</AlertTitle>

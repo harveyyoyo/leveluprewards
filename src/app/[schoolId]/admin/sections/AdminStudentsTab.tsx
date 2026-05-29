@@ -207,8 +207,20 @@ export function AdminStudentsTab({
   const [isBulkPurging, setIsBulkPurging] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
-  const selectedStudents =
-    students?.filter((s) => selectedStudentIds.has(s.id)) || [];
+  // Preserve the current visible/sorted list order for bulk actions (especially printing).
+  // Fall back to the full students list for any selected IDs that aren't currently visible.
+  const selectedStudents = (() => {
+    if (!selectedStudentIds || selectedStudentIds.size === 0) return [];
+    const visibleSelected = filteredStudents.filter((s) =>
+      selectedStudentIds.has(s.id),
+    );
+    const visibleIds = new Set(visibleSelected.map((s) => s.id));
+    const hiddenSelected =
+      students?.filter(
+        (s) => selectedStudentIds.has(s.id) && !visibleIds.has(s.id),
+      ) || [];
+    return [...visibleSelected, ...hiddenSelected];
+  })();
   const studentsForIdPrint =
     selectedStudentIds.size > 0 ? selectedStudents : filteredStudents;
   const bulkBusy = isBulkPurging || isBulkDeleting || isBulkUpdating;
@@ -509,6 +521,44 @@ export function AdminStudentsTab({
 
           <div className="w-full overflow-x-auto">
             <ul className="flex flex-col gap-1.5 pr-4">
+              {filteredStudents.length === 0 ? (
+                <li className="mb-2 rounded-xl border bg-secondary/60 p-4 text-sm text-muted-foreground">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="space-y-1">
+                      <p className="font-semibold text-foreground">No students match the current view.</p>
+                      <p>
+                        Total loaded: <span className="font-mono">{students?.length ?? 0}</span> · Visible after filters:{' '}
+                        <span className="font-mono">{filteredStudents.length}</span>
+                      </p>
+                      <p>
+                        Search: <span className="font-mono">{studentSearchTerm ? JSON.stringify(studentSearchTerm) : '""'}</span> · Class:{' '}
+                        <span className="font-mono">{studentFilterClass}</span> · Sort:{' '}
+                        <span className="font-mono">{studentSortOption}</span>
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => {
+                          setStudentSearchTerm("");
+                          setStudentFilterClass("all");
+                          setStudentSortOption("updatedAtDesc");
+                        }}
+                      >
+                        Clear filters
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => router.refresh()}
+                      >
+                        Refresh
+                      </Button>
+                    </div>
+                  </div>
+                </li>
+              ) : null}
               {filteredStudents.length > 0 ? (
                 <AdminRecordListHeader
                   gridClassName={cn(

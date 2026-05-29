@@ -7,6 +7,7 @@ import type { Category, LibraryItem, LibraryItemInput, Student } from '@/lib/typ
 export function AdminLibraryTab({
   libraryItems,
   getStudentName,
+  schoolId,
   onAddLibraryItem,
   onEditLibraryItem,
   onDeleteLibraryItem,
@@ -18,6 +19,7 @@ export function AdminLibraryTab({
 }: {
   libraryItems: LibraryItem[] | null | undefined;
   getStudentName: (id?: string) => string;
+  schoolId?: string | null;
   students?: Student[] | null;
   categories?: Category[] | null;
   onAddLibraryItem: () => void;
@@ -31,6 +33,7 @@ export function AdminLibraryTab({
     <LibraryManagementPanel
       libraryItems={libraryItems}
       getStudentName={getStudentName}
+      schoolId={schoolId}
       showIntakeScanner={!!onRegisterFromScan && !!upcTaken}
       onAddLibraryItem={onAddLibraryItem}
       onEditLibraryItem={onEditLibraryItem}

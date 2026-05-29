@@ -63,6 +63,17 @@ function parseSettingsViewFromQuery(value: string | null): SettingsView | null {
 type RoleView = 'global' | 'student' | 'teacher';
 type PreviewMode = 'live' | 'draft';
 
+const ADMIN_PERMISSION_HINT = 'Needs admin permission to change';
+
+function AdminPermissionHint({ show, className }: { show: boolean; className?: string }) {
+    if (!show) return null;
+    return (
+        <p className={cn('text-[11px] text-muted-foreground leading-snug', className)}>
+            {ADMIN_PERMISSION_HINT}
+        </p>
+    );
+}
+
 type FeatureFilter = { query: string; enabledOnly: boolean };
 const FeatureFilterContext = createContext<FeatureFilter>({ query: '', enabledOnly: false });
 
@@ -118,9 +129,9 @@ function cloneSettings(s: AppSettings): AppSettings {
     return JSON.parse(JSON.stringify(s)) as AppSettings;
 }
 
-function FeatureRow({ id, label, desc, icon, settings, onToggle, onConfigure, isImplemented = true, isAdmin = true, blockHint }: {
+function FeatureRow({ id, label, desc, icon, settings, onToggle, onConfigure, isImplemented = true, canEditAdminSettings = true, blockHint }: {
     id: string; label: string; desc: string; icon: React.ReactNode;
-    settings: any; onToggle: (key: string, val: any) => void; onConfigure?: () => void; isImplemented?: boolean; isAdmin?: boolean;
+    settings: any; onToggle: (key: string, val: any) => void; onConfigure?: () => void; isImplemented?: boolean; canEditAdminSettings?: boolean;
     /** When set (e.g. product pillar off), the toggle is forced off and disabled. */
     blockHint?: string;
 }) {
@@ -136,9 +147,9 @@ function FeatureRow({ id, label, desc, icon, settings, onToggle, onConfigure, is
     }
     return (
         <div 
-            className={`flex items-start justify-between py-4 px-3 border-b border-border/40 last:border-0 hover:bg-muted/30 rounded-xl transition-colors ${canUse && isAdmin ? 'cursor-pointer' : ''}`}
+            className={`flex items-start justify-between py-4 px-3 border-b border-border/40 last:border-0 hover:bg-muted/30 rounded-xl transition-colors ${canUse && canEditAdminSettings ? 'cursor-pointer' : ''}`}
             onClick={() => {
-                if (canUse && isAdmin) {
+                if (canUse && canEditAdminSettings) {
                     onToggle(id, !isEnabled);
                 }
             }}
@@ -162,7 +173,7 @@ function FeatureRow({ id, label, desc, icon, settings, onToggle, onConfigure, is
                                 size="icon"
                                 className="h-9 w-9 rounded-xl"
                                 onClick={(e) => { e.stopPropagation(); onConfigure(); }}
-                                disabled={!isAdmin}
+                                disabled={!canEditAdminSettings}
                                 title={`${label} settings`}
                                 aria-label={`${label} settings`}
                             >
@@ -174,12 +185,16 @@ function FeatureRow({ id, label, desc, icon, settings, onToggle, onConfigure, is
                                 id={id}
                                 checked={isEnabled && canUse}
                                 onCheckedChange={(checked) => onToggle(id, checked)}
-                                disabled={!isAdmin || blockedByConfig}
+                                disabled={!canEditAdminSettings || blockedByConfig}
                             />
                         </div>
                     </div>
-                    {!isAdmin && <span className="text-[10px] text-muted-foreground mt-2 font-black uppercase tracking-widest whitespace-nowrap">Admin Only</span>}
-                    {isAdmin && blockedByConfig && blockHint && (
+                    {!canEditAdminSettings && (
+                        <span className="text-[10px] text-muted-foreground mt-2 font-semibold tracking-wide max-w-[220px] text-right leading-snug">
+                            {ADMIN_PERMISSION_HINT}
+                        </span>
+                    )}
+                    {canEditAdminSettings && blockedByConfig && blockHint && (
                         <span className="text-[10px] text-muted-foreground mt-2 font-semibold tracking-wide max-w-[220px] text-right leading-snug" title={blockHint}>
                             {blockHint}
                         </span>
@@ -250,16 +265,6 @@ export function SettingsModal() {
     useLayoutEffect(() => {
         if (open) setInterfaceRole('global');
     }, [open]);
-
-    useLayoutEffect(() => {
-        if (!open || isAdmin || view !== 'security') return;
-        setView('features');
-    }, [open, isAdmin, view]);
-
-    useLayoutEffect(() => {
-        if (!open || canManageSchoolSettings || view !== 'pillars') return;
-        setView('hub');
-    }, [open, canManageSchoolSettings, view]);
 
     // In-app opener (avoids route transitions / layout jank).
     useEffect(() => {
@@ -442,8 +447,6 @@ export function SettingsModal() {
 
         const requestedView = parseSettingsViewFromQuery(requested);
         if (!requestedView) return;
-        if (requestedView === 'pillars' && !canManageSchoolSettings) return;
-
         autoOpenedFromQueryRef.current = true;
         beginSettingsSession(requestedView);
         setOpen(true);
@@ -635,7 +638,7 @@ export function SettingsModal() {
                                     variant="ghost"
                                     size="icon"
                                     onClick={() => {
-                                        if (view === 'features' && isAdmin) {
+                                        if (view === 'features' && canManageSchoolSettings) {
                                             openSettingsView('general');
                                             return;
                                         }
@@ -643,7 +646,7 @@ export function SettingsModal() {
                                         if (local.soundEnabled) playSound('click');
                                     }}
                                     className="h-8 w-8 -ml-2 rounded-full hover:bg-muted"
-                                    aria-label={view === 'features' && isAdmin ? 'Back to general settings' : 'Back to settings menu'}
+                                    aria-label={view === 'features' && canManageSchoolSettings ? 'Back to general settings' : 'Back to settings menu'}
                                 >
                                     <ArrowLeft className="h-4 w-4" />
                                 </Button>
@@ -686,7 +689,7 @@ export function SettingsModal() {
                             </button>
                             <button
                                 type="button"
-                                onClick={() => openSettingsView(isAdmin ? 'general' : 'advanced')}
+                                onClick={() => openSettingsView('general')}
                                 className={cn(
                                     'flex flex-col items-start gap-2 rounded-2xl border-2 p-4 text-left transition-all',
                                     'border-indigo-200 dark:border-indigo-900/50 bg-indigo-50/80 dark:bg-indigo-950/20',
@@ -704,29 +707,27 @@ export function SettingsModal() {
                                     Sessions, printing, kiosk options, shop features, and more
                                 </span>
                             </button>
-                            {canManageSchoolSettings && (
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setView('pillars');
-                                        if (local.soundEnabled) playSound('click');
-                                    }}
-                                    className={cn(
-                                        'flex flex-col items-start gap-2 rounded-2xl border-2 p-4 text-left transition-all',
-                                        'border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/80 dark:bg-emerald-950/20',
-                                        'hover:bg-emerald-100/80 dark:hover:bg-emerald-950/35',
-                                    )}
-                                >
-                                    <div className="flex w-full items-start justify-between gap-2">
-                                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500 text-white shadow-inner">
-                                            <ShieldCheck className="h-5 w-5" />
-                                        </span>
-                                        <ChevronRight className="h-5 w-5 shrink-0 text-emerald-700/50 dark:text-emerald-400/50" aria-hidden />
-                                    </div>
-                                    <span className="font-black text-emerald-900 dark:text-emerald-100">Product Pillars</span>
-                                    <span className="text-xs leading-snug text-emerald-800/90 dark:text-emerald-200/80">Select active paid plan products</span>
-                                </button>
-                            )}
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setView('pillars');
+                                    if (local.soundEnabled) playSound('click');
+                                }}
+                                className={cn(
+                                    'flex flex-col items-start gap-2 rounded-2xl border-2 p-4 text-left transition-all',
+                                    'border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/80 dark:bg-emerald-950/20',
+                                    'hover:bg-emerald-100/80 dark:hover:bg-emerald-950/35',
+                                )}
+                            >
+                                <div className="flex w-full items-start justify-between gap-2">
+                                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500 text-white shadow-inner">
+                                        <ShieldCheck className="h-5 w-5" />
+                                    </span>
+                                    <ChevronRight className="h-5 w-5 shrink-0 text-emerald-700/50 dark:text-emerald-400/50" aria-hidden />
+                                </div>
+                                <span className="font-black text-emerald-900 dark:text-emerald-100">Product Pillars</span>
+                                <span className="text-xs leading-snug text-emerald-800/90 dark:text-emerald-200/80">Select active paid plan products</span>
+                            </button>
                             {isStudentKioskUiContext(loginState, pathname, schoolId) && (
                                 <button
                                     type="button"
@@ -764,50 +765,49 @@ export function SettingsModal() {
                             />
 
                             <div className="mb-4 flex flex-col gap-3">
-                                {isAdmin && (
-                                    <div className="flex items-center gap-2 p-1 bg-muted/50 rounded-2xl border border-border/40">
-                                        {(['global', 'student', 'teacher'] as RoleView[]).map((role) => (
-                                            <button
-                                                key={role}
-                                                onClick={() => {
-                                                    setInterfaceRole(role);
-                                                    if (local.soundEnabled) playSound('click');
-                                                }}
-                                                className={cn(
-                                                    "flex-1 py-2 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                                                    interfaceRole === role 
-                                                        ? "bg-background text-foreground shadow-sm border border-border/50" 
-                                                        : "text-muted-foreground hover:text-foreground"
-                                                )}
-                                            >
-                                                {role} Portal
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
+                                <div className="flex items-center gap-2 p-1 bg-muted/50 rounded-2xl border border-border/40">
+                                    {(['global', 'student', 'teacher'] as RoleView[]).map((role) => (
+                                        <button
+                                            key={role}
+                                            type="button"
+                                            disabled={!canManageSchoolSettings}
+                                            onClick={() => {
+                                                if (!canManageSchoolSettings) return;
+                                                setInterfaceRole(role);
+                                                if (local.soundEnabled) playSound('click');
+                                            }}
+                                            className={cn(
+                                                "flex-1 py-2 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                                                interfaceRole === role 
+                                                    ? "bg-background text-foreground shadow-sm border border-border/50" 
+                                                    : "text-muted-foreground hover:text-foreground",
+                                                !canManageSchoolSettings && "opacity-60 cursor-not-allowed",
+                                            )}
+                                        >
+                                            {role} Portal
+                                        </button>
+                                    ))}
+                                </div>
+                                <AdminPermissionHint show={!canManageSchoolSettings} className="px-1" />
 
-                                {isAdmin ? (
-                                    <div className="rounded-2xl border border-border/40 bg-muted/30 p-3 flex items-center justify-between">
-                                        <div className="min-w-0">
-                                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
-                                                Editing
-                                            </p>
-                                            <p className="text-sm font-black tracking-tight text-foreground mt-1">
-                                                {interfaceRole === 'global'
-                                                    ? 'Global defaults'
-                                                    : interfaceRole === 'student'
-                                                        ? 'Student portal overrides'
-                                                        : 'Teacher portal overrides'}
-                                            </p>
-                                        </div>
-                                        <div className="shrink-0 text-[10px] font-black uppercase tracking-widest rounded-full border border-border/60 bg-background/70 px-3 py-1.5 text-muted-foreground">
-                                            {interfaceRole === 'global' ? 'ALL USERS' : interfaceRole.toUpperCase()}
-                                        </div>
+                                <div className="rounded-2xl border border-border/40 bg-muted/30 p-3 flex items-center justify-between">
+                                    <div className="min-w-0">
+                                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+                                            Editing
+                                        </p>
+                                        <p className="text-sm font-black tracking-tight text-foreground mt-1">
+                                            {interfaceRole === 'global'
+                                                ? 'Global defaults'
+                                                : interfaceRole === 'student'
+                                                    ? 'Student portal overrides'
+                                                    : 'Teacher portal overrides'}
+                                        </p>
                                     </div>
-                                ) : null}
+                                    <div className="shrink-0 text-[10px] font-black uppercase tracking-widest rounded-full border border-border/60 bg-background/70 px-3 py-1.5 text-muted-foreground">
+                                        {interfaceRole === 'global' ? 'ALL USERS' : interfaceRole.toUpperCase()}
+                                    </div>
+                                </div>
                             </div>
-
-                            {isAdmin ? null : null}
 
                             {/* APPEARANCE */}
                             <div className="grid gap-4 md:grid-cols-[220px_1fr]">
@@ -1195,9 +1195,10 @@ export function SettingsModal() {
                                                     handleToggle('studentPortalPortraitDisplay', false);
                                                 }
                                             }}
-                                            disabled={!isAdmin}
+                                            disabled={!canManageSchoolSettings}
                                         />
                                     </div>
+                                    <AdminPermissionHint show={!canManageSchoolSettings} className="col-span-2 px-1" />
                                 </div>
 
                                  {/* Display Mode */}
@@ -1268,7 +1269,7 @@ export function SettingsModal() {
                                      </div>
                                  )}
 
-                                 {isAdmin && interfaceRole === 'global' ? (
+                                 {interfaceRole === 'global' ? (
                                      <div className="space-y-2 mt-4 pt-4 border-t border-border/40">
                                          <div className="flex items-center gap-2">
                                              <PanelLeft className="w-4 h-4 text-muted-foreground shrink-0" />
@@ -1286,12 +1287,17 @@ export function SettingsModal() {
                                                      <button
                                                          key={layout}
                                                          type="button"
-                                                         onClick={() => handleToggle('adminNavLayout', layout)}
+                                                         disabled={!canManageSchoolSettings}
+                                                         onClick={() => {
+                                                             if (!canManageSchoolSettings) return;
+                                                             handleToggle('adminNavLayout', layout);
+                                                         }}
                                                          className={cn(
                                                              'flex flex-1 items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all',
                                                              active
                                                                  ? 'bg-background text-foreground shadow-sm border border-border/50'
                                                                  : 'text-muted-foreground hover:text-foreground',
+                                                             !canManageSchoolSettings && 'opacity-60 cursor-not-allowed',
                                                          )}
                                                      >
                                                          {layout === 'top' ? (
@@ -1316,9 +1322,11 @@ export function SettingsModal() {
                                                  onCheckedChange={(checked) =>
                                                      handleToggle('adminPerTabColorScheme', checked)
                                                  }
+                                                 disabled={!canManageSchoolSettings}
                                                  aria-label="Use a different color scheme per admin tab"
                                              />
                                          </div>
+                                         <AdminPermissionHint show={!canManageSchoolSettings} />
                                      </div>
                                  ) : null}
                             </div>
@@ -1329,6 +1337,10 @@ export function SettingsModal() {
 
                     {view === 'security' && (
                         <div className="space-y-4">
+                            <AdminPermissionHint
+                                show={!canManageSchoolSettings}
+                                className="rounded-xl border border-border/50 bg-muted/30 px-3 py-2"
+                            />
                             <div className="flex items-center justify-end">
                                 <Button
                                     type="button"
@@ -1427,7 +1439,7 @@ export function SettingsModal() {
                                                             handleToggle('kioskLoginTabCardEnabled', true);
                                                         }
                                                     }}
-                                                    disabled={!isAdmin}
+                                                    disabled={!canManageSchoolSettings}
                                                 />
                                             </div>
                                             <div className="flex items-center justify-between gap-3">
@@ -1444,7 +1456,7 @@ export function SettingsModal() {
                                                             handleToggle('kioskLoginTabCardEnabled', true);
                                                         }
                                                     }}
-                                                    disabled={!isAdmin}
+                                                    disabled={!canManageSchoolSettings}
                                                 />
                                             </div>
                                             <div className="flex items-center justify-between gap-3">
@@ -1463,7 +1475,7 @@ export function SettingsModal() {
                                                             handleToggle('kioskLoginTabCardEnabled', true);
                                                         }
                                                     }}
-                                                    disabled={!isAdmin}
+                                                    disabled={!canManageSchoolSettings}
                                                 />
                                             </div>
                                             <div className="flex items-center justify-between gap-3">
@@ -1481,13 +1493,11 @@ export function SettingsModal() {
                                                             handleToggle('kioskLoginTabCardEnabled', true);
                                                         }
                                                     }}
-                                                    disabled={!isAdmin}
+                                                    disabled={!canManageSchoolSettings}
                                                 />
                                             </div>
                                         </div>
-                                        {!isAdmin ? (
-                                            <p className="text-[11px] text-muted-foreground">Admin only.</p>
-                                        ) : null}
+                                        <AdminPermissionHint show={!canManageSchoolSettings} />
                                     </div>
 
                                     <div className="flex items-center justify-between border-t border-slate-200/60 dark:border-slate-700/50 pt-4">
@@ -1504,9 +1514,10 @@ export function SettingsModal() {
                                                 handleToggle('kioskCouponRedemptionManualEnabled', !checked);
                                                 handleToggle('kioskCouponRedemptionInput', checked ? 'camera' : 'manual');
                                             }}
-                                            disabled={!isAdmin}
+                                            disabled={!canManageSchoolSettings}
                                         />
                                     </div>
+                                    <AdminPermissionHint show={!canManageSchoolSettings} />
 
                                     <div className="flex items-center justify-between border-t border-slate-200/60 dark:border-slate-700/50 pt-4">
                                         <div className="flex flex-col pr-4">
@@ -1520,7 +1531,7 @@ export function SettingsModal() {
                                             onCheckedChange={(checked) =>
                                                 handleToggle('kioskWedgeDemoCameraEnabled', checked)
                                             }
-                                            disabled={!isAdmin}
+                                            disabled={!canManageSchoolSettings}
                                         />
                                     </div>
 
@@ -1534,7 +1545,7 @@ export function SettingsModal() {
                                         <Switch
                                             checked={local.enableCouponRedeemCompliments !== false}
                                             onCheckedChange={(checked) => handleToggle('enableCouponRedeemCompliments', checked)}
-                                            disabled={!isAdmin}
+                                            disabled={!canManageSchoolSettings}
                                         />
                                     </div>
 
@@ -1618,39 +1629,40 @@ export function SettingsModal() {
                                         }
                                     />
 
-                                    {isAdmin && (
-                                        <div className="space-y-4 border-t border-slate-200/60 dark:border-slate-700/50 pt-4">
-                                            <p className="text-xs text-muted-foreground leading-relaxed">
-                                                Optional printer reminders for staff. Web apps cannot select a specific printer; these notes appear near the student ID print flow so the correct device is chosen in the print dialog.
-                                            </p>
-                                            <div className="space-y-1.5">
-                                                <Label htmlFor="printerReminderIdCards" className="text-xs font-bold">
-                                                    Student ID / card stock printing
-                                                </Label>
-                                                <Textarea
-                                                    id="printerReminderIdCards"
-                                                    rows={2}
-                                                    placeholder='e.g. "Use the Fargo DTC at the front desk — not the office copier."'
-                                                    className="min-h-[72px] rounded-xl text-sm bg-background/80 border-border/60 resize-y"
-                                                    value={local.printerReminderIdCards ?? ''}
-                                                    onChange={(e) => handleToggle('printerReminderIdCards', e.target.value)}
-                                                />
-                                            </div>
-                                            <div className="space-y-1.5">
-                                                <Label htmlFor="printerReminderPrizeVouchers" className="text-xs font-bold">
-                                                    Prize vouchers &amp; coupon sheets
-                                                </Label>
-                                                <Textarea
-                                                    id="printerReminderPrizeVouchers"
-                                                    rows={2}
-                                                    placeholder='e.g. "Send redeem slips to the thermal printer in the office."'
-                                                    className="min-h-[72px] rounded-xl text-sm bg-background/80 border-border/60 resize-y"
-                                                    value={local.printerReminderPrizeVouchers ?? ''}
-                                                    onChange={(e) => handleToggle('printerReminderPrizeVouchers', e.target.value)}
-                                                />
-                                            </div>
+                                    <div className="space-y-4 border-t border-slate-200/60 dark:border-slate-700/50 pt-4">
+                                        <p className="text-xs text-muted-foreground leading-relaxed">
+                                            Optional printer reminders for staff. Web apps cannot select a specific printer; these notes appear near the student ID print flow so the correct device is chosen in the print dialog.
+                                        </p>
+                                        <div className="space-y-1.5">
+                                            <Label htmlFor="printerReminderIdCards" className="text-xs font-bold">
+                                                Student ID / card stock printing
+                                            </Label>
+                                            <Textarea
+                                                id="printerReminderIdCards"
+                                                rows={2}
+                                                placeholder='e.g. "Use the Fargo DTC at the front desk — not the office copier."'
+                                                className="min-h-[72px] rounded-xl text-sm bg-background/80 border-border/60 resize-y"
+                                                value={local.printerReminderIdCards ?? ''}
+                                                onChange={(e) => handleToggle('printerReminderIdCards', e.target.value)}
+                                                disabled={!canManageSchoolSettings}
+                                            />
                                         </div>
-                                    )}
+                                        <div className="space-y-1.5">
+                                            <Label htmlFor="printerReminderPrizeVouchers" className="text-xs font-bold">
+                                                Prize vouchers &amp; coupon sheets
+                                            </Label>
+                                            <Textarea
+                                                id="printerReminderPrizeVouchers"
+                                                rows={2}
+                                                placeholder='e.g. "Send redeem slips to the thermal printer in the office."'
+                                                className="min-h-[72px] rounded-xl text-sm bg-background/80 border-border/60 resize-y"
+                                                value={local.printerReminderPrizeVouchers ?? ''}
+                                                onChange={(e) => handleToggle('printerReminderPrizeVouchers', e.target.value)}
+                                                disabled={!canManageSchoolSettings}
+                                            />
+                                        </div>
+                                        <AdminPermissionHint show={!canManageSchoolSettings} />
+                                    </div>
 
                                     <div className="flex items-center justify-between border-t border-slate-200/60 dark:border-slate-700/50 pt-4 gap-4">
                                         <div className="min-w-0">
@@ -1692,6 +1704,7 @@ export function SettingsModal() {
                                 <p className="text-xs text-muted-foreground leading-normal mb-3">
                                     Select which products are part of your active plan. School Office is optional and uses its own roster (not shared with rewards).
                                 </p>
+                                <AdminPermissionHint show={!canManageSchoolSettings} className="mb-2" />
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     {(() => {
                                         const enabledCount = [
@@ -1710,7 +1723,7 @@ export function SettingsModal() {
                                                     <Switch
                                                         checked={local.payRewards ?? true}
                                                         onCheckedChange={(val) => handleToggle('payRewards', val)}
-                                                        disabled={enabledCount === 1 && (local.payRewards ?? true)}
+                                                        disabled={!canManageSchoolSettings || (enabledCount === 1 && (local.payRewards ?? true))}
                                                     />
                                                 </div>
                                                 <div className="flex items-center justify-between p-3 bg-background/50 border border-border/40 rounded-xl hover:bg-muted/40 transition-colors">
@@ -1721,7 +1734,7 @@ export function SettingsModal() {
                                                     <Switch
                                                         checked={local.payAttendance ?? true}
                                                         onCheckedChange={(val) => handleToggle('payAttendance', val)}
-                                                        disabled={enabledCount === 1 && (local.payAttendance ?? true)}
+                                                        disabled={!canManageSchoolSettings || (enabledCount === 1 && (local.payAttendance ?? true))}
                                                     />
                                                 </div>
                                                 <div className="flex items-center justify-between p-3 bg-background/50 border border-border/40 rounded-xl hover:bg-muted/40 transition-colors">
@@ -1732,7 +1745,7 @@ export function SettingsModal() {
                                                     <Switch
                                                         checked={local.payHomework ?? true}
                                                         onCheckedChange={(val) => handleToggle('payHomework', val)}
-                                                        disabled={enabledCount === 1 && (local.payHomework ?? true)}
+                                                        disabled={!canManageSchoolSettings || (enabledCount === 1 && (local.payHomework ?? true))}
                                                     />
                                                 </div>
                                                 <div className="flex items-center justify-between p-3 bg-background/50 border border-border/40 rounded-xl hover:bg-muted/40 transition-colors">
@@ -1743,7 +1756,7 @@ export function SettingsModal() {
                                                     <Switch
                                                         checked={local.payLibrary ?? true}
                                                         onCheckedChange={(val) => handleToggle('payLibrary', val)}
-                                                        disabled={enabledCount === 1 && (local.payLibrary ?? true)}
+                                                        disabled={!canManageSchoolSettings || (enabledCount === 1 && (local.payLibrary ?? true))}
                                                     />
                                                 </div>
                                                 <div className="sm:col-span-2 p-3 bg-background/50 border border-border/40 rounded-xl space-y-2">
@@ -1760,6 +1773,7 @@ export function SettingsModal() {
                                                             <Switch
                                                                 checked={local.payOffice === true}
                                                                 onCheckedChange={(val) => handleToggle('payOffice', val)}
+                                                                disabled={!canManageSchoolSettings}
                                                                 aria-label={PRODUCT_PILLAR_LABELS.payOffice}
                                                             />
                                                             {local.payOffice === true && schoolId ? (
@@ -1781,6 +1795,10 @@ export function SettingsModal() {
 
                     {view === 'features' && (
                         <div className="space-y-6 pb-2 -mx-1 px-1">
+                            <AdminPermissionHint
+                                show={!canManageSchoolSettings}
+                                className="rounded-xl border border-border/50 bg-muted/30 px-3 py-2"
+                            />
                             <div className="rounded-2xl border border-border/40 bg-muted/20 p-3">
                                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                     <div className="min-w-0">
@@ -1821,7 +1839,8 @@ export function SettingsModal() {
                             <div className="flex items-center justify-between mb-3 border-b border-border/40 pb-3 mt-1">
                                 <h3 className="text-sm font-bold text-muted-foreground">Feature toggles</h3>
                                 <div className="flex items-center gap-2 shrink-0">
-                                    <Button variant="outline" size="sm" className="h-8 rounded-xl text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-700 dark:hover:text-emerald-300" onClick={() => {
+                                    <Button variant="outline" size="sm" disabled={!canManageSchoolSettings} className="h-8 rounded-xl text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-700 dark:hover:text-emerald-300" onClick={() => {
+                                        if (!canManageSchoolSettings) return;
                                         if (local.soundEnabled) playSound('click');
                                         setDraft(prev => {
                                             if (!prev) return prev;
@@ -1844,7 +1863,8 @@ export function SettingsModal() {
                                     }}>
                                         Select All
                                     </Button>
-                                    <Button variant="outline" size="sm" className="h-8 rounded-xl text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:bg-destructive/10 hover:text-destructive" onClick={() => {
+                                    <Button variant="outline" size="sm" disabled={!canManageSchoolSettings} className="h-8 rounded-xl text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:bg-destructive/10 hover:text-destructive" onClick={() => {
+                                        if (!canManageSchoolSettings) return;
                                         if (local.soundEnabled) playSound('click');
                                         setDraft(prev => {
                                             if (!prev) return prev;
@@ -1890,7 +1910,7 @@ export function SettingsModal() {
                                     settings={local}
                                     onToggle={handleToggle}
                                     isImplemented={true}
-                                    isAdmin={isAdmin}
+                                    canEditAdminSettings={canManageSchoolSettings}
                                 />
                                 <FeatureRow
                                     id="enableBulkPoints"
@@ -1900,7 +1920,7 @@ export function SettingsModal() {
                                     settings={local}
                                     onToggle={handleToggle}
                                     isImplemented={false}
-                                    isAdmin={isAdmin}
+                                    canEditAdminSettings={canManageSchoolSettings}
                                 />
                                 <FeatureRow
                                     id="enableTeacherCharts"
@@ -1910,7 +1930,7 @@ export function SettingsModal() {
                                     settings={local}
                                     onToggle={handleToggle}
                                     isImplemented={false}
-                                    isAdmin={isAdmin}
+                                    canEditAdminSettings={canManageSchoolSettings}
                                 />
                             </div>
 
@@ -1924,7 +1944,7 @@ export function SettingsModal() {
                                     settings={local}
                                     onToggle={handleToggle}
                                     isImplemented={false}
-                                    isAdmin={isAdmin}
+                                    canEditAdminSettings={canManageSchoolSettings}
                                 />
                                 <FeatureRow
                                     id="enableStreaks"
@@ -1934,7 +1954,7 @@ export function SettingsModal() {
                                     settings={local}
                                     onToggle={handleToggle}
                                     isImplemented={false}
-                                    isAdmin={isAdmin}
+                                    canEditAdminSettings={canManageSchoolSettings}
                                 />
                                 <FeatureRow
                                     id="enableClassAccumulations"
@@ -1944,7 +1964,7 @@ export function SettingsModal() {
                                     settings={local}
                                     onToggle={handleToggle}
                                     isImplemented={true}
-                                    isAdmin={isAdmin}
+                                    canEditAdminSettings={canManageSchoolSettings}
                                 />
                             </div>
 
@@ -1958,7 +1978,7 @@ export function SettingsModal() {
                                     settings={local}
                                     onToggle={handleToggle}
                                     isImplemented={true}
-                                    isAdmin={isAdmin}
+                                    canEditAdminSettings={canManageSchoolSettings}
                                 />
                                 {local.enablePrizeAiSurprise ? (
                                     <div className="px-3 pb-4 pt-0 border-t border-slate-100 dark:border-slate-800/50 mt-1">
@@ -2017,7 +2037,7 @@ export function SettingsModal() {
                                     onToggle={handleToggle}
                                     onConfigure={() => setVendingSettingsOpen(true)}
                                     isImplemented={true}
-                                    isAdmin={isAdmin}
+                                    canEditAdminSettings={canManageSchoolSettings}
                                 />
                                 <FeatureRow
                                     id="enableStudentEmojiOnPrizeTickets"
@@ -2027,7 +2047,7 @@ export function SettingsModal() {
                                     settings={local}
                                     onToggle={handleToggle}
                                     isImplemented={true}
-                                    isAdmin={isAdmin}
+                                    canEditAdminSettings={canManageSchoolSettings}
                                 />
 
                             </div>
@@ -2042,7 +2062,7 @@ export function SettingsModal() {
                                     settings={local}
                                     onToggle={handleToggle}
                                     isImplemented={true}
-                                    isAdmin={isAdmin}
+                                    canEditAdminSettings={canManageSchoolSettings}
                                 />
                                 <FeatureRow
                                     id="enableThemeAnimations"
@@ -2052,7 +2072,7 @@ export function SettingsModal() {
                                     settings={local}
                                     onToggle={handleToggle}
                                     isImplemented={true}
-                                    isAdmin={isAdmin}
+                                    canEditAdminSettings={canManageSchoolSettings}
                                 />
                                 <FeatureRow
                                     id="enableStudentWelcome"
@@ -2062,9 +2082,9 @@ export function SettingsModal() {
                                     settings={local}
                                     onToggle={handleToggle}
                                     isImplemented={false}
-                                    isAdmin={isAdmin}
+                                    canEditAdminSettings={canManageSchoolSettings}
                                 />
-                                {isAdmin && local.enableStudentWelcome ? (
+                                {local.enableStudentWelcome ? (
                                     <div className="px-3 pb-4 pt-1">
                                         <Label className="text-xs font-bold text-foreground">
                                             Default welcome style (school)
@@ -2075,6 +2095,7 @@ export function SettingsModal() {
                                         <div className="mt-3 max-w-sm">
                                             <Select
                                                 value={local.defaultWelcomeGreetingStyleId || '__none__'}
+                                                disabled={!canManageSchoolSettings}
                                                 onValueChange={(v) =>
                                                     setDraft((prev) =>
                                                         prev
@@ -2098,6 +2119,7 @@ export function SettingsModal() {
                                                     ))}
                                                 </SelectContent>
                                             </Select>
+                                            <AdminPermissionHint show={!canManageSchoolSettings} className="mt-2" />
                                         </div>
                                     </div>
                                 ) : null}
@@ -2111,7 +2133,7 @@ export function SettingsModal() {
                                     settings={local}
                                     onToggle={handleToggle}
                                     isImplemented={false}
-                                    isAdmin={isAdmin}
+                                    canEditAdminSettings={canManageSchoolSettings}
                                 />
                                 <FeatureRow
                                     id="enableWishlist"
@@ -2121,7 +2143,7 @@ export function SettingsModal() {
                                     settings={local}
                                     onToggle={handleToggle}
                                     isImplemented={false}
-                                    isAdmin={isAdmin}
+                                    canEditAdminSettings={canManageSchoolSettings}
                                 />
                             </div>
 
@@ -2135,7 +2157,7 @@ export function SettingsModal() {
                                     settings={local}
                                     onToggle={handleToggle}
                                     isImplemented={true}
-                                    isAdmin={isAdmin}
+                                    canEditAdminSettings={canManageSchoolSettings}
                                 />
                                 {local.enableBirthdayPoints && (
                                     <div className="px-3 pb-4 space-y-3">
@@ -2159,7 +2181,7 @@ export function SettingsModal() {
                                     settings={local}
                                     onToggle={handleToggle}
                                     isImplemented={true}
-                                    isAdmin={isAdmin}
+                                    canEditAdminSettings={canManageSchoolSettings}
                                 />
                                 {local.enableSpecialDayPoints && (
                                     <div className="px-3 pb-4 space-y-4 pt-1">

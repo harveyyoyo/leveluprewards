@@ -89,6 +89,16 @@ export const PROMOTION_FLYERS: readonly PromotionFlyer[] = [
     tags: ['Hallway', 'Poster', 'High contrast'],
   },
   {
+    id: 'levelup-rewards-premium',
+    name: 'PBIS Overview (Premium)',
+    description:
+      'High-fidelity two-page general guide—student portal overview, automated school-wide routines, and Sole Source procurement specs.',
+    href: '/marketing/levelup-rewards-flyer.html',
+    audience: 'general',
+    preview: { border: 'border-fuchsia-500/40', tag: 'Premium' },
+    tags: ['Overview', 'PBIS', 'Sole Source', 'Rewards'],
+  },
+  {
     id: 'sunset',
     name: 'Community Night',
     description:
@@ -149,6 +159,16 @@ export const PROMOTION_FLYERS: readonly PromotionFlyer[] = [
     tags: ['Yeshiva', 'Staff', 'Middos'],
   },
   {
+    id: 'levelup-teachers',
+    name: 'Teacher Companion (Premium)',
+    description:
+      'High-fidelity classroom playbook—1-tap positive reinforcement, physical kiosk scans, digital raffle wheels, and classroom incentive ideas.',
+    href: '/marketing/levelup-teachers-flyer.html',
+    audience: 'staff',
+    preview: { border: 'border-violet-500/40', tag: 'Premium' },
+    tags: ['Teachers', 'Classroom', 'Playbook', 'Raffles'],
+  },
+  {
     id: 'students-elementary',
     name: 'Elementary Stars',
     description:
@@ -197,6 +217,16 @@ export const PROMOTION_FLYERS: readonly PromotionFlyer[] = [
     audience: 'general',
     preview: { border: 'border-amber-300/40', tag: 'Talmidim' },
     tags: ['Yeshiva', 'Students', 'Kiosk'],
+  },
+  {
+    id: 'levelup-principals',
+    name: 'Leadership Brief (Premium)',
+    description:
+      'High-fidelity administrator guide—building-wide PBIS consistency, staff telemetry, NYS Ed Law 2-d compliance, and federal Title I/IV-A procurement specs.',
+    href: '/marketing/levelup-principals-flyer.html',
+    audience: 'principal',
+    preview: { border: 'border-cyan-500/40', tag: 'Premium' },
+    tags: ['Principals', 'Procurement', 'NYS 2-d', 'Telemetry'],
   },
   {
     id: 'principal-data',

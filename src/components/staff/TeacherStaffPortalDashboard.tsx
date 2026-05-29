@@ -8,6 +8,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { cn } from '@/lib/utils';
 import { TeacherPrinterInner } from '@/app/[schoolId]/teacher/TeacherPrinterInner';
 import { StaffPortalChrome } from './StaffPortalChrome';
+import { staffPortalContentMaxWidthClass } from './staffPortalNavStyles';
 
 type TeacherStaffPortalDashboardProps = {
   /** Admin opened teacher tools from the staff portal (`/admin?view=teacher`). */
@@ -41,7 +42,7 @@ export function TeacherStaffPortalDashboard({
       <div
         className={cn(
           'mx-auto flex h-full min-h-0 min-w-0 w-full flex-col gap-6 p-4 md:p-8',
-          sidebar ? 'max-w-[100rem]' : 'max-w-7xl',
+          staffPortalContentMaxWidthClass(sidebar),
         )}
       >
         <StaffPortalChrome role="teacher" schoolId={schoolId} displayName={displayName} />

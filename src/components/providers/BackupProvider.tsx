@@ -30,6 +30,7 @@ import type { HistoryItem, StaffAccount, Student, Teacher } from '@/lib/types';
 import { DEFAULT_PLAN } from '@/lib/plans';
 import { isPublicSampleSchoolId, SAMPLE_SCHOOL_ACCESS_PASSCODE } from '@/lib/sampleSchools';
 import { syncSchoolStaffDirectory } from '@/lib/syncSchoolStaffDirectory';
+import { DEMO_STUDENT_THEMES } from '@/lib/demoStudentThemes';
 import {
     seedOfficeDemoDataForSchool,
     type OfficeDemoVariant,
@@ -224,6 +225,12 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
         await syncSchoolStaffDirectory(firestore, cleanId, teachers, staffAccounts);
     }, [firestore]);
 
+    const ensureDeveloperIsAdminForSchool = useCallback(async (schoolId: string) => {
+        if (!functions || !auth.currentUser) return;
+        const fn = httpsCallable(functions, 'startDeveloperSupportSession');
+        await fn({ schoolId });
+    }, [functions, auth]);
+
     const devSeedOfficeDemoData = useCallback(async (schoolId: string) => {
         if (!firestore || !auth.currentUser) return;
         const cleanId = schoolId.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
@@ -240,6 +247,8 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
         toast({ title: `Seeding office data for ${cleanId}...`, description: 'Roster, grades, and billing.' });
 
         try {
+            // Seed touches staff directory + app settings; ensure dev can access this school.
+            await ensureDeveloperIsAdminForSchool(cleanId);
             let students: any[];
             let classes: any[];
             let teachers: Teacher[];
@@ -269,7 +278,7 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
                 description: (e as Error).message,
             });
         }
-    }, [firestore, auth, playSound, toast, seedOfficeForSampleSchool]);
+    }, [firestore, auth, playSound, toast, seedOfficeForSampleSchool, ensureDeveloperIsAdminForSchool]);
 
     const devResetSampleSchool = useCallback(async (schoolId: string) => {
         if (!firestore || !auth.currentUser) return;
@@ -286,117 +295,171 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
 
         toast({ title: `Resetting ${cleanId}...`, description: "Reapplying latest sample data." });
 
-        // Clear subcollections (and student activities)
-        for (const sub of SUBCOLLECTIONS) {
-            const subcollectionRef = collection(firestore, 'schools', cleanId, sub);
-            const snap = await getDocs(subcollectionRef);
-            if (snap.empty) continue;
+        try {
+            // This reset deletes + recreates rewards collections. Firestore rules allow that only
+            // for admins, so provision this developer as an admin for the sample school.
+            await ensureDeveloperIsAdminForSchool(cleanId);
 
-            if (sub === "students") {
-                for (const studentDoc of snap.docs) {
-                    const activitiesRef = collection(studentDoc.ref, "activities");
-                    const activitiesSnap = await getDocs(activitiesRef);
-                    if (activitiesSnap.empty) continue;
-                    for (let i = 0; i < activitiesSnap.docs.length; i += BATCH_LIMIT) {
-                        const batch = writeBatch(firestore);
-                        activitiesSnap.docs.slice(i, i + BATCH_LIMIT).forEach(d => batch.delete(d.ref));
-                        await batch.commit();
+            // Clear subcollections (and student activities)
+            for (const sub of SUBCOLLECTIONS) {
+                const subcollectionRef = collection(firestore, 'schools', cleanId, sub);
+                const snap = await getDocs(subcollectionRef);
+                if (snap.empty) continue;
+
+                if (sub === "students") {
+                    for (const studentDoc of snap.docs) {
+                        const activitiesRef = collection(studentDoc.ref, "activities");
+                        const activitiesSnap = await getDocs(activitiesRef);
+                        if (activitiesSnap.empty) continue;
+                        for (let i = 0; i < activitiesSnap.docs.length; i += BATCH_LIMIT) {
+                            const batch = writeBatch(firestore);
+                            activitiesSnap.docs.slice(i, i + BATCH_LIMIT).forEach(d => batch.delete(d.ref));
+                            await batch.commit();
+                        }
                     }
                 }
-            }
 
-            for (let i = 0; i < snap.docs.length; i += BATCH_LIMIT) {
-                const batch = writeBatch(firestore);
-                snap.docs.slice(i, i + BATCH_LIMIT).forEach(d => batch.delete(d.ref));
-                await batch.commit();
-            }
-        }
-
-        // Re-seed from built-in sample data
-        let schoolData: Record<string, any>, newPasscode: string;
-        if (cleanId === 'yeshiva') {
-            const { YESHIVA_DATA } = await import('@/lib/yeshivaData');
-            newPasscode = SAMPLE_SCHOOL_ACCESS_PASSCODE;
-            schoolData = YESHIVA_DATA;
-        } else {
-            const { SCHOOL_DATA } = await import('@/lib/schoolData');
-            newPasscode = SAMPLE_SCHOOL_ACCESS_PASSCODE;
-            schoolData = SCHOOL_DATA;
-        }
-
-        const { students, classes, teachers, categories, prizes, coupons, ...schoolDocData } = schoolData;
-        const finalSchoolDocData = {
-            ...schoolDocData,
-            passcode: newPasscode,
-            schoolAccessPasscode: newPasscode,
-            adminPasscode: newPasscode,
-            name: schoolData.name,
-            plan: schoolDocData.plan ?? DEFAULT_PLAN,
-            featureOverrides: schoolDocData.featureOverrides ?? {},
-            hasMigratedStudents: true,
-            hasMigratedClasses: true,
-            hasMigratedTeachers: true,
-            hasMigratedPrizes: true,
-            hasMigratedCoupons: true,
-            hasMigratedCategories: true,
-        };
-
-        const allOps: Array<{ ref: any; data: any }> = [];
-
-        const collectItems = (list: any[] | undefined, collectionName: string) => {
-            if (!list) return;
-            for (const item of list) {
-                const itemRef = doc(firestore, 'schools', cleanId, collectionName, item.id);
-                if (collectionName === 'students') {
-                    const studentData: Student = {
-                        ...item,
-                        points: item.points || 0,
-                        lifetimePoints: item.lifetimePoints || item.points || 0,
-                        categoryPoints: item.categoryPoints || {},
-                        categoryPointsByPeriod: item.categoryPointsByPeriod || {},
-                        earnedAchievements: item.earnedAchievements || [],
-                        earnedBadges: item.earnedBadges || [],
-                    };
-                    allOps.push({ ref: itemRef, data: studentData });
-                } else {
-                    allOps.push({ ref: itemRef, data: item });
+                for (let i = 0; i < snap.docs.length; i += BATCH_LIMIT) {
+                    const batch = writeBatch(firestore);
+                    snap.docs.slice(i, i + BATCH_LIMIT).forEach(d => batch.delete(d.ref));
+                    await batch.commit();
                 }
             }
-        };
 
-        collectItems(students, 'students');
-        collectItems(classes, 'classes');
-        collectItems(teachers, 'teachers');
-        collectItems(categories, 'categories');
-        collectItems(prizes, 'prizes');
-        collectItems(coupons, 'coupons');
-
-        const firstBatch = writeBatch(firestore);
-        firstBatch.set(schoolDocRef, finalSchoolDocData);
-        firstBatch.set(
-            schoolPublicDocRef(firestore, cleanId),
-            mainSchoolDocToPublicPayload(finalSchoolDocData as Record<string, unknown>),
-        );
-        await firstBatch.commit();
-
-        const restOps = allOps;
-        for (let i = 0; i < restOps.length; i += BATCH_LIMIT) {
-            const chunk = restOps.slice(i, i + BATCH_LIMIT);
-            const batch = writeBatch(firestore);
-            for (const op of chunk) {
-                batch.set(op.ref, op.data);
+            // Re-seed from built-in sample data
+            let schoolData: Record<string, any>, newPasscode: string;
+            if (cleanId === 'yeshiva') {
+                const { YESHIVA_DATA } = await import('@/lib/yeshivaData');
+                newPasscode = SAMPLE_SCHOOL_ACCESS_PASSCODE;
+                schoolData = YESHIVA_DATA;
+            } else {
+                const { SCHOOL_DATA } = await import('@/lib/schoolData');
+                newPasscode = SAMPLE_SCHOOL_ACCESS_PASSCODE;
+                schoolData = SCHOOL_DATA;
             }
-            await batch.commit();
+
+            const { students, classes, teachers, categories, prizes, coupons, ...schoolDocData } = schoolData;
+
+            // Random theme rotation for the first 7 demo students (each reseed).
+            const randomInt = (maxExclusive: number) => {
+                if (maxExclusive <= 0) return 0;
+                const g = (globalThis as any)?.crypto;
+                if (g?.getRandomValues) {
+                    const arr = new Uint32Array(1);
+                    g.getRandomValues(arr);
+                    return Number(arr[0] % maxExclusive);
+                }
+                return Math.floor(Math.random() * maxExclusive);
+            };
+            const pickRandomDemoThemes = (pool: typeof DEMO_STUDENT_THEMES, count: number) => {
+                const copy = pool.slice();
+                for (let i = pool.length - 1; i > 0; i -= 1) {
+                    const j = randomInt(i + 1);
+                    [copy[i], copy[j]] = [copy[j], copy[i]];
+                }
+                return copy.slice(0, Math.min(count, copy.length));
+            };
+            const themedPool = DEMO_STUDENT_THEMES;
+            const randomizedThemes = pickRandomDemoThemes(themedPool, 7);
+            const themedAt = Date.now();
+            const studentsWithRandomThemes = Array.isArray(students)
+                ? students.map((s: any, idx: number) => {
+                    if (!s || typeof s !== 'object') return s;
+                    // Strip any existing theme from sample data first, then apply only to the first 7.
+                    const { theme: _theme, ...base } = s as any;
+                    if (idx < randomizedThemes.length) {
+                        return {
+                            ...base,
+                            theme: randomizedThemes[idx],
+                            updatedAt: themedAt + (randomizedThemes.length - idx),
+                        };
+                    }
+                    return base;
+                })
+                : students;
+            const finalSchoolDocData = {
+                ...schoolDocData,
+                passcode: newPasscode,
+                schoolAccessPasscode: newPasscode,
+                adminPasscode: newPasscode,
+                name: schoolData.name,
+                plan: schoolDocData.plan ?? DEFAULT_PLAN,
+                featureOverrides: schoolDocData.featureOverrides ?? {},
+                hasMigratedStudents: true,
+                hasMigratedClasses: true,
+                hasMigratedTeachers: true,
+                hasMigratedPrizes: true,
+                hasMigratedCoupons: true,
+                hasMigratedCategories: true,
+            };
+
+            const allOps: Array<{ ref: any; data: any }> = [];
+
+            const collectItems = (list: any[] | undefined, collectionName: string) => {
+                if (!list) return;
+                for (const item of list) {
+                    const itemRef = doc(firestore, 'schools', cleanId, collectionName, item.id);
+                    if (collectionName === 'students') {
+                        const studentData: Student = {
+                            ...item,
+                            points: item.points || 0,
+                            lifetimePoints: item.lifetimePoints || item.points || 0,
+                            categoryPoints: item.categoryPoints || {},
+                            categoryPointsByPeriod: item.categoryPointsByPeriod || {},
+                            earnedAchievements: item.earnedAchievements || [],
+                            earnedBadges: item.earnedBadges || [],
+                        };
+                        allOps.push({ ref: itemRef, data: studentData });
+                    } else {
+                        allOps.push({ ref: itemRef, data: item });
+                    }
+                }
+            };
+
+            collectItems(studentsWithRandomThemes, 'students');
+            collectItems(classes, 'classes');
+            collectItems(teachers, 'teachers');
+            collectItems(categories, 'categories');
+            collectItems(prizes, 'prizes');
+            collectItems(coupons, 'coupons');
+
+            const firstBatch = writeBatch(firestore);
+            firstBatch.set(schoolDocRef, finalSchoolDocData);
+            firstBatch.set(
+                schoolPublicDocRef(firestore, cleanId),
+                mainSchoolDocToPublicPayload(finalSchoolDocData as Record<string, unknown>),
+            );
+            await firstBatch.commit();
+
+            const restOps = allOps;
+            for (let i = 0; i < restOps.length; i += BATCH_LIMIT) {
+                const chunk = restOps.slice(i, i + BATCH_LIMIT);
+                const batch = writeBatch(firestore);
+                for (const op of chunk) {
+                    batch.set(op.ref, op.data);
+                }
+                await batch.commit();
+            }
+
+            await seedOfficeForSampleSchool(cleanId as OfficeDemoVariant, students ?? [], classes ?? [], teachers ?? []);
+
+            const verifyStudentsSnap = await getDocs(collection(firestore, 'schools', cleanId, 'students'));
+            const verifyClassesSnap = await getDocs(collection(firestore, 'schools', cleanId, 'classes'));
+
+            playSound('success');
+            toast({
+                title: `Sample school "${cleanId}" reset`,
+                description: `Restored ${verifyStudentsSnap.size} students and ${verifyClassesSnap.size} classes (plus rewards + School Office).`,
+            });
+        } catch (e) {
+            playSound('error');
+            toast({
+                variant: 'destructive',
+                title: `Reset failed for "${cleanId}"`,
+                description: (e as Error).message || 'Unknown error while reseeding demo data.',
+            });
         }
-
-        await seedOfficeForSampleSchool(cleanId as OfficeDemoVariant, students ?? [], classes ?? [], teachers ?? []);
-
-        playSound('success');
-        toast({
-            title: `Sample school "${cleanId}" reset`,
-            description: 'Rewards and School Office demo data were restored.',
-        });
-    }, [firestore, auth, playSound, toast, seedOfficeForSampleSchool]);
+    }, [firestore, auth, playSound, toast, seedOfficeForSampleSchool, ensureDeveloperIsAdminForSchool]);
 
     const deleteSchool = useCallback(async (schoolId: string) => {
         if (!firestore || !auth.currentUser) return;
@@ -469,13 +532,12 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
             for (const funcName of migrationFunctions) {
                 const callable = httpsCallable(functions, funcName);
                 const result = await callable({ schoolId });
-                console.log(`${funcName} result:`, result.data);
+                void result;
             }
             playSound('success');
             toast({ title: "Migration Complete!", description: `Data for ${schoolId} has been migrated to the new structure.` });
         } catch (error) {
             playSound('error');
-            console.error("Data migration failed:", error);
             toast({ variant: 'destructive', title: 'Migration Failed', description: (error as any).message });
         }
     }, [functions, toast, playSound]);

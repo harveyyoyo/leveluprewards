@@ -20,6 +20,7 @@ import type { CouponPrintPageSize } from '@/lib/couponPrint';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import type { PrizeVoucherPaperFormat } from '@/lib/prizeVoucherPrint';
 import { applyThermalPrizePrintRootLocks, clearThermalPrizePrintRootLocks } from '@/lib/prizeThermalPrintDom';
+import { useToast } from '@/hooks/use-toast';
 
 const PrintSheet = dynamic(
     () => import('@/components/PrintSheet').then((m) => ({ default: m.PrintSheet })),
@@ -57,11 +58,11 @@ const LibraryBarcodePrintSheet = dynamic(
 );
 
 interface PrintContextType {
-    setCouponsToPrint: (coupons: Coupon[], options?: { couponsPerPage?: CouponPrintPageSize }) => void;
-    setStudentsToPrint: (data: { students: Student[]; classes: Class[]; printerType?: 'dtc4500e' }) => void;
+    setCouponsToPrint: (coupons: Coupon[], options?: { couponsPerPage?: CouponPrintPageSize; schoolId: string }) => void;
+    setStudentsToPrint: (data: { students: Student[]; classes: Class[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular' }) => void;
     printPrizeTickets: (tickets: PrizeRedeemTicket[]) => void;
-    setPrizeIdCardsToPrint: (data: { prizes: Prize[]; printerType?: 'dtc4500e' }) => void;
-    setLibraryStickersToPrint: (items: LibraryItem[], options?: { format?: LibraryLabelFormat }) => void;
+    setPrizeIdCardsToPrint: (data: { prizes: Prize[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular' }) => void;
+    setLibraryStickersToPrint: (items: LibraryItem[], options: { schoolId: string; format?: LibraryLabelFormat }) => void;
 }
 
 const PrintContext = createContext<PrintContextType | null>(null);
@@ -81,11 +82,12 @@ async function ensurePrizeTicketFontsLoaded(): Promise<void> {
 }
 
 export function PrintProvider({ children }: { children: React.ReactNode }) {
-    const [couponPrintJob, setCouponPrintJob] = useState<{ coupons: Coupon[]; couponsPerPage: CouponPrintPageSize } | null>(null);
-    const [printData, setPrintData] = useState<{ students: Student[]; classes: Class[]; printerType?: 'dtc4500e' } | null>(null);
+    const { toast } = useToast();
+    const [couponPrintJob, setCouponPrintJob] = useState<{ coupons: Coupon[]; couponsPerPage: CouponPrintPageSize; schoolId: string } | null>(null);
+    const [printData, setPrintData] = useState<{ students: Student[]; classes: Class[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular' } | null>(null);
     const [prizeTicketsToPrint, setPrizeTicketsToPrint] = useState<PrizeRedeemTicket[]>([]);
-    const [prizeIdPrintData, setPrizeIdPrintData] = useState<{ prizes: Prize[]; printerType?: 'dtc4500e' } | null>(null);
-    const [libraryPrintJob, setLibraryPrintJob] = useState<{ items: LibraryItem[]; format: LibraryLabelFormat } | null>(null);
+    const [prizeIdPrintData, setPrizeIdPrintData] = useState<{ prizes: Prize[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular' } | null>(null);
+    const [libraryPrintJob, setLibraryPrintJob] = useState<{ items: LibraryItem[]; format: LibraryLabelFormat; schoolId: string } | null>(null);
     const { settings } = useSettings();
     const prizeVoucherPaperFormat: PrizeVoucherPaperFormat =
         settings.prizeVoucherPaperFormat === 'thermal_80mm' ? 'thermal_80mm' : 'label_50x70';
@@ -205,18 +207,42 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
     }, [libraryPrintJob, playSound]);
 
     const value = useMemo(
-        () => ({ 
-            setCouponsToPrint: (coupons: Coupon[], options?: { couponsPerPage?: CouponPrintPageSize }) => {
-                setCouponPrintJob({ coupons, couponsPerPage: options?.couponsPerPage ?? 10 });
-            }, 
-            setStudentsToPrint: setPrintData,
+        () => ({
+            setCouponsToPrint: (coupons: Coupon[], options?: { couponsPerPage?: CouponPrintPageSize; schoolId: string }) => {
+                const sid = (options?.schoolId ?? '').trim();
+                if (!sid) {
+                    toast({ variant: 'destructive', title: 'Cannot print coupons', description: 'Missing schoolId.' });
+                    return;
+                }
+                setCouponPrintJob({ coupons, couponsPerPage: options?.couponsPerPage ?? 10, schoolId: sid });
+            },
+            setStudentsToPrint: (data: { students: Student[]; classes: Class[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular' }) => {
+                const sid = (data?.schoolId ?? '').trim();
+                if (!sid) {
+                    toast({ variant: 'destructive', title: 'Cannot print ID cards', description: 'Missing schoolId.' });
+                    return;
+                }
+                setPrintData({ ...data, schoolId: sid });
+            },
             printPrizeTickets: setPrizeTicketsToPrint,
-            setPrizeIdCardsToPrint: setPrizeIdPrintData,
-            setLibraryStickersToPrint: (items: LibraryItem[], options?: { format?: LibraryLabelFormat }) => {
-                setLibraryPrintJob({ items, format: options?.format ?? 'sticker' });
+            setPrizeIdCardsToPrint: (data: { prizes: Prize[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular' }) => {
+                const sid = (data?.schoolId ?? '').trim();
+                if (!sid) {
+                    toast({ variant: 'destructive', title: 'Cannot print prize cards', description: 'Missing schoolId.' });
+                    return;
+                }
+                setPrizeIdPrintData({ ...data, schoolId: sid });
+            },
+            setLibraryStickersToPrint: (items: LibraryItem[], options: { schoolId: string; format?: LibraryLabelFormat }) => {
+                const sid = (options?.schoolId ?? '').trim();
+                if (!sid) {
+                    toast({ variant: 'destructive', title: 'Cannot print library labels', description: 'Missing schoolId.' });
+                    return;
+                }
+                setLibraryPrintJob({ items, format: options?.format ?? 'sticker', schoolId: sid });
             },
         }),
-        []
+        [toast],
     );
 
     return (
@@ -226,12 +252,22 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
                 <PrintSheet
                     coupons={couponPrintJob.coupons}
                     couponsPerPage={couponPrintJob.couponsPerPage}
-                    schoolId={schoolId}
+                    schoolId={couponPrintJob.schoolId}
                     onReady={triggerCouponPrint}
                 />
             )}
-            {printData && printData.students.length > 0 && printData.printerType !== 'dtc4500e' && <StudentIdPrintSheet students={printData.students} classes={printData.classes} schoolId={schoolId} onReady={triggerStudentPrint} />}
-            {printData && printData.students.length > 0 && printData.printerType === 'dtc4500e' && <StudentIdDTCPrintSheet students={printData.students} classes={printData.classes} schoolId={schoolId} onReady={triggerStudentPrint} />}
+            {printData && printData.students.length > 0 && printData.printerType !== 'dtc4500e' && (
+                <StudentIdPrintSheet
+                    students={printData.students}
+                    classes={printData.classes}
+                    schoolId={printData.schoolId}
+                    onReady={triggerStudentPrint}
+                    cornerStyle={printData.cornerStyle}
+                />
+            )}
+            {printData && printData.students.length > 0 && printData.printerType === 'dtc4500e' && (
+                <StudentIdDTCPrintSheet students={printData.students} classes={printData.classes} schoolId={printData.schoolId} onReady={triggerStudentPrint} />
+            )}
             {prizeTicketsToPrint.length > 0 && (
                 <PrizeRedeemTicketPrintSheet
                     tickets={prizeTicketsToPrint}
@@ -242,16 +278,21 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
                 />
             )}
             {prizeIdPrintData && prizeIdPrintData.prizes.length > 0 && prizeIdPrintData.printerType !== 'dtc4500e' && (
-                <PrizeIdPrintSheet prizes={prizeIdPrintData.prizes} schoolId={schoolId} onReady={triggerPrizeIdPrint} />
+                <PrizeIdPrintSheet
+                    prizes={prizeIdPrintData.prizes}
+                    schoolId={prizeIdPrintData.schoolId}
+                    onReady={triggerPrizeIdPrint}
+                    cornerStyle={prizeIdPrintData.cornerStyle}
+                />
             )}
             {prizeIdPrintData && prizeIdPrintData.prizes.length > 0 && prizeIdPrintData.printerType === 'dtc4500e' && (
-                <PrizeIdDTCPrintSheet prizes={prizeIdPrintData.prizes} schoolId={schoolId} onReady={triggerPrizeIdPrint} />
+                <PrizeIdDTCPrintSheet prizes={prizeIdPrintData.prizes} schoolId={prizeIdPrintData.schoolId} onReady={triggerPrizeIdPrint} />
             )}
             {libraryPrintJob && libraryPrintJob.items.length > 0 && (
                 <LibraryBarcodePrintSheet
                     items={libraryPrintJob.items}
                     format={libraryPrintJob.format}
-                    schoolId={schoolId}
+                    schoolId={libraryPrintJob.schoolId}
                     onReady={triggerLibraryStickerPrint}
                 />
             )}

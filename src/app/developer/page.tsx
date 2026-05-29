@@ -186,7 +186,7 @@ export default function DeveloperPage() {
   const {
     loginState, isInitialized, isUserLoading, logout, createSchool, deleteSchool, updateSchool,
     devCreateBackup, devRestoreFromBackup, devDownloadBackup, devBackupAllSchools,
-    devVerifyBackup, devMigrateSchoolData, devResetSampleSchool, devSeedOfficeDemoData, devSyncSchoolPublicIndex,
+    devVerifyBackup, devMigrateSchoolData, devResetSampleSchool, devSyncSchoolPublicIndex,
     startDeveloperSupportSession,
   } = useAppContext();
   const firestore = useFirestore();
@@ -961,42 +961,17 @@ export default function DeveloperPage() {
               <CardContent className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                 <Button
                   variant="outline"
-                  onClick={() => devResetSampleSchool('yeshiva')}
+                  onClick={() => void devResetSampleSchool('yeshiva')}
                   className="justify-center sm:flex-1"
                 >
                   <span className="font-semibold">Reset &quot;yeshiva&quot;</span>
                 </Button>
                 <Button
                   variant="outline"
-                  onClick={() => devResetSampleSchool('schoolabc')}
+                  onClick={() => void devResetSampleSchool('schoolabc')}
                   className="justify-center sm:flex-1"
                 >
                   <span className="font-semibold">Reset &quot;schoolabc&quot;</span>
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">School Office demo data</CardTitle>
-                <CardDescription>
-                  Seed roster, grades, and billing for a demo school without resetting rewards data. Enables the School Office pillar.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                <Button
-                  variant="secondary"
-                  onClick={() => devSeedOfficeDemoData('yeshiva')}
-                  className="justify-center sm:flex-1"
-                >
-                  Seed office — yeshiva
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={() => devSeedOfficeDemoData('schoolabc')}
-                  className="justify-center sm:flex-1"
-                >
-                  Seed office — schoolabc
                 </Button>
               </CardContent>
             </Card>

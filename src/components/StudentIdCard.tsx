@@ -17,6 +17,7 @@ export function StudentIdCard({
   appLogoUrl,
   appName,
   appTagline,
+  cornerStyle,
   /** When true, always apply stored themes (e.g. theme editor preview) even if the school has student themes turned off. */
   forceStudentThemePreview = false,
 }: {
@@ -28,9 +29,11 @@ export function StudentIdCard({
   appLogoUrl?: string | null;
   appName?: string;
   appTagline?: string;
+  cornerStyle?: 'rounded' | 'rectangular';
   forceStudentThemePreview?: boolean;
 }) {
   const { settings } = useSettings();
+  const resolvedCornerStyle = cornerStyle ?? settings.idCardCornerStyle ?? 'rounded';
   const studentThemesOn = forceStudentThemePreview || settings.enableStudentThemes;
   const theme = resolveStudentThemeWithSchoolDefault(
     student.theme,
@@ -90,7 +93,7 @@ export function StudentIdCard({
       className={cn(
         'print-id-card',
         isColorEnabled && 'is-colored',
-        settings.idCardCornerStyle === 'rectangular' && 'print-id-card--rectangular',
+        resolvedCornerStyle === 'rectangular' && 'print-id-card--rectangular',
       )}
       style={resolvedCardStyle}
     >

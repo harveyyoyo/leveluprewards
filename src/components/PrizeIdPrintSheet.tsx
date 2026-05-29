@@ -13,9 +13,10 @@ interface PrizeIdPrintSheetProps {
   prizes: Prize[];
   schoolId: string | null;
   onReady: () => void;
+  cornerStyle?: 'rounded' | 'rectangular';
 }
 
-export function PrizeIdPrintSheet({ prizes, schoolId, onReady }: PrizeIdPrintSheetProps) {
+export function PrizeIdPrintSheet({ prizes, schoolId, onReady, cornerStyle }: PrizeIdPrintSheetProps) {
   const { settings } = useSettings();
   const firestore = useFirestore();
   const appConfigRef = useMemoFirebase(() => (firestore ? doc(firestore, 'appConfig', 'global') : null), [firestore]);
@@ -64,6 +65,7 @@ export function PrizeIdPrintSheet({ prizes, schoolId, onReady }: PrizeIdPrintShe
               appLogoUrl={appLogoUrl}
               appName={appName}
               appTagline={appTagline}
+              cornerStyle={cornerStyle}
             />
           ))}
         </div>

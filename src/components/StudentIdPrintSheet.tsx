@@ -14,9 +14,10 @@ interface StudentIdPrintSheetProps {
   classes: Class[];
   schoolId: string | null;
   onReady: () => void;
+  cornerStyle?: 'rounded' | 'rectangular';
 }
 
-export function StudentIdPrintSheet({ students, classes, schoolId, onReady }: StudentIdPrintSheetProps) {
+export function StudentIdPrintSheet({ students, classes, schoolId, onReady, cornerStyle }: StudentIdPrintSheetProps) {
   const { settings } = useSettings();
   const firestore = useFirestore();
   const appConfigRef = useMemoFirebase(() => (firestore ? doc(firestore, 'appConfig', 'global') : null), [firestore]);
@@ -83,6 +84,7 @@ export function StudentIdPrintSheet({ students, classes, schoolId, onReady }: St
               appLogoUrl={appLogoUrl}
               appName={appName}
               appTagline={appTagline}
+              cornerStyle={cornerStyle}
             />
           ))}
         </div>

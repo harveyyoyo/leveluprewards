@@ -58,7 +58,9 @@ function requireString(value, name) {
     }
 }
 function trimmedString(value) {
-    return typeof value === "string" ? value.trim() : "";
+    if (value === null || value === undefined)
+        return "";
+    return String(value).trim();
 }
 function maskRecipient(to) {
     const s = typeof to === "string" ? to.trim() : "";
@@ -2230,17 +2232,38 @@ exports.verifyStaffAccountPasscode = functions.https.onCall(async (data, context
     }
     requireString(data.username, "username");
     const username = String(data.username).trim().toLowerCase();
-    const accountsSnap = await db
+    let accountsSnap = await db
         .collection("schools")
         .doc(schoolId)
         .collection("staffAccounts")
         .where("username", "==", username)
         .limit(5)
         .get();
+    if (accountsSnap.empty) {
+        const allAccountsSnap = await db
+            .collection("schools")
+            .doc(schoolId)
+            .collection("staffAccounts")
+            .get();
+        const matchedDocs = allAccountsSnap.docs.filter((d) => {
+            var _a;
+            const u = String(((_a = d.data()) === null || _a === void 0 ? void 0 : _a.username) || "").trim().toLowerCase();
+            return u === username;
+        });
+        if (matchedDocs.length > 0) {
+            accountsSnap = {
+                docs: matchedDocs,
+                empty: false,
+                size: matchedDocs.length,
+            };
+        }
+    }
     const match = accountsSnap.docs.find((d) => {
         const row = d.data();
         const roles = Array.isArray(row.roles) && row.roles.length > 0 ? row.roles : [row.role];
-        return roles.includes(role) && row.passcode === passcode;
+        const dbPasscode = row.passcode !== undefined && row.passcode !== null ? String(row.passcode).trim() : "";
+        const inputPasscode = passcode !== undefined && passcode !== null ? String(passcode).trim() : "";
+        return roles.includes(role) && dbPasscode === inputPasscode;
     });
     if (!match) {
         throw new functions.https.HttpsError("permission-denied", "Invalid staff login.");

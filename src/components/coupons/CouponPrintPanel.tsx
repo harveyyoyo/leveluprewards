@@ -395,7 +395,7 @@ export function CouponPrintPanel({
     ) {
       await teacherBudget.onBudgetSpend(totalCost);
     }
-    setCouponsToPrint(couponsToCreate, { couponsPerPage: printCouponsPerPage });
+    setCouponsToPrint(couponsToCreate, { couponsPerPage: printCouponsPerPage, schoolId });
     playSound('success');
     toast({
       title: 'Coupons ready to print',

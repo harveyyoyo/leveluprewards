@@ -295,13 +295,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             localStorage.removeItem(DEVELOPER_SUPPORT_SESSION_KEY);
             setLoginState('school');
             if (schoolId) {
-                const dest =
-                    options?.staffNavigateTo === 'teacher'
-                        ? 'teacher'
-                        : options?.staffNavigateTo === 'student'
-                          ? 'student'
-                          : 'portal';
-                router.push(`/${schoolId}/${dest}`);
+                if (loginState === 'office') {
+                    const isSubdomain = typeof window !== 'undefined' && window.location.host.startsWith('office.');
+                    const destPath = isSubdomain ? `/${schoolId}` : `/${schoolId}/office`;
+                    router.push(destPath);
+                } else {
+                    const dest =
+                        options?.staffNavigateTo === 'teacher'
+                            ? 'teacher'
+                            : options?.staffNavigateTo === 'student'
+                              ? 'student'
+                              : 'portal';
+                    router.push(`/${schoolId}/${dest}`);
+                }
             } else {
                 router.push('/login');
             }

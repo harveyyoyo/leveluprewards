@@ -961,8 +961,8 @@ export function AdminPrizesTab({
             if (!o) setPrizeIdPrintJob(null);
           }}
           prizes={prizeIdPrintJob}
-          onConfirm={({ prizes, printerType }) => {
-            setPrizeIdCardsToPrint({ prizes, printerType });
+          onConfirm={({ prizes, printerType, cornerStyle }) => {
+            setPrizeIdCardsToPrint({ prizes, schoolId, printerType, cornerStyle });
             setPrizeIdPrintJob(null);
             toast({
               title: prizes.length === 1 ? 'Printing prize card' : 'Printing prize cards',

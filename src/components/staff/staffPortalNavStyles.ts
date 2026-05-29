@@ -1,5 +1,10 @@
 import { cn } from '@/lib/utils';
 
+/** Content shell width — side tabs use full width (same idea as office wide layout). */
+export function staffPortalContentMaxWidthClass(sidebar: boolean) {
+  return sidebar ? 'max-w-none' : 'max-w-7xl';
+}
+
 /** Main tab triggers — shared by admin dashboard and teacher staff portal on `/admin`. */
 export function staffPortalTabTriggerClassName(sidebar: boolean) {
   return cn(

@@ -17,6 +17,7 @@ export function PrizeIdCard({
   appTagline,
   isColorEnabled,
   className,
+  cornerStyle,
 }: {
   prize: Prize;
   schoolName: string;
@@ -26,8 +27,10 @@ export function PrizeIdCard({
   appTagline?: string;
   isColorEnabled: boolean;
   className?: string;
+  cornerStyle?: 'rounded' | 'rectangular';
 }) {
   const { settings } = useSettings();
+  const resolvedCornerStyle = cornerStyle ?? settings.idCardCornerStyle ?? 'rounded';
   const scanCode = prizeScanCodeFor(prize);
   const nameFitScale = prize.name.length >= 28 ? 0.78 : prize.name.length >= 22 ? 0.88 : 1;
   const fitStyle: React.CSSProperties = { ['--print-id-name-fit-scale' as string]: String(nameFitScale) };
@@ -76,7 +79,7 @@ export function PrizeIdCard({
       className={cn(
         'print-id-card print-prize-id-card',
         isColorEnabled && 'is-colored',
-        settings.idCardCornerStyle === 'rectangular' && 'print-id-card--rectangular',
+        resolvedCornerStyle === 'rectangular' && 'print-id-card--rectangular',
         className,
       )}
       style={cardStyle}

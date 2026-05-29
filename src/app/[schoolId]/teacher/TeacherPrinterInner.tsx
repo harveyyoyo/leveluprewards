@@ -39,6 +39,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { StaffPortalNav } from '@/components/staff/StaffPortalNav';
+import { staffPortalContentMaxWidthClass } from '@/components/staff/staffPortalNavStyles';
 import { TeacherPortalAddMoreMenu } from '@/components/staff/TeacherPortalAddMoreMenu';
 import { TeacherPortalTabPane } from '@/components/staff/TeacherPortalTabPane';
 import { staffPortalTabIsValid, staffPortalTeacherPinSideEffects, useStaffPortalTabs } from '@/lib/staffPortal';
@@ -84,7 +85,9 @@ import { formatStudentPointTypes } from '@/lib/studentPointTypes';
 const MAX_COUPON_PRINT_SHEETS = 100;
 const teacherPortalTabContentClassName =
     'mt-0 h-full min-h-0 w-full overflow-y-auto overflow-x-hidden pb-6 pr-1 data-[state=active]:animate-none motion-reduce:animate-none';
-const teacherPortalPanelClassName = 'w-full max-w-7xl mx-auto';
+function teacherPortalPanelClassName(sidebar: boolean) {
+  return cn('w-full mx-auto', staffPortalContentMaxWidthClass(sidebar));
+}
 
 
 function TeacherHomeworkTab({ schoolId, teacherId, students, classes }: { schoolId: string; teacherId: string; students: Student[]; classes: Class[] }) {
@@ -2146,7 +2149,9 @@ export function TeacherPrinterInner({
                 <div
                     className={cn(
                         'mx-auto flex w-full flex-1 min-h-0 flex-col gap-6 relative z-10',
-                        embedded ? 'max-w-none p-0' : 'max-w-7xl p-4 md:p-8',
+                        embedded
+                            ? 'max-w-none p-0'
+                            : cn('p-4 md:p-8', staffPortalContentMaxWidthClass(teacherNavSidebar)),
                         settings.displayMode === 'app' && !embedded && 'pb-24',
                     )}
                 >
@@ -2238,7 +2243,7 @@ export function TeacherPrinterInner({
                                 tabId={resolvedTeacherTab}
                             >
                             <TeacherPortalTabPane tabId="coupons" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
-                                <div className={teacherPortalPanelClassName}>
+                                <div className={teacherPortalPanelClassName(teacherNavSidebar)}>
                                 <CategoryModal
                                     isOpen={isCategoryModalOpen}
                                     setIsOpen={setIsCategoryModalOpen}
@@ -2258,7 +2263,7 @@ export function TeacherPrinterInner({
                                     issuerDisplayName={teacherName}
                                     isGraphic={isGraphic}
                                     printAccentColor={teacherAccent}
-                                    className="w-full max-w-7xl mx-auto"
+                                    className={teacherPortalPanelClassName(teacherNavSidebar)}
                                     onAddCategory={!secretaryMode ? () => handleOpenCategoryModal(null) : undefined}
                                     onEditCategory={!secretaryMode ? (c) => handleOpenCategoryModal(c) : undefined}
                                     onDeleteCategory={
@@ -2332,7 +2337,7 @@ export function TeacherPrinterInner({
 
                             {teacherTabEnabled('generated-coupons') && (
                             <TeacherPortalTabPane tabId="generated-coupons" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
-                                <div className={teacherPortalPanelClassName}>
+                                <div className={teacherPortalPanelClassName(teacherNavSidebar)}>
                                     <MyCoupons
                                         schoolId={schoolId!}
                                         teacherId={teacherId}
@@ -2345,7 +2350,7 @@ export function TeacherPrinterInner({
 
 
                             <TeacherPortalTabPane tabId="roster" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
-                                <div className={teacherPortalPanelClassName}>
+                                <div className={teacherPortalPanelClassName(teacherNavSidebar)}>
                                     <TeacherRosterTab
                                         teacherId={teacherId}
                                         allStudents={students || []}
@@ -2357,7 +2362,7 @@ export function TeacherPrinterInner({
                             </TeacherPortalTabPane>
 
                             <TeacherPortalTabPane tabId="classes" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
-                                <div className={teacherPortalPanelClassName}>
+                                <div className={teacherPortalPanelClassName(teacherNavSidebar)}>
                                     <TeacherClassesTab
                                         teacherId={teacherId}
                                         classes={classes || []}
@@ -2368,7 +2373,7 @@ export function TeacherPrinterInner({
 
                             {teacherTabEnabled('attendance') && (
                             <TeacherPortalTabPane tabId="attendance" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
-                                <div className={teacherPortalPanelClassName}>
+                                <div className={teacherPortalPanelClassName(teacherNavSidebar)}>
                                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-muted/30 px-4 py-3 mb-6">
                                     <p className="text-sm text-muted-foreground max-w-prose">
                                         New setup takes one rule: class, period, points. Use the walkthrough for a quick test.
@@ -2412,7 +2417,7 @@ export function TeacherPrinterInner({
                             )}
 
                             <TeacherPortalTabPane tabId="prizes" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
-                                <div className={teacherPortalPanelClassName}>
+                                <div className={teacherPortalPanelClassName(teacherNavSidebar)}>
                                 <div className="grid grid-cols-1 gap-8">
                                     <div className="w-full">
                                         <TeacherPrizeManager schoolId={schoolId!} teacherId={teacherId} teachers={teachers} />
@@ -2422,7 +2427,7 @@ export function TeacherPrinterInner({
                             </TeacherPortalTabPane>
 
                             <TeacherPortalTabPane tabId="redemptions" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
-                                <div className={teacherPortalPanelClassName}>
+                                <div className={teacherPortalPanelClassName(teacherNavSidebar)}>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                     <RecentRedemptions schoolId={schoolId!} students={studentsForTeacherActions} classes={classes || []} teacherId={teacherId} />
                                 </div>
@@ -2430,7 +2435,7 @@ export function TeacherPrinterInner({
                             </TeacherPortalTabPane>
 
                             <TeacherPortalTabPane tabId="reports" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
-                                <div className={teacherPortalPanelClassName}>
+                                <div className={teacherPortalPanelClassName(teacherNavSidebar)}>
                                     <div className="w-full">
                                         <SchoolReportsPanel
                                             scope="teacher"
@@ -2451,7 +2456,7 @@ export function TeacherPrinterInner({
 
                             {teacherTabEnabled('raffle') && (
                                 <TeacherPortalTabPane tabId="raffle" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
-                                    <div className={teacherPortalPanelClassName}>
+                                    <div className={teacherPortalPanelClassName(teacherNavSidebar)}>
                                         <AdminRaffleTab
                                             schoolId={schoolId!}
                                             students={studentsForTeacherActions}
@@ -2464,7 +2469,7 @@ export function TeacherPrinterInner({
 
                                 {teacherTabEnabled('goals') && (
                                     <TeacherPortalTabPane tabId="goals" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
-                                        <div className={teacherPortalPanelClassName}>
+                                        <div className={teacherPortalPanelClassName(teacherNavSidebar)}>
                                             <GoalsManager
                                                 schoolId={schoolId!}
                                                 variant="teacher"
@@ -2482,7 +2487,7 @@ export function TeacherPrinterInner({
 
                             {teacherTabEnabled('homework') && (
                                 <TeacherPortalTabPane tabId="homework" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
-                                <div className={teacherPortalPanelClassName}>
+                                <div className={teacherPortalPanelClassName(teacherNavSidebar)}>
                                     <TeacherHomeworkTab schoolId={schoolId!} teacherId={teacherId} students={studentsForTeacherActions} classes={classesForTeacherUi} />
                                 </div>
                             </TeacherPortalTabPane>

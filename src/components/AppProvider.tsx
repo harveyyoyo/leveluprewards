@@ -62,8 +62,8 @@ interface AppContextType {
   isKioskLocked: boolean;
   setIsKioskLocked: (locked: boolean) => void;
   // Print
-  setCouponsToPrint: (coupons: Coupon[], options?: { couponsPerPage?: CouponPrintPageSize }) => void;
-  setStudentsToPrint: (data: { students: Student[], classes: Class[], printerType?: 'dtc4500e' }) => void;
+  setCouponsToPrint: (coupons: Coupon[], options?: { couponsPerPage?: CouponPrintPageSize; schoolId: string }) => void;
+  setStudentsToPrint: (data: { students: Student[], classes: Class[], schoolId: string; printerType?: 'dtc4500e' }) => void;
   printPrizeTickets: (tickets: any[]) => void;
   // CRUD
   addStudent: (student: Omit<Student, 'id' | 'points' | 'lifetimePoints'>) => Promise<void>;

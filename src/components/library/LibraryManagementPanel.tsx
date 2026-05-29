@@ -47,6 +47,7 @@ export type LibraryStatusFilter = 'all' | 'available' | 'checked_out' | 'overdue
 export function LibraryManagementPanel({
   libraryItems,
   getStudentName,
+  schoolId,
   showIntakeScanner = false,
   onAddLibraryItem,
   onEditLibraryItem,
@@ -59,6 +60,7 @@ export function LibraryManagementPanel({
 }: {
   libraryItems: LibraryItem[] | null | undefined;
   getStudentName: (id?: string) => string;
+  schoolId?: string | null;
   students?: Student[] | null;
   categories?: Category[] | null;
   showIntakeScanner?: boolean;
@@ -72,7 +74,8 @@ export function LibraryManagementPanel({
   const { setLibraryStickersToPrint } = usePrint();
   const { toast } = useToast();
   const confirm = useConfirm();
-  const { schoolId } = useAppContext();
+  const { schoolId: ctxSchoolId } = useAppContext();
+  const resolvedSchoolId = (schoolId ?? ctxSchoolId ?? '').trim() || null;
   const [sortKey, setSortKey] = useState<LibrarySortKey>('title');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [labelFormat, setLabelFormat] = useState<LibraryLabelFormat>('sticker');
@@ -148,13 +151,17 @@ export function LibraryManagementPanel({
         toast({ variant: 'destructive', title: 'No items', description: 'Select items to print labels.' });
         return;
       }
-      setLibraryStickersToPrint(items, { format });
+      if (!resolvedSchoolId) {
+        toast({ variant: 'destructive', title: 'Cannot print labels', description: 'Missing schoolId.' });
+        return;
+      }
+      setLibraryStickersToPrint(items, { format, schoolId: resolvedSchoolId });
       toast({
         title: 'Printing labels',
         description: `${items.length} label(s) — ${format === 'sticker' ? 'standard sticker' : format === 'spine' ? 'spine label' : 'pocket label'}.`,
       });
     },
-    [setLibraryStickersToPrint, toast],
+    [setLibraryStickersToPrint, toast, resolvedSchoolId],
   );
 
   const handlePrintAll = () => printItems(sortedItems, labelFormat);

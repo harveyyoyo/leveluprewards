@@ -53,6 +53,11 @@ function studentRowLabel(s: Student) {
   return `${getStudentNickname(s)} ${s.lastName}`.trim();
 }
 
+/** Fluid columns so side-tab layout can use full width; minmax(0, …) avoids grid overflow clipping. */
+const TEACHERS_LIST_GRID =
+  'grid-cols-[76px_minmax(0,1fr)_minmax(0,1.75fr)_minmax(104px,0.5fr)_minmax(104px,0.5fr)_96px_44px]';
+const DESK_STAFF_LIST_GRID = 'grid-cols-[76px_minmax(0,1fr)_minmax(0,2fr)_96px_44px]';
+
 export function AdminTeachersTab({
   teachers,
   staffAccounts,
@@ -238,7 +243,7 @@ export function AdminTeachersTab({
   };
 
   return (
-    <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden">
+    <Card className="w-full border-t-4 border-primary shadow-md">
       <CardHeader className="flex flex-row justify-between items-center py-6">
         <div>
           <Helper content="Full classroom staff who can print coupons and award points. Desk staff get limited coupon, prize, library, houses, office, or reports access. Expand Classes or Students on a row to manage scope.">
@@ -282,7 +287,7 @@ export function AdminTeachersTab({
                 key={t.id}
                 className="bg-secondary/20 rounded-2xl border hover:border-purple-200 transition-colors overflow-hidden"
               >
-                <div className="grid grid-cols-[76px_minmax(140px,1fr)_minmax(180px,260px)_116px_116px_96px_44px] items-center gap-3 px-3 py-2">
+                <div className={cn('grid items-center gap-3 px-3 py-2', TEACHERS_LIST_GRID)}>
                   <div className="flex items-center">
                     <Button
                       variant="outline"
@@ -564,16 +569,18 @@ export function AdminTeachersTab({
             />
           )}
           </ul>
+          </div>
         </section>
 
         <section className="space-y-3">
           <Helper content="Limited accounts for coupon sheets, prize redemption, houses, office, library, or reports.">
             <h3 className="font-bold">Desk staff</h3>
           </Helper>
-          <ul className="space-y-2 pr-1">
+          <div className="w-full min-w-0 overflow-x-auto">
+          <ul className="min-w-[40rem] space-y-2 pr-1">
             {staffAccounts && staffAccounts.length > 0 ? (
               <AdminRecordListHeader
-                gridClassName="grid-cols-[76px_minmax(180px,1fr)_minmax(180px,260px)_96px_44px]"
+                gridClassName={DESK_STAFF_LIST_GRID}
                 columns={[
                   { label: 'Edit' },
                   { label: 'Staff Name' },
@@ -586,7 +593,10 @@ export function AdminTeachersTab({
             {staffAccounts?.map((account) => (
               <li
                 key={account.id}
-                className="grid grid-cols-[76px_minmax(180px,1fr)_minmax(180px,260px)_96px_44px] items-center gap-3 rounded-xl border bg-secondary/20 px-3 py-2 transition-colors hover:border-primary/30"
+                className={cn(
+                  'grid items-center gap-3 rounded-xl border bg-secondary/20 px-3 py-2 transition-colors hover:border-primary/30',
+                  DESK_STAFF_LIST_GRID,
+                )}
               >
                 <div className="flex items-center">
                   <Button
@@ -638,6 +648,7 @@ export function AdminTeachersTab({
               />
             )}
           </ul>
+          </div>
         </section>
 
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

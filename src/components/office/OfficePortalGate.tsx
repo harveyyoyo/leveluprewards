@@ -269,6 +269,24 @@ export function OfficePortalGate({ children }: { children: React.ReactNode }) {
               {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
               Sign in
             </Button>
+            <div className="flex flex-col gap-1 pt-1">
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full rounded-xl text-xs text-muted-foreground hover:text-foreground h-9"
+                onClick={() => router.push(schoolPortalHref(routeSchoolId))}
+              >
+                Return to student portal
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full rounded-xl text-xs text-muted-foreground hover:text-foreground h-9"
+                onClick={() => void logout()}
+              >
+                Sign out of school
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>

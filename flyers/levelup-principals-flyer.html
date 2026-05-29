@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>LevelUp Rewards — Leadership Brief</title>
+    <style>
+      @page {
+        size: letter;
+        margin: 0.5in;
+      }
+
+      :root {
+        --bg: #0b1220;
+        --panel: rgba(255, 255, 255, 0.05);
+        --text: #eaf0ff;
+        --muted: rgba(234, 240, 255, 0.78);
+        --hair: rgba(234, 240, 255, 0.15);
+        --accent: #7c3aed;
+        --accent2: #06b6d4;
+        --success: #22c55e;
+        --black: #0a0a0a;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        height: 100%;
+      }
+
+      body {
+        margin: 0;
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          Segoe UI,
+          Roboto,
+          Helvetica,
+          Arial,
+          "Apple Color Emoji",
+          "Segoe UI Emoji";
+        color: var(--text);
+        background: #fff;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      .page {
+        height: calc(11in - 1in);
+        width: calc(8.5in - 1in);
+        position: relative;
+        overflow: hidden;
+        border-radius: 18px;
+        background:
+          radial-gradient(1200px 700px at 10% 10%, rgba(124, 58, 237, 0.3), transparent 60%),
+          radial-gradient(900px 600px at 90% 20%, rgba(6, 182, 212, 0.25), transparent 55%),
+          linear-gradient(180deg, #081022, #070b16 70%, #05060c);
+        padding: 24px;
+      }
+
+      .page + .page {
+        page-break-before: always;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        padding-bottom: 14px;
+        border-bottom: 1px solid var(--hair);
+      }
+
+      .brand {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: rgba(234, 240, 255, 0.9);
+        width: max-content;
+      }
+
+      .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 3px;
+        background: linear-gradient(135deg, var(--accent), var(--accent2));
+        box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.08);
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 34px;
+        line-height: 1.05;
+        letter-spacing: -0.02em;
+        background: linear-gradient(135deg, #ffffff 60%, rgba(234, 240, 255, 0.7));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .subtitle {
+        margin: 0;
+        font-size: 14px;
+        line-height: 1.4;
+        color: var(--muted);
+        max-width: 48ch;
+      }
+
+      .right-meta {
+        text-align: right;
+        font-size: 11.5px;
+        line-height: 1.5;
+        color: rgba(234, 240, 255, 0.8);
+        white-space: nowrap;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1.2fr 0.95fr;
+        gap: 16px;
+        margin-top: 16px;
+      }
+
+      .card {
+        background: var(--panel);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        padding: 16px;
+        backdrop-filter: blur(10px);
+      }
+
+      h2 {
+        margin: 0 0 10px 0;
+        font-size: 13.5px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--accent2);
+        font-weight: 700;
+      }
+
+      ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+
+      /deep/ li,
+      li {
+        margin: 8px 0;
+        color: rgba(234, 240, 255, 0.88);
+        line-height: 1.35;
+        font-size: 13px;
+        position: relative;
+        padding-left: 20px;
+      }
+
+      /deep/ li::before,
+      li::before {
+        content: "✦";
+        position: absolute;
+        left: 0;
+        top: 0;
+        color: var(--accent2);
+        font-size: 11px;
+        line-height: 18px;
+        text-shadow: 0 0 8px rgba(6, 182, 212, 0.6);
+      }
+
+      li strong {
+        color: #ffffff;
+      }
+
+      .callout {
+        border-left: 3px solid var(--accent);
+        padding: 10px 12px 10px 14px;
+        background: rgba(124, 58, 237, 0.1);
+        border-radius: 12px;
+      }
+
+      .callout p {
+        margin: 0;
+        color: rgba(234, 240, 255, 0.92);
+        font-size: 13px;
+        line-height: 1.4;
+      }
+
+      .kpis {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .kpi {
+        padding: 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.04);
+      }
+
+      .kpi .label {
+        font-size: 9.5px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: rgba(234, 240, 255, 0.6);
+      }
+
+      .kpi .value {
+        margin-top: 4px;
+        font-size: 12px;
+        line-height: 1.25;
+        color: rgba(255, 255, 255, 0.95);
+        font-weight: 600;
+      }
+
+      .footer {
+        position: absolute;
+        left: 24px;
+        right: 24px;
+        bottom: 18px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        gap: 16px;
+        padding-top: 12px;
+        border-top: 1px solid var(--hair);
+        color: rgba(234, 240, 255, 0.75);
+        font-size: 11px;
+        line-height: 1.4;
+      }
+
+      .footer strong {
+        color: rgba(255, 255, 255, 0.95);
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 5px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.05);
+        font-size: 10px;
+        color: rgba(234, 240, 255, 0.85);
+        white-space: nowrap;
+      }
+
+      .pill.sole {
+        border-color: rgba(34, 197, 94, 0.35);
+        background: rgba(34, 197, 94, 0.12);
+      }
+
+      .muted {
+        color: rgba(234, 240, 255, 0.65);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- PAGE 1: FRONT -->
+    <section class="page" aria-label="Front of flyer">
+      <header class="topbar">
+        <div class="brand">
+          <div class="badge"><span class="dot" aria-hidden="true"></span> Leadership Brief</div>
+          <h1>LevelUp Rewards</h1>
+          <p class="subtitle">
+            A secure, building-wide PBIS and school culture platform that standardizes expectations, automates redemptions, and delivers actionable, real-time data—built for NYC DOE and NYS schools.
+          </p>
+        </div>
+        <div class="right-meta">
+          <div><strong>LevelUp EdTech Enterprises LLC</strong></div>
+          <div>Brooklyn, NY</div>
+          <div class="muted">1849 East 38th Street</div>
+          <div class="muted">
+            <a href="mailto:contact@leveluprewards.app?subject=NYC%20DOE%20Procurement%20Inquiry" style="color: var(--accent2); text-decoration: none;"
+              >contact@leveluprewards.app</a
+            >
+          </div>
+        </div>
+      </header>
+
+      <div class="grid">
+        <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <h2>Building-wide PBIS (Expectations & Telemetry)</h2>
+            <ul>
+              <li><strong>Standardized behavior expectations</strong> across all classrooms. Establish unified categories (Respect, Responsibility, Effort) building-wide.</li>
+              <li><strong>Equity & transparency</strong> for all students. An open, visible reward ledger that students trust, removing teacher bias.</li>
+              <li><strong>Low-IT administrative hub:</strong> Seamless student/teacher roster imports (CSV/JSON) and student house sorting setups in minutes.</li>
+              <li><strong>Federal & State funding paths:</strong> Title I, Title II, Title IV-A (SSAE), and NYS NPSE eligible. Sole Source direct purchase up to $25,000.</li>
+            </ul>
+          </div>
+
+          <div style="margin-top: 10px; margin-bottom: 10px;">
+            <div class="callout">
+              <p>
+                <strong>Designed for modern leadership:</strong> establish school-wide consistency, reduce administrative overhead, and make behavior progress visible and measurable.
+              </p>
+            </div>
+          </div>
+
+          <div class="kpis" aria-label="Leadership outcomes">
+            <div class="kpi">
+              <div class="label">Consistency</div>
+              <div class="value">Same system in every room</div>
+            </div>
+            <div class="kpi">
+              <div class="label">Telemetry</div>
+              <div class="value">Real-time building data</div>
+            </div>
+            <div class="kpi">
+              <div class="label">Procurement</div>
+              <div class="value">Sole Source Vendor up to $25k</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+          <!-- 3D Graphic Panel -->
+          <div class="card" style="padding: 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px; height: 180px; position: relative;">
+            <img src="../public/levelup_rewards_hero.png" style="width: 100%; height: 100%; object-fit: cover;" alt="LevelUp 3D Gamification UI Hero" />
+            <div style="position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 6px; font-size: 10px; border: 1px solid rgba(255,255,255,0.15); color: #fff;">
+              Arcade & PBIS Hub
+            </div>
+          </div>
+          
+          <div class="card" style="flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <h2>Compliance & Security</h2>
+              <ul style="margin-bottom: 10px;">
+                <li><strong>NY Education Law § 2-d compliant:</strong> Strict student data isolation, encrypted endpoints, and contract-ready DPA agreements.</li>
+                <li><strong>Privacy first:</strong> Adheres fully to FERPA & COPPA frameworks. No student PII is used to train external AI models.</li>
+              </ul>
+            </div>
+            <div>
+              <h2>NYC Vendor Registration</h2>
+              <ul>
+                <li><strong>NYC Vendor Code:</strong> VS00109014</li>
+                <li><strong>Entity Name:</strong> LevelUp EdTech Enterprises LLC</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <footer class="footer">
+        <div>
+          <strong>Consistent PBIS, done right.</strong> Built for NYC schools that need a secure, building-wide incentives program.
+        </div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end">
+          <span class="pill">Title IV-A eligible</span>
+          <span class="pill">Title I eligible</span>
+          <span class="pill sole">Sole Source ≤ $25k</span>
+          <span class="pill">NY Law 2-d</span>
+        </div>
+      </footer>
+    </section>
+
+    <!-- PAGE 2: BACK -->
+    <section class="page" aria-label="Back of flyer">
+      <header class="topbar">
+        <div class="brand">
+          <div class="badge"><span class="dot" aria-hidden="true"></span> Telemetry & Rollout</div>
+          <h1>Telemetry, security, & low-lift rollout</h1>
+          <p class="subtitle">
+            Built to scale seamlessly, protect student privacy, and provide school leadership with decision-ready climate insights.
+          </p>
+        </div>
+        <div class="right-meta">
+          <div><strong>LevelUp Rewards</strong></div>
+          <div class="muted">Principal brief one-pager</div>
+        </div>
+      </header>
+
+      <div class="grid">
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+          <div class="card">
+            <h2>Actionable school insights</h2>
+            <ul>
+              <li><strong>Staff Engagement telemetry:</strong> Review who is rewarding, how often, and identify grades or teams that need culture support.</li>
+              <li><strong>Redemption popularity logs:</strong> Live stats on what rewards drive student motivation, optimizing school store budgets.</li>
+              <li><strong>Exportable reporting:</strong> Complete ledger and attendance histories exported in one click for PBIS/MTSS meetings.</li>
+              <li><strong>Houses & Sorting ceremonies:</strong> Group students into teams to foster belonginess, team spirit, and healthy peer accountability.</li>
+            </ul>
+
+            <div style="height: 12px"></div>
+            <h2>For deans & PBIS teams</h2>
+            <ul>
+              <li><strong>Consistent criteria:</strong> Establish shared rubrics so all staff recognize identical culture expectations.</li>
+              <li><strong>Controlled access:</strong> Multi-role permissions for teachers, librarians, deans, and administrators.</li>
+            </ul>
+          </div>
+          
+          <!-- 3D Achievements Graphic Panel -->
+          <div class="card" style="padding: 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px; height: 130px; position: relative;">
+            <img src="../public/levelup_rewards_achievements.png" style="width: 100%; height: 100%; object-fit: cover;" alt="LevelUp 3D Badges & Achievements" />
+            <div style="position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 6px; font-size: 10px; border: 1px solid rgba(255,255,255,0.15); color: #fff;">
+              Student Level-Up Progression
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+          <!-- App Mockup Panel -->
+          <div class="card" style="padding: 6px; overflow: hidden; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px; background: rgba(0,0,0,0.4);">
+            <div style="font-size: 9px; color: rgba(255,255,255,0.4); padding: 2px 6px 6px 6px; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 6px; display: flex; align-items: center; gap: 4px;">
+              <span style="width: 5px; height: 5px; border-radius: 50%; background: #ef4444; display: inline-block;"></span>
+              <span style="width: 5px; height: 5px; border-radius: 50%; background: #eab308; display: inline-block;"></span>
+              <span style="width: 5px; height: 5px; border-radius: 50%; background: #22c55e; display: inline-block;"></span>
+              <span style="margin-left: 4px; font-family: monospace;">portal.leveluprewards.app/admin/stats</span>
+            </div>
+            <img src="../public/marketing/screenshots/admin-stats.png" style="width: 100%; border-radius: 10px; display: block; border: 1px solid rgba(255,255,255,0.08);" alt="LevelUp Admin Stats Dashboard Screenshot" />
+          </div>
+          
+          <div class="card" style="flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <h2>Plug-and-Play Hardware</h2>
+              <ul>
+                <li><strong>Autonomous kiosks:</strong> High-performance, wall-mounted touchscreens with barcode scanners. Plug and play via standard outlets and Wi-Fi.</li>
+                <li><strong>Optional smart vending:</strong> Desktop or countertop motor dispensers for reliable, automated prize checkouts.</li>
+              </ul>
+            </div>
+            
+            <div>
+              <h2>Support & Verification</h2>
+              <ul>
+                <li><strong>Procurement package:</strong> Direct custom quotes and full security protocols packet ready for your business office.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <footer class="footer">
+        <div>
+          <strong>LevelUp EdTech Enterprises LLC</strong><br />
+          1849 East 38th Street, Brooklyn, NY<br />
+          <a href="mailto:contact@leveluprewards.app?subject=NYC%20DOE%20Procurement%20Inquiry" style="color: var(--accent2); text-decoration: none;"
+            >contact@leveluprewards.app</a
+          >
+        </div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end">
+          <span class="pill">PBIS / MTSS aligned</span>
+          <span class="pill">Real-time telemetry</span>
+          <span class="pill">DPA-ready</span>
+          <span class="pill">NYC Vendor VS00109014</span>
+        </div>
+      </footer>
+    </section>
+  </body>
+</html>

@@ -115,15 +115,21 @@ function developerGoogleEmailAllowlist(): string[] {
 /** Allowed Google accounts may provision school admin without the admin passcode. */
 function isAllowedGoogleAdminBypass(context: functions.https.CallableContext): boolean {
   const email = (context.auth?.token?.email ?? "").trim().toLowerCase();
-  const provider = context.auth?.token?.firebase?.sign_in_provider;
-  if (provider !== "google.com" || !email) return false;
+  if (!email || !isGoogleAuthenticated(context)) return false;
   return isAllowedGoogleEmailOnAllowlist(email, developerGoogleEmailAllowlist());
 }
 
 // Demo schools should authenticate like any other school (no passcode bypass).
 
 function isGoogleAuthenticated(context: functions.https.CallableContext): boolean {
-  return context.auth?.token?.firebase?.sign_in_provider === "google.com";
+  const token = context.auth?.token as any;
+  const provider = String(token?.firebase?.sign_in_provider ?? "");
+  if (provider === "google.com") return true;
+
+  // When an anonymous Firebase user is linked to Google, `sign_in_provider` may remain "anonymous".
+  // The ID token still includes Google identities when the account is linked.
+  const identities = token?.firebase?.identities;
+  return Boolean(identities && (identities["google.com"] || identities.google));
 }
 
 async function hasExistingSchoolPortalAccess(

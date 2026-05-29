@@ -215,6 +215,7 @@ export default function LibrarianPage() {
           <LibraryManagementPanel
             libraryItems={library}
             students={students}
+            schoolId={schoolId}
             getStudentName={(id) => (id ? studentNameById.get(id) : undefined) ?? 'Unknown'}
             showIntakeScanner
             onAddLibraryItem={() => {
