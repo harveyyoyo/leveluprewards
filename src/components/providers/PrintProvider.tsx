@@ -10,50 +10,51 @@ import React, {
 } from 'react';
 import dynamic from 'next/dynamic';
 import type { Coupon, Student, Class, Prize, LibraryItem } from '@/lib/types';
-import type { LibraryLabelFormat } from '@/lib/libraryScanCode';
-import type { PrizeRedeemTicket } from '@/components/PrizeRedeemTicketPrintSheet';
+import type { LibraryLabelFormat } from '@/lib/library/libraryScanCode';
+import type { PrizeRedeemTicket } from '@/components/prizes/PrizeRedeemTicketPrintSheet';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useAuth } from './AuthProvider';
 import { useDoc } from '@/firebase';
 import { useSchoolMetadataDocRef } from '@/hooks/useSchoolMetadataDocRef';
-import type { CouponPrintPageSize } from '@/lib/couponPrint';
+import type { CouponPrintPageSize } from '@/lib/coupons/couponPrint';
 import { useSettings } from '@/components/providers/SettingsProvider';
-import type { PrizeVoucherPaperFormat } from '@/lib/prizeVoucherPrint';
-import { applyThermalPrizePrintRootLocks, clearThermalPrizePrintRootLocks } from '@/lib/prizeThermalPrintDom';
+import type { PrizeVoucherPaperFormat } from '@/lib/prizes/prizeVoucherPrint';
+import { applyThermalPrizePrintRootLocks, clearThermalPrizePrintRootLocks } from '@/lib/prizes/prizeThermalPrintDom';
+import { waitForPrintBarcodes } from '@/lib/printBarcode';
 import { useToast } from '@/hooks/use-toast';
 
 const PrintSheet = dynamic(
-    () => import('@/components/PrintSheet').then((m) => ({ default: m.PrintSheet })),
+    () => import('@/components/print/PrintSheet').then((m) => ({ default: m.PrintSheet })),
     { ssr: false },
 );
 
 const StudentIdPrintSheet = dynamic(
-    () => import('@/components/StudentIdPrintSheet').then((m) => ({ default: m.StudentIdPrintSheet })),
+    () => import('@/components/student/StudentIdPrintSheet').then((m) => ({ default: m.StudentIdPrintSheet })),
     { ssr: false },
 );
 
 const StudentIdDTCPrintSheet = dynamic(
-    () => import('@/components/StudentIdDTCPrintSheet').then((m) => ({ default: m.StudentIdDTCPrintSheet })),
+    () => import('@/components/student/StudentIdDTCPrintSheet').then((m) => ({ default: m.StudentIdDTCPrintSheet })),
     { ssr: false },
 );
 
 const PrizeRedeemTicketPrintSheet = dynamic(
-    () => import('@/components/PrizeRedeemTicketPrintSheet').then((m) => ({ default: m.PrizeRedeemTicketPrintSheet })),
+    () => import('@/components/prizes/PrizeRedeemTicketPrintSheet').then((m) => ({ default: m.PrizeRedeemTicketPrintSheet })),
     { ssr: false },
 );
 
 const PrizeIdPrintSheet = dynamic(
-    () => import('@/components/PrizeIdPrintSheet').then((m) => ({ default: m.PrizeIdPrintSheet })),
+    () => import('@/components/prizes/PrizeIdPrintSheet').then((m) => ({ default: m.PrizeIdPrintSheet })),
     { ssr: false },
 );
 
 const PrizeIdDTCPrintSheet = dynamic(
-    () => import('@/components/PrizeIdDTCPrintSheet').then((m) => ({ default: m.PrizeIdDTCPrintSheet })),
+    () => import('@/components/prizes/PrizeIdDTCPrintSheet').then((m) => ({ default: m.PrizeIdDTCPrintSheet })),
     { ssr: false },
 );
 
 const LibraryBarcodePrintSheet = dynamic(
-    () => import('@/components/LibraryBarcodePrintSheet').then((m) => ({ default: m.LibraryBarcodePrintSheet })),
+    () => import('@/components/print/LibraryBarcodePrintSheet').then((m) => ({ default: m.LibraryBarcodePrintSheet })),
     { ssr: false },
 );
 
@@ -109,7 +110,7 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
             };
             window.addEventListener('afterprint', afterPrint);
             playSound('swoosh');
-            document.fonts.load('38pt "Libre Barcode 39"').finally(() => {
+            waitForPrintBarcodes().finally(() => {
               requestAnimationFrame(() => {
                 requestAnimationFrame(() => window.print());
               });
@@ -128,7 +129,7 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
             };
             window.addEventListener('afterprint', afterPrint);
             playSound('swoosh');
-            document.fonts.load('48pt "Libre Barcode 39"').finally(() => {
+            waitForPrintBarcodes().finally(() => {
                 requestAnimationFrame(() => {
                     requestAnimationFrame(() => window.print());
                 });
@@ -179,7 +180,7 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
             };
             window.addEventListener('afterprint', afterPrint);
             playSound('swoosh');
-            document.fonts.load('48pt "Libre Barcode 39"').finally(() => {
+            waitForPrintBarcodes().finally(() => {
                 requestAnimationFrame(() => {
                     requestAnimationFrame(() => window.print());
                 });
@@ -198,7 +199,7 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
             };
             window.addEventListener('afterprint', afterPrint);
             playSound('swoosh');
-            document.fonts.load('32pt "Libre Barcode 39"').finally(() => {
+            waitForPrintBarcodes().finally(() => {
                 requestAnimationFrame(() => {
                     requestAnimationFrame(() => window.print());
                 });

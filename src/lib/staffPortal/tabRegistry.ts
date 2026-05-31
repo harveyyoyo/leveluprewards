@@ -10,7 +10,9 @@ import {
   GraduationCap,
   History,
   Home,
+  LayoutGrid,
   Megaphone,
+  Monitor,
   Palette,
   Plug,
   Tag,
@@ -22,6 +24,7 @@ import {
   Database,
 } from 'lucide-react';
 import type { Settings } from '@/components/providers/SettingsProvider';
+import { isClassroomPillarOn, isRewardsPillarOn } from '@/lib/productPillars';
 import type { StaffPortalRole, StaffPortalTabDef } from './types';
 
 function teacherAddonHidden(settings: Settings, tabValue: string): boolean {
@@ -39,12 +42,13 @@ function adminAddonHidden(settings: Settings, tabValue: string): boolean {
  * - **Add-on** tabs: optional in the nav row when pinned via **Add more**.
  * - **Admin** pins school-management tabs (Insights, Houses, …) and toggles school config flags.
  * - **Teachers** pin their own tabs (Raffle, Goals, Attendance, …); admins do not gate teacher nav.
- *   Pinning a teacher tab can turn on student-facing flags (e.g. raffle on the kiosk).
+ *   Pinning raffle turns on `enableWeeklyRaffle` (kiosk ticket display still requires Rewards pillar).
  *
  * | Tab value        | Admin | Teacher | Notes |
  * |------------------|:-----:|:-------:|-------|
- * | raffle, homework, generated-coupons | — | add-on | Teacher-operational |
- * | attendance, goals | add-on | add-on | Admin config + teacher daily use |
+ * | raffle, goals, homework | — / add-on | add-on | Teacher-operational (not Rewards-gated) |
+ * | generated-coupons | — | add-on | Rewards economy (coupon print) |
+ * | attendance | add-on | add-on | `payAttendance` pillar |
  * | insights, houses, … | add-on | — | Admin-only |
  */
 
@@ -81,7 +85,7 @@ export const STAFF_PORTAL_TAB_REGISTRY: StaffPortalTabDef[] = [
     icon: Gift,
     kind: 'core',
     roles: ['admin', 'teacher'],
-    isEnabled: () => true,
+    isEnabled: (s) => isRewardsPillarOn(s),
   },
   {
     value: 'categories',
@@ -90,7 +94,16 @@ export const STAFF_PORTAL_TAB_REGISTRY: StaffPortalTabDef[] = [
     kind: 'core',
     roles: ['admin'],
     title: 'Point categories (school setup)',
-    isEnabled: () => true,
+    isEnabled: (s) => isRewardsPillarOn(s),
+  },
+  {
+    value: 'classroom',
+    label: 'Classroom',
+    icon: LayoutGrid,
+    kind: 'core',
+    roles: ['admin', 'teacher'],
+    title: 'Seating chart, quick awards, and room display',
+    isEnabled: (s, role) => isClassroomPillarOn(s) || role === 'admin',
   },
   {
     value: 'reports',
@@ -117,7 +130,7 @@ export const STAFF_PORTAL_TAB_REGISTRY: StaffPortalTabDef[] = [
     kind: 'core',
     roles: ['teacher', 'secretary'],
     title: 'Print coupons and award points',
-    isEnabled: () => true,
+    isEnabled: (s) => isRewardsPillarOn(s),
   },
   {
     value: 'redemptions',
@@ -125,7 +138,7 @@ export const STAFF_PORTAL_TAB_REGISTRY: StaffPortalTabDef[] = [
     icon: History,
     kind: 'core',
     roles: ['teacher'],
-    isEnabled: () => true,
+    isEnabled: (s) => isRewardsPillarOn(s),
   },
   // —— Admin add-ons (feature tabs) ——
   {
@@ -167,6 +180,14 @@ export const STAFF_PORTAL_TAB_REGISTRY: StaffPortalTabDef[] = [
     isEnabled: (s) => s.bulletinEnabled !== false,
   },
   {
+    value: 'smart-screen',
+    label: 'Smart Screen',
+    icon: Monitor,
+    kind: 'addon',
+    roles: ['admin'],
+    isEnabled: (s) => !!s.smartScreenEnabled && !adminAddonHidden(s, 'smart-screen'),
+  },
+  {
     value: 'library',
     label: 'Library',
     icon: BookOpen,
@@ -199,7 +220,7 @@ export const STAFF_PORTAL_TAB_REGISTRY: StaffPortalTabDef[] = [
     isEnabled: (s, role) => {
       if (role === 'teacher') {
         if (teacherAddonHidden(s, 'goals')) return false;
-        return s.payRewards ?? true;
+        return true;
       }
       return !!s.enableGoals;
     },
@@ -213,7 +234,7 @@ export const STAFF_PORTAL_TAB_REGISTRY: StaffPortalTabDef[] = [
     isEnabled: (s, role) => {
       if (role !== 'teacher') return false;
       if (teacherAddonHidden(s, 'raffle')) return false;
-      return s.payRewards ?? true;
+      return true;
     },
   },
   {
@@ -277,7 +298,7 @@ export const STAFF_PORTAL_TAB_REGISTRY: StaffPortalTabDef[] = [
     isEnabled: (s, role) => {
       if (role !== 'teacher') return false;
       if (teacherAddonHidden(s, 'generated-coupons')) return false;
-      return true;
+      return isRewardsPillarOn(s);
     },
   },
   {
@@ -298,7 +319,7 @@ export function staffPortalTeacherPinSideEffects(
   if (!pinned) return {};
   switch (tabValue) {
     case 'raffle':
-      return { payRewards: true, enableWeeklyRaffle: true };
+      return { enableWeeklyRaffle: true };
     case 'goals':
       return { enableGoals: true };
     case 'attendance':
@@ -341,8 +362,14 @@ export function staffPortalAddOnTabs(role: StaffPortalRole, settings: Settings):
 }
 
 /** Default tab when current selection is invalid. */
-export function staffPortalDefaultTab(role: StaffPortalRole): string {
+export function staffPortalDefaultTab(
+  role: StaffPortalRole,
+  settings?: Pick<Settings, 'payRewards' | 'payClassroom'>,
+): string {
   if (role === 'secretary') return 'coupons';
-  if (role === 'teacher') return 'coupons';
+  if (role === 'teacher') {
+    if (settings && isClassroomPillarOn(settings) && !isRewardsPillarOn(settings)) return 'classroom';
+    return 'coupons';
+  }
   return 'students';
 }

@@ -1,4 +1,4 @@
-﻿# Cursor indexing / @-mention exclusions (gitignore-style patterns).
+# Cursor indexing / @-mention exclusions (gitignore-style patterns).
 # Keeps agents from scanning huge or generated folders. Source code stays indexed.
 
 # Dependencies & build output
@@ -31,6 +31,9 @@ assets/
 *.apng
 *.gif
 
+# Remotion promo subproject (build + deps)
+promo-video/node_modules/
+promo-video/.next/
 promo-video/public/capture-library/
 promo-video/public/voiceover/
 promo-video/public/music/

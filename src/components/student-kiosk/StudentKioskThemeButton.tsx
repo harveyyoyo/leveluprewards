@@ -16,7 +16,7 @@ import { normalizeStudentTheme } from '@/lib/themeContrast';
 import type { Student, StudentTheme } from '@/lib/types';
 
 const ThemeGeneratorModal = dynamic(
-  () => import('@/components/ThemeGeneratorModal').then((m) => m.ThemeGeneratorModal),
+  () => import('@/components/themes/ThemeGeneratorModal').then((m) => m.ThemeGeneratorModal),
   { ssr: false },
 );
 
@@ -25,6 +25,10 @@ type Props = {
   student: Student;
   classLabel?: string;
   themed?: boolean;
+  primaryForeground?: string;
+  /** `sidebar` matches full-width kiosk actions like More prizes; `inline` is compact. */
+  layout?: 'sidebar' | 'inline';
+  className?: string;
 };
 
 export function StudentKioskThemeButton({
@@ -32,6 +36,9 @@ export function StudentKioskThemeButton({
   student,
   classLabel = 'Unassigned',
   themed,
+  primaryForeground = '#ffffff',
+  layout = 'inline',
+  className,
 }: Props) {
   const { settings } = useSettings();
   const playSound = useArcadeSound();
@@ -88,23 +95,33 @@ export function StudentKioskThemeButton({
     }
   };
 
+  const sidebar = layout === 'sidebar';
   const triggerStyle = themed
-    ? {
-        borderColor: 'var(--theme-primary)',
-        backgroundColor: 'color-mix(in srgb, var(--theme-card) 88%, white)',
-        color: 'var(--theme-text)',
-      }
+    ? sidebar
+      ? {
+          backgroundColor: 'var(--theme-primary)',
+          color: primaryForeground,
+        }
+      : {
+          borderColor: 'var(--theme-primary)',
+          backgroundColor: 'color-mix(in srgb, var(--theme-card) 88%, white)',
+          color: 'var(--theme-text)',
+        }
     : undefined;
 
   return (
     <>
       <Button
         type="button"
-        variant="outline"
-        size="sm"
+        variant={sidebar ? 'default' : 'outline'}
+        size={sidebar ? 'default' : 'sm'}
         className={cn(
-          'h-10 w-full shrink-0 justify-center gap-1.5 rounded-full px-3.5 text-[11px] font-bold uppercase tracking-widest lg:w-auto',
-          themed && 'shadow-sm',
+          sidebar
+            ? 'h-12 w-full shrink-0 text-sm font-black uppercase tracking-wide shadow-md sm:h-14 sm:text-base'
+            : 'h-9 w-auto shrink-0 justify-center gap-1.5 rounded-full px-3.5 text-[11px] font-bold uppercase tracking-widest',
+          sidebar && !themed && 'bg-gradient-to-r from-primary to-primary/90',
+          !sidebar && themed && 'shadow-sm',
+          className,
         )}
         style={triggerStyle}
         aria-label="Change theme"
@@ -114,8 +131,10 @@ export function StudentKioskThemeButton({
           setThemeModalOpen(true);
         }}
       >
-        <Palette className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
-        Change theme
+        <span className={cn('flex items-center justify-center gap-1.5', sidebar && 'w-full')}>
+          <Palette className={cn('shrink-0 opacity-90', sidebar ? 'h-4 w-4 sm:h-5 sm:w-5' : 'h-3.5 w-3.5')} aria-hidden />
+          {sidebar ? 'Change theme' : 'Theme'}
+        </span>
       </Button>
 
       {themeModalOpen ? (

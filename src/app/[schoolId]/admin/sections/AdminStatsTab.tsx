@@ -1,7 +1,13 @@
 'use client';
 
 import { Activity, LayoutDashboard } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  StaffPortalSectionCard,
+  StaffPortalSectionCardContent,
+  StaffPortalSectionCardHeader,
+  StaffPortalSectionCardTitle,
+} from '@/components/staff/StaffPortalSection';
 import { Helper } from '@/components/ui/helper';
 import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 import type { Class, Coupon, Student, Teacher } from '@/lib/types';
@@ -23,16 +29,16 @@ export function AdminStatsTab({
 }) {
   return (
     <>
-      <Card className="border-t-4 border-primary shadow-md">
-        <CardHeader className="py-6 flex flex-row items-start justify-between gap-4">
+      <StaffPortalSectionCard className="">
+        <StaffPortalSectionCardHeader className="py-6 flex flex-row items-start justify-between gap-4">
           <Helper content="Overview of points and engagement across the school.">
-            <CardTitle className="text-2xl flex items-center gap-2">
+            <StaffPortalSectionCardTitle className="text-2xl flex items-center gap-2">
               <Activity className="text-primary w-6 h-6" /> School Analytics
-            </CardTitle>
+            </StaffPortalSectionCardTitle>
           </Helper>
           <TabWalkthroughHeaderAction />
-        </CardHeader>
-        <CardContent className="space-y-6">
+        </StaffPortalSectionCardHeader>
+        <StaffPortalSectionCardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card className="bg-secondary/30 border-0 shadow-none">
               <CardContent className="p-6">
@@ -61,18 +67,18 @@ export function AdminStatsTab({
               </CardContent>
             </Card>
           </div>
-        </CardContent>
-      </Card>
+        </StaffPortalSectionCardContent>
+      </StaffPortalSectionCard>
 
-      <Card className="border-t-4 border-primary shadow-md">
-        <CardHeader>
+      <StaffPortalSectionCard>
+        <StaffPortalSectionCardHeader>
           <Helper content="A high-level overview of your school's data, including counts for students, classes, teachers, and coupon activity.">
-            <CardTitle className="flex items-center gap-2">
+            <StaffPortalSectionCardTitle className="flex items-center gap-2">
               <LayoutDashboard className="w-5 h-5 text-primary" /> System Stats
-            </CardTitle>
+            </StaffPortalSectionCardTitle>
           </Helper>
-        </CardHeader>
-        <CardContent className="grid grid-cols-2 lg:grid-cols-3 gap-4 text-center">
+        </StaffPortalSectionCardHeader>
+        <StaffPortalSectionCardContent className="grid grid-cols-2 lg:grid-cols-3 gap-4 text-center">
           {[
             { label: 'Students', val: students?.length || 0 },
             { label: 'Classes', val: classes?.length || 0 },
@@ -86,8 +92,8 @@ export function AdminStatsTab({
               <p className="text-xs text-muted-foreground uppercase font-bold tracking-tighter mt-1">{stat.label}</p>
             </div>
           ))}
-        </CardContent>
-      </Card>
+        </StaffPortalSectionCardContent>
+      </StaffPortalSectionCard>
     </>
   );
 }

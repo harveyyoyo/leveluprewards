@@ -1,0 +1,7 @@
+Student 106 / coupon 685335: redeem error on screen
+Error: Student 106 / coupon 685335: redeem error on screen
+    at validate (file:///C:/Users/Administrator/school%20arcade%20reward%20antigravity/studio/scripts/capture-walkthrough-videos.mjs:1582:17)
+    at async recordClipReady (file:///C:/Users/Administrator/school%20arcade%20reward%20antigravity/studio/scripts/capture-walkthrough-videos.mjs:1071:23)
+    at async captureLibrary (file:///C:/Users/Administrator/school%20arcade%20reward%20antigravity/studio/scripts/capture-walkthrough-videos.mjs:2466:26)
+    at async capturePromoBroll (file:///C:/Users/Administrator/school%20arcade%20reward%20antigravity/studio/scripts/capture-walkthrough-videos.mjs:2599:3)
+    at async main (file:///C:/Users/Administrator/school%20arcade%20reward%20antigravity/studio/scripts/capture-walkthrough-videos.mjs:2758:5)

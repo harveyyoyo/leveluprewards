@@ -15,6 +15,10 @@
  *   node scripts/capture-walkthrough-videos.mjs --library
  *   node scripts/capture-walkthrough-videos.mjs --library --category=login
  *   node scripts/capture-walkthrough-videos.mjs --library --promote-defaults
+ *   node scripts/capture-walkthrough-videos.mjs --kiosk-clips
+ *   node scripts/capture-walkthrough-videos.mjs --kiosk-coupons
+ *   node scripts/capture-walkthrough-videos.mjs --kiosk-coupons --clip=132403
+ *   node scripts/capture-walkthrough-videos.mjs --promo-broll
  *   CAPTURE_BASE_URL=https://portal.leveluprewards.app node scripts/capture-walkthrough-videos.mjs
  */
 
@@ -304,14 +308,9 @@ async function waitForTeacherReady(page) {
   }
   await waitNoAppLoading(page);
   await page
-    .getByRole('heading', { name: /Teacher Portal/i })
-    .waitFor({ state: 'visible', timeout: 90000 });
-  await page.getByRole('tab', { name: /^Students$/i }).waitFor({ state: 'visible', timeout: 90000 });
-  await page
-    .getByText(/Academics|Problem Solving|Good Behavior/i)
+    .getByRole('tab', { name: /^Students$/i })
     .first()
-    .waitFor({ state: 'visible', timeout: 90000 })
-    .catch(() => {});
+    .waitFor({ state: 'visible', timeout: 120000 });
   await sleep(600);
 }
 
@@ -446,31 +445,207 @@ async function openStudentKiosk(page, origin) {
   await waitForStudentKioskReady(page);
 }
 
-async function signInStudentKiosk(page) {
+async function dismissWelcomeOverlayIfPresent(page) {
+  const letsGo = page.getByRole('button', { name: /Let'?s Go!/i });
+  if (await letsGo.isVisible({ timeout: 2500 }).catch(() => false)) {
+    await letsGo.click();
+    await sleep(500);
+    return;
+  }
+  const welcome = page.getByText(/^WELCOME BACK!/i);
+  if (await welcome.isVisible({ timeout: 1500 }).catch(() => false)) {
+    await sleep(2200);
+  }
+}
+
+async function signInStudentKiosk(page, { slowType = false, badgeId = STUDENT_BADGE_ID, timeoutMs = 90000 } = {}) {
+  const studentId = String(badgeId).trim();
   await ensureStudentKioskTypeTab(page);
   const manualInput = page.locator('input[placeholder="----"]');
   if (await manualInput.isVisible({ timeout: 8000 }).catch(() => false)) {
-    await manualInput.fill(STUDENT_BADGE_ID);
+    await manualInput.click();
+    if (slowType) {
+      await manualInput.pressSequentially(studentId, { delay: 140 });
+    } else {
+      await manualInput.fill(studentId);
+    }
     await page.getByRole('button', { name: /Identify Student/i }).click();
   } else {
     const input = page.getByRole('textbox').first();
     await input.click();
-    await input.fill(STUDENT_BADGE_ID);
+    if (slowType) {
+      await input.pressSequentially(studentId, { delay: 140 });
+    } else {
+      await input.fill(studentId);
+    }
     await input.press('Enter');
   }
   await page.waitForFunction(
     () => {
       const t = document.body?.innerText ?? '';
       return (
-        /Rewards|Wallet|Gift|WELCOME BACK|BALANCE|Eligible Rewards/i.test(t) &&
+        /Rewards|Wallet|Gift|WELCOME BACK|BALANCE|Eligible Rewards|Student found/i.test(t) &&
         !/Enter your Student ID|Loading kiosk/i.test(t)
       );
     },
-    { timeout: 90000, polling: 300 },
+    { timeout: timeoutMs, polling: 300 },
   );
   await waitForCleanUi(page);
   await assertCleanUi(page, 'student kiosk signed in');
   await sleep(600);
+}
+
+async function signOutStudentKiosk(page) {
+  const logout = page.getByRole('button', { name: /^Logout$/i });
+  if (await logout.isVisible({ timeout: 4000 }).catch(() => false)) {
+    await logout.click();
+    await page.waitForFunction(
+      () => {
+        const t = document.body?.innerText ?? '';
+        return /Enter your Student ID|Identify Student|Please scan your card/i.test(t);
+      },
+      { timeout: 45000, polling: 300 },
+    );
+    await sleep(500);
+    return;
+  }
+  await page.goto(`${localOrigin()}/${SCHOOL}/student`, {
+    waitUntil: 'domcontentloaded',
+    timeout: 30000,
+  });
+  await waitForStudentKioskReady(page);
+}
+
+/** Set by captureKioskClips before recording redeem clip. */
+let resolvedCaptureCouponCode = null;
+
+/** When Firebase reset fails, filled from a teacher print sheet (10 fresh codes). */
+let activeCouponRedeemScenes = null;
+
+const DEFAULT_COUPON_STUDENT_BADGES = ['100', '101', '102', '103', '104', '105', '106', '107', '108', '109'];
+
+async function mintCouponScenesViaTeacherPrint(browser) {
+  const ctx = await browser.newContext({ viewport: VIEWPORT, storageState: SCHOOL_AUTH });
+  const page = await ctx.newPage();
+  try {
+    await openTeacherPortal(page, localOrigin());
+    await waitForPrintCouponsReady(page);
+    await page.locator('input[type="number"]').nth(1).fill('1');
+    await page.getByRole('button', { name: /Generate.*print/i }).click();
+    await page
+      .getByText(/Coupons ready to print|coupon.*generated/i)
+      .first()
+      .waitFor({ state: 'visible', timeout: 90000 });
+    await sleep(900);
+    await page.locator('.coupon-barcode').first().waitFor({ state: 'visible', timeout: 30000 });
+    const codes = (await page.locator('.print-coupon-wrapper .coupon-barcode, .coupon-barcode').allInnerTexts())
+      .map((raw) => {
+        const digits = raw.replace(/\D/g, '');
+        return digits.length >= 6 ? digits.slice(-6) : digits;
+      })
+      .filter((c) => c.length >= 6);
+    const scenes = [];
+    const n = Math.min(codes.length, DEFAULT_COUPON_STUDENT_BADGES.length);
+    for (let i = 0; i < n; i++) {
+      scenes.push({
+        couponCode: codes[i],
+        studentBadgeId: DEFAULT_COUPON_STUDENT_BADGES[i],
+      });
+      console.log(`  fresh coupon: student ${DEFAULT_COUPON_STUDENT_BADGES[i]} → ${codes[i]}`);
+    }
+    if (!scenes.length) throw new Error('Could not read coupon codes from teacher print preview');
+    return scenes;
+  } finally {
+    await contextClose(ctx);
+  }
+}
+
+async function resolveCouponRedeemScenes(browser) {
+  const marketing = await import('./lib/demo-marketing-settings.mjs');
+  marketing.loadEnvLocal();
+  const configured = marketing.CAPTURE_COUPON_REDEEM_SCENES;
+  try {
+    if (await marketing.ensureCaptureCouponsUnused(configured.map((s) => s.couponCode))) {
+      console.log('  coupons: reset configured codes to unused via Firebase');
+      return configured;
+    }
+  } catch (err) {
+    console.warn(`  coupons: Firebase reset failed (${err.message})`);
+  }
+  console.log('  coupons: minting a fresh print sheet (teacher portal)…');
+  return mintCouponScenesViaTeacherPrint(browser);
+}
+
+async function resolveCaptureCouponCode(browser) {
+  const { ensureCapturePromoCoupon, CAPTURE_PROMO_COUPON_CODE } = await import(
+    './lib/demo-marketing-settings.mjs',
+  );
+  if (await ensureCapturePromoCoupon()) {
+    resolvedCaptureCouponCode = CAPTURE_PROMO_COUPON_CODE;
+    return resolvedCaptureCouponCode;
+  }
+
+  if (authNeedsRefresh(TEACHER_AUTH)) await ensureTeacherAuth(browser);
+  const ctx = await browser.newContext({ viewport: VIEWPORT, storageState: TEACHER_AUTH });
+  const page = await ctx.newPage();
+  try {
+    await gotoTeacher(page, localOrigin());
+    await waitForPrintCouponsReady(page);
+    const sheetsField = page.locator('input[type="number"]').first();
+    await sheetsField.fill('1');
+    await page.getByRole('button', { name: /Generate.*print/i }).click();
+    await page
+      .getByText(/Coupons ready to print|coupon.*generated/i)
+      .first()
+      .waitFor({ state: 'visible', timeout: 60000 })
+      .catch(() => {});
+    await sleep(800);
+    const barcode = page.locator('.coupon-barcode').first();
+    await barcode.waitFor({ state: 'visible', timeout: 30000 });
+    const raw = (await barcode.innerText()).trim();
+    const digits = raw.replace(/\D/g, '');
+    if (digits.length >= 6) {
+      resolvedCaptureCouponCode = digits.slice(-6);
+      console.log(`  capture coupon (teacher print): ${resolvedCaptureCouponCode}`);
+      return resolvedCaptureCouponCode;
+    }
+    throw new Error(`Could not read coupon code from print preview: "${raw}"`);
+  } finally {
+    await contextClose(ctx);
+  }
+}
+
+async function redeemCaptureCouponOnKiosk(page, couponCode, { slowType = false } = {}) {
+  const code = (couponCode || resolvedCaptureCouponCode || '').trim().toUpperCase();
+  if (!code) throw new Error('No capture coupon code available');
+
+  await dismissWelcomeOverlayIfPresent(page);
+  await page.getByText(/^Redeem Coupon$/i).first().scrollIntoViewIfNeeded().catch(() => {});
+  await sleep(400);
+
+  const couponInput = page
+    .getByPlaceholder(/type coupon code|Code appears here when scanned/i)
+    .first();
+  await couponInput.waitFor({ state: 'visible', timeout: 45000 });
+  await couponInput.click();
+  if (slowType) {
+    await couponInput.fill('');
+    await couponInput.pressSequentially(code, { delay: 110 });
+  } else {
+    await couponInput.fill(code);
+  }
+  await page.getByRole('button', { name: /^Redeem$/i }).click();
+  await page.waitForFunction(
+    () => {
+      const t = document.body?.innerText ?? '';
+      return (
+        /\+\d+\s*PTS|You gained \d+ points|Coupon Redeemed/i.test(t) &&
+        !/Redemption Failed|already been used|not found/i.test(t)
+      );
+    },
+    { timeout: 45000, polling: 250 },
+  );
+  await sleep(1200);
 }
 
 async function isStudentKioskSignedIn(page) {
@@ -543,24 +718,39 @@ async function signInStudentHome(page) {
   return ok;
 }
 
-async function ensureSchoolAuth(browser) {
+async function saveContextStorageState(ctx, authPath) {
   fs.mkdirSync(AUTH_DIR, { recursive: true });
+  let lastErr;
+  for (let attempt = 1; attempt <= 4; attempt++) {
+    try {
+      await ctx.storageState({ path: authPath, indexedDB: true });
+      return;
+    } catch (err) {
+      lastErr = err;
+      await sleep(350 * attempt);
+    }
+  }
+  throw lastErr;
+}
+
+async function ensureSchoolAuth(browser) {
   const ctx = await browser.newContext({ viewport: VIEWPORT });
   const page = await ctx.newPage();
   await schoolLogin(page);
-  await ctx.storageState({ path: SCHOOL_AUTH, indexedDB: true });
+  await saveContextStorageState(ctx, SCHOOL_AUTH);
   await ctx.close();
   console.log('  auth: school session saved');
 }
 
 async function ensureTeacherAuth(browser) {
-  fs.mkdirSync(AUTH_DIR, { recursive: true });
-  await ensureSchoolAuth(browser);
+  if (!fs.existsSync(SCHOOL_AUTH) || authNeedsRefresh(SCHOOL_AUTH)) {
+    await ensureSchoolAuth(browser);
+  }
   const ctx = await browser.newContext({ viewport: VIEWPORT, storageState: SCHOOL_AUTH });
   const page = await ctx.newPage();
   const origin = localOrigin();
   await openTeacherPortal(page, origin);
-  await ctx.storageState({ path: TEACHER_AUTH, indexedDB: true });
+  await saveContextStorageState(ctx, TEACHER_AUTH);
   if (USE_LOCAL_DEV()) rewriteStorageStateOrigin(TEACHER_AUTH);
   await ctx.close();
   console.log(`  auth: teacher session saved (${localOrigin()})`);
@@ -770,6 +960,65 @@ async function ensurePromoAdminAddOnTabs(page) {
   }
 }
 
+async function gotoTeacherRaffle(page, origin) {
+  await gotoTeacher(page, origin);
+  const tab = page.getByRole('tab', { name: /^Raffle$/i }).first();
+  await tab.waitFor({ state: 'visible', timeout: 30000 });
+  await tab.click();
+  await waitNoAppLoading(page);
+  await page
+    .getByText(/Run draw|Jackpot \(reels\)|Spinning wheel/i)
+    .first()
+    .waitFor({ state: 'visible', timeout: 60000 });
+  await sleep(700);
+}
+
+async function prepareAdminRaffleDraw(page, origin) {
+  await gotoAdmin(page, origin);
+  await ensureAdminAddOnTab(page, 'Raffle');
+  const ok = await gotoAdminTab(page, origin, 'Raffle');
+  if (!ok) throw new Error('Admin Raffle tab not visible (enable Weekly Raffle on school or pin Raffle tab)');
+  const eligible = page.getByText(/^Eligible$/i).first();
+  await eligible.waitFor({ state: 'visible', timeout: 30000 }).catch(() => {});
+  const body = await pageBodyText(page);
+  if (/In pool[\s\S]*\b0\b/.test(body) && !/In pool[\s\S]*[1-9]/.test(body)) {
+    throw new Error('Raffle pool has no tickets — check demo students / raffle settings');
+  }
+}
+
+async function recordRaffleJackpotPull(page) {
+  await page.getByRole('button', { name: /Jackpot \(reels\)/i }).click();
+  await page.getByRole('button', { name: 'PULL!' }).waitFor({ state: 'visible', timeout: 25000 });
+  await sleep(700);
+  await page.getByRole('button', { name: 'PULL!' }).click();
+  await page.waitForFunction(
+    () => /SPINNING|🎉/i.test(document.body?.innerText ?? ''),
+    { timeout: 15000, polling: 200 },
+  );
+  await page.waitForFunction(
+    () => /🎉[\s\S]{2,}/i.test(document.body?.innerText ?? ''),
+    { timeout: 12000, polling: 250 },
+  );
+  await sleep(1400);
+}
+
+async function recordRaffleWheelSpin(page) {
+  await page.getByRole('button', { name: /Spinning wheel/i }).click();
+  const spinBtn = page.getByRole('button', { name: 'SPIN!' });
+  await spinBtn.waitFor({ state: 'visible', timeout: 25000 });
+  await sleep(700);
+  await spinBtn.click();
+  await page.waitForFunction(
+    () => /The winner is|SPINNING/i.test(document.body?.innerText ?? ''),
+    { timeout: 15000, polling: 200 },
+  );
+  await page.waitForFunction(
+    () => /The winner is/i.test(document.body?.innerText ?? ''),
+    { timeout: 12000, polling: 300 },
+  );
+  await sleep(1200);
+}
+
 async function gotoAdminTab(page, origin, tabLabel) {
   await gotoAdmin(page, origin);
   if (await isAdminPasscodeGate(page)) await submitAdminPasscodeGate(page);
@@ -803,13 +1052,14 @@ async function gotoAdminTab(page, origin, tabLabel) {
 }
 
 async function ensureAdminAuth(browser) {
-  fs.mkdirSync(AUTH_DIR, { recursive: true });
-  await ensureSchoolAuth(browser);
+  if (!fs.existsSync(SCHOOL_AUTH) || authNeedsRefresh(SCHOOL_AUTH)) {
+    await ensureSchoolAuth(browser);
+  }
   const ctx = await browser.newContext({ viewport: VIEWPORT, storageState: SCHOOL_AUTH });
   const page = await ctx.newPage();
   await adminLogin(page);
   await ensurePromoAdminAddOnTabs(page);
-  await ctx.storageState({ path: ADMIN_AUTH, indexedDB: true });
+  await saveContextStorageState(ctx, ADMIN_AUTH);
   if (USE_LOCAL_DEV()) rewriteStorageStateOrigin(ADMIN_AUTH);
   await ctx.close();
   console.log(`  auth: admin session saved (${localOrigin()})`);
@@ -1123,6 +1373,239 @@ function libraryPath(category, name) {
   return path.join(LIBRARY_DIR, category, `${name}.mp4`);
 }
 
+/** Raffle spins, kiosk b-roll, and other high-value Remotion clips (see --promo-broll). */
+function buildPromoBrollExtraVariants() {
+  const raffleTrim = { startSec: 0.7, maxDurationSec: 9 };
+  return [
+    {
+      category: 'raffle',
+      name: 'teacher-jackpot-pull',
+      storageState: TEACHER_AUTH,
+      trim: raffleTrim,
+      prepare: async (page) => {
+        await gotoTeacherRaffle(page, localOrigin());
+      },
+      record: async (page) => {
+        await gotoTeacherRaffle(page, localOrigin());
+        await recordRaffleJackpotPull(page);
+      },
+      validate: async (page) => {
+        if (!/🎉/.test(await pageBodyText(page))) {
+          throw new Error('Teacher jackpot winner not visible');
+        }
+        await assertCleanUi(page, 'teacher jackpot');
+      },
+    },
+    {
+      category: 'raffle',
+      name: 'teacher-wheel-spin',
+      storageState: TEACHER_AUTH,
+      trim: raffleTrim,
+      prepare: async (page) => {
+        await gotoTeacherRaffle(page, localOrigin());
+      },
+      record: async (page) => {
+        await gotoTeacherRaffle(page, localOrigin());
+        await recordRaffleWheelSpin(page);
+      },
+      validate: async (page) => {
+        if (!/The winner is/i.test(await pageBodyText(page))) {
+          throw new Error('Teacher wheel winner not visible');
+        }
+        await assertCleanUi(page, 'teacher wheel');
+      },
+    },
+    {
+      category: 'student-kiosk',
+      name: 'kiosk-prize-shop',
+      storageState: SCHOOL_AUTH,
+      trim: { startSec: 1.2, maxDurationSec: 5.5 },
+      prepare: async (page) => {
+        await openStudentKiosk(page, localOrigin());
+        await signInStudentKiosk(page, { badgeId: '106' });
+        await dismissWelcomeOverlayIfPresent(page);
+      },
+      record: async (page) => {
+        await openStudentKiosk(page, localOrigin());
+        await signInStudentKiosk(page, { badgeId: '106' });
+        await dismissWelcomeOverlayIfPresent(page);
+        await page.goto(`${localOrigin()}/${SCHOOL}/student?shop=prizes`, {
+          waitUntil: 'domcontentloaded',
+          timeout: 30000,
+        });
+        await waitNoAppLoading(page);
+        await dismissWelcomeOverlayIfPresent(page);
+        await sleep(1200);
+        await page.mouse.move(640, 400);
+        await sleep(800);
+      },
+      validate: async (page) => {
+        const t = await pageBodyText(page);
+        if (!/Prize|Rewards|Redeem|Shop/i.test(t)) {
+          throw new Error('Prize shop not visible');
+        }
+        await assertCleanUi(page, 'kiosk prize shop');
+      },
+    },
+    {
+      category: 'student-kiosk',
+      name: 'kiosk-scan-tab',
+      storageState: SCHOOL_AUTH,
+      trim: { startSec: 0.35, maxDurationSec: 4.5 },
+      prepare: async (page) => {
+        await openStudentKiosk(page, localOrigin());
+        if (await isStudentKioskSignedIn(page)) await signOutStudentKiosk(page);
+      },
+      record: async (page) => {
+        await openStudentKiosk(page, localOrigin());
+        const scanTab = page.getByRole('tab', { name: /^Scan$/i });
+        if (await scanTab.isVisible().catch(() => false)) {
+          await scanTab.click();
+          await sleep(1100);
+        }
+        await assertCleanUi(page, 'kiosk scan tab');
+      },
+    },
+    {
+      category: 'portal',
+      name: 'portal-hub-overview',
+      storageState: SCHOOL_AUTH,
+      trim: { startSec: 0.2, maxDurationSec: 5 },
+      prepare: async (page) => {
+        await page.goto(`${localOrigin()}/${SCHOOL}/portal`, { waitUntil: 'domcontentloaded' });
+        await waitForPortalHub(page);
+      },
+      record: async (page) => {
+        await page.goto(`${localOrigin()}/${SCHOOL}/portal`, { waitUntil: 'domcontentloaded' });
+        await waitForPortalHub(page);
+        const links = ['Student Kiosk', 'Teacher Portal', 'Admin'];
+        for (const label of links) {
+          const link = page.getByRole('link', { name: new RegExp(label, 'i') }).first();
+          if (await link.isVisible().catch(() => false)) {
+            await link.hover();
+            await sleep(550);
+          }
+        }
+      },
+    },
+    {
+      category: 'teacher',
+      name: 'teacher-award-points-flow',
+      storageState: TEACHER_AUTH,
+      trim: { startSec: 1.8, maxDurationSec: 5 },
+      prepare: async (page) => {
+        await gotoTeacher(page, localOrigin());
+        await page.getByRole('tab', { name: /^Students$/i }).click();
+        await waitNoAppLoading(page);
+      },
+      record: async (page) => {
+        await gotoTeacher(page, localOrigin());
+        await page.getByRole('tab', { name: /^Students$/i }).click();
+        await sleep(600);
+        const firstStudent = page.locator('[data-student-row], tr').filter({ hasText: /\d+/ }).first();
+        if (await firstStudent.isVisible({ timeout: 8000 }).catch(() => false)) {
+          await firstStudent.click();
+          await sleep(900);
+        }
+        await page.mouse.move(700, 420);
+        await sleep(700);
+      },
+    },
+  ];
+}
+
+/** Library clip ids included in --promo-broll (plus coupon redeems + buildPromoBrollExtraVariants). */
+const PROMO_BROLL_LIBRARY_IDS = [
+  'login/login-portal-settle',
+  'selector/selector-hover-kiosk',
+  'selector/selector-hub-pan',
+  'student-kiosk/kiosk-mode-idle',
+  'student-kiosk/kiosk-type-entry',
+  'student-kiosk/kiosk-signin-welcome-points',
+  'student-kiosk/kiosk-new-points-on-entry',
+  'student-kiosk/kiosk-signin-rewards',
+  'student-kiosk/kiosk-prizes-hover',
+  'student-kiosk/kiosk-welcome-balance',
+  'student-kiosk/kiosk-card-tab',
+  'action/action-print-coupons',
+  'action/action-print-preview-hold',
+  'admin/admin-id-card-preview',
+  'features/admin-branding-theme',
+  'features/hall-of-fame',
+  'features/bulletin-board',
+  'features/admin-houses',
+  'features/admin-badges',
+  'features/admin-notifications',
+  'features/admin-library',
+  'features/admin-stats',
+  'features/admin-attendance',
+  'raffle/teacher-jackpot-pull',
+  'raffle/teacher-wheel-spin',
+  'teacher/teacher-students-roster',
+  'teacher/teacher-points-tab',
+  'teacher/teacher-tabs-cycle',
+];
+
+async function collectPromoBrollVariants() {
+  const coupons = await buildKioskCouponRedeemVariants();
+  const extras = buildPromoBrollExtraVariants();
+  const fromLibrary = LIBRARY_VARIANTS.filter((v) =>
+    PROMO_BROLL_LIBRARY_IDS.includes(`${v.category}/${v.name}`),
+  );
+  const seen = new Set();
+  const merged = [];
+  for (const v of [...coupons, ...extras, ...fromLibrary]) {
+    const key = `${v.category}/${v.name}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    merged.push(v);
+  }
+  return merged;
+}
+
+async function buildKioskCouponRedeemVariants() {
+  const { CAPTURE_COUPON_REDEEM_SCENES: configured } = await import(
+    './lib/demo-marketing-settings.mjs',
+  );
+  const scenes = activeCouponRedeemScenes ?? configured;
+  return scenes.map(({ couponCode, studentBadgeId }) => {
+    const code = couponCode.trim();
+    const badge = studentBadgeId.trim();
+    return {
+      category: 'student-kiosk',
+      name: `kiosk-coupon-redeem-${code}`,
+      storageState: SCHOOL_AUTH,
+      trim: { startSec: 0.55, maxDurationSec: 6.8 },
+      prepare: async (page) => {
+        await openStudentKiosk(page, localOrigin());
+        if (await isStudentKioskSignedIn(page)) await signOutStudentKiosk(page);
+        await signInStudentKiosk(page, { badgeId: badge });
+        await dismissWelcomeOverlayIfPresent(page);
+      },
+      record: async (page) => {
+        await openStudentKiosk(page, localOrigin());
+        if (await isStudentKioskSignedIn(page)) await signOutStudentKiosk(page);
+        await signInStudentKiosk(page, { badgeId: badge, slowType: true });
+        await dismissWelcomeOverlayIfPresent(page);
+        await redeemCaptureCouponOnKiosk(page, code, { slowType: true });
+        await sleep(1000);
+      },
+      validate: async (page) => {
+        const t = await pageBodyText(page);
+        if (/already been used|not found|Redemption Failed/i.test(t)) {
+          throw new Error(`Student ${badge} / coupon ${code}: redeem error on screen`);
+        }
+        if (!/\+\d+\s*PTS|You gained \d+ points|Coupon Redeemed/i.test(t)) {
+          throw new Error(
+            `Student ${badge} / coupon ${code}: points celebration not visible (${t.slice(0, 200)})`,
+          );
+        }
+        await assertCleanUi(page, `kiosk coupon ${code}`);
+      },
+    };
+  });
+}
+
 /** Extra takes for choosing in Remotion / manual review */
 const LIBRARY_VARIANTS = [
   {
@@ -1343,6 +1826,117 @@ const LIBRARY_VARIANTS = [
         await sleep(900);
       }
       await assertCleanUi(page, 'kiosk card tab');
+    },
+  },
+  {
+    category: 'student-kiosk',
+    name: 'kiosk-mode-idle',
+    storageState: SCHOOL_AUTH,
+    trim: { startSec: 0.35, maxDurationSec: 5.5 },
+    prepare: async (page) => {
+      await openStudentKiosk(page, localOrigin());
+      if (await isStudentKioskSignedIn(page)) await signOutStudentKiosk(page);
+    },
+    record: async (page) => {
+      await openStudentKiosk(page, localOrigin());
+      if (await isStudentKioskSignedIn(page)) await signOutStudentKiosk(page);
+      await ensureStudentKioskTypeTab(page);
+      await sleep(1400);
+      await page.mouse.move(700, 420);
+      await sleep(600);
+    },
+    validate: async (page) => {
+      const t = await pageBodyText(page);
+      if (!/Enter your Student ID|Identify Student|Please scan your card|System Ready/i.test(t)) {
+        throw new Error('Kiosk sign-in screen not visible');
+      }
+      await assertCleanUi(page, 'kiosk idle');
+    },
+  },
+  {
+    category: 'student-kiosk',
+    name: 'kiosk-signin-welcome-points',
+    storageState: SCHOOL_AUTH,
+    trim: { startSec: 0.2, maxDurationSec: 7.5 },
+    prepare: async (page) => {
+      await openStudentKiosk(page, localOrigin());
+      if (await isStudentKioskSignedIn(page)) await signOutStudentKiosk(page);
+    },
+    record: async (page) => {
+      await openStudentKiosk(page, localOrigin());
+      if (await isStudentKioskSignedIn(page)) await signOutStudentKiosk(page);
+      await signInStudentKiosk(page, { slowType: true });
+      await page.waitForFunction(
+        () => /WELCOME BACK|Your Balance|Student found/i.test(document.body?.innerText ?? ''),
+        { timeout: 60000, polling: 200 },
+      );
+      await sleep(2800);
+    },
+    validate: async (page) => {
+      const t = await pageBodyText(page);
+      if (!/WELCOME BACK|Your Balance|PTS/i.test(t)) {
+        throw new Error('Welcome back / balance overlay not visible (enable welcome splash in school settings)');
+      }
+      await assertCleanUi(page, 'kiosk welcome points');
+    },
+  },
+  {
+    category: 'student-kiosk',
+    name: 'kiosk-new-points-on-entry',
+    storageState: SCHOOL_AUTH,
+    trim: { startSec: 0.8, maxDurationSec: 6.5 },
+    prepare: async (page) => {
+      await openStudentKiosk(page, localOrigin());
+      if (await isStudentKioskSignedIn(page)) await signOutStudentKiosk(page);
+    },
+    record: async (page) => {
+      await openStudentKiosk(page, localOrigin());
+      if (await isStudentKioskSignedIn(page)) await signOutStudentKiosk(page);
+      await signInStudentKiosk(page, { slowType: true });
+      await page.waitForFunction(
+        () => {
+          const t = document.body?.innerText ?? '';
+          return (
+            /\+\d+\s*PTS|You gained \d+ points|Attendance recorded/i.test(t) ||
+            /WELCOME BACK|Your Balance/i.test(t)
+          );
+        },
+        { timeout: 90000, polling: 250 },
+      );
+      await sleep(1600);
+    },
+    validate: async (page) => {
+      const t = await pageBodyText(page);
+      if (!/\+\d+\s*PTS|You gained \d+ points|WELCOME BACK|Your Balance|PTS/i.test(t)) {
+        throw new Error('Expected points celebration or welcome balance on kiosk sign-in');
+      }
+      await assertCleanUi(page, 'kiosk points on entry');
+    },
+  },
+  {
+    category: 'student-kiosk',
+    name: 'kiosk-coupon-points-redeem',
+    storageState: SCHOOL_AUTH,
+    skipIf: async () => !resolvedCaptureCouponCode,
+    trim: { startSec: 0.5, maxDurationSec: 6.5 },
+    prepare: async (page) => {
+      await openStudentKiosk(page, localOrigin());
+      await signInStudentKiosk(page);
+    },
+    record: async (page) => {
+      await openStudentKiosk(page, localOrigin());
+      if (!(await isStudentKioskSignedIn(page))) {
+        await signInStudentKiosk(page);
+      }
+      await redeemCaptureCouponOnKiosk(page, resolvedCaptureCouponCode);
+      await sleep(800);
+    },
+    validate: async (page) => {
+      const t = await pageBodyText(page);
+      if (!/\+\d+\s*PTS|You gained \d+ points/i.test(t)) {
+        throw new Error('Points earned fly-up / message not visible after coupon redeem');
+      }
+      await assertCleanUi(page, 'kiosk points redeem');
     },
   },
   {
@@ -1823,6 +2417,16 @@ const PROMO_SIMPLE_LIBRARY = [
   'action/action-print-coupons',
 ];
 
+/** Kiosk + “new points” clips for Remotion b-roll */
+const KIOSK_PROMO_LIBRARY = [
+  'student-kiosk/kiosk-mode-idle',
+  'student-kiosk/kiosk-signin-welcome-points',
+  'student-kiosk/kiosk-new-points-on-entry',
+  'student-kiosk/kiosk-type-entry',
+  'student-kiosk/kiosk-signin-rewards',
+  'student-kiosk/kiosk-coupon-points-redeem',
+];
+
 /** Clips for long feature showcase promos */
 const PROMO_FEATURE_LIBRARY = [
   'admin/admin-id-card-preview',
@@ -1838,9 +2442,9 @@ const PROMO_FEATURE_LIBRARY = [
   'features/admin-attendance',
 ];
 
-async function captureLibrary({ categoryFilter, nameFilter } = {}) {
+async function captureLibrary({ categoryFilter, nameFilter, variantsOverride, skipAuthRefresh = false } = {}) {
   fs.mkdirSync(LIBRARY_DIR, { recursive: true });
-  let variants = LIBRARY_VARIANTS;
+  let variants = variantsOverride ?? LIBRARY_VARIANTS;
   if (nameFilter?.length) {
     variants = variants.filter((v) =>
       nameFilter.includes(`${v.category}/${v.name}`),
@@ -1861,9 +2465,17 @@ async function captureLibrary({ categoryFilter, nameFilter } = {}) {
   const needsSchool = variants.some((v) => v.storageState === SCHOOL_AUTH);
   const needsAdmin = variants.some((v) => v.storageState === ADMIN_AUTH);
   const refreshAuth = process.argv.includes('--refresh-auth');
-  if (needsSchool && (refreshAuth || authNeedsRefresh(SCHOOL_AUTH))) await ensureSchoolAuth(browser);
-  if (needsTeacher && (refreshAuth || authNeedsRefresh(TEACHER_AUTH))) await ensureTeacherAuth(browser);
-  if (needsAdmin && (refreshAuth || authNeedsRefresh(ADMIN_AUTH))) await ensureAdminAuth(browser);
+  if (!skipAuthRefresh) {
+    if (needsSchool && (refreshAuth || authNeedsRefresh(SCHOOL_AUTH))) await ensureSchoolAuth(browser);
+    if (needsTeacher && (refreshAuth || authNeedsRefresh(TEACHER_AUTH))) await ensureTeacherAuth(browser);
+    if (needsAdmin && (refreshAuth || authNeedsRefresh(ADMIN_AUTH))) await ensureAdminAuth(browser);
+  } else if (needsSchool && !fs.existsSync(SCHOOL_AUTH)) {
+    await ensureSchoolAuth(browser);
+  } else if (needsTeacher && !fs.existsSync(TEACHER_AUTH)) {
+    await ensureTeacherAuth(browser);
+  } else if (needsAdmin && !fs.existsSync(ADMIN_AUTH)) {
+    await ensureAdminAuth(browser);
+  }
   await browser.close();
 
   let ok = 0;
@@ -1955,6 +2567,136 @@ function concatFastWalkthrough() {
   console.log('✓ walkthrough-fast.mp4 (concat)');
 }
 
+async function prepPromoBroll(browser) {
+  const marketing = await import('./lib/demo-marketing-settings.mjs');
+  marketing.loadEnvLocal();
+  try {
+    if (await marketing.patchDemoMarketingSettings()) {
+      console.log('  demo: school settings patched for captures');
+    } else {
+      console.warn('  ⚠ Could not patch demo school settings (Firebase admin unavailable)');
+    }
+  } catch (err) {
+    console.warn(`  ⚠ Settings patch failed: ${err.message}`);
+  }
+  if (authNeedsRefresh(SCHOOL_AUTH) || !fs.existsSync(SCHOOL_AUTH)) {
+    await ensureSchoolAuth(browser);
+  }
+  if (authNeedsRefresh(TEACHER_AUTH) || !fs.existsSync(TEACHER_AUTH)) {
+    try {
+      await ensureTeacherAuth(browser);
+    } catch (err) {
+      console.warn(`  ⚠ Teacher auth failed (teacher clips may fail): ${err.message}`);
+    }
+  }
+  if (authNeedsRefresh(ADMIN_AUTH) || !fs.existsSync(ADMIN_AUTH)) {
+    await ensureAdminAuth(browser);
+    const ctx = await browser.newContext({ viewport: VIEWPORT, storageState: ADMIN_AUTH });
+    const page = await ctx.newPage();
+    try {
+      await gotoAdmin(page, localOrigin());
+      await ensurePromoAdminAddOnTabs(page);
+    } finally {
+      await contextClose(ctx);
+    }
+  }
+  try {
+    activeCouponRedeemScenes = await resolveCouponRedeemScenes(browser);
+  } catch (err) {
+    console.warn(`  ⚠ Coupon prep failed: ${err.message}`);
+    activeCouponRedeemScenes = null;
+  }
+}
+
+async function capturePromoBroll() {
+  console.log('\n=== Promo b-roll batch (kiosk, coupons, raffle, admin, teacher) ===\n');
+  const browser = await chromium.launch({ headless: true });
+  try {
+    await prepPromoBroll(browser);
+  } catch (e) {
+    console.warn(`  ⚠ Prep failed: ${e.message}\n`);
+  } finally {
+    await browser.close();
+  }
+
+  let variants = await collectPromoBrollVariants();
+  const clipFilter = process.argv.find((a) => a.startsWith('--clip='))?.split('=')[1]?.trim();
+  if (clipFilter) {
+    variants = variants.filter(
+      (v) => v.name.includes(clipFilter) || v.name.endsWith(`-${clipFilter}`),
+    );
+    if (!variants.length) throw new Error(`No promo b-roll clips match --clip=${clipFilter}`);
+  }
+
+  console.log(`Capturing ${variants.length} clip(s)…\n`);
+  const nameFilter = variants.map((v) => `${v.category}/${v.name}`);
+  await captureLibrary({ nameFilter, variantsOverride: variants, skipAuthRefresh: true });
+  console.log('\n✓ Promo b-roll → promo-video/public/capture-library/\n');
+}
+
+async function captureKioskCoupons() {
+  console.log('\n=== Kiosk coupon redeems (one student + code per clip) ===\n');
+  const marketing = await import('./lib/demo-marketing-settings.mjs');
+
+  const browser = await chromium.launch({ headless: true });
+  try {
+    await prepPromoBroll(browser);
+  } catch (e) {
+    console.warn(`  ⚠ Prep failed: ${e.message}\n`);
+  } finally {
+    await browser.close();
+  }
+
+  let variants = await buildKioskCouponRedeemVariants();
+  const clipFilter = process.argv.find((a) => a.startsWith('--clip='))?.split('=')[1]?.trim();
+  if (clipFilter) {
+    variants = variants.filter(
+      (v) => v.name.includes(clipFilter) || v.name.endsWith(`-${clipFilter}`),
+    );
+    if (!variants.length) {
+      throw new Error(`No coupon redeem clips match --clip=${clipFilter}`);
+    }
+  }
+
+  const nameFilter = variants.map((v) => `${v.category}/${v.name}`);
+  console.log(`Capturing ${variants.length} coupon redeem clip(s)…\n`);
+  await captureLibrary({ nameFilter, variantsOverride: variants });
+  console.log('\n✓ Coupon clips → promo-video/public/capture-library/student-kiosk/kiosk-coupon-redeem-*.mp4\n');
+}
+
+async function captureKioskClips() {
+  console.log('\n=== Kiosk promo clips (idle, welcome points, coupon redeem) ===\n');
+  const browser = await chromium.launch({ headless: true });
+  try {
+    const { patchDemoMarketingSettings } = await import('./lib/demo-marketing-settings.mjs');
+    const patched = await patchDemoMarketingSettings();
+    if (!patched) {
+      console.warn(
+        '  ⚠ FIREBASE_SERVICE_ACCOUNT_KEY not set — welcome splash uses production settings; coupon via teacher print\n',
+      );
+    }
+    if (authNeedsRefresh(SCHOOL_AUTH)) await ensureSchoolAuth(browser);
+    try {
+      await resolveCaptureCouponCode(browser);
+    } catch (couponErr) {
+      console.warn(`  ⚠ Coupon seed skipped: ${couponErr.message}`);
+    }
+  } catch (e) {
+    console.warn(`  ⚠ Demo prep failed: ${e.message}\n`);
+  } finally {
+    await browser.close();
+  }
+  const clipFilter = process.argv.find((a) => a.startsWith('--clip='))?.split('=')[1];
+  const nameFilter = clipFilter
+    ? KIOSK_PROMO_LIBRARY.filter((n) => n.includes(clipFilter))
+    : KIOSK_PROMO_LIBRARY;
+  if (clipFilter && !nameFilter.length) {
+    throw new Error(`No kiosk clips match --clip=${clipFilter}`);
+  }
+  await captureLibrary({ nameFilter });
+  console.log('\n✓ Kiosk clips → promo-video/public/capture-library/student-kiosk/\n');
+}
+
 async function captureFeaturePromo() {
   console.log('\n=== Long feature promo — addon screen captures ===\n');
   try {
@@ -2000,6 +2742,9 @@ async function main() {
   const libraryMode = process.argv.includes('--library');
   const promoSimple = process.argv.includes('--promo-simple');
   const featurePromo = process.argv.includes('--feature-promo');
+  const kioskClips = process.argv.includes('--kiosk-clips');
+  const kioskCoupons = process.argv.includes('--kiosk-coupons');
+  const promoBroll = process.argv.includes('--promo-broll');
   const promoteDefaults = process.argv.includes('--promote-defaults');
   const categoryFilter = process.argv.find((a) => a.startsWith('--category='))?.split('=')[1];
 
@@ -2030,6 +2775,21 @@ async function main() {
 
   if (featurePromo) {
     await captureFeaturePromo();
+    return;
+  }
+
+  if (kioskClips) {
+    await captureKioskClips();
+    return;
+  }
+
+  if (kioskCoupons) {
+    await captureKioskCoupons();
+    return;
+  }
+
+  if (promoBroll) {
+    await capturePromoBroll();
     return;
   }
 

@@ -2,7 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Dices, Disc3, Ticket, Trophy, Users } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  StaffPortalSectionCard,
+  StaffPortalSectionCardContent,
+  StaffPortalSectionCardHeader,
+  StaffPortalSectionCardTitle,
+} from '@/components/staff/StaffPortalSection';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -265,8 +271,8 @@ export function AdminRaffleTab({
 
   return (
     <>
-      <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden">
-        <CardHeader className="flex flex-row justify-between items-center py-6">
+      <StaffPortalSectionCard className="w-full overflow-hidden">
+        <StaffPortalSectionCardHeader className="flex flex-row justify-between items-center py-6">
           <div>
             <Helper content={
               canEditSettings ? (
@@ -277,16 +283,16 @@ export function AdminRaffleTab({
                 </div>
               ) : "Rules are read-only here. Use the draw buttons for your current class scope; edit settings from a teacher or admin session."
             }>
-              <CardTitle className="flex items-center gap-2">
+              <StaffPortalSectionCardTitle className="flex items-center gap-2">
                 <Ticket className="h-5 w-5 text-primary" aria-hidden />
                 Raffle
-              </CardTitle>
+              </StaffPortalSectionCardTitle>
             </Helper>
           </div>
           <TabWalkthroughHeaderAction />
-        </CardHeader>
+        </StaffPortalSectionCardHeader>
 
-        <CardContent className="space-y-8">
+        <StaffPortalSectionCardContent className="space-y-8">
             {canEditSettings ? (
               <section className="space-y-3">
                 <h2 className="text-[0.65rem] font-bold uppercase tracking-[0.14em] text-muted-foreground">Pool rules</h2>
@@ -562,8 +568,8 @@ export function AdminRaffleTab({
                 ) : null}
               </div>
             </section>
-        </CardContent>
-      </Card>
+        </StaffPortalSectionCardContent>
+      </StaffPortalSectionCard>
 
       <Dialog open={drawDialogOpen} onOpenChange={setDrawDialogOpen}>
         <DialogContent size="xl" className="gap-0 p-0 sm:p-0 max-h-[95vh] overflow-y-auto overflow-x-hidden">

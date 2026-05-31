@@ -20,7 +20,7 @@ import {
   resetStudentPortalBrowser,
   setStudentPortalPasscode,
   unlockStudentPortal,
-} from '@/lib/studentPortalClient';
+} from '@/lib/students/studentPortalClient';
 import { getReadableErrorMessage } from '@/lib/errorMessage';
 import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 
@@ -229,22 +229,6 @@ export function AdminStudentPortalTab({ schoolId, students }: Props) {
                   </AlertDescription>
                 </Alert>
               ) : null}
-
-              <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border p-4">
-                <div>
-                  <Label className="font-semibold">Show header on student home</Label>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    When on, students see the school header (logo and navigation). When off, the page stays
-                    full-screen like the kiosk (move the mouse to the top edge to reveal the header briefly).
-                  </p>
-                </div>
-                <Switch
-                  checked={settings.studentPortalShowHeader === true}
-                  onCheckedChange={(checked) =>
-                    updateSettings({ studentPortalShowHeader: checked })
-                  }
-                />
-              </div>
 
               <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border p-4">
                 <div>

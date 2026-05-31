@@ -302,6 +302,12 @@ service cloud.firestore {
         allow create, update, delete: if isAdmin(schoolId) || isTeacher(schoolId) || isDeveloper();
       }
 
+      match /behaviorNotes/{noteId} {
+        allow read: if isAdmin(schoolId) || isTeacher(schoolId) || isReports(schoolId) || isDeveloper();
+        allow create: if isAdmin(schoolId) || isTeacher(schoolId) || isDeveloper();
+        allow update, delete: if isAdmin(schoolId) || isDeveloper();
+      }
+
       match /bulletinBoardIncentives/{incentiveId} {
         // Bulletin board incentives are intentionally readable after auth
         // (e.g. demo / kiosk flows) even before role/kioskMember docs exist.

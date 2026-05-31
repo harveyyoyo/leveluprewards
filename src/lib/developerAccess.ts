@@ -1,6 +1,6 @@
 import type { User } from 'firebase/auth';
 
-import { isAllowedGoogleEmailOnAllowlist } from '@/lib/googleAllowlist';
+import { isAllowedGoogleEmailOnAllowlist } from '@/lib/google/googleAllowlist';
 
 export function getDeveloperGoogleEmailAllowlist(): string[] {
   return (process.env.NEXT_PUBLIC_DEVELOPER_GOOGLE_EMAIL_ALLOWLIST ?? '')

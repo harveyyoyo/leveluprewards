@@ -2,7 +2,13 @@
 
 import { Edit, Loader2, Plus, Trash2, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  StaffPortalSectionCard,
+  StaffPortalSectionCardContent,
+  StaffPortalSectionCardHeader,
+  StaffPortalSectionCardTitle,
+} from '@/components/staff/StaffPortalSection';
 import { Helper } from '@/components/ui/helper';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -30,13 +36,13 @@ export function AdminBonusPointsTab(props: any) {
   } = props;
 
   return (
-    <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden">
-      <CardHeader className="flex flex-row justify-between items-center py-6">
+    <StaffPortalSectionCard className="w-full overflow-hidden">
+      <StaffPortalSectionCardHeader className="flex flex-row justify-between items-center py-6">
         <div>
           <Helper content="Define bonus point milestones. When students hit these point thresholds they earn extra bonus points. Enable from Admin → Add more.">
-            <CardTitle className="flex items-center gap-2">
+            <StaffPortalSectionCardTitle className="flex items-center gap-2">
               <Trophy className="w-5 h-5 text-primary" /> Bonus Points
-            </CardTitle>
+            </StaffPortalSectionCardTitle>
           </Helper>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -49,8 +55,8 @@ export function AdminBonusPointsTab(props: any) {
             <Plus className="mr-2 h-4 w-4" /> Add milestone
           </Button>
         </div>
-      </CardHeader>
-      <CardContent>
+      </StaffPortalSectionCardHeader>
+      <StaffPortalSectionCardContent>
         {achievementsLoading ? (
           <ul className="space-y-2 pr-1">
             {[1, 2, 3].map((i: number) => (
@@ -129,7 +135,7 @@ export function AdminBonusPointsTab(props: any) {
             )}
           </ul>
         )}
-      </CardContent>
-    </Card>
+      </StaffPortalSectionCardContent>
+    </StaffPortalSectionCard>
   );
 }

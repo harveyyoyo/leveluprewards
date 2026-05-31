@@ -3,7 +3,12 @@
 import { CheckSquare, Cog, Edit3, Gift, Plus, Printer, Trash2, GraduationCap, ShoppingBag, Wand2, UserMinus, X } from 'lucide-react';
 import { Helper } from '@/components/ui/helper';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  StaffPortalSectionCard,
+  StaffPortalSectionCardContent,
+  StaffPortalSectionCardHeader,
+  StaffPortalSectionCardTitle,
+} from '@/components/staff/StaffPortalSection';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,16 +21,18 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePrint } from '@/components/providers/PrintProvider';
 import { useFirestore } from '@/firebase';
 import { backfillPrizeScanCodes } from '@/lib/db/prizes';
-import { backfillPrizeCardColors } from '@/lib/prizeCardColor';
-import { prizeScanCodeFor } from '@/lib/prizeScanCode';
+import { backfillPrizeCardColors } from '@/lib/prizes/prizeCardColor';
+import { prizeScanCodeFor } from '@/lib/prizes/prizeScanCode';
 import { useToast } from '@/hooks/use-toast';
-import { AutoCircularToggles } from '@/components/AutoCircularToggles';
+import { AutoCircularToggles } from '@/components/admin/AutoCircularToggles';
 import { AdminRecordListHeader } from '@/components/admin/AdminRecordListHeader';
 import { AdminRecordListScroll } from '@/components/admin/AdminRecordListScroll';
 import {
   PRIZES_LIST_GRID_COLS,
   adminRecordListGridCompactGapClassName,
+  adminRecordListGridActionsCellClassName,
   adminRecordListGridClassName,
+  adminRecordListGridNameCellClassName,
   adminRecordListGridStyle,
 } from '@/components/admin/adminRecordListGrid';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -38,7 +45,7 @@ import {
   prizeRestrictionTeacherIds,
   removeTeacherFromPrize,
   teacherListedOnPrize,
-} from '@/lib/prizeUtils';
+} from '@/lib/prizes/prizeUtils';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { isAiSurpriseHiddenFromAdminGrid } from '@/lib/aiJokePrize';
 import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
@@ -235,12 +242,12 @@ export function AdminPrizesTab({
   }, [firestore, schoolId, tablePrizes, toast]);
 
   return (
-    <Card className="w-full min-w-0 border-t-4 border-primary shadow-md">
-      <CardHeader className="flex flex-row flex-wrap justify-between items-center gap-3 py-4 px-4 sm:px-5">
+    <StaffPortalSectionCard>
+      <StaffPortalSectionCardHeader className="flex flex-row flex-wrap justify-between items-center gap-3 py-4 px-4 sm:px-5">
         <Helper content="Items students redeem with points in the rewards shop. Set cost, stock, shop visibility, teacher or class access, vending motor, and print card options per item.">
-          <CardTitle className="flex items-center gap-2">
+          <StaffPortalSectionCardTitle className="flex items-center gap-2">
             <Gift className="text-primary w-5 h-5" /> Rewards Shop
-          </CardTitle>
+          </StaffPortalSectionCardTitle>
         </Helper>
         <div className="flex flex-wrap items-center justify-end gap-2">
           <TabWalkthroughHeaderAction />
@@ -280,8 +287,8 @@ export function AdminPrizesTab({
             <Plus className="mr-2 h-4 w-4" /> New Item
           </Button>
         </div>
-      </CardHeader>
-      <CardContent className="min-w-0 overflow-visible px-3 pb-4 pt-0 sm:px-4">
+      </StaffPortalSectionCardHeader>
+      <StaffPortalSectionCardContent className="min-w-0 overflow-visible px-2 pb-4 pt-0 sm:px-3">
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <Button
             type="button"
@@ -325,16 +332,9 @@ export function AdminPrizesTab({
           <AdminRecordListHeader
             gridColumns={PRIZES_LIST_GRID_COLS}
             columns={[
-              { label: 'Sel', className: 'text-center' },
-              { label: 'Act' },
-              { label: 'Item' },
-              { label: 'Pts', className: 'text-center' },
-              { label: 'Qty', className: 'text-center' },
-              { label: 'Vis', className: 'text-center' },
-              { label: mode === 'teacher' ? 'All' : 'Tch', className: 'text-center' },
-              { label: 'Cls', className: 'text-center' },
-              { label: 'Mot', className: 'text-center' },
-              { label: 'Del', className: 'text-right' },
+              { label: 'Act', className: 'text-center' },
+              { label: 'Item', className: 'text-left' },
+              { label: 'Settings', className: 'text-right' },
             ]}
           />
           {prizeListItems.map((item) =>
@@ -392,24 +392,23 @@ export function AdminPrizesTab({
                   <li
                     key={p.id}
                     className={cn(
-                      'items-center rounded-xl border bg-secondary/30 px-1 py-0.5 transition-all hover:bg-background group',
+                      'items-center rounded-xl border bg-secondary/30 px-1 py-0.5 transition-all hover:bg-background group cursor-pointer',
                       adminRecordListGridCompactGapClassName,
                       adminRecordListGridClassName,
                       selectedPrizeIds.has(p.id) && 'border-ring/45 bg-secondary',
                       rowDimmed && 'opacity-60',
                     )}
                     style={prizeListGridStyle}
+                    data-selected={selectedPrizeIds.has(p.id) ? 'true' : 'false'}
+                    title={selectedPrizeIds.has(p.id) ? 'Click row to deselect' : 'Click row to select'}
+                    onClick={(event) => {
+                      const target = event.target as HTMLElement;
+                      if (target.closest('button,input,select,textarea,a,[role="button"],[role="combobox"]')) return;
+                      togglePrizeSelected(p.id);
+                    }}
                   >
-                    <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
-                      <Checkbox
-                        checked={selectedPrizeIds.has(p.id)}
-                        onCheckedChange={() => togglePrizeSelected(p.id)}
-                        aria-label={`Select ${p.name}`}
-                        className="h-5 w-5 rounded-md"
-                      />
-                    </div>
                     {/* Edit + print */}
-                    <div className="flex items-center justify-center gap-0.5">
+                    <div className="flex items-center justify-center gap-0.5" onClick={(e) => e.stopPropagation()}>
                       {onEditPrize ? (
                         <Button
                           type="button"
@@ -438,7 +437,7 @@ export function AdminPrizesTab({
                     </div>
 
                     {/* 2. Name */}
-                    <div className="min-w-0 flex items-center gap-2">
+                    <div className={cn('flex items-center gap-2', adminRecordListGridNameCellClassName)}>
                       <div
                         className={cn(
                           'size-7 shrink-0 rounded-md flex items-center justify-center bg-background border relative overflow-hidden',
@@ -482,14 +481,20 @@ export function AdminPrizesTab({
                       </div>
                     </div>
 
-                    {/* 3. Points */}
-                    <div>
+                    <div
+                      className={cn(
+                        'flex flex-nowrap items-center justify-end gap-1',
+                        adminRecordListGridActionsCellClassName,
+                      )}
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <Input
                         type="number"
                         min={0}
                         disabled={!canEditFull}
                         aria-label="Points"
-                        className="h-7 text-[10px] px-1"
+                        title="Point cost"
+                        className="h-7 w-12 shrink-0 text-[10px] px-1 tabular-nums"
                         defaultValue={String(p.points ?? 0)}
                         key={`points-${p.id}-${p.points}`}
                         onBlur={(e) => {
@@ -498,16 +503,13 @@ export function AdminPrizesTab({
                           if (next !== p.points) onUpdatePrize({ ...p, points: next });
                         }}
                       />
-                    </div>
-
-                    {/* 4. Qty */}
-                    <div>
                       <Input
                         type="number"
                         min={0}
                         disabled={!canEditFull}
                         aria-label="Stock on hand"
-                        className="h-7 text-[10px] px-1"
+                        title="Stock quantity"
+                        className="h-7 w-12 shrink-0 text-[10px] px-1 tabular-nums"
                         placeholder="∞"
                         defaultValue={p.stockCount === undefined ? '' : String(p.stockCount)}
                         key={`stock-${p.id}-${p.stockCount ?? 'x'}`}
@@ -517,10 +519,6 @@ export function AdminPrizesTab({
                           if (next !== p.stockCount) onUpdatePrize({ ...p, stockCount: next });
                         }}
                       />
-                    </div>
-
-                    {/* 5. Toggles */}
-                    <div className="flex flex-col items-center">
                       <AutoCircularToggles
                         record={p}
                         defs={[
@@ -528,17 +526,17 @@ export function AdminPrizesTab({
                           { key: 'offerPrintTicketOnRedeem', label: 'Offer print voucher', shortLabel: 'Vch' },
                         ]}
                         wrap={false}
-                        toggleButtonClassName="h-6 w-6 sm:h-6 sm:w-6 text-[8px]"
+                        containerClassName="shrink-0 flex-nowrap gap-0.5"
+                        toggleButtonClassName="h-7 w-7 text-[8px]"
                         onToggle={(key, val) => {
                           onUpdatePrize({ ...p, [key]: val });
                         }}
                       />
-                    </div>
-
-                    {/* 6. Teachers */}
-                    <div className="flex flex-col gap-0.5">
                       {mode === 'teacher' ? (
-                        <div className="flex items-center justify-center h-7 rounded-md border bg-background">
+                        <div
+                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border bg-background"
+                          title="School-wide teachers"
+                        >
                           <Switch
                             checked={schoolWideT}
                             disabled={!canEditFull}
@@ -558,13 +556,20 @@ export function AdminPrizesTab({
                             <Button
                               type="button"
                               variant="outline"
-                              className="h-7 w-full min-h-7 text-[9px] px-0.5 font-semibold"
+                              size="icon"
+                              className="h-7 w-7 shrink-0 rounded-md"
                               disabled={!canEditFull}
+                              title={
+                                restrictionIds.length === 0
+                                  ? 'All teachers'
+                                  : `${restrictionIds.length} teacher(s)`
+                              }
+                              aria-label="Teacher access"
                             >
-                              {restrictionIds.length === 0 ? 'All' : `${restrictionIds.length}`}
+                              <GraduationCap className="h-3.5 w-3.5" />
                             </Button>
                           </PopoverTrigger>
-                          <PopoverContent className="w-64 p-3 z-[250]" align="start">
+                          <PopoverContent className="w-64 p-3 z-[250]" align="end">
                             <div className="space-y-3">
                               <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
                                 <Checkbox
@@ -604,16 +609,15 @@ export function AdminPrizesTab({
                           </PopoverContent>
                         </Popover>
                       )}
-                    </div>
-
-                    {/* 7. Class */}
-                    <div className="flex flex-col gap-0.5">
                       <Select
                         value={p.classId || 'all'}
                         disabled={!canEditFull}
                         onValueChange={(v) => onUpdatePrize({ ...p, classId: v === 'all' ? undefined : v })}
                       >
-                        <SelectTrigger className="h-7 min-h-7 text-[9px] px-0.5 w-full min-w-0">
+                        <SelectTrigger
+                          className="h-7 w-[4.25rem] shrink-0 px-1 text-[9px] [&>span]:truncate"
+                          title="Class restriction"
+                        >
                           <SelectValue placeholder="All" />
                         </SelectTrigger>
                         <SelectContent>
@@ -623,26 +627,22 @@ export function AdminPrizesTab({
                           ))}
                         </SelectContent>
                       </Select>
-                    </div>
-
-                    {/* 8. Vending */}
-                    <div className="flex justify-center">
                       {vendingEnabled ? (
                         <Popover>
                           <PopoverTrigger asChild>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className={cn(
-                                  "h-7 w-7 rounded-full hover:bg-muted",
-                                  motorEnabled ? "text-emerald-700 dark:text-emerald-300" : "text-muted-foreground",
-                                )}
-                                disabled={!canEditFull}
-                                title="Prize vending motor"
-                              >
-                                <Cog className="w-3.5 h-3.5" />
-                              </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              className={cn(
+                                'h-7 w-7 shrink-0 rounded-md',
+                                motorEnabled ? 'text-emerald-700 dark:text-emerald-300' : 'text-muted-foreground',
+                              )}
+                              disabled={!canEditFull}
+                              title="Prize vending motor"
+                            >
+                              <Cog className="h-3.5 w-3.5" />
+                            </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-72 p-3 z-[250]" align="end">
                             <div className="space-y-3">
@@ -659,8 +659,7 @@ export function AdminPrizesTab({
                                   className="data-[state=checked]:bg-emerald-500"
                                 />
                               </div>
-
-                              <div className={cn("grid grid-cols-1 gap-2", !motorEnabled && "opacity-50 pointer-events-none")}>
+                              <div className={cn('grid grid-cols-1 gap-2', !motorEnabled && 'opacity-50 pointer-events-none')}>
                                 <div className="space-y-1">
                                   <Label className="text-[10px] font-bold uppercase tracking-tighter opacity-60">Axis</Label>
                                   <Select
@@ -682,21 +681,17 @@ export function AdminPrizesTab({
                             </div>
                           </PopoverContent>
                         </Popover>
-                      ) : <div />}
-                    </div>
-
-                    {/* 9. Delete/Remove */}
-                    <div className="flex items-center justify-end gap-0">
+                      ) : null}
                       {canRemoveSelf && teacherId ? (
                         <Button
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+                          className="h-7 w-7 shrink-0 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
                           title="Remove from my prizes (others keep access)"
                           onClick={() => onUpdatePrize(removeTeacherFromPrize(p, teacherId))}
                         >
-                          <UserMinus className="w-3.5 h-3.5" />
+                          <UserMinus className="h-3.5 w-3.5" />
                         </Button>
                       ) : null}
                       {mode === 'admin' || canDelete ? (
@@ -705,14 +700,14 @@ export function AdminPrizesTab({
                           variant="ghost"
                           size="icon"
                           className={cn(
-                            'h-7 w-7 rounded-full',
+                            'h-7 w-7 shrink-0 rounded-full',
                             p.aiFunReward ? 'text-muted-foreground hover:bg-muted hover:text-foreground' : 'text-destructive hover:bg-destructive/10',
                           )}
                           disabled={mode === 'teacher' && !canDelete}
                           title={p.aiFunReward ? 'Remove AI surprise prize' : mode === 'teacher' ? 'Delete item you created' : 'Delete item'}
                           onClick={() => onDeletePrize(p.id)}
                         >
-                          {p.aiFunReward ? <X className="w-3.5 h-3.5" /> : <Trash2 className="w-3.5 h-3.5" />}
+                          {p.aiFunReward ? <X className="w-3.5 w-3.5" /> : <Trash2 className="w-3.5 w-3.5" />}
                         </Button>
                       ) : null}
                     </div>
@@ -723,7 +718,7 @@ export function AdminPrizesTab({
           )}
         </ul>
         </AdminRecordListScroll>
-      </CardContent>
+      </StaffPortalSectionCardContent>
       <Dialog open={wizardOpen} onOpenChange={(open) => { setWizardOpen(open); if (!open) resetWizard(); }}>
         <DialogContent>
           <DialogHeader>
@@ -977,6 +972,6 @@ export function AdminPrizesTab({
         />
       ) : null}
 
-    </Card>
+    </StaffPortalSectionCard>
   );
 }

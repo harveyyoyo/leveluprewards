@@ -3,6 +3,8 @@ import {
   adminRecordListGridClassName,
   adminRecordListGridCompactGapClassName,
 } from '@/components/admin/adminRecordListGrid';
+import { useStaffPortalLayout } from '@/components/staff/StaffPortalLayoutContext';
+import { staffPortalRecordListHeaderClassName } from '@/components/staff/staffPortalNavStyles';
 import { cn } from '@/lib/utils';
 
 export type AdminRecordListHeaderColumn = {
@@ -27,14 +29,20 @@ export function AdminRecordListHeader({
   className?: string;
   style?: CSSProperties;
 }) {
+  const { sidebar } = useStaffPortalLayout();
   const gridStyle: CSSProperties | undefined = gridColumns
-    ? { ...style, ['--admin-list-cols' as string]: gridColumns }
+    ? {
+        ...style,
+        gridTemplateColumns: gridColumns,
+        ['--admin-list-cols' as string]: gridColumns,
+      }
     : style;
 
   return (
     <li
       className={cn(
-        'sticky top-0 z-10 w-full min-w-0 rounded-xl border border-ring/30 bg-secondary px-2 py-1.5 shadow-sm backdrop-blur',
+        'w-full min-w-0',
+        staffPortalRecordListHeaderClassName(sidebar),
         className,
       )}
     >
@@ -49,7 +57,7 @@ export function AdminRecordListHeader({
         {columns.map((column, idx) => (
           <span
             key={column.id ?? `${column.label}-${idx}`}
-            className={cn('truncate', column.className)}
+            className={column.className}
           >
             {column.label}
           </span>

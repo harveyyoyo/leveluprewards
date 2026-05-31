@@ -15,7 +15,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { lookupStudentPortal, verifyStudentPortal } from '@/lib/studentPortalClient';
+import { lookupStudentPortal, verifyStudentPortal } from '@/lib/students/studentPortalClient';
 import { getReadableErrorMessage } from '@/lib/errorMessage';
 import { scanMismatchAtStudentLogin } from '@/lib/scanMismatch';
 import { NumericKeypad } from '@/components/ui/NumericKeypad';

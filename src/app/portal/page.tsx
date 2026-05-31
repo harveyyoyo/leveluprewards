@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { PortalEntryRedirect } from '@/components/PortalEntryRedirect';
+import { PortalEntryRedirect } from '@/components/layout/PortalEntryRedirect';
 
 export const metadata: Metadata = {
   title: 'School Portal - LevelUp',

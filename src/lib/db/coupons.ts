@@ -7,7 +7,7 @@ import {
   Firestore,
 } from 'firebase/firestore';
 import type { Student, Coupon, Achievement, Category, Badge, Class } from '../types';
-import { studentMayRedeemCoupon } from '../couponRedemptionRules';
+import { studentMayRedeemCoupon } from '../coupons/couponRedemptionRules';
 import { reportFirestorePermissionError } from '@/firebase/error-emitter';
 import { getReadableErrorMessage } from '@/lib/errorMessage';
 import { removeUndefined, applyCategoryPointsByPeriod, applyAchievementsAndBadges } from './helpers';

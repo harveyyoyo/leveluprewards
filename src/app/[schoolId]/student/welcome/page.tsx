@@ -7,13 +7,13 @@ import { ArrowLeft, Loader2, Sparkles } from 'lucide-react';
 import dynamic from 'next/dynamic';
 // 122 KB — 30 style themes + palettes. Lazy-loaded while SchoolGate renders.
 const WelcomeGreeting = dynamic(
-  () => import('@/components/WelcomeGreeting').then(m => m.WelcomeGreeting),
+  () => import('@/components/welcome/WelcomeGreeting').then(m => m.WelcomeGreeting),
   { ssr: false, loading: () => <div className="animate-pulse h-96 w-full rounded-xl bg-muted/40" /> },
 );
 import { useAppContext } from '@/components/AppProvider';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useStudentKioskSession } from '@/components/providers/StudentKioskSessionProvider';
-import { SchoolGate } from '@/components/SchoolGate';
+import { SchoolGate } from '@/components/auth/SchoolGate';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
@@ -24,7 +24,7 @@ import {
   schoolAllowsStudentWelcome,
   studentAllowsWelcomePage,
   welcomeGreetingStyleStorageKey,
-} from '@/lib/studentWelcome';
+} from '@/lib/students/studentWelcome';
 import { getStudentNickname } from '@/lib/utils';
 
 export default function StudentWelcomePage() {

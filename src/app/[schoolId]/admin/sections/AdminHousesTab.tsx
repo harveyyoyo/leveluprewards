@@ -28,10 +28,16 @@ import {
   housePointsSourceSettingsPatch,
   isHouseStudentPointsRollupEnabled,
   resolveHousePointsSource,
-} from '@/lib/housePointsSettings';
+} from '@/lib/houses/housePointsSettings';
 import { useConfirm } from '@/components/providers/ConfirmProvider';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  StaffPortalSectionCard,
+  StaffPortalSectionCardContent,
+  StaffPortalSectionCardHeader,
+  StaffPortalSectionCardTitle,
+} from '@/components/staff/StaffPortalSection';
 import { Helper } from '@/components/ui/helper';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -68,7 +74,7 @@ import {
 } from '@/components/houses/HouseStandingsChartBlock';
 import { HouseIdeasPanel } from '@/components/houses/HouseIdeasPanel';
 import { HouseStandingsInlineCell } from '@/components/houses/HouseStandingsInlineCell';
-import { buildHouseStandingsRows } from '@/lib/houseStandings';
+import { buildHouseStandingsRows } from '@/lib/houses/houseStandings';
 import type { House, Student, Teacher } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useSettings } from '@/components/providers/SettingsProvider';
@@ -79,7 +85,7 @@ import {
   assignStudentsToHousesRandom,
   listHouses,
 } from '@/lib/db';
-import { HOUSE_PRESET_THEMES, type HousePresetThemeId } from '@/lib/housePresets';
+import { HOUSE_PRESET_THEMES, type HousePresetThemeId } from '@/lib/houses/housePresets';
 import { useFirestore } from '@/firebase';
 
 export function AdminHousesTab({
@@ -346,13 +352,13 @@ export function AdminHousesTab({
   };
 
   return (
-    <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden">
-      <CardHeader className="flex flex-col gap-4 py-6 bg-secondary sm:flex-row sm:items-start sm:justify-between">
+    <StaffPortalSectionCard className="w-full overflow-hidden">
+      <StaffPortalSectionCardHeader className="flex flex-col gap-4 py-6 bg-secondary sm:flex-row sm:items-start sm:justify-between">
         <div>
           <Helper content="School houses: rosters, house parents, point rollups, sorting ceremony, and Hall of Fame standings.">
-            <CardTitle className="flex items-center gap-2">
+            <StaffPortalSectionCardTitle className="flex items-center gap-2">
               <Home className="w-5 h-5 text-primary" /> Houses
-            </CardTitle>
+            </StaffPortalSectionCardTitle>
           </Helper>
         </div>
         <div className="flex flex-nowrap items-center gap-2 overflow-x-auto">
@@ -402,9 +408,9 @@ export function AdminHousesTab({
             <Plus className="mr-2 h-4 w-4" /> Add house
           </Button>
         </div>
-      </CardHeader>
+      </StaffPortalSectionCardHeader>
 
-      <CardContent className="space-y-6">
+      <StaffPortalSectionCardContent className="space-y-6">
         <ContentSectionTreeNav
           items={[
             { id: 'rosters', label: 'Rosters & Points' },
@@ -828,7 +834,7 @@ export function AdminHousesTab({
         )}
         </>
         )}
-      </CardContent>
+      </StaffPortalSectionCardContent>
 
       <HouseSetupWizard
         open={wizardOpen}
@@ -1030,6 +1036,6 @@ export function AdminHousesTab({
           ) : null}
         </DialogContent>
       </Dialog>
-    </Card>
+    </StaffPortalSectionCard>
   );
 }

@@ -7,13 +7,9 @@ import {
   UploadCloud,
   Palette,
   User,
-  Shield,
-  Clock,
   Megaphone,
   Tv,
   Image as ImageIcon,
-  Sparkles,
-  Maximize2,
   RotateCcw,
   Check,
   Calendar,
@@ -37,13 +33,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Helper } from '@/components/ui/helper';
 import { useSettings, type Settings, type KioskProfile } from '@/components/providers/SettingsProvider';
-import { ThemeGeneratorModal } from '@/components/ThemeGeneratorModal';
+import { ThemeGeneratorModal } from '@/components/themes/ThemeGeneratorModal';
 import { normalizeStudentTheme } from '@/lib/themeContrast';
 import type { StudentTheme } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { KioskSponsorBanner } from '@/components/KioskSponsorBanner';
+import { KioskSponsorBanner } from '@/components/kiosk/KioskSponsorBanner';
 import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 import { ContentSectionTreeNav } from '@/components/ui/content-section-tree-nav';
+import { OpenSchoolSettingsLink } from '@/components/settings/OpenSchoolSettingsLink';
 
 export function AdminBrandingTab({
   schoolId,
@@ -91,7 +88,7 @@ export function AdminBrandingTab({
   const [newSponsorSpeed, setNewSponsorSpeed] = useState<'slow' | 'normal' | 'fast' | 'very_fast' | 'static'>('normal');
   const [newSponsorPosition, setNewSponsorPosition] = useState<'top' | 'bottom'>('bottom');
   const [newSponsorIcon, setNewSponsorIcon] = useState('🎉');
-  const [section, setSection] = useState<'logo' | 'photos' | 'theme' | 'sessions' | 'sponsor' | 'kiosk_profiles'>('logo');
+  const [section, setSection] = useState<'logo' | 'photos' | 'theme' | 'sponsor' | 'kiosk_profiles'>('logo');
 
   // Kiosk Profile Management States
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -127,7 +124,6 @@ export function AdminBrandingTab({
           { id: 'logo', label: 'School Logo' },
           { id: 'photos', label: 'Student Photos' },
           { id: 'theme', label: 'ID Card Theme' },
-          { id: 'sessions', label: 'Session Timeouts' },
           { id: 'sponsor', label: 'Sponsor Banner' },
           { id: 'kiosk_profiles', label: 'Kiosk Profiles' },
         ]}
@@ -570,169 +566,6 @@ export function AdminBrandingTab({
         </Card>
       )}
 
-      {/* 4. SESSION TIMEOUTS */}
-      {section === 'sessions' && (
-        <Card className="border-0 bg-background shadow-lg rounded-3xl overflow-hidden">
-          <CardHeader className="p-6 md:p-8 border-b bg-gradient-to-r from-muted/50 via-background to-muted/20">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <Helper content="Adjust active login durations, student sign-in freeze locks, and screensaver reset timers.">
-                <CardTitle className="text-xl font-black tracking-tight flex items-center gap-3">
-                  <Shield className="w-5 h-5 text-amber-500" />
-                  Security & Session Timeouts
-                </CardTitle>
-              </Helper>
-              <TabWalkthroughHeaderAction />
-            </div>
-          </CardHeader>
-          <CardContent className="p-6 md:p-8 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Card 1: Admin */}
-              <div className="rounded-3xl border bg-card p-6 shadow-sm space-y-4 hover:border-amber-500/20 transition-all flex flex-col justify-between">
-                <div className="space-y-2">
-                  <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500 mb-4">
-                    <Clock className="w-5 h-5" />
-                  </div>
-                  <Label htmlFor="admin-timeout" className="font-bold text-sm text-foreground">Admin Session Timeout</Label>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Auto-log out teachers and admins after consecutive minutes of inactivity. Keep schools secure.
-                  </p>
-                </div>
-                <div className="flex items-center gap-3 pt-3 border-t">
-                  <Input
-                    id="admin-timeout"
-                    type="number"
-                    min={1}
-                    max={1440}
-                    value={Math.round((settings.adminSessionTimeoutMs ?? 300000) / 60000)}
-                    onChange={(e) => {
-                      const mins = Math.max(1, parseInt(e.target.value) || 1);
-                      updateSettings({ adminSessionTimeoutMs: mins * 60000 });
-                    }}
-                    className="w-24 font-bold rounded-xl text-center"
-                  />
-                  <span className="text-xs font-semibold text-muted-foreground">Minutes</span>
-                </div>
-              </div>
-
-              {/* Card 2: Kiosk Timeout */}
-              <div className="rounded-3xl border bg-card p-6 shadow-sm space-y-4 hover:border-amber-500/20 transition-all flex flex-col justify-between">
-                <div className="space-y-2">
-                  <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 mb-4">
-                    <Tv className="w-5 h-5" />
-                  </div>
-                  <Label htmlFor="kiosk-timeout" className="font-bold text-sm text-foreground">Kiosk Idle Reset</Label>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Automatically return to the scan screen on the kiosk if a student leaves it idle.
-                  </p>
-                </div>
-                <div className="flex items-center gap-3 pt-3 border-t">
-                  <Input
-                    id="kiosk-timeout"
-                    type="number"
-                    min={1}
-                    max={300}
-                    value={settings.kioskSessionTimeoutSec ?? 10}
-                    onChange={(e) => {
-                      const secs = Math.max(1, parseInt(e.target.value) || 10);
-                      updateSettings({ kioskSessionTimeoutSec: secs });
-                    }}
-                    className="w-24 font-bold rounded-xl text-center"
-                  />
-                  <span className="text-xs font-semibold text-muted-foreground">Seconds</span>
-                </div>
-              </div>
-
-              {/* Card 3: Voucher Timeout */}
-              <div className="rounded-3xl border bg-card p-6 shadow-sm space-y-4 hover:border-indigo-500/10 transition-all flex flex-col justify-between">
-                <div className="space-y-2">
-                  <div className="h-10 w-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-500 mb-4">
-                    <Maximize2 className="w-5 h-5" />
-                  </div>
-                  <Label htmlFor="kiosk-voucher-timeout" className="font-bold text-sm text-foreground">Voucher Modal Pause</Label>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    If no tap is received during printed voucher redemption prompts, pause auto-print until another tap.
-                  </p>
-                </div>
-                <div className="flex items-center gap-3 pt-3 border-t">
-                  <Input
-                    id="kiosk-voucher-timeout"
-                    type="number"
-                    min={1}
-                    max={14400}
-                    value={settings.kioskVoucherIdleOffSec ?? 360}
-                    onChange={(e) => {
-                      const n = parseInt(e.target.value, 10);
-                      const secs = Number.isFinite(n) ? Math.min(14400, Math.max(1, n)) : 360;
-                      updateSettings({ kioskVoucherIdleOffSec: secs });
-                    }}
-                    className="w-24 font-bold rounded-xl text-center"
-                  />
-                  <span className="text-xs font-semibold text-muted-foreground">Seconds</span>
-                </div>
-              </div>
-
-              {/* Card 4: Sign-in Freeze */}
-              <div className="rounded-3xl border bg-card p-6 shadow-sm space-y-4 hover:border-emerald-500/10 transition-all flex flex-col justify-between">
-                <div className="space-y-2">
-                  <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 mb-4">
-                    <Shield className="w-5 h-5" />
-                  </div>
-                  <Label htmlFor="signin-freeze" className="font-bold text-sm text-foreground">Duplicate Tap Freeze Lock</Label>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Prevent students from duplicate sign-ins by blocking subsequent scans for a freeze window. (0 to disable)
-                  </p>
-                </div>
-                <div className="flex items-center gap-3 pt-3 border-t">
-                  <Input
-                    id="signin-freeze"
-                    type="number"
-                    min={0}
-                    max={3600}
-                    value={settings.studentSignInFreezeSec ?? 0}
-                    onChange={(e) => {
-                      const n = parseInt(e.target.value, 10);
-                      const secs = Number.isFinite(n) ? Math.min(3600, Math.max(0, n)) : 0;
-                      updateSettings({ studentSignInFreezeSec: secs });
-                    }}
-                    className="w-24 font-bold rounded-xl text-center"
-                  />
-                  <span className="text-xs font-semibold text-muted-foreground">Seconds</span>
-                </div>
-              </div>
-
-              {/* Card 5: Welcome Splash */}
-              <div className="rounded-3xl border bg-card p-6 shadow-sm space-y-4 hover:border-purple-500/10 transition-all flex flex-col justify-between md:col-span-2">
-                <div className="space-y-2">
-                  <div className="h-10 w-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-500 mb-4">
-                    <Sparkles className="w-5 h-5" />
-                  </div>
-                  <Label htmlFor="welcome-back-duration" className="font-bold text-sm text-foreground">Welcome Back Splash Duration</Label>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Number of seconds the personalized kiosk celebration screen stays active when checking in before auto-routing back.
-                  </p>
-                </div>
-                <div className="flex items-center gap-3 pt-3 border-t">
-                  <Input
-                    id="welcome-back-duration"
-                    type="number"
-                    min={1}
-                    max={60}
-                    value={settings.studentWelcomeBackDurationSec ?? 3}
-                    onChange={(e) => {
-                      const n = parseInt(e.target.value, 10);
-                      const secs = Number.isFinite(n) ? Math.min(60, Math.max(1, n)) : 3;
-                      updateSettings({ studentWelcomeBackDurationSec: secs });
-                    }}
-                    className="w-24 font-bold rounded-xl text-center"
-                  />
-                  <span className="text-xs font-semibold text-muted-foreground">Seconds</span>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* 5. SPONSOR BANNER */}
       {section === 'sponsor' && (
         <Card className="border-0 bg-background shadow-lg rounded-3xl overflow-hidden">
@@ -1093,11 +926,15 @@ export function AdminBrandingTab({
             </div>
           </CardHeader>
           <CardContent className="p-6 md:p-8 space-y-6">
-            <div className="text-xs text-muted-foreground leading-relaxed max-w-2xl bg-amber-50/50 dark:bg-amber-950/10 border border-amber-200/50 dark:border-amber-900/30 rounded-2xl p-4">
+            <div className="text-xs text-muted-foreground leading-relaxed max-w-2xl bg-amber-50/50 dark:bg-amber-950/10 border border-amber-200/50 dark:border-amber-900/30 rounded-2xl p-4 space-y-3">
               <p className="font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5 mb-1">
                 💡 Managing Multiple Physical Kiosks
               </p>
               By default, all kiosk screens use your general school settings. Define distinct profiles below (e.g. <em>&ldquo;Portrait Lobby Kiosk&rdquo;</em> vs <em>&ldquo;Landscape Gym Tablet&rdquo;</em>) to enforce specific layout behaviors, active login tabs, sounds, or visual schemes on different screens.
+              <div className="flex flex-wrap gap-2 pt-1">
+                <OpenSchoolSettingsLink view="general" label="Kiosk defaults (gear menu)" />
+                <OpenSchoolSettingsLink view="device" label="Link this device to a profile" />
+              </div>
             </div>
 
             {(() => {
@@ -1794,22 +1631,39 @@ export function AdminBrandingTab({
                 Session Constraints
               </h4>
 
-              <div className="flex items-center justify-between gap-4 border rounded-2xl p-3 text-xs">
-                <div className="space-y-0.5">
-                  <span className="font-bold block">Auto Logout Timeout</span>
-                  <span className="text-[10px] text-muted-foreground">Log student out after idle time (seconds).</span>
+              <div className="flex flex-wrap items-center justify-between gap-4 border rounded-2xl p-3 text-xs">
+                <div className="space-y-0.5 min-w-0">
+                  <span className="font-bold block">Auto Logout</span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {editingProfileSettings.kioskAutoLogoutEnabled !== false
+                      ? 'Log student out after idle time (seconds).'
+                      : 'Students stay signed in until manual logout or kiosk lock.'}
+                  </span>
                 </div>
-                <Input
-                  type="number"
-                  className="w-20 rounded-lg text-center h-8 font-bold"
-                  value={editingProfileSettings.kioskSessionTimeoutSec ?? 45}
-                  onChange={(e) =>
-                    setEditingProfileSettings((prev) => ({
-                      ...prev,
-                      kioskSessionTimeoutSec: parseInt(e.target.value) || 45,
-                    }))
-                  }
-                />
+                <div className="flex items-center gap-2 shrink-0">
+                  <Switch
+                    checked={editingProfileSettings.kioskAutoLogoutEnabled !== false}
+                    onCheckedChange={(checked) =>
+                      setEditingProfileSettings((prev) => ({
+                        ...prev,
+                        kioskAutoLogoutEnabled: checked,
+                      }))
+                    }
+                    aria-label="Enable kiosk auto-logout for this profile"
+                  />
+                  <Input
+                    type="number"
+                    className="w-20 rounded-lg text-center h-8 font-bold disabled:opacity-40"
+                    disabled={editingProfileSettings.kioskAutoLogoutEnabled === false}
+                    value={editingProfileSettings.kioskSessionTimeoutSec ?? 45}
+                    onChange={(e) =>
+                      setEditingProfileSettings((prev) => ({
+                        ...prev,
+                        kioskSessionTimeoutSec: parseInt(e.target.value) || 45,
+                      }))
+                    }
+                  />
+                </div>
               </div>
             </div>
           </div>

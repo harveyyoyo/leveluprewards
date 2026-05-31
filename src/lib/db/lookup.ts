@@ -8,7 +8,7 @@ import {
   Firestore,
 } from 'firebase/firestore';
 import type { Prize } from '../types';
-import { isPrizeScanCode, normalizeScanInput, prizeScanCodeFor } from '@/lib/prizeScanCode';
+import { isPrizeScanCode, normalizeScanInput, prizeScanCodeFor } from '@/lib/prizes/prizeScanCode';
 
 /** Look up a student by scanned ID (document ID, nfcId string, or nfcId number). Used by both student kiosk and prize redemption. */
 export const lookupStudentId = async (

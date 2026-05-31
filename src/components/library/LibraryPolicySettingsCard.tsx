@@ -12,7 +12,7 @@ import {
   LIBRARY_REWARD_MODE_LABELS,
   resolveLibraryRewardMode,
   type LibraryRewardMode,
-} from '@/lib/libraryPolicy';
+} from '@/lib/library/libraryPolicy';
 import type { Category } from '@/lib/types';
 
 export function LibraryPolicySettingsCard({ categories }: { categories?: Category[] | null }) {

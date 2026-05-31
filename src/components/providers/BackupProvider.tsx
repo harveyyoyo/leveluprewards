@@ -300,6 +300,16 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
             // for admins, so provision this developer as an admin for the sample school.
             await ensureDeveloperIsAdminForSchool(cleanId);
 
+            // faceAuth is Admin-SDK only (client rules deny access); clear via Cloud Function.
+            if (functions) {
+                try {
+                    const clearFace = httpsCallable(functions, 'devClearSampleSchoolFaceAuth');
+                    await clearFace({ schoolId: cleanId });
+                } catch (faceClearErr) {
+                    console.warn('[devResetSampleSchool] faceAuth clear skipped', faceClearErr);
+                }
+            }
+
             // Clear subcollections (and student activities)
             for (const sub of SUBCOLLECTIONS) {
                 const subcollectionRef = collection(firestore, 'schools', cleanId, sub);
@@ -459,7 +469,7 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
                 description: (e as Error).message || 'Unknown error while reseeding demo data.',
             });
         }
-    }, [firestore, auth, playSound, toast, seedOfficeForSampleSchool, ensureDeveloperIsAdminForSchool]);
+    }, [firestore, auth, functions, playSound, toast, seedOfficeForSampleSchool, ensureDeveloperIsAdminForSchool]);
 
     const deleteSchool = useCallback(async (schoolId: string) => {
         if (!firestore || !auth.currentUser) return;

@@ -3,7 +3,13 @@
 import { useMemo, useState } from 'react';
 import { ContentSectionTreeNav } from '@/components/ui/content-section-tree-nav';
 import { Ticket, Search, Trash2, X, ChevronsUpDown } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  StaffPortalSectionCard,
+  StaffPortalSectionCardContent,
+  StaffPortalSectionCardHeader,
+  StaffPortalSectionCardTitle,
+} from '@/components/staff/StaffPortalSection';
 import { Helper } from '@/components/ui/helper';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -11,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { AdminRecordListHeader } from '@/components/admin/AdminRecordListHeader';
 import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 import type { Coupon } from '@/lib/types';
-import { couponRedemptionLabelForPrint } from '@/lib/couponRedemptionRules';
+import { couponRedemptionLabelForPrint } from '@/lib/coupons/couponRedemptionRules';
 
 type CouponGroup = {
   key: string;
@@ -34,6 +40,7 @@ export function AdminCouponsTab({
   onDeleteCoupon,
   onPurgeRedeemed,
   schoolId,
+  embedded = false,
 }: {
   availableCoupons: Coupon[];
   redeemedCoupons: Coupon[];
@@ -41,6 +48,8 @@ export function AdminCouponsTab({
   onDeleteCoupon?: (id: string) => Promise<void>;
   onPurgeRedeemed?: () => Promise<void>;
   schoolId: string;
+  /** When true, render without outer Card (for embedding in Points tab). */
+  embedded?: boolean;
 }) {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');
@@ -177,35 +186,19 @@ export function AdminCouponsTab({
     }
   };
 
-  return (
-    <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden bg-background/95 backdrop-blur-md">
-      <CardHeader className="py-6 bg-secondary/35 border-b border-border/40">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <Helper content="View all available and redeemed coupons for this school. Print new coupon sheets from Admin → Points.">
-              <CardTitle className="flex items-center gap-2 text-2xl font-black tracking-tight text-foreground">
-                <Ticket className="w-6 h-6 text-primary animate-pulse" /> Coupon Management
-              </CardTitle>
-            </Helper>
-          </div>
-          <div className="flex shrink-0">
-            <TabWalkthroughHeaderAction />
-          </div>
-        </div>
-      </CardHeader>
+  const body = (
+    <>
+      <ContentSectionTreeNav
+        items={[
+          { id: 'available', label: 'Available', badge: filteredAvailable.length },
+          { id: 'redeemed', label: 'Redeemed', badge: filteredRedeemed.length },
+        ]}
+        value={section}
+        onValueChange={(id) => setSection(id as 'available' | 'redeemed')}
+        className="mb-2"
+      />
 
-      <CardContent className="p-6 space-y-6">
-        <ContentSectionTreeNav
-          items={[
-            { id: 'available', label: 'Available', badge: filteredAvailable.length },
-            { id: 'redeemed', label: 'Redeemed', badge: filteredRedeemed.length },
-          ]}
-          value={section}
-          onValueChange={(id) => setSection(id as 'available' | 'redeemed')}
-          className="mb-2"
-        />
-
-        <div className="flex flex-wrap gap-4 items-end bg-muted/20 p-4 rounded-2xl border">
+      <div className="flex flex-wrap gap-4 items-end bg-muted/20 p-4 rounded-2xl border">
           <div className="flex-1 min-w-[200px]">
             <label className="text-[10px] font-black uppercase text-muted-foreground mb-1.5 block tracking-wider">Search Code</label>
             <div className="relative">
@@ -673,8 +666,32 @@ export function AdminCouponsTab({
         </div>
         )}
       </div>
-    </CardContent>
-  </Card>
+    </>
+  );
+
+  if (embedded) {
+    return <div className="space-y-6">{body}</div>;
+  }
+
+  return (
+    <StaffPortalSectionCard className="w-full overflow-hidden bg-background/95 backdrop-blur-md">
+      <StaffPortalSectionCardHeader className="py-6 bg-secondary/35 border-b border-border/40">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <Helper content="View all available and redeemed coupons for this school. Print new coupon sheets from Admin → Points.">
+              <StaffPortalSectionCardTitle className="flex items-center gap-2 text-2xl font-black tracking-tight text-foreground">
+                <Ticket className="w-6 h-6 text-primary animate-pulse" /> Coupon Management
+              </StaffPortalSectionCardTitle>
+            </Helper>
+          </div>
+          <div className="flex shrink-0">
+            <TabWalkthroughHeaderAction />
+          </div>
+        </div>
+      </StaffPortalSectionCardHeader>
+
+      <StaffPortalSectionCardContent className="p-6 space-y-6">{body}</StaffPortalSectionCardContent>
+    </StaffPortalSectionCard>
   );
 }
 

@@ -1,6 +1,10 @@
 import "./index.css";
 import { Composition } from "remotion";
 import { MyComposition } from "./Composition";
+import { CinematicPromo } from "./CinematicPromo";
+import { LongFeaturePromo, LONG_PROMO_DURATION } from "./LongFeaturePromo";
+// @ts-expect-error: Imported build-metadata.json does not have an explicit TypeScript declaration file
+import metadata from "./build-metadata.json";
 import { ShortPromo } from "./ShortPromo";
 import { CapturedPromo } from "./CapturedPromo";
 import { LandscapePromo } from "./LandscapePromo";
@@ -23,11 +27,77 @@ import {
 } from "./promo/promoVariants";
 import { LANDSCAPE_TIMING } from "./promo/landscapePromoTiming";
 import { TIMING } from "./promo/theme";
+import { CT } from "./promo/cinematicTheme";
 import { MY_COMP_FPS, MY_COMP_TOTAL } from "./promo/myCompTiming";
 
 export const RemotionRoot: React.FC = () => {
+  const isDev = process.env.NODE_ENV === "development";
+  const cinematicId = isDev ? `CinematicLevelUpPromo-${metadata.cinematicUpdated}` : "CinematicLevelUpPromo";
+  const longPromoId = isDev ? `LongFeaturePromo-${metadata.longPromoUpdated}` : "LongFeaturePromo";
+
   return (
     <>
+      {isDev ? (
+        metadata.newer === "longPromo" ? (
+          <>
+            <Composition
+              id={longPromoId}
+              component={LongFeaturePromo}
+              durationInFrames={LONG_PROMO_DURATION}
+              fps={30}
+              width={1920}
+              height={1080}
+            />
+            <Composition
+              id={cinematicId}
+              component={CinematicPromo}
+              durationInFrames={CT.total}
+              fps={30}
+              width={1920}
+              height={1080}
+            />
+          </>
+        ) : (
+          <>
+            <Composition
+              id={cinematicId}
+              component={CinematicPromo}
+              durationInFrames={CT.total}
+              fps={30}
+              width={1920}
+              height={1080}
+            />
+            <Composition
+              id={longPromoId}
+              component={LongFeaturePromo}
+              durationInFrames={LONG_PROMO_DURATION}
+              fps={30}
+              width={1920}
+              height={1080}
+            />
+          </>
+        )
+      ) : (
+        <>
+          <Composition
+            id={cinematicId}
+            component={CinematicPromo}
+            durationInFrames={CT.total}
+            fps={30}
+            width={1920}
+            height={1080}
+          />
+          <Composition
+            id={longPromoId}
+            component={LongFeaturePromo}
+            durationInFrames={LONG_PROMO_DURATION}
+            fps={30}
+            width={1920}
+            height={1080}
+          />
+        </>
+      )}
+
       <Composition
         id="LandscapePromo"
         component={LandscapePromo}
@@ -144,6 +214,7 @@ export const RemotionRoot: React.FC = () => {
         width={1080}
         height={1920}
       />
+
     </>
   );
 };

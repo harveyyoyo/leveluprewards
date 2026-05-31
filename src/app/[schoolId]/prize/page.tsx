@@ -11,17 +11,17 @@ import { Gift, Loader2 } from 'lucide-react';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useActiveStudentSession } from '@/hooks/useActiveStudentSession';
-import type { StudentFoundMeta } from '@/components/StudentScanner';
+import type { StudentFoundMeta } from '@/components/student/StudentScanner';
 import { appearanceVarsForSurface } from '@/lib/appearance';
 import { cn } from '@/lib/utils';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { FaceMismatchBanner } from '@/components/FaceMismatchBanner';
+import { FaceMismatchBanner } from '@/components/student/FaceMismatchBanner';
 import { PrizeDashboard } from './PrizeDashboard';
-import { StudentKioskTransitionFlash } from '@/components/StudentKioskTransitionFlash';
+import { StudentKioskTransitionFlash } from '@/components/student/StudentKioskTransitionFlash';
 
 const StudentScanner = dynamic(
     () =>
-        import('@/components/StudentScanner')
+        import('@/components/student/StudentScanner')
             .then((m) => m.StudentScanner)
             .catch((err) => {
                 if (typeof window !== 'undefined' && (err.message?.includes('Loading chunk') || err.name === 'ChunkLoadError')) {

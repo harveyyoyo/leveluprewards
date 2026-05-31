@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { HomeLandingLogo } from '@/components/HomeLandingLogo';
+import { HomeLandingLogo } from '@/components/logos/HomeLandingLogo';
 import { Button } from '@/components/ui/button';
 import { getLevelUpLogoHref, getScheduleDemoHref } from '@/lib/appBranding';
 import { MARKETING_LANDING_PAGES } from '@/lib/marketingLandings';

@@ -16,7 +16,7 @@ import type { Coupon, Category, Teacher, Student, Class, HistoryItem, Prize, Att
 import type { LucideIcon } from 'lucide-react';
 import { ArrowLeft, Printer, Plus, LogIn, LogOut, UserCheck, Award, User, Search, Users, Minus, Gift, Loader2, Trash2, Edit, Filter, Ticket, Clock, History, FileText, BookOpen, Target, X, Dices } from 'lucide-react';
 import { useSettings, type Settings } from '@/components/providers/SettingsProvider';
-import { PrinterReminderCallout } from '@/components/PrinterReminderCallout';
+import { PrinterReminderCallout } from '@/components/coupons/PrinterReminderCallout';
 import {
     Dialog,
     DialogContent,
@@ -26,7 +26,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog";
-import { Coupon as CouponPreview } from '@/components/Coupon';
+import { Coupon as CouponPreview } from '@/components/coupons/Coupon';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, where, getDocs, doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
@@ -63,23 +63,24 @@ import {
 } from '@/components/tabWalkthrough/TabWalkthroughContext';
 import { getReadableErrorMessage } from '@/lib/errorMessage';
 import { AdminPrizesTab } from '@/app/[schoolId]/admin/sections/AdminPrizesTab';
-import { PrizeModal } from '@/components/PrizeModal';
+import { PrizeModal } from '@/components/prizes/PrizeModal';
 import {
     COUPONS_PER_PRINT_PAGE,
     COUPON_PRINT_PAGE_SIZE_OPTIONS,
     generateUniqueCouponCodes,
     normalizeCouponPrintPageSize,
     type CouponPrintPageSize,
-} from '@/lib/couponPrint';
-import { buildRedemptionPrintNote, couponRedemptionLabelForPrint } from '@/lib/couponRedemptionRules';
+} from '@/lib/coupons/couponPrint';
+import { buildRedemptionPrintNote, couponRedemptionLabelForPrint } from '@/lib/coupons/couponRedemptionRules';
 import { SchoolReportsPanel } from '@/components/reports/SchoolReportsPanel';
 import { GoalsManager } from '@/components/goals/GoalsManager';
 import { homeworkRewardCategoryKey } from '@/lib/homeworkRewards';
 import { studentsInTeacherScope } from '@/lib/reportsScope';
 import { AdminRaffleTab } from '@/app/[schoolId]/admin/sections/AdminRaffleTab';
 import { StaffPointsTab } from '@/components/points/StaffPointsTab';
-import { CategoryModal } from '@/components/CategoryModal';
-import { formatStudentPointTypes } from '@/lib/studentPointTypes';
+import { StaffClassroomTab } from '@/components/points/StaffClassroomTab';
+import { CategoryModal } from '@/components/admin/CategoryModal';
+import { formatStudentPointTypes } from '@/lib/students/studentPointTypes';
 
 /** Max sheets per run. Bounded for sensible printer jobs and UI. */
 const MAX_COUPON_PRINT_SHEETS = 100;
@@ -2242,6 +2243,7 @@ export function TeacherPrinterInner({
                                 scope="teacher"
                                 tabId={resolvedTeacherTab}
                             >
+                            {teacherTabEnabled('coupons') && (
                             <TeacherPortalTabPane tabId="coupons" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
                                 <div className={teacherPortalPanelClassName(teacherNavSidebar)}>
                                 <CategoryModal
@@ -2334,6 +2336,45 @@ export function TeacherPrinterInner({
                                 />
                                 </div>
                             </TeacherPortalTabPane>
+                            )}
+
+                            {teacherTabEnabled('classroom') && (
+                            <TeacherPortalTabPane tabId="classroom" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
+                                <div className={teacherPortalPanelClassName(teacherNavSidebar)}>
+                                <StaffClassroomTab
+                                    variant="teacher"
+                                    schoolId={schoolId!}
+                                    categories={categories}
+                                    classes={classes}
+                                    students={studentsForTeacherActions}
+                                    managerTeacherId={managerTeacherId}
+                                    schoolWideAccess={schoolWideTeacherScope && !secretaryMode}
+                                    isGraphic={isGraphic}
+                                    manualAccentColor={teacherAccent}
+                                    className={teacherPortalPanelClassName(teacherNavSidebar)}
+                                    manualBudgetOptions={
+                                        isAdmin
+                                            ? undefined
+                                            : {
+                                                  isAdmin: false,
+                                                  currentTeacher: currentTeacher ?? null,
+                                                  onBudgetSpend: async (totalCost) => {
+                                                      if (!currentTeacher) return;
+                                                      const next =
+                                                          currentTeacher.monthlyBudget !== undefined
+                                                              ? teacherWithBudgetAfterSpend(currentTeacher, totalCost)
+                                                              : {
+                                                                    ...currentTeacher,
+                                                                    spentThisMonth: (currentTeacher.spentThisMonth || 0) + totalCost,
+                                                                };
+                                                      await updateTeacher(next);
+                                                  },
+                                              }
+                                    }
+                                />
+                                </div>
+                            </TeacherPortalTabPane>
+                            )}
 
                             {teacherTabEnabled('generated-coupons') && (
                             <TeacherPortalTabPane tabId="generated-coupons" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>

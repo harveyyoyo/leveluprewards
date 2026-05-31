@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { SchoolDeveloperLoginForm } from '@/components/SchoolDeveloperLoginForm';
+import { SchoolDeveloperLoginForm } from '@/components/auth/SchoolDeveloperLoginForm';
 import { useAuth } from '@/components/providers/AuthProvider';
 
 function readLoginUrlState(): { school: string; changeSchool: boolean } {

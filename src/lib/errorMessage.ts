@@ -15,8 +15,11 @@ function getFirebaseCallableConnectivityHint(): string {
   if (typeof window !== 'undefined') {
     const host = window.location.hostname;
     if (host === 'localhost' || host === '127.0.0.1' || host === '[::1]') {
-      dev =
-        ' On localhost: either deploy functions (firebase deploy --only functions) or use the emulator (NEXT_PUBLIC_FIREBASE_FUNCTIONS_EMULATOR=true in .env.local, firebase emulators:start, then restart next dev).';
+      const emulatorWired = !!(window as { __SCHOOL_ARCADE_FIREBASE_EMULATORS__?: boolean })
+        .__SCHOOL_ARCADE_FIREBASE_EMULATORS__;
+      dev = emulatorWired
+        ? ' On localhost: NEXT_PUBLIC_FIREBASE_FUNCTIONS_EMULATOR is enabled but the emulator is not reachable. Run `firebase emulators:start --only functions` in another terminal, or set NEXT_PUBLIC_FIREBASE_FUNCTIONS_EMULATOR=false in .env.local and restart `npm run dev`.'
+        : ' On localhost: either deploy functions (`firebase deploy --only functions`) or enable the emulator (NEXT_PUBLIC_FIREBASE_FUNCTIONS_EMULATOR=true in .env.local, `firebase emulators:start --only functions`, then restart `npm run dev`).';
     }
   }
   return `Could not reach or run Firebase Cloud Functions. Check VPN/firewall/proxy (allow *.cloudfunctions.net and *.googleapis.com), then try again.${dev}`;

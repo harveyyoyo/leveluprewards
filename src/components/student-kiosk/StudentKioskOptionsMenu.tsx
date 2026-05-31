@@ -25,7 +25,7 @@ import { normalizeStudentTheme } from '@/lib/themeContrast';
 import type { Student, StudentTheme } from '@/lib/types';
 
 const ThemeGeneratorModal = dynamic(
-  () => import('@/components/ThemeGeneratorModal').then((m) => m.ThemeGeneratorModal),
+  () => import('@/components/themes/ThemeGeneratorModal').then((m) => m.ThemeGeneratorModal),
   { ssr: false },
 );
 

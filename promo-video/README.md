@@ -11,6 +11,47 @@
 
 Welcome to your Remotion project!
 
+## Screen capture library (b-roll)
+
+Recorded clips live under `public/capture-library/<category>/*.mp4` for use in Remotion via `staticFile("capture-library/...")`.
+
+**Kiosk clips** (from repo root):
+
+```bash
+npm run capture:kiosk-clips
+```
+
+| File | What it shows |
+|------|----------------|
+| `student-kiosk/kiosk-mode-idle.mp4` | Kiosk sign-in screen (scan / type ID) |
+| `student-kiosk/kiosk-type-entry.mp4` | Student ID typed on kiosk |
+| `student-kiosk/kiosk-signin-welcome-points.mp4` | Sign-in → “Welcome back” balance overlay |
+| `student-kiosk/kiosk-new-points-on-entry.mp4` | Sign-in → points celebration (+PTS or welcome balance) |
+| `student-kiosk/kiosk-signin-rewards.mp4` | Signed-in rewards dashboard |
+
+**Per-student coupon redeems** (10 clips, one code each — edit list in `scripts/lib/demo-marketing-settings.mjs`):
+
+```bash
+npm run capture:kiosk-coupons
+# single code: node scripts/capture-walkthrough-videos.mjs --kiosk-coupons --clip=132403
+```
+
+Output: `capture-library/student-kiosk/kiosk-coupon-redeem-<code>.mp4` (student badge 100–109 paired with each code).
+
+**Full promo b-roll batch** (re-captures coupons, raffle jackpot + wheel, kiosk, admin features, teacher flows):
+
+```bash
+npm run capture:promo-broll
+```
+
+Set `FIREBASE_SERVICE_ACCOUNT_KEY` in `.env.local` to reset coupons to unused before capture and tune welcome splash / raffle on the demo school.
+
+Raffle clips (teacher portal — **Weekly Raffle** must be enabled on the demo school): `raffle/teacher-jackpot-pull.mp4`, `raffle/teacher-wheel-spin.mp4`.
+
+Coupon re-capture: your listed codes are reset when Firebase admin works (`FIREBASE_SERVICE_ACCOUNT_KEY` for project `studio-1273073612-71183`). Otherwise the script prints a fresh sheet of 10 codes via the teacher portal.
+
+If raffle tabs are missing on production, run with local dev: `npm run dev` then `CAPTURE_BASE_URL=http://localhost:3000 node scripts/capture-walkthrough-videos.mjs --promo-broll --clip=teacher-jackpot`.
+
 ## Commands
 
 **Install Dependencies**

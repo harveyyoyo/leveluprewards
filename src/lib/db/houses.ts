@@ -15,7 +15,7 @@ import {
   getHousePresetTheme,
   housePresetKeysFromDoc,
   type HousePresetThemeId,
-} from '@/lib/housePresets';
+} from '@/lib/houses/housePresets';
 
 function newHouseId(): string {
   return `h_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;

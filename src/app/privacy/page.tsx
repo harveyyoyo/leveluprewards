@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { LegalPageFooter } from '@/components/LegalPageFooter';
+import { LegalPageFooter } from '@/components/layout/LegalPageFooter';
 import { getContactFormHref } from '@/lib/appBranding';
 
 export const dynamic = 'force-dynamic';

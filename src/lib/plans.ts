@@ -8,8 +8,10 @@
  *     an included feature off (false). Overrides win over the plan defaults.
  *
  * Subscription tiers are retained for developer billing labels only.
- * Runtime gating uses product pillars (`payAttendance`, `payLibrary`, `payHomework`)
+ * Runtime gating uses product pillars (`payClassroom`, `payAttendance`, `payLibrary`, `payHomework`, `payOffice`)
  * via `@/lib/productPillars` — not plan tiers.
+ *
+ * Sales levels ↔ pillars: `.agent/knowledge/product-ladder.md`
  */
 
 export type PlanTier = 'free' | 'basic' | 'pro' | 'enterprise';

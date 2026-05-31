@@ -2,13 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { PrizeRedeemTicketPrintSheet } from '@/components/PrizeRedeemTicketPrintSheet';
+import { PrizeRedeemTicketPrintSheet } from '@/components/prizes/PrizeRedeemTicketPrintSheet';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { schoolPublicDocRef } from '@/lib/schoolPublic';
-import { applyThermalPrizePrintRootLocks, clearThermalPrizePrintRootLocks } from '@/lib/prizeThermalPrintDom';
+import { applyThermalPrizePrintRootLocks, clearThermalPrizePrintRootLocks } from '@/lib/prizes/prizeThermalPrintDom';
 
 type TicketParams = {
   activityId: string;

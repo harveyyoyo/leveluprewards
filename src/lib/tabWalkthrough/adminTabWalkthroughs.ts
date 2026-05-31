@@ -93,7 +93,7 @@ const ADMIN_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
   },
   categories: {
     title: 'Points tab',
-    subtitle: 'Categories and printable coupons',
+    subtitle: 'Categories, coupons, and manual awards',
     steps: [
       {
         title: 'Define categories',
@@ -109,6 +109,34 @@ const ADMIN_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
           'Use Print coupons below to generate scannable sheets (10 or 30 per page).',
           'Teachers can also print from their Points tab using the same categories.',
           'Students redeem codes at the kiosk to bank points.',
+        ],
+      },
+      {
+        title: 'Review coupon inventory',
+        checklist: [
+          'Open Manage Coupons to see available and redeemed codes.',
+          'Search by code or filter by category and teacher to audit a print run.',
+          'Delete unused codes or purge redeemed history when cleaning up.',
+        ],
+      },
+    ],
+  },
+  classroom: {
+    title: 'Classroom tab',
+    subtitle: 'Seating chart, quick awards, and room display',
+    steps: [
+      {
+        title: 'Set up your classes',
+        checklist: [
+          'Run Classroom setup to enable seating and quick awards for teachers.',
+          'Pick a class, arrange desks, and tap students to award during the lesson.',
+        ],
+      },
+      {
+        title: 'Room display',
+        checklist: [
+          'Open Room display to mirror the live chart on a projector or classroom TV.',
+          'Hallway Smart Screen is separate — configure it under Admin → Smart Screen.',
         ],
       },
     ],
@@ -135,21 +163,13 @@ const ADMIN_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
   },
   insights: {
     title: 'Insights tab',
-    subtitle: 'Analytics and coupon inventory',
+    subtitle: 'Analytics and school-wide trends',
     steps: [
       {
         title: 'Read the dashboard',
         checklist: [
           'Scan totals for redemptions, active students, and top categories.',
           'Use trends to see whether rewards activity is growing or quiet.',
-        ],
-      },
-      {
-        title: 'Review coupon inventory',
-        checklist: [
-          'Available lists unused codes; Redeemed shows what students already cashed in.',
-          'Search by code or filter to audit a specific print run.',
-          'Print new sheets from Admin → Points.',
         ],
       },
     ],
@@ -196,6 +216,26 @@ const ADMIN_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
         checklist: [
           'Create a headline and body students see on supported screens.',
           'Set start and end dates so old posts expire automatically.',
+        ],
+      },
+    ],
+  },
+  'smart-screen': {
+    title: 'Smart Screen tab',
+    subtitle: 'Hallway and lobby signage (included on every plan)',
+    steps: [
+      {
+        title: 'Turn on the display',
+        checklist: [
+          'Enable Smart Screen, set a title and daily message, and pick mirror or dashboard layout.',
+          'Open the full-screen link on a hallway monitor, lobby TV, or gym display.',
+        ],
+      },
+      {
+        title: 'Choose modules',
+        checklist: [
+          'Show only the blocks that fit the location: clock, weather card, leaders, bulletin items, rewards, or schedule.',
+          'Use manual weather text when the display is not connected to an external weather service.',
         ],
       },
     ],

@@ -7,17 +7,18 @@ import { GraduationCap } from 'lucide-react';
 import { useFirebase, useFunctions, useUser } from '@/firebase';
 import { useAppContext } from '@/components/AppProvider';
 import { useSettings } from '@/components/providers/SettingsProvider';
-import { SchoolGate } from '@/components/SchoolGate';
+import { SchoolGate } from '@/components/auth/SchoolGate';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { StudentPortalLogin } from '@/components/student-portal/StudentPortalLogin';
 import { StudentPortalDashboard } from '@/components/student-portal/StudentPortalDashboard';
-import { logoutStudentPortal } from '@/lib/studentPortalClient';
-import { establishStudentPortalLobby } from '@/lib/studentPortalLobby';
+import { logoutStudentPortal } from '@/lib/students/studentPortalClient';
+import { establishStudentPortalLobby } from '@/lib/students/studentPortalLobby';
 import {
   syncFirebaseSessionCookie,
   syncSchoolGateCookie,
 } from '@/lib/auth/syncFirebaseSessionCookie';
 import { getReadableErrorMessage } from '@/lib/errorMessage';
+import { setStudentPortalSignedIn } from '@/lib/students/studentLayoutChrome';
 
 export default function StudentHomePage() {
   const params = useParams<{ schoolId: string }>();
@@ -108,9 +109,16 @@ export default function StudentHomePage() {
     }
   }, [auth, lockBrowserToStudent, portalStudentId, schoolId]);
 
+  const isPortalStudent = Boolean(portalStudentId && user?.uid === portalStudentId);
+
+  useEffect(() => {
+    setStudentPortalSignedIn(isPortalStudent);
+    return () => setStudentPortalSignedIn(false);
+  }, [isPortalStudent]);
+
   if (!portalEnabled) {
     return (
-      <div className="flex min-h-[calc(100vh-5rem)] flex-col items-center justify-center px-4 py-10">
+      <div className="flex min-h-dvh flex-col items-center justify-center px-4 py-10">
         <Card className="w-full max-w-lg border-t-8 border-muted shadow-lg">
           <CardHeader className="text-center space-y-4">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
@@ -126,11 +134,9 @@ export default function StudentHomePage() {
     );
   }
 
-  const isPortalStudent = Boolean(portalStudentId && user?.uid === portalStudentId);
-
   return (
     <SchoolGate>
-      <div className="flex min-h-[calc(100vh-5rem)] flex-col items-center justify-center px-4 py-10">
+      <div className="flex min-h-dvh flex-col items-center justify-center px-4 py-10">
         {lobbyError ? (
           <Card className="w-full max-w-lg border-destructive/40">
             <CardHeader>

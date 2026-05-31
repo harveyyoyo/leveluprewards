@@ -1,8 +1,8 @@
 
 'use client';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useAppContext } from '@/components/AppProvider';
-import { SchoolDeveloperLoginForm } from '@/components/SchoolDeveloperLoginForm';
+import { SchoolDeveloperLoginForm } from '@/components/auth/SchoolDeveloperLoginForm';
 import { useFirestore, useFirebase, useCollection, useMemoFirebase, useFunctions } from '@/firebase';
 import { collection, doc, getDoc, setDoc, query, getDocs, orderBy, limit } from 'firebase/firestore';
 import { schoolPublicDocRef, mainSchoolDocToPublicPayload } from '@/lib/schoolPublic';
@@ -29,7 +29,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import type { BackupInfo } from '@/lib/types';
@@ -46,7 +45,7 @@ import { Helper } from '@/components/ui/helper';
 import { httpsCallable } from 'firebase/functions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ImageCropper } from '@/components/ImageCropper';
+import { ImageCropper } from '@/components/admin/ImageCropper';
 import {
   isAllowedLogoFile,
   isSvgLogoFile,
@@ -63,123 +62,19 @@ import {
   subscribeHomeLogoMode,
   type HomeLogoMode,
 } from '@/lib/homeLogoMode';
-import { DeveloperRemoteSupportViewer } from '@/components/DeveloperRemoteSupportViewer';
+import { DeveloperRemoteSupportViewer } from '@/components/support/DeveloperRemoteSupportViewer';
+import { DeveloperSchoolInsightsPanel } from '@/components/developer/DeveloperSchoolInsightsPanel';
 
 interface SchoolInfo {
   id: string;
   name: string;
   appSettings?: {
+    payClassroom?: boolean;
     payAttendance?: boolean;
     payLibrary?: boolean;
     payHomework?: boolean;
     payOffice?: boolean;
   };
-}
-
-interface SchoolStats {
-  students: number;
-  classes: number;
-  teachers: number;
-  categories: number;
-  prizes: number;
-  coupons: number;
-  usedCoupons: number;
-  totalPointsAwarded: number;
-}
-
-
-function SchoolStatsModal({ school, isOpen, onOpenChange }: { school: SchoolInfo | null, isOpen: boolean, onOpenChange: (open: boolean) => void }) {
-  const [stats, setStats] = useState<SchoolStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const firestore = useFirestore();
-
-  useEffect(() => {
-    if (!isOpen || !school || !firestore) return;
-
-    const fetchStats = async () => {
-      setLoading(true);
-      try {
-        const collections = ['students', 'classes', 'teachers', 'categories', 'prizes', 'coupons'];
-        const promises = collections.map(col => getDocs(collection(firestore, 'schools', school.id, col)));
-        const snapshots = await Promise.all(promises);
-
-        const couponsSnapshot = snapshots[5];
-        const usedCoupons = couponsSnapshot.docs.filter(doc => doc.data().used).length;
-
-        const totalPointsAwarded = couponsSnapshot.docs
-          .filter((c) => c.data().used)
-          .reduce((sum, c) => sum + c.data().value, 0) || 0;
-
-
-        setStats({
-          students: snapshots[0].size,
-          classes: snapshots[1].size,
-          teachers: snapshots[2].size,
-          categories: snapshots[3].size,
-          prizes: snapshots[4].size,
-          coupons: snapshots[5].size,
-          usedCoupons: usedCoupons,
-          totalPointsAwarded: totalPointsAwarded
-        });
-      } catch (error) {
-        console.error("Error fetching school stats:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchStats();
-  }, [isOpen, school, firestore]);
-
-  if (!school) return null;
-
-  return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Database Stats for <span className="font-code">{school.id}</span></DialogTitle>
-          <DialogDescription>
-            {`An overview of the database statistics for "${school.name || school.id}".`}
-          </DialogDescription>
-        </DialogHeader>
-        {loading ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 py-4 text-center">
-            {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-24" />)}
-          </div>
-        ) : stats && (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 py-4 text-center">
-            <div className="bg-secondary p-4 rounded-lg">
-              <p className="text-2xl font-bold">{stats.students}</p>
-              <p className="text-sm text-muted-foreground">Students</p>
-            </div>
-            <div className="bg-secondary p-4 rounded-lg">
-              <p className="text-2xl font-bold">{stats.classes}</p>
-              <p className="text-sm text-muted-foreground">Classes</p>
-            </div>
-            <div className="bg-secondary p-4 rounded-lg">
-              <p className="text-2xl font-bold">{stats.teachers}</p>
-              <p className="text-sm text-muted-foreground">Teachers</p>
-            </div>
-            <div className="bg-secondary p-4 rounded-lg">
-              <p className="text-2xl font-bold">{stats.coupons} / {stats.usedCoupons}</p>
-              <p className="text-sm text-muted-foreground">Coupons (Used)</p>
-            </div>
-            <div className="bg-secondary p-4 rounded-lg">
-              <p className="text-2xl font-bold">{stats.prizes}</p>
-                    <p className="text-sm text-muted-foreground">Reward items</p>
-            </div>
-            <div className="bg-secondary p-4 rounded-lg">
-              <p className="text-2xl font-bold">{(stats.totalPointsAwarded || 0).toLocaleString()}</p>
-              <p className="text-sm text-muted-foreground">Points Awarded</p>
-            </div>
-          </div>
-        )}
-        <DialogFooter>
-          <Button variant="secondary" onClick={() => onOpenChange(false)}>Close</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  )
 }
 
 export default function DeveloperPage() {
@@ -212,6 +107,7 @@ export default function DeveloperPage() {
   const [editingAdminPasscode, setEditingAdminPasscode] = useState('');
   const [pillarSchool, setPillarSchool] = useState<SchoolInfo | null>(null);
   const [editingPillars, setEditingPillars] = useState<Record<ProductPillarKey, boolean>>({
+    payClassroom: true,
     payAttendance: true,
     payLibrary: true,
     payHomework: true,
@@ -219,8 +115,72 @@ export default function DeveloperPage() {
   });
   const [backupSchool, setBackupSchool] = useState<SchoolInfo | null>(null);
   const [schoolBackups, setSchoolBackups] = useState<BackupInfo[]>([]);
-  const [statsSchool, setStatsSchool] = useState<SchoolInfo | null>(null);
+  const [insightFocusSchoolId, setInsightFocusSchoolId] = useState<string | null>(null);
   const [supportStartingSchool, setSupportStartingSchool] = useState<string | null>(null);
+
+  type FaceEnrollmentRow = {
+    studentId: string;
+    enabled: boolean;
+    scanCount: number;
+    updatedAt: number | null;
+  };
+  const [faceEnrollmentSchool, setFaceEnrollmentSchool] = useState<string | null>(null);
+  const [faceEnrollments, setFaceEnrollments] = useState<FaceEnrollmentRow[] | null>(null);
+  const [faceEnrollmentBusy, setFaceEnrollmentBusy] = useState(false);
+
+  const loadFaceEnrollments = useCallback(async (schoolId: string) => {
+    if (!functions) return;
+    setFaceEnrollmentBusy(true);
+    setFaceEnrollmentSchool(schoolId);
+    try {
+      const fn = httpsCallable(functions, 'listSchoolFaceEnrollments');
+      const res = await fn({ schoolId });
+      const rows = (res.data as { enrollments?: FaceEnrollmentRow[] })?.enrollments ?? [];
+      setFaceEnrollments(rows);
+      toast({
+        title: `Face enrollments · ${schoolId}`,
+        description:
+          rows.length === 0
+            ? 'No faceAuth records in Firestore.'
+            : `${rows.length} record${rows.length === 1 ? '' : 's'} (see list below).`,
+      });
+    } catch (e: unknown) {
+      setFaceEnrollments(null);
+      toast({
+        variant: 'destructive',
+        title: 'Could not load face enrollments',
+        description: (e as Error)?.message || 'Deploy listSchoolFaceEnrollments or check developer login.',
+      });
+    } finally {
+      setFaceEnrollmentBusy(false);
+    }
+  }, [functions, toast]);
+
+  const clearSampleFaceEnrollments = useCallback(async (schoolId: string, exceptStudentIds: string[] = []) => {
+    if (!functions) return;
+    setFaceEnrollmentBusy(true);
+    try {
+      const fn = httpsCallable(functions, 'devClearSampleSchoolFaceAuth');
+      const res = await fn({ schoolId, exceptStudentIds });
+      const cleared = (res.data as { cleared?: number })?.cleared ?? 0;
+      toast({
+        title: `Cleared face enrollments · ${schoolId}`,
+        description:
+          cleared === 0
+            ? 'Nothing removed.'
+            : `Removed ${cleared} record${cleared === 1 ? '' : 's'}${exceptStudentIds.length ? ` (kept ${exceptStudentIds.join(', ')})` : ''}.`,
+      });
+      await loadFaceEnrollments(schoolId);
+    } catch (e: unknown) {
+      toast({
+        variant: 'destructive',
+        title: 'Could not clear face enrollments',
+        description: (e as Error)?.message || 'Deploy devClearSampleSchoolFaceAuth or check developer login.',
+      });
+    } finally {
+      setFaceEnrollmentBusy(false);
+    }
+  }, [functions, loadFaceEnrollments, toast]);
 
   const [orphanSchoolId, setOrphanSchoolId] = useState('');
   const [latestBackup, setLatestBackup] = useState<{ id: string } | null>(null);
@@ -518,6 +478,7 @@ export default function DeveloperPage() {
       const snap = await getDoc(doc(firestore, 'schools', school.id));
       const app = snap.data()?.appSettings as SchoolInfo['appSettings'] | undefined;
       setEditingPillars({
+        payClassroom: app?.payClassroom !== false,
         payAttendance: app?.payAttendance !== false,
         payLibrary: app?.payLibrary !== false,
         payHomework: app?.payHomework !== false,
@@ -525,6 +486,7 @@ export default function DeveloperPage() {
       });
     } catch {
       setEditingPillars({
+        payClassroom: school.appSettings?.payClassroom !== false,
         payAttendance: school.appSettings?.payAttendance !== false,
         payLibrary: school.appSettings?.payLibrary !== false,
         payHomework: school.appSettings?.payHomework !== false,
@@ -536,6 +498,7 @@ export default function DeveloperPage() {
   const handleClosePillarsModal = () => {
     setPillarSchool(null);
     setEditingPillars({
+      payClassroom: true,
       payAttendance: true,
       payLibrary: true,
       payHomework: true,
@@ -550,6 +513,7 @@ export default function DeveloperPage() {
       const existingApp = (snap.data()?.appSettings ?? {}) as Record<string, unknown>;
       const nextAppSettings = {
         ...existingApp,
+        payClassroom: editingPillars.payClassroom,
         payAttendance: editingPillars.payAttendance,
         payLibrary: editingPillars.payLibrary,
         payHomework: editingPillars.payHomework,
@@ -714,6 +678,11 @@ export default function DeveloperPage() {
           </Card>
         </header>
 
+        <DeveloperSchoolInsightsPanel
+          focusSchoolId={insightFocusSchoolId}
+          onFocusSchool={setInsightFocusSchoolId}
+        />
+
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:items-start">
           <section className="space-y-6 lg:col-span-7" aria-labelledby="dev-schools-heading">
             <Card className="shadow-md">
@@ -728,7 +697,7 @@ export default function DeveloperPage() {
                     </CardTitle>
                   </Helper>
                   <CardDescription>
-                    Create schools, sync the student portal index, and use each row for plans, backups, migration, and edits.
+                    Create schools, sync the student portal index, and use each row for plans, backups, migration, and edits. Click a school name to open full usage insights.
                   </CardDescription>
                 </div>
                 <Separator />
@@ -764,7 +733,11 @@ export default function DeveloperPage() {
               <ul className="space-y-2">
                 {allSchools && [...allSchools].sort((a, b) => a.id.localeCompare(b.id)).map((school) => (
                   <li key={school.id} className="flex flex-wrap gap-2 items-center justify-between rounded-xl border bg-secondary/80 p-3 shadow-sm">
-                    <div onClick={() => setStatsSchool(school)} className="min-w-0 flex-1 cursor-pointer rounded-md p-2 -m-2 transition-colors hover:bg-accent/50">
+                    <div
+                      onClick={() => setInsightFocusSchoolId(school.id)}
+                      className="min-w-0 flex-1 cursor-pointer rounded-md p-2 -m-2 transition-colors hover:bg-accent/50"
+                      title="Open usage insights"
+                    >
                       <p className="font-bold font-code break-all">{school.id}</p>
                       <p className="text-sm text-muted-foreground">{school.name}</p>
                       <p className="mt-1 inline-flex items-center rounded-md bg-background px-2 py-0.5 text-[11px] font-bold uppercase tracking-widest text-muted-foreground border">
@@ -973,6 +946,44 @@ export default function DeveloperPage() {
                 >
                   <span className="font-semibold">Reset &quot;schoolabc&quot;</span>
                 </Button>
+              </CardContent>
+              <CardContent className="space-y-3 border-t pt-4">
+                <p className="text-sm text-muted-foreground">
+                  Face login stores embeddings in Firestore <code className="rounded bg-muted px-1 py-0.5 text-xs">faceAuth</code> (not visible in Admin student list unless you open each student). &quot;Unclear match&quot; means two or more enabled enrollments scored nearly the same.
+                </p>
+                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                  <Button
+                    variant="secondary"
+                    disabled={faceEnrollmentBusy}
+                    onClick={() => void loadFaceEnrollments('schoolabc')}
+                  >
+                    List face enrollments (schoolabc)
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    disabled={faceEnrollmentBusy}
+                    onClick={() => void clearSampleFaceEnrollments('schoolabc', ['100'])}
+                  >
+                    Clear orphans (keep 100)
+                  </Button>
+                </div>
+                {faceEnrollmentSchool === 'schoolabc' && faceEnrollments ? (
+                  <ul className="rounded-md border bg-muted/30 p-3 text-sm">
+                    {faceEnrollments.length === 0 ? (
+                      <li className="text-muted-foreground">No faceAuth documents.</li>
+                    ) : (
+                      faceEnrollments.map((row) => (
+                        <li key={row.studentId} className="font-mono text-xs">
+                          {row.studentId}
+                          {' · '}
+                          {row.enabled ? 'enabled' : 'disabled'}
+                          {' · '}
+                          {row.scanCount} scan{row.scanCount === 1 ? '' : 's'}
+                        </li>
+                      ))
+                    )}
+                  </ul>
+                ) : null}
               </CardContent>
             </Card>
 
@@ -1285,12 +1296,6 @@ export default function DeveloperPage() {
           </DialogContent>
         </Dialog>
 
-        <SchoolStatsModal
-          school={statsSchool}
-          isOpen={!!statsSchool}
-          onOpenChange={(open) => !open && setStatsSchool(null)}
-        />
-
         <AlertDialog open={!!createdSchoolInfo} onOpenChange={() => setCreatedSchoolInfo(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -1388,6 +1393,8 @@ export default function DeveloperPage() {
                         <div>
                           <Label className="text-sm font-bold">{PRODUCT_PILLAR_LABELS[key]}</Label>
                           <p className="text-xs text-muted-foreground mt-1">
+                            {key === 'payClassroom' &&
+                              'Classroom seating, quick awards, and full-screen classroom view for teachers.'}
                             {key === 'payAttendance' && 'Class sign-in, attendance rewards, and related admin tabs.'}
                             {key === 'payLibrary' && 'Library catalog, checkout scans, and library notifications.'}
                             {key === 'payHomework' && 'Teacher homework rewards (not shown on the student portal).'}

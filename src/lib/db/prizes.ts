@@ -13,10 +13,10 @@ import {
 import type { Student, Prize, HistoryItem } from '../types';
 import { reportFirestorePermissionError } from '@/firebase/error-emitter';
 import { removeUndefined } from './helpers';
-import { prizeRestrictionTeacherIds } from '@/lib/prizeUtils';
+import { prizeRestrictionTeacherIds } from '@/lib/prizes/prizeUtils';
 import { AI_FUN_UNIFIED_PRIZE_ID } from '@/lib/aiJokePrize';
-import { derivePrizeScanCode, generatePrizeScanCode, isPrizeScanCode } from '@/lib/prizeScanCode';
-import { prizeCardColorForId } from '@/lib/prizeCardColor';
+import { derivePrizeScanCode, generatePrizeScanCode, isPrizeScanCode } from '@/lib/prizes/prizeScanCode';
+import { prizeCardColorForId } from '@/lib/prizes/prizeCardColor';
 
 /** Creates the single Fun (AI) prize doc if missing — students choose joke/riddle/fortune teller at redeem. */
 export async function ensureUnifiedAiFunPrize(

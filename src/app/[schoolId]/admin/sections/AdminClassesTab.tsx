@@ -3,7 +3,14 @@
 import { useState } from 'react';
 import { BookOpen, Plus, Trash2, ChevronDown, ChevronUp, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  StaffPortalSectionCard,
+  StaffPortalSectionCardContent,
+  StaffPortalSectionCardHeader,
+  StaffPortalSectionCardTitle,
+} from '@/components/staff/StaffPortalSection';
+;
 import { Helper } from '@/components/ui/helper';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -44,13 +51,13 @@ export function AdminClassesTab({
   };
 
   return (
-    <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden">
-      <CardHeader className="flex flex-row justify-between items-center py-6 bg-secondary">
+    <StaffPortalSectionCard className="w-full overflow-hidden">
+      <StaffPortalSectionCardHeader className="flex flex-row justify-between items-center py-6 bg-secondary">
         <div>
           <Helper content="Manage class groups for your school.">
-            <CardTitle className="flex items-center gap-2">
+            <StaffPortalSectionCardTitle className="flex items-center gap-2">
               <BookOpen className="w-5 h-5 text-ring" /> Classes
-            </CardTitle>
+            </StaffPortalSectionCardTitle>
           </Helper>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -59,8 +66,8 @@ export function AdminClassesTab({
             <Plus className="mr-2 h-4 w-4" /> Add Class
           </Button>
         </div>
-      </CardHeader>
-      <CardContent>
+      </StaffPortalSectionCardHeader>
+      <StaffPortalSectionCardContent>
         <ul className="space-y-4 pr-1">
           {classes && classes.length > 0 ? (
             <AdminRecordListHeader
@@ -127,7 +134,7 @@ export function AdminClassesTab({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                      className="h-8 w-8 min-h-0 min-w-0 text-destructive hover:bg-destructive/10"
                       onClick={() => onDeleteClass(c.id, students || [])}
                     >
                       <Trash2 className="w-4 h-4" />
@@ -211,7 +218,7 @@ export function AdminClassesTab({
             />
           )}
         </ul>
-      </CardContent>
-    </Card>
+      </StaffPortalSectionCardContent>
+    </StaffPortalSectionCard>
   );
 }

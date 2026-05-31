@@ -61,11 +61,24 @@ export function schoolPathAllowedByGate(
     }
     return scopes.has('office') || scopes.has('admin');
   }
-  if (section === 'library') {
+  if (section === 'library' || section === 'parent') {
     return true;
   }
   if (section === 'hall-of-fame') {
     return (
+      scopes.has('admin') ||
+      scopes.has('teacher') ||
+      scopes.has('secretary') ||
+      scopes.has('prizeClerk') ||
+      scopes.has('reports') ||
+      scopes.has('librarian') ||
+      scopes.has('houseCoordinator')
+    );
+  }
+
+  if (section === 'smart-screen') {
+    return (
+      scopes.has('portal') ||
       scopes.has('admin') ||
       scopes.has('teacher') ||
       scopes.has('secretary') ||

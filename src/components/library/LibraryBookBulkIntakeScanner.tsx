@@ -11,12 +11,12 @@ import {
   catalogIsbnSet,
   isRetailIsbnBarcode,
   primaryIsbnVariant,
-} from '@/lib/libraryCatalogLookup';
+} from '@/lib/library/libraryCatalogLookup';
 import {
   createScanDeduper,
   fetchCatalogHitByIsbn,
   generateUniqueLibraryUpc,
-} from '@/lib/libraryIntakeHelpers';
+} from '@/lib/library/libraryIntakeHelpers';
 import type { LibraryItem, LibraryItemInput } from '@/lib/types';
 import { LibraryBarcodeReaderField } from './LibraryBarcodeReaderField';
 

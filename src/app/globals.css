@@ -6,6 +6,50 @@
   font-family: 'Libre Barcode 39', cursive;
 }
 
+/* SVG barcodes (JsBarcode Code 128) — sharper bars + quiet zone for camera scan */
+.print-barcode {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  background: #ffffff;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.print-barcode-svg {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  overflow: visible;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.print-barcode-caption {
+  margin-top: 2px;
+}
+
+.print-id-barcode-container .print-barcode {
+  width: 94%;
+  max-width: 2.85in;
+}
+
+.print-id-barcode-container .print-barcode-svg {
+  min-height: 0.28in;
+  max-height: 0.44in;
+}
+
+.coupon-barcode.print-barcode .print-barcode-svg {
+  max-height: 1.1em;
+}
+
+.library-barcode-sticker-code.print-barcode .print-barcode-svg {
+  max-height: 0.22in;
+}
+
 /* System emoji fonts — theme/display fonts rarely include emoji glyphs. */
 :root {
   --emoji-font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", "Android Emoji", emoji, sans-serif;
@@ -1241,9 +1285,15 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
   margin-top: 4px;
   border-top: 1px solid rgba(0, 0, 0, 0.08);
 }
+.print-id-card .print-id-barcode-container .print-barcode-svg {
+  width: 100%;
+  max-height: calc(0.44in * var(--print-id-font-scale, 1));
+  transform: none;
+}
+
 .print-id-card .print-id-barcode-container .font-barcode,
 .print-id-card .font-barcode {
-  /* Theme bold/italic must not apply — Code 39 bars rely on normal weight. */
+  /* Legacy Code 39 font fallback */
   font-weight: 400;
   font-style: normal;
   font-size: calc(30px * var(--print-id-font-scale));
@@ -2022,13 +2072,10 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
     padding-bottom: 0.04em !important;
   }
 
-  /* Scanner-friendly Code 39 on all coupon print layouts */
-  .print-coupon-wrapper .coupon-barcode {
+  /* Scanner-friendly Code 128 SVG on all coupon print layouts */
+  .print-coupon-wrapper .coupon-barcode.print-barcode,
+  .print-coupon-wrapper .coupon-barcode .print-barcode-svg {
     overflow: visible !important;
-    text-overflow: clip !important;
-    font-weight: 400 !important;
-    font-style: normal !important;
-    line-height: 0.72 !important;
     color: #000000 !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
@@ -2040,11 +2087,9 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
   }
 
   /* 30-up: larger bars + taller module height (matches ID card print technique) */
-  .coupon-print-page--30 .print-coupon-wrapper .coupon-barcode {
+  .coupon-print-page--30 .print-coupon-wrapper .coupon-barcode .print-barcode-svg {
     display: block !important;
-    font-size: 1.34em !important;
-    line-height: 1 !important;
-    letter-spacing: 0.03em !important;
+    max-height: 1.35em !important;
     transform: none !important;
   }
 
@@ -2160,13 +2205,13 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
     line-height: 1.1;
   }
 
-  .library-barcode-sticker-code {
-    font-size: 14pt !important;
-    line-height: 1 !important;
-    color: #000 !important;
+  .library-barcode-sticker-code.print-barcode {
     max-width: 100%;
-    overflow: hidden;
-    white-space: nowrap;
+    overflow: visible;
+  }
+
+  .library-barcode-sticker-code.print-barcode .print-barcode-svg {
+    max-height: 0.24in !important;
   }
 
   .library-barcode-sticker-upc {
@@ -2462,6 +2507,12 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
     border-top: 1px solid rgba(0, 0, 0, 0.08);
   }
 
+  .print-id-barcode-container .print-barcode-svg {
+    width: 100% !important;
+    max-height: 0.44in !important;
+    color: #000000 !important;
+  }
+
   .print-id-card .print-id-barcode-container .font-barcode,
   .print-id-card .font-barcode {
     font-weight: 400;
@@ -2525,7 +2576,7 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
     border-radius: 0 !important;
   }
   /* Inherit theme font (and italic) from the card root; Avery/print rules above set Ubuntu on .print-id-header, etc. */
-  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card *:not(.font-barcode):not(.print-id-theme-emoji-center) {
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card *:not(.print-barcode-svg):not(.print-barcode):not(.print-id-theme-emoji-center) {
     font-family: inherit !important;
     font-style: inherit !important;
   }
@@ -2667,6 +2718,11 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
     border-radius: 10px !important;
     margin-top: 4px !important;
     border-top: 1px solid rgba(0, 0, 0, 0.08) !important;
+  }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card .print-id-barcode-container .print-barcode-svg {
+    width: 100% !important;
+    max-height: 0.44in !important;
+    color: #000000 !important;
   }
   body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card .print-id-barcode-container .font-barcode,
   body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card .font-barcode {
@@ -3428,5 +3484,135 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
 
   .level-up-logo-drift h1 {
     opacity: 1 !important;
+  }
+}
+
+/* Classroom celebration effects */
+@keyframes classroom-fx-fall {
+  to {
+    transform: translateY(110vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+@keyframes classroom-fx-rise {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-100vh);
+    opacity: 0;
+  }
+}
+
+@keyframes classroom-fx-twinkle {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+@keyframes classroom-fx-burst {
+  from {
+    transform: translate(-50%, -50%) scale(0.2);
+    opacity: 1;
+  }
+  to {
+    transform: translate(calc(-50% + var(--fx-x, 0)), calc(-50% + var(--fx-y, 0))) scale(1);
+    opacity: 0;
+  }
+}
+
+.animate-classroom-fx-fall {
+  animation: classroom-fx-fall linear forwards;
+}
+
+.animate-classroom-fx-rise {
+  animation: classroom-fx-rise ease-out forwards;
+}
+
+.animate-classroom-fx-twinkle {
+  animation: classroom-fx-twinkle ease-in-out forwards;
+}
+
+.animate-classroom-fx-burst {
+  animation: classroom-fx-burst ease-out forwards;
+}
+
+/* Desk-scoped celebration effects (contained to student cell) */
+@keyframes classroom-fx-fall-scoped {
+  to {
+    transform: translateY(calc(100% + 12px)) rotate(540deg);
+    opacity: 0;
+  }
+}
+
+@keyframes classroom-fx-rise-scoped {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-90%);
+    opacity: 0;
+  }
+}
+
+@keyframes classroom-fx-twinkle-scoped {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes classroom-fx-burst-scoped {
+  from {
+    transform: translate(-50%, -50%) scale(0.15);
+    opacity: 1;
+  }
+  to {
+    transform: translate(calc(-50% + var(--fx-x, 0)), calc(-50% + var(--fx-y, 0))) scale(0.7);
+    opacity: 0;
+  }
+}
+
+.animate-classroom-fx-fall-scoped {
+  animation: classroom-fx-fall-scoped linear forwards;
+}
+
+.animate-classroom-fx-rise-scoped {
+  animation: classroom-fx-rise-scoped ease-out forwards;
+}
+
+.animate-classroom-fx-twinkle-scoped {
+  animation: classroom-fx-twinkle-scoped ease-in-out forwards;
+}
+
+.animate-classroom-fx-burst-scoped {
+  animation: classroom-fx-burst-scoped ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-classroom-fx-fall,
+  .animate-classroom-fx-rise,
+  .animate-classroom-fx-twinkle,
+  .animate-classroom-fx-burst,
+  .animate-classroom-fx-fall-scoped,
+  .animate-classroom-fx-rise-scoped,
+  .animate-classroom-fx-twinkle-scoped,
+  .animate-classroom-fx-burst-scoped {
+    animation: none !important;
+    opacity: 0 !important;
   }
 }

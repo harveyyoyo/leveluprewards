@@ -8,7 +8,7 @@ import React, {
   useEffect,
 } from 'react';
 import type { Student, Class, House, Coupon, Teacher, Prize, Category, CategoryRubricLevel, HistoryItem, Achievement, Badge, AttendanceSettings, AttendanceLogEntry, RecordClassSignInResult, HomeworkAssignment, HomeworkSubmission } from '@/lib/types';
-import type { CouponPrintPageSize } from '@/lib/couponPrint';
+import type { CouponPrintPageSize } from '@/lib/coupons/couponPrint';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { reportFirestorePermissionError } from '@/firebase/error-emitter';
 import { collection, doc, runTransaction } from 'firebase/firestore';
@@ -24,10 +24,10 @@ import {
   listPendingTeacherAwards,
   updatePendingTeacherAwards,
 } from '@/lib/pendingTeacherAwards';
-import { couponIsKnownAndValidOffline, loadCouponSnapshot, saveCouponSnapshot } from '@/lib/couponCache';
+import { couponIsKnownAndValidOffline, loadCouponSnapshot, saveCouponSnapshot } from '@/lib/coupons/couponCache';
 import type { LoginResult } from '@/lib/loginResult';
 import { AI_FUN_UNIFIED_PRIZE_ID } from '@/lib/aiJokePrize';
-import { isStudentKioskRoute, isStudentKioskUiContext } from '@/lib/studentKioskRoute';
+import { isStudentKioskRoute, isStudentKioskUiContext } from '@/lib/students/studentKioskRoute';
 
 const getDb = () => import('@/lib/db');
 
@@ -212,6 +212,9 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
   // Uses logoutRef + narrow deps so a changing `logout` identity does not reset the timer every render.
   // Throttles mousemove/scroll/wheel so pointer jitter does not keep extending the session forever.
   React.useEffect(() => {
+    if (settings.adminAutoLogoutEnabled === false) {
+      return;
+    }
     if (
       loginState !== 'admin' &&
       loginState !== 'developer' &&
@@ -299,7 +302,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
       }
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [loginState, settings.adminSessionTimeoutMs]);
+  }, [loginState, settings.adminAutoLogoutEnabled, settings.adminSessionTimeoutMs]);
 
   // Background refresh: download coupon snapshot for offline validation.
   React.useEffect(() => {

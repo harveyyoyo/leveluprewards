@@ -5,8 +5,8 @@ import OpenAI from 'openai';
 import { guardAiRoute } from '@/lib/apiAuth';
 import { assertPrizeAiSurpriseAllowedForSchool } from '@/lib/server/prizeAiSurpriseGate';
 import type { PrizeAiFunReward } from '@/lib/types';
-import { lettersForAcrosticName } from '@/lib/prizeAiFunAcrostic';
-import { clampStudentAgeYearsForAiRequest, prizeAiFunAudiencePromptBlock } from '@/lib/studentAiFunAge';
+import { lettersForAcrosticName } from '@/lib/prizes/prizeAiFunAcrostic';
+import { clampStudentAgeYearsForAiRequest, prizeAiFunAudiencePromptBlock } from '@/lib/students/studentAiFunAge';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 const defaultOpenAI = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || '' });

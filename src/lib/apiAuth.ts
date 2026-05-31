@@ -437,3 +437,72 @@ export async function guardAiRoute(
 
   return { ok: true, value: { uid: verified.uid, body, schoolId } };
 }
+
+/**
+ * Developer console AI routes — Bearer token + `appConfig/global.developerUids` only.
+ */
+export async function guardDeveloperRoute(
+  req: NextRequest,
+  options: Pick<GuardOptions, 'maxRequests' | 'windowMs' | 'maxBodyBytes'> = {},
+): Promise<Ok<{ uid: string; body: Record<string, unknown> }> | Err> {
+  const windowMs = options.windowMs ?? DEFAULT_WINDOW_MS;
+  const maxRequests = options.maxRequests ?? 6;
+  const maxBodyBytes = options.maxBodyBytes ?? 48 * 1024;
+
+  if (!sameOrigin(req)) {
+    return { ok: false, response: jsonError(403, 'Cross-origin requests are not allowed.') };
+  }
+
+  const authHeader = req.headers.get('authorization') || '';
+  const match = /^Bearer\s+(.+)$/i.exec(authHeader);
+  if (!match) {
+    return { ok: false, response: jsonError(401, 'Authentication required.') };
+  }
+  const idToken = match[1]!;
+
+  const verified = await verifyIdToken(idToken);
+  if (!verified) {
+    return { ok: false, response: jsonError(401, 'Invalid or expired session.') };
+  }
+
+  sweepBuckets();
+  const userLimit = checkRateLimit(`dev-ai:uid:${verified.uid}`, maxRequests, windowMs);
+  if (!userLimit.allowed) {
+    const res = jsonError(429, 'Too many requests. Please slow down.');
+    res.headers.set('Retry-After', String(userLimit.retryAfterSec));
+    return { ok: false, response: res };
+  }
+
+  const contentLength = Number(req.headers.get('content-length') || 0);
+  if (contentLength > maxBodyBytes) {
+    return { ok: false, response: jsonError(413, 'Request body too large.') };
+  }
+
+  let raw: string;
+  try {
+    raw = await req.text();
+  } catch {
+    return { ok: false, response: jsonError(400, 'Could not read request body.') };
+  }
+  if (raw.length > maxBodyBytes) {
+    return { ok: false, response: jsonError(413, 'Request body too large.') };
+  }
+
+  let body: Record<string, unknown>;
+  try {
+    const parsed = raw ? JSON.parse(raw) : {};
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return { ok: false, response: jsonError(400, 'Invalid JSON body.') };
+    }
+    body = parsed as Record<string, unknown>;
+  } catch {
+    return { ok: false, response: jsonError(400, 'Invalid JSON body.') };
+  }
+
+  const developer = await checkDeveloperAllowlist(idToken, verified.uid);
+  if (!developer) {
+    return { ok: false, response: jsonError(403, 'Developer access is required.') };
+  }
+
+  return { ok: true, value: { uid: verified.uid, body } };
+}

@@ -14,8 +14,8 @@ import { isProductPillarKey, isSettingsKeyAllowed } from '@/lib/productPillars';
 import type { StudentTheme } from '@/lib/types';
 import type { IdCardPrinterFamilyId, IdCardPrintProfile } from '@/lib/idCardPrintCatalog';
 import { defaultPaperForFamily } from '@/lib/idCardPrintCatalog';
-import type { PrizeVoucherPaperFormat } from '@/lib/prizeVoucherPrint';
-import { STUDENT_WELCOME_STYLES_LIVE } from '@/lib/studentWelcome';
+import type { PrizeVoucherPaperFormat } from '@/lib/prizes/prizeVoucherPrint';
+import { STUDENT_WELCOME_STYLES_LIVE } from '@/lib/students/studentWelcome';
 import { LEVELUP_BRAND_PRIMARY_HEX } from '@/lib/appBranding';
 import {
     normalizeDisplayModePreference,
@@ -28,7 +28,7 @@ import {
     resolveLegacyModePreference,
     type LegacyModeSignals,
 } from '@/lib/legacyMode';
-import { isStudentKioskUiContext } from '@/lib/studentKioskRoute';
+import { isStudentKioskUiContext } from '@/lib/students/studentKioskRoute';
 import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
 
 type ColorScheme =
@@ -183,8 +183,10 @@ interface Settings {
      * (sign out does not free the browser). When false (default), sign out lets a sibling sign in on the same device.
      */
     studentPortalLockBrowserToStudent?: boolean;
-    /** When true, student home shows the normal app header (school name, home). Default: hidden like the kiosk. */
+    /** @deprecated No longer used — student home never shows the global site header. */
     studentPortalShowHeader?: boolean;
+    /** When true, tuck the school header off-screen on staff portal pages (reveals at the top edge on hover). */
+    hideSiteHeaderOutsidePortal?: boolean;
     /**
      * When true, student kiosk screens (portal hub, sign-in, rewards shop) use a tall narrow
      * layout for portrait-mounted displays (e.g. a floor stand with a rotated monitor).
@@ -228,11 +230,15 @@ interface Settings {
     /** Admin-set palette for students with no individual `student.theme` (kiosk, prize/rewards shop, ID card). */
     defaultStudentTheme?: StudentTheme | null;
     // Security & Session
+    /** When false, staff sessions do not auto-log out on idle. Default on when unset. */
+    adminAutoLogoutEnabled?: boolean;
     adminSessionTimeoutMs?: number;
+    /** When false, kiosk / rewards shop sessions stay signed in until manual logout or kiosk lock. Default on when unset. */
+    kioskAutoLogoutEnabled?: boolean;
     kioskSessionTimeoutSec?: number;
     /** Seconds of kiosk inactivity before AI Fun is hidden until the next interaction. */
     kioskAiFunIdleOffSec?: number;
-    /** Seconds of kiosk inactivity before redeem print-voucher offers are hidden until the next interaction. */
+    /** @deprecated Voucher idle timeout removed; print-voucher prompts are always available. */
     kioskVoucherIdleOffSec?: number;
     /** @deprecated Use kioskAiFunIdleOffSec and kioskVoucherIdleOffSec. */
     kioskAiFunAndVoucherIdleOffMin?: number;
@@ -301,15 +307,35 @@ interface Settings {
     bulletinShowWowBadge?: boolean;
     /** '1' = single column; '2' = responsive two-column grid on wide screens. */
     bulletinColumns?: '1' | '2';
+
+    // Smart Screen (admin-managed shared display)
+    smartScreenEnabled?: boolean;
+    smartScreenTitle?: string;
+    smartScreenMessage?: string;
+    smartScreenTheme?: 'midnight' | 'daylight' | 'studio';
+    smartScreenLayout?: 'mirror' | 'dashboard' | 'portrait';
+    /** Optional US ZIP code. When set, Smart Screen uses it for both weather and timezone. */
+    smartScreenLocationZip?: string;
+    smartScreenWeatherLabel?: string;
+    smartScreenWeatherTemp?: string;
+    smartScreenShowWeather?: boolean;
+    smartScreenShowStats?: boolean;
+    smartScreenShowCompliments?: boolean;
+    smartScreenShowFocus?: boolean;
+    smartScreenShowQuote?: boolean;
+    smartScreenShowLeaderboard?: boolean;
+    smartScreenShowHouses?: boolean;
+    smartScreenShowClasses?: boolean;
+    smartScreenShowBirthdays?: boolean;
+    smartScreenShowBulletin?: boolean;
+    smartScreenShowRewards?: boolean;
+    smartScreenShowSchedule?: boolean;
     // Special Occasions
     enableBirthdayPoints: boolean;
     birthdayPointsAmount: number;
-    enableSpecialDayPoints: boolean;
-    specialDayPointsAmount: number;
-    specialDayLabel: string;
-    specialDayDate: string;
     // Product pillars
     payRewards?: boolean;
+    payClassroom?: boolean;
     payAttendance?: boolean;
     payHomework?: boolean;
     payLibrary?: boolean;
@@ -356,7 +382,7 @@ interface Settings {
     adminHiddenAddOnTabs?: string[];
     /** Admin-only UI preference: pins enabled add-on tabs into the main Admin tab row. */
     adminPinnedAddOnTabs?: string[];
-    /** Admin-only UI preference: main section tabs across the top (default) or down the left sidebar. */
+    /** Admin-only UI preference: main section tabs across the top or down the left sidebar (default). */
     adminNavLayout?: 'top' | 'sidebar';
     /** When on, each admin section tab applies its own color scheme while you work in that tab. */
     adminPerTabColorScheme?: boolean;
@@ -542,6 +568,7 @@ const defaultSettings: Settings = {
     studentPortalMaxFailedAttempts: 5,
     studentPortalLockBrowserToStudent: false,
     studentPortalShowHeader: false,
+    hideSiteHeaderOutsidePortal: false,
     kioskPortraitDisplay: false,
     enableClassSignIn: false,
     enableFaceLogin: false,
@@ -573,10 +600,11 @@ const defaultSettings: Settings = {
         cardBackground: '#ffffff',
         accent: '#2563eb',
     },
+    adminAutoLogoutEnabled: true,
     adminSessionTimeoutMs: 5 * 60 * 1000,
+    kioskAutoLogoutEnabled: true,
     kioskSessionTimeoutSec: 10,
     kioskAiFunIdleOffSec: 360,
-    kioskVoucherIdleOffSec: 360,
     studentSignInThrottleEnabled: false,
     studentSignInThrottleMaxAttempts: 10,
     studentSignInThrottleWindowMin: 2,
@@ -606,13 +634,31 @@ const defaultSettings: Settings = {
     bulletinLogoSize: 'md',
     bulletinShowWowBadge: true,
     bulletinColumns: '2',
+
+    smartScreenEnabled: false,
+    smartScreenTitle: 'Smart Screen',
+    smartScreenMessage: 'Make today count.',
+    smartScreenTheme: 'midnight',
+    smartScreenLayout: 'mirror',
+    smartScreenLocationZip: '',
+    smartScreenWeatherLabel: 'Clear focus',
+    smartScreenWeatherTemp: '72',
+    smartScreenShowWeather: true,
+    smartScreenShowStats: true,
+    smartScreenShowCompliments: true,
+    smartScreenShowFocus: true,
+    smartScreenShowQuote: true,
+    smartScreenShowLeaderboard: true,
+    smartScreenShowHouses: true,
+    smartScreenShowClasses: true,
+    smartScreenShowBirthdays: true,
+    smartScreenShowBulletin: true,
+    smartScreenShowRewards: true,
+    smartScreenShowSchedule: true,
     enableBirthdayPoints: false,
     birthdayPointsAmount: 100,
-    enableSpecialDayPoints: false,
-    specialDayPointsAmount: 50,
-    specialDayLabel: 'School Spirit Day',
-    specialDayDate: '',
     payRewards: true,
+    payClassroom: true,
     payAttendance: true,
     payHomework: true,
     payLibrary: true,
@@ -629,7 +675,7 @@ const defaultSettings: Settings = {
     expertMode: false,
     adminHiddenAddOnTabs: [],
     adminPinnedAddOnTabs: [],
-    adminNavLayout: 'top',
+    adminNavLayout: 'sidebar',
     adminPerTabColorScheme: false,
     adminMainTabOrder: [],
     adminExtraTabOrder: [],
@@ -806,6 +852,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
     const applyEntitlements = useCallback((input: Settings): Settings => {
         const next = { ...input };
+        if (!(next.payClassroom ?? true)) {
+            next.enableParentView = false;
+        }
         if (!(next.payAttendance ?? true)) {
             next.enableClassSignIn = false;
             next.enableAttendance = false;

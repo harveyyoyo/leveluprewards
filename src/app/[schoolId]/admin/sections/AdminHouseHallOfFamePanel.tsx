@@ -19,7 +19,7 @@ import { ContentSectionTreeNav } from '@/components/ui/content-section-tree-nav'
 import { LiveScreenPreview } from '@/components/admin/LiveScreenPreview';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { resolveAppAbsoluteUrl } from '@/lib/appUrl';
-import { buildHouseHallOfFameHref, isHouseStudentPointsRollupEnabled } from '@/lib/housePointsSettings';
+import { buildHouseHallOfFameHref, isHouseStudentPointsRollupEnabled } from '@/lib/houses/housePointsSettings';
 
 export function AdminHouseHallOfFamePanel({ schoolId }: { schoolId: string }) {
   const { settings, updateSettings } = useSettings();

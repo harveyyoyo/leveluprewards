@@ -8,12 +8,12 @@ import { useAppContext } from '@/components/AppProvider';
 import { useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, collection } from 'firebase/firestore';
 import dynamic from 'next/dynamic';
-import { FaceMismatchBanner } from '@/components/FaceMismatchBanner';
+import { FaceMismatchBanner } from '@/components/student/FaceMismatchBanner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const StudentScanner = dynamic(
     () =>
-        import('@/components/StudentScanner')
+        import('@/components/student/StudentScanner')
             .then((m) => m.StudentScanner)
             .catch((err) => {
                 if (typeof window !== 'undefined' && (err.message?.includes('Loading chunk') || err.name === 'ChunkLoadError')) {
@@ -55,28 +55,31 @@ import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useKioskAiFunAndVoucherIdleActive } from '@/hooks/useKioskAiFunAndVoucherIdle';
 import { usePrizeAiFunAudienceCacheReset } from '@/hooks/usePrizeAiFunAudienceCacheReset';
 import { useSettings } from '@/components/providers/SettingsProvider';
-import { PrinterReminderCallout } from '@/components/PrinterReminderCallout';
+import { PrinterReminderCallout } from '@/components/coupons/PrinterReminderCallout';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { GoogleFontLoader } from '@/components/GoogleFontLoader';
+import { GoogleFontLoader } from '@/components/themes/GoogleFontLoader';
 import { useActiveStudentSession } from '@/hooks/useActiveStudentSession';
-import type { StudentFoundMeta } from '@/components/StudentScanner';
+import type { StudentFoundMeta } from '@/components/student/StudentScanner';
 import { rainbowTripletForNavId, complementTripletForNavId } from '@/lib/rainbowNav';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
 import { appearanceVarsForSurface } from '@/lib/appearance';
 import { StudentKioskTopBar } from '@/components/student-kiosk/StudentKioskTopBar';
-import { StudentKioskWarmBackdrop } from '@/components/student-kiosk/StudentKioskRedeemUI';
+import {
+  StudentKioskLogoutControls,
+  StudentKioskWarmBackdrop,
+} from '@/components/student-kiosk/StudentKioskRedeemUI';
 import { StudentPrizeShopCard } from '@/components/student-kiosk/StudentPrizeShopCard';
 
-import { prizeIsListed, studentSeesPrizeByTeachers } from '@/lib/prizeUtils';
+import { prizeIsListed, studentSeesPrizeByTeachers } from '@/lib/prizes/prizeUtils';
 import { runMotor as runVendingMotor, isConnected as motorIsConnected } from '@/lib/vendingMotor';
 import { useAuthFetch } from '@/lib/authFetch';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { isAiFunPrize, prizeAppearsInRewardsShop, resolveAiFunApiMode, withUnifiedAiFunPrize } from '@/lib/aiJokePrize';
-import { acrosticFirstNameFromStudent } from '@/lib/prizeAiFunAcrostic';
-import { requestAcrosticSurprise } from '@/lib/prizeAiFunRequest';
-import { prizeAiFunAgeBandKey, studentAgeYearsFromBirthday } from '@/lib/studentAiFunAge';
+import { acrosticFirstNameFromStudent } from '@/lib/prizes/prizeAiFunAcrostic';
+import { requestAcrosticSurprise } from '@/lib/prizes/prizeAiFunRequest';
+import { prizeAiFunAgeBandKey, studentAgeYearsFromBirthday } from '@/lib/students/studentAiFunAge';
 import {
     type AiSurpriseBody,
     type AiSurpriseKind,
@@ -90,7 +93,7 @@ import {
     rememberAiSurprise,
     recentAiSurpriseDedupeSet,
     writeAiSurpriseStock,
-} from '@/lib/prizeAiFunClientStorage';
+} from '@/lib/prizes/prizeAiFunClientStorage';
 
 /** Max units per redemption for 0-point prizes when stock is unlimited (balance does not limit). */
 const FREE_PRIZE_MAX_QTY = 99;
@@ -419,11 +422,11 @@ export function PrizeDashboard({
     const { toast } = useToast();
     const playSound = useArcadeSound();
     const { settings } = useSettings();
-    const { kioskAiFunActive, kioskVoucherActive, markKioskRewardsActivity } = useKioskAiFunAndVoucherIdleActive(
+    const { kioskAiFunActive, markKioskRewardsActivity } = useKioskAiFunAndVoucherIdleActive(
         settings.kioskAiFunIdleOffSec,
-        settings.kioskVoucherIdleOffSec,
         isKioskLocked,
     );
+    const kioskAutoLogoutOn = settings.kioskAutoLogoutEnabled !== false;
     const kioskAiFunInShop = settings.enablePrizeAiSurprise === true && kioskAiFunActive;
     const animBackdrop = globalAnimatedBackdropActive(settings);
     const [confirmingPrize, setConfirmingPrize] = useState<Prize | null>(null);
@@ -552,11 +555,11 @@ export function PrizeDashboard({
     const [logoutTimer, setLogoutTimer] = useState(settings.kioskSessionTimeoutSec ?? 10);
 
     const resetTimer = useCallback(() => {
-        if (!isKioskLocked) {
+        if (!isKioskLocked && kioskAutoLogoutOn) {
             markKioskRewardsActivity();
             setLogoutTimer(settings.kioskSessionTimeoutSec ?? 10);
         }
-    }, [isKioskLocked, settings.kioskSessionTimeoutSec, markKioskRewardsActivity]);
+    }, [isKioskLocked, kioskAutoLogoutOn, settings.kioskSessionTimeoutSec, markKioskRewardsActivity]);
 
     const closeAiSurprise = useCallback(() => {
         flushPendingTicketAfterAi();
@@ -568,7 +571,7 @@ export function PrizeDashboard({
     }, [flushPendingTicketAfterAi, resetTimer]);
 
     useEffect(() => {
-        if (isKioskLocked) return;
+        if (isKioskLocked || !kioskAutoLogoutOn) return;
         if (logoutTimer <= 0) {
             onDone();
             return;
@@ -577,10 +580,10 @@ export function PrizeDashboard({
             setLogoutTimer((t: number) => t - 1);
         }, 1000);
         return () => clearTimeout(timerId);
-    }, [logoutTimer, onDone, isKioskLocked]);
+    }, [logoutTimer, onDone, isKioskLocked, kioskAutoLogoutOn]);
 
     useEffect(() => {
-        if (isKioskLocked) return;
+        if (isKioskLocked || !kioskAutoLogoutOn) return;
         const handleActivity = () => {
             const now = Date.now();
             if (now - lastActivityResetRef.current < 1000) return;
@@ -592,7 +595,7 @@ export function PrizeDashboard({
         return () => {
             events.forEach((ev) => window.removeEventListener(ev, handleActivity));
         };
-    }, [resetTimer, isKioskLocked]);
+    }, [resetTimer, isKioskLocked, kioskAutoLogoutOn]);
 
     const handleRedeemReward = async (prize: Prize, quantity: number, aiFunUserPick?: PrizeAiFunReward) => {
         if (!student || isRedeeming) return;
@@ -657,7 +660,6 @@ export function PrizeDashboard({
             let ticketPayload: NonNullable<typeof ticketData> | null = null;
             if (
                 prize.offerPrintTicketOnRedeem === true &&
-                kioskVoucherActive &&
                 activityId &&
                 redeemedAt &&
                 typeof totalCost === 'number'
@@ -1006,13 +1008,13 @@ export function PrizeDashboard({
                     )}
                 >
                     {!embedded ? (
-                    <StudentKioskTopBar
-                        student={student}
-                        points={student.points ?? 0}
-                        themed={!!activeTheme}
-                        primaryForeground={primaryForeground}
-                        photoDisplayMode={settings.photoDisplayMode}
-                    />
+                        <StudentKioskTopBar
+                            student={student}
+                            points={student.points ?? 0}
+                            themed={!!activeTheme}
+                            primaryForeground={primaryForeground}
+                            photoDisplayMode={settings.photoDisplayMode}
+                        />
                     ) : null}
 
                     <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1043,55 +1045,15 @@ export function PrizeDashboard({
                                 </Link>
                             </Button>
                         )}
-                        <div className="flex items-center gap-2">
-                            <div
-                                className={cn(
-                                    'whitespace-nowrap rounded-full border-2 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest',
-                                    !activeTheme &&
-                                        (isKioskLocked
-                                            ? 'border-red-200 bg-red-100 text-red-800 dark:border-red-800 dark:bg-red-950/50 dark:text-red-300'
-                                            : 'border-slate-300 bg-slate-100 text-slate-800 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100'),
-                                )}
-                                style={
-                                    activeTheme
-                                        ? isKioskLocked
-                                            ? {
-                                                  borderColor: 'color-mix(in srgb, #ef4444 55%, var(--theme-primary))',
-                                                  backgroundColor: 'color-mix(in srgb, #ef4444 22%, var(--theme-bg))',
-                                                  color: 'var(--theme-text)',
-                                              }
-                                            : {
-                                                  borderColor: 'color-mix(in srgb, var(--theme-primary) 45%, transparent)',
-                                                  backgroundColor: 'var(--theme-bg)',
-                                                  color: 'var(--theme-text)',
-                                              }
-                                        : undefined
-                                }
-                                aria-label={isKioskLocked ? 'Kiosk locked' : `Auto logout in ${logoutTimer} seconds`}
-                            >
-                                {isKioskLocked ? 'Kiosk Locked • Stays signed in' : `Auto-logout ${logoutTimer}`}
-                            </div>
-                            <Button
-                                type="button"
-                                size="sm"
-                                className={cn(
-                                    'h-8 rounded-full border-2 px-3.5 text-[11px] font-bold uppercase tracking-widest shadow-sm',
-                                    !activeTheme && 'border-primary/40 bg-primary text-primary-foreground hover:bg-primary/90',
-                                )}
-                                style={
-                                    activeTheme
-                                        ? {
-                                              borderColor: 'var(--theme-primary)',
-                                              backgroundColor: 'var(--theme-primary)',
-                                              color: primaryForeground,
-                                          }
-                                        : undefined
-                                }
-                                onClick={onRequestExit}
-                            >
-                                Logout
-                            </Button>
-                        </div>
+                        <StudentKioskLogoutControls
+                            themed={{ active: !!activeTheme }}
+                            primaryForeground={primaryForeground}
+                            isKioskLocked={isKioskLocked}
+                            autoLogoutEnabled={kioskAutoLogoutOn}
+                            logoutTimer={logoutTimer}
+                            sessionTimeoutSec={settings.kioskSessionTimeoutSec ?? 10}
+                            onLogout={onRequestExit}
+                        />
                     </div>
 
                     <p

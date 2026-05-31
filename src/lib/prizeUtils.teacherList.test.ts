@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildTeacherPrizeListItems } from './prizeUtils';
+import { buildTeacherPrizeListItems } from './prizes/prizeUtils';
 import type { Prize } from '@/lib/types';
 
 function prize(overrides: Partial<Prize> & { id: string }): Prize {

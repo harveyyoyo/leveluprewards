@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { Prize } from '@/lib/types';
-import { stripLeadingEmojiFromPrizeName } from '@/lib/prizeUtils';
+import { stripLeadingEmojiFromPrizeName } from '@/lib/prizes/prizeUtils';
 import { cn } from '@/lib/utils';
 
 export type StudentPrizeShopCardProps = {

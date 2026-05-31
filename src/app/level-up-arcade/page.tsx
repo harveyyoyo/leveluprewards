@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import Logo from '@/components/Logo';
+import Logo from '@/components/logos/Logo';
 import { buttonVariants } from '@/components/ui/button';
 import { getContactFormHref, SITE_LEGAL_UMBRELLA } from '@/lib/appBranding';
 import { MARKETING_FLYERS_HREF } from '@/lib/marketingLandings';

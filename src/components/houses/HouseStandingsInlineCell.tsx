@@ -2,7 +2,7 @@
 
 import { AlertTriangle } from 'lucide-react';
 import { Helper } from '@/components/ui/helper';
-import type { HouseStandingsRow } from '@/lib/houseStandings';
+import type { HouseStandingsRow } from '@/lib/houses/houseStandings';
 import { cn } from '@/lib/utils';
 
 export function HouseStandingsInlineCell({ row }: { row: HouseStandingsRow }) {

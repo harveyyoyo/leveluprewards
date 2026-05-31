@@ -3,7 +3,13 @@
 import { useState } from 'react';
 import { Edit, Plus, Trash2, Printer, Gift } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  StaffPortalSectionCard,
+  StaffPortalSectionCardContent,
+  StaffPortalSectionCardHeader,
+  StaffPortalSectionCardTitle,
+} from '@/components/staff/StaffPortalSection';
 import { Helper } from '@/components/ui/helper';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
@@ -82,8 +88,8 @@ export function AdminStaffAccountsTab({
   };
 
   return (
-    <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden">
-      <CardHeader className="flex flex-row justify-between items-center py-6">
+    <StaffPortalSectionCard className="w-full overflow-hidden">
+      <StaffPortalSectionCardHeader className="flex flex-row justify-between items-center py-6">
         <div>
           <Helper
             content={
@@ -96,16 +102,16 @@ export function AdminStaffAccountsTab({
               </>
             }
           >
-            <CardTitle className="flex items-center gap-2">
+            <StaffPortalSectionCardTitle className="flex items-center gap-2">
               <Printer className="w-5 h-5 text-primary" /> Desk staff
-            </CardTitle>
+            </StaffPortalSectionCardTitle>
           </Helper>
         </div>
         <Button onClick={openNew} className="rounded-xl">
           <Plus className="mr-2 h-4 w-4" /> Add account
         </Button>
-      </CardHeader>
-      <CardContent>
+      </StaffPortalSectionCardHeader>
+      <StaffPortalSectionCardContent>
         <ul className="pr-1 space-y-1">
           {staffAccounts && staffAccounts.length > 0 ? (
             <AdminRecordListHeader
@@ -209,7 +215,7 @@ export function AdminStaffAccountsTab({
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </CardContent>
-    </Card>
+      </StaffPortalSectionCardContent>
+    </StaffPortalSectionCard>
   );
 }

@@ -1,0 +1,19 @@
+{
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/.next/**": true,
+    "**/.firebase/**": true,
+    "**/functions/lib/**": true,
+    "**/promo-video/public/capture-library/**": true,
+    "**/promo-video/node_modules/**": true,
+    "**/assets/**": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/.next": true,
+    "**/.firebase": true,
+    "**/functions/lib": true,
+    "**/promo-video/public/capture-library": true,
+    "**/promo-video/node_modules": true
+  }
+}

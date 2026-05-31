@@ -8,6 +8,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { cn } from '@/lib/utils';
 import { TeacherPrinterInner } from '@/app/[schoolId]/teacher/TeacherPrinterInner';
 import { StaffPortalChrome } from './StaffPortalChrome';
+import { StaffPortalLayoutProvider } from './StaffPortalLayoutContext';
 import { staffPortalShellClassName } from './staffPortalNavStyles';
 
 type TeacherStaffPortalDashboardProps = {
@@ -43,14 +44,16 @@ export function TeacherStaffPortalDashboard({
         className={staffPortalShellClassName(sidebar)}
       >
         <StaffPortalChrome role="teacher" schoolId={schoolId} displayName={displayName} />
-        <ErrorBoundary name="TeacherStaffPortal">
-          <TeacherPrinterInner
-            embedded
-            teacherName={displayName}
-            teacherId={validTeacherId}
-            onLogout={handleLogout}
-          />
-        </ErrorBoundary>
+        <StaffPortalLayoutProvider sidebar={sidebar}>
+          <ErrorBoundary name="TeacherStaffPortal">
+            <TeacherPrinterInner
+              embedded
+              teacherName={displayName}
+              teacherId={validTeacherId}
+              onLogout={handleLogout}
+            />
+          </ErrorBoundary>
+        </StaffPortalLayoutProvider>
       </div>
     </TooltipProvider>
   );

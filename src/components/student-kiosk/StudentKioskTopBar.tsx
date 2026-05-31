@@ -4,9 +4,9 @@ import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import type { Student } from '@/lib/types';
 
-/** Shared space below the welcome/balance header on student kiosk + rewards shop. */
+/** Optional spacing below the student name bar when not inside a spaced flex column. */
 export const studentKioskHeaderGapClass =
-  'mb-12 sm:mb-14 md:mb-16 [@media(max-height:760px)]:mb-10';
+  'mb-2 sm:mb-3 [@media(max-height:760px)]:mb-1.5';
 
 export type StudentKioskTopBarProps = {
   student: Student;
@@ -16,7 +16,7 @@ export type StudentKioskTopBarProps = {
   photoDisplayMode?: string;
   /** Shown beside the name (house badge, emoji, etc.). */
   nameExtras?: ReactNode;
-  /** e.g. theme button */
+  /** e.g. logout controls */
   trailingActions?: ReactNode;
 };
 
@@ -32,7 +32,7 @@ export function StudentKioskTopBar({
   const displayName = `${student.firstName}${student.lastName ? ` ${student.lastName}` : ''}`.trim();
 
   return (
-    <header
+    <div
       className={cn(
         'relative z-10 w-full shrink-0 rounded-2xl border-2 px-4 py-3 sm:px-5 sm:py-4',
         studentKioskHeaderGapClass,
@@ -55,7 +55,7 @@ export function StudentKioskTopBar({
           >
             Welcome back
           </p>
-          <div className="mt-1 flex min-w-0 items-center gap-3">
+            <div className="mt-1 flex min-w-0 items-start gap-3">
             <div
               className={cn(
                 'flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl text-sm font-black uppercase sm:h-12 sm:w-12',
@@ -87,7 +87,7 @@ export function StudentKioskTopBar({
                 </span>
               )}
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <h1
                   className="truncate text-xl font-black uppercase leading-tight tracking-wide sm:text-2xl md:text-3xl lg:text-4xl"
@@ -95,9 +95,9 @@ export function StudentKioskTopBar({
                 >
                   {displayName}
                 </h1>
-                {nameExtras}
               </div>
             </div>
+            {nameExtras}
           </div>
         </div>
 
@@ -121,7 +121,7 @@ export function StudentKioskTopBar({
           </div>
         </div>
       </div>
-    </header>
+    </div>
   );
 }
 

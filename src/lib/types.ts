@@ -233,10 +233,9 @@ export interface Student {
   portalLocked?: boolean;
   portalFailedAttempts?: number;
   portalLockedAt?: number;
-  /** Tracks the last date (YYYY-MM-DD) special day points were awarded to prevent duplicates. */
+  /** Tracks the last date (YYYY-MM-DD) birthday bonus points were awarded to prevent duplicates. */
   lastSpecialDayAwarded?: {
     birthday?: string;
-    specialDay?: string;
   };
 }
 
@@ -547,4 +546,24 @@ export interface HomeworkSubmission {
   completedAt?: number;
   pointsAwarded?: number;
   teacherNote?: string;
+}
+
+/** Teacher behavior / incident note (Classroom Management pillar). */
+export type BehaviorNoteKind = 'positive' | 'concern' | 'incident';
+
+export interface BehaviorNote {
+  id: string;
+  studentId: string;
+  studentName: string;
+  classId?: string;
+  className?: string;
+  teacherId: string;
+  teacherName: string;
+  kind: BehaviorNoteKind;
+  note: string;
+  createdAt: number;
+  /** When false, visible to staff only (e.g. incident under review). */
+  visibleToParent: boolean;
+  pointsAmount?: number;
+  pointsLabel?: string;
 }

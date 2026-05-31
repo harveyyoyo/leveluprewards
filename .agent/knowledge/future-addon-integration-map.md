@@ -46,6 +46,8 @@ Staff rosters (e.g. `AdminStudentsTab.tsx`) can continue using full names.
 
 ## 3. Parent digest (weekly email/SMS, opt-in)
 
+**Pillar:** `payClassroom` (Classroom Management — Level 2). See `product-ladder.md`.
+
 **Pattern:** Match attendance notifications in Functions: parent contact fields on
 student docs, `notificationPrefs` object.
 

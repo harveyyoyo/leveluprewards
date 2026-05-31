@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { clearPrizeAiFunSchoolClientCache } from '@/lib/prizeAiFunClientStorage';
-import { studentAgeYearsFromBirthday } from '@/lib/studentAiFunAge';
+import { clearPrizeAiFunSchoolClientCache } from '@/lib/prizes/prizeAiFunClientStorage';
+import { studentAgeYearsFromBirthday } from '@/lib/students/studentAiFunAge';
 
 /**
  * Prefetched AI Fun jokes/riddles/fortunes (and recent acrostics) are stored per school + coarse age band.

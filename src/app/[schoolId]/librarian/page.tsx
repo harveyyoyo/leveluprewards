@@ -15,12 +15,12 @@ import { useSettings } from '@/components/providers/SettingsProvider';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { LibraryManagementPanel } from '@/components/library/LibraryManagementPanel';
-import { LibraryItemModal } from '@/components/LibraryItemModal';
+import { LibraryItemModal } from '@/components/library/LibraryItemModal';
 import { useCollection } from '@/firebase';
 import type { LibraryItem, LibraryItemInput, Student } from '@/lib/types';
-import { normalizeLibraryUpc } from '@/lib/libraryScanCode';
-import { forceReturnLibraryItem } from '@/lib/libraryOperations';
-import { getLibraryPolicyFromSettings } from '@/lib/libraryPolicy';
+import { normalizeLibraryUpc } from '@/lib/library/libraryScanCode';
+import { forceReturnLibraryItem } from '@/lib/library/libraryOperations';
+import { getLibraryPolicyFromSettings } from '@/lib/library/libraryPolicy';
 
 export default function LibrarianPage() {
   const { loginState, isInitialized, schoolId, login, logout, userName, isLibrarian, isAdmin, categories } =

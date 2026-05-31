@@ -36,8 +36,6 @@ const createSynth = () => {
     type: OscillatorType = 'triangle',
     volume: number = 0.1
   ) => {
-    // Don't try to play a note if the context is still suspended.
-    if (audioCtx.state === 'suspended') return;
     const oscillator = audioCtx.createOscillator();
     const gainNode = audioCtx.createGain();
 
@@ -246,13 +244,13 @@ export const useArcadeSound = () => {
     (synthRef as any).current = createSynth();
   }
 
-  const soundEnabled = settings.soundEnabled;
+  // Match kiosk profile UI: undefined means "on" (default).
+  const soundEnabled = settings.soundEnabled !== false;
   const studentAudioTheme = (settings as any).studentAudioTheme;
 
   const playSound = useCallback((sound: SoundEffect) => {
-    // Only play sound if it's enabled in settings.
     if (!soundEnabled) return;
-    synthRef.current?.play(sound, studentAudioTheme || 'retro_arcade');
+    void synthRef.current?.play(sound, studentAudioTheme || 'retro_arcade');
   }, [soundEnabled, studentAudioTheme]);
 
   return playSound;

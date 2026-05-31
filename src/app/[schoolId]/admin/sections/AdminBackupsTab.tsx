@@ -3,7 +3,13 @@
 import { Database, Download, Plus, Upload } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  StaffPortalSectionCard,
+  StaffPortalSectionCardContent,
+  StaffPortalSectionCardHeader,
+  StaffPortalSectionCardTitle,
+} from '@/components/staff/StaffPortalSection';
 import { Helper } from '@/components/ui/helper';
 import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 import type { BackupInfo } from '@/lib/types';
@@ -20,13 +26,13 @@ export function AdminBackupsTab({
   onRestoreFromBackup: (backupId: string) => void;
 }) {
   return (
-    <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden">
-      <CardHeader className="flex flex-row justify-between items-center py-6">
+    <StaffPortalSectionCard className="w-full overflow-hidden">
+      <StaffPortalSectionCardHeader className="flex flex-row justify-between items-center py-6">
         <div>
           <Helper content="Create and restore full data snapshots of your school. This is a critical tool for data safety and recovery.">
-            <CardTitle className="flex items-center gap-2">
+            <StaffPortalSectionCardTitle className="flex items-center gap-2">
               <Database className="text-primary w-5 h-5" /> System Backups
-            </CardTitle>
+            </StaffPortalSectionCardTitle>
           </Helper>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -35,8 +41,8 @@ export function AdminBackupsTab({
             <Plus className="mr-2 h-4 w-4" /> Create Snapshot
           </Button>
         </div>
-      </CardHeader>
-      <CardContent className="p-6">
+      </StaffPortalSectionCardHeader>
+      <StaffPortalSectionCardContent className="p-6">
         <div>
           <ul className="space-y-2.5 pr-4">
             {(backups || [])
@@ -103,8 +109,8 @@ export function AdminBackupsTab({
               ))}
           </ul>
         </div>
-      </CardContent>
-    </Card>
+      </StaffPortalSectionCardContent>
+    </StaffPortalSectionCard>
   );
 }
 

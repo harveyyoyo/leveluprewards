@@ -12,16 +12,16 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { appearanceVarsForSurface } from '@/lib/appearance';
 import { PrizeDashboard } from '@/app/[schoolId]/prize/PrizeDashboard';
-import type { StudentFoundMeta } from '@/components/StudentScanner';
+import type { StudentFoundMeta } from '@/components/student/StudentScanner';
 import type { Prize } from '@/lib/types';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
-import { PrizeDeskCardScan } from '@/components/PrizeDeskCardScan';
+import { PrizeDeskCardScan } from '@/components/prizes/PrizeDeskCardScan';
 import { withUnifiedAiFunPrize } from '@/lib/aiJokePrize';
 
 const StudentScanner = dynamic(
   () =>
-    import('@/components/StudentScanner')
+    import('@/components/student/StudentScanner')
       .then((m) => m.StudentScanner)
       .catch((err) => {
         if (typeof window !== 'undefined' && (err.message?.includes('Loading chunk') || err.name === 'ChunkLoadError')) {

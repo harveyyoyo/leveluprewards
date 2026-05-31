@@ -23,7 +23,13 @@ import {
   X,
 } from 'lucide-react';
 import { httpsCallable } from 'firebase/functions';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  StaffPortalSectionCard,
+  StaffPortalSectionCardContent,
+  StaffPortalSectionCardHeader,
+  StaffPortalSectionCardTitle,
+} from '@/components/staff/StaffPortalSection';
 import { Helper } from '@/components/ui/helper';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -273,13 +279,13 @@ export function AdminNotificationsTab() {
   };
 
   return (
-    <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden bg-background/95 backdrop-blur-md">
-      <CardHeader className="py-6 bg-secondary/35 border-b border-border/40">
+    <StaffPortalSectionCard className="w-full overflow-hidden bg-background/95 backdrop-blur-md">
+      <StaffPortalSectionCardHeader className="py-6 bg-secondary/35 border-b border-border/40">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <Helper content="Configure automated school notifications, manage active delivery rules, and view diagnostic logs.">
-            <CardTitle className="flex items-center gap-2 text-2xl font-black tracking-tight text-foreground">
+            <StaffPortalSectionCardTitle className="flex items-center gap-2 text-2xl font-black tracking-tight text-foreground">
               <Bell className="w-6 h-6 text-primary animate-pulse" /> Notifications &amp; Alerts
-            </CardTitle>
+            </StaffPortalSectionCardTitle>
           </Helper>
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 shrink-0">
             <div className="flex items-center gap-2 bg-background/60 p-2 rounded-xl border border-border/50">
@@ -302,9 +308,9 @@ export function AdminNotificationsTab() {
             </Button>
           </div>
         </div>
-      </CardHeader>
+      </StaffPortalSectionCardHeader>
 
-      <CardContent className="p-6 space-y-6">
+      <StaffPortalSectionCardContent className="p-6 space-y-6">
         <ContentSectionTreeNav
           items={[
             { id: 'alerts', label: 'Active Alerts', badge: activeRules.length },
@@ -928,7 +934,7 @@ export function AdminNotificationsTab() {
             </div>
           </div>
         )}
-      </CardContent>
+      </StaffPortalSectionCardContent>
 
       <NotificationSetupWizard
         open={wizardOpen}
@@ -939,6 +945,6 @@ export function AdminNotificationsTab() {
         notificationsEnabled={settings.enableNotifications === true}
         updateSettings={updateSettings}
       />
-    </Card>
+    </StaffPortalSectionCard>
   );
 }

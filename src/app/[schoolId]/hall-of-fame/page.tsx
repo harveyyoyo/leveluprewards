@@ -14,7 +14,7 @@ import { useSettings } from '@/components/providers/SettingsProvider';
 import { cn, displayStudentNameOnSharedBoard } from '@/lib/utils';
 import { canAccessHallOfFameRoute } from '@/lib/hallOfFameAccess';
 import { parseHallOfFameSearchParams, type HallOfFameRankType } from '@/lib/hallOfFameUrlConfig';
-import { isHouseStudentPointsRollupEnabled } from '@/lib/housePointsSettings';
+import { isHouseStudentPointsRollupEnabled } from '@/lib/houses/housePointsSettings';
 import { computeGoalProgress } from '@/lib/goalsProgress';
 import { getPeriodKeys } from '@/lib/db/helpers';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';

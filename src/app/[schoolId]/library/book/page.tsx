@@ -7,16 +7,17 @@ import { useFirestore, useFunctions, useCollection, useMemoFirebase } from '@/fi
 import { collection } from 'firebase/firestore';
 import { useAppContext } from '@/components/AppProvider';
 import { useSettings } from '@/components/providers/SettingsProvider';
-import { computeDaysOverdue, formatDueDate, getLibraryPolicyFromSettings } from '@/lib/libraryPolicy';
+import { computeDaysOverdue, formatDueDate, getLibraryPolicyFromSettings } from '@/lib/library/libraryPolicy';
 import type { Category } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
+import { BarcodeScannerCameraView } from '@/components/barcode/BarcodeScannerCameraView';
 import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
 import { lookupStudentId } from '@/lib/db/lookup';
-import { findLibraryItemByUpc, performLibraryCheckoutOrReturn } from '@/lib/libraryOperations';
-import { normalizeLibraryUpc } from '@/lib/libraryScanCode';
+import { findLibraryItemByUpc, performLibraryCheckoutOrReturn } from '@/lib/library/libraryOperations';
+import { normalizeLibraryUpc } from '@/lib/library/libraryScanCode';
 import type { LibraryItem } from '@/lib/types';
 
 function LibraryBookPageInner({ schoolId }: { schoolId: string }) {
@@ -113,7 +114,12 @@ function LibraryBookPageInner({ schoolId }: { schoolId: string }) {
     [firestore, schoolId, code, busy, playSound, toast, libraryPolicy, functions],
   );
 
-  const { videoRef } = useBarcodeScanner(true, (scanned) => void processStudentCard(scanned), () => {});
+  const { videoRef, hasCameraPermission, zoom, setZoom } = useBarcodeScanner(
+    true,
+    (scanned) => void processStudentCard(scanned),
+    () => {},
+    { cameraEnabled: true, keepCameraWarm: true },
+  );
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -214,9 +220,15 @@ function LibraryBookPageInner({ schoolId }: { schoolId: string }) {
               {loginState === 'student' ? ' You can also scan the book again from your dashboard after signing in.' : ''}
             </p>
 
-            <div className="relative aspect-video max-h-40 overflow-hidden rounded-lg border bg-black">
-              <video ref={videoRef as React.RefObject<HTMLVideoElement>} className="h-full w-full object-cover" playsInline muted />
-            </div>
+            <BarcodeScannerCameraView
+              videoRef={videoRef}
+              hasCameraPermission={hasCameraPermission}
+              zoom={zoom}
+              onZoomChange={setZoom}
+              viewportClassName="aspect-video max-h-40"
+              className="space-y-2"
+              hintText="Scan your student ID card in the frame"
+            />
 
             {busy ? (
               <div className="flex justify-center">

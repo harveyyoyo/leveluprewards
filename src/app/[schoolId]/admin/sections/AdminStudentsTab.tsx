@@ -1,5 +1,5 @@
 "use client";
-import { useState, type CSSProperties } from "react";
+import { useState } from "react";
 
 import {
   Award,
@@ -20,16 +20,16 @@ import {
   Zap,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import styles from "./AdminStudentsTab.module.css";
 import { useAppContext } from "@/components/AppProvider";
 import { useConfirm } from "@/components/providers/ConfirmProvider";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  StaffPortalSectionCard,
+  StaffPortalSectionCardContent,
+  StaffPortalSectionCardHeader,
+  StaffPortalSectionCardTitle,
+} from "@/components/staff/StaffPortalSection";
+import { useStaffPortalLayout } from "@/components/staff/StaffPortalLayoutContext";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import {
@@ -53,21 +53,25 @@ import { Helper } from "@/components/ui/helper";
 import { AdminRecordListHeader } from "@/components/admin/AdminRecordListHeader";
 import { AdminRecordListScroll } from "@/components/admin/AdminRecordListScroll";
 import {
-  studentsListGridColumns,
+  adminRecordListGridClassName,
   adminRecordListGridCompactGapClassName,
+  adminRecordListGridNameCellClassName,
+  adminRecordListGridStyle,
+  studentsListGridColumns,
 } from "@/components/admin/adminRecordListGrid";
 import { StudentBulkActionsMenu } from "@/components/admin/StudentBulkActionsMenu";
 import { StudentPointsTypeButton } from "@/components/admin/StudentPointsTypeButton";
 import { TabWalkthroughHeaderAction } from "@/components/tabWalkthrough/TabWalkthroughContext";
 import { useToast } from "@/hooks/use-toast";
 import { useArcadeSound } from "@/hooks/useArcadeSound";
+import { useSchoolFaceEnrollments } from "@/hooks/useSchoolFaceEnrollments";
 import { cn } from "@/lib/utils";
 import type { Class, Student, Teacher } from "@/lib/types";
 import {
   AutoCircularToggles,
   type ToggleDef,
-} from "@/components/AutoCircularToggles";
-import { STUDENT_WELCOME_STYLES_LIVE } from "@/lib/studentWelcome";
+} from "@/components/admin/AutoCircularToggles";
+import { STUDENT_WELCOME_STYLES_LIVE } from "@/lib/students/studentWelcome";
 
 function buildStudentKioskWelcomeToggleDefs(settings: {
   enableStudentWelcome?: boolean;
@@ -208,6 +212,7 @@ export function AdminStudentsTab({
   const playSound = useArcadeSound();
   const { purgeStudentsProgress, deleteStudent: deleteStudentRecord } =
     useAppContext();
+  const { sidebar } = useStaffPortalLayout();
   const [bulkPurgeOpen, setBulkPurgeOpen] = useState(false);
   const [isBulkPurging, setIsBulkPurging] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
@@ -239,6 +244,9 @@ export function AdminStudentsTab({
   };
   const studentKioskWelcomeToggleDefs =
     buildStudentKioskWelcomeToggleDefs(settings);
+  const { activeByStudentId, isStudentFaceEnrolled } = useSchoolFaceEnrollments(students, {
+    enabled: !!settings.enableFaceLogin,
+  });
   const hasWelcomeBackToggle = studentKioskWelcomeToggleDefs.some(
     (d) => d.key === "welcomeBackScreenEnabled",
   );
@@ -363,18 +371,16 @@ export function AdminStudentsTab({
   const studentsListGridCols = studentsListGridColumns(
     studentActionHeaderLabels.length,
   );
-  const studentsListGridStyle = {
-    ["--students-list-cols" as string]: studentsListGridCols,
-  } as CSSProperties;
+  const studentsListGridStyle = adminRecordListGridStyle(studentsListGridCols);
   const hasBulkSelection = selectedStudentIds.size > 0;
   return (
     <>
-      <Card className="w-full min-w-0 border-t-4 border-primary shadow-md">
-        <CardHeader className="bg-secondary flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 py-4 px-4 sm:px-5">
+      <StaffPortalSectionCard className="overflow-visible">
+        <StaffPortalSectionCardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 py-4 px-4 sm:px-5 bg-secondary">
           <Helper content="Manage your enrollments, view student activity, and print ID cards. Points are awarded from the Teacher Portal.">
-            <CardTitle className="text-2xl flex items-center gap-2 text-secondary-foreground">
+            <StaffPortalSectionCardTitle className="text-2xl flex items-center gap-2 text-secondary-foreground">
               <Users className="text-ring w-6 h-6" /> Students
-            </CardTitle>
+            </StaffPortalSectionCardTitle>
           </Helper>
           <div className="flex flex-wrap items-center gap-2 w-full pb-1 sm:pb-0 justify-between">
             <div className="flex flex-wrap items-center gap-2 min-w-0">
@@ -444,8 +450,8 @@ export function AdminStudentsTab({
               />
             </div>
           </div>
-        </CardHeader>
-        <CardContent className="min-w-0 px-3 pb-4 sm:px-4">
+        </StaffPortalSectionCardHeader>
+        <StaffPortalSectionCardContent className="min-w-0 overflow-visible px-3 pb-4 sm:px-4">
           <div className="mb-6 space-y-3">
             <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
               <div className="relative min-w-0 flex-1">
@@ -527,7 +533,12 @@ export function AdminStudentsTab({
 
 
           <AdminRecordListScroll>
-            <ul className="flex w-full min-w-0 flex-col gap-1.5">
+            <ul
+              className={cn(
+                "flex w-full min-w-0 flex-col gap-1.5",
+                sidebar && "pr-12",
+              )}
+            >
               {filteredStudents.length === 0 ? (
                 <li className="mb-2 rounded-xl border bg-secondary/60 p-4 text-sm text-muted-foreground">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -572,24 +583,24 @@ export function AdminStudentsTab({
                   columns={[
                     {
                       id: "hdr-select",
-                      label: "Select",
+                      label: "Sel",
                       className: "hidden sm:block text-center",
                     },
                     {
                       id: "hdr-edit",
-                      label: "Edit",
+                      label: "",
                       className: "hidden sm:block",
                     },
                     {
                       id: "hdr-student",
                       label: "Student",
-                      className: "hidden sm:block",
+                      className: "hidden sm:block min-w-0 truncate text-left",
                     },
                     ...studentActionHeaderLabels.map((label, i) => ({
                       id: `hdr-act-${i}-${label}`,
                       label,
                       className:
-                        "hidden sm:block text-center whitespace-nowrap",
+                        "hidden sm:block truncate text-center whitespace-nowrap",
                     })),
                   ]}
                 />
@@ -607,8 +618,8 @@ export function AdminStudentsTab({
                   <li
                     key={s.id}
                     className={cn(
-                      "flex flex-wrap items-center gap-2 py-1.5 px-2 rounded-xl border transition-all sm:grid sm:flex-nowrap sm:items-center",
-                      styles.studentsListGrid,
+                      "flex flex-wrap items-center gap-2 overflow-visible py-1.5 px-2 rounded-xl border transition-all sm:grid sm:flex-nowrap sm:items-center",
+                      adminRecordListGridClassName,
                       adminRecordListGridCompactGapClassName,
                       "cursor-pointer",
                       selectedStudentIds.has(s.id)
@@ -644,14 +655,19 @@ export function AdminStudentsTab({
                       <Button
                         variant="outline"
                         size="icon"
-                        className="h-8 w-8 sm:h-9 sm:w-9 rounded-full sm:justify-self-center"
+                        className="h-8 w-8 min-h-0 min-w-0 rounded-full sm:justify-self-center"
                         onClick={() => handleOpenStudentModal?.(s)}
                         title="Edit student"
                       >
-                        <Edit className="w-4 h-4 text-primary" />
+                        <Edit className="h-3.5 w-3.5 text-primary" />
                       </Button>
                     </div>
-                    <div className="flex min-w-0 flex-[1_1_10rem] items-center gap-2.5 overflow-hidden sm:min-w-0 sm:gap-3">
+                    <div
+                      className={cn(
+                        "flex max-sm:flex-[1_1_10rem] items-center gap-2",
+                        adminRecordListGridNameCellClassName,
+                      )}
+                    >
                       <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden bg-secondary border border-ring/35 flex items-center justify-center text-xs font-bold text-secondary-foreground flex-shrink-0">
                         {s.photoUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
@@ -724,7 +740,9 @@ export function AdminStudentsTab({
                       </div>
                     </div>
                     <div
-                      className="flex min-w-0 max-sm:basis-full max-sm:flex-wrap max-sm:justify-start max-sm:gap-1.5 max-sm:border-t max-sm:border-border/50 max-sm:pt-2 shrink-0 justify-end sm:contents sm:pl-1"
+                      className={cn(
+                        "flex min-w-0 max-sm:basis-full max-sm:flex-wrap max-sm:justify-start max-sm:gap-1 max-sm:border-t max-sm:border-border/50 max-sm:pt-2 sm:contents",
+                      )}
                       onClick={(e) => e.stopPropagation()}
                     >
                       <StudentPointsTypeButton student={s} />
@@ -733,8 +751,9 @@ export function AdminStudentsTab({
                           record={s}
                           defs={studentKioskWelcomeToggleDefs}
                           restrictToDefs
-                          containerClassName="sm:contents shrink-0 flex-nowrap"
-                          toggleButtonClassName="sm:justify-self-center"
+                          wrap={false}
+                          containerClassName="sm:contents shrink-0 flex-nowrap gap-0.5"
+                          toggleButtonClassName="h-8 w-8 min-h-0 min-w-0 text-[7px] sm:justify-self-center"
                           onToggle={(key, val) => {
                             if (onUpdateStudent) {
                               onUpdateStudent({ ...s, [key]: val });
@@ -743,20 +762,42 @@ export function AdminStudentsTab({
                         />
                       ) : null}
                       {settings.enableFaceLogin ? (
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-8 w-8 sm:h-9 sm:w-9 rounded-full sm:justify-self-center"
-                          onClick={() => onOpenFaceTraining?.(s)}
-                          title="Face login training"
-                        >
-                          <ScanFace className="w-4 h-4 text-sky-600 dark:text-sky-400" />
-                        </Button>
+                        (() => {
+                          const faceEnrollment = activeByStudentId.get(s.id);
+                          const faceTrained = isStudentFaceEnrolled(s.id);
+                          return (
+                            <Button
+                              variant={faceTrained ? "default" : "outline"}
+                              size="icon"
+                              className={cn(
+                                "h-8 w-8 min-h-0 min-w-0 rounded-full sm:justify-self-center",
+                                faceTrained
+                                  ? "border-sky-600 bg-sky-600 text-white hover:bg-sky-700 hover:text-white shadow-sm"
+                                  : "border-dashed border-sky-300/80 bg-background/60 hover:bg-sky-50 dark:border-sky-800 dark:hover:bg-sky-950/40",
+                              )}
+                              onClick={() => onOpenFaceTraining?.(s)}
+                              title={
+                                faceTrained
+                                  ? `Face login trained (${faceEnrollment?.scanCount ?? 1} scan${(faceEnrollment?.scanCount ?? 1) === 1 ? "" : "s"}) — click to retrain`
+                                  : "Train face login"
+                              }
+                            >
+                              <ScanFace
+                                className={cn(
+                                  "w-4 h-4",
+                                  faceTrained
+                                    ? "text-white"
+                                    : "text-sky-600/70 dark:text-sky-400/70",
+                                )}
+                              />
+                            </Button>
+                          );
+                        })()
                       ) : null}
                       <Button
                         variant="outline"
                         size="icon"
-                        className="h-8 w-8 sm:h-9 sm:w-9 rounded-full sm:justify-self-center"
+                        className="h-8 w-8 min-h-0 min-w-0 rounded-full sm:justify-self-center"
                         onClick={() => {
                           if (!schoolId?.trim()) {
                             toast({
@@ -777,7 +818,7 @@ export function AdminStudentsTab({
                       <Button
                         variant="outline"
                         size="icon"
-                        className="h-8 w-8 sm:h-9 sm:w-9 rounded-full sm:justify-self-center"
+                        className="h-8 w-8 min-h-0 min-w-0 rounded-full sm:justify-self-center"
                         onClick={() => setThemeStudent?.(s)}
                         title="Generate AI Theme"
                       >
@@ -786,7 +827,7 @@ export function AdminStudentsTab({
                       <Button
                         variant="outline"
                         size="icon"
-                        className="h-8 w-8 sm:h-9 sm:w-9 rounded-full sm:justify-self-center"
+                        className="h-8 w-8 min-h-0 min-w-0 rounded-full sm:justify-self-center"
                         onClick={() => previewIdCardStudent?.(s)}
                         title="Preview ID Card"
                       >
@@ -795,7 +836,7 @@ export function AdminStudentsTab({
                       <Button
                         variant="outline"
                         size="icon"
-                        className="h-8 w-8 sm:h-9 sm:w-9 rounded-full sm:justify-self-center"
+                        className="h-8 w-8 min-h-0 min-w-0 rounded-full sm:justify-self-center"
                         onClick={() => handleOpenActivityModal?.(s)}
                         title="Activity history"
                       >
@@ -806,7 +847,7 @@ export function AdminStudentsTab({
                           variant="outline"
                           size="icon"
                           className={cn(
-                            "h-8 w-8 sm:h-9 sm:w-9 rounded-full sm:justify-self-center",
+                            "h-8 w-8 min-h-0 min-w-0 rounded-full sm:justify-self-center",
                             (!s.earnedBadges || s.earnedBadges.length === 0) &&
                               "opacity-40",
                           )}
@@ -829,7 +870,7 @@ export function AdminStudentsTab({
                       <Button
                         variant="outline"
                         size="icon"
-                        className="h-8 w-8 sm:h-9 sm:w-9 rounded-full text-primary hover:bg-primary/10 sm:justify-self-center"
+                        className="h-8 w-8 min-h-0 min-w-0 rounded-full text-primary hover:bg-primary/10 sm:justify-self-center"
                         title="Purge points & badges"
                         onClick={() => setStudentToPurge?.(s)}
                       >
@@ -838,7 +879,7 @@ export function AdminStudentsTab({
                       <Button
                         variant="outline"
                         size="icon"
-                        className="h-8 w-8 sm:h-9 sm:w-9 rounded-full text-destructive hover:bg-destructive/10 sm:justify-self-center"
+                        className="h-8 w-8 min-h-0 min-w-0 rounded-full text-destructive hover:bg-destructive/10 sm:justify-self-center"
                         onClick={() => deleteStudent?.(s.id)}
                         title="Delete student"
                       >
@@ -850,8 +891,8 @@ export function AdminStudentsTab({
               })}
             </ul>
           </AdminRecordListScroll>
-        </CardContent>
-      </Card>
+        </StaffPortalSectionCardContent>
+      </StaffPortalSectionCard>
       <AlertDialog
         open={bulkPurgeOpen}
         onOpenChange={(open) => !isBulkPurging && setBulkPurgeOpen(open)}

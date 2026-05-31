@@ -4,7 +4,6 @@ import React, { type FormEvent, type ReactNode, type Ref } from 'react';
 import Link from 'next/link';
 import {
   Award,
-  Camera,
   ChevronRight,
   Clock,
   Gift,
@@ -15,6 +14,8 @@ import {
   Wallet,
 } from 'lucide-react';
 
+import type { BarcodeScannerStatus } from '@/lib/barcodeScannerStatus';
+import { BarcodeScannerCameraView } from '@/components/barcode/BarcodeScannerCameraView';
 import DynamicIcon from '@/components/DynamicIcon';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -32,53 +33,145 @@ export function StudentKioskLogoutControls({
   themed,
   primaryForeground,
   isKioskLocked,
+  autoLogoutEnabled = true,
   logoutTimer,
+  sessionTimeoutSec = 10,
   onLogout,
   className,
 }: {
   themed: StudentKioskThemed;
   primaryForeground: string;
   isKioskLocked: boolean;
+  autoLogoutEnabled?: boolean;
   logoutTimer: number;
+  sessionTimeoutSec?: number;
   onLogout: () => void;
   className?: string;
 }) {
   const t = themed.active;
+  const maxSec = Math.max(1, sessionTimeoutSec);
+  const progress = Math.min(1, Math.max(0, logoutTimer / maxSec));
+  const ringRadius = 14;
+  const ringCircumference = 2 * Math.PI * ringRadius;
+  const ringOffset = ringCircumference * (1 - progress);
+  const urgent = autoLogoutEnabled && !isKioskLocked && logoutTimer <= 3;
+
+  const lockedPillStyle = t
+    ? {
+        borderColor: 'color-mix(in srgb, #ef4444 55%, var(--theme-primary))',
+        backgroundColor: 'color-mix(in srgb, #ef4444 18%, var(--theme-card))',
+        color: 'var(--theme-text)',
+      }
+    : undefined;
+
+  const countdownPillStyle = t
+    ? {
+        borderColor: urgent
+          ? 'color-mix(in srgb, #f97316 65%, var(--theme-primary))'
+          : 'color-mix(in srgb, var(--theme-primary) 40%, transparent)',
+        backgroundColor: 'color-mix(in srgb, var(--theme-card) 94%, white)',
+        color: 'var(--theme-text)',
+      }
+    : undefined;
+
+  const ringStroke = t
+    ? urgent
+      ? '#f97316'
+      : 'var(--theme-primary)'
+    : urgent
+      ? '#f97316'
+      : 'hsl(var(--primary))';
 
   return (
-    <div className={cn('flex flex-wrap items-center justify-end gap-2', className)}>
-      <div
-        className={cn(
-          'whitespace-nowrap rounded-full border-2 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest transition-colors',
-          !t &&
-            (isKioskLocked
-              ? 'border-red-200 bg-red-100 text-red-800 dark:border-red-800 dark:bg-red-950/50 dark:text-red-300'
-              : 'border-slate-300 bg-slate-100 text-slate-800 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100'),
-        )}
-        style={
-          t
-            ? isKioskLocked
+    <div className={cn('flex flex-wrap items-center justify-end gap-2.5', className)}>
+      {isKioskLocked ? (
+        <div
+          className={cn(
+            'flex items-center gap-2 rounded-2xl border-2 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest',
+            !t && 'border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200',
+          )}
+          style={lockedPillStyle}
+          aria-label="Kiosk locked"
+        >
+          <span className="relative flex h-2 w-2 shrink-0" aria-hidden>
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-60" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
+          </span>
+          Locked
+        </div>
+      ) : autoLogoutEnabled ? (
+        <div
+          className={cn(
+            'flex items-center rounded-2xl border-2 p-1.5 shadow-sm transition-shadow',
+            urgent && 'shadow-[0_0_0_2px_color-mix(in_srgb,#f97316_35%,transparent)]',
+            !t && 'border-slate-200 bg-white/95 dark:border-slate-600 dark:bg-slate-900/90',
+          )}
+          style={countdownPillStyle}
+          role="timer"
+          aria-live="polite"
+          aria-label={`Auto logout in ${logoutTimer} ${logoutTimer === 1 ? 'second' : 'seconds'}`}
+          title={logoutTimer === 1 ? '1 second until auto logout' : `${logoutTimer} seconds until auto logout`}
+        >
+          <div className="relative h-9 w-9 shrink-0">
+            <svg className="h-9 w-9 -rotate-90" viewBox="0 0 36 36" aria-hidden>
+              <circle
+                cx="18"
+                cy="18"
+                r={ringRadius}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="3"
+                className="opacity-20"
+              />
+              <circle
+                cx="18"
+                cy="18"
+                r={ringRadius}
+                fill="none"
+                stroke={ringStroke}
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeDasharray={ringCircumference}
+                strokeDashoffset={ringOffset}
+                className="transition-[stroke-dashoffset] duration-1000 ease-linear"
+              />
+            </svg>
+            <span
+              className={cn(
+                'absolute inset-0 flex items-center justify-center text-sm font-black tabular-nums leading-none',
+                urgent && !t && 'text-orange-600 dark:text-orange-400',
+              )}
+              style={t && urgent ? { color: '#f97316' } : undefined}
+            >
+              {logoutTimer}
+            </span>
+          </div>
+        </div>
+      ) : (
+        <div
+          className={cn(
+            'rounded-2xl border-2 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest opacity-80',
+            !t && 'border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300',
+          )}
+          style={
+            t
               ? {
-                  borderColor: 'color-mix(in srgb, #ef4444 55%, var(--theme-primary))',
-                  backgroundColor: 'color-mix(in srgb, #ef4444 22%, var(--theme-bg))',
+                  borderColor: 'color-mix(in srgb, var(--theme-primary) 30%, transparent)',
+                  backgroundColor: 'color-mix(in srgb, var(--theme-card) 92%, white)',
                   color: 'var(--theme-text)',
                 }
-              : {
-                  borderColor: 'color-mix(in srgb, var(--theme-primary) 45%, transparent)',
-                  backgroundColor: 'var(--theme-bg)',
-                  color: 'var(--theme-text)',
-                }
-            : undefined
-        }
-        aria-label={isKioskLocked ? 'Kiosk locked' : `Auto logout in ${logoutTimer} seconds`}
-      >
-        {isKioskLocked ? 'Kiosk Locked • Stays signed in' : `Auto-logout ${logoutTimer}`}
-      </div>
+              : undefined
+          }
+          aria-label="No auto-logout"
+        >
+          Session stays open
+        </div>
+      )}
       <Button
         type="button"
         size="sm"
         className={cn(
-          'h-8 whitespace-nowrap rounded-full border-2 px-3.5 text-[11px] font-bold uppercase tracking-widest shadow-sm',
+          'h-9 whitespace-nowrap rounded-full border-2 px-4 text-[11px] font-bold uppercase tracking-widest shadow-sm',
           !t && 'border-primary/40 bg-primary text-primary-foreground hover:bg-primary/90',
         )}
         style={
@@ -91,7 +184,7 @@ export function StudentKioskLogoutControls({
             : undefined
         }
         onClick={onLogout}
-        aria-label="Log out now."
+        aria-label="Log out now"
       >
         Logout
       </Button>
@@ -438,6 +531,9 @@ export type StudentKioskRedeemHeroProps = {
   onRedeemCoupon: (code?: string) => void | Promise<void>;
   videoRef: Ref<HTMLVideoElement | null>;
   hasCameraPermission: boolean;
+  cameraZoom: number;
+  onCameraZoomChange: (zoom: number) => void;
+  scanStatus?: BarcodeScannerStatus | null;
   className?: string;
 };
 
@@ -453,6 +549,9 @@ export function StudentKioskRedeemHero({
   onRedeemCoupon,
   videoRef,
   hasCameraPermission,
+  cameraZoom,
+  onCameraZoomChange,
+  scanStatus,
   className,
 }: StudentKioskRedeemHeroProps) {
   const t = themed.active;
@@ -536,20 +635,17 @@ export function StudentKioskRedeemHero({
   );
 
   const cameraPane = (
-    <div className="relative h-36 overflow-hidden rounded-xl border-2 border-slate-100 bg-black shadow-inner sm:h-40 dark:border-slate-800">
-            {/* videoRef allows null from parent useRef */}
-            <video ref={videoRef as React.Ref<HTMLVideoElement>} className="h-full w-full object-cover" playsInline muted />
-      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-        <div className="h-3/2 w-3/4 rounded-2xl border-2 border-dashed border-white/40" />
-      </div>
-      {!hasCameraPermission ? (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/90 p-6 text-center backdrop-blur-sm">
-          <Camera className="mb-4 h-12 w-12 text-destructive" />
-          <p className="font-bold text-foreground">Camera access required</p>
-          <p className="mt-2 text-xs text-muted-foreground">Please enable camera in settings</p>
-        </div>
-      ) : null}
-    </div>
+    <BarcodeScannerCameraView
+      videoRef={videoRef}
+      hasCameraPermission={hasCameraPermission}
+      zoom={cameraZoom}
+      onZoomChange={onCameraZoomChange}
+      scanStatus={scanStatus}
+      showScanFeedback
+      viewportClassName="h-36 sm:h-40 border-slate-100 shadow-inner dark:border-slate-800"
+      className="space-y-2"
+      hintText=""
+    />
   );
 
   return (
@@ -712,6 +808,47 @@ export function StudentKioskMorePrizesButton({
       >
         {label}
       </Link>
+    </Button>
+  );
+}
+
+export type StudentKioskMoreActivityButtonProps = {
+  themed: StudentKioskThemed;
+  primaryForeground: string;
+  onClick: () => void;
+  className?: string;
+};
+
+export function StudentKioskMoreActivityButton({
+  themed,
+  primaryForeground,
+  onClick,
+  className,
+}: StudentKioskMoreActivityButtonProps) {
+  const t = themed.active;
+
+  return (
+    <Button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'h-12 w-full shrink-0 text-sm font-black uppercase tracking-wide shadow-md sm:h-14 sm:text-base',
+        !t && 'bg-gradient-to-r from-primary to-primary/90',
+        className,
+      )}
+      style={
+        t
+          ? {
+              backgroundColor: 'var(--theme-primary)',
+              color: primaryForeground,
+            }
+          : undefined
+      }
+    >
+      <span className="flex items-center justify-center gap-2">
+        <Clock className="h-4 w-4 shrink-0 sm:h-5 sm:w-5" aria-hidden />
+        More activity
+      </span>
     </Button>
   );
 }

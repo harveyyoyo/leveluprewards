@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BrowserMultiFormatReader } from '@zxing/browser';
-import { createScanDeduper } from '@/lib/libraryIntakeHelpers';
+import { createScanDeduper } from '@/lib/library/libraryIntakeHelpers';
 import {
   getKioskWedgeBarcodeDetector,
   kioskWedgeFrontCameraConstraints,

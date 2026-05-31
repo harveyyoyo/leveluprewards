@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
 import { useAdminGooglePasscodeBypass } from '@/hooks/useAdminGooglePasscodeBypass';
-import { Book, GraduationCap, Printer, UserCog, Loader2, ShieldCheck, ArrowUpRight } from 'lucide-react';
+import { Book, GraduationCap, Printer, UserCog, Users, Loader2, ShieldCheck, ArrowUpRight } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useToast } from '@/hooks/use-toast';
@@ -27,7 +27,8 @@ import {
     portalChoosePageShellClass,
     portalChooseTitleClass,
 } from '@/lib/kioskPortraitLayout';
-import { isSchoolPortalChooser } from '@/lib/studentKioskRoute';
+import { isClassroomPillarOn, isRewardsPillarOn } from '@/lib/productPillars';
+import { isSchoolPortalChooser } from '@/lib/students/studentKioskRoute';
 
 type PortalArea = {
     id: string;
@@ -270,18 +271,38 @@ export default function PortalPage() {
                       id: 'print',
                       href: `/${schoolId}/admin`,
                       title: 'Teacher Portal',
-                      description: 'Staff portal with teacher tabs — points, classes, prizes, and reports.',
+                      description: isRewardsPillarOn(settings)
+                        ? 'Staff portal with teacher tabs — points, classes, prizes, and reports.'
+                        : isClassroomPillarOn(settings)
+                          ? 'Classroom Management — seating chart, session tracking, and room display.'
+                          : 'Staff portal for your school.',
                       icon: Printer,
                   },
               ]
             : []),
-        {
-            id: 'redeem',
-            href: `/${schoolId}/student`,
-            title: 'Student Kiosk',
-            description: 'Scan your card to redeem coupon codes, view points, and open the prize shop.',
-            icon: GraduationCap,
-        },
+        ...(isRewardsPillarOn(settings)
+          ? [
+              {
+                  id: 'redeem',
+                  href: `/${schoolId}/student`,
+                  title: 'Student Kiosk',
+                  description:
+                      'Scan your card to redeem coupon codes, view points, and open the prize shop.',
+                  icon: GraduationCap,
+              },
+            ]
+          : []),
+        ...(isClassroomPillarOn(settings) && settings.enableParentView === true
+          ? [
+              {
+                  id: 'parent',
+                  href: `/${schoolId}/parent`,
+                  title: 'Parent Portal',
+                  description: 'View your child’s points, behavior notes, and today’s attendance.',
+                  icon: Users,
+              },
+            ]
+          : []),
     ];
 
     return (

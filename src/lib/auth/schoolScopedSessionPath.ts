@@ -31,6 +31,7 @@ const PROTECTED_SECOND = new Set([
   'reports',
   'hall-of-fame',
   'bulletin-board',
+  'smart-screen',
   'office',
 ]);
 

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import Logo from '@/components/Logo';
+import Logo from '@/components/logos/Logo';
 import { FlyersGallery } from '@/components/marketing/FlyersGallery';
 import { buttonVariants } from '@/components/ui/button';
 import { APP_TAGLINE, getContactFormHref, getScheduleDemoHref, SITE_LEGAL_UMBRELLA } from '@/lib/appBranding';

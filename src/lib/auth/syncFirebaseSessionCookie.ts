@@ -1,12 +1,13 @@
 import type { Auth } from 'firebase/auth';
 import { FIREBASE_SESSION_COOKIE_NAME } from '@/lib/auth/firebaseSessionCookie';
 import { sanitizeInternalNextPath } from '@/lib/auth/internalNextRedirect';
+import { userHasGoogleProvider } from '@/lib/google/googleAuthSession';
 
 export async function syncFirebaseSessionCookie(auth: Auth): Promise<boolean> {
   const user = auth.currentUser;
   if (!user) return false;
   try {
-    const idToken = await user.getIdToken();
+    const idToken = await user.getIdToken(userHasGoogleProvider(user));
     const res = await fetch('/api/auth/session', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

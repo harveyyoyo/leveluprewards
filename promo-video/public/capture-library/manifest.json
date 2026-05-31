@@ -1,12 +1,204 @@
 {
-  "capturedAt": "2026-05-26T06:02:19.622Z",
-  "base": "http://127.0.0.1:3000",
+  "capturedAt": "2026-05-31T06:03:24.634Z",
+  "base": "https://portal.leveluprewards.app",
   "school": "schoolabc",
   "variants": [
     {
+      "category": "student-kiosk",
+      "name": "kiosk-coupon-redeem-123456",
+      "status": "failed",
+      "error": "page.waitForFunction: Timeout 30000ms exceeded."
+    },
+    {
+      "category": "raffle",
+      "name": "teacher-jackpot-pull",
+      "status": "failed",
+      "error": "locator.waitFor: Timeout 30000ms exceeded.\nCall log:\n  - waiting for getByRole('tab', { name: /^Raffle$/i }).first() to be visible\n"
+    },
+    {
+      "category": "raffle",
+      "name": "teacher-wheel-spin",
+      "status": "failed",
+      "error": "locator.waitFor: Timeout 30000ms exceeded.\nCall log:\n  - waiting for getByRole('tab', { name: /^Raffle$/i }).first() to be visible\n"
+    },
+    {
+      "category": "student-kiosk",
+      "name": "kiosk-prize-shop",
+      "path": "capture-library\\student-kiosk\\kiosk-prize-shop.mp4",
+      "status": "ok"
+    },
+    {
+      "category": "student-kiosk",
+      "name": "kiosk-scan-tab",
+      "path": "capture-library\\student-kiosk\\kiosk-scan-tab.mp4",
+      "status": "ok"
+    },
+    {
+      "category": "portal",
+      "name": "portal-hub-overview",
+      "path": "capture-library\\portal\\portal-hub-overview.mp4",
+      "status": "ok"
+    },
+    {
+      "category": "teacher",
+      "name": "teacher-award-points-flow",
+      "path": "capture-library\\teacher\\teacher-award-points-flow.mp4",
+      "status": "ok"
+    },
+    {
+      "category": "login",
+      "name": "login-portal-settle",
+      "path": "capture-library\\login\\login-portal-settle.mp4",
+      "status": "ok"
+    },
+    {
+      "category": "selector",
+      "name": "selector-hub-pan",
+      "path": "capture-library\\selector\\selector-hub-pan.mp4",
+      "status": "ok"
+    },
+    {
+      "category": "selector",
+      "name": "selector-hover-kiosk",
+      "path": "capture-library\\selector\\selector-hover-kiosk.mp4",
+      "status": "ok"
+    },
+    {
+      "category": "student-kiosk",
+      "name": "kiosk-type-entry",
+      "path": "capture-library\\student-kiosk\\kiosk-type-entry.mp4",
+      "status": "ok"
+    },
+    {
+      "category": "student-kiosk",
+      "name": "kiosk-signin-rewards",
+      "path": "capture-library\\student-kiosk\\kiosk-signin-rewards.mp4",
+      "status": "ok"
+    },
+    {
+      "category": "student-kiosk",
+      "name": "kiosk-welcome-balance",
+      "path": "capture-library\\student-kiosk\\kiosk-welcome-balance.mp4",
+      "status": "ok"
+    },
+    {
+      "category": "student-kiosk",
+      "name": "kiosk-prizes-hover",
+      "status": "failed",
+      "error": "Kiosk not signed in"
+    },
+    {
+      "category": "student-kiosk",
+      "name": "kiosk-card-tab",
+      "path": "capture-library\\student-kiosk\\kiosk-card-tab.mp4",
+      "status": "ok"
+    },
+    {
+      "category": "student-kiosk",
+      "name": "kiosk-mode-idle",
+      "path": "capture-library\\student-kiosk\\kiosk-mode-idle.mp4",
+      "status": "ok"
+    },
+    {
+      "category": "student-kiosk",
+      "name": "kiosk-signin-welcome-points",
+      "path": "capture-library\\student-kiosk\\kiosk-signin-welcome-points.mp4",
+      "status": "ok"
+    },
+    {
+      "category": "student-kiosk",
+      "name": "kiosk-new-points-on-entry",
+      "path": "capture-library\\student-kiosk\\kiosk-new-points-on-entry.mp4",
+      "status": "ok"
+    },
+    {
+      "category": "teacher",
+      "name": "teacher-students-roster",
+      "path": "capture-library\\teacher\\teacher-students-roster.mp4",
+      "status": "ok"
+    },
+    {
+      "category": "teacher",
+      "name": "teacher-tabs-cycle",
+      "path": "capture-library\\teacher\\teacher-tabs-cycle.mp4",
+      "status": "ok"
+    },
+    {
+      "category": "teacher",
+      "name": "teacher-points-tab",
+      "path": "capture-library\\teacher\\teacher-points-tab.mp4",
+      "status": "ok"
+    },
+    {
+      "category": "action",
+      "name": "action-print-coupons",
+      "path": "capture-library\\action\\action-print-coupons.mp4",
+      "status": "ok"
+    },
+    {
+      "category": "action",
+      "name": "action-print-preview-hold",
+      "path": "capture-library\\action\\action-print-preview-hold.mp4",
+      "status": "ok"
+    },
+    {
+      "category": "admin",
+      "name": "admin-id-card-preview",
+      "path": "capture-library\\admin\\admin-id-card-preview.mp4",
+      "status": "ok"
+    },
+    {
       "category": "features",
-      "name": "teacher-raffle",
-      "path": "capture-library\\features\\teacher-raffle.mp4",
+      "name": "admin-branding-theme",
+      "path": "capture-library\\features\\admin-branding-theme.mp4",
+      "status": "ok"
+    },
+    {
+      "category": "features",
+      "name": "hall-of-fame",
+      "path": "capture-library\\features\\hall-of-fame.mp4",
+      "status": "ok"
+    },
+    {
+      "category": "features",
+      "name": "bulletin-board",
+      "path": "capture-library\\features\\bulletin-board.mp4",
+      "status": "ok"
+    },
+    {
+      "category": "features",
+      "name": "admin-houses",
+      "path": "capture-library\\features\\admin-houses.mp4",
+      "status": "ok"
+    },
+    {
+      "category": "features",
+      "name": "admin-notifications",
+      "path": "capture-library\\features\\admin-notifications.mp4",
+      "status": "ok"
+    },
+    {
+      "category": "features",
+      "name": "admin-library",
+      "path": "capture-library\\features\\admin-library.mp4",
+      "status": "ok"
+    },
+    {
+      "category": "features",
+      "name": "admin-badges",
+      "path": "capture-library\\features\\admin-badges.mp4",
+      "status": "ok"
+    },
+    {
+      "category": "features",
+      "name": "admin-stats",
+      "path": "capture-library\\features\\admin-stats.mp4",
+      "status": "ok"
+    },
+    {
+      "category": "features",
+      "name": "admin-attendance",
+      "path": "capture-library\\features\\admin-attendance.mp4",
       "status": "ok"
     }
   ]

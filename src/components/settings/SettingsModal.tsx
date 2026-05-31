@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirebase } from '@/firebase';
 import { canBypassSchoolAdminPasscode, loginSchoolAdmin } from '@/lib/adminGoogleAccess';
@@ -32,209 +32,81 @@ import {
     Settings, Volume2, VolumeX, Monitor, Smartphone, ChevronRight,
     Shield, Moon, Sun, ArrowLeft, Palette, Zap, Trophy,
     BarChart3, MessageSquare, ShoppingBag, ShieldCheck, Star,
-    Users, Printer, LayoutDashboard, History, HelpCircle, PanelLeft, Rows3,
+    Users, Printer, LayoutDashboard, History, HelpCircle,
     Cpu, Cog, Lock, Sparkles, Trash2, RotateCcw, Smile, BookOpen, Tv,
-    Layers, UsersRound, Ticket, Loader2
+    Layers, UsersRound, Ticket, Loader2, PanelTop, ScanFace
 } from 'lucide-react';
 import { useSettings, colorSchemes, type ColorScheme, type Settings as AppSettings } from '../providers/SettingsProvider';
 import { normalizeDisplayModePreference } from '@/lib/displayMode';
 import type { StudentTheme } from '@/lib/types';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useToast } from '@/hooks/use-toast';
-import { isStudentKioskUiContext } from '@/lib/studentKioskRoute';
-import { VendingMotorPanel } from '@/components/VendingMotorPanel';
+import { isStudentKioskUiContext } from '@/lib/students/studentKioskRoute';
+import { VendingMotorPanel } from '@/components/kiosk/VendingMotorPanel';
 import { ANIMATED_BACKGROUND_STYLES, type AnimatedBackgroundStyle } from '@/lib/animatedBackdrop';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
 import { cn } from '@/lib/utils';
-import { WELCOME_GREETING_STYLES } from '@/components/WelcomeGreeting';
+import { WELCOME_GREETING_STYLES } from '@/components/welcome/WelcomeGreeting';
 import { IdCardPrinterSettingsSection } from '@/components/settings/IdCardPrinterSettingsSection';
+import { SettingsFaceEnrollmentsPanel } from '@/components/settings/SettingsFaceEnrollmentsPanel';
+import { SettingsSectionJumpNav } from '@/components/settings/SettingsSectionJumpNav';
+import { FeatureFilterContext, SettingsFeatureRow } from '@/components/settings/SettingsFeatureRow';
 import { PRODUCT_PILLAR_LABELS } from '@/lib/productPillars';
 import { OfficePortalEntryLink } from '@/components/office/OfficePortalEntryLink';
-type SettingsView = 'hub' | 'interface' | 'security' | 'features' | 'pillars' | 'device';
-
-function parseSettingsViewFromQuery(value: string | null): SettingsView | null {
-    if (value === 'hub') return 'hub';
-    if (value === 'features') return 'features';
-    if (value === 'interface') return 'interface';
-    if (value === 'security') return 'security';
-    if (value === 'pillars') return 'pillars';
-    return null;
-}
+import Link from 'next/link';
+import {
+    FEATURE_SECTION_NAV,
+    GENERAL_SECTION_NAV,
+    IMPLEMENTED_FEATURE_TOGGLE_KEYS,
+    INTERFACE_SECTION_NAV,
+    getAdminManagedSettingsLinks,
+    parseSettingsViewFromQuery,
+    type SettingsView,
+} from '@/components/settings/settingsModalConfig';
 type RoleView = 'global' | 'student' | 'teacher';
 type PreviewMode = 'live' | 'draft';
 
-const ADMIN_PERMISSION_HINT = 'Needs admin permission to change';
-
-function AdminPermissionHint({ show, className }: { show: boolean; className?: string }) {
-    if (!show) return null;
-    return (
-        <p className={cn('text-[11px] text-muted-foreground leading-snug', className)}>
-            {ADMIN_PERMISSION_HINT}
-        </p>
-    );
-}
-
-type FeatureFilter = { query: string; enabledOnly: boolean };
-const FeatureFilterContext = createContext<FeatureFilter>({ query: '', enabledOnly: false });
-
-const FEATURE_SECTION_NAV = [
-    { id: 'settings-features-core', label: 'Core' },
-    { id: 'settings-features-recognition', label: 'Recognition' },
-    { id: 'settings-features-shop', label: 'Shop' },
-    { id: 'settings-features-students', label: 'Students' },
-    { id: 'settings-features-occasions', label: 'Occasions' },
-    { id: 'settings-features-sponsor', label: 'Sponsor' },
-] as const;
-
-const INTERFACE_SECTION_NAV = [
-    { id: 'settings-interface-appearance', label: 'Colors' },
-    { id: 'settings-interface-motion', label: 'Motion' },
-    { id: 'settings-interface-layout', label: 'Layout' },
-] as const;
-
-function SettingsSectionJumpNav({
-    sections,
-    onJump,
-    ariaLabel,
-}: {
-    sections: readonly { readonly id: string; readonly label: string }[];
-    onJump: (id: string) => void;
-    ariaLabel: string;
-}) {
-    return (
-        <div
-            role="navigation"
-            aria-label={ariaLabel}
-            className={cn(
-                'sticky top-0 z-10 -mx-1 mb-3 flex gap-2 overflow-x-auto pb-3 pt-0.5 shrink-0',
-                'border-b border-border/40 bg-background/95 backdrop-blur-md [scrollbar-width:thin]',
-                '[&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border',
-            )}
-        >
-            {sections.map(({ id, label }) => (
-                <button
-                    key={id}
-                    type="button"
-                    onClick={() => onJump(id)}
-                    className="shrink-0 whitespace-nowrap rounded-full border border-border/60 bg-muted/35 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground transition-colors hover:border-primary/45 hover:bg-primary/10 hover:text-foreground"
-                >
-                    {label}
-                </button>
-            ))}
-        </div>
-    );
-}
-
 function cloneSettings(s: AppSettings): AppSettings {
     return JSON.parse(JSON.stringify(s)) as AppSettings;
-}
-
-function FeatureRow({ id, label, desc, icon, settings, onToggle, onConfigure, isImplemented = true, canEditAdminSettings = true, blockHint }: {
-    id: string; label: string; desc: string; icon: React.ReactNode;
-    settings: any; onToggle: (key: string, val: any) => void; onConfigure?: () => void; isImplemented?: boolean; canEditAdminSettings?: boolean;
-    /** When set (e.g. product pillar off), the toggle is forced off and disabled. */
-    blockHint?: string;
-}) {
-    const filter = useContext(FeatureFilterContext);
-    const isEnabled = settings[id] || false;
-    const blockedByConfig = Boolean(blockHint);
-    const canUse = isImplemented && !blockedByConfig;
-    if (filter.enabledOnly && !isEnabled) return null;
-    if (filter.query.trim()) {
-        const q = filter.query.trim().toLowerCase();
-        const hay = `${id} ${label} ${desc}`.toLowerCase();
-        if (!hay.includes(q)) return null;
-    }
-    return (
-        <div 
-            className={`flex items-start justify-between py-4 px-3 border-b border-border/40 last:border-0 hover:bg-muted/30 rounded-xl transition-colors ${canUse && canEditAdminSettings ? 'cursor-pointer' : ''}`}
-            onClick={() => {
-                if (canUse && canEditAdminSettings) {
-                    onToggle(id, !isEnabled);
-                }
-            }}
-        >
-            <div className={`flex items-start gap-4 ${!canUse && 'opacity-60'} mr-6 min-w-0`}>
-                <div className={`p-2.5 rounded-xl transition-colors shrink-0 mt-0.5 ${(isEnabled && canUse) ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
-                    {icon}
-                </div>
-                <div className="flex flex-col min-w-0">
-                    <span className="font-bold text-sm block text-foreground mb-1">{label}</span>
-                    <p className="text-xs text-muted-foreground leading-relaxed w-full pr-4">{desc}</p>
-                </div>
-            </div>
-            {isImplemented ? (
-                <div className="flex flex-col flex-shrink-0 items-end justify-start min-h-[44px]">
-                    <div className="flex items-center gap-2">
-                        {onConfigure ? (
-                            <Button
-                                type="button"
-                                variant="outline"
-                                size="icon"
-                                className="h-9 w-9 rounded-xl"
-                                onClick={(e) => { e.stopPropagation(); onConfigure(); }}
-                                disabled={!canEditAdminSettings}
-                                title={`${label} settings`}
-                                aria-label={`${label} settings`}
-                            >
-                                <Cog className="h-4 w-4" />
-                            </Button>
-                        ) : null}
-                        <div onClick={(e) => e.stopPropagation()}>
-                            <Switch
-                                id={id}
-                                checked={isEnabled && canUse}
-                                onCheckedChange={(checked) => onToggle(id, checked)}
-                                disabled={!canEditAdminSettings || blockedByConfig}
-                            />
-                        </div>
-                    </div>
-                    {!canEditAdminSettings && (
-                        <span className="text-[10px] text-muted-foreground mt-2 font-semibold tracking-wide max-w-[220px] text-right leading-snug">
-                            {ADMIN_PERMISSION_HINT}
-                        </span>
-                    )}
-                    {canEditAdminSettings && blockedByConfig && blockHint && (
-                        <span className="text-[10px] text-muted-foreground mt-2 font-semibold tracking-wide max-w-[220px] text-right leading-snug" title={blockHint}>
-                            {blockHint}
-                        </span>
-                    )}
-                </div>
-            ) : (
-                <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground bg-muted px-3 py-1.5 rounded-md mt-1 whitespace-nowrap">
-                    Soon
-                </div>
-            )}
-        </div>
-    );
 }
 
 export function SettingsModal() {
     const {
         loginState,
         login,
-        isAdmin,
+        isAdmin: hasAdminRole,
         schoolId,
     } = useAppContext();
     const { user: firebaseUser } = useFirebase();
     const canBypassAdminPasscode = canBypassSchoolAdminPasscode(firebaseUser);
     const canOpenSettings = loginState === 'admin' || loginState === 'developer' || loginState === 'teacher';
-    const canManageSchoolSettings =
-        isAdmin || loginState === 'admin' || loginState === 'developer';
-    const { settings, settingsPreferences, updateSettings } = useSettings();
-    const playSound = useArcadeSound();
-    const { toast } = useToast();
     const [open, setOpen] = useState(false);
     const [adminDialogOpen, setAdminDialogOpen] = useState(false);
     const [adminPasscode, setAdminPasscode] = useState('');
     const [adminSubmitting, setAdminSubmitting] = useState(false);
+    /** Set when kiosk/school session unlocks settings via passcode (before auth context re-renders). */
+    const [kioskAdminSettingsUnlock, setKioskAdminSettingsUnlock] = useState(false);
+    /** Full school settings (all sections, edits) — admin role, admin session, or kiosk passcode unlock. */
+    const canManageSchoolSettings =
+        kioskAdminSettingsUnlock ||
+        hasAdminRole ||
+        loginState === 'admin' ||
+        loginState === 'developer';
+    const { settings, settingsPreferences, updateSettings } = useSettings();
+    const playSound = useArcadeSound();
+    const { toast } = useToast();
     const [draft, setDraft] = useState<AppSettings | null>(null);
     const [view, setView] = useState<SettingsView>('hub');
     const [vendingSettingsOpen, setVendingSettingsOpen] = useState(false);
     const [interfaceRole, setInterfaceRole] = useState<RoleView>('global');
-    const [previewMode, setPreviewMode] = useState<PreviewMode>(isAdmin ? 'draft' : 'live');
+    const [previewMode, setPreviewMode] = useState<PreviewMode>('live');
     const [featureQuery, setFeatureQuery] = useState('');
     const [featuresEnabledOnly, setFeaturesEnabledOnly] = useState(false);
+    const [showComingSoonFeatures, setShowComingSoonFeatures] = useState(false);
+    const adminManagedLinks = useMemo(
+        () => getAdminManagedSettingsLinks(schoolId),
+        [schoolId],
+    );
     const [selectedProfileId, setSelectedProfileId] = useState('');
     const local = draft ?? settings;
     const pathname = usePathname();
@@ -249,12 +121,13 @@ export function SettingsModal() {
 
     /** Must run whenever the modal opens (trigger, ?settings=, or window event) so draft/original refs stay in sync. */
     const beginSettingsSession = useCallback(
-        (initialView?: SettingsView) => {
+        (initialView?: SettingsView, options?: { fullAccess?: boolean }) => {
+            const fullAccess = options?.fullAccess ?? canManageSchoolSettings;
             committedRef.current = false;
             originalSettingsRef.current = cloneSettings(settingsPreferences);
             setDraft(cloneSettings(settingsPreferences));
             setView(initialView ?? 'hub');
-            setPreviewMode(canManageSchoolSettings ? 'draft' : 'live');
+            setPreviewMode(fullAccess ? 'draft' : 'live');
             if (typeof window !== 'undefined') {
                 setSelectedProfileId(localStorage.getItem('current_kiosk_profile_id') || '');
             }
@@ -265,6 +138,21 @@ export function SettingsModal() {
     useLayoutEffect(() => {
         if (open) setInterfaceRole('global');
     }, [open]);
+
+    useLayoutEffect(() => {
+        if (!open || canManageSchoolSettings || view !== 'general') return;
+        setView('features');
+    }, [open, canManageSchoolSettings, view]);
+
+    useLayoutEffect(() => {
+        if (!open || canManageSchoolSettings || view !== 'pillars') return;
+        setView('hub');
+    }, [open, canManageSchoolSettings, view]);
+
+    useLayoutEffect(() => {
+        if (!open || !canManageSchoolSettings) return;
+        setPreviewMode('draft');
+    }, [open, canManageSchoolSettings]);
 
     // In-app opener (avoids route transitions / layout jank).
     useEffect(() => {
@@ -341,6 +229,9 @@ export function SettingsModal() {
             if (key === 'payHomework' && value === false) {
                 next = { ...next, enableHomework: false };
             }
+            if (key === 'payClassroom' && value === false) {
+                next = { ...next, enableParentView: false };
+            }
             if (key === 'payAttendance' && value === false) {
                 next = { ...next, enableClassSignIn: false, enableAttendance: false };
             }
@@ -349,10 +240,13 @@ export function SettingsModal() {
 
         // Session timeouts affect global idle timers immediately (draft-only would leave stale values until OK).
         if (
+            key === 'adminAutoLogoutEnabled' ||
             key === 'adminSessionTimeoutMs' ||
+            key === 'kioskAutoLogoutEnabled' ||
             key === 'kioskSessionTimeoutSec' ||
             key === 'kioskAiFunIdleOffSec' ||
-            key === 'kioskVoucherIdleOffSec'
+            key === 'soundEnabled' ||
+            key === 'studentAudioTheme'
         ) {
             updateSettings({ [key]: value } as Partial<AppSettings>);
         }
@@ -399,15 +293,16 @@ export function SettingsModal() {
     const viewTitle: Record<SettingsView, string> = {
         hub: 'Settings',
         interface: 'Interface & display',
-        security: 'Settings',
-        features: 'Settings',
+        general: 'School settings',
+        features: 'School settings',
         pillars: 'Product Pillars',
-        device: 'Kiosk Device Setup',
+        device: 'Kiosk device setup',
+        faceEnrollments: 'Face login enrollments',
     };
 
     const openSettingsView = useCallback(
         (target: 'general' | 'advanced') => {
-            setView(target === 'advanced' ? 'features' : 'security');
+            setView(target === 'advanced' ? 'features' : 'general');
             if (local.soundEnabled) playSound('click');
         },
         [local.soundEnabled, playSound],
@@ -430,6 +325,7 @@ export function SettingsModal() {
             beginSettingsSession('hub');
         } else {
             setDraft(null);
+            setKioskAdminSettingsUnlock(false);
             // Do not force view to hub here — avoids flashing the hub screen while the modal is
             // closing from Interface / features / etc. Next open always resets via beginSettingsSession.
         }
@@ -447,6 +343,8 @@ export function SettingsModal() {
 
         const requestedView = parseSettingsViewFromQuery(requested);
         if (!requestedView) return;
+        if (requestedView === 'pillars' && !canManageSchoolSettings) return;
+
         autoOpenedFromQueryRef.current = true;
         beginSettingsSession(requestedView);
         setOpen(true);
@@ -505,7 +403,10 @@ export function SettingsModal() {
             }
 
             playSound('login');
-            beginSettingsSession('hub');
+            setKioskAdminSettingsUnlock(true);
+            const pendingView = pendingSettingsViewRef.current;
+            pendingSettingsViewRef.current = null;
+            beginSettingsSession(pendingView ?? 'hub', { fullAccess: true });
             setOpen(true);
             setAdminSubmitting(false);
             setAdminDialogOpen(false);
@@ -530,8 +431,10 @@ export function SettingsModal() {
         >
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                    <DialogTitle className="font-headline font-black tracking-tight">Admin passcode</DialogTitle>
-                    <DialogDescription>Enter the admin passcode for this school to open Admin tools.</DialogDescription>
+                    <DialogTitle className="font-headline font-black tracking-tight">Sign in as admin</DialogTitle>
+                    <DialogDescription>
+                        Only admins can change school settings. Enter the admin passcode for this school to open settings.
+                    </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-2">
                     <div className="space-y-2">
@@ -579,7 +482,7 @@ export function SettingsModal() {
                                 Signing in...
                             </>
                         ) : (
-                            'Continue'
+                            'Sign in as admin'
                         )}
                     </Button>
                 </DialogFooter>
@@ -638,6 +541,11 @@ export function SettingsModal() {
                                     variant="ghost"
                                     size="icon"
                                     onClick={() => {
+                                        if (view === 'faceEnrollments') {
+                                            setView('general');
+                                            if (local.soundEnabled) playSound('click');
+                                            return;
+                                        }
                                         if (view === 'features' && canManageSchoolSettings) {
                                             openSettingsView('general');
                                             return;
@@ -646,7 +554,13 @@ export function SettingsModal() {
                                         if (local.soundEnabled) playSound('click');
                                     }}
                                     className="h-8 w-8 -ml-2 rounded-full hover:bg-muted"
-                                    aria-label={view === 'features' && canManageSchoolSettings ? 'Back to general settings' : 'Back to settings menu'}
+                                    aria-label={
+                                        view === 'faceEnrollments'
+                                            ? 'Back to school settings'
+                                            : view === 'features' && canManageSchoolSettings
+                                              ? 'Back to general settings'
+                                              : 'Back to settings menu'
+                                    }
                                 >
                                     <ArrowLeft className="h-4 w-4" />
                                 </Button>
@@ -655,7 +569,7 @@ export function SettingsModal() {
                                 {viewTitle[view]}
                                 {view === 'features' ? (
                                     <span className="ml-2 text-sm font-bold text-amber-600 dark:text-amber-400">· Advanced</span>
-                                ) : view === 'security' ? (
+                                ) : view === 'general' ? (
                                     <span className="ml-2 text-sm font-bold text-muted-foreground">· General</span>
                                 ) : null}
                             </DialogTitle>
@@ -689,7 +603,7 @@ export function SettingsModal() {
                             </button>
                             <button
                                 type="button"
-                                onClick={() => openSettingsView('general')}
+                                onClick={() => openSettingsView(canManageSchoolSettings ? 'general' : 'advanced')}
                                 className={cn(
                                     'flex flex-col items-start gap-2 rounded-2xl border-2 p-4 text-left transition-all',
                                     'border-indigo-200 dark:border-indigo-900/50 bg-indigo-50/80 dark:bg-indigo-950/20',
@@ -704,30 +618,32 @@ export function SettingsModal() {
                                 </div>
                                 <span className="font-black text-indigo-900 dark:text-indigo-100">School settings</span>
                                 <span className="text-xs leading-snug text-indigo-800/90 dark:text-indigo-200/80">
-                                    Sessions, printing, kiosk options, shop features, and more
+                                    Sessions, kiosk behavior, printing, and optional features
                                 </span>
                             </button>
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setView('pillars');
-                                    if (local.soundEnabled) playSound('click');
-                                }}
-                                className={cn(
-                                    'flex flex-col items-start gap-2 rounded-2xl border-2 p-4 text-left transition-all',
-                                    'border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/80 dark:bg-emerald-950/20',
-                                    'hover:bg-emerald-100/80 dark:hover:bg-emerald-950/35',
-                                )}
-                            >
-                                <div className="flex w-full items-start justify-between gap-2">
-                                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500 text-white shadow-inner">
-                                        <ShieldCheck className="h-5 w-5" />
-                                    </span>
-                                    <ChevronRight className="h-5 w-5 shrink-0 text-emerald-700/50 dark:text-emerald-400/50" aria-hidden />
-                                </div>
-                                <span className="font-black text-emerald-900 dark:text-emerald-100">Product Pillars</span>
-                                <span className="text-xs leading-snug text-emerald-800/90 dark:text-emerald-200/80">Select active paid plan products</span>
-                            </button>
+                            {canManageSchoolSettings && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setView('pillars');
+                                        if (local.soundEnabled) playSound('click');
+                                    }}
+                                    className={cn(
+                                        'flex flex-col items-start gap-2 rounded-2xl border-2 p-4 text-left transition-all',
+                                        'border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/80 dark:bg-emerald-950/20',
+                                        'hover:bg-emerald-100/80 dark:hover:bg-emerald-950/35',
+                                    )}
+                                >
+                                    <div className="flex w-full items-start justify-between gap-2">
+                                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500 text-white shadow-inner">
+                                            <ShieldCheck className="h-5 w-5" />
+                                        </span>
+                                        <ChevronRight className="h-5 w-5 shrink-0 text-emerald-700/50 dark:text-emerald-400/50" aria-hidden />
+                                    </div>
+                                    <span className="font-black text-emerald-900 dark:text-emerald-100">Product Pillars</span>
+                                    <span className="text-xs leading-snug text-emerald-800/90 dark:text-emerald-200/80">Select active paid plan products</span>
+                                </button>
+                            )}
                             {isStudentKioskUiContext(loginState, pathname, schoolId) && (
                                 <button
                                     type="button"
@@ -765,49 +681,50 @@ export function SettingsModal() {
                             />
 
                             <div className="mb-4 flex flex-col gap-3">
-                                <div className="flex items-center gap-2 p-1 bg-muted/50 rounded-2xl border border-border/40">
-                                    {(['global', 'student', 'teacher'] as RoleView[]).map((role) => (
-                                        <button
-                                            key={role}
-                                            type="button"
-                                            disabled={!canManageSchoolSettings}
-                                            onClick={() => {
-                                                if (!canManageSchoolSettings) return;
-                                                setInterfaceRole(role);
-                                                if (local.soundEnabled) playSound('click');
-                                            }}
-                                            className={cn(
-                                                "flex-1 py-2 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                                                interfaceRole === role 
-                                                    ? "bg-background text-foreground shadow-sm border border-border/50" 
-                                                    : "text-muted-foreground hover:text-foreground",
-                                                !canManageSchoolSettings && "opacity-60 cursor-not-allowed",
-                                            )}
-                                        >
-                                            {role} Portal
-                                        </button>
-                                    ))}
-                                </div>
-                                <AdminPermissionHint show={!canManageSchoolSettings} className="px-1" />
+                                {canManageSchoolSettings && (
+                                    <div className="flex items-center gap-2 p-1 bg-muted/50 rounded-2xl border border-border/40">
+                                        {(['global', 'student', 'teacher'] as RoleView[]).map((role) => (
+                                            <button
+                                                key={role}
+                                                onClick={() => {
+                                                    setInterfaceRole(role);
+                                                    if (local.soundEnabled) playSound('click');
+                                                }}
+                                                className={cn(
+                                                    "flex-1 py-2 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                                                    interfaceRole === role 
+                                                        ? "bg-background text-foreground shadow-sm border border-border/50" 
+                                                        : "text-muted-foreground hover:text-foreground"
+                                                )}
+                                            >
+                                                {role} Portal
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
 
-                                <div className="rounded-2xl border border-border/40 bg-muted/30 p-3 flex items-center justify-between">
-                                    <div className="min-w-0">
-                                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
-                                            Editing
-                                        </p>
-                                        <p className="text-sm font-black tracking-tight text-foreground mt-1">
-                                            {interfaceRole === 'global'
-                                                ? 'Global defaults'
-                                                : interfaceRole === 'student'
-                                                    ? 'Student portal overrides'
-                                                    : 'Teacher portal overrides'}
-                                        </p>
+                                {canManageSchoolSettings ? (
+                                    <div className="rounded-2xl border border-border/40 bg-muted/30 p-3 flex items-center justify-between">
+                                        <div className="min-w-0">
+                                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+                                                Editing
+                                            </p>
+                                            <p className="text-sm font-black tracking-tight text-foreground mt-1">
+                                                {interfaceRole === 'global'
+                                                    ? 'Global defaults'
+                                                    : interfaceRole === 'student'
+                                                        ? 'Student portal overrides'
+                                                        : 'Teacher portal overrides'}
+                                            </p>
+                                        </div>
+                                        <div className="shrink-0 text-[10px] font-black uppercase tracking-widest rounded-full border border-border/60 bg-background/70 px-3 py-1.5 text-muted-foreground">
+                                            {interfaceRole === 'global' ? 'ALL USERS' : interfaceRole.toUpperCase()}
+                                        </div>
                                     </div>
-                                    <div className="shrink-0 text-[10px] font-black uppercase tracking-widest rounded-full border border-border/60 bg-background/70 px-3 py-1.5 text-muted-foreground">
-                                        {interfaceRole === 'global' ? 'ALL USERS' : interfaceRole.toUpperCase()}
-                                    </div>
-                                </div>
+                                ) : null}
                             </div>
+
+                            {canManageSchoolSettings ? null : null}
 
                             {/* APPEARANCE */}
                             <div className="grid gap-4 md:grid-cols-[220px_1fr]">
@@ -1174,31 +1091,6 @@ export function SettingsModal() {
                                             onCheckedChange={(checked) => handleToggle('enableStudentThemes', checked)}
                                         />
                                     </div>
-                                    <div className="flex items-center justify-between gap-4 col-span-2">
-                                        <div className="flex items-center gap-2 min-w-0 pr-2">
-                                            <Smartphone className="w-4 h-4 text-muted-foreground shrink-0" />
-                                            <div className="min-w-0">
-                                                <span className="text-sm font-bold">Portrait display layout</span>
-                                                <p className="text-[10px] text-muted-foreground font-medium leading-snug mt-0.5">
-                                                    Tall narrow layout for portrait-mounted kiosk screens.
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <Switch
-                                            checked={
-                                                local.kioskPortraitDisplay === true ||
-                                                local.studentPortalPortraitDisplay === true
-                                            }
-                                            onCheckedChange={(checked) => {
-                                                handleToggle('kioskPortraitDisplay', checked);
-                                                if (local.studentPortalPortraitDisplay) {
-                                                    handleToggle('studentPortalPortraitDisplay', false);
-                                                }
-                                            }}
-                                            disabled={!canManageSchoolSettings}
-                                        />
-                                    </div>
-                                    <AdminPermissionHint show={!canManageSchoolSettings} className="col-span-2 px-1" />
                                 </div>
 
                                  {/* Display Mode */}
@@ -1269,77 +1161,18 @@ export function SettingsModal() {
                                      </div>
                                  )}
 
-                                 {interfaceRole === 'global' ? (
-                                     <div className="space-y-2 mt-4 pt-4 border-t border-border/40">
-                                         <div className="flex items-center gap-2">
-                                             <PanelLeft className="w-4 h-4 text-muted-foreground shrink-0" />
-                                             <div className="min-w-0">
-                                                 <span className="text-sm font-bold">Admin section tabs</span>
-                                                 <p className="text-[10px] text-muted-foreground font-medium leading-snug mt-0.5">
-                                                     Top row (default) or a vertical list on the left on large screens.
-                                                 </p>
-                                             </div>
-                                         </div>
-                                         <div className="flex items-center justify-between bg-muted/40 p-1.5 rounded-2xl border border-border/50">
-                                             {(['top', 'sidebar'] as const).map((layout) => {
-                                                 const active = (local.adminNavLayout ?? 'top') === layout;
-                                                 return (
-                                                     <button
-                                                         key={layout}
-                                                         type="button"
-                                                         disabled={!canManageSchoolSettings}
-                                                         onClick={() => {
-                                                             if (!canManageSchoolSettings) return;
-                                                             handleToggle('adminNavLayout', layout);
-                                                         }}
-                                                         className={cn(
-                                                             'flex flex-1 items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all',
-                                                             active
-                                                                 ? 'bg-background text-foreground shadow-sm border border-border/50'
-                                                                 : 'text-muted-foreground hover:text-foreground',
-                                                             !canManageSchoolSettings && 'opacity-60 cursor-not-allowed',
-                                                         )}
-                                                     >
-                                                         {layout === 'top' ? (
-                                                             <Rows3 className="h-3.5 w-3.5" aria-hidden />
-                                                         ) : (
-                                                             <PanelLeft className="h-3.5 w-3.5" aria-hidden />
-                                                         )}
-                                                         {layout === 'top' ? 'Top' : 'Side'}
-                                                     </button>
-                                                 );
-                                             })}
-                                         </div>
-                                         <div className="flex items-center justify-between gap-3 rounded-2xl border border-border/50 bg-muted/30 p-3 mt-3">
-                                             <div className="min-w-0">
-                                                 <span className="text-sm font-bold">Color per admin tab</span>
-                                                 <p className="text-[10px] text-muted-foreground font-medium leading-snug mt-0.5">
-                                                     Each admin tab shows a soft accent from your theme; the open section uses the same mild tint.
-                                                 </p>
-                                             </div>
-                                             <Switch
-                                                 checked={!!local.adminPerTabColorScheme}
-                                                 onCheckedChange={(checked) =>
-                                                     handleToggle('adminPerTabColorScheme', checked)
-                                                 }
-                                                 disabled={!canManageSchoolSettings}
-                                                 aria-label="Use a different color scheme per admin tab"
-                                             />
-                                         </div>
-                                         <AdminPermissionHint show={!canManageSchoolSettings} />
-                                     </div>
-                                 ) : null}
                             </div>
                                 </div>
                             </div>
                         </>
                     )}
 
-                    {view === 'security' && (
+                    {view === 'general' && (
                         <div className="space-y-4">
-                            <AdminPermissionHint
-                                show={!canManageSchoolSettings}
-                                className="rounded-xl border border-border/50 bg-muted/30 px-3 py-2"
+                            <SettingsSectionJumpNav
+                                sections={GENERAL_SECTION_NAV}
+                                ariaLabel="General school settings sections"
+                                onJump={jumpToSettingsSection}
                             />
                             <div className="flex items-center justify-end">
                                 <Button
@@ -1353,69 +1186,142 @@ export function SettingsModal() {
                                     <ChevronRight className="ml-1 h-3.5 w-3.5" aria-hidden />
                                 </Button>
                             </div>
-                            <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 border border-slate-100 dark:border-slate-800/50">
+                            <div
+                                id="settings-general-sessions"
+                                className="scroll-mt-[4.5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 border border-slate-100 dark:border-slate-800/50"
+                            >
                                 <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 pb-3 flex items-center gap-2">
-                                    <Shield className="w-3.5 h-3.5" /> General
+                                    <Shield className="w-3.5 h-3.5" /> Sessions
                                 </p>
 
                                 <div className="space-y-4 mt-1">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex flex-col">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div className="flex flex-col min-w-0">
                                             <span className="text-sm font-bold">Admin Auto-Logout</span>
-                                            <p className="text-[11px] text-muted-foreground">Session duration (minutes)</p>
+                                            <p className="text-[11px] text-muted-foreground">
+                                                {local.adminAutoLogoutEnabled !== false
+                                                    ? 'Log out staff after idle time (minutes)'
+                                                    : 'Staff stay signed in until they log out manually'}
+                                            </p>
                                         </div>
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            <Switch
+                                                checked={local.adminAutoLogoutEnabled !== false}
+                                                onCheckedChange={(checked) => handleToggle('adminAutoLogoutEnabled', checked)}
+                                                disabled={!canManageSchoolSettings}
+                                                aria-label="Enable admin auto-logout"
+                                            />
                                             <Input
                                                 type="number"
-                                                className="w-20 h-9 rounded-xl text-center font-bold bg-background/50 border-border/50"
+                                                className="w-20 h-9 rounded-xl text-center font-bold bg-background/50 border-border/50 disabled:opacity-40"
                                                 value={Math.round((local.adminSessionTimeoutMs || 0) / 60000)}
                                                 onChange={(e) => handleToggle('adminSessionTimeoutMs', Math.max(1, parseInt(e.target.value) || 1) * 60000)}
                                                 min={1}
                                                 max={1440}
+                                                disabled={local.adminAutoLogoutEnabled === false || !canManageSchoolSettings}
                                             />
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex flex-col">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div className="flex flex-col min-w-0">
                                             <span className="text-sm font-bold">Kiosk Auto-Logout</span>
-                                            <p className="text-[11px] text-muted-foreground">Idle time (seconds)</p>
+                                            <p className="text-[11px] text-muted-foreground">
+                                                {local.kioskAutoLogoutEnabled !== false
+                                                    ? 'Return to sign-in after idle time (seconds)'
+                                                    : 'Students stay signed in until they log out or kiosk is locked'}
+                                            </p>
                                         </div>
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            <Switch
+                                                checked={local.kioskAutoLogoutEnabled !== false}
+                                                onCheckedChange={(checked) => handleToggle('kioskAutoLogoutEnabled', checked)}
+                                                disabled={!canManageSchoolSettings}
+                                                aria-label="Enable kiosk auto-logout"
+                                            />
                                             <Input
                                                 type="number"
-                                                className="w-20 h-9 rounded-xl text-center font-bold bg-background/50 border-border/50"
+                                                className="w-20 h-9 rounded-xl text-center font-bold bg-background/50 border-border/50 disabled:opacity-40"
                                                 value={local.kioskSessionTimeoutSec ?? 10}
                                                 onChange={(e) => handleToggle('kioskSessionTimeoutSec', Math.max(1, parseInt(e.target.value) || 10))}
                                                 min={1}
                                                 max={300}
+                                                disabled={local.kioskAutoLogoutEnabled === false || !canManageSchoolSettings}
                                             />
                                         </div>
                                     </div>
+                                </div>
+                            </div>
 
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex flex-col max-w-[min(100%,18rem)]">
-                                            <span className="text-sm font-bold">Voucher timeout</span>
+                            <div
+                                id="settings-general-kiosk"
+                                className="scroll-mt-[4.5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 border border-slate-100 dark:border-slate-800/50"
+                            >
+                                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 pb-3 flex items-center gap-2">
+                                    <Smartphone className="w-3.5 h-3.5" /> Kiosk
+                                </p>
+
+                                <div className="space-y-4 mt-1">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div className="flex flex-col min-w-0 pr-4">
+                                            <span className="text-sm font-bold">Portrait display layout</span>
                                             <p className="text-[11px] text-muted-foreground">
-                                                Hide print-voucher prompts after this many idle seconds on the student kiosk or rewards shop. Next touch turns them back on.
+                                                Tall narrow layout for portrait-mounted kiosk screens. Per-device overrides live in Admin → Branding → Kiosk profiles.
                                             </p>
                                         </div>
-                                        <div className="flex items-center gap-2 shrink-0">
-                                            <Input
-                                                type="number"
-                                                className="w-20 h-9 rounded-xl text-center font-bold bg-background/50 border-border/50"
-                                                value={local.kioskVoucherIdleOffSec ?? 360}
-                                                onChange={(e) =>
-                                                    handleToggle(
-                                                        'kioskVoucherIdleOffSec',
-                                                        Math.max(1, Math.min(14400, parseInt(e.target.value, 10) || 360)),
-                                                    )
+                                        <Switch
+                                            checked={
+                                                local.kioskPortraitDisplay === true ||
+                                                local.studentPortalPortraitDisplay === true
+                                            }
+                                            onCheckedChange={(checked) => {
+                                                handleToggle('kioskPortraitDisplay', checked);
+                                                if (local.studentPortalPortraitDisplay) {
+                                                    handleToggle('studentPortalPortraitDisplay', false);
                                                 }
-                                                min={1}
-                                                max={14400}
-                                            />
-                                            <span className="text-[10px] font-bold text-muted-foreground uppercase">sec</span>
+                                            }}
+                                            disabled={!canManageSchoolSettings}
+                                        />
+                                    </div>
+
+                                    <div className="flex items-center justify-between gap-3 border-t border-slate-200/60 dark:border-slate-700/50 pt-4">
+                                        <div className="flex flex-col min-w-0 pr-4">
+                                            <span className="text-sm font-bold">Hide header</span>
+                                            <p className="text-[11px] text-muted-foreground">
+                                                With top tabs, tuck the school header off-screen. A small tab stays visible at the top — move the mouse there to slide the full header down. Side tabs always hide the header while you scroll and bring it back at the top of the page.
+                                            </p>
                                         </div>
+                                        <Switch
+                                            checked={local.hideSiteHeaderOutsidePortal === true}
+                                            onCheckedChange={(checked) =>
+                                                handleToggle('hideSiteHeaderOutsidePortal', checked)
+                                            }
+                                            disabled={!canManageSchoolSettings}
+                                            aria-label="Hide header on staff portal pages"
+                                        />
+                                    </div>
+
+                                    <div className="flex items-center justify-between gap-3 border-t border-slate-200/60 dark:border-slate-700/50 pt-4">
+                                        <div className="flex flex-col min-w-0">
+                                            <span className="text-sm font-bold">Duplicate tap freeze</span>
+                                            <p className="text-[11px] text-muted-foreground">
+                                                Block repeat kiosk sign-ins for this many seconds (0 = off).
+                                            </p>
+                                        </div>
+                                        <Input
+                                            type="number"
+                                            className="w-20 h-9 rounded-xl text-center font-bold bg-background/50 border-border/50 shrink-0"
+                                            value={local.studentSignInFreezeSec ?? 0}
+                                            onChange={(e) => {
+                                                const n = parseInt(e.target.value, 10);
+                                                const secs = Number.isFinite(n) ? Math.min(3600, Math.max(0, n)) : 0;
+                                                handleToggle('studentSignInFreezeSec', secs);
+                                            }}
+                                            min={0}
+                                            max={3600}
+                                            disabled={!canManageSchoolSettings}
+                                            aria-label="Duplicate tap freeze seconds"
+                                        />
                                     </div>
 
                                     <div className="space-y-2 border-t border-slate-200/60 dark:border-slate-700/50 pt-4">
@@ -1497,18 +1403,49 @@ export function SettingsModal() {
                                                 />
                                             </div>
                                         </div>
-                                        <AdminPermissionHint show={!canManageSchoolSettings} />
+                                        {!canManageSchoolSettings ? (
+                                            <p className="text-[11px] text-muted-foreground">Admin only.</p>
+                                        ) : null}
+                                        {canManageSchoolSettings && local.kioskLoginTabFaceEnabled === true ? (
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setView('faceEnrollments');
+                                                    if (local.soundEnabled) playSound('click');
+                                                }}
+                                                className={cn(
+                                                    'mt-2 flex w-full items-center justify-between gap-3 rounded-xl border border-sky-200/80 bg-sky-50/70 px-3 py-2.5 text-left transition-colors',
+                                                    'hover:bg-sky-100/80 dark:border-sky-900/50 dark:bg-sky-950/25 dark:hover:bg-sky-950/40',
+                                                )}
+                                            >
+                                                <span className="flex min-w-0 items-center gap-2">
+                                                    <ScanFace className="h-4 w-4 shrink-0 text-sky-600 dark:text-sky-400" aria-hidden />
+                                                    <span className="min-w-0">
+                                                        <span className="block text-xs font-bold text-foreground">
+                                                            Manage face enrollments
+                                                        </span>
+                                                        <span className="block text-[11px] text-muted-foreground">
+                                                            View trained faces, remove stale enrollments, fix unclear match
+                                                        </span>
+                                                    </span>
+                                                </span>
+                                                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                                            </button>
+                                        ) : null}
                                     </div>
 
                                     <div className="flex items-center justify-between border-t border-slate-200/60 dark:border-slate-700/50 pt-4">
                                         <div className="flex flex-col pr-4">
                                             <span className="text-sm font-bold">Camera coupon scan</span>
                                             <p className="text-[11px] text-muted-foreground">
-                                                Off by default — students use a USB barcode scanner. Turn on to scan coupons with the kiosk webcam instead.
+                                                On when students use the login <span className="font-semibold">Scan</span> tab (saved for this browser session).
+                                                Turn on separately for camera coupons while login stays on Card/wedge.
                                             </p>
                                         </div>
                                         <Switch
-                                            checked={local.kioskCouponRedemptionCameraEnabled === true}
+                                            checked={
+                                                local.kioskCouponRedemptionCameraEnabled === true
+                                            }
                                             onCheckedChange={(checked) => {
                                                 handleToggle('kioskCouponRedemptionCameraEnabled', checked);
                                                 handleToggle('kioskCouponRedemptionManualEnabled', !checked);
@@ -1517,7 +1454,6 @@ export function SettingsModal() {
                                             disabled={!canManageSchoolSettings}
                                         />
                                     </div>
-                                    <AdminPermissionHint show={!canManageSchoolSettings} />
 
                                     <div className="flex items-center justify-between border-t border-slate-200/60 dark:border-slate-700/50 pt-4">
                                         <div className="flex flex-col pr-4">
@@ -1572,15 +1508,18 @@ export function SettingsModal() {
                                     </div>
                                     {!local.enableStudentWelcomeBackScreen ? (
                                         <p className="text-[11px] text-muted-foreground">
-                                            Turn on <span className="font-semibold">Welcome back splash</span> in Advanced to use this.
+                                            Turn on <span className="font-semibold">Welcome back splash</span> under Feature toggles to use this.
                                         </p>
                                     ) : null}
                                 </div>
                             </div>
 
-                            <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 border border-slate-100 dark:border-slate-800/50 space-y-4">
+                            <div
+                                id="settings-general-printing"
+                                className="scroll-mt-[4.5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 border border-slate-100 dark:border-slate-800/50 space-y-4"
+                            >
                                 <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 pb-1 flex items-center gap-2">
-                                    <Monitor className="w-3.5 h-3.5" /> Printing &amp; Guidance
+                                    <Printer className="w-3.5 h-3.5" /> Printing
                                 </p>
 
                                 <div className="space-y-4">
@@ -1629,42 +1568,53 @@ export function SettingsModal() {
                                         }
                                     />
 
-                                    <div className="space-y-4 border-t border-slate-200/60 dark:border-slate-700/50 pt-4">
-                                        <p className="text-xs text-muted-foreground leading-relaxed">
-                                            Optional printer reminders for staff. Web apps cannot select a specific printer; these notes appear near the student ID print flow so the correct device is chosen in the print dialog.
-                                        </p>
-                                        <div className="space-y-1.5">
-                                            <Label htmlFor="printerReminderIdCards" className="text-xs font-bold">
-                                                Student ID / card stock printing
-                                            </Label>
-                                            <Textarea
-                                                id="printerReminderIdCards"
-                                                rows={2}
-                                                placeholder='e.g. "Use the Fargo DTC at the front desk — not the office copier."'
-                                                className="min-h-[72px] rounded-xl text-sm bg-background/80 border-border/60 resize-y"
-                                                value={local.printerReminderIdCards ?? ''}
-                                                onChange={(e) => handleToggle('printerReminderIdCards', e.target.value)}
-                                                disabled={!canManageSchoolSettings}
-                                            />
+                                    {canManageSchoolSettings && (
+                                        <div className="space-y-4 border-t border-slate-200/60 dark:border-slate-700/50 pt-4">
+                                            <p className="text-xs text-muted-foreground leading-relaxed">
+                                                Optional printer reminders for staff. Web apps cannot select a specific printer; these notes appear near the student ID print flow so the correct device is chosen in the print dialog.
+                                            </p>
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="printerReminderIdCards" className="text-xs font-bold">
+                                                    Student ID / card stock printing
+                                                </Label>
+                                                <Textarea
+                                                    id="printerReminderIdCards"
+                                                    rows={2}
+                                                    placeholder='e.g. "Use the Fargo DTC at the front desk — not the office copier."'
+                                                    className="min-h-[72px] rounded-xl text-sm bg-background/80 border-border/60 resize-y"
+                                                    value={local.printerReminderIdCards ?? ''}
+                                                    onChange={(e) => handleToggle('printerReminderIdCards', e.target.value)}
+                                                />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="printerReminderPrizeVouchers" className="text-xs font-bold">
+                                                    Prize vouchers &amp; coupon sheets
+                                                </Label>
+                                                <Textarea
+                                                    id="printerReminderPrizeVouchers"
+                                                    rows={2}
+                                                    placeholder='e.g. "Send redeem slips to the thermal printer in the office."'
+                                                    className="min-h-[72px] rounded-xl text-sm bg-background/80 border-border/60 resize-y"
+                                                    value={local.printerReminderPrizeVouchers ?? ''}
+                                                    onChange={(e) => handleToggle('printerReminderPrizeVouchers', e.target.value)}
+                                                />
+                                            </div>
                                         </div>
-                                        <div className="space-y-1.5">
-                                            <Label htmlFor="printerReminderPrizeVouchers" className="text-xs font-bold">
-                                                Prize vouchers &amp; coupon sheets
-                                            </Label>
-                                            <Textarea
-                                                id="printerReminderPrizeVouchers"
-                                                rows={2}
-                                                placeholder='e.g. "Send redeem slips to the thermal printer in the office."'
-                                                className="min-h-[72px] rounded-xl text-sm bg-background/80 border-border/60 resize-y"
-                                                value={local.printerReminderPrizeVouchers ?? ''}
-                                                onChange={(e) => handleToggle('printerReminderPrizeVouchers', e.target.value)}
-                                                disabled={!canManageSchoolSettings}
-                                            />
-                                        </div>
-                                        <AdminPermissionHint show={!canManageSchoolSettings} />
-                                    </div>
+                                    )}
 
-                                    <div className="flex items-center justify-between border-t border-slate-200/60 dark:border-slate-700/50 pt-4 gap-4">
+                                </div>
+                            </div>
+
+                            <div
+                                id="settings-general-guidance"
+                                className="scroll-mt-[4.5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 border border-slate-100 dark:border-slate-800/50 space-y-4"
+                            >
+                                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 pb-1 flex items-center gap-2">
+                                    <HelpCircle className="w-3.5 h-3.5" /> Guidance
+                                </p>
+
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between gap-4">
                                         <div className="min-w-0">
                                             <div className="flex items-center gap-2">
                                                 <HelpCircle className="w-4 h-4 text-muted-foreground shrink-0" />
@@ -1704,11 +1654,11 @@ export function SettingsModal() {
                                 <p className="text-xs text-muted-foreground leading-normal mb-3">
                                     Select which products are part of your active plan. School Office is optional and uses its own roster (not shared with rewards).
                                 </p>
-                                <AdminPermissionHint show={!canManageSchoolSettings} className="mb-2" />
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     {(() => {
                                         const enabledCount = [
                                             local.payRewards ?? true,
+                                            local.payClassroom ?? true,
                                             local.payAttendance ?? true,
                                             local.payHomework ?? true,
                                             local.payLibrary ?? true,
@@ -1718,12 +1668,23 @@ export function SettingsModal() {
                                                 <div className="flex items-center justify-between p-3 bg-background/50 border border-border/40 rounded-xl hover:bg-muted/40 transition-colors">
                                                     <div>
                                                         <h4 className="font-bold text-sm text-foreground uppercase tracking-tight">levelup rewards</h4>
-                                                        <p className="text-[10px] text-muted-foreground">Product included in paid subscription</p>
+                                                        <p className="text-[10px] text-muted-foreground">Student kiosk, prize shop, and coupon redemption</p>
                                                     </div>
                                                     <Switch
                                                         checked={local.payRewards ?? true}
                                                         onCheckedChange={(val) => handleToggle('payRewards', val)}
-                                                        disabled={!canManageSchoolSettings || (enabledCount === 1 && (local.payRewards ?? true))}
+                                                        disabled={enabledCount === 1 && (local.payRewards ?? true)}
+                                                    />
+                                                </div>
+                                                <div className="flex items-center justify-between p-3 bg-background/50 border border-border/40 rounded-xl hover:bg-muted/40 transition-colors">
+                                                    <div>
+                                                        <h4 className="font-bold text-sm text-foreground uppercase tracking-tight">levelup classroom</h4>
+                                                        <p className="text-[10px] text-muted-foreground">Seating chart, quick awards, and full-screen classroom view</p>
+                                                    </div>
+                                                    <Switch
+                                                        checked={local.payClassroom ?? true}
+                                                        onCheckedChange={(val) => handleToggle('payClassroom', val)}
+                                                        disabled={enabledCount === 1 && (local.payClassroom ?? true)}
                                                     />
                                                 </div>
                                                 <div className="flex items-center justify-between p-3 bg-background/50 border border-border/40 rounded-xl hover:bg-muted/40 transition-colors">
@@ -1734,7 +1695,7 @@ export function SettingsModal() {
                                                     <Switch
                                                         checked={local.payAttendance ?? true}
                                                         onCheckedChange={(val) => handleToggle('payAttendance', val)}
-                                                        disabled={!canManageSchoolSettings || (enabledCount === 1 && (local.payAttendance ?? true))}
+                                                        disabled={enabledCount === 1 && (local.payAttendance ?? true)}
                                                     />
                                                 </div>
                                                 <div className="flex items-center justify-between p-3 bg-background/50 border border-border/40 rounded-xl hover:bg-muted/40 transition-colors">
@@ -1745,7 +1706,7 @@ export function SettingsModal() {
                                                     <Switch
                                                         checked={local.payHomework ?? true}
                                                         onCheckedChange={(val) => handleToggle('payHomework', val)}
-                                                        disabled={!canManageSchoolSettings || (enabledCount === 1 && (local.payHomework ?? true))}
+                                                        disabled={enabledCount === 1 && (local.payHomework ?? true)}
                                                     />
                                                 </div>
                                                 <div className="flex items-center justify-between p-3 bg-background/50 border border-border/40 rounded-xl hover:bg-muted/40 transition-colors">
@@ -1756,7 +1717,7 @@ export function SettingsModal() {
                                                     <Switch
                                                         checked={local.payLibrary ?? true}
                                                         onCheckedChange={(val) => handleToggle('payLibrary', val)}
-                                                        disabled={!canManageSchoolSettings || (enabledCount === 1 && (local.payLibrary ?? true))}
+                                                        disabled={enabledCount === 1 && (local.payLibrary ?? true)}
                                                     />
                                                 </div>
                                                 <div className="sm:col-span-2 p-3 bg-background/50 border border-border/40 rounded-xl space-y-2">
@@ -1773,7 +1734,6 @@ export function SettingsModal() {
                                                             <Switch
                                                                 checked={local.payOffice === true}
                                                                 onCheckedChange={(val) => handleToggle('payOffice', val)}
-                                                                disabled={!canManageSchoolSettings}
                                                                 aria-label={PRODUCT_PILLAR_LABELS.payOffice}
                                                             />
                                                             {local.payOffice === true && schoolId ? (
@@ -1795,10 +1755,43 @@ export function SettingsModal() {
 
                     {view === 'features' && (
                         <div className="space-y-6 pb-2 -mx-1 px-1">
-                            <AdminPermissionHint
-                                show={!canManageSchoolSettings}
-                                className="rounded-xl border border-border/50 bg-muted/30 px-3 py-2"
-                            />
+                            {canManageSchoolSettings && adminManagedLinks.length > 0 ? (
+                                <div className="rounded-2xl border border-indigo-200/60 bg-indigo-50/50 dark:border-indigo-900/40 dark:bg-indigo-950/20 p-4 space-y-3">
+                                    <div>
+                                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-700/80 dark:text-indigo-300/80">
+                                            Managed in Admin
+                                        </p>
+                                        <p className="text-xs text-muted-foreground mt-1 leading-snug">
+                                            Rich setup (content, rosters, previews) lives on dedicated Admin tabs — not duplicated here.
+                                        </p>
+                                    </div>
+                                    <div className="grid gap-2 sm:grid-cols-2">
+                                        {adminManagedLinks.map(({ tab, label, description, icon: Icon }) => (
+                                            <Link
+                                                key={tab}
+                                                href={tab}
+                                                onClick={() => {
+                                                    if (draft) {
+                                                        committedRef.current = true;
+                                                        updateSettings({ ...draft });
+                                                    }
+                                                    setOpen(false);
+                                                }}
+                                                className="flex items-start gap-3 rounded-xl border border-indigo-200/50 bg-background/70 p-3 text-left transition-colors hover:border-indigo-400/60 hover:bg-background"
+                                            >
+                                                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+                                                    <Icon className="h-4 w-4" aria-hidden />
+                                                </span>
+                                                <span className="min-w-0">
+                                                    <span className="block text-sm font-bold text-foreground">{label}</span>
+                                                    <span className="mt-0.5 block text-[11px] leading-snug text-muted-foreground">{description}</span>
+                                                </span>
+                                            </Link>
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : null}
+
                             <div className="rounded-2xl border border-border/40 bg-muted/20 p-3">
                                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                     <div className="min-w-0">
@@ -1832,6 +1825,20 @@ export function SettingsModal() {
                                         >
                                             Enabled only
                                         </Button>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            className={cn(
+                                                "h-9 rounded-xl text-[10px] font-black uppercase tracking-widest",
+                                                showComingSoonFeatures && "border-primary/40 text-primary bg-primary/5"
+                                            )}
+                                            onClick={() => {
+                                                setShowComingSoonFeatures((v) => !v);
+                                                if (local.soundEnabled) playSound('click');
+                                            }}
+                                        >
+                                            Coming soon
+                                        </Button>
                                     </div>
                                 </div>
                             </div>
@@ -1839,48 +1846,26 @@ export function SettingsModal() {
                             <div className="flex items-center justify-between mb-3 border-b border-border/40 pb-3 mt-1">
                                 <h3 className="text-sm font-bold text-muted-foreground">Feature toggles</h3>
                                 <div className="flex items-center gap-2 shrink-0">
-                                    <Button variant="outline" size="sm" disabled={!canManageSchoolSettings} className="h-8 rounded-xl text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-700 dark:hover:text-emerald-300" onClick={() => {
-                                        if (!canManageSchoolSettings) return;
+                                    <Button variant="outline" size="sm" className="h-8 rounded-xl text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-700 dark:hover:text-emerald-300" onClick={() => {
                                         if (local.soundEnabled) playSound('click');
                                         setDraft(prev => {
                                             if (!prev) return prev;
                                             const next = { ...prev };
-                                            const keys = [
-                                                'enableTeacherBudgets', 'enableBulkPoints',
-                                                'enableTeacherCharts',
-                                                'enableStudentWelcomeBackScreen', 'enableStudentWelcome', 'enableFaceLogin', 'enableQrLogin',
-                                                'enablePrizeImages', 'enableWishlist', 'kioskSponsorEnabled',
-                                                'enableLevels', 'enableStreaks',
-                                                'enableClassAccumulations', 'enableBirthdayPoints', 'enableSpecialDayPoints',
-                                                'enablePrizeAiSurprise', 'enableVendingMachine', 'enableStudentEmojiOnPrizeTickets',
-                                                'enableThemeAnimations',
-                                            ];
-                                            keys.forEach(k => {
-                                                (next as any)[k] = true;
+                                            IMPLEMENTED_FEATURE_TOGGLE_KEYS.forEach((k) => {
+                                                (next as Record<string, unknown>)[k] = true;
                                             });
                                             return next;
                                         });
                                     }}>
                                         Select All
                                     </Button>
-                                    <Button variant="outline" size="sm" disabled={!canManageSchoolSettings} className="h-8 rounded-xl text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:bg-destructive/10 hover:text-destructive" onClick={() => {
-                                        if (!canManageSchoolSettings) return;
+                                    <Button variant="outline" size="sm" className="h-8 rounded-xl text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:bg-destructive/10 hover:text-destructive" onClick={() => {
                                         if (local.soundEnabled) playSound('click');
                                         setDraft(prev => {
                                             if (!prev) return prev;
                                             const next = { ...prev };
-                                            const keys = [
-                                                'enableTeacherBudgets', 'enableBulkPoints',
-                                                'enableTeacherCharts',
-                                                'enableStudentWelcomeBackScreen', 'enableStudentWelcome', 'enableFaceLogin', 'enableQrLogin',
-                                                'enablePrizeImages', 'enableWishlist', 'kioskSponsorEnabled',
-                                                'enableLevels', 'enableStreaks',
-                                                'enableClassAccumulations', 'enableBirthdayPoints', 'enableSpecialDayPoints',
-                                                'enablePrizeAiSurprise', 'enableVendingMachine', 'enableStudentEmojiOnPrizeTickets',
-                                                'enableThemeAnimations',
-                                            ];
-                                            keys.forEach(k => {
-                                                (next as any)[k] = false;
+                                            IMPLEMENTED_FEATURE_TOGGLE_KEYS.forEach((k) => {
+                                                (next as Record<string, unknown>)[k] = false;
                                             });
                                             return next;
                                         });
@@ -1896,13 +1881,13 @@ export function SettingsModal() {
                                 onJump={jumpToSettingsSection}
                             />
 
-                            <FeatureFilterContext.Provider value={{ query: featureQuery, enabledOnly: featuresEnabledOnly }}>
+                            <FeatureFilterContext.Provider value={{ query: featureQuery, enabledOnly: featuresEnabledOnly, showComingSoon: showComingSoonFeatures }}>
                             <div className="space-y-4">
 
 
                              <div id="settings-features-core" className="scroll-mt-[5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
                                  <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><Settings className="w-3.5 h-3.5" /> Core Workflow</p>
-                                <FeatureRow
+                                <SettingsFeatureRow
                                     id="enableTeacherBudgets"
                                     label="Teacher Budgets"
                                     desc="Give each teacher a monthly points allowance so they can’t overspend when printing coupons or awarding points."
@@ -1912,7 +1897,7 @@ export function SettingsModal() {
                                     isImplemented={true}
                                     canEditAdminSettings={canManageSchoolSettings}
                                 />
-                                <FeatureRow
+                                <SettingsFeatureRow
                                     id="enableBulkPoints"
                                     label="Bulk Class Points (Soon)"
                                     desc="Award points to an entire class at once instead of one student at a time."
@@ -1922,7 +1907,7 @@ export function SettingsModal() {
                                     isImplemented={false}
                                     canEditAdminSettings={canManageSchoolSettings}
                                 />
-                                <FeatureRow
+                                <SettingsFeatureRow
                                     id="enableTeacherCharts"
                                     label="Teacher Analytics (Soon)"
                                     desc="Let teachers see simple charts for just their own classes and students."
@@ -1936,7 +1921,7 @@ export function SettingsModal() {
 
                             <div id="settings-features-recognition" className="scroll-mt-[5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
                                 <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><Trophy className="w-3.5 h-3.5" /> Recognition</p>
-                                <FeatureRow
+                                <SettingsFeatureRow
                                     id="enableLevels"
                                     label="Levels (Soon)"
                                     desc="Turn total points into fun “levels” (Level 1, Level 2, etc.) for extra motivation."
@@ -1946,7 +1931,7 @@ export function SettingsModal() {
                                     isImplemented={false}
                                     canEditAdminSettings={canManageSchoolSettings}
                                 />
-                                <FeatureRow
+                                <SettingsFeatureRow
                                     id="enableStreaks"
                                     label="Daily Streaks (Soon)"
                                     desc="Reward students for showing up or logging in on consecutive days."
@@ -1956,7 +1941,7 @@ export function SettingsModal() {
                                     isImplemented={false}
                                     canEditAdminSettings={canManageSchoolSettings}
                                 />
-                                <FeatureRow
+                                <SettingsFeatureRow
                                     id="enableClassAccumulations"
                                     label="Class Accumulations"
                                     desc="Class standings (combined balances by class) live on Hall of Fame. This toggle is for future advanced options; it does not show class standings on the student kiosk."
@@ -1970,7 +1955,7 @@ export function SettingsModal() {
 
                             <div id="settings-features-shop" className="scroll-mt-[5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
                                 <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><ShoppingBag className="w-3.5 h-3.5" /> Rewards Shop</p>
-                                <FeatureRow
+                                <SettingsFeatureRow
                                     id="enablePrizeAiSurprise"
                                     label="AI reward surprises"
                                     desc="Adds a single built-in Fun reward in the shop; students pick joke, riddle, fortune teller, name poem, or random when redeeming. Requires API keys on the server."
@@ -2028,7 +2013,7 @@ export function SettingsModal() {
                                         </div>
                                     </div>
                                 ) : null}
-                                <FeatureRow
+                                <SettingsFeatureRow
                                     id="enableVendingMachine"
                                     label="Vending Machine"
                                     desc="Connect a USB serial vending rig and let configured reward items trigger a motor after redemption."
@@ -2039,7 +2024,7 @@ export function SettingsModal() {
                                     isImplemented={true}
                                     canEditAdminSettings={canManageSchoolSettings}
                                 />
-                                <FeatureRow
+                                <SettingsFeatureRow
                                     id="enableStudentEmojiOnPrizeTickets"
                                     label="Student emoji on reward vouchers"
                                     desc="When printing a redeem voucher, show the student theme emoji (or school default theme emoji) next to their name."
@@ -2054,7 +2039,7 @@ export function SettingsModal() {
 
                             <div id="settings-features-students" className="scroll-mt-[5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
                                 <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><Smartphone className="w-3.5 h-3.5" /> Student Experience</p>
-                                <FeatureRow
+                                <SettingsFeatureRow
                                     id="enableStudentWelcomeBackScreen"
                                     label="Welcome back splash"
                                     desc="Shows a short full-screen greeting when a student opens the kiosk. Default 2 seconds (adjustable in General). Can be turned off per student in Admin → Students."
@@ -2064,7 +2049,7 @@ export function SettingsModal() {
                                     isImplemented={true}
                                     canEditAdminSettings={canManageSchoolSettings}
                                 />
-                                <FeatureRow
+                                <SettingsFeatureRow
                                     id="enableThemeAnimations"
                                     label="Theme Animations"
                                     desc="Animate emojis + themed accents (kiosk & shop)"
@@ -2074,7 +2059,7 @@ export function SettingsModal() {
                                     isImplemented={true}
                                     canEditAdminSettings={canManageSchoolSettings}
                                 />
-                                <FeatureRow
+                                <SettingsFeatureRow
                                     id="enableStudentWelcome"
                                     label="Student welcome styles"
                                     desc="Full-screen animated welcome styles on the kiosk. Coming soon — per-student controls will return when this ships."
@@ -2084,7 +2069,7 @@ export function SettingsModal() {
                                     isImplemented={false}
                                     canEditAdminSettings={canManageSchoolSettings}
                                 />
-                                {local.enableStudentWelcome ? (
+                                {canManageSchoolSettings && local.enableStudentWelcome ? (
                                     <div className="px-3 pb-4 pt-1">
                                         <Label className="text-xs font-bold text-foreground">
                                             Default welcome style (school)
@@ -2095,7 +2080,6 @@ export function SettingsModal() {
                                         <div className="mt-3 max-w-sm">
                                             <Select
                                                 value={local.defaultWelcomeGreetingStyleId || '__none__'}
-                                                disabled={!canManageSchoolSettings}
                                                 onValueChange={(v) =>
                                                     setDraft((prev) =>
                                                         prev
@@ -2119,13 +2103,12 @@ export function SettingsModal() {
                                                     ))}
                                                 </SelectContent>
                                             </Select>
-                                            <AdminPermissionHint show={!canManageSchoolSettings} className="mt-2" />
                                         </div>
                                     </div>
                                 ) : null}
-                                {/* Student kiosk login/coupon method controls live in Settings → General. */}
+                                {/* Student kiosk login/coupon controls: Settings → General → Kiosk. */}
 
-                                  <FeatureRow
+                                  <SettingsFeatureRow
                                     id="enablePrizeImages"
                                     label="Reward Photos"
                                     desc="Show real photos of reward items in the shop, not only icons."
@@ -2135,7 +2118,7 @@ export function SettingsModal() {
                                     isImplemented={false}
                                     canEditAdminSettings={canManageSchoolSettings}
                                 />
-                                <FeatureRow
+                                <SettingsFeatureRow
                                     id="enableWishlist"
                                     label="Student Wishlists"
                                     desc="Let students star favorite reward items and track progress toward them."
@@ -2147,85 +2130,14 @@ export function SettingsModal() {
                                 />
                             </div>
 
-                            <div id="settings-features-occasions" className="scroll-mt-[5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
-                                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><Sparkles className="w-3.5 h-3.5" /> Special Occasions</p>
-                                <FeatureRow
-                                    id="enableBirthdayPoints"
-                                    label="Birthday Points"
-                                    desc="Award bonus points to students on their birthday when they log in to the kiosk."
-                                    icon={<Smile className="w-5 h-5" />}
-                                    settings={local}
-                                    onToggle={handleToggle}
-                                    isImplemented={true}
-                                    canEditAdminSettings={canManageSchoolSettings}
-                                />
-                                {local.enableBirthdayPoints && (
-                                    <div className="px-3 pb-4 space-y-3">
-                                        <div className="flex items-center justify-between">
-                                            <Label htmlFor="birthdayPointsAmount" className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Points Amount</Label>
-                                            <Input
-                                                id="birthdayPointsAmount"
-                                                type="number"
-                                                className="w-24 h-9 rounded-xl text-center font-bold bg-background/50 border-border/50"
-                                                value={local.birthdayPointsAmount}
-                                                onChange={(e) => handleToggle('birthdayPointsAmount', parseInt(e.target.value) || 0)}
-                                            />
-                                        </div>
-                                    </div>
-                                )}
-                                <FeatureRow
-                                    id="enableSpecialDayPoints"
-                                    label="School Special Day"
-                                    desc="Award points to every student who logs in on a specific school-wide special day."
-                                    icon={<Star className="w-5 h-5" />}
-                                    settings={local}
-                                    onToggle={handleToggle}
-                                    isImplemented={true}
-                                    canEditAdminSettings={canManageSchoolSettings}
-                                />
-                                {local.enableSpecialDayPoints && (
-                                    <div className="px-3 pb-4 space-y-4 pt-1">
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <div className="space-y-1.5">
-                                                <Label htmlFor="specialDayLabel" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Event Label</Label>
-                                                <Input
-                                                    id="specialDayLabel"
-                                                    placeholder="Founder's Day"
-                                                    className="h-9 rounded-xl text-xs bg-background/50 border-border/50"
-                                                    value={local.specialDayLabel}
-                                                    onChange={(e) => handleToggle('specialDayLabel', e.target.value)}
-                                                />
-                                            </div>
-                                            <div className="space-y-1.5">
-                                                <Label htmlFor="specialDayDate" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Date (MM-DD)</Label>
-                                                <Input
-                                                    id="specialDayDate"
-                                                    placeholder="12-25"
-                                                    className="h-9 rounded-xl text-xs text-center bg-background/50 border-border/50"
-                                                    value={local.specialDayDate}
-                                                    onChange={(e) => handleToggle('specialDayDate', e.target.value)}
-                                                />
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center justify-between">
-                                            <Label htmlFor="specialDayPointsAmount" className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Points Amount</Label>
-                                            <Input
-                                                id="specialDayPointsAmount"
-                                                type="number"
-                                                className="w-24 h-9 rounded-xl text-center font-bold bg-background/50 border-border/50"
-                                                value={local.specialDayPointsAmount}
-                                                onChange={(e) => handleToggle('specialDayPointsAmount', parseInt(e.target.value) || 0)}
-                                            />
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
-
                             </div>
                             </FeatureFilterContext.Provider>
                         </div>
                 )}
+
+                {view === 'faceEnrollments' && canManageSchoolSettings ? (
+                    <SettingsFaceEnrollmentsPanel />
+                ) : null}
 
                 {view === 'device' && (
                     <div className="space-y-6 pb-2 -mx-1 px-1">

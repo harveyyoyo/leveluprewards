@@ -4,7 +4,13 @@ import React from 'react';
 import { ContentSectionTreeNav } from '@/components/ui/content-section-tree-nav';
 import { Clock, Globe, History, Loader2, Trash2, Users, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  StaffPortalSectionCard,
+  StaffPortalSectionCardContent,
+  StaffPortalSectionCardHeader,
+  StaffPortalSectionCardTitle,
+} from '@/components/staff/StaffPortalSection';
 import { Helper } from '@/components/ui/helper';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -123,22 +129,22 @@ export function AdminAttendanceTab(props: any) {
   };
 
   return (
-    <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden bg-background/95 backdrop-blur-md">
-      <CardHeader className="py-6 bg-secondary/35 border-b border-border/40">
+    <StaffPortalSectionCard className="w-full overflow-hidden bg-background/95 backdrop-blur-md">
+      <StaffPortalSectionCardHeader className="py-6 bg-secondary/35 border-b border-border/40">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <Helper content="Configure school-wide attendance rules, manage universal period slots, and oversee teacher configurations.">
-            <CardTitle className="flex items-center gap-2 text-2xl font-black tracking-tight text-foreground">
+            <StaffPortalSectionCardTitle className="flex items-center gap-2 text-2xl font-black tracking-tight text-foreground">
               <Clock className="w-6 h-6 text-primary animate-pulse" /> Attendance &amp; Periods
-            </CardTitle>
+            </StaffPortalSectionCardTitle>
           </Helper>
           <div className="flex flex-wrap items-center gap-2 shrink-0">
             <TabWalkthroughHeaderAction />
             <AttendanceSetupWizard variant="admin" />
           </div>
         </div>
-      </CardHeader>
+      </StaffPortalSectionCardHeader>
 
-      <CardContent className="p-6 space-y-6">
+      <StaffPortalSectionCardContent className="p-6 space-y-6">
         <ContentSectionTreeNav
           items={[
             { id: 'defaults', label: 'School Defaults' },
@@ -825,7 +831,7 @@ export function AdminAttendanceTab(props: any) {
             </div>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </StaffPortalSectionCardContent>
+    </StaffPortalSectionCard>
   );
 }

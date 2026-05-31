@@ -29,7 +29,7 @@ import {
   type ChartConfig,
 } from '@/components/ui/chart';
 import { HouseBadge } from '@/components/houses/HouseBadge';
-import { buildHouseStandingsRows, type HouseStandingsRow } from '@/lib/houseStandings';
+import { buildHouseStandingsRows, type HouseStandingsRow } from '@/lib/houses/houseStandings';
 import type { House, Student } from '@/lib/types';
 
 export type HouseStandingsChartFormat = 'bars' | 'columns' | 'line' | 'pie';

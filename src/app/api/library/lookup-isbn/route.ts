@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { isRetailIsbnBarcode, lookupBookByIsbn, normalizeIsbnDigits } from '@/lib/libraryCatalogLookup';
+import { isRetailIsbnBarcode, lookupBookByIsbn, normalizeIsbnDigits } from '@/lib/library/libraryCatalogLookup';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);

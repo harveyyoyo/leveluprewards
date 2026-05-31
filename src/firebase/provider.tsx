@@ -7,17 +7,8 @@ import { Auth, User, getRedirectResult, onAuthStateChanged, signInAnonymously } 
 import { Functions } from 'firebase/functions';
 import { FirebaseStorage } from 'firebase/storage';
 import { FirebaseErrorListener } from '@/firebase/FirebaseErrorListener';
-import { hasPendingDeveloperGoogleRedirect } from '@/lib/googleAuthRedirect';
-
-const waitForAuthUser = async (auth: Auth, maxMs: number): Promise<User | null> => {
-  const stepMs = 100;
-  const attempts = Math.ceil(maxMs / stepMs);
-  for (let i = 0; i < attempts; i++) {
-    if (auth.currentUser) return auth.currentUser;
-    await new Promise((resolve) => setTimeout(resolve, stepMs));
-  }
-  return auth.currentUser;
-};
+import { hasPendingGoogleRedirect } from '@/lib/google/googleAuthRedirect';
+import { refreshGoogleIdToken, waitForAuthUser } from '@/lib/google/googleAuthSession';
 
 interface FirebaseProviderProps {
   children: ReactNode;
@@ -119,7 +110,10 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
         // Must finish pending Google/OAuth redirects before anonymous sign-in.
         // Otherwise redirect credentials are lost and /developer Google login loops forever.
         const redirectResult = await getRedirectResult(auth);
-        redirectUser = redirectResult?.user ?? null;
+        redirectUser = redirectResult?.user ?? auth.currentUser;
+        if (redirectUser) {
+          await refreshGoogleIdToken(redirectUser);
+        }
         if (redirectUser && !cancelled) {
           setUserAuthState({ user: redirectUser, isUserLoading: false, userError: null });
         }
@@ -141,16 +135,21 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
         return;
       }
 
-      if (hasPendingDeveloperGoogleRedirect()) {
-        const waitedUser = await waitForAuthUser(auth, 5_000);
+      if (hasPendingGoogleRedirect()) {
+        const waitedUser = await waitForAuthUser(auth, 12_000);
         if (cancelled) return;
         if (waitedUser) {
+          await refreshGoogleIdToken(waitedUser);
           setUserAuthState({ user: waitedUser, isUserLoading: false, userError: null });
           return;
         }
         console.warn(
-          'FirebaseProvider: pending Google redirect did not produce a signed-in user; continuing with anonymous bootstrap.',
+          'FirebaseProvider: pending Google redirect did not produce a signed-in user; skipping anonymous bootstrap so the user can retry Google sign-in.',
         );
+        if (!cancelled) {
+          setUserAuthState({ user: null, isUserLoading: false, userError: null });
+        }
+        return;
       }
 
       if (auth.currentUser) {

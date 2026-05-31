@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useLayoutEffect, useMemo, useState, useRef, ChangeEvent, type ComponentType } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useState, useRef, ChangeEvent, Suspense, type ComponentType } from 'react';
 import { useConfirm } from '@/components/providers/ConfirmProvider';
 import { useRouter, useSearchParams, useParams } from 'next/navigation';
 import Link from 'next/link';
@@ -16,14 +16,13 @@ import {
    Users, Gift, BookOpen, Trash2, Edit, UploadCloud, Printer, LayoutDashboard, Database,
    Settings, History, Award, CheckCircle, Tag, Trophy, ArrowRight, Loader2, Play, ShieldCheck,
    User, Upload, Download, Activity, Zap, Clock, Palette, Wand2, TableProperties,
-   FileText, Bell, Target, Megaphone, ChevronDown, X, Plug, GraduationCap, Home, Ticket,
+   FileText, Bell, Target, Megaphone, Monitor, ChevronDown, X, Plug, GraduationCap, Home, Ticket,
    PanelLeft, Rows3,
  } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { useAdminGooglePasscodeBypass } from '@/hooks/useAdminGooglePasscodeBypass';
 import type { Student, Prize, Coupon, Category, Class, House, Teacher, BackupInfo, Achievement, Badge, AttendanceScheduleSlot, TeacherBudgetPeriod, StaffAccount, LibraryItem, LibraryItemInput } from '@/lib/types';
@@ -38,10 +37,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { StudentModal } from '@/components/StudentModal';
-import { AdminFaceEnrollmentPanel } from '@/components/AdminFaceEnrollmentPanel';
+import { StudentModal } from '@/components/student/StudentModal';
+import { AdminFaceEnrollmentPanel } from '@/components/admin/AdminFaceEnrollmentPanel';
 import { AttendanceTimeZoneField } from '@/components/attendance/AttendanceTimeZoneField';
-import { PrizeModal } from '@/components/PrizeModal';
+import { PrizeModal } from '@/components/prizes/PrizeModal';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   AlertDialog,
@@ -64,7 +63,7 @@ import {
   DialogTitle,
   DialogTrigger
 } from "@/components/ui/dialog";
-import { StudentActivityModal } from '@/components/StudentActivityModal';
+import { StudentActivityModal } from '@/components/student/StudentActivityModal';
 import DynamicIcon from '@/components/DynamicIcon';
 import { Switch } from '@/components/ui/switch';
 import { cn, getStudentNickname } from '@/lib/utils';
@@ -87,28 +86,29 @@ import {
 import { useSettings, type Settings as AppSettings } from '@/components/providers/SettingsProvider';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
-import { ImageCropper } from '@/components/ImageCropper';
+import { ImageCropper } from '@/components/admin/ImageCropper';
 import { Helper } from '@/components/ui/helper';
 import { TabWalkthroughProvider } from '@/components/tabWalkthrough/TabWalkthroughContext';
 import dynamic from 'next/dynamic';
-import { CategoryModal } from '@/components/CategoryModal';
-import { LibraryItemModal } from '@/components/LibraryItemModal';
-import { normalizeLibraryUpc } from '@/lib/libraryScanCode';
+import { CategoryModal } from '@/components/admin/CategoryModal';
+import { LibraryItemModal } from '@/components/library/LibraryItemModal';
+import { normalizeLibraryUpc } from '@/lib/library/libraryScanCode';
 import { syncSchoolStaffDirectory } from '@/lib/syncSchoolStaffDirectory';
-import { StudentIdCard } from '@/components/StudentIdCard';
+import { StudentIdCard } from '@/components/student/StudentIdCard';
 import { IdCardPrintSetupDialog } from '@/components/admin/IdCardPrintSetupDialog';
 import { AdminMainTabsList } from '@/components/admin/AdminMainTabsList';
+import { StaffPortalLayoutProvider } from '@/components/staff/StaffPortalLayoutContext';
 import {
   staffPortalShellClassName,
   staffPortalTabTriggerClassName,
 } from '@/components/staff/staffPortalNavStyles';
 import { staffPortalAdminAddOnIsOn, staffPortalCoreTabs } from '@/lib/staffPortal';
 import { TeacherStaffPortalDashboard } from '@/components/staff/TeacherStaffPortalDashboard';
-import { AchievementModal } from '@/components/AchievementModal';
-import { BadgeModal } from '@/components/BadgeModal';
+import { AchievementModal } from '@/components/badges/AchievementModal';
+import { BadgeModal } from '@/components/badges/BadgeModal';
 
 const ThemeGeneratorModal = dynamic(
-  () => import('@/components/ThemeGeneratorModal').then((m) => m.ThemeGeneratorModal),
+  () => import('@/components/themes/ThemeGeneratorModal').then((m) => m.ThemeGeneratorModal),
   { ssr: false },
 );
 import { addAchievement, updateAchievement, deleteAchievement, addBadge, updateBadge, deleteBadge, addStaffAccount, updateStaffAccount, deleteStaffAccount, ensureDefaultAttendanceRules } from '@/lib/db';
@@ -127,6 +127,7 @@ import { AdminLibraryTab } from './sections/AdminLibraryTab';
 import { budgetWindowKeyForDate } from '@/lib/teacherBudget';
 import { resolveIdCardPrintJobOptions } from '@/lib/idCardPrintCatalog';
 import { adminPerTabAppearanceProps, adminTabTriggerStyle } from '@/lib/adminTabColorScheme';
+import { ADMIN_SETTINGS_TAB_VALUES } from '@/components/settings/settingsModalConfig';
 
 const tabLoader = () => (
   <div className="animate-pulse h-64 w-full rounded-xl bg-muted/40" aria-hidden="true" />
@@ -177,12 +178,12 @@ const AdminCategoriesTab = dynamic(
   importAdminTabSection(() => import('./sections/AdminCategoriesTab'), 'AdminCategoriesTab'),
   { loading: tabLoader, ssr: false },
 );
-const AdminPrizesTab = dynamic(
-  importAdminTabSection(() => import('./sections/AdminPrizesTab'), 'AdminPrizesTab'),
+const AdminClassroomTab = dynamic(
+  importAdminTabSection(() => import('./sections/AdminClassroomTab'), 'AdminClassroomTab'),
   { loading: tabLoader, ssr: false },
 );
-const AdminCouponsTab = dynamic(
-  importAdminTabSection(() => import('./sections/AdminCouponsTab'), 'AdminCouponsTab'),
+const AdminPrizesTab = dynamic(
+  importAdminTabSection(() => import('./sections/AdminPrizesTab'), 'AdminPrizesTab'),
   { loading: tabLoader, ssr: false },
 );
 const AdminAttendanceTab = dynamic(
@@ -209,6 +210,10 @@ const AdminBulletinBoardTab = dynamic(
   importAdminTabSection(() => import('./sections/AdminBulletinBoardTab'), 'AdminBulletinBoardTab'),
   { loading: tabLoader, ssr: false },
 );
+const AdminSmartScreenTab = dynamic(
+  importAdminTabSection(() => import('./sections/AdminSmartScreenTab'), 'AdminSmartScreenTab'),
+  { loading: tabLoader, ssr: false },
+);
 const AdminHallOfFameTab = dynamic(
   importAdminTabSection(() => import('./sections/AdminHallOfFameTab'), 'AdminHallOfFameTab'),
   { loading: tabLoader, ssr: false },
@@ -230,9 +235,9 @@ const AdminHousesTab = dynamic(
   { loading: tabLoader, ssr: false },
 );
 import { getReadableErrorMessage } from '@/lib/errorMessage';
-import { BulkRosterSetupDialog } from '@/components/BulkRosterSetupDialog';
-import { StudentCsvColumnMapDialog } from '@/components/StudentCsvColumnMapDialog';
-import { guessStudentCsvColumnMap, parseStudentCsvToMatrix } from '@/lib/studentCsvColumnMap';
+import { BulkRosterSetupDialog } from '@/components/admin/BulkRosterSetupDialog';
+import { StudentCsvColumnMapDialog } from '@/components/student/StudentCsvColumnMapDialog';
+import { guessStudentCsvColumnMap, parseStudentCsvToMatrix } from '@/lib/students/studentCsvColumnMap';
 import { AdminPrizeDeskDashboard } from './AdminPrizeDeskDashboard';
 
 function describeCsvImportReport(
@@ -375,6 +380,7 @@ function AdminDashboardInner() {
   const schoolId = (typeof params?.schoolId === 'string' && params.schoolId.trim())
     ? params.schoolId.trim().toLowerCase()
     : ctxSchoolId;
+  const searchParams = useSearchParams();
   const functions = useFunctions();
   const { toast } = useToast();
   const confirm = useConfirm();
@@ -397,15 +403,14 @@ function AdminDashboardInner() {
       return;
     }
     couponsTabMigratedRef.current = true;
-    const mapTab = (v: string) => (v === 'coupons' ? 'insights' : v);
+    const mapTab = (v: string) => (v === 'coupons' ? 'categories' : v);
     const nextPinned = Array.from(new Set(pinned.map(mapTab)));
     const nextOrder = Array.from(new Set(order.map(mapTab)));
     updateSettings({
       adminPinnedAddOnTabs: nextPinned,
       adminMainTabOrder: nextOrder,
-      ...(settings.enableAdminAnalytics ? {} : { enableAdminAnalytics: true }),
     });
-  }, [settings.adminMainTabOrder, settings.adminPinnedAddOnTabs, settings.enableAdminAnalytics, updateSettings]);
+  }, [settings.adminMainTabOrder, settings.adminPinnedAddOnTabs, updateSettings]);
 
   // All Firestore reads the dashboard needs live in a single hook so this
   // component only has to worry about orchestration and UI state.
@@ -536,6 +541,13 @@ function AdminDashboardInner() {
 
   const [activeMainTab, setActiveMainTab] = useState('students');
 
+  useEffect(() => {
+    const tab = searchParams.get('tab')?.trim().toLowerCase();
+    if (tab && ADMIN_SETTINGS_TAB_VALUES.has(tab)) {
+      setActiveMainTab(tab);
+    }
+  }, [searchParams]);
+
   type AdminAddOnTabDef = {
     value: string;
     label: string;
@@ -603,6 +615,23 @@ function AdminDashboardInner() {
         isOn: (s) => staffPortalAdminAddOnIsOn(s, 'bulletinboard'),
         enable: () => updateSettings({ bulletinEnabled: true, adminHiddenAddOnTabs: removeHidden('bulletinboard') }),
         disable: () => updateSettings({ bulletinEnabled: false, adminHiddenAddOnTabs: removeHidden('bulletinboard'), adminPinnedAddOnTabs: removePinned('bulletinboard') }),
+      },
+      {
+        value: 'smart-screen',
+        label: 'Smart Screen',
+        icon: Monitor,
+        isOn: (s) => staffPortalAdminAddOnIsOn(s, 'smart-screen'),
+        enable: () =>
+          updateSettings({
+            smartScreenEnabled: true,
+            adminHiddenAddOnTabs: removeHidden('smart-screen'),
+          }),
+        disable: () =>
+          updateSettings({
+            smartScreenEnabled: false,
+            adminHiddenAddOnTabs: removeHidden('smart-screen'),
+            adminPinnedAddOnTabs: removePinned('smart-screen'),
+          }),
       },
       {
         value: 'library',
@@ -830,10 +859,48 @@ function AdminDashboardInner() {
     });
   };
 
-  const unpinAddOnTab = (value: string) => {
-    const now = settings.adminPinnedAddOnTabs || [];
-    if (!now.includes(value)) return;
-    updateSettings({ adminPinnedAddOnTabs: now.filter((v) => v !== value) });
+  const addOnTabEnablePatch = (tabValue: string): Partial<AppSettings> => {
+    const patch: Partial<AppSettings> = {};
+    switch (tabValue) {
+      case 'insights':
+        patch.enableAdminAnalytics = true;
+        break;
+      case 'attendance':
+        patch.payAttendance = true;
+        patch.enableAttendance = true;
+        patch.enableClassSignIn = true;
+        break;
+      case 'halloffame':
+        patch.enableClassLeaderboard = true;
+        break;
+      case 'bulletinboard':
+        patch.bulletinEnabled = true;
+        break;
+      case 'smart-screen':
+        patch.smartScreenEnabled = true;
+        break;
+      case 'library':
+        patch.payLibrary = true;
+        break;
+      case 'bonuspoints':
+        patch.enableAchievements = true;
+        break;
+      case 'category-badges':
+        patch.enableBadges = true;
+        break;
+      case 'goals':
+        patch.enableGoals = true;
+        break;
+      case 'houses':
+        patch.enableHouses = true;
+        break;
+      case 'notifications':
+        patch.enableNotifications = true;
+        break;
+      default:
+        break;
+    }
+    return patch;
   };
 
   const toggleAddOnTab = (tabValue: string, enabled: boolean) => {
@@ -848,28 +915,7 @@ function AdminDashboardInner() {
     if (enabled) {
       patch.adminHiddenAddOnTabs = hiddenNow.filter((x) => x !== tabValue);
       patch.adminPinnedAddOnTabs = [...new Set([...pinnedNow, tabValue])];
-      
-      switch (tabValue) {
-        case 'insights': patch.enableAdminAnalytics = true; break;
-        case 'attendance':
-          patch.payAttendance = true;
-          patch.enableAttendance = true;
-          patch.enableClassSignIn = true;
-          break;
-        case 'halloffame': patch.enableClassLeaderboard = true; break;
-        case 'bulletinboard': patch.bulletinEnabled = true; break;
-        case 'library': patch.payLibrary = true; break;
-        case 'bonuspoints': patch.enableAchievements = true; break;
-        case 'category-badges': patch.enableBadges = true; break;
-        case 'goals': patch.enableGoals = true; break;
-        case 'houses': patch.enableHouses = true; break;
-        case 'notifications': patch.enableNotifications = true; break;
-        case 'student-portal':
-          break;
-        case 'integrations':
-          break;
-        default: break;
-      }
+      Object.assign(patch, addOnTabEnablePatch(tabValue));
       
       updateSettings(patch);
       setActiveMainTab(tabValue);
@@ -895,6 +941,10 @@ function AdminDashboardInner() {
         case 'bulletinboard':
           patch.bulletinEnabled = false;
           nextHidden = nextHidden.filter((x) => x !== 'bulletinboard');
+          break;
+        case 'smart-screen':
+          patch.smartScreenEnabled = false;
+          nextHidden = nextHidden.filter((x) => x !== 'smart-screen');
           break;
         case 'library':
           patch.payLibrary = false;
@@ -974,6 +1024,9 @@ function AdminDashboardInner() {
         case 'bulletinboard':
           patch.bulletinEnabled = true;
           break;
+        case 'smart-screen':
+          patch.smartScreenEnabled = true;
+          break;
         case 'library':
           patch.payLibrary = true;
           break;
@@ -1037,6 +1090,10 @@ function AdminDashboardInner() {
           patch.bulletinEnabled = false;
           nextHidden = nextHidden.filter((x) => x !== 'bulletinboard');
           break;
+        case 'smart-screen':
+          patch.smartScreenEnabled = false;
+          nextHidden = nextHidden.filter((x) => x !== 'smart-screen');
+          break;
         case 'library':
           patch.payLibrary = false;
           nextHidden = nextHidden.filter((x) => x !== 'library');
@@ -1082,12 +1139,9 @@ function AdminDashboardInner() {
   };
 
   useLayoutEffect(() => {
-    const basicTabs = ['students', 'classes', 'teachers', 'prizes', 'categories', 'reports'];
-    if (loginState === 'developer') basicTabs.push('backups');
-    const enabledExtras = visibleAddOnTabs.map((t) => t.value);
-    const allowedTabs = new Set<string>([...basicTabs, ...enabledExtras]);
+    const allowedTabs = new Set(orderedMainTabs.map((t) => t.value));
     if (!allowedTabs.has(activeMainTab)) setActiveMainTab('students');
-  }, [activeMainTab, visibleAddOnTabs, loginState]);
+  }, [activeMainTab, orderedMainTabs]);
 
   const [bulkRosterOpen, setBulkRosterOpen] = useState(false);
   const [isPreviousLogosOpen, setIsPreviousLogosOpen] = useState(false);
@@ -1141,7 +1195,8 @@ function AdminDashboardInner() {
     listTeacherAttendanceLog,
   });
 
-  const isDbLoading = studentsLoading || classesLoading || teachersLoading || staffAccountsLoading || categoriesLoading || prizesLoading || couponsLoading;
+  /** Show shell as soon as the default Students tab can render; other collections load in background. */
+  const isShellLoading = studentsLoading || classesLoading;
 
   const collectionErrors = [
     { name: 'Students', error: studentsError },
@@ -1164,7 +1219,7 @@ function AdminDashboardInner() {
     return student ? `${student.firstName} ${student.lastName}` : `ID: ${studentId}`;
   };
 
-  if (isDbLoading) {
+  if (isShellLoading) {
     return <AdminDashboardSkeleton />;
   }
 
@@ -1542,8 +1597,8 @@ function AdminDashboardInner() {
     const item = library?.find((i) => i.id === itemId);
     if (!item) return;
     if (await confirm({ title: 'Force Return Item?', description: 'This will check the item back in and apply any late/on-time library points. Proceed?' })) {
-      const { forceReturnLibraryItem } = await import('@/lib/libraryOperations');
-      const { getLibraryPolicyFromSettings } = await import('@/lib/libraryPolicy');
+      const { forceReturnLibraryItem } = await import('@/lib/library/libraryOperations');
+      const { getLibraryPolicyFromSettings } = await import('@/lib/library/libraryPolicy');
       const policy = getLibraryPolicyFromSettings(settings, categories);
       const res = await forceReturnLibraryItem(firestore, schoolId, item, {
         policy,
@@ -1663,8 +1718,7 @@ function AdminDashboardInner() {
         <div
           className={cn(
             'flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-visible',
-            adminNavSidebar &&
-              'w-full rounded-xl border border-border/70 bg-card shadow-sm',
+            !adminNavSidebar && 'rounded-xl border border-border/70 bg-card shadow-sm',
           )}
         >
           <Tabs
@@ -1759,9 +1813,14 @@ function AdminDashboardInner() {
                     <DropdownMenuContent align="end" className="min-w-[240px]">
                       <div className="px-2 py-2">
                         <div className="flex items-center justify-between gap-3">
-                          <span className="text-[10px] font-black uppercase text-muted-foreground tracking-wider">
-                            Feature tabs
-                          </span>
+                          <div>
+                            <span className="text-[10px] font-black uppercase text-muted-foreground tracking-wider">
+                              Feature tabs
+                            </span>
+                            <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+                              Check to turn on and pin to your tab bar. Uncheck to turn off.
+                            </p>
+                          </div>
                           <div className="flex items-center gap-2">
                             <button
                               type="button"
@@ -1795,16 +1854,18 @@ function AdminDashboardInner() {
                       <DropdownMenuSeparator />
                       {addOnTabDefs.map((t) => {
                         const Icon = t.icon;
-                        const pinned = new Set(settings.adminPinnedAddOnTabs || []);
-                        const checked = t.isOn(settings) && pinned.has(t.value);
+                        const checked = t.isOn(settings);
                         return (
                           <DropdownMenuCheckboxItem
                             key={t.value}
                             checked={checked}
-                            onCheckedChange={(next) => {
-                              toggleAddOnTab(t.value, !!next);
-                            }}
-                            className="flex items-center gap-2"
+                            className="flex items-center gap-2 font-semibold"
+                            title={
+                              checked
+                                ? `${t.label} is on — uncheck to turn off`
+                                : `${t.label} is off — check to turn on`
+                            }
+                            onCheckedChange={(next) => toggleAddOnTab(t.value, !!next)}
                           >
                             <Icon className="h-4 w-4 opacity-75" aria-hidden />
                             <span className="flex-1">{t.label}</span>
@@ -1891,6 +1952,7 @@ function AdminDashboardInner() {
 
           </div>
 
+          <StaffPortalLayoutProvider sidebar={adminNavSidebar}>
           <TabWalkthroughProvider scope="admin" tabId={activeMainTab}>
           <div className="w-full min-w-0 flex-1">
           <TabsContent value="students" className={fittedAdminTabClassName}>
@@ -2082,22 +2144,6 @@ function AdminDashboardInner() {
                 totalPointsAwarded={totalPointsAwarded}
               />
             ) : null}
-            {(settings.payRewards ?? true) ? (
-              <AdminCouponsTab
-                availableCoupons={availableCoupons}
-                redeemedCoupons={redeemedCoupons}
-                getStudentName={getStudentName}
-                schoolId={schoolId!}
-                onDeleteCoupon={deleteCoupon}
-                onPurgeRedeemed={async () => {
-                  const ids = redeemedCoupons.map((c) => c.id);
-                  if (ids.length > 0) {
-                    await deleteCoupons(ids);
-                    toast({ title: 'Redeemed coupons purged', description: `Successfully deleted ${ids.length} coupons.` });
-                  }
-                }}
-              />
-            ) : null}
           </TabsContent>
 
           <TabsContent value="categories" className={`${scrollingAdminTabClassName} space-y-6`}>
@@ -2107,6 +2153,18 @@ function AdminDashboardInner() {
               classes={classes}
               students={students}
               schoolId={schoolId!}
+              showCouponManagement={settings.payRewards ?? true}
+              availableCoupons={availableCoupons}
+              redeemedCoupons={redeemedCoupons}
+              getStudentName={getStudentName}
+              onDeleteCoupon={deleteCoupon}
+              onPurgeRedeemed={async () => {
+                const ids = redeemedCoupons.map((c) => c.id);
+                if (ids.length > 0) {
+                  await deleteCoupons(ids);
+                  toast({ title: 'Redeemed coupons purged', description: `Successfully deleted ${ids.length} coupons.` });
+                }
+              }}
               onAddCategory={() => handleOpenCategoryModal(null)}
               onEditCategory={(c) => handleOpenCategoryModal(c)}
               onDeleteCategory={async (id) => {
@@ -2120,6 +2178,15 @@ function AdminDashboardInner() {
                 if (!ok) return;
                 await deleteCategory(id);
               }}
+            />
+          </TabsContent>
+
+          <TabsContent value="classroom" className={`${scrollingAdminTabClassName} space-y-6`}>
+            <AdminClassroomTab
+              categories={categories}
+              classes={classes}
+              students={students}
+              schoolId={schoolId!}
             />
           </TabsContent>
 
@@ -2181,6 +2248,14 @@ function AdminDashboardInner() {
             <AdminBulletinBoardTab
               schoolId={schoolId!}
               schoolLogoUrl={schoolData?.logoUrl ?? null}
+              settings={settings}
+              updateSettings={updateSettings}
+            />
+          </TabsContent>
+
+          <TabsContent value="smart-screen" className={scrollingAdminTabClassName}>
+            <AdminSmartScreenTab
+              schoolId={schoolId!}
               settings={settings}
               updateSettings={updateSettings}
             />
@@ -2323,6 +2398,7 @@ function AdminDashboardInner() {
           </TabsContent>
           </div>
           </TabWalkthroughProvider>
+          </StaffPortalLayoutProvider>
         </Tabs>
 
         {/* Modals outside Tabs */}
@@ -3457,7 +3533,7 @@ function HouseCoordinatorDashboard() {
   );
 }
 
-export default function AdminPage() {
+function AdminPage() {
   const { loginState, isInitialized, isAdmin, isPrizeClerk, isHouseCoordinator, login, schoolId: ctxSchoolId } =
     useAppContext();
   const params = useParams<{ schoolId?: string }>();
@@ -3528,5 +3604,14 @@ export default function AdminPage() {
     <ErrorBoundary name="AdminPage">
       <AdminDashboardInner />
     </ErrorBoundary>
+  );
+}
+
+/** `useSearchParams()` must sit under Suspense or dev error recovery can loop with “missing required error components”. */
+export default function AdminPageRoute() {
+  return (
+    <Suspense fallback={<AdminDashboardSkeleton />}>
+      <AdminPage />
+    </Suspense>
   );
 }

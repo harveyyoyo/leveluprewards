@@ -7,19 +7,33 @@
  */
 const { spawn } = require('child_process');
 const path = require('path');
+const {
+  ensureLoopbackPortAvailable,
+  warnIfFirebaseAdminCredentialLooksWrong,
+} = require('./lib/dev-startup-checks.cjs');
 
 const root = path.join(__dirname, '..');
 const port = String(process.env.PORT || '3000').trim() || '3000';
 const host = String(process.env.HOST || '127.0.0.1').trim() || '127.0.0.1';
 const nextCli = path.join(root, 'node_modules', 'next', 'dist', 'bin', 'next');
 
-console.log(`[dev] http://${host}:${port}`);
-console.log('[dev] If pages are blank or you see Cannot find module ./*.js → npm run dev:reset\n');
+async function main() {
+  warnIfFirebaseAdminCredentialLooksWrong(root);
+  await ensureLoopbackPortAvailable({ host, port });
 
-const child = spawn(process.execPath, [nextCli, 'dev', '-H', host, '-p', port], {
-  cwd: root,
-  stdio: 'inherit',
-  env: process.env,
+  console.log(`[dev] http://${host}:${port}`);
+  console.log('[dev] If pages are blank or you see Cannot find module ./*.js -> npm run dev:reset\n');
+
+  const child = spawn(process.execPath, [nextCli, 'dev', '-H', host, '-p', port], {
+    cwd: root,
+    stdio: 'inherit',
+    env: process.env,
+  });
+
+  child.on('exit', (code) => process.exit(code ?? 0));
+}
+
+main().catch((error) => {
+  console.error(`[dev] ${error.message || error}`);
+  process.exit(1);
 });
-
-child.on('exit', (code) => process.exit(code ?? 0));

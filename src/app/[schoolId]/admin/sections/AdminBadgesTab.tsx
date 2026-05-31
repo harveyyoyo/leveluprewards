@@ -2,13 +2,19 @@
 
 import { Award, Edit, Loader2, Plus, Trash2, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  StaffPortalSectionCard,
+  StaffPortalSectionCardContent,
+  StaffPortalSectionCardHeader,
+  StaffPortalSectionCardTitle,
+} from '@/components/staff/StaffPortalSection';
 import { Helper } from '@/components/ui/helper';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { cn } from '@/lib/utils';
 import DynamicIcon from '@/components/DynamicIcon';
-import { AutoCircularToggles } from '@/components/AutoCircularToggles';
+import { AutoCircularToggles } from '@/components/admin/AutoCircularToggles';
 import { AdminRecordListHeader } from '@/components/admin/AdminRecordListHeader';
 import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 
@@ -31,13 +37,13 @@ export function AdminBadgesTab(props: any) {
   } = props;
 
   return (
-    <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden">
-      <CardHeader className="flex flex-row justify-between items-center py-6">
+    <StaffPortalSectionCard className="w-full overflow-hidden">
+      <StaffPortalSectionCardHeader className="flex flex-row justify-between items-center py-6">
         <div>
           <Helper content="Define badges students earn by reaching a points threshold in a category within a time period (e.g. Good Behavior badge for 50 points this month).">
-            <CardTitle className="flex items-center gap-2">
+            <StaffPortalSectionCardTitle className="flex items-center gap-2">
               <Award className="w-5 h-5 text-primary" /> Badges
-            </CardTitle>
+            </StaffPortalSectionCardTitle>
           </Helper>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -55,8 +61,8 @@ export function AdminBadgesTab(props: any) {
             Add sample badges
           </Button>
         </div>
-      </CardHeader>
-      <CardContent>
+      </StaffPortalSectionCardHeader>
+      <StaffPortalSectionCardContent>
         {badgesLoading ? (
           <ul className="space-y-2 pr-1">
             {[1, 2, 3].map((i: number) => (
@@ -171,7 +177,7 @@ export function AdminBadgesTab(props: any) {
             )}
           </ul>
         )}
-      </CardContent>
-    </Card>
+      </StaffPortalSectionCardContent>
+    </StaffPortalSectionCard>
   );
 }

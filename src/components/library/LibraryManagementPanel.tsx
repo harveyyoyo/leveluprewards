@@ -21,7 +21,7 @@ import {
 import { useConfirm } from '@/components/providers/ConfirmProvider';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { computeDaysOverdue, formatDueDate } from '@/lib/libraryPolicy';
+import { computeDaysOverdue, formatDueDate } from '@/lib/library/libraryPolicy';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -31,7 +31,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { usePrint } from '@/components/providers/PrintProvider';
 import { useToast } from '@/hooks/use-toast';
 import type { LibraryItem, LibraryItemInput } from '@/lib/types';
-import type { LibraryLabelFormat } from '@/lib/libraryScanCode';
+import type { LibraryLabelFormat } from '@/lib/library/libraryScanCode';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LibraryBookBulkIntakeScanner } from './LibraryBookBulkIntakeScanner';
 import { LibraryBookIntakeScanner } from './LibraryBookIntakeScanner';

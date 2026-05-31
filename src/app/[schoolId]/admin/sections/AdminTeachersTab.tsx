@@ -3,7 +3,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Book, Building2, ChevronDown, Copy, Edit, FileText, Gift, Home, Minus, Plus, Printer, Trash2, User, UserMinus, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  StaffPortalSectionCard,
+  StaffPortalSectionCardContent,
+  StaffPortalSectionCardHeader,
+  StaffPortalSectionCardTitle,
+} from '@/components/staff/StaffPortalSection';
 import { Helper } from '@/components/ui/helper';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -248,13 +254,13 @@ export function AdminTeachersTab({
   };
 
   return (
-    <Card className="w-full min-w-0 border-t-4 border-primary shadow-md">
-      <CardHeader className="flex flex-row flex-wrap justify-between items-center gap-3 py-4 px-4 sm:px-5">
+    <StaffPortalSectionCard className="w-full min-w-0">
+      <StaffPortalSectionCardHeader className="flex flex-row flex-wrap justify-between items-center gap-3 py-4 px-4 sm:px-5">
         <div>
           <Helper content="Full classroom staff who can print coupons and award points. Desk staff get limited coupon, prize, library, houses, office, or reports access. Expand Classes or Students on a row to manage scope.">
-            <CardTitle className="flex items-center gap-2">
+            <StaffPortalSectionCardTitle className="flex items-center gap-2">
               <User className="w-5 h-5 text-primary" /> Teachers & staff
-            </CardTitle>
+            </StaffPortalSectionCardTitle>
           </Helper>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -266,8 +272,8 @@ export function AdminTeachersTab({
             <Plus className="mr-2 h-4 w-4" /> Add teacher
           </Button>
         </div>
-      </CardHeader>
-      <CardContent className="min-w-0 space-y-6 px-3 pb-4 sm:px-4">
+      </StaffPortalSectionCardHeader>
+      <StaffPortalSectionCardContent className="min-w-0 space-y-6 px-3 pb-4 sm:px-4">
         <section className="space-y-3">
           <AdminRecordListScroll>
           <ul className="space-y-2">
@@ -766,7 +772,7 @@ export function AdminTeachersTab({
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </CardContent>
-    </Card>
+      </StaffPortalSectionCardContent>
+    </StaffPortalSectionCard>
   );
 }

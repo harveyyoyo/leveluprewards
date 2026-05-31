@@ -40,14 +40,14 @@ import {
   seedHouseThemePack,
   syncHousePointsFromStudents,
 } from '@/lib/db';
-import { HOUSE_PRESET_THEMES, type HousePresetThemeId } from '@/lib/housePresets';
+import { HOUSE_PRESET_THEMES, type HousePresetThemeId } from '@/lib/houses/housePresets';
 import {
   applyHouseWizardSettings,
   buildHouseHallOfFameHref,
   type HouseAssignMode,
   type HousePointsSource,
   type HouseSetupWizardDraft,
-} from '@/lib/housePointsSettings';
+} from '@/lib/houses/housePointsSettings';
 import { HouseBadge } from '@/components/houses/HouseBadge';
 
 const STEP_LABELS = ['Start', 'Houses', 'Points', 'Roster', 'Display', 'Done'] as const;

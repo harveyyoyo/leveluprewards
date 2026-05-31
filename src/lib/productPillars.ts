@@ -1,20 +1,31 @@
 /**
  * Product pillars are the only subscription-style gates in the app.
  * Each pillar maps to a `pay*` flag on school `appSettings`.
+ *
+ * Sales levels ↔ pillars: see `.agent/knowledge/product-ladder.md`
  */
 
-export const PRODUCT_PILLAR_KEYS = ['payAttendance', 'payLibrary', 'payHomework', 'payOffice'] as const;
+export const PRODUCT_PILLAR_KEYS = [
+  'payClassroom',
+  'payAttendance',
+  'payLibrary',
+  'payHomework',
+  'payOffice',
+] as const;
 
 export type ProductPillarKey = (typeof PRODUCT_PILLAR_KEYS)[number];
 
 export const PRODUCT_PILLAR_LABELS: Record<ProductPillarKey, string> = {
+  payClassroom: 'Classroom Management',
   payAttendance: 'Attendance',
   payLibrary: 'Library',
   payHomework: 'Homework',
   payOffice: 'School Office',
 };
 
-export type PillarSettings = Partial<Record<ProductPillarKey, boolean>>;
+export type PillarSettings = Partial<Record<ProductPillarKey, boolean>> & {
+  payRewards?: boolean;
+};
 
 export function isProductPillarKey(key: string): key is ProductPillarKey {
   return (PRODUCT_PILLAR_KEYS as readonly string[]).includes(key);
@@ -31,11 +42,38 @@ export function isOfficePillarOn(settings: PillarSettings | null | undefined): b
   return isPillarOn(settings, 'payOffice');
 }
 
+/**
+ * Rewards Core pillar (Level 1) — student-facing economy surfaces:
+ * kiosk, prize shop, coupon redemption, student-home prize flows.
+ *
+ * Teacher-operational tools (raffle draw, goals, attendance, homework) are gated
+ * by their own flags/pillars, not by `payRewards`.
+ */
+export function isRewardsPillarOn(settings: PillarSettings | null | undefined): boolean {
+  return settings?.payRewards !== false;
+}
+
+/** Student kiosk / prize shop / coupon redemption UI. Alias for clarity at call sites. */
+export function isStudentRewardsUiOn(settings: PillarSettings | null | undefined): boolean {
+  return isRewardsPillarOn(settings);
+}
+
+/** Classroom Management pillar — seating chart and quick awards (Level 2). Smart Screen is not gated here. */
+export function isClassroomPillarOn(settings: PillarSettings | null | undefined): boolean {
+  return isPillarOn(settings, 'payClassroom');
+}
+
+/** Classroom pillar on without Rewards — session seating + room display only. */
+export function isClassroomOnlyMode(settings: PillarSettings | null | undefined): boolean {
+  return isClassroomPillarOn(settings) && !isRewardsPillarOn(settings);
+}
+
 /** Feature toggles that require a product pillar to be on. */
 const FEATURE_REQUIRES_PILLAR: Partial<Record<string, ProductPillarKey>> = {
   enableHomework: 'payHomework',
   enableAttendance: 'payAttendance',
   enableClassSignIn: 'payAttendance',
+  enableParentView: 'payClassroom',
 };
 
 export function pillarRequiredForFeature(key: string): ProductPillarKey | undefined {

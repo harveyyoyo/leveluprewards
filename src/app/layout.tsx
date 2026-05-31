@@ -4,7 +4,7 @@ import { headers } from 'next/headers';
 import { AppProvider } from "@/components/AppProvider";
 import { FirebaseClientProvider } from '@/firebase';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import LayoutClientWrapper from "@/components/LayoutClientWrapper";
+import LayoutClientWrapper from "@/components/layout/LayoutClientWrapper";
 import { isOfficeHostname, OFFICE_CHROME_REQUEST_HEADER } from '@/lib/officeRouting';
 import "./globals.css";
 
@@ -103,8 +103,34 @@ export default async function RootLayout({
             __html: `requestIdleCallback?requestIdleCallback(function(){var l=document.getElementById('deferred-fonts');if(l)l.media='all'}):setTimeout(function(){var l=document.getElementById('deferred-fonts');if(l)l.media='all'},100)`,
           }}
         />
+        {process.env.NODE_ENV === 'development' ? (
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `(function(){var compileMs=15000,staleMs=90000;setTimeout(function(){if(window.__LEVELUP_APP_MOUNTED__)return;var h=document.getElementById('levelup-js-boot-hint');var c=document.getElementById('levelup-js-boot-compiling');if(h&&c){h.hidden=false;c.hidden=false;}},compileMs);setTimeout(function(){if(window.__LEVELUP_APP_MOUNTED__)return;var h=document.getElementById('levelup-js-boot-hint');var c=document.getElementById('levelup-js-boot-compiling');var s=document.getElementById('levelup-js-boot-stale');if(h&&s){if(c)c.hidden=true;s.hidden=false;h.hidden=false;}},staleMs);})();`,
+            }}
+          />
+        ) : null}
       </head>
       <body className="font-sans antialiased bg-background text-foreground transition-colors duration-500 min-h-screen" suppressHydrationWarning>
+        {process.env.NODE_ENV === 'development' ? (
+          <div
+            id="levelup-js-boot-hint"
+            hidden
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-background/95 p-6 text-center text-sm text-foreground"
+          >
+            <p id="levelup-js-boot-compiling" hidden className="max-w-md leading-relaxed">
+              Still loading dev bundles… first visit to Admin can take up to a minute while webpack compiles.
+              Use <code className="font-mono">http://127.0.0.1:3000</code> (not{' '}
+              <code className="font-mono">localhost</code>) if the page never finishes loading.
+            </p>
+            <p id="levelup-js-boot-stale" hidden className="max-w-md leading-relaxed">
+              App scripts did not load (stale dev build). Stop other <code className="font-mono">next dev</code>{' '}
+              processes, run <code className="font-mono">npm run dev:reset</code>, then hard-refresh (
+              <kbd className="font-mono">Ctrl+Shift+R</kbd>) at{' '}
+              <code className="font-mono">http://127.0.0.1:3000</code>.
+            </p>
+          </div>
+        ) : null}
         <div
           id="arcade-backdrop-host"
           className="arcade-animated-site-bg no-print pointer-events-none fixed inset-0 min-h-0 w-full overflow-visible"

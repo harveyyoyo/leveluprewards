@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Plus, Printer } from 'lucide-react';
 import { useAppContext } from '@/components/AppProvider';
-import { Coupon as CouponPreview } from '@/components/Coupon';
-import { PrinterReminderCallout } from '@/components/PrinterReminderCallout';
+import { Coupon as CouponPreview } from '@/components/coupons/Coupon';
+import { PrinterReminderCallout } from '@/components/coupons/PrinterReminderCallout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Helper } from '@/components/ui/helper';
@@ -38,8 +38,8 @@ import {
   generateUniqueCouponCodes,
   normalizeCouponPrintPageSize,
   type CouponPrintPageSize,
-} from '@/lib/couponPrint';
-import { buildRedemptionPrintNote } from '@/lib/couponRedemptionRules';
+} from '@/lib/coupons/couponPrint';
+import { buildRedemptionPrintNote } from '@/lib/coupons/couponRedemptionRules';
 import {
   remainingTeacherBudgetPoints,
   resolveTeacherBudgetPeriod,

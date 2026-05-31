@@ -1,8 +1,8 @@
 import { doc, getDoc, type Firestore } from 'firebase/firestore';
 import { lookupStudentId } from '@/lib/db/lookup';
-import { isCouponScanCode, normalizeCouponCodeInput } from '@/lib/couponScanCode';
-import { isPrizeScanCode } from '@/lib/prizeScanCode';
-import { loadCouponSnapshot } from '@/lib/couponCache';
+import { isCouponScanCode, normalizeCouponCodeInput } from '@/lib/coupons/couponScanCode';
+import { isPrizeScanCode } from '@/lib/prizes/prizeScanCode';
+import { loadCouponSnapshot } from '@/lib/coupons/couponCache';
 
 export type ScanMismatchAlert = {
   title: string;

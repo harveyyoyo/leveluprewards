@@ -2,7 +2,7 @@ import type { User } from 'firebase/auth';
 
 import type { LoginResult } from '@/lib/loginResult';
 import { isAllowedDeveloperGoogleUser } from '@/lib/developerAccess';
-import { isGoogleSignedInUser } from '@/lib/googleSchoolAccess';
+import { isGoogleSignedInUser } from '@/lib/google/googleSchoolAccess';
 
 /**
  * Trusted Google accounts (developer email allowlist) may provision school admin

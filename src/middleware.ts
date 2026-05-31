@@ -57,7 +57,7 @@ function applySecurityHeaders(response: NextResponse) {
     "img-src 'self' blob: data: https://*.googleapis.com https://*.googleusercontent.com https://firebasestorage.googleapis.com",
     "connect-src 'self' http://127.0.0.1:* http://localhost:* https://*.cloudfunctions.net https://*.googleapis.com https://*.firebaseio.com https://firebaseinstallations.googleapis.com https://identitytoolkit.googleapis.com wss://*.firebaseio.com",
     "media-src 'self' blob:",
-    "frame-src 'self' https://*.firebaseapp.com https://accounts.google.com",
+    "frame-src 'self' https://leveluprewards.app https://*.leveluprewards.app https://*.firebaseapp.com https://accounts.google.com",
     "object-src 'none'",
     "base-uri 'self'",
   ].join('; ');

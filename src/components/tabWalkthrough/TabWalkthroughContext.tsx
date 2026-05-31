@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { getAdminTabWalkthrough, getTeacherTabWalkthrough } from '@/lib/tabWalkthrough';
-import { TabWalkthroughWizard } from '@/components/TabWalkthroughWizard';
+import { TabWalkthroughWizard } from '@/components/admin/TabWalkthroughWizard';
 
 type TabWalkthroughContextValue = {
   scope: 'admin' | 'teacher';

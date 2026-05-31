@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback, useMemo, RefObject } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, Suspense, RefObject } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { format } from 'date-fns';
@@ -9,24 +9,27 @@ import { useKioskAiFunAndVoucherIdleActive } from '@/hooks/useKioskAiFunAndVouch
 import { useKioskBackendWarmup } from '@/hooks/useKioskBackendWarmup';
 import { usePrizeAiFunAudienceCacheReset } from '@/hooks/usePrizeAiFunAudienceCacheReset';
 import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
+import { preloadBarcodeScanStack } from '@/lib/barcodeCameraScan';
+import { syncKioskBarcodeCameraWarm } from '@/lib/barcodeCameraSession';
+import { readKioskLoginTab } from '@/lib/kiosk/kioskSessionPrefs';
 import { useSettings } from '@/components/providers/SettingsProvider';
-import { PrinterReminderCallout } from '@/components/PrinterReminderCallout';
+import { PrinterReminderCallout } from '@/components/coupons/PrinterReminderCallout';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirestore, useFirebase, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, limit, doc, where, getDocs, updateDoc, addDoc } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
-import { SchoolGate } from '@/components/SchoolGate';
+import { SchoolGate } from '@/components/auth/SchoolGate';
 import dynamic from 'next/dynamic';
-import type { StudentFoundMeta } from '@/components/StudentScanner';
-import { LevelUpKioskLogo } from '@/components/LevelUpKioskLogo';
-import { KioskSponsorBanner } from '@/components/KioskSponsorBanner';
+import type { StudentFoundMeta } from '@/components/student/StudentScanner';
+import { LevelUpKioskLogo } from '@/components/logos/LevelUpKioskLogo';
+import { KioskSponsorBanner } from '@/components/kiosk/KioskSponsorBanner';
 import { KioskWedgeCameraAssist } from '@/components/kiosk/KioskWedgeCameraAssist';
 
 // ~32 KB (plus @vladmandic/face-api on the face tab). Load only when the
 // kiosk actually needs to scan a student.
 const StudentScanner = dynamic(
   () =>
-    import('@/components/StudentScanner')
+    import('@/components/student/StudentScanner')
       .then((m) => m.StudentScanner)
       .catch((err) => {
         if (typeof window !== 'undefined' && (err.message?.includes('Loading chunk') || err.name === 'ChunkLoadError')) {
@@ -42,10 +45,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import type { Student, Prize, HistoryItem, Class, House, LibraryItem, PrizeAiFunReward, Category } from '@/lib/types';
-import { computeDaysOverdue, getLibraryPolicyFromSettings } from '@/lib/libraryPolicy';
+import { computeDaysOverdue, getLibraryPolicyFromSettings } from '@/lib/library/libraryPolicy';
 import { StudentLibraryCheckoutsCard } from '@/components/student-kiosk/StudentLibraryCheckoutsCard';
 import { StudentKioskThemeButton } from '@/components/student-kiosk/StudentKioskThemeButton';
-import { StudentKioskProfileExtras } from '@/components/student-kiosk/StudentKioskProfileExtras';
+import {
+  StudentKioskEmojiBadge,
+  StudentKioskProfileExtras,
+} from '@/components/student-kiosk/StudentKioskProfileExtras';
 import { StudentKioskActivityPreview } from '@/components/student-kiosk/StudentKioskActivityPreview';
 import { StudentActivityList } from '@/components/student-kiosk/StudentActivityList';
 import { StudentPrizeShopCard } from '@/components/student-kiosk/StudentPrizeShopCard';
@@ -81,6 +87,7 @@ import {
   Clock,
   Gift,
   Ticket,
+  GraduationCap,
   CheckCircle2,
   LogOut,
   Printer,
@@ -88,8 +95,8 @@ import {
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { GoogleFontLoader } from '@/components/GoogleFontLoader';
-import { Balloons, BirthdayHat, Confetti } from '@/components/BirthdayFX';
+import { GoogleFontLoader } from '@/components/themes/GoogleFontLoader';
+import { Balloons, BirthdayHat, Confetti } from '@/components/themes/BirthdayFX';
 
 import { Label } from '@/components/ui/label';
 import {
@@ -114,13 +121,14 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Helper } from '@/components/ui/helper';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StudentGoalsCard } from '@/components/goals/StudentGoalsCard';
-import { EarnedBadgesShowcase } from '@/components/EarnedBadgesShowcase';
+import { EarnedBadgesShowcase } from '@/components/badges/EarnedBadgesShowcase';
 import { useStudentKioskSession } from '@/components/providers/StudentKioskSessionProvider';
-import { FaceMismatchBanner } from '@/components/FaceMismatchBanner';
+import { FaceMismatchBanner } from '@/components/student/FaceMismatchBanner';
 import { appearanceVarsForSurface } from '@/lib/appearance';
-import { STUDENT_KIOSK_REQUEST_EXIT_EVENT } from '@/lib/studentKiosk';
-import { studentSeesWelcomeBackOverlay, studentSeesWelcomePage } from '@/lib/studentWelcome';
-import { prizeIsListed, studentSeesPrizeByTeachers } from '@/lib/prizeUtils';
+import { STUDENT_KIOSK_REQUEST_EXIT_EVENT } from '@/lib/students/studentKiosk';
+import { setStudentKioskSignedIn } from '@/lib/students/studentLayoutChrome';
+import { studentSeesWelcomeBackOverlay, studentSeesWelcomePage } from '@/lib/students/studentWelcome';
+import { prizeIsListed, studentSeesPrizeByTeachers } from '@/lib/prizes/prizeUtils';
 import { prizeAppearsInRewardsShop, resolveAiFunApiMode, withUnifiedAiFunPrize } from '@/lib/aiJokePrize';
 import { floorRaffleFullTickets, parseRafflePointsPerTicket } from '@/lib/raffleTickets';
 import {
@@ -128,15 +136,15 @@ import {
   isAiSurpriseTextRecentlySeen,
   rememberAiSurprise,
   type AiSurpriseKind,
-} from '@/lib/prizeAiFunClientStorage';
-import { acrosticFirstNameFromStudent, buildFallbackAcrostic } from '@/lib/prizeAiFunAcrostic';
-import { requestPrizeAiFunSurprise } from '@/lib/prizeAiFunRequest';
-import { prizeAiFunAgeBandKey, studentAgeYearsFromBirthday } from '@/lib/studentAiFunAge';
+} from '@/lib/prizes/prizeAiFunClientStorage';
+import { acrosticFirstNameFromStudent, buildFallbackAcrostic } from '@/lib/prizes/prizeAiFunAcrostic';
+import { requestPrizeAiFunSurprise } from '@/lib/prizes/prizeAiFunRequest';
+import { prizeAiFunAgeBandKey, studentAgeYearsFromBirthday } from '@/lib/students/studentAiFunAge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuthFetch } from '@/lib/authFetch';
-import { WelcomeOverlay } from '@/components/WelcomeOverlay';
-import { StudentKioskTransitionFlash } from '@/components/StudentKioskTransitionFlash';
-import { isPillarOn } from '@/lib/productPillars';
+import { WelcomeOverlay } from '@/components/welcome/WelcomeOverlay';
+import { StudentKioskTransitionFlash } from '@/components/student/StudentKioskTransitionFlash';
+import { isPillarOn, isStudentRewardsUiOn } from '@/lib/productPillars';
 import {
   StudentKioskWarmBackdrop,
   StudentKioskRewardRail,
@@ -144,14 +152,16 @@ import {
   StudentKioskLogoutControls,
   studentKioskCenterStackClass,
   StudentKioskMorePrizesButton,
+  StudentKioskMoreActivityButton,
   StudentKioskMobileRewardsGrid,
 } from '@/components/student-kiosk/StudentKioskRedeemUI';
-import { getStudentPointTypeTotals } from '@/lib/studentPointTypes';
+import { StudentKioskFadeScrollPane } from '@/components/student-kiosk/StudentKioskFadeScrollPane';
+import { getStudentPointTypeTotals } from '@/lib/students/studentPointTypes';
 import {
   COUPON_TRASH_REMINDER,
   couponRedeemStudentMessage,
   requestCouponRedeemCompliment,
-} from '@/lib/couponRedeemCompliment';
+} from '@/lib/coupons/couponRedeemCompliment';
 
 const STUDENT_TRANSITION_MIN_VISIBLE_MS = 650;
 const STUDENT_TRANSITION_EXIT_MS = 320;
@@ -254,15 +264,20 @@ function StudentDashboardInner({
   const { functions, auth } = useFirebase();
   const { toast } = useToast();
   const { settings } = useSettings();
-  const { kioskAiFunActive, kioskVoucherActive, markKioskRewardsActivity } = useKioskAiFunAndVoucherIdleActive(
+  const { kioskAiFunActive, markKioskRewardsActivity } = useKioskAiFunAndVoucherIdleActive(
     settings.kioskAiFunIdleOffSec,
-    settings.kioskVoucherIdleOffSec,
     isKioskLocked,
   );
+  const kioskAutoLogoutOn = settings.kioskAutoLogoutEnabled !== false;
   const kioskAiFunInShop = settings.enablePrizeAiSurprise === true && kioskAiFunActive;
-  const showCameraCoupon =
+  const loginScanEnabled = settings.kioskLoginTabScanEnabled !== false;
+  const explicitCouponCamera =
     settings.kioskCouponRedemptionCameraEnabled === true &&
     settings.kioskCouponRedemptionManualEnabled === false;
+  const kioskPrefersCameraLogin = readKioskLoginTab(schoolId) === 'camera';
+  /** Camera coupons only when Scan tab is the active kiosk preference, or explicitly enabled in settings. */
+  const showCameraCoupon =
+    explicitCouponCamera || (loginScanEnabled && kioskPrefersCameraLogin);
   const showManualCoupon = !showCameraCoupon && settings.kioskCouponRedemptionManualEnabled !== false;
   const couponSectionEnabled = showManualCoupon || showCameraCoupon;
   const libraryScanHint =
@@ -388,6 +403,7 @@ function StudentDashboardInner({
   const [couponCode, setCouponCode] = useState('');
   const [flyPointsValue, setFlyPointsValue] = useState<number | null>(null);
   const [flyCompliment, setFlyCompliment] = useState<string | null>(null);
+  const [flyPointsReason, setFlyPointsReason] = useState<string | null>(null);
   const flyDismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [celebrationMessage, setCelebrationMessage] = useState<string | null>(null);
   const celebrationQueueRef = useRef<string[]>([]);
@@ -427,6 +443,7 @@ function StudentDashboardInner({
     flyDismissTimerRef.current = setTimeout(() => {
       setFlyPointsValue(null);
       setFlyCompliment(null);
+      setFlyPointsReason(null);
       setShowRedeem(false);
       flyDismissTimerRef.current = null;
     }, ms);
@@ -517,10 +534,10 @@ function StudentDashboardInner({
     }
     const timerId = window.setTimeout(() => setLogoutTimer((t) => t - 1), 1000);
     return () => window.clearTimeout(timerId);
-  }, [isKioskLocked, logoutTimer, onDone, toast]);
+  }, [isKioskLocked, kioskAutoLogoutOn, logoutTimer, onDone, toast]);
 
   useEffect(() => {
-    if (isKioskLocked) return;
+    if (isKioskLocked || !kioskAutoLogoutOn) return;
     const onActivity = () => resetLogoutTimer();
     const events: (keyof WindowEventMap)[] = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'pointerdown', 'wheel', 'scroll'];
     for (const ev of events) {
@@ -531,19 +548,32 @@ function StudentDashboardInner({
         window.removeEventListener(ev, onActivity);
       }
     };
-  }, [isKioskLocked, resetLogoutTimer]);
+  }, [isKioskLocked, kioskAutoLogoutOn, resetLogoutTimer]);
 
   const [hasCameraPermission, setHasCameraPermission] = useState(true);
 
   const couponCameraScannerOn = showRedeem && showCameraCoupon;
 
-  const { videoRef, hasCameraPermission: hookHasPermission } = useBarcodeScanner(
+  useEffect(() => {
+    if (loginScanEnabled || showCameraCoupon) preloadBarcodeScanStack();
+    syncKioskBarcodeCameraWarm({
+      loginScan: false,
+      couponCamera: showCameraCoupon,
+    });
+  }, [loginScanEnabled, showCameraCoupon]);
+
+  const { videoRef, hasCameraPermission: hookHasPermission, zoom: cameraZoom, setZoom: setCameraZoom, scanStatus } = useBarcodeScanner(
     couponCameraScannerOn,
     (code) => handleRedeemCoupon(code),
     (err) => {
       setHasCameraPermission(false);
       toast({ variant: 'destructive', title: 'Camera Error', description: err });
-    }
+    },
+    {
+      cameraEnabled: showCameraCoupon,
+      keepCameraWarm: showCameraCoupon,
+      showScanFeedback: true,
+    },
   );
 
   useEffect(() => {
@@ -613,7 +643,7 @@ function StudentDashboardInner({
     })();
   }, [settings.payAttendance, settings.enableClassSignIn, student, schoolId, functions, toast, playSound]);
  
-  // --- Special Occasions (Birthday & School Special Day) ---
+  // --- Birthday bonus points (when enabled in school settings) ---
   useEffect(() => {
     if (!student || !schoolId || !functions) return;
     
@@ -633,16 +663,6 @@ function StudentDashboardInner({
             totalAward += settings.birthdayPointsAmount || 0;
             descriptions.push(`Happy Birthday! 🎂 (+${settings.birthdayPointsAmount} pts)`);
             newLastAwarded.birthday = todayFull;
-        }
-    }
-
-    // 2. Special Day Check
-    if (settings.enableSpecialDayPoints && settings.specialDayDate) {
-        if (settings.specialDayDate === todayMD && lastAwarded.specialDay !== todayFull) {
-            totalAward += settings.specialDayPointsAmount || 0;
-            const label = settings.specialDayLabel || 'Special Day';
-            descriptions.push(`${label}! ⭐ (+${settings.specialDayPointsAmount} pts)`);
-            newLastAwarded.specialDay = todayFull;
         }
     }
 
@@ -675,7 +695,6 @@ function StudentDashboardInner({
     todayInSchoolTz.full,
     todayInSchoolTz.md,
     settings.enableBirthdayPoints,
-    settings.enableSpecialDayPoints,
     schoolId,
     functions,
     playSound,
@@ -721,7 +740,7 @@ function StudentDashboardInner({
     // 1. Check Library Item first (if enabled)
     if (settings.payLibrary !== false && firestore && schoolId) {
       try {
-        const { performLibraryCheckoutOrReturn } = await import('@/lib/libraryOperations');
+        const { performLibraryCheckoutOrReturn } = await import('@/lib/library/libraryOperations');
         const result = await performLibraryCheckoutOrReturn(firestore, schoolId, student.id, code, {
           policy: libraryPolicy,
           functions,
@@ -799,6 +818,7 @@ function StudentDashboardInner({
         animationKey.current += 1;
         setFlyCompliment(compliment);
         setFlyPointsValue(points);
+        setFlyPointsReason(category);
         scheduleFlyDismiss(complimentsOn && compliment ? 3200 : 1800);
         if (settings.enableGoals && schoolId && firestore) {
           void import('@/lib/goalsProgress').then((m) =>
@@ -874,7 +894,6 @@ function StudentDashboardInner({
       let ticketPayload: typeof prizeTicketData = null;
       if (
         prize.offerPrintTicketOnRedeem === true &&
-        kioskVoucherActive &&
         activityId &&
         redeemedAt &&
         typeof totalCost === 'number'
@@ -907,7 +926,7 @@ function StudentDashboardInner({
       if (prize.aiFunReward && schoolId && settings.enablePrizeAiSurprise === true && kioskAiFunActive) {
         const aiCooldownOk = Date.now() - lastAiSurpriseCallRef.current > 10_000;
         if (!aiCooldownOk) {
-          if (ticketPayload && kioskVoucherActive) setPrizeTicketData(ticketPayload);
+          if (ticketPayload) setPrizeTicketData(ticketPayload);
         } else {
           lastAiSurpriseCallRef.current = Date.now();
           pendingPrizeTicketAfterAiRef.current = ticketPayload;
@@ -969,7 +988,7 @@ function StudentDashboardInner({
             }
           })();
         }
-      } else if (ticketPayload && kioskVoucherActive) {
+      } else if (ticketPayload) {
         setPrizeTicketData(ticketPayload);
       }
       setConfirmingPrize(null);
@@ -983,7 +1002,7 @@ function StudentDashboardInner({
     } finally {
       setIsRedeemingPrize(false);
     }
-  }, [authFetch, confirmingFunKind, confirmingPrize, playSound, redeemPrize, resetLogoutTimer, schoolId, settings.defaultStudentTheme, settings.enableStudentThemes, settings.enablePrizeAiSurprise, settings.enableStudentEmojiOnPrizeTickets, settings.enableGoals, student, toast, firestore, kioskAiFunActive, kioskVoucherActive]);
+  }, [authFetch, confirmingFunKind, confirmingPrize, playSound, redeemPrize, resetLogoutTimer, schoolId, settings.defaultStudentTheme, settings.enableStudentThemes, settings.enablePrizeAiSurprise, settings.enableStudentEmojiOnPrizeTickets, settings.enableGoals, student, toast, firestore, kioskAiFunActive]);
 
   const handlePrintPrizeTicket = useCallback(() => {
     if (!prizeTicketData) return;
@@ -1100,6 +1119,7 @@ function StudentDashboardInner({
   }, [student?.earnedBadges, badges]);
 
   const portalRaffleTickets = useMemo(() => {
+    if (!isStudentRewardsUiOn(settings)) return null;
     if (!settings.enableWeeklyRaffle) return null;
     const { isGeneralRaffle, pointsPerTicket } = parseRafflePointsPerTicket(settings.rafflePointsPerTicket);
     if (isGeneralRaffle || pointsPerTicket < 1) return null;
@@ -1109,6 +1129,7 @@ function StudentDashboardInner({
       equalOddsNote: !!settings.raffleOneEntryPerStudent,
     };
   }, [
+    settings.payRewards,
     settings.enableWeeklyRaffle,
     settings.rafflePointsPerTicket,
     settings.raffleOneEntryPerStudent,
@@ -1232,12 +1253,26 @@ function StudentDashboardInner({
     <StudentKioskProfileExtras
       birthdayToday={birthdayToday}
       studentHouse={studentHouse}
-      customEmojiUrl={student.customEmojiUrl}
-      themeEmoji={effectiveTheme?.emoji}
       welcomeStylesHref={schoolId ? `/${schoolId}/student/welcome` : null}
       showWelcomeStyles={studentSeesWelcomePage(settings, student)}
       themed={!!effectiveTheme}
     />
+  );
+
+  const headerEmojiBadge = (
+    <div className="flex shrink-0 flex-col items-center gap-1">
+      <StudentKioskEmojiBadge customEmojiUrl={student.customEmojiUrl} themed={!!effectiveTheme} />
+      {schoolId && settings.enableStudentThemes !== false ? (
+        <StudentKioskThemeButton
+          schoolId={schoolId}
+          student={student}
+          classLabel={studentClassLabel}
+          themed={!!effectiveTheme}
+          primaryForeground={primaryForeground}
+          layout="inline"
+        />
+      ) : null}
+    </div>
   );
 
   const wedgeDemoCameraActive =
@@ -1338,6 +1373,11 @@ function StudentDashboardInner({
               <div className="animate-fly-up text-4xl md:text-6xl font-black tracking-widest text-emerald-400 drop-shadow-[0_0_14px_rgba(52,211,153,0.75)]">
                 +{flyPointsValue} PTS
               </div>
+              {flyPointsReason ? (
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 text-2xl md:text-4xl font-black tracking-widest uppercase text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.85)] max-w-[28rem] leading-tight">
+                  {flyPointsReason}
+                </div>
+              ) : null}
               {flyCompliment ? (
                 <p className="animate-in fade-in slide-in-from-bottom-2 duration-500 text-sm md:text-base font-bold text-amber-100 drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)] max-w-sm leading-snug">
                   {flyCompliment}
@@ -1358,47 +1398,50 @@ function StudentDashboardInner({
         )}
 
         <StudentKioskTopBar
-          student={student}
-          points={student.points ?? 0}
-          themed={!!effectiveTheme}
-          primaryForeground={primaryForeground}
-          photoDisplayMode={settings.photoDisplayMode}
-          trailingActions={
-            <div className="flex flex-col items-end gap-2">
-              {settings.enableBadges && headerBadges.length > 0 ? (
-                <div className="flex flex-wrap items-center justify-end gap-1">
-                  {headerBadges.map((b) => (
-                    <div
-                      key={b.id}
-                      className="flex h-6 w-6 items-center justify-center rounded-full border border-border/50 bg-card/80 shadow-sm"
-                      title={b.name}
-                    >
-                      <DynamicIcon
-                        name={b.icon}
-                        className="h-3.5 w-3.5"
-                        style={b.accentColor ? { color: b.accentColor } : undefined}
-                      />
-                    </div>
-                  ))}
-                  {totalUniqueBadges > headerBadges.length ? (
-                    <span className="text-[9px] font-bold uppercase tracking-widest opacity-60">
-                      +{totalUniqueBadges - headerBadges.length}
-                    </span>
-                  ) : null}
-                </div>
-              ) : null}
-              <StudentKioskLogoutControls
-                themed={{ active: !!effectiveTheme }}
-                primaryForeground={primaryForeground}
-                isKioskLocked={isKioskLocked}
-                logoutTimer={logoutTimer}
-                onLogout={handleManualLogout}
-              />
-            </div>
-          }
+            student={student}
+            points={student.points ?? 0}
+            themed={!!effectiveTheme}
+            primaryForeground={primaryForeground}
+            photoDisplayMode={settings.photoDisplayMode}
+            nameExtras={headerEmojiBadge}
+            trailingActions={
+              <div className="flex flex-col items-end gap-2">
+                {settings.enableBadges && headerBadges.length > 0 ? (
+                  <div className="flex flex-wrap items-center justify-end gap-1">
+                    {headerBadges.map((b) => (
+                      <div
+                        key={b.id}
+                        className="flex h-6 w-6 items-center justify-center rounded-full border border-border/50 bg-card/80 shadow-sm"
+                        title={b.name}
+                      >
+                        <DynamicIcon
+                          name={b.icon}
+                          className="h-3.5 w-3.5"
+                          style={b.accentColor ? { color: b.accentColor } : undefined}
+                        />
+                      </div>
+                    ))}
+                    {totalUniqueBadges > headerBadges.length ? (
+                      <span className="text-[9px] font-bold uppercase tracking-widest opacity-60">
+                        +{totalUniqueBadges - headerBadges.length}
+                      </span>
+                    ) : null}
+                  </div>
+                ) : null}
+                <StudentKioskLogoutControls
+                  themed={{ active: !!effectiveTheme }}
+                  primaryForeground={primaryForeground}
+                  isKioskLocked={isKioskLocked}
+                  autoLogoutEnabled={kioskAutoLogoutOn}
+                  logoutTimer={logoutTimer}
+                  sessionTimeoutSec={settings.kioskSessionTimeoutSec ?? 10}
+                  onLogout={handleManualLogout}
+                />
+              </div>
+            }
         />
         {student.nickname?.trim() ? (
-          <div className="flex w-full shrink-0 flex-wrap items-center gap-2 px-0.5">
+          <div className="mt-2 flex w-full shrink-0 flex-wrap items-center gap-2 px-0.5">
             <p
               className="truncate text-[10px] font-bold uppercase tracking-[0.2em] opacity-60"
               style={{ color: effectiveTheme ? 'var(--theme-page-text)' : undefined }}
@@ -1407,7 +1450,6 @@ function StudentDashboardInner({
             </p>
           </div>
         ) : null}
-
 
         <div className="relative z-10 flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
         <div
@@ -1429,22 +1471,19 @@ function StudentDashboardInner({
           <div
             className={cn(
               'grid min-h-0 w-full min-w-0 flex-1 gap-4 overflow-hidden xl:gap-5',
-              'grid-cols-1 lg:grid-cols-[minmax(260px,300px)_minmax(0,1fr)_minmax(200px,240px)] lg:items-stretch lg:content-start',
+              'grid-cols-1 lg:grid-cols-[minmax(0,12.5rem)_minmax(0,1fr)_minmax(0,12.5rem)] lg:items-stretch',
               '[@media(max-height:760px)]:gap-2',
             )}
           >
           {/* Left prize rail (desktop) */}
-          <aside className="order-2 hidden min-h-0 min-w-0 flex-col gap-3 overflow-hidden lg:order-1 lg:flex">
+          <aside className="order-2 hidden min-h-0 min-w-0 flex-col gap-2 overflow-hidden lg:order-1 lg:flex lg:max-w-[12.5rem]">
             <p
               className="shrink-0 text-center text-xs font-black uppercase tracking-[0.2em] opacity-80 sm:text-sm"
               style={effectiveTheme ? { color: 'var(--theme-page-text)' } : undefined}
             >
               Eligible prizes
             </p>
-            <div
-              ref={rewardGridRef}
-              className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overflow-x-hidden pr-0.5 scroll-pb-2"
-            >
+            <StudentKioskFadeScrollPane themed={!!effectiveTheme} contentRef={rewardGridRef}>
               {prizesLoading
                 ? [...Array(4)].map((_, i) => (
                     <Skeleton key={i} className="min-h-[15rem] w-full shrink-0 rounded-2xl" />
@@ -1463,7 +1502,7 @@ function StudentDashboardInner({
                       }}
                     />
                   ))}
-            </div>
+            </StudentKioskFadeScrollPane>
             <StudentKioskMorePrizesButton
               themed={{ active: !!effectiveTheme }}
               primaryForeground={primaryForeground}
@@ -1476,7 +1515,7 @@ function StudentDashboardInner({
           {/* Center: redeem coupon (primary focus) */}
           <div
             className={cn(
-              'order-1 flex min-h-0 flex-col gap-3 lg:order-2 lg:justify-center [@media(max-height:760px)]:gap-2',
+              'order-1 flex min-h-0 min-w-0 flex-col gap-3 px-4 sm:px-6 lg:order-2 lg:min-h-full lg:justify-center lg:px-8 lg:py-[clamp(0.75rem,6vh,3rem)] [@media(max-height:760px)]:gap-2',
               studentKioskCenterStackClass,
             )}
           >
@@ -1492,6 +1531,9 @@ function StudentDashboardInner({
             onRedeemCoupon={() => void handleRedeemCoupon()}
             videoRef={videoRef}
             hasCameraPermission={hasCameraPermission}
+            cameraZoom={cameraZoom}
+            onCameraZoomChange={setCameraZoom}
+            scanStatus={scanStatus}
           />
 
             <EarnedBadgesShowcase
@@ -1503,28 +1545,39 @@ function StudentDashboardInner({
 
           </div>
 
-          <aside className="order-3 hidden min-h-0 min-w-0 flex-col gap-3 overflow-hidden lg:flex">
-            {schoolId ? (
-              <StudentKioskThemeButton
-                schoolId={schoolId}
-                student={student}
-                classLabel={studentClassLabel}
+          <aside className="order-3 hidden min-h-0 min-w-0 flex-col gap-2 overflow-hidden lg:order-3 lg:flex lg:max-w-[12.5rem]">
+            <p
+              className="shrink-0 text-center text-xs font-black uppercase tracking-[0.2em] opacity-80 sm:text-sm"
+              style={effectiveTheme ? { color: 'var(--theme-page-text)' } : undefined}
+            >
+              Other info
+            </p>
+            <StudentKioskFadeScrollPane themed={!!effectiveTheme}>
+              {profileExtrasBlock}
+              <StudentKioskPointCategoriesPanel
                 themed={!!effectiveTheme}
+                totals={pointTypeTotals}
+                footer={portalRaffleFooter}
               />
-            ) : null}
-            {profileExtrasBlock}
-            <StudentKioskPointCategoriesPanel
-              themed={!!effectiveTheme}
-              totals={pointTypeTotals}
-              footer={portalRaffleFooter}
-            />
+              {schoolId ? (
+                <StudentKioskActivityPreview
+                  schoolId={schoolId}
+                  studentId={student.id}
+                  themed={!!effectiveTheme}
+                  variant="sidebar"
+                  showFooterCta={false}
+                  onViewAll={() => {
+                    playSound('click');
+                    setActivityDialogOpen(true);
+                  }}
+                />
+              ) : null}
+            </StudentKioskFadeScrollPane>
             {schoolId ? (
-              <StudentKioskActivityPreview
-                schoolId={schoolId}
-                studentId={student.id}
-                themed={!!effectiveTheme}
-                variant="sidebar"
-                onViewAll={() => {
+              <StudentKioskMoreActivityButton
+                themed={{ active: !!effectiveTheme }}
+                primaryForeground={primaryForeground}
+                onClick={() => {
                   playSound('click');
                   setActivityDialogOpen(true);
                 }}
@@ -1533,14 +1586,12 @@ function StudentDashboardInner({
           </aside>
 
           <div className="order-4 flex min-h-0 min-w-0 flex-col gap-2 overflow-hidden lg:hidden [@media(max-height:760px)]:gap-1.5">
-            {schoolId ? (
-              <StudentKioskThemeButton
-                schoolId={schoolId}
-                student={student}
-                classLabel={studentClassLabel}
-                themed={!!effectiveTheme}
-              />
-            ) : null}
+            <p
+              className="shrink-0 text-center text-xs font-black uppercase tracking-[0.2em] opacity-80 sm:text-sm"
+              style={effectiveTheme ? { color: 'var(--theme-page-text)' } : undefined}
+            >
+              Other info
+            </p>
             {profileExtrasBlock}
             <StudentKioskPointCategoriesPanel
               themed={!!effectiveTheme}
@@ -1553,7 +1604,18 @@ function StudentDashboardInner({
                 studentId={student.id}
                 themed={!!effectiveTheme}
                 variant="sidebar"
+                showFooterCta={false}
                 onViewAll={() => {
+                  playSound('click');
+                  setActivityDialogOpen(true);
+                }}
+              />
+            ) : null}
+            {schoolId ? (
+              <StudentKioskMoreActivityButton
+                themed={{ active: !!effectiveTheme }}
+                primaryForeground={primaryForeground}
+                onClick={() => {
                   playSound('click');
                   setActivityDialogOpen(true);
                 }}
@@ -1562,7 +1624,8 @@ function StudentDashboardInner({
             <p className="shrink-0 text-center text-xs font-black uppercase tracking-[0.2em] text-muted-foreground sm:text-sm">
               Eligible prizes
             </p>
-            <div className="grid min-h-0 flex-1 grid-cols-2 gap-4 overflow-y-auto pb-2">
+            <StudentKioskFadeScrollPane themed={!!effectiveTheme} className="min-h-[12rem]">
+              <div className="grid grid-cols-2 gap-3">
               {prizesLoading
                 ? [...Array(6)].map((_, i) => (
                     <Skeleton key={`m-${i}`} className="min-h-[15rem] w-full shrink-0 rounded-2xl" />
@@ -1604,7 +1667,8 @@ function StudentDashboardInner({
                   </p>
                 </div>
               ) : null}
-            </div>
+              </div>
+            </StudentKioskFadeScrollPane>
             <StudentKioskMorePrizesButton
               themed={{ active: !!effectiveTheme }}
               primaryForeground={primaryForeground}
@@ -1892,7 +1956,25 @@ function StudentDashboardInner({
   );
 }
 
-export default function StudentLoginPage() {
+function StudentKioskPageFallback() {
+  const { settings } = useSettings();
+  const animBackdrop = globalAnimatedBackdropActive(settings);
+  return (
+    <div
+      className={cn(
+        'min-h-screen flex items-center justify-center p-8',
+        animBackdrop ? 'bg-transparent' : 'bg-background',
+      )}
+    >
+      <div className="text-center space-y-4">
+        <Loader2 className="w-8 h-8 animate-spin mx-auto text-muted-foreground" />
+        <p className="text-muted-foreground font-medium animate-pulse">Loading kiosk…</p>
+      </div>
+    </div>
+  );
+}
+
+function StudentLoginPage() {
   const { loginState, isInitialized, schoolId, login, logout, syncStatus } = useAppContext();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -1910,6 +1992,11 @@ export default function StudentLoginPage() {
   const { data: appConfig } = useDoc<{ appLogoUrl?: string }>(appConfigDocRef);
 
   const { activeStudentId, setActiveStudentId, handleDone, loginMeta, setLoginMeta } = useStudentKioskSession();
+
+  useEffect(() => {
+    setStudentKioskSignedIn(Boolean(activeStudentId));
+    return () => setStudentKioskSignedIn(false);
+  }, [activeStudentId]);
 
   useKioskBackendWarmup({
     enabled:
@@ -2167,6 +2254,31 @@ export default function StudentLoginPage() {
     </div>;
   }
 
+  if (!isStudentRewardsUiOn(settings)) {
+    return (
+      <div
+        className={cn(
+          'min-h-screen flex flex-col items-center justify-center gap-4 p-8 text-center',
+          animBackdrop ? 'bg-transparent' : 'bg-background',
+        )}
+      >
+        <GraduationCap className="h-10 w-10 text-muted-foreground" aria-hidden />
+        <div className="max-w-md space-y-2">
+          <h1 className="text-xl font-black">Student kiosk is off</h1>
+          <p className="text-sm text-muted-foreground">
+            The Rewards product is not enabled for this school. Turn on levelup rewards in Settings →
+            Product pillars, or use the staff portal for classroom tools.
+          </p>
+        </div>
+        {schoolId ? (
+          <Button asChild variant="outline">
+            <Link href={`/${schoolId}/portal`}>Back to portal</Link>
+          </Button>
+        ) : null}
+      </div>
+    );
+  }
+
   if (activeStudentId) {
     return (
       <>
@@ -2255,7 +2367,14 @@ export default function StudentLoginPage() {
   );
 }
 
-
+/** `useSearchParams()` must sit under Suspense or dev error recovery can loop with “missing required error components”. */
+export default function StudentLoginPageRoute() {
+  return (
+    <Suspense fallback={<StudentKioskPageFallback />}>
+      <StudentLoginPage />
+    </Suspense>
+  );
+}
 
 
 

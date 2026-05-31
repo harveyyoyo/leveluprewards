@@ -4,6 +4,10 @@ import type { Auth } from 'firebase-admin/auth';
 import type { ServiceAccount } from 'firebase-admin/app';
 import { firebaseConfig } from '@/firebase/config';
 
+type FirebaseServiceAccountJson = ServiceAccount & {
+  private_key?: string;
+};
+
 function resolveAdminProjectId(): string | undefined {
   return (
     process.env.FIREBASE_ADMIN_PROJECT_ID ||
@@ -14,12 +18,31 @@ function resolveAdminProjectId(): string | undefined {
   );
 }
 
+export function normalizeServiceAccountForAdmin(
+  serviceAccount: ServiceAccount,
+): ServiceAccount {
+  const raw = serviceAccount as FirebaseServiceAccountJson;
+  if (typeof raw.private_key === 'string') {
+    return {
+      ...raw,
+      private_key: raw.private_key.replace(/\\n/g, '\n'),
+    } as ServiceAccount;
+  }
+  if (typeof raw.privateKey === 'string') {
+    return {
+      ...raw,
+      privateKey: raw.privateKey.replace(/\\n/g, '\n'),
+    };
+  }
+  return serviceAccount;
+}
+
 /** Supports `FIREBASE_SERVICE_ACCOUNT_KEY` JSON (same as backup/upload scripts). */
 function serviceAccountFromEnv(): ServiceAccount | null {
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT_KEY?.trim();
   if (!raw) return null;
   try {
-    return JSON.parse(raw) as ServiceAccount;
+    return normalizeServiceAccountForAdmin(JSON.parse(raw) as ServiceAccount);
   } catch {
     return null;
   }
@@ -30,7 +53,9 @@ function serviceAccountFromKeyFile(): ServiceAccount | null {
   const path = join(process.cwd(), 'serviceAccountKey.json');
   if (!existsSync(path)) return null;
   try {
-    return JSON.parse(readFileSync(path, 'utf8')) as ServiceAccount;
+    return normalizeServiceAccountForAdmin(
+      JSON.parse(readFileSync(path, 'utf8')) as ServiceAccount,
+    );
   } catch {
     return null;
   }
@@ -61,7 +86,7 @@ export async function getFirebaseAdminAuth(): Promise<Auth> {
     if (serviceAccount) {
       initializeApp({
         credential: cert(serviceAccount),
-        projectId: serviceAccount.projectId || projectId,
+        projectId: projectId || serviceAccount.projectId,
       });
     } else if (clientEmail && privateKey && projectId) {
       initializeApp({

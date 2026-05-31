@@ -4,7 +4,7 @@ import { Book, AlertTriangle, Calendar } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import type { LibraryItem } from '@/lib/types';
-import { computeDaysOverdue, formatDueDate } from '@/lib/libraryPolicy';
+import { computeDaysOverdue, formatDueDate } from '@/lib/library/libraryPolicy';
 
 /**
  * Student portal "My Books" card – shows the student's currently

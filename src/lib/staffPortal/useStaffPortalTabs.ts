@@ -85,7 +85,7 @@ export function useStaffPortalTabs(options: UseStaffPortalTabsOptions): UseStaff
         mainTabs: main,
         addMoreTabs: [],
         allTabValues: main.map((t) => t.value),
-        defaultTab: staffPortalDefaultTab(role),
+        defaultTab: staffPortalDefaultTab(role, settings),
         coreTabs: main,
         addOnTabDefs: [],
       };
@@ -102,7 +102,7 @@ export function useStaffPortalTabs(options: UseStaffPortalTabsOptions): UseStaff
         mainTabs: main,
         addMoreTabs: addMore,
         allTabValues: allDefs.map((t) => t.value),
-        defaultTab: staffPortalDefaultTab(role),
+        defaultTab: staffPortalDefaultTab(role, settings),
         coreTabs: core,
         addOnTabDefs: addOnDefs,
       };
@@ -126,7 +126,7 @@ export function useStaffPortalTabs(options: UseStaffPortalTabsOptions): UseStaff
       mainTabs: main,
       addMoreTabs: addMore,
       allTabValues: allDefs.map((t) => t.value),
-      defaultTab: staffPortalDefaultTab(role),
+      defaultTab: staffPortalDefaultTab(role, settings),
       coreTabs: core,
       addOnTabDefs: addOnDefs,
     };

@@ -11,9 +11,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge as UiBadge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn, getStudentNickname } from '@/lib/utils';
-import { EarnedBadgesShowcase } from '@/components/EarnedBadgesShowcase';
+import { EarnedBadgesShowcase } from '@/components/badges/EarnedBadgesShowcase';
 import { StudentGoalsCard } from '@/components/goals/StudentGoalsCard';
-import { getStudentPointTypeTotals } from '@/lib/studentPointTypes';
+import { getStudentPointTypeTotals } from '@/lib/students/studentPointTypes';
 import { StudentPortalMyBooksCard } from './StudentPortalMyBooksCard';
 import { StudentPortalMyHouseCard } from './StudentPortalMyHouseCard';
 

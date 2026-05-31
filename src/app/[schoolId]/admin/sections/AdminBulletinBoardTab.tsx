@@ -16,7 +16,13 @@ import {
   ArrowUpRight,
   Settings2,
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  StaffPortalSectionCard,
+  StaffPortalSectionCardContent,
+  StaffPortalSectionCardHeader,
+  StaffPortalSectionCardTitle,
+} from '@/components/staff/StaffPortalSection';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -185,13 +191,13 @@ export function AdminBulletinBoardTab({
 
   return (
     <>
-      <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden">
-        <CardHeader className="py-6 flex flex-row items-start justify-between gap-4">
+      <StaffPortalSectionCard className="w-full overflow-hidden">
+        <StaffPortalSectionCardHeader className="py-6 flex flex-row items-start justify-between gap-4">
           <div className="min-w-0">
             <Helper content="Configure the board here, then open the full-screen display (opens in a new tab). Staff-facing board; not shown on the student kiosk.">
-              <CardTitle className="flex items-center gap-2">
+              <StaffPortalSectionCardTitle className="flex items-center gap-2">
                 <Megaphone className="w-5 h-5 text-primary" /> Bulletin Board
-              </CardTitle>
+              </StaffPortalSectionCardTitle>
             </Helper>
           </div>
           <div className="flex flex-wrap items-center gap-2 shrink-0">
@@ -202,8 +208,8 @@ export function AdminBulletinBoardTab({
               </Link>
             </Button>
           </div>
-        </CardHeader>
-        <CardContent>
+        </StaffPortalSectionCardHeader>
+        <StaffPortalSectionCardContent>
           <div className="space-y-4 mb-6">
             <div className="w-full rounded-2xl border bg-muted/10 p-4">
               <div className="flex items-center gap-2 mb-3">
@@ -527,8 +533,8 @@ export function AdminBulletinBoardTab({
               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </StaffPortalSectionCardContent>
+      </StaffPortalSectionCard>
 
       {/* Creation / Editing Incentive Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>

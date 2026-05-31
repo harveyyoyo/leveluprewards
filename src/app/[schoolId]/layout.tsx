@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { SchoolSessionGate } from '@/components/SchoolSessionGate';
+import { SchoolSessionGate } from '@/components/auth/SchoolSessionGate';
 
 /** Next.js 14: sync params. Next.js 15+: params may be a Promise — normalize both. */
 type SchoolRouteParams =

@@ -13,6 +13,7 @@ export function StudentKioskActivityPreview({
   onViewAll,
   className,
   variant = 'center',
+  showFooterCta = true,
 }: {
   schoolId: string;
   studentId: string;
@@ -21,6 +22,7 @@ export function StudentKioskActivityPreview({
   className?: string;
   /** `sidebar` = right column under categories; `center` = redeem stack. */
   variant?: 'center' | 'sidebar';
+  showFooterCta?: boolean;
 }) {
   return (
     <button
@@ -62,12 +64,14 @@ export function StudentKioskActivityPreview({
           maxItems={3}
         />
       </div>
-      <p
-        className="mt-2 text-center text-[10px] font-bold uppercase tracking-widest opacity-70"
-        style={themed ? { color: 'var(--theme-text)' } : undefined}
-      >
-        Tap for full activity
-      </p>
+      {showFooterCta ? (
+        <p
+          className="mt-2 text-center text-[10px] font-bold uppercase tracking-widest opacity-70"
+          style={themed ? { color: 'var(--theme-text)' } : undefined}
+        >
+          Tap for full activity
+        </p>
+      ) : null}
     </button>
   );
 }

@@ -16,7 +16,7 @@ import { httpsCallable } from 'firebase/functions';
 import { doc, getDoc, getDocFromServer, onSnapshot, type DocumentReference, type DocumentData, type DocumentSnapshot } from 'firebase/firestore';
 import { schoolPublicDocRef } from '@/lib/schoolPublic';
 import { getReadableErrorMessage } from '@/lib/errorMessage';
-import { loginErr, loginOk, messageFromVerifySchoolAccessError, type LoginResult } from '@/lib/loginResult';
+import { loginErr, loginOk, type LoginResult } from '@/lib/loginResult';
 import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
 import { APP_NAME } from '@/lib/appBranding';
 import {
@@ -28,7 +28,10 @@ import {
 import { sanitizeInternalNextPath } from '@/lib/auth/internalNextRedirect';
 import { canBypassSchoolAdminPasscode } from '@/lib/adminGoogleAccess';
 import { isAllowedDeveloperGoogleUser } from '@/lib/developerAccess';
-import { isStudentKioskRoute } from '@/lib/studentKioskRoute';
+import { isGoogleSignedInUser } from '@/lib/google/googleSchoolAccess';
+import { refreshGoogleIdToken } from '@/lib/google/googleAuthSession';
+import { verifySchoolAccessViaApi } from '@/lib/auth/verifySchoolAccessClient';
+import { isStudentKioskRoute } from '@/lib/students/studentKioskRoute';
 import { verifyStaffDeskLogin } from '@/lib/staffDeskLogin';
 
 export type SyncStatus = 'synced' | 'syncing' | 'offline' | 'error';
@@ -353,6 +356,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     useLayoutEffect(() => {
         setIsMounted(true);
+        if (typeof window !== 'undefined') {
+            (window as Window & { __LEVELUP_APP_MOUNTED__?: boolean }).__LEVELUP_APP_MOUNTED__ = true;
+            document.getElementById('levelup-js-boot-hint')?.remove();
+        }
     }, []);
 
     /** If client JS is slow or hydration stalls, do not block the shell forever. */
@@ -833,6 +840,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         );
                     }
 
+                    await refreshGoogleIdToken(auth.currentUser);
+
                     // Listing `schools` in Firestore requires `isDeveloper()` (UID in appConfig/global.developerUids).
                     // addDeveloperMe merges the current Firebase user's UID into that allow-list.
                     let uid = auth.currentUser?.uid ?? null;
@@ -883,25 +892,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         'No Firebase session yet. Refresh the page and try again.',
                     );
                 }
-                try {
-                    const verifyAccess = httpsCallable(functions, 'verifySchoolAccessPasscode');
-                    await withCallableTimeout(
-                        verifyAccess({
-                            schoolId: lowerSchoolId,
-                            passcode: credentials.passcode?.trim() || '',
-                        }),
-                        'School sign-in timed out. Check your connection and try again.',
-                    );
-                } catch (e) {
-                    console.error('School access login failed', e);
-                    const timedOut =
-                        e instanceof Error &&
-                        e.message === 'School sign-in timed out. Check your connection and try again.';
-                    return loginErr(
-                        timedOut
-                            ? e.message
-                            : messageFromVerifySchoolAccessError(e, 'Invalid School ID or passcode.'),
-                    );
+                const passcodeTrimmed = credentials.passcode?.trim() || '';
+                if (passcodeTrimmed.length === 0 && isGoogleSignedInUser(auth.currentUser)) {
+                    await refreshGoogleIdToken(auth.currentUser);
+                }
+                const verifyResult = await verifySchoolAccessViaApi(auth, lowerSchoolId, passcodeTrimmed, functions);
+                if (!verifyResult.ok) {
+                    console.error('School access login failed:', verifyResult.message);
+                    return loginErr(verifyResult.message);
                 }
                 setSchoolId(lowerSchoolId);
                 setLoginState('school');
@@ -929,13 +927,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 }
                 try {
                     if (credentials.passcode && credentials.passcode.trim()) {
-                        try {
-                            const verifyAccess = httpsCallable(functions, 'verifySchoolAccessPasscode');
-                            await verifyAccess({ schoolId: lowerSchoolId, passcode: credentials.passcode.trim() });
-                        } catch (e) {
-                            return loginErr(
-                                messageFromVerifySchoolAccessError(e, 'Invalid school access passcode.'),
-                            );
+                        const verifyResult = await verifySchoolAccessViaApi(
+                            auth,
+                            lowerSchoolId,
+                            credentials.passcode.trim(),
+                            functions,
+                        );
+                        if (!verifyResult.ok) {
+                            return loginErr(verifyResult.message);
                         }
                     }
                     await establishStudentKioskSession(lowerSchoolId);
@@ -956,13 +955,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 if (type === 'admin' && passcodeTrimmed.length === 0 && !googleAdminBypass) {
                     return loginErr('Enter the admin passcode to continue.');
                 }
+                if (googleAdminBypass) {
+                    await refreshGoogleIdToken(auth.currentUser);
+                }
                 try {
-                    // 1. Call the function to set the role on the backend
-                    const verify = httpsCallable(functions, 'verifySchoolPasscode');
-                    await verify({
-                        schoolId: lowerSchoolId,
-                        passcode: passcodeTrimmed,
-                    });
+                    // 1. Call the function to set the role on the backend.
+                    // Local dev can have a broken Admin service account while deployed callables still work.
+                    // Keep this owner/developer bypass dev-only so production continues through the normal gate.
+                    if (
+                        process.env.NODE_ENV === 'development' &&
+                        googleAdminBypass &&
+                        passcodeTrimmed.length === 0 &&
+                        isAllowedDeveloperGoogleUser(auth.currentUser)
+                    ) {
+                        const addDeveloperMe = httpsCallable(functions, 'addDeveloperMe');
+                        await addDeveloperMe({});
+
+                        const startSupportSession = httpsCallable(functions, 'startDeveloperSupportSession');
+                        await startSupportSession({ schoolId: lowerSchoolId });
+                    } else {
+                        const verify = httpsCallable(functions, 'verifySchoolPasscode');
+                        await verify({
+                            schoolId: lowerSchoolId,
+                            passcode: passcodeTrimmed,
+                        });
+                    }
 
                     // 2. Poll the server to confirm the admin role is readable
                     const adminRoleRef = doc(firestore, 'schools', lowerSchoolId, 'roles_admin', auth.currentUser.uid);
@@ -1252,7 +1269,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!isMounted && !allowRenderBeforeMount) {
         return (
             <AuthContext.Provider value={value}>
-                <div className="min-h-screen flex items-center justify-center bg-background text-foreground p-6 text-center">
+                <div
+                    id="levelup-auth-boot-shell"
+                    className="min-h-screen flex flex-col items-center justify-center gap-3 bg-background text-foreground p-6 text-center"
+                >
                     <div className="animate-pulse text-primary font-bold text-xl uppercase tracking-tighter">
                         Loading {APP_NAME}…
                     </div>

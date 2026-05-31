@@ -46,6 +46,25 @@ const TEACHER_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
       },
     ],
   },
+  classroom: {
+    title: 'Classroom tab',
+    subtitle: 'Seating chart and quick awards',
+    steps: [
+      {
+        title: 'Run your class',
+        checklist: [
+          'Choose your class and open the seating chart or full-screen view.',
+          'Tap students to log quick awards for the session.',
+        ],
+      },
+      {
+        title: 'Room display',
+        checklist: [
+          'Use Room display to show the live chart on a classroom screen.',
+        ],
+      },
+    ],
+  },
   prizes: {
     title: 'Prizes tab',
     subtitle: 'Rewards your students can buy',

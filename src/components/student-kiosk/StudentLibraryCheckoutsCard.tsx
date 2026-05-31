@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import type { LibraryItem } from '@/lib/types';
-import { computeDaysOverdue, formatDueDate } from '@/lib/libraryPolicy';
+import { computeDaysOverdue, formatDueDate } from '@/lib/library/libraryPolicy';
 
 export function StudentLibraryCheckoutsCard({
   schoolId,

@@ -9,17 +9,15 @@ export function kioskRewardsIdleThresholdMs(idleOffSec: unknown): number {
 }
 
 /**
- * After the configured idle windows without pointer/keyboard activity on the kiosk,
- * AI Fun and redeem print-voucher offers are treated as off until the user interacts again.
- * When the kiosk is locked (stays signed in), extras stay available.
+ * After the configured idle window without pointer/keyboard activity on the kiosk,
+ * AI Fun is treated as off until the user interacts again.
+ * When the kiosk is locked (stays signed in), AI Fun stays available.
  */
 export function useKioskAiFunAndVoucherIdleActive(
   aiFunIdleOffSecSetting: number | undefined,
-  voucherIdleOffSecSetting: number | undefined,
   isKioskLocked: boolean,
 ): {
   kioskAiFunActive: boolean;
-  kioskVoucherActive: boolean;
   markKioskRewardsActivity: () => void;
 } {
   const [activityAt, setActivityAt] = useState(() => Date.now());
@@ -40,12 +38,10 @@ export function useKioskAiFunAndVoucherIdleActive(
 
   const now = Date.now();
   const aiFunThresholdMs = kioskRewardsIdleThresholdMs(aiFunIdleOffSecSetting);
-  const voucherThresholdMs = kioskRewardsIdleThresholdMs(voucherIdleOffSecSetting);
   void idleCheckSeq;
 
   return {
     kioskAiFunActive: isKioskLocked || now - activityAt < aiFunThresholdMs,
-    kioskVoucherActive: isKioskLocked || now - activityAt < voucherThresholdMs,
     markKioskRewardsActivity,
   };
 }
