@@ -40,7 +40,7 @@ export function applyClassroomWizardSettings(
 export function classroomPrefsFromDraft(draft: ClassroomSetupWizardDraft): ClassroomSeatingPrefs {
   return {
     ...DEFAULT_CLASSROOM_PREFS,
-    instantTap: draft.instantTap,
+    instantTap: true,
     defaultPoints: Math.max(1, draft.defaultPoints),
     defaultDescription: 'Quick award',
     design: draft.design,

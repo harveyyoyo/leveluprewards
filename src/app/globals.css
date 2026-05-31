@@ -3603,6 +3603,21 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
   animation: classroom-fx-burst-scoped ease-out forwards;
 }
 
+@keyframes classroom-fly-up-scoped {
+  from {
+    transform: scale(0.55) translateY(15%);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1.35) translateY(-85%);
+    opacity: 0;
+  }
+}
+
+.animate-classroom-fly-up-scoped {
+  animation: classroom-fly-up-scoped 1.2s ease-out forwards;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-classroom-fx-fall,
   .animate-classroom-fx-rise,
@@ -3611,7 +3626,8 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
   .animate-classroom-fx-fall-scoped,
   .animate-classroom-fx-rise-scoped,
   .animate-classroom-fx-twinkle-scoped,
-  .animate-classroom-fx-burst-scoped {
+  .animate-classroom-fx-burst-scoped,
+  .animate-classroom-fly-up-scoped {
     animation: none !important;
     opacity: 0 !important;
   }

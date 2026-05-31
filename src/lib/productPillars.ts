@@ -68,6 +68,22 @@ export function isClassroomOnlyMode(settings: PillarSettings | null | undefined)
   return isClassroomPillarOn(settings) && !isRewardsPillarOn(settings);
 }
 
+/** User-facing copy when Classroom is on but Rewards (student economy) is off. */
+export const CLASSROOM_SESSION_ONLY = {
+  /** Short banner in the seating chart */
+  bannerTitle: 'Class session mode',
+  bannerBody:
+    'LevelUp Rewards is off. Desk taps update today’s class session and the room display only — they do not change student point balances, coupons, or the kiosk.',
+  bannerHint:
+    'Use this when you want seating charts, behavior notes, and projector display without the prize shop. Turn on LevelUp Rewards in Settings → Product pillars to sync taps to student accounts.',
+  /** Admin / tab header */
+  tabBody:
+    'LevelUp Rewards is off. Teachers can use seating, behavior notes, and the room display. Quick awards show on desks for this session but do not update student balances until Rewards is enabled (Settings → Product pillars).',
+  /** Toast after a tap */
+  toastDescription:
+    'Saved for this class session and the room display only — not added to the student’s account. Enable LevelUp Rewards to sync balances.',
+} as const;
+
 /** Feature toggles that require a product pillar to be on. */
 const FEATURE_REQUIRES_PILLAR: Partial<Record<string, ProductPillarKey>> = {
   enableHomework: 'payHomework',

@@ -6,7 +6,7 @@ import { ClassroomPointsPanel } from '@/components/points/ClassroomPointsPanel';
 import { BehaviorTimelinePanel } from '@/components/classroom/BehaviorTimelinePanel';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { filterCategoriesForStaffPortal } from '@/lib/staffCategoryScope';
-import { isClassroomOnlyMode, isClassroomPillarOn } from '@/lib/productPillars';
+import { isClassroomOnlyMode, isClassroomPillarOn, CLASSROOM_SESSION_ONLY } from '@/lib/productPillars';
 import { ClassroomSetupWizardTrigger } from '@/app/[schoolId]/admin/sections/ClassroomSetupWizard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Helper } from '@/components/ui/helper';
@@ -93,9 +93,8 @@ export function StaffClassroomTab({
           </CardTitle>
         </Helper>
         {sessionOnly ? (
-          <p className="text-sm text-muted-foreground mt-2 max-w-2xl">
-            Rewards pillar is off — session tracking and room display only. Turn on levelup rewards in
-            Settings → Product pillars to sync awards to student balances.
+          <p className="text-sm text-muted-foreground mt-2 max-w-2xl leading-relaxed">
+            {CLASSROOM_SESSION_ONLY.tabBody}
           </p>
         ) : null}
       </CardHeader>

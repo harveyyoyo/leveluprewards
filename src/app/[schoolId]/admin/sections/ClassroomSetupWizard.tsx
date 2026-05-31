@@ -131,9 +131,7 @@ export function ClassroomSetupWizard({
       if (draft.enableParentView) summary.push('Parent portal enabled');
 
       saveClassroomPrefs(schoolId, 'admin', classroomPrefsFromDraft(draft));
-      summary.push(
-        `Quick awards: ${draft.defaultPoints} pts${draft.instantTap ? ' · instant tap on' : ''}`,
-      );
+      summary.push(`Quick awards: ${draft.defaultPoints} pts · instant tap`);
 
       if (draft.spotlightClassId) {
         const cls = sortedClasses.find((c) => c.id === draft.spotlightClassId);
@@ -259,18 +257,11 @@ export function ClassroomSetupWizard({
 
         {step === 2 && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between rounded-xl border p-4">
-              <div>
-                <p className="font-semibold text-sm">Instant tap</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  One tap on a desk awards default points with no menu.
-                </p>
-              </div>
-              <Switch
-                checked={draft.instantTap}
-                onCheckedChange={(v) => setDraft((d) => ({ ...d, instantTap: v }))}
-                aria-label="Instant tap awards"
-              />
+            <div className="rounded-xl border bg-muted/20 p-4">
+              <p className="font-semibold text-sm">Instant tap</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                One tap on a desk awards default points right away — no popup menu.
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="classroom-wizard-points" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">

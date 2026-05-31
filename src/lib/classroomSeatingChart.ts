@@ -9,6 +9,8 @@ export function normalizeClassroomDesign(design: ClassroomDesign): ClassroomDesi
 }
 
 export type ClassroomCelebrationEffect =
+  | 'flash'
+  | 'flyUp'
   | 'sparkles'
   | 'confetti'
   | 'hearts'
@@ -35,7 +37,7 @@ export type ClassroomSeatingPrefs = {
   defaultPoints: number;
   defaultDescription: string;
   quickAwards: ClassroomQuickAward[];
-  /** Tap once = default points immediately (no menu). */
+  /** Tap once = default points immediately (no menu). Always enabled. */
   instantTap: boolean;
   /** Show lifetime balance on each desk. */
   showPointBalances: boolean;
@@ -51,6 +53,8 @@ export type ClassroomSeatingPrefs = {
   frontAtBottom: boolean;
   /** Plays on the student desk when points are awarded. */
   celebrationEffect: ClassroomCelebrationEffect;
+  /** Internal — bumps when defaults change. */
+  prefsVersion?: number;
 };
 
 export const DEFAULT_CLASSROOM_QUICK_AWARDS: ClassroomQuickAward[] = [
@@ -59,6 +63,9 @@ export const DEFAULT_CLASSROOM_QUICK_AWARDS: ClassroomQuickAward[] = [
   { id: 'effort', label: 'Great effort', points: 15, description: 'Great effort' },
   { id: 'super', label: 'Superstar', points: 20, description: 'Superstar' },
 ];
+
+/** Bump when classroom tap/effect defaults change — triggers one-time localStorage migration. */
+export const CLASSROOM_PREFS_VERSION = 2;
 
 export const DEFAULT_CLASSROOM_PREFS: ClassroomSeatingPrefs = {
   autoAwardMs: 3000,
@@ -73,11 +80,37 @@ export const DEFAULT_CLASSROOM_PREFS: ClassroomSeatingPrefs = {
   correctionDescription: 'Behavior reminder',
   design: 'aurora',
   frontAtBottom: false,
-  celebrationEffect: 'sparkles',
+  celebrationEffect: 'flash',
+  prefsVersion: CLASSROOM_PREFS_VERSION,
 };
 
 const LAYOUT_PREFIX = 'levelup-classroom-layout:';
 const PREFS_PREFIX = 'levelup-classroom-prefs:';
+
+const VALID_CELEBRATION_EFFECTS: ClassroomCelebrationEffect[] = [
+  'flash',
+  'flyUp',
+  'sparkles',
+  'confetti',
+  'hearts',
+  'stars',
+  'fireworks',
+  'snow',
+];
+
+function normalizeCelebrationEffect(
+  effect: ClassroomCelebrationEffect | undefined,
+  migrated: boolean,
+): ClassroomCelebrationEffect {
+  if (migrated) {
+    if (effect && effect !== 'sparkles' && VALID_CELEBRATION_EFFECTS.includes(effect)) {
+      return effect;
+    }
+    return DEFAULT_CLASSROOM_PREFS.celebrationEffect;
+  }
+  if (effect && VALID_CELEBRATION_EFFECTS.includes(effect)) return effect;
+  return DEFAULT_CLASSROOM_PREFS.celebrationEffect;
+}
 
 function layoutKey(schoolId: string, scope: string, classId: string) {
   return `${LAYOUT_PREFIX}${schoolId}:${scope}:${classId}`;
@@ -126,14 +159,16 @@ export function loadClassroomPrefs(schoolId: string, scope: string): ClassroomSe
     const raw = localStorage.getItem(prefsKey(schoolId, scope));
     if (!raw) return DEFAULT_CLASSROOM_PREFS;
     const parsed = JSON.parse(raw) as Partial<ClassroomSeatingPrefs>;
-    return {
+    const parsedVersion = parsed.prefsVersion ?? 1;
+    const migrated = parsedVersion < CLASSROOM_PREFS_VERSION;
+    const prefs: ClassroomSeatingPrefs = {
       ...DEFAULT_CLASSROOM_PREFS,
       ...parsed,
       quickAwards:
         parsed.quickAwards?.length && parsed.quickAwards.every((q) => q.label && q.points > 0)
           ? parsed.quickAwards
           : DEFAULT_CLASSROOM_PREFS.quickAwards,
-      instantTap: parsed.instantTap ?? DEFAULT_CLASSROOM_PREFS.instantTap,
+      instantTap: true,
       showPointBalances: parsed.showPointBalances ?? DEFAULT_CLASSROOM_PREFS.showPointBalances,
       showSessionTotals: parsed.showSessionTotals ?? DEFAULT_CLASSROOM_PREFS.showSessionTotals,
       correctionPoints: parsed.correctionPoints ?? DEFAULT_CLASSROOM_PREFS.correctionPoints,
@@ -142,8 +177,13 @@ export function loadClassroomPrefs(schoolId: string, scope: string): ClassroomSe
         parsed.correctionDescription ?? DEFAULT_CLASSROOM_PREFS.correctionDescription,
       design: normalizeClassroomDesign(parsed.design ?? DEFAULT_CLASSROOM_PREFS.design),
       frontAtBottom: parsed.frontAtBottom ?? DEFAULT_CLASSROOM_PREFS.frontAtBottom,
-      celebrationEffect: parsed.celebrationEffect ?? DEFAULT_CLASSROOM_PREFS.celebrationEffect,
+      celebrationEffect: normalizeCelebrationEffect(parsed.celebrationEffect, migrated),
+      prefsVersion: CLASSROOM_PREFS_VERSION,
     };
+    if (migrated || parsed.instantTap === false || parsed.design === 'midnight') {
+      saveClassroomPrefs(schoolId, scope, prefs);
+    }
+    return prefs;
   } catch {
     return DEFAULT_CLASSROOM_PREFS;
   }

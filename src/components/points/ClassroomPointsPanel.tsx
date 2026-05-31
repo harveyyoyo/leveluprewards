@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { openClassroomFullscreenTab } from '@/lib/classroomPointsUrl';
 import { ClassroomScreenSetupPopover } from '@/components/points/ClassroomScreenSetupPopover';
-import { isClassroomPillarOn, isClassroomOnlyMode, isPillarOn } from '@/lib/productPillars';
+import { isClassroomPillarOn, isClassroomOnlyMode, isPillarOn, CLASSROOM_SESSION_ONLY } from '@/lib/productPillars';
 import { BehaviorNoteDialog } from '@/components/classroom/BehaviorNoteDialog';
 import {
   attendanceStatusForStudent,
@@ -61,6 +61,7 @@ import {
   type ClassroomSeatingLayout,
   type ClassroomSeatingPrefs,
   type ClassroomSessionTotals,
+  CLASSROOM_PREFS_VERSION,
   DEFAULT_CLASSROOM_PREFS,
 } from '@/lib/classroomSeatingChart';
 import {
@@ -346,7 +347,7 @@ export function ClassroomPointsPanel({
             title: isDeduct
               ? `−${magnitude} session (Rewards off)`
               : `+${magnitude} session (Rewards off)`,
-            description: 'Tracked for the room display only — enable Rewards to update balances.',
+            description: CLASSROOM_SESSION_ONLY.toastDescription,
           });
         }
         setAwardingId(null);
@@ -437,8 +438,10 @@ export function ClassroomPointsPanel({
   );
 
   const celebrateAtCell = useCallback(
-    (cellIndex: number) => {
-      playEffectAtCell(prefsRef.current.celebrationEffect ?? 'sparkles', cellIndex);
+    (cellIndex: number, points: number) => {
+      const effect = prefsRef.current.celebrationEffect ?? 'flash';
+      if (effect === 'flash') return;
+      playEffectAtCell(effect, cellIndex, points);
     },
     [playEffectAtCell],
   );
@@ -456,7 +459,7 @@ export function ClassroomPointsPanel({
       const { studentId, cellIndex } = pendingAward;
       setPendingAward(null);
       const ok = await runAward(studentId, points, description, cellIndex);
-      if (ok && points > 0) celebrateAtCell(cellIndex);
+      if (ok && points > 0) celebrateAtCell(cellIndex, points);
     },
     [pendingAward, clearAutoTimer, runAward, celebrateAtCell],
   );
@@ -483,7 +486,7 @@ export function ClassroomPointsPanel({
         prefsRef.current.defaultDescription,
         cellIndex,
       ).then((ok) => {
-        if (ok) celebrateAtCell(cellIndex);
+        if (ok) celebrateAtCell(cellIndex, prefsRef.current.defaultPoints);
       });
     }, remaining);
     return clearAutoTimer;
@@ -499,22 +502,9 @@ export function ClassroomPointsPanel({
       return;
     }
 
-    if (prefs.instantTap) {
-      void runAward(studentId, prefs.defaultPoints, prefs.defaultDescription, cellIndex).then((ok) => {
-        if (ok) celebrateAtCell(cellIndex);
-      });
-      return;
-    }
-
-    if (pendingAward?.studentId === studentId) {
-      confirmPendingAward(prefs.defaultPoints, prefs.defaultDescription);
-      return;
-    }
-    if (pendingAward) {
-      clearAutoTimer();
-      setPendingAward(null);
-    }
-    setPendingAward({ studentId, cellIndex, startedAt: Date.now() });
+    void runAward(studentId, prefs.defaultPoints, prefs.defaultDescription, cellIndex).then((ok) => {
+      if (ok) celebrateAtCell(cellIndex, prefs.defaultPoints);
+    });
   };
 
   const pickRandomStudent = useCallback(() => {
@@ -693,8 +683,13 @@ export function ClassroomPointsPanel({
   };
 
   const updatePrefs = (next: ClassroomSeatingPrefs) => {
-    setPrefs(next);
-    saveClassroomPrefs(schoolId, storageScope, next);
+    const normalized = {
+      ...next,
+      instantTap: true as const,
+      prefsVersion: CLASSROOM_PREFS_VERSION,
+    };
+    setPrefs(normalized);
+    saveClassroomPrefs(schoolId, storageScope, normalized);
   };
 
   const setDesign = (nextDesign: ClassroomDesign) => {
@@ -814,9 +809,15 @@ export function ClassroomPointsPanel({
   return (
     <div className={cn(classroomDesignShellClass(design, isFullscreen), isFullscreen && 'gap-2 p-1')}>
       {sessionOnly ? (
-        <p className="rounded-xl border border-amber-300/40 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-950 dark:bg-amber-950/30 dark:text-amber-100">
-          Session-only mode — taps update the room display, not student point balances.
-        </p>
+        <Helper content={CLASSROOM_SESSION_ONLY.bannerHint}>
+          <div
+            className="rounded-xl border border-amber-300/40 bg-amber-50 px-3 py-2.5 text-xs text-amber-950 dark:bg-amber-950/30 dark:text-amber-100"
+            role="status"
+          >
+            <p className="font-bold">{CLASSROOM_SESSION_ONLY.bannerTitle}</p>
+            <p className="mt-1 font-medium leading-snug opacity-95">{CLASSROOM_SESSION_ONLY.bannerBody}</p>
+          </div>
+        </Helper>
       ) : null}
       {isFullscreen ? (
         <ClassroomHeaderBrand
@@ -927,7 +928,7 @@ export function ClassroomPointsPanel({
 
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <ClassroomDesignSwitcher design={design} onDesignChange={setDesign} />
-          <ClassroomPrefsPopover prefs={prefs} onChange={updatePrefs} accentColor={accentColor} />
+          <ClassroomPrefsPopover prefs={prefs} onChange={updatePrefs} />
           <ClassroomIconButton design={design} title="Reset layout" onClick={resetLayout}>
             <RotateCcw className="h-4 w-4" />
           </ClassroomIconButton>
@@ -1087,7 +1088,7 @@ export function ClassroomPointsPanel({
                   />
                 )}
 
-                {isFlashing && flashCell && (
+                {isFlashing && flashCell && prefs.celebrationEffect !== 'flyUp' && (
                   <span className="pointer-events-none absolute -top-1 right-1 animate-bounce text-sm font-black text-emerald-600">
                     +{flashCell.points}
                   </span>
@@ -1107,6 +1108,7 @@ export function ClassroomPointsPanel({
                   <ClassroomEffectOverlay
                     effect={activeCelebration.effect}
                     runId={activeCelebration.runId}
+                    points={activeCelebration.points}
                   />
                 ) : null}
               </button>
@@ -1171,14 +1173,7 @@ export function ClassroomPointsPanel({
       {!editMode && !isFullscreen && (
         <p className="flex shrink-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-muted-foreground">
           <Sparkles className="h-3.5 w-3.5 shrink-0 text-primary" />
-          {prefs.instantTap ? (
-            <>Tap once = instant +{prefs.defaultPoints} (no menu).</>
-          ) : (
-            <>
-              Tap a student — menu auto-awards +{prefs.defaultPoints} after {prefs.autoAwardMs / 1000}s, or pick
-              a reason sooner.
-            </>
-          )}
+          <>Tap once = instant +{prefs.defaultPoints}.</>
           <span className="text-muted-foreground/70">
             · Shift+click behavior note · R random · Ctrl+U undo · Arrange to flip room
             {attendanceEnabled ? ' · Dot = today attendance' : ''}
@@ -1448,33 +1443,37 @@ function ClassroomAwardMenu({
 function ClassroomPrefsPopover({
   prefs,
   onChange,
-  accentColor,
 }: {
   prefs: ClassroomSeatingPrefs;
   onChange: (p: ClassroomSeatingPrefs) => void;
-  accentColor: string;
 }) {
-  const [draft, setDraft] = useState(prefs);
   const [open, setOpen] = useState(false);
 
-  useEffect(() => {
-    if (open) setDraft(prefs);
-  }, [open, prefs]);
-
-  const save = () => {
-    onChange({
-      ...draft,
-      autoAwardMs: Math.max(1000, Math.min(10000, draft.autoAwardMs)),
-      defaultPoints: Math.max(1, draft.defaultPoints),
-    });
-    setOpen(false);
-  };
+  const patchPrefs = useCallback(
+    (patch: Partial<ClassroomSeatingPrefs>) => {
+      onChange({
+        ...prefs,
+        ...patch,
+        instantTap: true,
+        autoAwardMs:
+          patch.autoAwardMs !== undefined
+            ? Math.max(1000, Math.min(10000, patch.autoAwardMs))
+            : prefs.autoAwardMs,
+        defaultPoints:
+          patch.defaultPoints !== undefined ? Math.max(1, patch.defaultPoints) : prefs.defaultPoints,
+        correctionPoints:
+          patch.correctionPoints !== undefined
+            ? Math.max(0, patch.correctionPoints)
+            : prefs.correctionPoints,
+      });
+    },
+    [onChange, prefs],
+  );
 
   const updateQuick = (index: number, patch: Partial<ClassroomQuickAward>) => {
-    setDraft((d) => ({
-      ...d,
-      quickAwards: d.quickAwards.map((q, i) => (i === index ? { ...q, ...patch } : q)),
-    }));
+    patchPrefs({
+      quickAwards: prefs.quickAwards.map((q, i) => (i === index ? { ...q, ...patch } : q)),
+    });
   };
 
   return (
@@ -1487,80 +1486,50 @@ function ClassroomPrefsPopover({
       <PopoverContent className="z-[250] max-h-[min(85vh,560px)] w-96 overflow-y-auto rounded-2xl" align="end">
         <p className="mb-1 text-sm font-black">Classroom settings</p>
         <p className="mb-4 text-xs text-muted-foreground">
-          How tapping students works, what the award menu shows, and desk display options.
+          Changes apply immediately. Default points, celebration effects, and desk display.
         </p>
         <div className="space-y-4">
           <div className="space-y-2 rounded-xl border bg-muted/20 p-3">
             <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">When you tap a student</p>
-            <label className="flex cursor-pointer items-start gap-2">
-              <Checkbox
-                className="mt-0.5"
-                checked={draft.instantTap}
-                onCheckedChange={(v) => setDraft((d) => ({ ...d, instantTap: v === true }))}
-              />
-              <span className="text-xs leading-snug">
-                <span className="font-semibold">Instant tap</span> — award default points immediately with no popup
-                menu.
-              </span>
-            </label>
-            {!draft.instantTap && (
-              <div>
-                <Label className="text-xs">Auto-award countdown (seconds)</Label>
-                <p className="mb-1 text-[11px] text-muted-foreground">
-                  If you open the menu and wait, this many seconds pass before default points are applied
-                  automatically.
-                </p>
-                <Input
-                  type="number"
-                  min={1}
-                  max={10}
-                  className="h-9 rounded-lg"
-                  value={draft.autoAwardMs / 1000}
-                  onChange={(e) =>
-                    setDraft((d) => ({
-                      ...d,
-                      autoAwardMs: Math.max(1, Number(e.target.value) || 3) * 1000,
-                    }))
-                  }
-                />
-              </div>
-            )}
+            <p className="text-xs leading-snug text-muted-foreground">
+              <span className="font-semibold text-foreground">Instant tap</span> — one tap awards default points
+              immediately. There is no popup menu.
+            </p>
             <div>
               <Label className="text-xs">Default points</Label>
               <p className="mb-1 text-[11px] text-muted-foreground">
-                Used for instant tap, auto-award, Class +N, and burst awards.
+                Used for instant tap, Class +N, and burst awards.
               </p>
               <Input
                 type="number"
                 min={1}
                 className="h-9 rounded-lg"
-                value={draft.defaultPoints}
+                value={prefs.defaultPoints}
                 onChange={(e) =>
-                  setDraft((d) => ({
-                    ...d,
-                    defaultPoints: Math.max(1, Number(e.target.value) || 5),
-                  }))
+                  patchPrefs({ defaultPoints: Math.max(1, Number(e.target.value) || 5) })
                 }
               />
             </div>
             <div>
               <Label className="text-xs">Celebration effect</Label>
               <p className="mb-1 text-[11px] text-muted-foreground">
-                Plays on the student&apos;s desk when points are awarded.
+                Optional extra animation on the desk. Simple flash is the default; Kiosk fly-up matches the student
+                +PTS animation.
               </p>
               <Select
-                value={draft.celebrationEffect}
+                value={prefs.celebrationEffect}
                 onValueChange={(v) =>
-                  setDraft((d) => ({
-                    ...d,
+                  patchPrefs({
                     celebrationEffect: v as ClassroomSeatingPrefs['celebrationEffect'],
-                  }))
+                  })
                 }
               >
                 <SelectTrigger className="h-9 rounded-lg text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="z-[350]" position="popper">
+                  <SelectItem value="flash">Simple flash</SelectItem>
+                  <SelectItem value="flyUp">Kiosk fly-up (+PTS)</SelectItem>
                   <SelectItem value="sparkles">Sparkles</SelectItem>
                   <SelectItem value="confetti">Confetti</SelectItem>
                   <SelectItem value="hearts">Hearts</SelectItem>
@@ -1577,8 +1546,8 @@ function ClassroomPrefsPopover({
             <label className="flex cursor-pointer items-start gap-2">
               <Checkbox
                 className="mt-0.5"
-                checked={draft.showPointBalances}
-                onCheckedChange={(v) => setDraft((d) => ({ ...d, showPointBalances: v === true }))}
+                checked={prefs.showPointBalances}
+                onCheckedChange={(v) => patchPrefs({ showPointBalances: v === true })}
               />
               <span className="text-xs leading-snug">
                 <span className="font-semibold">Point balances</span> — show each student&apos;s current total on
@@ -1588,8 +1557,8 @@ function ClassroomPrefsPopover({
             <label className="flex cursor-pointer items-start gap-2">
               <Checkbox
                 className="mt-0.5"
-                checked={draft.showSessionTotals}
-                onCheckedChange={(v) => setDraft((d) => ({ ...d, showSessionTotals: v === true }))}
+                checked={prefs.showSessionTotals}
+                onCheckedChange={(v) => patchPrefs({ showSessionTotals: v === true })}
               />
               <span className="text-xs leading-snug">
                 <span className="font-semibold">Session badges</span> — small +/− badge for points given today in
@@ -1599,16 +1568,17 @@ function ClassroomPrefsPopover({
           </div>
 
           <div className="space-y-2 rounded-xl border bg-muted/20 p-3">
-            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Award menu buttons</p>
+            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Quick award labels</p>
             <p className="text-[11px] text-muted-foreground">
-              Quick-pick shortcuts in the popup (label and points). Activity uses the label as the reason.
+              Shortcuts if you use the award menu elsewhere (label and points).
             </p>
-            {draft.quickAwards.map((q, i) => (
+            {prefs.quickAwards.map((q, i) => (
               <div key={q.id} className="grid grid-cols-[1fr_4rem] gap-1">
                 <Input
                   className="h-8 rounded-lg text-xs"
-                  value={q.label}
-                  onChange={(e) => updateQuick(i, { label: e.target.value })}
+                  defaultValue={q.label}
+                  key={`${q.id}-label-${q.label}`}
+                  onBlur={(e) => updateQuick(i, { label: e.target.value.trim() || q.label })}
                 />
                 <Input
                   type="number"
@@ -1629,37 +1599,29 @@ function ClassroomPrefsPopover({
           <div className="space-y-2 rounded-xl border bg-muted/20 p-3">
             <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Correction button</p>
             <p className="text-[11px] text-muted-foreground">
-              Optional deduct shortcut at the bottom of the award menu (e.g. reminder −2 pts).
+              Optional deduct shortcut (e.g. reminder −2 pts).
             </p>
             <div className="grid grid-cols-[1fr_4rem] gap-1">
               <Input
                 className="h-8 rounded-lg text-xs"
-                value={draft.correctionLabel}
-                onChange={(e) => setDraft((d) => ({ ...d, correctionLabel: e.target.value }))}
+                defaultValue={prefs.correctionLabel}
+                key={`correction-label-${prefs.correctionLabel}`}
+                onBlur={(e) =>
+                  patchPrefs({ correctionLabel: e.target.value.trim() || prefs.correctionLabel })
+                }
               />
               <Input
                 type="number"
                 min={0}
                 className="h-8 rounded-lg text-xs"
-                value={draft.correctionPoints}
+                value={prefs.correctionPoints}
                 onChange={(e) =>
-                  setDraft((d) => ({
-                    ...d,
-                    correctionPoints: Math.max(0, Number(e.target.value) || 0),
-                  }))
+                  patchPrefs({ correctionPoints: Math.max(0, Number(e.target.value) || 0) })
                 }
               />
             </div>
           </div>
         </div>
-        <Button
-          type="button"
-          className="mt-4 w-full rounded-xl font-bold"
-          style={{ backgroundColor: accentColor, color: '#fff' }}
-          onClick={save}
-        >
-          Save
-        </Button>
       </PopoverContent>
     </Popover>
   );

@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState, type ComponentType, type ReactNode } from 'react';
 import {
-  ChevronDown,
   Heart,
   LayoutGrid,
   Monitor,
@@ -12,7 +11,12 @@ import {
 } from 'lucide-react';
 import { cn, getStudentNickname } from '@/lib/utils';
 import type { Student } from '@/lib/types';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from '@/components/ui/select';
 
 import type { ClassroomDesign } from '@/lib/classroomSeatingChart';
 import { normalizeClassroomDesign } from '@/lib/classroomSeatingChart';
@@ -21,6 +25,7 @@ export type { ClassroomDesign };
 
 export type ClassroomEffect =
   | 'none'
+  | 'flyUp'
   | 'confetti'
   | 'sparkles'
   | 'hearts'
@@ -447,48 +452,28 @@ export function ClassroomDesignSwitcher({
   onDesignChange: (d: ClassroomDesign) => void;
 }) {
   const activeDesign = normalizeClassroomDesign(design);
-  const current = CLASSROOM_DESIGNS.find((d) => d.id === activeDesign) ?? CLASSROOM_DESIGNS[0];
 
   return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium shadow-sm transition-colors hover:bg-accent sm:text-sm"
-          title="Seating chart style"
-        >
-          <Palette className="h-4 w-4 text-primary" />
-          <span>{current.label}</span>
-          <ChevronDown className="h-4 w-4 text-muted-foreground" />
-        </button>
-      </PopoverTrigger>
-      <PopoverContent className="z-[250] w-72 p-3" align="end">
-        <p className="mb-1 text-sm font-semibold">Seating chart style</p>
-        <p className="mb-3 text-xs leading-snug text-muted-foreground">
-          Desk shapes, colors, and accents for this classroom chart. Light and dark mode come from your app
-          theme in profile settings — not here.
+    <Select value={activeDesign} onValueChange={(v) => onDesignChange(v as ClassroomDesign)}>
+      <SelectTrigger
+        className="h-auto w-auto gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium shadow-sm hover:bg-accent sm:text-sm [&>svg:last-child]:h-4 [&>svg:last-child]:w-4"
+        aria-label="Seating chart style"
+      >
+        <Palette className="h-4 w-4 shrink-0 text-primary" />
+        <span>Style</span>
+      </SelectTrigger>
+      <SelectContent className="z-[250] w-56" position="popper" align="end">
+        <p className="px-2 pb-2 pt-1 text-xs leading-snug text-muted-foreground">
+          Desk shapes and accents. App light/dark mode is in profile settings.
         </p>
-        <div className="space-y-1">
-          {CLASSROOM_DESIGNS.map((d) => (
-            <button
-              key={d.id}
-              type="button"
-              onClick={() => onDesignChange(d.id)}
-              className={cn(
-                'flex w-full items-start gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors',
-                d.id === activeDesign ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/60',
-              )}
-            >
-              <div className="flex-1">
-                <div className="font-semibold">{d.label}</div>
-                <div className="text-xs text-muted-foreground">{d.description}</div>
-              </div>
-              {d.id === activeDesign && <div className="mt-1.5 h-2 w-2 rounded-full bg-primary" />}
-            </button>
-          ))}
-        </div>
-      </PopoverContent>
-    </Popover>
+        {CLASSROOM_DESIGNS.map((d) => (
+          <SelectItem key={d.id} value={d.id} className="text-sm">
+            <span className="font-semibold">{d.label}</span>
+            <span className="text-xs text-muted-foreground"> — {d.description}</span>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 
@@ -516,12 +501,14 @@ function scopedParticleCount(effect: ClassroomEffect): number {
 export function ClassroomEffectOverlay({
   effect,
   runId,
+  points = 0,
 }: {
   effect: ClassroomEffect;
   runId: number;
+  points?: number;
 }) {
   const particles = useMemo((): FxParticle[] => {
-    if (effect === 'none') return [];
+    if (effect === 'none' || effect === 'flyUp') return [];
     const count = scopedParticleCount(effect);
     return Array.from({ length: count }, (_, i) => ({
       id: i,
@@ -537,6 +524,19 @@ export function ClassroomEffectOverlay({
   }, [effect, runId]);
 
   if (effect === 'none') return null;
+
+  if (effect === 'flyUp') {
+    return (
+      <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center overflow-hidden rounded-[inherit]">
+        <div
+          key={runId}
+          className="animate-classroom-fly-up-scoped text-center text-[clamp(0.55rem,2.2vmin,0.95rem)] font-black leading-none tracking-wider text-emerald-500 drop-shadow-[0_0_8px_rgba(52,211,153,0.75)]"
+        >
+          +{points} PTS
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="pointer-events-none absolute inset-0 z-10 overflow-hidden rounded-[inherit]">
@@ -652,14 +652,15 @@ export type ActiveClassroomCelebration = {
   effect: ClassroomEffect;
   cellIndex: number;
   runId: number;
+  points: number;
 };
 
 export function useClassroomCelebrationEffect() {
   const [active, setActive] = useState<ActiveClassroomCelebration | null>(null);
 
-  const playEffectAtCell = (effect: ClassroomEffect, cellIndex: number) => {
+  const playEffectAtCell = (effect: ClassroomEffect, cellIndex: number, points: number) => {
     if (effect === 'none') return;
-    setActive({ effect, cellIndex, runId: Date.now() });
+    setActive({ effect, cellIndex, runId: Date.now(), points });
   };
 
   useEffect(() => {
