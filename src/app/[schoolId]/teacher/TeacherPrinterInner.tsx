@@ -2179,13 +2179,13 @@ export function TeacherPrinterInner({
                     >
                         <Helper content={secretaryMode ? 'Generate coupon sheets for teachers to hand out. You cannot award points or edit prizes from here.' : 'Use Points to print coupon sheets from school categories, or open Manually Add or Deduct Points for direct changes without a printed coupon. Prizes, attendance, and reports are also here.'}>
                             <div>
-                                <h2 className="text-2xl font-bold tracking-tight" style={{ color: teacherAccent }}>
-                                    {secretaryMode ? 'Secretary - coupon printing' : 'Staff Portal — Teacher'}
+                                <h2 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+                                    {secretaryMode ? 'Secretary — coupon printing' : 'Teacher portal'}
                                 </h2>
-                                <p className="text-muted-foreground">
+                                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
                                     {secretaryMode
-                                        ? 'Create printable coupon batches using the school\'s incentive categories.'
-                                        : 'Same navigation as the admin portal, with only the tabs you need. Award points, manage your classes, and run reports.'}
+                                        ? 'Print coupon batches from your school\'s point categories.'
+                                        : 'Points, classes, prizes, and reports — pick a tab to get started.'}
                                 </p>
                                 {teacherName ? (
                                     <p className="text-sm text-muted-foreground mt-1">
@@ -2260,6 +2260,7 @@ export function TeacherPrinterInner({
                                     role="teacher"
                                     settings={settings}
                                     onGoToTab={setActiveTeacherTab}
+                                    displayName={teacherName}
                                 />
                                 </div>
                             </TeacherPortalTabPane>

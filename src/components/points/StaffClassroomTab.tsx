@@ -9,7 +9,7 @@ import { useAppContext } from '@/components/AppProvider';
 import { useFirebase } from '@/firebase';
 import { ensureDeveloperSchoolAccess } from '@/lib/classroom/ensureDeveloperSchoolAccess';
 import { isAllowedDeveloperGoogleUser } from '@/lib/developerAccess';
-import { buildClassroomSections } from '@/lib/classroom/classroomTabSections';
+import { buildClassroomSections, CLASSROOM_SEATING_SECTION_LABEL } from '@/lib/classroom/classroomTabSections';
 import { ClassroomPointsPanel } from '@/components/points/ClassroomPointsPanel';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { filterCategoriesForStaffPortal } from '@/lib/staffCategoryScope';
@@ -75,7 +75,10 @@ export function StaffClassroomTab({
   const classroomOn = isClassroomPillarOn(settings);
   const sessionOnly = isClassroomOnlyMode(settings);
   const isAdminVariant = variant === 'admin';
-  const canEditSetup = isAdminVariant;
+  /** Teachers and admins share classroom setup toggles when the pillar is on. */
+  const canEditClassroomSetup = classroomOn;
+  /** Turning on the Classroom pillar itself stays admin-only. */
+  const canEnableClassroomPillar = isAdminVariant;
   const parentPortalOn = settings.enableParentView === true;
   const principalTimelineOn = settings.enablePrincipalBehaviorTimeline === true;
   const roomDisplayOn = settings.enableClassroomRoomDisplay === true;
@@ -112,8 +115,8 @@ export function StaffClassroomTab({
   const seatingDescription = sessionOnly
     ? CLASSROOM_SESSION_ONLY.tabBody
     : roomDisplayOn
-      ? 'Tap students for quick awards, burst mode, room display, and live session totals on each desk.'
-      : 'Tap students for quick awards, burst mode, and live session totals on each desk.';
+      ? 'Tap students for quick awards, optional burst/class tools, room display, and live session totals on each desk.'
+      : 'Tap students for quick awards, optional burst/class tools, and live session totals on each desk.';
 
   if (!classroomOn) {
     return (
@@ -126,11 +129,11 @@ export function StaffClassroomTab({
         </CardHeader>
         <CardContent className="space-y-4 p-4 sm:p-6">
           <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-            {canEditSetup
+            {canEnableClassroomPillar
               ? 'Classroom Management is not enabled. Run the setup wizard to turn on seating charts and quick awards for teachers.'
               : 'Classroom Management is not enabled for your school yet. Ask a school administrator to turn it on.'}
           </p>
-          {canEditSetup ? (
+          {canEnableClassroomPillar ? (
             <ClassroomSetupWizardTrigger
               schoolId={schoolId}
               classes={sortedClasses}
@@ -147,9 +150,9 @@ export function StaffClassroomTab({
     <ClassroomSectionFrame
       title="Setup"
       description={
-        canEditSetup
-          ? 'Optional features for your school. When enabled, their section appears in the menu above for everyone.'
-          : 'These options are set by your school administrator. Teachers and admins see the same sections when a feature is on.'
+        canEditClassroomSetup
+          ? 'Optional features for your school. Turn sections on or off here — teachers and admins see the same tabs when a feature is enabled.'
+          : 'Classroom Management must be enabled before these options are available.'
       }
     >
       <div className="space-y-3">
@@ -165,7 +168,7 @@ export function StaffClassroomTab({
           <Switch
             id="enable-principal-timeline"
             checked={principalTimelineOn}
-            disabled={!canEditSetup}
+            disabled={!canEditClassroomSetup}
             onCheckedChange={(v) => updateSettings({ enablePrincipalBehaviorTimeline: v })}
           />
         </div>
@@ -182,7 +185,7 @@ export function StaffClassroomTab({
           <Switch
             id="enable-room-display"
             checked={roomDisplayOn}
-            disabled={!canEditSetup}
+            disabled={!canEditClassroomSetup}
             onCheckedChange={(v) => updateSettings({ enableClassroomRoomDisplay: v })}
           />
         </div>
@@ -198,7 +201,7 @@ export function StaffClassroomTab({
           <Switch
             id="enable-parent-view"
             checked={parentPortalOn}
-            disabled={!canEditSetup}
+            disabled={!canEditClassroomSetup}
             onCheckedChange={(v) => updateSettings({ enableParentView: v })}
           />
         </div>
@@ -207,7 +210,7 @@ export function StaffClassroomTab({
   );
 
   const seatingContent = (
-    <ClassroomSectionFrame title="Seating chart" icon={LayoutGrid} description={seatingDescription}>
+    <ClassroomSectionFrame title={CLASSROOM_SEATING_SECTION_LABEL} icon={LayoutGrid} description={seatingDescription}>
       <ClassroomPointsPanel
         schoolId={schoolId}
         students={deferredStudents}

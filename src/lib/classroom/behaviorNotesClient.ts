@@ -6,6 +6,7 @@ import {
   type CreateBehaviorNoteInput,
 } from '@/lib/db/behaviorNotes';
 import type { BehaviorNote } from '@/lib/types';
+import { parseBehaviorNoteCreatedAt } from '@/lib/classroom/behaviorNoteTime';
 
 export type SaveBehaviorNoteRequest = CreateBehaviorNoteInput & {
   schoolId: string;
@@ -63,6 +64,7 @@ export async function fetchBehaviorNotes(
   if (res.ok) {
     const notes = (data.notes ?? []).map((n) => ({
       ...n,
+      createdAt: parseBehaviorNoteCreatedAt(n.createdAt),
       visibleToParent: n.visibleToParent !== false,
     })) as BehaviorNote[];
     return { notes };

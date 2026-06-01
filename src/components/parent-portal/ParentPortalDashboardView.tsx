@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { format } from 'date-fns';
-import { Loader2, LogOut } from 'lucide-react';
+import { Loader2, LogOut, Calendar, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +12,11 @@ import {
   type ParentPortalDashboard,
 } from '@/lib/parentPortal/parentPortalClient';
 import { cn } from '@/lib/utils';
+import {
+  formatBehaviorNoteDate,
+  formatBehaviorNoteDateTime,
+  formatBehaviorNoteTime,
+} from '@/lib/classroom/behaviorNoteTime';
 
 export function ParentPortalDashboardView({
   schoolId,
@@ -163,15 +168,27 @@ export function ParentPortalDashboardView({
             <p className="text-sm text-muted-foreground">No notes shared with parents yet.</p>
           ) : (
             data.behaviorNotes.map((n, i) => (
-              <div key={`${n.createdAt}-${i}`} className="rounded-xl border bg-muted/20 p-3 text-sm">
-                <div className="flex justify-between gap-2 mb-1">
+              <div key={`${n.createdAt}-${i}`} className="rounded-xl border bg-muted/20 p-3 text-sm space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="font-semibold capitalize">{n.kind}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {n.createdAt ? format(n.createdAt, 'MMM d') : ''}
-                  </span>
                 </div>
+                {n.createdAt ? (
+                  <div
+                    className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground"
+                    title={formatBehaviorNoteDateTime(n.createdAt)}
+                  >
+                    <span className="inline-flex items-center gap-1.5 tabular-nums">
+                      <Calendar className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
+                      {formatBehaviorNoteDate(n.createdAt)}
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 tabular-nums font-medium text-foreground/80">
+                      <Clock className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
+                      {formatBehaviorNoteTime(n.createdAt)}
+                    </span>
+                  </div>
+                ) : null}
                 <p>{n.note}</p>
-                <p className="text-xs text-muted-foreground mt-1">{n.teacherName}</p>
+                <p className="text-xs text-muted-foreground">{n.teacherName}</p>
               </div>
             ))
           )}

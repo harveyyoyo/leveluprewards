@@ -6,24 +6,41 @@ import { useSettings } from '@/components/providers/SettingsProvider';
 import { staffPortalNavLayoutPatch } from '@/lib/staffPortal';
 import { cn } from '@/lib/utils';
 
+type StaffPortalNavLayout = 'top' | 'sidebar';
+
 type StaffPortalNavLayoutControlsProps = {
   /** Which portal layout this row controls. */
   target: 'admin' | 'teacher';
   disabled?: boolean;
   className?: string;
+  /** Controlled value (settings modal draft). */
+  value?: StaffPortalNavLayout;
+  /** Controlled change handler (settings modal draft). */
+  onChange?: (layout: StaffPortalNavLayout) => void;
 };
 
 export function StaffPortalNavLayoutControls({
   target,
   disabled = false,
   className,
+  value,
+  onChange,
 }: StaffPortalNavLayoutControlsProps) {
   const { settings, updateSettings } = useSettings();
   const layout =
-    target === 'teacher'
+    value ??
+    (target === 'teacher'
       ? (settings.teacherNavLayout ?? 'sidebar')
-      : (settings.adminNavLayout ?? 'sidebar');
+      : (settings.adminNavLayout ?? 'sidebar'));
   const sidebar = layout === 'sidebar';
+
+  const setLayout = (next: StaffPortalNavLayout) => {
+    if (onChange) {
+      onChange(next);
+      return;
+    }
+    updateSettings(staffPortalNavLayoutPatch(target, next));
+  };
 
   return (
     <div
@@ -40,7 +57,7 @@ export function StaffPortalNavLayoutControls({
         size="sm"
         variant={sidebar ? 'ghost' : 'default'}
         className="h-9 rounded-lg gap-1.5 px-3 text-xs font-bold"
-        onClick={() => updateSettings(staffPortalNavLayoutPatch(target, 'top'))}
+        onClick={() => setLayout('top')}
         aria-pressed={!sidebar}
         disabled={disabled}
       >
@@ -52,7 +69,7 @@ export function StaffPortalNavLayoutControls({
         size="sm"
         variant={sidebar ? 'default' : 'ghost'}
         className="h-9 rounded-lg gap-1.5 px-3 text-xs font-bold"
-        onClick={() => updateSettings(staffPortalNavLayoutPatch(target, 'sidebar'))}
+        onClick={() => setLayout('sidebar')}
         aria-pressed={sidebar}
         disabled={disabled}
       >

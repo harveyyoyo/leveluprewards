@@ -1,8 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { format } from 'date-fns';
-import { AlertTriangle, Loader2, RefreshCw, Smile, ThumbsDown } from 'lucide-react';
+import { AlertTriangle, Calendar, Clock, Loader2, RefreshCw, Smile, ThumbsDown } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,6 +9,12 @@ import type { BehaviorNote, BehaviorNoteKind } from '@/lib/types';
 import { BEHAVIOR_NOTE_SAVED_EVENT } from '@/lib/classroom/behaviorNoteEvents';
 import { useFirestore } from '@/firebase';
 import { fetchBehaviorNotes } from '@/lib/classroom/behaviorNotesClient';
+import { CLASSROOM_SEATING_SECTION_LABEL } from '@/lib/classroom/classroomTabSections';
+import {
+  formatBehaviorNoteDate,
+  formatBehaviorNoteDateTime,
+  formatBehaviorNoteTime,
+} from '@/lib/classroom/behaviorNoteTime';
 import { cn } from '@/lib/utils';
 
 export type BehaviorTimelineMode = 'behavior' | 'principal';
@@ -92,7 +97,7 @@ export function BehaviorTimelinePanel({
   const title = mode === 'behavior' ? 'Behavior notes' : 'Principal';
   const description =
     mode === 'behavior'
-      ? 'Notes you add from the seating chart (Shift+click or award menu → Behavior note). New entries appear here after you save.'
+      ? `Notes you add from ${CLASSROOM_SEATING_SECTION_LABEL} (Shift+click or award menu → Behavior note). New entries appear here after you save.`
       : 'School-wide log of behavior notes from all classes. Review positives, concerns, and incidents — separate from quick point awards.';
 
   const header = (
@@ -125,7 +130,7 @@ export function BehaviorTimelinePanel({
           <p className="font-bold text-foreground">How teachers add a note</p>
           <ol className="mt-1.5 list-decimal space-y-1 pl-4">
             <li>
-              On the <span className="font-semibold text-foreground">Seating chart</span> above,
+              On <span className="font-semibold text-foreground">{CLASSROOM_SEATING_SECTION_LABEL}</span>,
               <span className="font-semibold text-foreground"> Shift+click</span> a student (or turn on{' '}
               <span className="font-semibold text-foreground">Show award menu</span> in classroom settings (not quick
               select) and choose Behavior note).
@@ -175,10 +180,22 @@ export function BehaviorTimelinePanel({
                       Staff only
                     </Badge>
                   ) : null}
-                  <span className="ml-auto text-[11px] text-muted-foreground">
-                    {n.createdAt ? format(n.createdAt, 'MMM d, h:mm a') : ''}
-                  </span>
                 </div>
+                {n.createdAt ? (
+                  <div
+                    className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground"
+                    title={formatBehaviorNoteDateTime(n.createdAt)}
+                  >
+                    <span className="inline-flex items-center gap-1.5 tabular-nums">
+                      <Calendar className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
+                      {formatBehaviorNoteDate(n.createdAt)}
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 tabular-nums font-medium text-foreground/80">
+                      <Clock className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
+                      {formatBehaviorNoteTime(n.createdAt)}
+                    </span>
+                  </div>
+                ) : null}
                 <p className="text-sm leading-snug">{n.note}</p>
                 <p className="text-[11px] text-muted-foreground">
                   {n.teacherName}

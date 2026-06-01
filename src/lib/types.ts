@@ -439,6 +439,31 @@ export interface AttendanceLogEntry {
   teacherId?: string;
 }
 
+/** Student currently out on a bathroom pass (one doc per student). */
+export interface BathroomPassActive {
+  studentId: string;
+  studentName?: string;
+  classId?: string;
+  startedAt: number;
+  teacherId?: string;
+  teacherName?: string;
+}
+
+/** Completed bathroom trip for reporting. */
+export interface BathroomLogEntry {
+  id?: string;
+  studentId: string;
+  studentName?: string;
+  classId?: string;
+  startedAt: number;
+  returnedAt: number;
+  durationMs: number;
+  overLimit: boolean;
+  maxMinutes?: number;
+  teacherId?: string;
+  teacherName?: string;
+}
+
 export type RecordClassSignInReason =
   | 'recorded'
   | 'duplicate_same_session'

@@ -39,14 +39,14 @@ export function StaffPortalChrome({
 
   const defaultSubtitle =
     role === 'teacher'
-      ? 'Teacher tools — points, classes, prizes, and reports.'
+      ? 'Points, classes, prizes, and reports.'
       : role === 'secretary'
-        ? 'Print coupon sheets for teachers to hand out.'
-        : 'Manage students, classes, teachers, points, prizes and much more...';
+        ? 'Print coupon sheets for teachers.'
+        : 'Students, classes, points, prizes, and school settings.';
 
   const helperContent =
     role === 'teacher'
-      ? 'Teacher sign-in uses the same URL as school admin, but only your tabs are shown.'
+      ? 'Teachers sign in at the same URL as admin, with only teacher tabs shown.'
       : 'School admin portal.';
 
   const heading = title ?? portalHeading(role);
@@ -54,7 +54,7 @@ export function StaffPortalChrome({
   const resolvedSubtitle =
     subtitle ??
     (displayName && role === 'teacher'
-      ? `${defaultSubtitle} Signed in as ${displayName}.`
+      ? `Signed in as ${displayName}. ${defaultSubtitle}`
       : defaultSubtitle);
 
   return (
@@ -66,13 +66,10 @@ export function StaffPortalChrome({
     >
       <Helper content={helperContent}>
         <div>
-          <h2
-            className="text-2xl font-bold tracking-tight"
-            style={{ color: 'hsl(var(--primary))' }}
-          >
+          <h2 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
             {heading}
           </h2>
-          <p className="text-muted-foreground">{resolvedSubtitle}</p>
+          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{resolvedSubtitle}</p>
         </div>
       </Helper>
 

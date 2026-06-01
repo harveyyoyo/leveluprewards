@@ -156,12 +156,14 @@ function LayoutClientWrapperInner({
     const fullscreen = searchParams?.get('fullscreen') === '1';
     const isClassroomScreenPage =
       typeof pathname === 'string' && pathname.includes('/classroom-screen');
+    const isSmartScreenPage =
+      typeof pathname === 'string' && pathname.includes('/smart-screen');
     const isFullscreenSpecialPage =
       isClassroomScreenPage ||
+      isSmartScreenPage ||
       (fullscreen &&
         (pathname?.includes('/hall-of-fame') ||
           pathname?.includes('/bulletin-board') ||
-          pathname?.includes('/smart-screen') ||
           pathname?.includes('/classroom')));
 
     const schoolPathMatch =
@@ -412,7 +414,7 @@ function LayoutClientWrapperInner({
                                 ? 'relative z-10 flex w-full flex-col'
                                 : isStudentKioskPage
                                     ? 'relative z-10 flex w-full min-h-0 flex-col overflow-hidden'
-                                    : isStaffPortalShellRoot || isPortalChoosePage
+                                    : isStaffPortalShellRoot || isPortalChoosePage || isSmartScreenPage
                                         ? 'relative z-10 w-full max-w-none'
                                         : 'relative z-10 mx-auto w-full max-w-7xl',
                             appShellNoPageScroll && 'overflow-hidden flex flex-col min-h-0',

@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import type { Settings } from '@/components/providers/SettingsProvider';
 import { isClassroomPillarOn, isRewardsPillarOn } from '@/lib/productPillars';
+import { CLASSROOM_SEATING_SECTION_LABEL } from '@/lib/classroom/classroomTabSections';
 import type { StaffPortalRole, StaffPortalTabDef } from './types';
 
 function teacherAddonHidden(settings: Settings, tabValue: string): boolean {
@@ -62,8 +63,8 @@ export const STAFF_PORTAL_TAB_REGISTRY: StaffPortalTabDef[] = [
     icon: Sparkles,
     kind: 'core',
     roles: ['admin', 'teacher'],
-    title: 'Portal overview',
-    description: 'Directory of every section in this portal with short descriptions and quick links.',
+    title: 'Home',
+    description: 'Your starting point — quick links to every section.',
     isEnabled: () => true,
   },
   // —— Admin core ——
@@ -114,7 +115,7 @@ export const STAFF_PORTAL_TAB_REGISTRY: StaffPortalTabDef[] = [
     icon: LayoutGrid,
     kind: 'core',
     roles: ['admin', 'teacher'],
-    title: 'Seating chart, quick awards, and room display',
+    title: `${CLASSROOM_SEATING_SECTION_LABEL}, quick awards, and room display`,
     isEnabled: (s, role) => isClassroomPillarOn(s) || role === 'admin',
   },
   {
@@ -389,7 +390,7 @@ const STAFF_PORTAL_TAB_DESCRIPTIONS: Record<string, string> = {
   teachers: 'Staff accounts, roles, passcodes, and who can sign in to the portal.',
   prizes: 'Prize shop inventory, costs, and redemption rules.',
   categories: 'Point categories teachers use when awarding or printing coupons.',
-  classroom: 'Seating charts, quick awards, and classroom display tools.',
+  classroom: `${CLASSROOM_SEATING_SECTION_LABEL}, quick awards, and classroom display tools.`,
   reports: 'Exports and summaries of points, redemptions, and activity.',
   roster: 'Your students — search, filter, and open profiles for awards.',
   coupons: 'Print coupon sheets and award or deduct points.',

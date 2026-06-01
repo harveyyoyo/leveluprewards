@@ -28,6 +28,7 @@ import {
     portalChooseTitleClass,
 } from '@/lib/kioskPortraitLayout';
 import { isClassroomPillarOn, isRewardsPillarOn } from '@/lib/productPillars';
+import { CLASSROOM_SEATING_SECTION_LABEL } from '@/lib/classroom/classroomTabSections';
 import { leadershipPersonnelLabel, normalizeTeacherPersonnelRole } from '@/lib/teacherPersonnelRole';
 import type { TeacherPersonnelRole } from '@/lib/types';
 import { isSchoolPortalChooser } from '@/lib/students/studentKioskRoute';
@@ -279,7 +280,7 @@ export default function PortalPage() {
                       description: isRewardsPillarOn(settings)
                         ? 'Staff portal with teacher tabs — points, classes, prizes, and reports.'
                         : isClassroomPillarOn(settings)
-                          ? 'Classroom Management — seating chart, session tracking, and room display.'
+                          ? `Classroom Management — ${CLASSROOM_SEATING_SECTION_LABEL}, session tracking, and room display.`
                           : 'Staff portal for your school.',
                       icon: Printer,
                   },

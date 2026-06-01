@@ -7,12 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Helper } from '@/components/ui/helper';
 import { ContentSectionTreeNav } from '@/components/ui/content-section-tree-nav';
 import type { ClassroomTabSection } from '@/lib/classroom/classroomTabSections';
+import { CLASSROOM_SEATING_SECTION_LABEL } from '@/lib/classroom/classroomTabSections';
 import { cn } from '@/lib/utils';
 
 export type { ClassroomTabSection };
 
 const SECTION_LABELS: Record<ClassroomTabSection, string> = {
-  seating: 'Seating chart',
+  seating: CLASSROOM_SEATING_SECTION_LABEL,
   behavior: 'Behavior',
   principal: 'Principal',
   parents: 'Parent portal',
@@ -83,7 +84,7 @@ export function ClassroomTabLayout({
 
   const header = (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-      <Helper content="Seating chart, behavior notes, principal timeline, and optional parent portal.">
+      <Helper content={`${CLASSROOM_SEATING_SECTION_LABEL}, behavior notes, principal timeline, and optional parent portal.`}>
         <CardTitle className="flex items-center gap-2 text-xl font-black leading-tight tracking-tight text-foreground sm:text-2xl">
           <LayoutGrid className="w-5 h-5 shrink-0 text-violet-500 sm:w-6 sm:h-6" /> Classroom Management
         </CardTitle>

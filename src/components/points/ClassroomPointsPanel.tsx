@@ -29,6 +29,10 @@ import { openClassroomFullscreenTab } from '@/lib/classroomPointsUrl';
 import { isClassroomPillarOn, isClassroomOnlyMode, isPillarOn, CLASSROOM_SESSION_ONLY } from '@/lib/productPillars';
 import { BehaviorNoteDialog } from '@/components/classroom/BehaviorNoteDialog';
 import { useTodayAttendanceMap } from '@/hooks/useTodayAttendanceMap';
+import { useActiveBathroomPasses } from '@/hooks/useActiveBathroomPasses';
+import { BathroomPassesBar } from '@/components/attendance/BathroomPassesBar';
+import { startBathroomPass, endBathroomPass } from '@/lib/db/bathroom';
+import { formatBathroomElapsed } from '@/lib/bathroom/formatBathroomElapsed';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirestore } from '@/firebase';
 import { awardClassroomPoints } from '@/lib/classroom/classroomPointsClient';
@@ -181,7 +185,10 @@ function ClassroomPointsPanelInner({
   const { awardPoints, awardPointsToMultipleStudents, deductPointsFromMultipleStudents, userName, teacherDocId } =
     useAppContext();
   const attendanceEnabled = isPillarOn(settings, 'payAttendance') && !!settings.enableClassSignIn;
+  const bathroomTimerOn = attendanceEnabled && (settings.enableBathroomTimer ?? true);
+  const bathroomMaxMinutes = Math.min(30, Math.max(1, settings.bathroomMaxMinutes ?? 5));
   const todayAttendance = useTodayAttendanceMap(schoolId, attendanceEnabled);
+  const activeBathroomPasses = useActiveBathroomPasses(schoolId, bathroomTimerOn);
   const operatorId = teacherDocId || storageScope;
   const operatorName = userName || storageScope;
   const [behaviorNoteStudent, setBehaviorNoteStudent] = useState<Student | null>(null);
@@ -248,6 +255,21 @@ function ClassroomPointsPanelInner({
     if (filterClassId === 'all') return deferredStudents;
     return deferredStudents.filter((s) => s.classId === filterClassId);
   }, [deferredStudents, filterClassId]);
+
+  const bathroomEnabled = bathroomTimerOn && !editMode;
+  const bathroomByStudent = useMemo(() => {
+    const map = new Map<string, { startedAt: number }>();
+    activeBathroomPasses.forEach((pass, studentId) => {
+      if (pass.startedAt) map.set(studentId, { startedAt: pass.startedAt });
+    });
+    return map;
+  }, [activeBathroomPasses]);
+  const bathroomTick = activeBathroomPasses.size;
+  const classStudentIdSet = useMemo(() => new Set(classStudents.map((s) => s.id)), [classStudents]);
+  const activeBathroomList = useMemo(
+    () => Array.from(activeBathroomPasses.values()),
+    [activeBathroomPasses],
+  );
 
   const classStudentIdsKey = useMemo(
     () => classStudents.map((s) => s.id).join('\0'),
@@ -344,6 +366,13 @@ function ClassroomPointsPanelInner({
   useEffect(() => {
     setPrefs(loadClassroomPrefs(schoolId, storageScope));
   }, [schoolId, storageScope]);
+
+  useEffect(() => {
+    if (!prefs.showBurstAward && burstMode) {
+      setBurstMode(false);
+      setBurstSelected([]);
+    }
+  }, [prefs.showBurstAward, burstMode]);
 
   useEffect(() => {
     if (!effectiveClassId || effectiveClassId === 'all') {
@@ -744,7 +773,7 @@ function ClassroomPointsPanelInner({
   const handleDeskTap = (studentId: string, cellIndex: number) => {
     if (editMode || awardingId) return;
 
-    if (burstMode) {
+    if (burstMode && prefs.showBurstAward) {
       playClassroomSound(CLASSROOM_TAP_SOUND);
       setBurstSelected((prev) =>
         prev.includes(studentId) ? prev.filter((id) => id !== studentId) : [...prev, studentId],
@@ -936,12 +965,79 @@ function ClassroomPointsPanelInner({
     setDragIndex(null);
   };
 
+  const handleBathroomToggle = useCallback(
+    async (studentId: string) => {
+      if (!bathroomEnabled) return;
+      const student = studentById.get(studentId);
+      if (!student) return;
+
+      const isOut = activeBathroomPasses.has(studentId);
+      if (!isOut && settings.bathroomRequirePresent !== false) {
+        const status = todayAttendance.get(studentId) ?? 'absent';
+        if (status === 'absent') {
+          toast({
+            variant: 'destructive',
+            title: 'Not signed in',
+            description: 'Student must sign in for attendance before leaving for the bathroom.',
+          });
+          return;
+        }
+      }
+
+      try {
+        if (isOut) {
+          const log = await endBathroomPass(firestore, schoolId, studentId, bathroomMaxMinutes);
+          if (log) {
+            toast({
+              title: 'Back from bathroom',
+              description: `${log.studentName || studentId} · ${formatBathroomElapsed(log.durationMs)}${
+                log.overLimit ? ' (over limit)' : ''
+              }`,
+            });
+          }
+        } else {
+          await startBathroomPass(firestore, schoolId, student, {
+            teacherId: operatorId,
+            teacherName: operatorName,
+            classId: effectiveClassId && effectiveClassId !== 'all' ? effectiveClassId : student.classId,
+          });
+          toast({
+            title: 'Bathroom pass started',
+            description: `${[student.firstName, student.lastName].filter(Boolean).join(' ') || student.nickname || studentId} is out. Alt+click when they return.`,
+          });
+        }
+      } catch (err) {
+        console.error('Bathroom pass failed', err);
+        toast({
+          variant: 'destructive',
+          title: 'Bathroom pass failed',
+          description: err instanceof Error ? err.message : 'Could not update bathroom pass.',
+        });
+      }
+    },
+    [
+      activeBathroomPasses,
+      bathroomEnabled,
+      bathroomMaxMinutes,
+      effectiveClassId,
+      firestore,
+      operatorId,
+      operatorName,
+      schoolId,
+      settings.bathroomRequirePresent,
+      studentById,
+      todayAttendance,
+      toast,
+    ],
+  );
+
   gridHandlersRef.current = {
     onDeskTap: handleDeskTap,
     onBehaviorNote: (studentId) => {
       const s = studentById.get(studentId);
       if (s) openBehaviorNote(s);
     },
+    onBathroomToggle: bathroomEnabled ? handleBathroomToggle : undefined,
     onDragStart: handleDragStart,
     onDrop: handleDrop,
   };
@@ -1148,20 +1244,22 @@ function ClassroomPointsPanelInner({
                 disabled={!placedStudentIds.length}
               />
             ) : null}
-            <ClassroomToolButton
-              design={design}
-              icon={MousePointerClick}
-              label={burstMode ? `Burst (${burstSelected.length})` : 'Burst'}
-              primary={burstMode}
-              title="Select several students, then award once"
-              onClick={() => {
-                playClassroomSound(CLASSROOM_TAP_SOUND);
-                setBurstMode((v) => !v);
-                setBurstSelected([]);
-                setPendingAward(null);
-                clearAutoTimer();
-              }}
-            />
+            {prefs.showBurstAward ? (
+              <ClassroomToolButton
+                design={design}
+                icon={MousePointerClick}
+                label={burstMode ? `Burst (${burstSelected.length})` : 'Burst'}
+                primary={burstMode}
+                title="Select several students, then award once"
+                onClick={() => {
+                  playClassroomSound(CLASSROOM_TAP_SOUND);
+                  setBurstMode((v) => !v);
+                  setBurstSelected([]);
+                  setPendingAward(null);
+                  clearAutoTimer();
+                }}
+              />
+            ) : null}
             {lastAction && (
               <ClassroomToolButton
                 design={design}
@@ -1288,6 +1386,15 @@ function ClassroomPointsPanelInner({
         </p>
       ) : null}
 
+      {bathroomEnabled && activeBathroomList.length > 0 ? (
+        <BathroomPassesBar
+          passes={activeBathroomList}
+          maxMinutes={bathroomMaxMinutes}
+          classStudentIds={filterClassId !== 'all' ? classStudentIdSet : undefined}
+          onReturn={(studentId) => void handleBathroomToggle(studentId)}
+        />
+      ) : null}
+
       <div
         className={cn(
           'flex min-h-0 min-w-0 flex-col overflow-visible',
@@ -1322,6 +1429,10 @@ function ClassroomPointsPanelInner({
           awardingId={awardingId}
           attendanceEnabled={attendanceEnabled}
           attendanceByStudent={todayAttendance}
+          bathroomEnabled={bathroomEnabled}
+          bathroomByStudent={bathroomByStudent}
+          bathroomMaxMinutes={bathroomMaxMinutes}
+          bathroomTick={bathroomTick}
           activeCelebration={gridActiveCelebration}
           handlersRef={gridHandlersRef}
         />
@@ -1347,7 +1458,7 @@ function ClassroomPointsPanelInner({
         </p>
       ) : null}
 
-      {burstMode && burstSelected.length > 0 && !editMode && (
+      {prefs.showBurstAward && burstMode && burstSelected.length > 0 && !editMode && (
         <div className="flex shrink-0 flex-wrap items-center justify-center gap-2 rounded-xl border border-sky-500/30 bg-sky-500/10 px-3 py-2">
           <span className="text-xs font-bold text-sky-900 dark:text-sky-100">
             {burstSelected.length} selected
@@ -1403,8 +1514,10 @@ function ClassroomPointsPanelInner({
           <>Tap once = instant +{prefs.defaultPoints}.</>
           <span className="text-muted-foreground/70">
             · Shift+click behavior note
-            {prefs.showRandomPicker ? ' · R random' : ''} · Ctrl+U undo · Arrange to flip room
+            {prefs.showRandomPicker ? ' · R random' : ''}
+            {prefs.showBurstAward ? ' · Burst in toolbar' : ''} · Ctrl+U undo · Arrange to flip room
             {attendanceEnabled ? ' · Dot = today attendance' : ''}
+            {bathroomEnabled ? ' · Alt+click = bathroom pass' : ''}
           </span>
         </p>
       )}
@@ -1792,8 +1905,8 @@ function ClassroomPrefsPopover({
               <Label className="text-xs">Default points</Label>
               <p className="mb-1 text-[11px] text-muted-foreground">
                 {prefs.instantTap
-                  ? 'Used for each quick-select tap, entire-class awards (when enabled), and burst awards.'
-                  : 'Used for the menu auto-award timer, entire-class awards (when enabled), and burst awards.'}
+                  ? `Used for each quick-select tap${prefs.showClassAwardButton ? ', entire-class awards' : ''}${prefs.showBurstAward ? ', and burst awards' : ''}.`
+                  : `Used for the menu auto-award timer${prefs.showClassAwardButton ? ', entire-class awards' : ''}${prefs.showBurstAward ? ', and burst awards' : ''}.`}
               </p>
               <Input
                 type="number"
@@ -1915,6 +2028,17 @@ function ClassroomPrefsPopover({
               <span className="text-xs leading-snug">
                 <span className="font-semibold">Entire class award</span> — show the Class +N button to award default
                 points to every student on the seating chart at once.
+              </span>
+            </label>
+            <label className="flex cursor-pointer items-start gap-2">
+              <Checkbox
+                className="mt-0.5"
+                checked={prefs.showBurstAward}
+                onCheckedChange={(v) => patchPrefs({ showBurstAward: v === true })}
+              />
+              <span className="text-xs leading-snug">
+                <span className="font-semibold">Burst award</span> — show the Burst button to select several students,
+                then award default points to all of them at once.
               </span>
             </label>
           </div>

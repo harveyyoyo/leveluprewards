@@ -6,6 +6,7 @@ import {
   verifyParentPortalSession,
 } from '@/lib/parentPortal/parentPortalSession';
 import type { ParentPortalDashboard } from '@/lib/parentPortal/parentPortalClient';
+import { parseBehaviorNoteCreatedAt } from '@/lib/classroom/behaviorNoteTime';
 import { isRewardsPillarOn } from '@/lib/productPillars';
 
 const SCHOOL_ID_RE = /^[\w-]{1,128}$/;
@@ -96,7 +97,7 @@ export async function GET(req: NextRequest) {
         return {
           kind: String(row.kind || 'concern'),
           note: String(row.note || ''),
-          createdAt: Number(row.createdAt || 0),
+          createdAt: parseBehaviorNoteCreatedAt(row.createdAt),
           teacherName: String(row.teacherName || 'Staff'),
           pointsLabel: row.pointsLabel ? String(row.pointsLabel) : undefined,
           pointsAmount: row.pointsAmount != null ? Number(row.pointsAmount) : undefined,

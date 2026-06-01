@@ -52,6 +52,7 @@ import { SettingsFaceEnrollmentsPanel } from '@/components/settings/SettingsFace
 import { SettingsSectionJumpNav } from '@/components/settings/SettingsSectionJumpNav';
 import { FeatureFilterContext, SettingsFeatureRow } from '@/components/settings/SettingsFeatureRow';
 import { PRODUCT_PILLAR_LABELS, type ProductPillarKey } from '@/lib/productPillars';
+import { CLASSROOM_SEATING_SECTION_LABEL } from '@/lib/classroom/classroomTabSections';
 import { OfficePortalEntryLink } from '@/components/office/OfficePortalEntryLink';
 import { StaffPortalNavLayoutControls } from '@/components/settings/StaffPortalNavLayoutControls';
 import {
@@ -230,7 +231,7 @@ export function SettingsModal() {
                 next = { ...next, enableParentView: false };
             }
             if (key === 'payAttendance' && value === false) {
-                next = { ...next, enableClassSignIn: false, enableAttendance: false };
+                next = { ...next, enableClassSignIn: false, enableAttendance: false, enableBathroomTimer: false };
             }
             return next;
         });
@@ -243,7 +244,9 @@ export function SettingsModal() {
             key === 'kioskSessionTimeoutSec' ||
             key === 'kioskAiFunIdleOffSec' ||
             key === 'soundEnabled' ||
-            key === 'studentAudioTheme'
+            key === 'studentAudioTheme' ||
+            key === 'adminNavLayout' ||
+            key === 'teacherNavLayout'
         ) {
             updateSettings({ [key]: value } as Partial<AppSettings>);
         }
@@ -1171,7 +1174,11 @@ export function SettingsModal() {
                                                  Section tabs across the top or in a left sidebar.
                                              </p>
                                          </div>
-                                         <StaffPortalNavLayoutControls target="teacher" />
+                                         <StaffPortalNavLayoutControls
+                                             target="teacher"
+                                             value={local.teacherNavLayout ?? 'sidebar'}
+                                             onChange={(layout) => handleToggle('teacherNavLayout', layout)}
+                                         />
                                      </div>
                                  ) : null}
 
@@ -1312,7 +1319,11 @@ export function SettingsModal() {
                                                     Section tabs across the top or in a left sidebar for the admin portal.
                                                 </p>
                                             </div>
-                                            <StaffPortalNavLayoutControls target="admin" />
+                                            <StaffPortalNavLayoutControls
+                                                target="admin"
+                                                value={local.adminNavLayout ?? 'sidebar'}
+                                                onChange={(layout) => handleToggle('adminNavLayout', layout)}
+                                            />
                                         </div>
                                     ) : null}
                                     <div
@@ -1330,6 +1341,8 @@ export function SettingsModal() {
                                         </div>
                                         <StaffPortalNavLayoutControls
                                             target="teacher"
+                                            value={local.teacherNavLayout ?? 'sidebar'}
+                                            onChange={(layout) => handleToggle('teacherNavLayout', layout)}
                                             disabled={!canManageSchoolSettings && loginState !== 'teacher'}
                                         />
                                     </div>
@@ -1762,7 +1775,7 @@ export function SettingsModal() {
                                                 <div className={cn("flex items-center justify-between p-3 bg-background/50 border border-border/40 rounded-xl hover:bg-muted/40 transition-colors", unavailablePillarHint('payClassroom') && 'opacity-60')}>
                                                     <div>
                                                         <h4 className="font-bold text-sm text-foreground uppercase tracking-tight">levelup classroom</h4>
-                                                        <p className="text-[10px] text-muted-foreground">{unavailablePillarHint('payClassroom') ?? 'Seating chart, quick awards, and full-screen classroom view'}</p>
+                                                        <p className="text-[10px] text-muted-foreground">{unavailablePillarHint('payClassroom') ?? `${CLASSROOM_SEATING_SECTION_LABEL}, quick awards, and full-screen classroom view`}</p>
                                                     </div>
                                                     <Switch
                                                         checked={(local.payClassroom ?? true) && !unavailablePillarHint('payClassroom')}

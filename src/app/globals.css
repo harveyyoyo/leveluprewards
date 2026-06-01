@@ -474,6 +474,48 @@ html[data-office-portal] .office-content-pane {
   .font-extrabold {
     color: hsl(var(--primary));
   }
+
+  /*
+   * Smart Screen hallway display uses its own theme tokens.
+   * App dark mode must not recolor bold headings or the page shell.
+   */
+  html[data-smart-screen-theme] body {
+    background-image: none !important;
+  }
+
+  html[data-smart-screen-theme='daylight'] body {
+    background-color: #f5f7fb !important;
+    color: #0f172a !important;
+  }
+
+  html[data-smart-screen-theme='daylight'] {
+    color-scheme: light;
+  }
+
+  html[data-smart-screen-theme='midnight'] body {
+    background-color: #020817 !important;
+    color: #ffffff !important;
+  }
+
+  html[data-smart-screen-theme='studio'] body {
+    background-color: #090806 !important;
+    color: #ffffff !important;
+  }
+
+  html[data-smart-screen-theme='midnight'],
+  html[data-smart-screen-theme='studio'] {
+    color-scheme: dark;
+  }
+
+  html[data-smart-screen-theme] [data-smart-screen-root] :where(
+      strong,
+      b,
+      .font-bold,
+      .font-black,
+      .font-extrabold
+    ) {
+    color: inherit;
+  }
   
   .coupon-preview-container {
     container-type: inline-size;
@@ -3548,18 +3590,22 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
 /* Desk-scoped celebration effects (contained to student cell) */
 @keyframes classroom-fx-fall-scoped {
   to {
-    transform: translateY(calc(100% + 12px)) rotate(540deg);
+    transform: translateY(calc(120% + 16px)) rotate(620deg);
     opacity: 0;
   }
 }
 
 @keyframes classroom-fx-rise-scoped {
   from {
-    transform: translateY(0);
+    transform: translateY(0) scale(0.85);
     opacity: 1;
   }
+  40% {
+    opacity: 1;
+    transform: translateY(-45%) scale(1.05);
+  }
   to {
-    transform: translateY(-90%);
+    transform: translateY(-115%) scale(0.9);
     opacity: 0;
   }
 }
@@ -3568,21 +3614,50 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
   0%,
   100% {
     opacity: 0;
-    transform: scale(0.4);
+    transform: scale(0.35) rotate(0deg);
   }
-  50% {
+  35% {
     opacity: 1;
-    transform: scale(1);
+    transform: scale(1.15) rotate(12deg);
+  }
+  65% {
+    opacity: 0.85;
+    transform: scale(0.95) rotate(-8deg);
   }
 }
 
 @keyframes classroom-fx-burst-scoped {
   from {
-    transform: translate(-50%, -50%) scale(0.15);
+    transform: translate(-50%, -50%) scale(0.1);
+    opacity: 1;
+  }
+  35% {
     opacity: 1;
   }
   to {
-    transform: translate(calc(-50% + var(--fx-x, 0)), calc(-50% + var(--fx-y, 0))) scale(0.7);
+    transform: translate(calc(-50% + var(--fx-x, 0)), calc(-50% + var(--fx-y, 0))) scale(1);
+    opacity: 0;
+  }
+}
+
+@keyframes classroom-fx-confetti-scoped {
+  0% {
+    transform: translateY(0) translateX(0) rotate(0deg) scale(1);
+    opacity: 1;
+  }
+  20% {
+    transform: translateY(28%) translateX(calc(var(--fx-drift, 0px) * 0.35)) rotate(calc(var(--fx-spin, 540deg) * 0.2))
+      scale(1.05);
+    opacity: 1;
+  }
+  55% {
+    transform: translateY(72%) translateX(calc(var(--fx-drift, 0px) * 0.75)) rotate(calc(var(--fx-spin, 540deg) * 0.55))
+      scale(0.98);
+    opacity: 0.95;
+  }
+  100% {
+    transform: translateY(calc(130% + 20px)) translateX(var(--fx-drift, 0px)) rotate(var(--fx-spin, 540deg))
+      scale(0.85);
     opacity: 0;
   }
 }
@@ -3601,6 +3676,88 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
 
 .animate-classroom-fx-burst-scoped {
   animation: classroom-fx-burst-scoped ease-out forwards;
+}
+
+.animate-classroom-fx-confetti-scoped {
+  animation: classroom-fx-confetti-scoped cubic-bezier(0.22, 0.85, 0.35, 1) forwards;
+}
+
+@keyframes classroom-fx-firework-flash-scoped {
+  0% {
+    transform: translate(-50%, -50%) scale(0.15);
+    opacity: 0;
+  }
+  12% {
+    transform: translate(-50%, -50%) scale(1.35);
+    opacity: 0.95;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(2.4);
+    opacity: 0;
+  }
+}
+
+@keyframes classroom-fx-firework-burst-scoped {
+  0% {
+    transform: translate(-50%, -50%) scale(0.15);
+    opacity: 1;
+  }
+  18% {
+    transform: translate(calc(-50% + var(--fx-x, 0) * 0.22), calc(-50% + var(--fx-y, 0) * 0.22)) scale(1.35);
+    opacity: 1;
+  }
+  55% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translate(
+        calc(-50% + var(--fx-x, 0)),
+        calc(-50% + var(--fx-y, 0) + var(--fx-gravity, 10%))
+      )
+      scale(0.25);
+    opacity: 0;
+  }
+}
+
+@keyframes classroom-fx-firework-trail-scoped {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.95;
+  }
+  25% {
+    transform: translate(calc(-50% + var(--fx-x, 0) * 0.55), calc(-50% + var(--fx-y, 0) * 0.55)) scale(0.85);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate(
+        calc(-50% + var(--fx-x, 0)),
+        calc(-50% + var(--fx-y, 0) + var(--fx-gravity, 14%))
+      )
+      scale(0.15);
+    opacity: 0;
+  }
+}
+
+.animate-classroom-fx-firework-flash-scoped {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(255, 230, 150, 0.75) 35%,
+    rgba(255, 180, 80, 0.25) 60%,
+    transparent 72%
+  );
+  animation: classroom-fx-firework-flash-scoped 0.75s ease-out forwards;
+}
+
+.animate-classroom-fx-firework-burst-scoped {
+  animation: classroom-fx-firework-burst-scoped cubic-bezier(0.15, 0.85, 0.25, 1) forwards;
+}
+
+.animate-classroom-fx-firework-trail-scoped {
+  animation: classroom-fx-firework-trail-scoped ease-out forwards;
 }
 
 @keyframes classroom-fly-up-scoped {
@@ -3685,11 +3842,14 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
 /* Classroom desk — simple award flash (arcade burst + wave + shine). */
 @keyframes classroom-desk-flash-burst {
   0% {
-    transform: scale(0.55);
+    transform: scale(0.45);
     opacity: 1;
   }
+  45% {
+    opacity: 0.95;
+  }
   100% {
-    transform: scale(1.4);
+    transform: scale(1.55);
     opacity: 0;
   }
 }
@@ -3806,6 +3966,10 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
   .animate-classroom-fx-rise-scoped,
   .animate-classroom-fx-twinkle-scoped,
   .animate-classroom-fx-burst-scoped,
+  .animate-classroom-fx-confetti-scoped,
+  .animate-classroom-fx-firework-flash-scoped,
+  .animate-classroom-fx-firework-burst-scoped,
+  .animate-classroom-fx-firework-trail-scoped,
   .animate-classroom-fly-up-scoped,
   .animate-classroom-kiosk-fly-up,
   .animate-classroom-pending-top {

@@ -25,6 +25,11 @@ import { useSettings } from '@/components/providers/SettingsProvider';
 import { useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { useSchoolMetadataDocRef } from '@/hooks/useSchoolMetadataDocRef';
 import { displayStudentNameOnSharedBoard, cn } from '@/lib/utils';
+import {
+  SMART_SCREEN_THEME_CLASSES,
+  validSmartScreenTheme,
+  type SmartScreenTheme,
+} from '@/lib/smartScreenThemes';
 import type { Class, House, Prize, Student } from '@/lib/types';
 
 type BulletinIncentive = {
@@ -38,7 +43,6 @@ type BulletinIncentive = {
 };
 
 type SmartScreenLayout = 'mirror' | 'dashboard' | 'portrait';
-type SmartScreenTheme = 'midnight' | 'daylight' | 'studio';
 type SmartScreenLocationInfo = {
   ok: boolean;
   source?: 'zip' | 'ip';
@@ -89,33 +93,6 @@ const FOCUS_SKILLS = [
   'Include someone who needs a place.',
   'Celebrate progress, then take the next step.',
 ];
-
-const THEME_CLASS_NAMES = {
-  midnight: {
-    page: 'bg-[#020817] text-white',
-    panel: 'border-cyan-200/25 bg-slate-950/88 text-white shadow-black/30',
-    quiet: 'text-cyan-50/85',
-    accent: 'text-cyan-100',
-    badge: 'border-cyan-100/35 bg-cyan-100/16 text-white',
-    rail: 'bg-cyan-200',
-  },
-  daylight: {
-    page: 'bg-[#f5f7fb] text-slate-950',
-    panel: 'border-slate-200 bg-white/86 text-slate-950 shadow-slate-200/70',
-    quiet: 'text-slate-500',
-    accent: 'text-blue-700',
-    badge: 'border-blue-200 bg-blue-50 text-blue-800',
-    rail: 'bg-blue-600',
-  },
-  studio: {
-    page: 'bg-[#090806] text-white',
-    panel: 'border-amber-100/25 bg-stone-950/90 text-white shadow-black/30',
-    quiet: 'text-amber-50/82',
-    accent: 'text-amber-100',
-    badge: 'border-amber-100/35 bg-amber-100/14 text-white',
-    rail: 'bg-amber-200',
-  },
-} as const;
 
 function safeTimeZone(timeZone: string | undefined) {
   if (!timeZone) return undefined;
@@ -171,10 +148,6 @@ function validLayout(value: string | null | undefined): SmartScreenLayout | null
   return value === 'mirror' || value === 'dashboard' || value === 'portrait' ? value : null;
 }
 
-function validTheme(value: string | null | undefined): SmartScreenTheme | null {
-  return value === 'midnight' || value === 'daylight' || value === 'studio' ? value : null;
-}
-
 function birthdayMatchesToday(birthday: string | undefined, now: Date) {
   if (!birthday) return false;
   const parts = birthday.trim().split('-');
@@ -184,9 +157,17 @@ function birthdayMatchesToday(birthday: string | undefined, now: Date) {
   return parts[1] === mm && parts[2] === dd;
 }
 
-function LoadingScreen({ label }: { label: string }) {
+function LoadingScreen({ label, themeKey }: { label: string; themeKey: SmartScreenTheme }) {
+  const theme = SMART_SCREEN_THEME_CLASSES[themeKey];
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-background p-6 text-muted-foreground">
+    <div
+      data-smart-screen-root
+      className={cn(
+        'flex min-h-dvh flex-col items-center justify-center gap-3 p-6',
+        theme.page,
+        theme.quiet,
+      )}
+    >
       <Loader2 className="h-8 w-8 animate-spin" aria-hidden />
       <p className="text-sm font-semibold">{label}</p>
     </div>
@@ -202,7 +183,7 @@ function ModuleCard({
 }: {
   title: string;
   icon: ReactNode;
-  theme: (typeof THEME_CLASS_NAMES)[SmartScreenTheme];
+  theme: (typeof SMART_SCREEN_THEME_CLASSES)[SmartScreenTheme];
   compact: boolean;
   children: ReactNode;
 }) {
@@ -348,12 +329,20 @@ export default function SmartScreenPage() {
       .slice(0, 3);
   }, [houses]);
 
+  const themeKey =
+    validSmartScreenTheme(searchParams.get('theme')) || validSmartScreenTheme(settings.smartScreenTheme) || 'midnight';
+  const theme = SMART_SCREEN_THEME_CLASSES[themeKey];
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.setAttribute('data-smart-screen-theme', themeKey);
+    return () => root.removeAttribute('data-smart-screen-theme');
+  }, [themeKey]);
+
   if (!isInitialized || !VIEWER_LOGIN_STATES.has(loginState)) {
-    return <LoadingScreen label="Loading Smart Screen..." />;
+    return <LoadingScreen label="Loading Smart Screen..." themeKey={themeKey} />;
   }
 
-  const themeKey = validTheme(searchParams.get('theme')) || settings.smartScreenTheme || 'midnight';
-  const theme = THEME_CLASS_NAMES[themeKey] ?? THEME_CLASS_NAMES.midnight;
   const layout = validLayout(searchParams.get('layout')) || settings.smartScreenLayout || 'mirror';
   const isPortrait = layout === 'portrait';
   const isDashboard = layout === 'dashboard';
@@ -606,6 +595,7 @@ export default function SmartScreenPage() {
 
   return (
     <main
+      data-smart-screen-root
       className={cn(
           'min-h-dvh overflow-hidden font-sans',
         isPortrait ? 'p-2' : 'p-3 sm:p-5 lg:p-6',
@@ -694,7 +684,12 @@ export default function SmartScreenPage() {
       ) : null}
 
       {!isPortrait ? (
-        <div className="pointer-events-none fixed bottom-5 right-5 hidden items-center gap-2 rounded-full border border-current/10 bg-black/20 px-3 py-2 text-xs font-black uppercase tracking-wide text-white/75 backdrop-blur-md md:flex">
+        <div
+          className={cn(
+            'pointer-events-none fixed bottom-5 right-5 hidden items-center gap-2 rounded-full border px-3 py-2 text-xs font-black uppercase tracking-wide backdrop-blur-md md:flex',
+            theme.watermark,
+          )}
+        >
           <Monitor className="h-4 w-4" aria-hidden />
           <span>Smart Screen</span>
         </div>

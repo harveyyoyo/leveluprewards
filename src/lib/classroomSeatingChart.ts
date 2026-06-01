@@ -62,6 +62,8 @@ export type ClassroomSeatingPrefs = {
   showRandomPicker: boolean;
   /** Show Class +N button to award everyone on the seating chart at once. */
   showClassAwardButton: boolean;
+  /** Show Burst button to select several students and award once. */
+  showBurstAward: boolean;
   /** Play arcade sounds when awarding or deducting points from the chart. */
   awardSounds: boolean;
   /** Internal — bumps when defaults change. */
@@ -78,7 +80,7 @@ export const DEFAULT_CLASSROOM_QUICK_AWARDS: ClassroomQuickAward[] = [
 ];
 
 /** Bump when classroom tap/effect defaults change — triggers one-time localStorage migration. */
-export const CLASSROOM_PREFS_VERSION = 10;
+export const CLASSROOM_PREFS_VERSION = 11;
 
 export const DEFAULT_CLASSROOM_PREFS: ClassroomSeatingPrefs = {
   autoAwardMs: 3000,
@@ -91,13 +93,14 @@ export const DEFAULT_CLASSROOM_PREFS: ClassroomSeatingPrefs = {
   correctionPoints: 2,
   correctionLabel: 'Reminder',
   correctionDescription: 'Behavior reminder',
-  design: 'aurora',
+  design: 'playful',
   frontAtBottom: false,
   celebrationEffect: 'none',
   showKioskFlyUp: true,
   kioskFlyUpSize: 'medium',
   showRandomPicker: false,
   showClassAwardButton: false,
+  showBurstAward: false,
   awardSounds: true,
   prefsVersion: CLASSROOM_PREFS_VERSION,
 };
@@ -221,6 +224,7 @@ export function loadClassroomPrefs(schoolId: string, scope: string): ClassroomSe
       showRandomPicker: parsed.showRandomPicker ?? DEFAULT_CLASSROOM_PREFS.showRandomPicker,
       showClassAwardButton:
         parsed.showClassAwardButton ?? DEFAULT_CLASSROOM_PREFS.showClassAwardButton,
+      showBurstAward: parsed.showBurstAward ?? DEFAULT_CLASSROOM_PREFS.showBurstAward,
       awardSounds: parsed.awardSounds ?? DEFAULT_CLASSROOM_PREFS.awardSounds,
       prefsVersion: CLASSROOM_PREFS_VERSION,
     };

@@ -593,6 +593,7 @@ function AdminDashboardInner() {
             payAttendance: true,
             enableAttendance: true,
             enableClassSignIn: true,
+            enableBathroomTimer: true,
             adminHiddenAddOnTabs: removeHidden('attendance'),
           }),
         disable: () =>
@@ -1664,16 +1665,13 @@ function AdminDashboardInner() {
             staffPortalPageIntroClassName(adminNavSidebar),
           )}
         >
-          <Helper content="This page is for system administrators. It allows you to manage all school instances, create backups, and perform system-wide operations.">
+          <Helper content="School administrators manage students, staff, points, prizes, and school settings from here.">
             <div>
-              <h2
-                className="text-2xl font-bold tracking-tight"
-                style={{ color: 'hsl(var(--primary))' }}
-              >
+              <h2 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
                 School admin
               </h2>
-              <p className="text-muted-foreground">
-                Manage students, classes, teachers, points, prizes and much more...
+              <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                Students, classes, points, prizes, and school settings.
               </p>
             </div>
           </Helper>
@@ -1962,6 +1960,7 @@ function AdminDashboardInner() {
               onGoToTab={setActiveMainTab}
               onBulkRoster={() => setBulkRosterOpen(true)}
               includeDeveloperBackups={loginState === 'developer'}
+              schoolName={schoolData?.name?.trim() || null}
             />
           </TabsContent>
 
@@ -2262,6 +2261,11 @@ function AdminDashboardInner() {
               getAttendanceConfig={getAttendanceConfig}
               setAttendanceConfig={setAttendanceConfig}
               UniversalPeriodsAdmin={UniversalPeriodsAdmin}
+              enableBathroomTimer={settings.enableBathroomTimer ?? true}
+              bathroomMaxMinutes={settings.bathroomMaxMinutes ?? 5}
+              bathroomRequirePresent={settings.bathroomRequirePresent ?? true}
+              classSignInEnabled={!!settings.enableClassSignIn}
+              onBathroomSettingsChange={(patch: Parameters<typeof updateSettings>[0]) => updateSettings(patch)}
             />
           </TabsContent>
 

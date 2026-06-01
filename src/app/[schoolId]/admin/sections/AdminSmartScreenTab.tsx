@@ -41,6 +41,7 @@ import { Helper } from '@/components/ui/helper';
 import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 import { LiveScreenPreview } from '@/components/admin/LiveScreenPreview';
 import { cn } from '@/lib/utils';
+import { SMART_SCREEN_THEME_OPTIONS } from '@/lib/smartScreenThemes';
 import type { Settings } from '@/components/providers/SettingsProvider';
 
 type SmartScreenTabProps = {
@@ -286,9 +287,16 @@ export function AdminSmartScreenTab({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="midnight">Midnight</SelectItem>
-                      <SelectItem value="daylight">Daylight</SelectItem>
-                      <SelectItem value="studio">Studio</SelectItem>
+                      {SMART_SCREEN_THEME_OPTIONS.map((option) => (
+                        <SelectItem key={option.id} value={option.id} className="text-sm">
+                          <span className="font-semibold">{option.label}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {' '}
+                            — {option.description}
+                            {option.tone === 'light' ? ' (light)' : ''}
+                          </span>
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

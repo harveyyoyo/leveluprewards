@@ -1,6 +1,7 @@
 import { addDoc, collection, getDocs, limit, orderBy, query } from 'firebase/firestore';
 import type { Firestore } from 'firebase/firestore';
 import type { BehaviorNote, BehaviorNoteKind } from '@/lib/types';
+import { parseBehaviorNoteCreatedAt } from '@/lib/classroom/behaviorNoteTime';
 
 const NOTE_KINDS = new Set<BehaviorNoteKind>(['positive', 'concern', 'incident']);
 
@@ -57,7 +58,7 @@ function mapBehaviorNoteDoc(id: string, row: Record<string, unknown>): BehaviorN
     teacherName: String(row.teacherName || ''),
     kind,
     note: String(row.note || ''),
-    createdAt: Number(row.createdAt || 0),
+    createdAt: parseBehaviorNoteCreatedAt(row.createdAt),
     visibleToParent: row.visibleToParent !== false,
     pointsAmount: row.pointsAmount != null ? Number(row.pointsAmount) : undefined,
     pointsLabel: row.pointsLabel ? String(row.pointsLabel) : undefined,

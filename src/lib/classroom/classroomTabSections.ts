@@ -7,6 +7,9 @@ export type ClassroomTabSection =
   | 'parents'
   | 'room-display';
 
+/** User-facing label for the live class awards / seating section. */
+export const CLASSROOM_SEATING_SECTION_LABEL = 'Class awards Live';
+
 /** Same sections for admin and teacher; optional sections follow school settings. */
 export function buildClassroomSections(options: {
   parentPortalOn: boolean;

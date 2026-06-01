@@ -20,6 +20,50 @@ async function grantDeveloperSchoolAccess(
   }
 }
 
+function canUseSchoolAccessCallableFallback(status: number): boolean {
+  return status === 503 || status === 502 || status === 404;
+}
+
+async function verifySchoolAccessViaCallable(
+  auth: Auth,
+  functions: Functions,
+  schoolId: string,
+  passcode: string,
+  options?: { allowDeveloperBypass?: boolean },
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const user = auth.currentUser;
+  if (!user) {
+    return { ok: false, message: 'No Firebase session yet. Refresh the page and try again.' };
+  }
+
+  const normalizedSchoolId = schoolId.trim().toLowerCase();
+  const passcodeTrimmed = passcode.trim();
+  const isGoogleLinked = user.providerData.some((p) => p.providerId === 'google.com');
+
+  try {
+    if (isGoogleLinked && passcodeTrimmed.length === 0) {
+      await user.getIdToken(true);
+    }
+    if (
+      options?.allowDeveloperBypass &&
+      passcodeTrimmed.length === 0 &&
+      isAllowedDeveloperGoogleUser(user)
+    ) {
+      const granted = await grantDeveloperSchoolAccess(functions, normalizedSchoolId);
+      if (granted) return { ok: true };
+    }
+    const verify = httpsCallable(functions, 'verifySchoolAccessPasscode');
+    await verify({ schoolId: normalizedSchoolId, passcode });
+    return { ok: true };
+  } catch (e) {
+    console.error('verifySchoolAccessPasscode fallback failed:', e);
+    return {
+      ok: false,
+      message: messageFromVerifySchoolAccessError(e, 'Invalid School ID or passcode.'),
+    };
+  }
+}
+
 export async function verifySchoolAccessViaApi(
   auth: Auth,
   schoolId: string,
@@ -46,28 +90,10 @@ export async function verifySchoolAccessViaApi(
 
   if (res.ok) return { ok: true };
 
-  if (process.env.NODE_ENV === 'development' && res.status === 503 && functions) {
-    try {
-      if (isGoogleLinked && passcode.trim().length === 0) {
-        await user.getIdToken(true);
-      }
-      if (passcode.trim().length === 0 && isAllowedDeveloperGoogleUser(user)) {
-        const granted = await grantDeveloperSchoolAccess(functions, schoolId);
-        if (granted) return { ok: true };
-      }
-      const verify = httpsCallable(functions, 'verifySchoolAccessPasscode');
-      await verify({
-        schoolId: schoolId.trim().toLowerCase(),
-        passcode,
-      });
-      return { ok: true };
-    } catch (e) {
-      console.error('verifySchoolAccessPasscode fallback failed:', e);
-      return {
-        ok: false,
-        message: messageFromVerifySchoolAccessError(e, 'Invalid School ID or passcode.'),
-      };
-    }
+  if (functions && canUseSchoolAccessCallableFallback(res.status)) {
+    return verifySchoolAccessViaCallable(auth, functions, schoolId, passcode, {
+      allowDeveloperBypass: process.env.NODE_ENV === 'development',
+    });
   }
 
   let message = 'Invalid School ID or passcode.';

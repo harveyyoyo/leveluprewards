@@ -581,16 +581,96 @@ type FxParticle = {
   hue: number;
   angle: number;
   dist: number;
+  /** Confetti strip width (px). */
+  width?: number;
+  /** Confetti strip height (px). */
+  height?: number;
+  /** Horizontal sway for falling particles (px). */
+  drift?: number;
+  /** End rotation (deg). */
+  spin?: number;
+  shape?: 'rect' | 'circle';
+  /** Fireworks burst origin (%). */
+  originLeft?: number;
+  originTop?: number;
+  /** Smaller falling spark after main burst. */
+  trail?: boolean;
 };
 
 function scopedParticleCount(effect: ClassroomEffect): number {
-  if (effect === 'fireworks') return 14;
-  if (effect === 'sparkles') return 10;
-  if (effect === 'snow') return 12;
-  if (effect === 'hearts') return 6;
-  if (effect === 'stars') return 7;
-  if (effect === 'confetti') return 16;
+  if (effect === 'fireworks') return 72;
+  if (effect === 'sparkles') return 30;
+  if (effect === 'snow') return 28;
+  if (effect === 'hearts') return 18;
+  if (effect === 'stars') return 20;
+  if (effect === 'confetti') return 56;
   return 0;
+}
+
+function buildCelebrationParticles(effect: ClassroomEffect, count: number): FxParticle[] {
+  if (effect === 'confetti') {
+    return Array.from({ length: count }, (_, i) => {
+      const isStrip = i % 3 !== 1;
+      const base = 5 + Math.random() * 9;
+      return {
+        id: i,
+        left: Math.random() * 100,
+        delay: Math.random() * 0.65,
+        duration: 1.15 + Math.random() * 1.35,
+        size: base,
+        width: isStrip ? 3 + Math.random() * 5 : 6 + Math.random() * 10,
+        height: isStrip ? 11 + Math.random() * 16 : 5 + Math.random() * 9,
+        hue: Math.floor(Math.random() * 360),
+        angle: 0,
+        dist: 0,
+        drift: (Math.random() - 0.5) * 44,
+        spin: 420 + Math.random() * 900,
+        shape: i % 6 === 0 ? 'circle' : 'rect',
+      };
+    });
+  }
+
+  if (effect === 'fireworks') {
+    const burstOrigins = [
+      { left: 28 + Math.random() * 8, top: 32 + Math.random() * 12, delay: 0 },
+      { left: 52 + Math.random() * 8, top: 26 + Math.random() * 14, delay: 0.2 },
+      { left: 72 + Math.random() * 8, top: 34 + Math.random() * 12, delay: 0.42 },
+    ];
+    const particles: FxParticle[] = [];
+    let id = 0;
+    const sparksPerBurst = Math.floor(count / burstOrigins.length);
+
+    for (const origin of burstOrigins) {
+      for (let i = 0; i < sparksPerBurst; i++) {
+        const isTrail = i >= sparksPerBurst - 10;
+        particles.push({
+          id: id++,
+          left: origin.left,
+          delay: origin.delay + (isTrail ? 0.12 + Math.random() * 0.18 : Math.random() * 0.1),
+          duration: isTrail ? 1.1 + Math.random() * 0.9 : 0.75 + Math.random() * 0.85,
+          size: isTrail ? 2.5 + Math.random() * 4 : 5 + Math.random() * 11,
+          hue: Math.floor(Math.random() * 360),
+          angle: (360 / sparksPerBurst) * i + Math.random() * 18,
+          dist: isTrail ? 22 + Math.random() * 38 : 42 + Math.random() * 72,
+          originLeft: origin.left,
+          originTop: origin.top,
+          trail: isTrail,
+        });
+      }
+    }
+    return particles;
+  }
+
+  return Array.from({ length: count }, (_, i) => ({
+    id: i,
+    left: Math.random() * 100,
+    delay: Math.random() * 0.45,
+    duration: 0.95 + Math.random() * 1.25,
+    size: 6 + Math.random() * 12,
+    hue: Math.floor(Math.random() * 360),
+    angle: Math.random() * 360,
+    dist: 28 + Math.random() * 42,
+  }));
 }
 
 export function ClassroomEffectOverlay({
@@ -604,24 +684,35 @@ export function ClassroomEffectOverlay({
 }) {
   const particles = useMemo((): FxParticle[] => {
     if (effect === 'none') return [];
-    const count = scopedParticleCount(effect);
-    return Array.from({ length: count }, (_, i) => ({
-      id: i,
-      left: Math.random() * 100,
-      delay: Math.random() * 0.35,
-      duration: 0.9 + Math.random() * 1.1,
-      size: 6 + Math.random() * 10,
-      hue: Math.floor(Math.random() * 360),
-      angle: Math.random() * 360,
-      dist: 25 + Math.random() * 35,
-    }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- runId is intentionally included to regenerate particles on each play
+    return buildCelebrationParticles(effect, scopedParticleCount(effect));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runId regenerates particles each play
   }, [effect, runId]);
 
   if (effect === 'none') return null;
 
+  const spillsOverDesk = effect === 'confetti' || effect === 'fireworks' || effect === 'sparkles';
+
   return (
-    <div className="pointer-events-none absolute inset-0 z-10 overflow-hidden rounded-[inherit]">
+    <div
+      className={cn(
+        'pointer-events-none absolute inset-0 z-10 rounded-[inherit]',
+        spillsOverDesk ? 'overflow-visible' : 'overflow-hidden',
+      )}
+    >
+      {effect === 'fireworks'
+        ? [0, 0.2, 0.42].map((delay, i) => (
+            <span
+              key={`fw-core-${runId}-${i}`}
+              className="pointer-events-none absolute animate-classroom-fx-firework-flash-scoped motion-reduce:opacity-70"
+              style={{
+                left: `${[30, 54, 76][i]}%`,
+                top: `${[36, 30, 38][i]}%`,
+                animationDelay: `${delay}s`,
+              }}
+              aria-hidden
+            />
+          ))
+        : null}
       {particles.map((p) => {
         const common: React.CSSProperties = {
           position: 'absolute',
@@ -632,11 +723,26 @@ export function ClassroomEffectOverlay({
           animationDuration: `${p.duration}s`,
         };
         if (effect === 'confetti') {
+          const w = p.width ?? p.size;
+          const h = p.height ?? p.size * 0.65;
           return (
             <span
               key={p.id}
-              style={{ ...common, top: -8, background: `hsl(${p.hue} 90% 60%)`, borderRadius: 2 }}
-              className="block animate-classroom-fx-fall-scoped"
+              style={{
+                position: 'absolute',
+                left: `${p.left}%`,
+                top: -16 - (p.id % 5) * 4,
+                width: w,
+                height: h,
+                animationDelay: `${p.delay}s`,
+                animationDuration: `${p.duration}s`,
+                background: `hsl(${p.hue} 92% 58%)`,
+                borderRadius: p.shape === 'circle' ? '50%' : 2,
+                boxShadow: `0 0 6px hsl(${p.hue} 90% 60% / 0.45)`,
+                ['--fx-drift' as string]: `${p.drift ?? 0}px`,
+                ['--fx-spin' as string]: `${p.spin ?? 720}deg`,
+              }}
+              className="block animate-classroom-fx-confetti-scoped"
             />
           );
         }
@@ -694,13 +800,49 @@ export function ClassroomEffectOverlay({
               key={p.id}
               style={{
                 ...common,
-                top: `${Math.random() * 100}%`,
-                color: `hsl(${p.hue} 90% 70%)`,
+                top: `${10 + (p.id % 7) * 12}%`,
+                left: `${p.left}%`,
+                color: `hsl(${p.hue} 92% 68%)`,
+                filter: 'drop-shadow(0 0 4px currentColor)',
               }}
               className="block animate-classroom-fx-twinkle-scoped"
             >
               <Sparkles className="h-full w-full" />
             </span>
+          );
+        }
+        if (effect === 'fireworks') {
+          const x = Math.cos((p.angle * Math.PI) / 180) * p.dist;
+          const y = Math.sin((p.angle * Math.PI) / 180) * p.dist;
+          const sparkSize = p.trail ? p.size * 0.45 : p.size * 0.6;
+          return (
+            <span
+              key={p.id}
+              style={{
+                position: 'absolute',
+                left: `${p.originLeft ?? 50}%`,
+                top: `${p.originTop ?? 45}%`,
+                width: sparkSize,
+                height: sparkSize,
+                background: p.trail
+                  ? `hsl(${p.hue} 98% 72%)`
+                  : `radial-gradient(circle, hsl(${p.hue} 98% 78%) 0%, hsl(${p.hue} 95% 58%) 55%, hsl(${p.hue} 90% 45%) 100%)`,
+                borderRadius: '50%',
+                boxShadow: p.trail
+                  ? `0 0 6px hsl(${p.hue} 95% 70% / 0.9)`
+                  : `0 0 12px hsl(${p.hue} 95% 65% / 0.95), 0 0 22px hsl(${p.hue} 95% 55% / 0.45)`,
+                animationDelay: `${p.delay}s`,
+                animationDuration: `${p.duration}s`,
+                ['--fx-x' as string]: `${x}%`,
+                ['--fx-y' as string]: `${y}%`,
+                ['--fx-gravity' as string]: `${8 + (p.id % 5) * 3}%`,
+              }}
+              className={
+                p.trail
+                  ? 'block animate-classroom-fx-firework-trail-scoped'
+                  : 'block animate-classroom-fx-firework-burst-scoped'
+              }
+            />
           );
         }
         const x = Math.cos((p.angle * Math.PI) / 180) * p.dist;
@@ -714,9 +856,9 @@ export function ClassroomEffectOverlay({
               top: '50%',
               width: p.size * 0.55,
               height: p.size * 0.55,
-              background: `hsl(${p.hue} 95% 60%)`,
+              background: `hsl(${p.hue} 95% 62%)`,
               borderRadius: '50%',
-              boxShadow: `0 0 8px hsl(${p.hue} 95% 60%)`,
+              boxShadow: `0 0 10px hsl(${p.hue} 95% 60% / 0.85), 0 0 18px hsl(${p.hue} 95% 60% / 0.35)`,
               animationDelay: `${p.delay}s`,
               animationDuration: `${p.duration}s`,
               ['--fx-x' as string]: `${x}%`,
@@ -758,10 +900,29 @@ export const ClassroomDeskFlashOverlay = memo(function ClassroomDeskFlashOverlay
         )}
       />
       {!subtle ? (
-        <span
-          key={`wave-${runId}`}
-          className="absolute inset-0 rounded-[inherit] border-2 border-emerald-400/80 animate-classroom-desk-flash-wave motion-reduce:border-emerald-400"
-        />
+        <>
+          <span
+            key={`wave-${runId}`}
+            className="absolute inset-0 rounded-[inherit] border-2 border-emerald-400/80 animate-classroom-desk-flash-wave motion-reduce:border-emerald-400"
+          />
+          <span
+            key={`shine-${runId}`}
+            className="absolute inset-0 overflow-hidden rounded-[inherit]"
+          >
+            <span className="absolute inset-y-0 w-1/2 bg-gradient-to-r from-transparent via-white/50 to-transparent animate-classroom-desk-flash-shine motion-reduce:opacity-40" />
+          </span>
+          {[0, 1, 2, 3, 4, 5].map((i) => (
+            <span
+              key={`spark-${runId}-${i}`}
+              className="absolute h-1.5 w-1.5 rounded-full bg-emerald-300 animate-classroom-desk-flash-spark motion-reduce:opacity-70"
+              style={{
+                left: `${18 + i * 14}%`,
+                top: `${22 + (i % 3) * 18}%`,
+                animationDelay: `${i * 0.06}s`,
+              }}
+            />
+          ))}
+        </>
       ) : null}
       {showPointsBadge && points > 0 ? (
         <span
@@ -837,7 +998,7 @@ export function useClassroomCelebrationEffect() {
 
   useEffect(() => {
     if (!active) return;
-    const t = setTimeout(() => setActive(null), 2800);
+    const t = setTimeout(() => setActive(null), 3800);
     return () => clearTimeout(t);
   }, [active]);
 

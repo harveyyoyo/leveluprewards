@@ -21,7 +21,7 @@ export function defaultClassroomWizardDraft(classes: Class[]): ClassroomSetupWiz
     spotlightClassId: sorted[0]?.id ?? '',
     instantTap: true,
     defaultPoints: 5,
-    design: 'aurora',
+    design: DEFAULT_CLASSROOM_PREFS.design,
     enableParentView: false,
   };
 }

@@ -1,7 +1,7 @@
 /** Classroom room display (projector/TV in the room) — separate from hallway Smart Screen. */
 
 import type { ClassroomDesign } from '@/lib/classroomSeatingChart';
-import { normalizeClassroomDesign } from '@/lib/classroomSeatingChart';
+import { DEFAULT_CLASSROOM_PREFS, normalizeClassroomDesign } from '@/lib/classroomSeatingChart';
 
 export type ClassroomScreenModule =
   | 'clock'

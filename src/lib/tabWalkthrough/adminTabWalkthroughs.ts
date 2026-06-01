@@ -1,4 +1,5 @@
 import type { TabWalkthroughConfig } from './types';
+import { CLASSROOM_SEATING_SECTION_LABEL } from '@/lib/classroom/classroomTabSections';
 
 const ADMIN_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
   students: {
@@ -135,12 +136,12 @@ const ADMIN_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
       {
         title: 'Behavior',
         checklist: [
-          'Teachers add notes from the seating chart (Shift+click or award menu).',
+          `Teachers add notes from ${CLASSROOM_SEATING_SECTION_LABEL} (Shift+click or award menu).`,
           'Open the Principal tab for the school-wide timeline when it is enabled.',
         ],
       },
       {
-        title: 'Seating chart',
+        title: CLASSROOM_SEATING_SECTION_LABEL,
         checklist: [
           'Pick a class, arrange desks, and tap students to award during the lesson.',
           'Open Help wizard in the tab header for a tour of each section.',

@@ -217,6 +217,12 @@ interface Settings {
     defaultWelcomeGreetingStyleId?: string;
     /** Back-compat alias used by some pages/components. */
     enableAttendance: boolean;
+    /** Classroom bathroom pass timer (requires attendance pillar + class sign-in). */
+    enableBathroomTimer?: boolean;
+    /** Max minutes before a bathroom pass is flagged as over limit. */
+    bathroomMaxMinutes?: number;
+    /** When true, only students who signed in today can start a bathroom pass. */
+    bathroomRequirePresent?: boolean;
     // Guidance
     enableHelperMode: boolean;
     showIntroWizard?: boolean;
@@ -594,6 +600,9 @@ const defaultSettings: Settings = {
     studentWelcomeBackDurationSec: 2,
     defaultWelcomeGreetingStyleId: '',
     enableAttendance: false,
+    enableBathroomTimer: true,
+    bathroomMaxMinutes: 5,
+    bathroomRequirePresent: true,
     enableHelperMode: true,
     showIntroWizard: false,
     enableTeacherBudgets: false,
@@ -910,6 +919,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         if (!(next.payAttendance ?? true)) {
             next.enableClassSignIn = false;
             next.enableAttendance = false;
+            next.enableBathroomTimer = false;
         }
         if (!(next.payHomework ?? true)) {
             next.enableHomework = false;
@@ -1123,6 +1133,12 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                     delete (parsed as Partial<Settings>).studentSignInFreezeSec;
                 } else {
                     parsed.studentSignInFreezeSec = Math.min(3600, Math.round(freezeSec));
+                }
+                if (parsed.adminNavLayout !== 'top' && parsed.adminNavLayout !== 'sidebar') {
+                    delete (parsed as Partial<Settings>).adminNavLayout;
+                }
+                if (parsed.teacherNavLayout !== 'top' && parsed.teacherNavLayout !== 'sidebar') {
+                    delete (parsed as Partial<Settings>).teacherNavLayout;
                 }
                 // Demo school: production defaults are applied only on first-run (see no-saved-settings branch below).
                 const nextSettings = applyEntitlements({ 

@@ -3,18 +3,19 @@
 import { TabWalkthroughWizard } from '@/components/admin/TabWalkthroughWizard';
 import type { TabWalkthroughStep } from '@/lib/tabWalkthrough';
 import type { ClassroomTabSection } from '@/lib/classroom/classroomTabSections';
+import { CLASSROOM_SEATING_SECTION_LABEL } from '@/lib/classroom/classroomTabSections';
 
 const STEP_BY_SECTION: Record<ClassroomTabSection, TabWalkthroughStep> = {
   setup: {
     title: 'Setup',
     checklist: [
-      'School admins turn Room display, Parent portal, and Principal on or off here.',
-      'Teachers see the same tabs; toggles stay in sync for the whole school.',
+      'Turn Room display, Parent portal, and Principal on or off for your school.',
+      'Teachers and admins use the same toggles — changes apply for everyone.',
       'Optional tabs only appear when they are enabled.',
     ],
   },
   seating: {
-    title: 'Seating chart',
+    title: CLASSROOM_SEATING_SECTION_LABEL,
     checklist: [
       'In classroom settings (gear), pick Quick select or Show award menu — only one mode at a time.',
       'Choose a class, then tap a desk to award points.',
@@ -32,7 +33,7 @@ const STEP_BY_SECTION: Record<ClassroomTabSection, TabWalkthroughStep> = {
   behavior: {
     title: 'Behavior',
     checklist: [
-      'Add notes from Seating (Shift+click or award menu → Behavior note).',
+      `Add notes from ${CLASSROOM_SEATING_SECTION_LABEL} (Shift+click or award menu → Behavior note).`,
       'Saved notes appear in the Behavior tab list right away.',
       'Turn on Principal in Setup for the same school-wide view under Principal.',
     ],

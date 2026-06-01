@@ -1,4 +1,5 @@
 import type { TabWalkthroughConfig } from './types';
+import { CLASSROOM_SEATING_SECTION_LABEL } from '@/lib/classroom/classroomTabSections';
 
 const TEACHER_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
   roster: {
@@ -51,7 +52,14 @@ const TEACHER_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
     subtitle: 'Same sections as school admin',
     steps: [
       {
-        title: 'Seating chart',
+        title: 'Setup',
+        checklist: [
+          'Open Setup to turn on Principal, Room display, or Parent portal.',
+          'Your choices apply for all staff — same tabs for teachers and admins.',
+        ],
+      },
+      {
+        title: CLASSROOM_SEATING_SECTION_LABEL,
         checklist: [
           'Choose your class and tap students for quick awards.',
           'Shift+click for a behavior note (see the Behavior section).',
@@ -60,8 +68,8 @@ const TEACHER_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
       {
         title: 'Behavior & Principal',
         checklist: [
-          'Behavior explains how to add notes from the chart.',
-          'Principal shows the school-wide timeline when your admin turned it on in Setup.',
+          'Behavior lists notes you add from the chart.',
+          'Turn on Principal in Setup to open the school-wide timeline tab.',
         ],
       },
       {

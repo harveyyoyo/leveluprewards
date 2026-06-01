@@ -5,6 +5,7 @@ import { clientIp, jsonError, rateLimit, sameOrigin } from '@/lib/server/apiSecu
 import { verifyStaffForSchoolApi } from '@/lib/server/verifyStaffForSchoolApi';
 import { isClassroomPillarOn } from '@/lib/productPillars';
 import type { BehaviorNoteKind } from '@/lib/types';
+import { parseBehaviorNoteCreatedAt } from '@/lib/classroom/behaviorNoteTime';
 
 const SCHOOL_ID_RE = /^[\w-]{1,128}$/;
 const MAX_BODY_BYTES = 16 * 1024;
@@ -81,7 +82,7 @@ export async function GET(req: NextRequest) {
         teacherName: String(row.teacherName || ''),
         kind: NOTE_KINDS.has(row.kind as BehaviorNoteKind) ? row.kind : 'concern',
         note: String(row.note || ''),
-        createdAt: Number(row.createdAt || 0),
+        createdAt: parseBehaviorNoteCreatedAt(row.createdAt),
         visibleToParent: row.visibleToParent !== false,
         pointsAmount: row.pointsAmount != null ? Number(row.pointsAmount) : undefined,
         pointsLabel: row.pointsLabel ? String(row.pointsLabel) : undefined,

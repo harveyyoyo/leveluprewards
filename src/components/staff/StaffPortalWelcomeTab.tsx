@@ -1,9 +1,8 @@
 'use client';
 
 import type { LucideIcon } from 'lucide-react';
-import { ArrowRight, TableProperties } from 'lucide-react';
+import { ChevronRight, Sparkles, TableProperties } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   staffPortalTabDescription,
   staffPortalTabsForRole,
@@ -19,53 +18,64 @@ type StaffPortalWelcomeTabProps = {
   /** Admin-only: open bulk CSV roster import. */
   onBulkRoster?: () => void;
   includeDeveloperBackups?: boolean;
+  /** First name or display name for a personal greeting. */
+  displayName?: string | null;
+  /** Shown on admin welcome when available. */
+  schoolName?: string | null;
   className?: string;
 };
 
-function TabLinkCard({
+function firstName(name: string): string {
+  const trimmed = name.trim();
+  if (!trimmed) return '';
+  return trimmed.split(/\s+/)[0] ?? trimmed;
+}
+
+/** One short line — easier to scan than full registry copy. */
+function shortTabBlurb(description: string): string {
+  const sentence = description.split(/(?<=[.!?])\s+/)[0]?.trim() ?? description;
+  if (sentence.length <= 80) return sentence;
+  return `${sentence.slice(0, 77).trimEnd()}…`;
+}
+
+function TabLinkRow({
   icon: Icon,
   label,
   description,
-  kind,
   onOpen,
 }: {
   icon: LucideIcon;
   label: string;
   description: string;
-  kind: 'core' | 'addon';
   onOpen: () => void;
 }) {
   return (
-    <Card className="rounded-2xl border-border/70 shadow-sm transition-colors hover:border-primary/30">
-      <CardHeader className="pb-2">
-        <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <Icon className="h-5 w-5" aria-hidden />
-          </div>
-          <div className="min-w-0 flex-1">
-            <CardTitle className="text-base font-bold leading-tight">{label}</CardTitle>
-            {kind === 'addon' ? (
-              <p className="mt-0.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                Add-on
-              </p>
-            ) : null}
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-3 pt-0">
-        <CardDescription className="text-sm leading-relaxed">{description}</CardDescription>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="rounded-xl font-semibold gap-1.5"
-          onClick={onOpen}
-        >
-          Open {label}
-          <ArrowRight className="h-3.5 w-3.5" aria-hidden />
-        </Button>
-      </CardContent>
-    </Card>
+    <button
+      type="button"
+      onClick={onOpen}
+      className={cn(
+        'group flex w-full items-center gap-3 rounded-xl border border-border/60 bg-card px-4 py-3.5 text-left',
+        'transition-colors hover:border-primary/25 hover:bg-muted/40',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35',
+      )}
+    >
+      <div
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary/15"
+        aria-hidden
+      >
+        <Icon className="h-4 w-4" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="font-semibold leading-snug text-foreground">{label}</p>
+        <p className="mt-0.5 text-sm leading-snug text-muted-foreground line-clamp-1">
+          {shortTabBlurb(description)}
+        </p>
+      </div>
+      <ChevronRight
+        className="h-4 w-4 shrink-0 text-muted-foreground/50 transition-transform group-hover:translate-x-0.5 group-hover:text-muted-foreground"
+        aria-hidden
+      />
+    </button>
   );
 }
 
@@ -75,6 +85,8 @@ export function StaffPortalWelcomeTab({
   onGoToTab,
   onBulkRoster,
   includeDeveloperBackups = false,
+  displayName,
+  schoolName,
   className,
 }: StaffPortalWelcomeTabProps) {
   const tabs = staffPortalTabsForRole(role, settings, { includeDeveloperBackups }).filter(
@@ -83,55 +95,72 @@ export function StaffPortalWelcomeTab({
   const core = tabs.filter((t) => t.kind === 'core');
   const addons = tabs.filter((t) => t.kind === 'addon');
 
+  const greetingName = displayName ? firstName(displayName) : '';
+  const greeting = greetingName ? `Hi, ${greetingName}` : 'Welcome';
+
   const intro =
     role === 'teacher'
-      ? 'Use the sections below for daily teaching tasks. Pin optional tabs from Add more when you want them in the sidebar or top row.'
-      : 'School setup and daily operations live in the sections below. Pin optional features from Add more to keep them one click away.';
+      ? 'Choose what you want to do today. Your tabs are always available on the left or across the top.'
+      : schoolName?.trim()
+        ? `Quick links for ${schoolName.trim()}. Open a section below or use the tabs.`
+        : 'Quick links to every section. Open one below or use the tabs.';
 
   return (
-    <div className={cn('space-y-8', className)}>
-      <div>
-        <h3 className="text-xl font-bold tracking-tight">Welcome</h3>
-        <p className="mt-1 max-w-2xl text-sm text-muted-foreground leading-relaxed">{intro}</p>
+    <div className={cn('space-y-6', className)}>
+      <div className="rounded-2xl border border-border/50 bg-muted/25 px-5 py-5 sm:px-6 sm:py-6">
+        <div className="flex items-start gap-3">
+          <div
+            className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/12 text-primary"
+            aria-hidden
+          >
+            <Sparkles className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <h3 className="text-lg font-semibold tracking-tight text-foreground">{greeting}</h3>
+            <p className="mt-1 max-w-xl text-sm leading-relaxed text-muted-foreground">{intro}</p>
+          </div>
+        </div>
       </div>
 
       {role === 'admin' && onBulkRoster ? (
-        <Card className="rounded-2xl border-dashed border-primary/40 bg-primary/5">
-          <CardHeader className="pb-2">
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
-                <TableProperties className="h-5 w-5" aria-hidden />
-              </div>
-              <div>
-                <CardTitle className="text-base font-bold">Bulk roster & AI import</CardTitle>
-                <CardDescription className="mt-1 text-sm">
-                  Import classes, teachers, and students with CSV templates, or paste spreadsheets, exports,
-                  or notes and let AI detect columns and build your roster — useful for a new school year or
-                  migrating from another system.
-                </CardDescription>
-              </div>
+        <div className="flex flex-col gap-3 rounded-xl border border-dashed border-primary/30 bg-primary/5 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <div className="flex min-w-0 items-start gap-3">
+            <div
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary"
+              aria-hidden
+            >
+              <TableProperties className="h-4 w-4" />
             </div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <Button type="button" className="rounded-xl font-semibold gap-2" onClick={onBulkRoster}>
-              <TableProperties className="h-4 w-4" aria-hidden />
-              Open bulk roster & AI import
-            </Button>
-          </CardContent>
-        </Card>
+            <div>
+              <p className="font-semibold text-foreground">Import your roster</p>
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                Upload CSV files or paste a spreadsheet to set up classes, staff, and students.
+              </p>
+            </div>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            className="shrink-0 rounded-lg font-semibold sm:self-center"
+            onClick={onBulkRoster}
+          >
+            Open import
+          </Button>
+        </div>
       ) : null}
 
       {core.length > 0 ? (
-        <section className="space-y-3">
-          <h4 className="text-sm font-black uppercase tracking-widest text-muted-foreground">Main sections</h4>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <section className="space-y-2.5">
+          <h4 className="text-sm font-medium text-foreground">
+            {role === 'teacher' ? 'Your everyday tools' : 'Main areas'}
+          </h4>
+          <div className="grid gap-2 sm:grid-cols-2">
             {core.map((tab) => (
-              <TabLinkCard
+              <TabLinkRow
                 key={tab.value}
                 icon={tab.icon}
                 label={tab.label}
                 description={staffPortalTabDescription(tab)}
-                kind={tab.kind}
                 onOpen={() => onGoToTab(tab.value)}
               />
             ))}
@@ -140,21 +169,20 @@ export function StaffPortalWelcomeTab({
       ) : null}
 
       {addons.length > 0 ? (
-        <section className="space-y-3">
-          <h4 className="text-sm font-black uppercase tracking-widest text-muted-foreground">
-            Optional features
-          </h4>
-          <p className="text-xs text-muted-foreground">
-            These may appear in your tab bar when enabled and pinned, or under Add more.
-          </p>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <section className="space-y-2.5">
+          <div>
+            <h4 className="text-sm font-medium text-foreground">More tools</h4>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Turn these on and pin them from Add more when you need them.
+            </p>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2">
             {addons.map((tab) => (
-              <TabLinkCard
+              <TabLinkRow
                 key={tab.value}
                 icon={tab.icon}
                 label={tab.label}
                 description={staffPortalTabDescription(tab)}
-                kind={tab.kind}
                 onOpen={() => onGoToTab(tab.value)}
               />
             ))}

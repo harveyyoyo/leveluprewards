@@ -16,11 +16,14 @@ import {
 import type { ClassroomDeskDisplay } from '@/lib/classroom/classroomDeskDisplay';
 import type { ClassroomKioskFlyUpSize } from '@/lib/classroomSeatingChart';
 import type { TodayAttendanceStatus } from '@/hooks/useTodayAttendanceMap';
+import { formatBathroomElapsed, isBathroomOverLimit } from '@/lib/bathroom/formatBathroomElapsed';
 import { cn } from '@/lib/utils';
+import { Timer } from 'lucide-react';
 
 export type ClassroomGridHandlers = {
   onDeskTap: (studentId: string, cellIndex: number) => void;
   onBehaviorNote: (studentId: string) => void;
+  onBathroomToggle?: (studentId: string) => void;
   onDragStart: (cellIndex: number) => void;
   onDrop: (cellIndex: number) => void;
 };
@@ -55,6 +58,10 @@ type SeatingDeskCellProps = {
   isAwarding: boolean;
   attendanceEnabled: boolean;
   attStatus: TodayAttendanceStatus;
+  bathroomEnabled: boolean;
+  bathroomStartedAt: number | null;
+  bathroomMaxMinutes: number;
+  bathroomTick: number;
   pendingStartedAt: number | null;
   autoAwardMs: number;
   activeCelebration: ActiveCelebrationState;
@@ -99,6 +106,10 @@ function seatingDeskCellPropsEqual(prev: SeatingDeskCellProps, next: SeatingDesk
     prev.isAwarding === next.isAwarding &&
     prev.attendanceEnabled === next.attendanceEnabled &&
     prev.attStatus === next.attStatus &&
+    prev.bathroomEnabled === next.bathroomEnabled &&
+    prev.bathroomStartedAt === next.bathroomStartedAt &&
+    prev.bathroomMaxMinutes === next.bathroomMaxMinutes &&
+    prev.bathroomTick === next.bathroomTick &&
     prev.pendingStartedAt === next.pendingStartedAt &&
     prev.autoAwardMs === next.autoAwardMs &&
     prev.activeCelebration === next.activeCelebration &&
@@ -130,6 +141,10 @@ const SeatingDeskCell = memo(function SeatingDeskCell({
   isAwarding,
   attendanceEnabled,
   attStatus,
+  bathroomEnabled,
+  bathroomStartedAt,
+  bathroomMaxMinutes,
+  bathroomTick,
   pendingStartedAt,
   autoAwardMs,
   activeCelebration,
@@ -137,12 +152,18 @@ const SeatingDeskCell = memo(function SeatingDeskCell({
   cellWrapRef,
 }: SeatingDeskCellProps) {
   const hasStudent = !!display;
+  void bathroomTick;
 
   const onClick = useCallback(
     (e: React.MouseEvent) => {
       if (editMode || !studentId) return;
       const h = handlersRef.current;
       if (!h) return;
+      if (e.altKey && h.onBathroomToggle) {
+        e.preventDefault();
+        h.onBathroomToggle(studentId);
+        return;
+      }
       if (e.shiftKey) {
         h.onBehaviorNote(studentId);
         return;
@@ -151,6 +172,11 @@ const SeatingDeskCell = memo(function SeatingDeskCell({
     },
     [cellIndex, editMode, handlersRef, studentId],
   );
+
+  const bathroomElapsedMs =
+    bathroomEnabled && bathroomStartedAt != null ? Date.now() - bathroomStartedAt : 0;
+  const bathroomOver =
+    bathroomStartedAt != null && isBathroomOverLimit(bathroomElapsedMs, bathroomMaxMinutes);
 
   const showCelebration =
     activeCelebration != null && activeCelebration.cellIndex === cellIndex;
@@ -239,6 +265,21 @@ const SeatingDeskCell = memo(function SeatingDeskCell({
           />
         ) : null}
 
+        {bathroomEnabled && bathroomStartedAt != null ? (
+          <span
+            className={cn(
+              'pointer-events-none absolute bottom-1 right-1 flex items-center gap-0.5 rounded-md px-1 py-0.5 text-[10px] font-bold font-mono tabular-nums ring-2 ring-background',
+              bathroomOver
+                ? 'bg-red-500 text-white'
+                : 'bg-violet-600 text-white',
+            )}
+            title={bathroomOver ? 'Over bathroom time limit — click desk with Alt to mark returned' : 'On bathroom pass — Alt+click to mark returned'}
+          >
+            <Timer className="h-2.5 w-2.5 shrink-0" aria-hidden />
+            {formatBathroomElapsed(bathroomElapsedMs)}
+          </span>
+        ) : null}
+
         {showCelebration && activeCelebration && activeCelebration.effect !== 'none' ? (
           <ClassroomEffectOverlay
             effect={activeCelebration.effect as ClassroomEffect}
@@ -278,6 +319,10 @@ export type ClassroomSeatingGridProps = {
   awardingId: string | null;
   attendanceEnabled: boolean;
   attendanceByStudent: Map<string, TodayAttendanceStatus>;
+  bathroomEnabled: boolean;
+  bathroomByStudent: Map<string, { startedAt: number }>;
+  bathroomMaxMinutes: number;
+  bathroomTick: number;
   activeCelebration: ActiveCelebrationState;
   handlersRef: RefObject<ClassroomGridHandlers>;
   className?: string;
@@ -310,6 +355,10 @@ export const ClassroomSeatingGrid = memo(function ClassroomSeatingGrid({
   awardingId,
   attendanceEnabled,
   attendanceByStudent,
+  bathroomEnabled,
+  bathroomByStudent,
+  bathroomMaxMinutes,
+  bathroomTick,
   activeCelebration,
   handlersRef,
   className,
@@ -405,6 +454,14 @@ export const ClassroomSeatingGrid = memo(function ClassroomSeatingGrid({
                   ? attendanceByStudent.get(studentId) ?? 'absent'
                   : 'unknown'
               }
+              bathroomEnabled={bathroomEnabled}
+              bathroomStartedAt={
+                studentId && bathroomByStudent.has(studentId)
+                  ? bathroomByStudent.get(studentId)!.startedAt
+                  : null
+              }
+              bathroomMaxMinutes={bathroomMaxMinutes}
+              bathroomTick={bathroomTick}
               pendingStartedAt={pendingCellIndex === cellIndex ? pendingStartedAt : null}
               autoAwardMs={autoAwardMs}
               activeCelebration={activeCelebration}

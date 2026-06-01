@@ -24,7 +24,7 @@ export const OFFICE_NAV_ITEMS: OfficeNavItem[] = [
   {
     id: 'home',
     label: 'Home',
-    description: 'Overview and quick actions',
+    description: 'Roster, grades, and billing at a glance',
     href: (schoolId) => officePublicHref(schoolId),
     icon: Home,
   },

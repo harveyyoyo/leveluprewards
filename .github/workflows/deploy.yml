@@ -44,6 +44,7 @@ jobs:
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          FIREBASE_SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_STUDIO_1273073612_71183 }}
         run: |
           {
             if [ -n "$OPENAI_API_KEY" ]; then
@@ -59,6 +60,9 @@ jobs:
             printf 'NEXT_PUBLIC_OFFICE_CANONICAL_HOST=office.leveluprewards.app\n'
             printf 'AUTH_COOKIE_DOMAIN=.leveluprewards.app\n'
           } > .env
+          if [ -n "$FIREBASE_SA_JSON" ]; then
+            node -e "const fs=require('fs');const sa=process.env.FIREBASE_SA_JSON||'';if(sa){fs.appendFileSync('.env','FIREBASE_SERVICE_ACCOUNT_KEY='+JSON.stringify(sa)+'\n');}"
+          fi
 
       - name: Build
         run: npm run build

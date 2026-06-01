@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { ContentSectionTreeNav } from '@/components/ui/content-section-tree-nav';
-import { Clock, Globe, History, Loader2, Trash2, Users, Zap } from 'lucide-react';
+import { Clock, Globe, History, Loader2, Timer, Trash2, Users, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -56,6 +56,11 @@ export function AdminAttendanceTab(props: any) {
     handleSaveAttendanceConfig,
     getAttendanceConfig,
     setAttendanceConfig,
+    enableBathroomTimer,
+    bathroomMaxMinutes,
+    bathroomRequirePresent,
+    classSignInEnabled,
+    onBathroomSettingsChange,
   } = props;
 
   const dayOptions = [
@@ -218,6 +223,61 @@ export function AdminAttendanceTab(props: any) {
                 setAttendanceConfig={setAttendanceConfig}
               />
             </div>
+
+            <div className="pt-6 border-t space-y-4">
+              <Helper content="Teachers start and stop bathroom passes from the Classroom seating chart. Students can be required to sign in for attendance first.">
+                <h3 className="text-lg font-black tracking-tight flex items-center gap-2">
+                  <Timer className="w-5 h-5 text-primary" /> Bathroom pass timer
+                </h3>
+              </Helper>
+              {!classSignInEnabled ? (
+                <p className="text-sm text-amber-800 dark:text-amber-100 rounded-xl border border-amber-500/35 bg-amber-500/10 px-3 py-2">
+                  Turn on <span className="font-semibold">class sign-in</span> in school settings so students can sign in before bathroom passes.
+                </p>
+              ) : null}
+              <div className="flex items-center justify-between rounded-xl border bg-muted/20 px-4 py-3">
+                <div>
+                  <p className="text-sm font-bold">Enable bathroom timer in Classroom</p>
+                  <p className="text-xs text-muted-foreground">Alt+click a student on the seating chart to send or return.</p>
+                </div>
+                <Switch
+                  checked={enableBathroomTimer ?? true}
+                  disabled={!classSignInEnabled}
+                  onCheckedChange={(v) => onBathroomSettingsChange?.({ enableBathroomTimer: v === true })}
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="bathroom-max-min">Max minutes (warning)</Label>
+                  <Input
+                    id="bathroom-max-min"
+                    type="number"
+                    min={1}
+                    max={30}
+                    disabled={!enableBathroomTimer}
+                    value={bathroomMaxMinutes ?? 5}
+                    onChange={(e) =>
+                      onBathroomSettingsChange?.({
+                        bathroomMaxMinutes: Math.min(30, Math.max(1, parseInt(e.target.value, 10) || 5)),
+                      })
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground">Timer turns red after this many minutes.</p>
+                </div>
+                <div className="flex items-center justify-between rounded-xl border bg-muted/20 px-4 py-3 md:mt-6">
+                  <div>
+                    <p className="text-sm font-bold">Require attendance sign-in</p>
+                    <p className="text-xs text-muted-foreground">Only present students can leave.</p>
+                  </div>
+                  <Switch
+                    checked={bathroomRequirePresent ?? true}
+                    disabled={!enableBathroomTimer}
+                    onCheckedChange={(v) => onBathroomSettingsChange?.({ bathroomRequirePresent: v === true })}
+                  />
+                </div>
+              </div>
+            </div>
+
             <Button 
               onClick={handleSaveAttendanceConfig} 
               disabled={attendanceConfigSaving}
