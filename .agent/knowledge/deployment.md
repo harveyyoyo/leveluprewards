@@ -12,7 +12,7 @@ Before any deployment, the site must be thoroughly tested to ensure it is workin
 
 ## Critical Auth Guardrails
 
-School login uses **callable-first** verification (`verifySchoolAccessPasscode`) with the SSR route as backup. Deploys must include `FIREBASE_SERVICE_ACCOUNT_KEY` in hosting `.env` and pass `npm run test:live-auth` (includes `/api/auth/verify-school-access`).
+School login uses **callable-first** verification (`verifySchoolAccessPasscode`) with the SSR route as backup. Deploys must include `SSR_SERVICE_ACCOUNT_JSON` in hosting `.env` and pass `npm run test:live-auth` (includes `/api/auth/verify-school-access`).
 
 See `docs/auth-production-guardrails.md` for the full checklist.
 

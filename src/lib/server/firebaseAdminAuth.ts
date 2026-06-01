@@ -37,9 +37,22 @@ export function normalizeServiceAccountForAdmin(
   return serviceAccount;
 }
 
-/** Supports `FIREBASE_SERVICE_ACCOUNT_KEY` JSON (same as backup/upload scripts). */
+/** Hosting SSR `.env` name — `FIREBASE_*` is reserved on Cloud Functions deploy. */
+const HOSTING_SERVICE_ACCOUNT_ENV = 'SSR_SERVICE_ACCOUNT_JSON';
+/** Local dev / scripts (`.env.local`, backup scripts). */
+const LOCAL_SERVICE_ACCOUNT_ENV = 'FIREBASE_SERVICE_ACCOUNT_KEY';
+
+function serviceAccountRawFromEnv(): string | null {
+  for (const key of [HOSTING_SERVICE_ACCOUNT_ENV, LOCAL_SERVICE_ACCOUNT_ENV]) {
+    const raw = process.env[key]?.trim();
+    if (raw) return raw;
+  }
+  return null;
+}
+
+/** Supports service account JSON from env (see HOSTING / LOCAL env names above). */
 function serviceAccountFromEnv(): ServiceAccount | null {
-  const raw = process.env.FIREBASE_SERVICE_ACCOUNT_KEY?.trim();
+  const raw = serviceAccountRawFromEnv();
   if (!raw) return null;
   try {
     return normalizeServiceAccountForAdmin(JSON.parse(raw) as ServiceAccount);
@@ -77,7 +90,7 @@ export function firebaseAdminCredentialProjectMismatch(): string | null {
   const appProject = resolveAdminProjectId();
   const saProject = serviceAccountProjectId();
   if (!appProject || !saProject || saProject === appProject) return null;
-  return `FIREBASE_SERVICE_ACCOUNT_KEY is for project "${saProject}" but this app uses "${appProject}". Download a service account key from the ${appProject} Firebase console.`;
+  return `Service account JSON is for project "${saProject}" but this app uses "${appProject}". Download a service account key from the ${appProject} Firebase console.`;
 }
 
 /** True when Admin SDK can write to this app's Firestore (correct project). */

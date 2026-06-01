@@ -60,9 +60,9 @@ jobs:
             printf 'AUTH_COOKIE_DOMAIN=.leveluprewards.app\n'
           } > .env
           if [ -n "$FIREBASE_SA_JSON" ]; then
-            node -e "const fs=require('fs');const sa=process.env.FIREBASE_SA_JSON||'';if(sa){fs.appendFileSync('.env','FIREBASE_SERVICE_ACCOUNT_KEY='+JSON.stringify(sa)+'\n');}"
+            node -e "const fs=require('fs');const sa=process.env.FIREBASE_SA_JSON||'';if(sa){fs.appendFileSync('.env','SSR_SERVICE_ACCOUNT_JSON='+JSON.stringify(sa)+'\n');}"
           else
-            echo '::error::FIREBASE_SERVICE_ACCOUNT_STUDIO_1273073612_71183 secret missing — SSR school login will 503.'
+            echo '::error::FIREBASE_SERVICE_ACCOUNT_STUDIO_1273073612_71183 secret missing — SSR school login API may 503.'
             exit 1
           fi
 

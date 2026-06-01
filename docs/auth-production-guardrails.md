@@ -10,7 +10,7 @@ School passcode verification uses **two independent backends**:
    Deployed with Firebase Functions, uses Admin SDK directly. This is what the login page calls first so schools stay unlocked even when SSR is unhealthy.
 
 2. **Backup — `POST /api/auth/verify-school-access`**  
-   Next.js SSR route. Requires `FIREBASE_SERVICE_ACCOUNT_KEY` in the hosting backend `.env`. Used when the callable is unavailable.
+   Next.js SSR route. Requires `SSR_SERVICE_ACCOUNT_JSON` in the hosting backend `.env` (`FIREBASE_*` is reserved on Cloud Functions). Used when the callable is unavailable.
 
 Wrong passcodes must **not** fall through to the other backend (avoid masking credential errors).
 
@@ -27,8 +27,8 @@ Wrong passcodes must **not** fall through to the other backend (avoid masking cr
 
 Every hosting deploy **must** include Firebase Admin credentials for the SSR backend:
 
-- GitHub Actions: secret `FIREBASE_SERVICE_ACCOUNT_STUDIO_1273073612_71183` → written to `.env` as `FIREBASE_SERVICE_ACCOUNT_KEY` (deploy fails if missing).
-- Local `npm run deploy:hosting:safe`: `scripts/ensure-hosting-production-env.mjs` copies the key from `.env.local` into `.env` when needed.
+- GitHub Actions: secret `FIREBASE_SERVICE_ACCOUNT_STUDIO_1273073612_71183` → written to `.env` as `SSR_SERVICE_ACCOUNT_JSON` (deploy fails if missing).
+- Local `npm run deploy:hosting:safe`: copies from `.env.local` `FIREBASE_SERVICE_ACCOUNT_KEY` → `.env` `SSR_SERVICE_ACCOUNT_JSON`.
 
 Without this, `/api/auth/verify-school-access` returns 503. Login still works via the callable, but deploy smoke tests should catch the regression.
 
@@ -100,6 +100,6 @@ Monitor for:
 
 **Wrong passcode / school ID** — fix credentials; both backends agree.
 
-**"Could not verify school access"** — SSR route 503 *and* callable failed; check Functions deploy + `FIREBASE_SERVICE_ACCOUNT_KEY` on hosting backend.
+**"Could not verify school access"** — SSR route 503 *and* callable failed; check Functions deploy + `SSR_SERVICE_ACCOUNT_JSON` on hosting backend.
 
 **"Secure session could not start"** — passcode accepted but session cookie failed; check session infrastructure (edge enforcement should stay off until fixed).
