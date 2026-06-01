@@ -54,7 +54,6 @@ jobs:
               printf 'GEMINI_API_KEY=%s\n' "$GEMINI_API_KEY"
             fi
             printf 'NEXT_PUBLIC_ENABLE_DEV_LOGIN=false\n'
-            # Session cookies still 503 on SSR; keep middleware gate off until Admin ADC is fixed.
             printf 'DISABLE_AUTH_SESSION_EDGE=1\n'
             printf 'OFFICE_CANONICAL_HOST=office.leveluprewards.app\n'
             printf 'NEXT_PUBLIC_OFFICE_CANONICAL_HOST=office.leveluprewards.app\n'
@@ -62,6 +61,9 @@ jobs:
           } > .env
           if [ -n "$FIREBASE_SA_JSON" ]; then
             node -e "const fs=require('fs');const sa=process.env.FIREBASE_SA_JSON||'';if(sa){fs.appendFileSync('.env','FIREBASE_SERVICE_ACCOUNT_KEY='+JSON.stringify(sa)+'\n');}"
+          else
+            echo '::error::FIREBASE_SERVICE_ACCOUNT_STUDIO_1273073612_71183 secret missing — SSR school login will 503.'
+            exit 1
           fi
 
       - name: Build

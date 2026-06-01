@@ -12,6 +12,10 @@ Before any deployment, the site must be thoroughly tested to ensure it is workin
 
 ## Critical Auth Guardrails
 
+School login uses **callable-first** verification (`verifySchoolAccessPasscode`) with the SSR route as backup. Deploys must include `FIREBASE_SERVICE_ACCOUNT_KEY` in hosting `.env` and pass `npm run test:live-auth` (includes `/api/auth/verify-school-access`).
+
+See `docs/auth-production-guardrails.md` for the full checklist.
+
 On 2026-05-14, live school login failed because edge session-cookie enforcement
 depended on `POST /api/auth/session`, and that SSR route returned `503` in
 production. The school passcode callable was healthy, but middleware kept

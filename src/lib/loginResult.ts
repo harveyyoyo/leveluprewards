@@ -15,6 +15,22 @@ function callableErrorTail(code: string): string {
   return parts[parts.length - 1] ?? '';
 }
 
+/** True when a callable failed for transport/server reasons (safe to try another backend). */
+export function isCallableInfrastructureError(error: unknown): boolean {
+  const tail = callableErrorTail(String((error as { code?: string })?.code ?? ''));
+  if (
+    ['permission-denied', 'not-found', 'invalid-argument', 'failed-precondition', 'unauthenticated'].includes(
+      tail,
+    )
+  ) {
+    return false;
+  }
+  if (['unavailable', 'internal', 'deadline-exceeded', 'resource-exhausted', 'unknown'].includes(tail)) {
+    return true;
+  }
+  return false;
+}
+
 /**
  * Human text for failures from `verifySchoolAccessPasscode` (and the same HTTP codes from similar gates).
  * Distinguishes wrong ID/pass from connectivity so the UI does not blame credentials when offline.

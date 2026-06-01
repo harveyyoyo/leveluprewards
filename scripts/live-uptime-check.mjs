@@ -1,12 +1,17 @@
-const DEFAULT_BASE_URL = 'https://leveluprewards.app';
+import {
+  createAnonymousIdToken,
+  liveAuthConfig,
+  verifySchoolAccessApiRoute,
+} from './live-auth-checks.mjs';
 
-const baseUrl = (process.env.LIVE_UPTIME_BASE_URL || process.env.LIVE_AUTH_BASE_URL || DEFAULT_BASE_URL).replace(
+const baseUrl = (process.env.LIVE_UPTIME_BASE_URL || process.env.LIVE_AUTH_BASE_URL || 'https://leveluprewards.app').replace(
   /\/+$/,
   '',
 );
 const schoolId = (process.env.LIVE_UPTIME_SCHOOL_ID || process.env.LIVE_AUTH_SCHOOL_ID || 'yeshiva')
   .trim()
   .toLowerCase();
+const { passcode, firebaseApiKey } = liveAuthConfig();
 const timeoutMs = Number(process.env.LIVE_UPTIME_TIMEOUT_MS || 15000);
 const portalMode = (process.env.LIVE_UPTIME_PORTAL_MODE || 'any').trim().toLowerCase();
 
@@ -122,8 +127,23 @@ async function checkPortal() {
   console.log(`[live-uptime] /${schoolId}/portal returned ${response.status}.`);
 }
 
+async function checkSchoolAccessApi() {
+  const idToken = await createAnonymousIdToken(firebaseApiKey);
+  const { response, body } = await verifySchoolAccessApiRoute({
+    baseUrl,
+    schoolId,
+    passcode,
+    idToken,
+  });
+  if (!response.ok) {
+    fail(`/api/auth/verify-school-access returned HTTP ${response.status}.`, body);
+  }
+  console.log(`[live-uptime] /api/auth/verify-school-access returned ${response.status}.`);
+}
+
 console.log(`[live-uptime] Checking ${baseUrl} for school "${schoolId}".`);
 await checkHealth();
+await checkSchoolAccessApi();
 await checkLogin();
 await checkPortal();
 console.log('[live-uptime] Uptime checks passed.');

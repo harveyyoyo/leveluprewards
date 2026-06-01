@@ -1,7 +1,11 @@
 import type { Auth } from 'firebase/auth';
 import { httpsCallable, type Functions } from 'firebase/functions';
 import { isAllowedDeveloperGoogleUser } from '@/lib/developerAccess';
-import { messageFromVerifySchoolAccessError } from '@/lib/loginResult';
+import { isCallableInfrastructureError, messageFromVerifySchoolAccessError } from '@/lib/loginResult';
+
+type VerifySchoolAccessResult =
+  | { ok: true }
+  | { ok: false; message: string; infrastructureFailure?: boolean };
 
 async function grantDeveloperSchoolAccess(
   functions: Functions,
@@ -20,7 +24,7 @@ async function grantDeveloperSchoolAccess(
   }
 }
 
-function canUseSchoolAccessCallableFallback(status: number): boolean {
+function canUseSchoolAccessApiFallback(status: number): boolean {
   return status === 503 || status === 502 || status === 404;
 }
 
@@ -30,7 +34,7 @@ async function verifySchoolAccessViaCallable(
   schoolId: string,
   passcode: string,
   options?: { allowDeveloperBypass?: boolean },
-): Promise<{ ok: true } | { ok: false; message: string }> {
+): Promise<VerifySchoolAccessResult> {
   const user = auth.currentUser;
   if (!user) {
     return { ok: false, message: 'No Firebase session yet. Refresh the page and try again.' };
@@ -56,23 +60,27 @@ async function verifySchoolAccessViaCallable(
     await verify({ schoolId: normalizedSchoolId, passcode });
     return { ok: true };
   } catch (e) {
-    console.error('verifySchoolAccessPasscode fallback failed:', e);
+    console.error('verifySchoolAccessPasscode failed:', e);
     return {
       ok: false,
       message: messageFromVerifySchoolAccessError(e, 'Invalid School ID or passcode.'),
+      infrastructureFailure: isCallableInfrastructureError(e),
     };
   }
 }
 
-export async function verifySchoolAccessViaApi(
+async function verifySchoolAccessViaApiRoute(
   auth: Auth,
   schoolId: string,
   passcode: string,
-  functions?: Functions,
-): Promise<{ ok: true } | { ok: false; message: string }> {
+): Promise<{ ok: true } | { ok: false; message: string; status: number }> {
   const user = auth.currentUser;
   if (!user) {
-    return { ok: false, message: 'No Firebase session yet. Refresh the page and try again.' };
+    return {
+      ok: false,
+      message: 'No Firebase session yet. Refresh the page and try again.',
+      status: 0,
+    };
   }
 
   const isGoogleLinked = user.providerData.some((p) => p.providerId === 'google.com');
@@ -90,12 +98,6 @@ export async function verifySchoolAccessViaApi(
 
   if (res.ok) return { ok: true };
 
-  if (functions && canUseSchoolAccessCallableFallback(res.status)) {
-    return verifySchoolAccessViaCallable(auth, functions, schoolId, passcode, {
-      allowDeveloperBypass: process.env.NODE_ENV === 'development',
-    });
-  }
-
   let message = 'Invalid School ID or passcode.';
   try {
     const data = (await res.json()) as { error?: string };
@@ -110,5 +112,46 @@ export async function verifySchoolAccessViaApi(
     message = 'No school with that ID was found.';
   }
 
-  return { ok: false, message };
+  return { ok: false, message, status: res.status };
+}
+
+/**
+ * School access gate used by the login page.
+ * Callable is primary (independently deployed Admin SDK); SSR API is backup when callable is down.
+ */
+export async function verifySchoolAccessViaApi(
+  auth: Auth,
+  schoolId: string,
+  passcode: string,
+  functions?: Functions,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const user = auth.currentUser;
+  if (!user) {
+    return { ok: false, message: 'No Firebase session yet. Refresh the page and try again.' };
+  }
+
+  if (functions) {
+    const callableResult = await verifySchoolAccessViaCallable(auth, functions, schoolId, passcode, {
+      allowDeveloperBypass: process.env.NODE_ENV === 'development',
+    });
+    if (callableResult.ok) return callableResult;
+    if (!callableResult.infrastructureFailure) {
+      return { ok: false, message: callableResult.message };
+    }
+  }
+
+  const apiResult = await verifySchoolAccessViaApiRoute(auth, schoolId, passcode);
+  if (apiResult.ok) return apiResult;
+
+  if (functions && canUseSchoolAccessApiFallback(apiResult.status)) {
+    const callableRetry = await verifySchoolAccessViaCallable(auth, functions, schoolId, passcode, {
+      allowDeveloperBypass: process.env.NODE_ENV === 'development',
+    });
+    if (callableRetry.ok) return callableRetry;
+    if (!callableRetry.infrastructureFailure) {
+      return { ok: false, message: callableRetry.message };
+    }
+  }
+
+  return { ok: false, message: apiResult.message };
 }

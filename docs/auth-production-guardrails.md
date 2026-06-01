@@ -1,24 +1,54 @@
 # Production Auth Guardrails
 
-Login is a critical path. Treat auth, middleware, and session-cookie changes like migrations: verify live behavior, keep rollback simple, and avoid silent loops.
+Login is a critical path. Treat auth, middleware, and session-cookie changes like migrations: verify live behavior, keep rollback simple, and avoid silent lockouts.
+
+## Architecture (school login)
+
+School passcode verification uses **two independent backends**:
+
+1. **Primary — Cloud Function `verifySchoolAccessPasscode`**  
+   Deployed with Firebase Functions, uses Admin SDK directly. This is what the login page calls first so schools stay unlocked even when SSR is unhealthy.
+
+2. **Backup — `POST /api/auth/verify-school-access`**  
+   Next.js SSR route. Requires `FIREBASE_SERVICE_ACCOUNT_KEY` in the hosting backend `.env`. Used when the callable is unavailable.
+
+Wrong passcodes must **not** fall through to the other backend (avoid masking credential errors).
 
 ## What Must Stay Healthy
 
-- School passcode callable: `verifySchoolAccessPasscode`
+- School passcode callable: `verifySchoolAccessPasscode` (**primary**)
+- SSR school gate: `/api/auth/verify-school-access` (**backup**; must not 503 after deploy)
 - Login page: `/login?school={schoolId}&next=/{schoolId}/portal`
 - Portal route: `/{schoolId}/portal`
 - Session-cookie endpoint when edge enforcement is enabled: `/api/auth/session`
 - School-gate endpoint when edge enforcement is enabled: `/api/auth/school-gate`
 
+## Deploy requirements
+
+Every hosting deploy **must** include Firebase Admin credentials for the SSR backend:
+
+- GitHub Actions: secret `FIREBASE_SERVICE_ACCOUNT_STUDIO_1273073612_71183` → written to `.env` as `FIREBASE_SERVICE_ACCOUNT_KEY` (deploy fails if missing).
+- Local `npm run deploy:hosting:safe`: `scripts/ensure-hosting-production-env.mjs` copies the key from `.env.local` into `.env` when needed.
+
+Without this, `/api/auth/verify-school-access` returns 503. Login still works via the callable, but deploy smoke tests should catch the regression.
+
 ## Required Post-Deploy Check
 
-`npm run deploy:hosting:safe` now runs:
+`npm run deploy:hosting:safe` runs:
 
 ```bash
 node scripts/live-auth-smoke.mjs
 ```
 
-The smoke test uses the live site, creates an anonymous Firebase test user, verifies the school access passcode callable, checks the session endpoint, requests the protected portal route, and uses Playwright to log in through the browser. A deploy is not considered healthy if this fails.
+The smoke test verifies:
+
+- anonymous Firebase test user creation
+- `verifySchoolAccessPasscode` callable
+- **`/api/auth/verify-school-access` returns 200** (not 503)
+- session endpoint behavior for current edge mode
+- browser login reaches `/{school}/portal`
+
+A deploy is **not** healthy if this fails.
 
 Default smoke target:
 
@@ -28,45 +58,25 @@ LIVE_AUTH_SCHOOL_ID=yeshiva
 LIVE_AUTH_PASSCODE=1234
 ```
 
-Override these when testing another deployment or a different canary school.
-
-GitHub deploys also run `npm run test:live-auth` after Firebase Hosting deploys. This keeps the
-full browser login smoke in CI instead of an hourly Codex automation.
+GitHub deploys also run `npm run test:live-auth` after Firebase Hosting deploys.
 
 ## Lightweight Uptime Check
-
-Use the cheap HTTP-only check for recurring monitoring:
 
 ```bash
 npm run test:live-uptime
 ```
 
-It checks `/api/health`, `/login?school={schoolId}&next=/{schoolId}/portal`, and
-`/{schoolId}/portal` without launching a browser or creating a Firebase Auth user.
+Checks `/api/health`, **`/api/auth/verify-school-access`**, login shell, and portal reachability (no browser).
 
-The `Production Uptime` GitHub Actions workflow runs this once daily and can also be run
-manually. Override targets with:
-
-```bash
-LIVE_UPTIME_BASE_URL=https://leveluprewards.app
-LIVE_UPTIME_SCHOOL_ID=yeshiva
-LIVE_UPTIME_PORTAL_MODE=public
-```
-
-Use `LIVE_UPTIME_PORTAL_MODE=strict` only when edge session enforcement is intentionally enabled.
+The `Production Uptime` workflow runs this daily.
 
 ## Edge Session Enforcement
 
 Production middleware can require an HttpOnly Firebase session cookie before serving `/{school}/...` pages.
 
-Normal strict mode requires:
-
-```bash
-AUTH_SESSION_EDGE_ENFORCEMENT=1
-LIVE_AUTH_REQUIRE_SESSION_COOKIE=1
-```
-
 Only enable strict mode when `npm run test:live-auth` passes with `LIVE_AUTH_REQUIRE_SESSION_COOKIE=1`.
+
+Keep `DISABLE_AUTH_SESSION_EDGE=1` until `/api/auth/session` reliably mints cookies in production.
 
 ## Emergency Rollback
 
@@ -77,25 +87,19 @@ DISABLE_AUTH_SESSION_EDGE=1
 npm run deploy:hosting:safe
 ```
 
-This does not bypass the school passcode. It only prevents middleware from requiring the server-minted session cookie while `/api/auth/session` is unhealthy.
-
 ## Alert Signals
 
-Set up monitoring for:
+Monitor for:
 
-- Any `5xx` from `/api/auth/session`
-- Any `5xx` from `/api/auth/school-gate`
-- Redirect spikes from `/{school}/portal` to `/login`
-- Login page traffic spikes during school hours
+- Any `5xx` from `/api/auth/verify-school-access`
+- Any `5xx` from `/api/auth/session` or `/api/auth/school-gate`
 - Cloud Function errors for `verifySchoolAccessPasscode`
+- Redirect spikes from `/{school}/portal` to `/login`
 
-## User-Facing Failure
+## User-Facing Failures
 
-If the passcode succeeds but secure session sync fails, the login page now shows:
+**Wrong passcode / school ID** — fix credentials; both backends agree.
 
-```text
-Secure session could not start
-Your passcode was accepted, but the server could not open the portal session.
-```
+**"Could not verify school access"** — SSR route 503 *and* callable failed; check Functions deploy + `FIREBASE_SERVICE_ACCOUNT_KEY` on hosting backend.
 
-That message means the user credentials are probably fine; check session-cookie infrastructure first.
+**"Secure session could not start"** — passcode accepted but session cookie failed; check session infrastructure (edge enforcement should stay off until fixed).

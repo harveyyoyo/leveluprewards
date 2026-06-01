@@ -1,12 +1,11 @@
 import { chromium } from '@playwright/test';
+import {
+  createAnonymousIdToken,
+  liveAuthConfig,
+  verifySchoolAccessApiRoute,
+} from './live-auth-checks.mjs';
 
-const DEFAULT_BASE_URL = 'https://leveluprewards.app';
-const DEFAULT_FIREBASE_API_KEY = 'AIzaSyBUH3r37IqZkJ9SmvWaaAJ5HU29Wa_hJLY';
-
-const baseUrl = (process.env.LIVE_AUTH_BASE_URL || DEFAULT_BASE_URL).replace(/\/+$/, '');
-const schoolId = (process.env.LIVE_AUTH_SCHOOL_ID || 'yeshiva').trim().toLowerCase();
-const passcode = process.env.LIVE_AUTH_PASSCODE || '1234';
-const firebaseApiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY || DEFAULT_FIREBASE_API_KEY;
+const { baseUrl, schoolId, passcode, firebaseApiKey } = liveAuthConfig();
 
 function fail(message, detail = '') {
   console.error(`[live-auth-smoke] ${message}`);
@@ -52,20 +51,20 @@ async function detectEdgeEnforcement() {
   return strict;
 }
 
-async function createAnonymousIdToken() {
-  const response = await fetch(
-    `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${encodeURIComponent(firebaseApiKey)}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ returnSecureToken: true }),
-    },
-  );
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok || typeof body.idToken !== 'string') {
-    fail(`Could not create anonymous Firebase test user. HTTP ${response.status}`, JSON.stringify(body));
+async function verifySchoolAccessApi(idToken) {
+  const { response, body } = await verifySchoolAccessApiRoute({
+    baseUrl,
+    schoolId,
+    passcode,
+    idToken,
+  });
+  if (!response.ok) {
+    fail(
+      `/api/auth/verify-school-access returned HTTP ${response.status}. Schools would rely on callable fallback only.`,
+      body,
+    );
   }
-  return body.idToken;
+  console.log(`[live-auth-smoke] /api/auth/verify-school-access returned ${response.status}.`);
 }
 
 async function verifyCallablePasscode(idToken) {
@@ -178,8 +177,9 @@ async function verifyBrowserLogin() {
 
 console.log(`[live-auth-smoke] Testing ${baseUrl} for school "${schoolId}".`);
 const requireSessionCookie = await detectEdgeEnforcement();
-const idToken = await createAnonymousIdToken();
+const idToken = await createAnonymousIdToken(firebaseApiKey);
 await verifyCallablePasscode(idToken);
+await verifySchoolAccessApi(idToken);
 await verifySessionCookieEndpoint(idToken, requireSessionCookie);
 await verifyDirectPortalHttp(requireSessionCookie);
 await verifyBrowserLogin();
