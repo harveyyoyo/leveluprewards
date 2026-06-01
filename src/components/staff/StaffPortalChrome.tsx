@@ -1,46 +1,55 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { PanelLeft, Rows3 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Helper } from '@/components/ui/helper';
-import { useSettings } from '@/components/providers/SettingsProvider';
 import type { StaffPortalRole } from '@/lib/staffPortal';
+import { staffPortalUsesSidebar } from '@/lib/staffPortal';
+import { useSettings } from '@/components/providers/SettingsProvider';
+import { staffPortalPageIntroClassName } from '@/components/staff/staffPortalNavStyles';
+import { cn } from '@/lib/utils';
+
+function portalHeading(role: StaffPortalRole): string {
+  if (role === 'teacher') return 'Teacher portal';
+  if (role === 'secretary') return 'Print desk';
+  return 'School admin';
+}
 
 type StaffPortalChromeProps = {
   role: StaffPortalRole;
   schoolId: string;
+  /** Override the default role-based page title. */
+  title?: string;
   /** Optional one-line context (e.g. teacher name); kept minimal to match admin header density. */
   displayName?: string;
   subtitle?: string;
-  /** Hide layout toggle (e.g. secretary) */
-  showLayoutToggle?: boolean;
-  /** Extra header actions (admin: bulk roster; teacher: none — global header handles sign-out). */
+  /** Extra header actions (legacy; prefer Welcome tab for tools like bulk roster). */
   endActions?: ReactNode;
 };
 
 export function StaffPortalChrome({
   role,
   schoolId: _schoolId,
+  title,
   displayName,
   subtitle,
-  showLayoutToggle = true,
   endActions,
 }: StaffPortalChromeProps) {
-  const { settings, updateSettings } = useSettings();
-  const sidebar = settings.adminNavLayout === 'sidebar';
+  const { settings } = useSettings();
+  const sidebar = staffPortalUsesSidebar(settings, role);
 
   const defaultSubtitle =
     role === 'teacher'
       ? 'Teacher tools — points, classes, prizes, and reports.'
       : role === 'secretary'
         ? 'Print coupon sheets for teachers to hand out.'
-        : 'Manage students, classes, prizes, and system settings.';
+        : 'Manage students, classes, teachers, points, prizes and much more...';
 
   const helperContent =
     role === 'teacher'
-      ? 'Same admin portal layout with teacher tabs only.'
+      ? 'Teacher sign-in uses the same URL as school admin, but only your tabs are shown.'
       : 'School admin portal.';
+
+  const heading = title ?? portalHeading(role);
 
   const resolvedSubtitle =
     subtitle ??
@@ -49,52 +58,29 @@ export function StaffPortalChrome({
       : defaultSubtitle);
 
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <div
+      className={cn(
+        'flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between',
+        staffPortalPageIntroClassName(sidebar),
+      )}
+    >
       <Helper content={helperContent}>
         <div>
           <h2
             className="text-2xl font-bold tracking-tight"
             style={{ color: 'hsl(var(--primary))' }}
           >
-            Admin
+            {heading}
           </h2>
           <p className="text-muted-foreground">{resolvedSubtitle}</p>
         </div>
       </Helper>
 
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:flex-wrap shrink-0">
-        {showLayoutToggle ? (
-          <div
-            className="flex items-center gap-0.5 rounded-xl border border-border/60 bg-muted/40 p-1"
-            role="group"
-            aria-label="Admin section tab layout"
-          >
-            <Button
-              type="button"
-              size="sm"
-              variant={sidebar ? 'ghost' : 'default'}
-              className="h-9 rounded-lg gap-1.5 px-3 text-xs font-bold"
-              onClick={() => updateSettings({ adminNavLayout: 'top' })}
-              aria-pressed={!sidebar}
-            >
-              <Rows3 className="h-3.5 w-3.5" aria-hidden />
-              Top tabs
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={sidebar ? 'default' : 'ghost'}
-              className="h-9 rounded-lg gap-1.5 px-3 text-xs font-bold"
-              onClick={() => updateSettings({ adminNavLayout: 'sidebar' })}
-              aria-pressed={sidebar}
-            >
-              <PanelLeft className="h-3.5 w-3.5" aria-hidden />
-              Side tabs
-            </Button>
-          </div>
-        ) : null}
-        {endActions}
-      </div>
+      {endActions ? (
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:flex-wrap shrink-0">
+          {endActions}
+        </div>
+      ) : null}
     </div>
   );
 }

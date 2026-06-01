@@ -6,6 +6,8 @@ export {
   staffPortalTeacherPinSideEffects,
   staffPortalCoreTabs,
   staffPortalDefaultTab,
+  staffPortalPinWelcomeFirst,
+  staffPortalTabDescription,
   staffPortalTabsForRole,
 } from './tabRegistry';
 export {
@@ -14,3 +16,9 @@ export {
   type UseStaffPortalTabsOptions,
   type UseStaffPortalTabsResult,
 } from './useStaffPortalTabs';
+export {
+  staffPortalNavLayoutPatch,
+  staffPortalRoleFromLoginState,
+  staffPortalUsesSidebar,
+  staffPortalUsesSidebarForLogin,
+} from './navLayout';

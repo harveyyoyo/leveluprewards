@@ -5,6 +5,36 @@ export function staffPortalContentMaxWidthClass(sidebar: boolean) {
   return sidebar ? 'max-w-none' : 'max-w-7xl';
 }
 
+/** Outer wrap: drop horizontal inset so the header band is edge-to-edge. */
+export function staffPortalGlobalHeaderWrapClassName(sidebar: boolean) {
+  if (!sidebar) return '';
+  return 'max-w-none w-full px-0';
+}
+
+/** Global site header band when staff portal uses side tabs. */
+export function staffPortalGlobalHeaderClassName(sidebar: boolean) {
+  if (!sidebar) return '';
+  return cn(
+    'mb-3 w-full max-w-none rounded-none border-0 border-b border-border/50',
+    'bg-slate-200/90 dark:bg-slate-900/88',
+    'shadow-none sm:mb-4',
+  );
+}
+
+/** Inner padding for global header content in side-tab layout. */
+export function staffPortalGlobalHeaderInnerClassName(sidebar: boolean) {
+  return sidebar ? 'px-4 md:px-6' : '';
+}
+
+/** Page title block (School admin / Teacher portal) — separates intro from tab content. */
+export function staffPortalPageIntroClassName(sidebar: boolean) {
+  if (!sidebar) return '';
+  return cn(
+    'border-b border-border/50 bg-slate-200/90 pb-4 dark:bg-slate-900/88',
+    'relative left-1/2 w-screen max-w-[100vw] -translate-x-1/2 px-4 sm:px-6',
+  );
+}
+
 /** Admin / teacher portal page shell — side tabs drop centered max-width frame. */
 export function staffPortalShellClassName(sidebar: boolean) {
   return cn(

@@ -583,7 +583,7 @@ export const FLYER_BOLD_CATALOG = [
   },
   {
     file: 'flyer-feature-raffle.html',
-    title: 'LevelUp — Weekly Raffle',
+    title: 'LevelUp — Raffle',
     headerEm: 'Feature',
     tagline: 'Raffle',
     mega: 'Points become<br /><span>raffle tickets.</span>',

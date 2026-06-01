@@ -67,6 +67,9 @@ export interface House {
 /** How often a teacher’s point budget resets (local date on this device). */
 export type TeacherBudgetPeriod = 'day' | 'week' | 'month';
 
+/** Classroom teachers vs school leadership in Admin > Teachers & staff. */
+export type TeacherPersonnelRole = 'teacher' | 'principal' | 'divisionHead';
+
 /** Staff logins managed in Admin (not full teachers). */
 export type StaffAccountRole = 'secretary' | 'prizeClerk' | 'reports' | 'librarian' | 'office' | 'houseCoordinator';
 
@@ -85,6 +88,8 @@ export interface StaffAccount {
 export interface Teacher {
   id: string;
   name: string;
+  /** Defaults to classroom teacher when unset. */
+  personnelRole?: TeacherPersonnelRole;
   username?: string;
   passcode?: string;
   email?: string;
@@ -202,6 +207,13 @@ export interface Student {
   updatedAt?: number;
   points: number;
   lifetimePoints?: number;
+  /**
+   * Classroom-only balance when LevelUp Rewards is off (or for classroom-only awards).
+   * Does not affect kiosk, prizes, or `points`.
+   */
+  classroomPoints?: number;
+  /** Classroom points by period (day/week/month/etc.). */
+  classroomPointsByPeriod?: { [periodKey: string]: number };
   /** Library-only point balance (not used for prizes or teacher awards). */
   libraryPoints?: number;
   /** Accumulated library fine balance (abstract units, not school reward points). */

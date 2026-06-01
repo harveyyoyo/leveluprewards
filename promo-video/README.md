@@ -46,7 +46,7 @@ npm run capture:promo-broll
 
 Set `FIREBASE_SERVICE_ACCOUNT_KEY` in `.env.local` to reset coupons to unused before capture and tune welcome splash / raffle on the demo school.
 
-Raffle clips (teacher portal — **Weekly Raffle** must be enabled on the demo school): `raffle/teacher-jackpot-pull.mp4`, `raffle/teacher-wheel-spin.mp4`.
+Raffle clips (teacher portal — **Raffle** must be enabled on the demo school): `raffle/teacher-jackpot-pull.mp4`, `raffle/teacher-wheel-spin.mp4`.
 
 Coupon re-capture: your listed codes are reset when Firebase admin works (`FIREBASE_SERVICE_ACCOUNT_KEY` for project `studio-1273073612-71183`). Otherwise the script prints a fresh sheet of 10 codes via the teacher portal.
 

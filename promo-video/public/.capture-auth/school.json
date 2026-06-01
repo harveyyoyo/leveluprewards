@@ -2,7 +2,7 @@
   "cookies": [],
   "origins": [
     {
-      "origin": "http://localhost:3000",
+      "origin": "https://portal.leveluprewards.app",
       "localStorage": [
         {
           "name": "schoolId",
@@ -14,7 +14,11 @@
         },
         {
           "name": "arcade_settings_schoolabc_staff",
-          "value": "{\"graphicMode\":\"graphics\",\"displayMode\":\"auto\",\"colorScheme\":\"lavender\",\"customAppearanceColors\":{},\"soundEnabled\":true,\"language\":\"English\",\"darkMode\":false,\"darkModeColorized\":false,\"enableThemeAnimations\":true,\"enableStudentThemes\":true,\"enableAchievements\":false,\"enableBadges\":false,\"enableLevels\":false,\"enableStreaks\":false,\"enableGoals\":false,\"enableHouses\":false,\"housesRollupPoints\":true,\"showHouseOnStudentKiosk\":true,\"enableChallenges\":false,\"enableTeacherCharts\":false,\"enableAdminAnalytics\":true,\"enableWeeklyRaffle\":true,\"enableNotifications\":false,\"notificationRewardsEnabled\":false,\"notificationAttendanceEnabled\":false,\"notificationLibraryEnabled\":false,\"notificationMilestonesEnabled\":true,\"notificationStudentsEnabled\":false,\"notificationArtworkEnabled\":true,\"notificationStaffAlertsEnabled\":true,\"notificationWhatsAppEnabled\":false,\"notificationPrizeInventoryEnabled\":true,\"notificationPrizeLowStockThreshold\":5,\"notificationPrizeEmptyShopEnabled\":false,\"notificationParentWeeklyDigestEnabled\":false,\"privacyStudentNameDisplayMode\":\"full\",\"enableTeacherOfflineAwardQueue\":true,\"enableClassLeaderboard\":false,\"enableClassAccumulations\":false,\"enableShoutouts\":false,\"enablePrizeImages\":false,\"enablePrizeAiSurprise\":false,\"prizeAiSurpriseDefaultPoints\":1,\"enablePrizeCategories\":true,\"enableWishlist\":false,\"enableSeasonalPrizes\":false,\"enableVendingMachine\":false,\"enableStudentEmojiOnPrizeTickets\":true,\"enableColorPrinting\":true,\"printerReminderIdCards\":\"\",\"idCardPrintProfiles\":[],\"idCardPrinterFamily\":\"dtc4500e\",\"idCardPaperId\":\"cr80_iso_id1\",\"idCardCornerStyle\":\"rounded\",\"printerReminderPrizeVouchers\":\"\",\"prizeVoucherPaperFormat\":\"thermal_80mm\",\"enableBulkPoints\":false,\"enablePointApproval\":false,\"enableAuditLog\":false,\"enablePdfExport\":false,\"rafflePointsPerTicket\":10,\"raffleDeductPoints\":false,\"raffleOneEntryPerStudent\":true,\"raffleDisplayMode\":\"loto\",\"enableStudentProfiles\":true,\"enableQrLogin\":true,\"enableParentView\":false,\"enableMultiAdmin\":false,\"enableStudentPortal\":true,\"studentPortalRequirePasscode\":true,\"studentPortalMaxFailedAttempts\":5,\"studentPortalLockBrowserToStudent\":false,\"studentPortalShowHeader\":false,\"kioskPortraitDisplay\":false,\"enableClassSignIn\":false,\"enableFaceLogin\":true,\"enableStudentWelcome\":false,\"enableStudentWelcomeBackScreen\":true,\"studentWelcomeBackDurationSec\":3,\"defaultWelcomeGreetingStyleId\":\"magazine\",\"enableAttendance\":false,\"enableHelperMode\":true,\"showIntroWizard\":false,\"enableTeacherBudgets\":false,\"enableTeacherGeneratedCouponsTab\":false,\"enableHomework\":false,\"legacyMode\":false,\"enableAnimatedBackground\":false,\"logoDisplayMode\":\"contain\",\"photoDisplayMode\":\"cover\",\"logoBorderRadius\":\"md\",\"logoDropShadow\":\"md\",\"photoBorderRadius\":\"none\",\"photoDropShadow\":\"lg\",\"animatedBackgroundStyle\":\"reward_mega\",\"hiddenAnimatedBackgroundIds\":[],\"defaultStudentTheme\":{\"accent\":\"#439a46\",\"emoji\":\"\",\"fontFamily\":\"Roboto\",\"backgroundStyle\":null,\"background\":\"#ffffff\",\"primary\":\"#007acc\",\"cardBackground\":\"#f0f4f8\",\"text\":\"#333333\"},\"adminSessionTimeoutMs\":60000,\"kioskSessionTimeoutSec\":10,\"kioskAiFunIdleOffSec\":360,\"kioskVoucherIdleOffSec\":360,\"studentSignInThrottleEnabled\":false,\"studentSignInThrottleMaxAttempts\":10,\"studentSignInThrottleWindowMin\":2,\"studentSignInFreezeSec\":0,\"kioskLoginTabCardEnabled\":true,\"kioskLoginTabTypeEnabled\":true,\"kioskLoginTabScanEnabled\":true,\"kioskLoginTabFaceEnabled\":true,\"kioskCouponRedemptionManualEnabled\":true,\"kioskCouponRedemptionCameraEnabled\":true,\"kioskCouponRedemptionInput\":\"both\",\"kioskSponsorEnabled\":false,\"kioskSponsorMessage\":\"Dial A Daf\",\"kioskSponsorLogoUrl\":\"\",\"kioskSponsorLink\":\"\",\"kioskSponsorSpeed\":\"static\",\"kioskSponsorPosition\":\"bottom\",\"kioskSponsorBannerStyle\":\"primary\",\"kioskSponsorIcon\":\"\",\"kioskSponsorSchedules\":[],\"bulletinEnabled\":false,\"bulletinTitle\":\"School Bulletin Board\",\"bulletinTheme\":\"sunset\",\"bulletinSubtitle\":\"\",\"bulletinLogoSize\":\"lg\",\"bulletinShowWowBadge\":true,\"bulletinColumns\":\"2\",\"enableBirthdayPoints\":true,\"birthdayPointsAmount\":100,\"enableSpecialDayPoints\":true,\"specialDayPointsAmount\":50,\"specialDayLabel\":\"School Spirit Day\",\"specialDayDate\":\"\",\"payRewards\":false,\"payAttendance\":false,\"payHomework\":false,\"payLibrary\":false,\"payOffice\":false,\"libraryLoanPeriodDays\":14,\"libraryLateFeesEnabled\":true,\"libraryLatePointsPerDay\":2,\"libraryOnTimeReturnPoints\":0,\"teacherFeatures\":{\"enableLevels\":true,\"enableTeacherCharts\":true,\"enableAttendance\":true,\"enableClassSignIn\":true,\"enableTeacherBudgets\":true,\"enableNotifications\":true,\"enableStreaks\":true,\"enableHomework\":true,\"enableBadges\":true,\"enableStudentProfiles\":true,\"enableAchievements\":true,\"enableBulkPoints\":true},\"expertMode\":false,\"adminHiddenAddOnTabs\":[\"integrations\",\"branding\"],\"adminPinnedAddOnTabs\":[\"attendance\",\"raffle\",\"student-portal\",\"insights\"],\"adminMainTabOrder\":[\"students\",\"classes\",\"teachers\",\"prizes\",\"categories\"],\"adminExtraTabOrder\":[\"bonuspoints\",\"goals\",\"branding\",\"bulletinboard\"],\"teacherHiddenAddOnTabs\":[],\"hallOfFameRankType\":\"students\",\"hallOfFameSortBy\":\"period_day\",\"hallOfFameScope\":\"all\",\"hallOfFameLimit\":50,\"hallOfFamePodiumSize\":3,\"hallOfFameAutoScroll\":false,\"hallOfFameGridLayout\":false,\"badgeGoldThreshold\":1000,\"badgeSilverThreshold\":500,\"studentColorScheme\":\"ocean\",\"enableStudentBadges\":true,\"enableLibrary\":true,\"enableCategoryBadges\":true,\"categoryBronzeThreshold\":50,\"badgeCategory\":\"all\",\"studentEnableAnimatedBackground\":false,\"categorySilverThreshold\":200,\"categoryGoldThreshold\":500,\"enableDoubleOrNothing\":true,\"badgeBronzeThreshold\":100,\"calmMode\":true,\"enableStudentReports\":true,\"showSingleStudentCardMachinePrintButton\":true}"
+          "value": "{\"graphicMode\":\"graphics\",\"displayMode\":\"auto\",\"colorScheme\":\"sky\",\"customAppearanceColors\":{},\"soundEnabled\":true,\"language\":\"English\",\"darkMode\":false,\"darkModeColorized\":false,\"enableThemeAnimations\":false,\"enableStudentThemes\":true,\"enableAchievements\":true,\"enableBadges\":true,\"enableLevels\":false,\"enableStreaks\":false,\"enableGoals\":true,\"enableHouses\":true,\"housesRollupPoints\":true,\"showHouseOnStudentKiosk\":true,\"enableChallenges\":false,\"enableTeacherCharts\":false,\"enableAdminAnalytics\":true,\"enableWeeklyRaffle\":false,\"enableNotifications\":true,\"notificationRewardsEnabled\":true,\"notificationAttendanceEnabled\":true,\"notificationLibraryEnabled\":false,\"notificationMilestonesEnabled\":true,\"notificationStudentsEnabled\":false,\"notificationArtworkEnabled\":true,\"notificationStaffAlertsEnabled\":true,\"notificationWhatsAppEnabled\":false,\"notificationPrizeInventoryEnabled\":false,\"notificationPrizeLowStockThreshold\":5,\"notificationPrizeEmptyShopEnabled\":false,\"notificationParentWeeklyDigestEnabled\":false,\"privacyStudentNameDisplayMode\":\"full\",\"enableTeacherOfflineAwardQueue\":true,\"enableClassLeaderboard\":true,\"enableClassAccumulations\":false,\"enableShoutouts\":false,\"enablePrizeImages\":false,\"enablePrizeAiSurprise\":false,\"enableCouponRedeemCompliments\":true,\"prizeAiSurpriseDefaultPoints\":1,\"enablePrizeCategories\":false,\"enableWishlist\":false,\"enableSeasonalPrizes\":false,\"enableVendingMachine\":false,\"enableStudentEmojiOnPrizeTickets\":false,\"enableColorPrinting\":true,\"printerReminderIdCards\":\"\",\"idCardPrintProfiles\":[],\"idCardPrinterFamily\":\"browser_sheet\",\"idCardPaperId\":\"avery25395_8up_letter\",\"idCardCornerStyle\":\"rounded\",\"printerReminderPrizeVouchers\":\"\",\"prizeVoucherPaperFormat\":\"label_50x70\",\"enableBulkPoints\":false,\"enablePointApproval\":false,\"enableAuditLog\":false,\"enablePdfExport\":false,\"rafflePointsPerTicket\":25,\"raffleDeductPoints\":false,\"raffleOneEntryPerStudent\":false,\"raffleDisplayMode\":\"jackpot\",\"enableStudentProfiles\":false,\"enableQrLogin\":true,\"enableParentView\":false,\"enableMultiAdmin\":false,\"enableStudentPortal\":false,\"studentPortalRequirePasscode\":true,\"studentPortalMaxFailedAttempts\":5,\"studentPortalLockBrowserToStudent\":false,\"studentPortalShowHeader\":false,\"kioskPortraitDisplay\":false,\"enableClassSignIn\":true,\"enableFaceLogin\":true,\"enableStudentWelcome\":false,\"enableStudentWelcomeBackScreen\":false,\"studentWelcomeBackDurationSec\":2,\"defaultWelcomeGreetingStyleId\":\"\",\"enableAttendance\":true,\"enableHelperMode\":true,\"showIntroWizard\":false,\"enableTeacherBudgets\":false,\"enableTeacherGeneratedCouponsTab\":false,\"enableHomework\":false,\"legacyMode\":false,\"enableAnimatedBackground\":false,\"logoDisplayMode\":\"contain\",\"photoDisplayMode\":\"cover\",\"logoBorderRadius\":\"md\",\"logoDropShadow\":\"md\",\"photoBorderRadius\":\"full\",\"photoDropShadow\":\"md\",\"animatedBackgroundStyle\":\"arcade\",\"hiddenAnimatedBackgroundIds\":[],\"defaultStudentTheme\":{\"text\":\"#020617\",\"cardBackground\":\"#ffffff\",\"fontScale\":1.15,\"primary\":\"#102a45\",\"background\":\"#eff6ff\",\"accent\":\"#2563eb\"},\"adminSessionTimeoutMs\":300000,\"kioskSessionTimeoutSec\":10,\"kioskAiFunIdleOffSec\":360,\"kioskVoucherIdleOffSec\":360,\"studentSignInThrottleEnabled\":false,\"studentSignInThrottleMaxAttempts\":10,\"studentSignInThrottleWindowMin\":2,\"studentSignInFreezeSec\":0,\"kioskLoginTabCardEnabled\":true,\"kioskLoginTabTypeEnabled\":true,\"kioskLoginTabScanEnabled\":true,\"kioskLoginTabFaceEnabled\":true,\"kioskCouponRedemptionManualEnabled\":true,\"kioskCouponRedemptionCameraEnabled\":false,\"kioskCouponRedemptionInput\":\"manual\",\"kioskWedgeDemoCameraEnabled\":false,\"kioskSponsorEnabled\":false,\"kioskSponsorMessage\":\"\",\"kioskSponsorLogoUrl\":\"\",\"kioskSponsorLink\":\"\",\"kioskSponsorSpeed\":\"normal\",\"kioskSponsorPosition\":\"bottom\",\"kioskSponsorBannerStyle\":\"primary\",\"kioskSponsorIcon\":\"🎉\",\"kioskSponsorSchedules\":[],\"bulletinEnabled\":true,\"bulletinTitle\":\"School Bulletin Board\",\"bulletinTheme\":\"default\",\"bulletinSubtitle\":\"\",\"bulletinLogoSize\":\"md\",\"bulletinShowWowBadge\":true,\"bulletinColumns\":\"2\",\"enableBirthdayPoints\":false,\"birthdayPointsAmount\":100,\"enableSpecialDayPoints\":false,\"specialDayPointsAmount\":50,\"specialDayLabel\":\"School Spirit Day\",\"specialDayDate\":\"\",\"payRewards\":true,\"payAttendance\":true,\"payHomework\":true,\"payLibrary\":true,\"payOffice\":true,\"libraryLoanPeriodDays\":14,\"libraryLateFeesEnabled\":true,\"libraryLatePointsPerDay\":2,\"libraryOnTimeReturnPoints\":0,\"teacherFeatures\":{},\"expertMode\":false,\"adminHiddenAddOnTabs\":[],\"adminPinnedAddOnTabs\":[\"insights\",\"attendance\",\"halloffame\",\"bulletinboard\",\"smart-screen\",\"bonuspoints\",\"goals\",\"houses\",\"notifications\",\"integrations\",\"library\",\"category-badges\",\"branding\",\"student-portal\"],\"adminNavLayout\":\"sidebar\",\"adminPerTabColorScheme\":false,\"adminMainTabOrder\":[],\"adminExtraTabOrder\":[],\"teacherHiddenAddOnTabs\":[],\"teacherPinnedAddOnTabs\":[],\"teacherMainTabOrder\":[],\"hallOfFameRankType\":\"students\",\"hallOfFameSortBy\":\"lifetimePoints\",\"hallOfFameScope\":\"all\",\"hallOfFameLimit\":50,\"hallOfFamePodiumSize\":3,\"hallOfFameAutoScroll\":false,\"hallOfFameGridLayout\":true,\"kioskProfiles\":{},\"smartScreenWeatherLabel\":\"Clear focus\",\"smartScreenTheme\":\"midnight\",\"smartScreenTitle\":\"Smart Screen\",\"smartScreenShowFocus\":true,\"smartScreenShowRewards\":true,\"smartScreenShowWeather\":true,\"smartScreenShowBirthdays\":true,\"smartScreenWeatherTemp\":\"72\",\"smartScreenShowLeaderboard\":true,\"smartScreenLocationZip\":\"\",\"smartScreenShowBulletin\":true,\"smartScreenShowHouses\":true,\"smartScreenShowSchedule\":true,\"smartScreenMessage\":\"Make today count.\",\"smartScreenShowCompliments\":true,\"kioskAutoLogoutEnabled\":true,\"smartScreenLayout\":\"mirror\",\"smartScreenEnabled\":true,\"smartScreenShowQuote\":true,\"smartScreenShowClasses\":true,\"adminAutoLogoutEnabled\":true,\"smartScreenShowStats\":true,\"hideSiteHeaderOutsidePortal\":true}"
+        },
+        {
+          "name": "firestore_zombie_firestore/[DEFAULT]/studio-1273073612-71183/_6NtyKUgl6bKqirT3AZvs",
+          "value": "1780205174254"
         }
       ],
       "indexedDB": [
@@ -29,7 +33,7 @@
                 {
                   "key": "[DEFAULT]!1:12494403927:web:60c2e4367b55c7921ee612",
                   "value": {
-                    "lastSentHeartbeatDate": "2026-05-19",
+                    "lastSentHeartbeatDate": "2026-05-31",
                     "heartbeats": []
                   }
                 }
@@ -60,7 +64,7 @@
                           "o": [
                             {
                               "k": "uid",
-                              "v": "kIdovzUQKoetC6AtfMFnlMs0a983"
+                              "v": "FIEOqunKoBW05aRcsuPZu0wkNEa2"
                             },
                             {
                               "k": "email",
@@ -113,15 +117,15 @@
                                 "o": [
                                   {
                                     "k": "refreshToken",
-                                    "v": "AMf-vByz7P024bFyCjSrKGs_VErJ8gZ05S0ixh1GncLA0sAPB73hfuvKzBNEodu1lunK6agxlTlhPoMmnh_YyObm7JxhrdiVV5txemR6q-05y6kOTgj_HjH4DdCgU1mz3qas0U6QpuML4G9gVJOa0WFwdVwqR0GnUPTedofTokNdRSTDkHLbwUZfHqhaaI8orYSBigxR632HvVur7nK2U0IRie3LvtWXiA"
+                                    "v": "AMf-vBxK-1OxWcjqR3ehm8JZULlfJgWBX9w_T-WuTsMBWWy-k8KuiKPDD7RPlg0ZmTF5km7pxl72WKVewgm5f4Lw4VUQvxtHuNLHff78NA-9Tlaf3otT3EtG9szngz8hQYcAez_ApAFQgh8i3htQ7Bt90I19Ywre4n--mdkmoqaEv79vTmYmGCSba-eQSUzx1d_eV7c65HamicxvfS0JJmn7ckCX_1qWoA"
                                   },
                                   {
                                     "k": "accessToken",
-                                    "v": "eyJhbGciOiJSUzI1NiIsImtpZCI6ImM5YTBjMWRlYWEyN2JjNjMyNTUzYmM4MWEyMmQ4NzY1MWM3MTMyY2IiLCJ0eXAiOiJKV1QifQ.eyJwcm92aWRlcl9pZCI6ImFub255bW91cyIsImlzcyI6Imh0dHBzOi8vc2VjdXJldG9rZW4uZ29vZ2xlLmNvbS9zdHVkaW8tMTI3MzA3MzYxMi03MTE4MyIsImF1ZCI6InN0dWRpby0xMjczMDczNjEyLTcxMTgzIiwiYXV0aF90aW1lIjoxNzc5MjM0MTg0LCJ1c2VyX2lkIjoia0lkb3Z6VVFLb2V0QzZBdGZNRm5sTXMwYTk4MyIsInN1YiI6ImtJZG92elVRS29ldEM2QXRmTUZubE1zMGE5ODMiLCJpYXQiOjE3NzkyMzQxODQsImV4cCI6MTc3OTIzNzc4NCwiZmlyZWJhc2UiOnsiaWRlbnRpdGllcyI6e30sInNpZ25faW5fcHJvdmlkZXIiOiJhbm9ueW1vdXMifX0.q_6r2j-W4tpX0f7AaHkxNViVAmnQb27lt7h-DfUxNl5A5rrK7Ryc0q9tiXF90XgZcgohbiyZBvbOkf5Kx7jUlJRGswML1vfSO3wkzeW3jZnEdM4HwtN06UE_Phyf2c4BPEoOvtK0NTdMKTHlzwQVt5g94JY5wl3upAYdHTWyPMxUcIxHr897kTdy0pmNSjS7meZ4u54GXjsm2y6J9NizgG9saQgu3Ui9n-oN8KH0d5I7G2CaJfFGcFfvi2Y5IcUd91cFvmMLVY6BmldaD_wyHwETm6_VZwNzQN_7WGlXxFKIaw9jY5bD4m0lsuP1NVbV8-A-mBBGM_xaPv9hg4rVFw"
+                                    "v": "eyJhbGciOiJSUzI1NiIsImtpZCI6Ijg1NGFhNGMyM2VkZTdiOGNhODc1OWZiMDZlNmExZDU4OTI0MjVkMDYiLCJ0eXAiOiJKV1QifQ.eyJwcm92aWRlcl9pZCI6ImFub255bW91cyIsImlzcyI6Imh0dHBzOi8vc2VjdXJldG9rZW4uZ29vZ2xlLmNvbS9zdHVkaW8tMTI3MzA3MzYxMi03MTE4MyIsImF1ZCI6InN0dWRpby0xMjczMDczNjEyLTcxMTgzIiwiYXV0aF90aW1lIjoxNzgwMjA1MTY4LCJ1c2VyX2lkIjoiRklFT3F1bktvQlcwNWFSY3N1UFp1MHdrTkVhMiIsInN1YiI6IkZJRU9xdW5Lb0JXMDVhUmNzdVBadTB3a05FYTIiLCJpYXQiOjE3ODAyMDUxNjgsImV4cCI6MTc4MDIwODc2OCwiZmlyZWJhc2UiOnsiaWRlbnRpdGllcyI6e30sInNpZ25faW5fcHJvdmlkZXIiOiJhbm9ueW1vdXMifX0.GZFL5g9KAFc8Rb6Ag7OexIPWjmCJtYW_ciw2e_cQYdWK2o7qhiKYKQ3KywLv5Lse0Lf9O5NcXivfu4U9_4Y0aIhS-HhKzrVQLsn8CSskgq66ihmGTTlUBIB3tn3FPxh2XMuKeDWldWmNbXsPlav5IzDoF-AM-a03D2-cubyUcmQ_iArjhpP-IuJzlxHoig_MKNj1ggRXpLacFTsjsFZ09AhBc_JPWcUBjih7F3ItM3oPSm9cNySEoTybxXJb0SxHpnTjcKmyubJdF-dtMEOdHRMteRhecWNTiV4auBnc6-uuCHsJrThb85n3ZEoEdM8oEvM3X7DE3SSxeIcJUQJHkg"
                                   },
                                   {
                                     "k": "expirationTime",
-                                    "v": 1779237785915
+                                    "v": 1780208770641
                                   }
                                 ],
                                 "id": 4
@@ -135,11 +139,11 @@
                             },
                             {
                               "k": "createdAt",
-                              "v": "1779234184355"
+                              "v": "1780205168394"
                             },
                             {
                               "k": "lastLoginAt",
-                              "v": "1779234184355"
+                              "v": "1780205168394"
                             },
                             {
                               "k": "apiKey",
@@ -180,8 +184,16 @@
               "records": [
                 {
                   "value": {
-                    "clientId": "vODMV8hadmBXVKB06wJt",
-                    "updateTimeMs": 1779234185495,
+                    "clientId": "6NtyKUgl6bKqirT3AZvs",
+                    "updateTimeMs": 1780205174194,
+                    "networkEnabled": true,
+                    "inForeground": true
+                  }
+                },
+                {
+                  "value": {
+                    "clientId": "VdUuG9KqCtwK2HbhVNyc",
+                    "updateTimeMs": 1780205174722,
                     "networkEnabled": true,
                     "inForeground": false
                   }
@@ -354,9 +366,9 @@
                 {
                   "key": "owner",
                   "value": {
-                    "ownerId": "vODMV8hadmBXVKB06wJt",
+                    "ownerId": "VdUuG9KqCtwK2HbhVNyc",
                     "allowTabSynchronization": false,
-                    "leaseTimestampMs": 1779234188946
+                    "leaseTimestampMs": 1780205175154
                   }
                 }
               ],
@@ -369,7 +381,7 @@
                 {
                   "key": "remoteDocumentGlobalKey",
                   "value": {
-                    "byteSize": 18708
+                    "byteSize": 19228
                   }
                 }
               ],
@@ -391,222 +403,21 @@
                     "collectionGroup": "appConfig",
                     "documentId": "global",
                     "readTime": [
-                      1779234184,
-                      293825000
+                      1780205168,
+                      268997000
                     ],
                     "hasCommittedMutations": false,
                     "document": {
                       "name": "projects/studio-1273073612-71183/databases/(default)/documents/appConfig/global",
                       "fields": {
-                        "appLogoUrl": {
-                          "stringValue": "https://firebasestorage.googleapis.com/v0/b/studio-1273073612-71183.firebasestorage.app/o/app-branding%2Fapp-logo-1777508641931?alt=media&token=7124c59b-fa13-40d3-bb74-99cf1618845f"
-                        },
                         "updatedBy": {
-                          "stringValue": "Vbcat392CDR9R96SryiMa581Vhw2"
+                          "stringValue": "e73JQFFyjBTkk79gdKfsnT2HfyJ2"
+                        },
+                        "appLogoUrl": {
+                          "stringValue": "https://firebasestorage.googleapis.com/v0/b/studio-1273073612-71183.firebasestorage.app/o/app-branding%2Fapp-logo-1779767256941?alt=media&token=d2e697eb-d240-4965-9a33-df946783def6"
                         },
                         "updatedAt": {
-                          "integerValue": "1777508642497"
-                        },
-                        "appLogoHistory": {
-                          "arrayValue": {
-                            "values": [
-                              {
-                                "mapValue": {
-                                  "fields": {
-                                    "url": {
-                                      "stringValue": "https://firebasestorage.googleapis.com/v0/b/studio-1273073612-71183.firebasestorage.app/o/app-branding%2Fapp-logo-1773974724344?alt=media&token=45e20a01-4410-4170-9be6-bae4f48b6c26"
-                                    },
-                                    "uploadedBy": {
-                                      "stringValue": "5N81teR67rgsEmgazhCq0svT2p62"
-                                    },
-                                    "uploadedAt": {
-                                      "integerValue": "1773974725139"
-                                    }
-                                  }
-                                }
-                              },
-                              {
-                                "mapValue": {
-                                  "fields": {
-                                    "uploadedAt": {
-                                      "integerValue": "1774397343874"
-                                    },
-                                    "uploadedBy": {
-                                      "stringValue": "5N81teR67rgsEmgazhCq0svT2p62"
-                                    },
-                                    "url": {
-                                      "stringValue": "https://firebasestorage.googleapis.com/v0/b/studio-1273073612-71183.firebasestorage.app/o/app-branding%2Fapp-logo-1774397343344?alt=media&token=ab5997fe-ab79-4838-b875-bf85401138c4"
-                                    }
-                                  }
-                                }
-                              },
-                              {
-                                "mapValue": {
-                                  "fields": {
-                                    "url": {
-                                      "stringValue": "https://firebasestorage.googleapis.com/v0/b/studio-1273073612-71183.firebasestorage.app/o/app-branding%2Fapp-logo-1774397464290?alt=media&token=dfa59477-bec6-4d2e-997e-2fdfe334a36e"
-                                    },
-                                    "uploadedAt": {
-                                      "integerValue": "1774397464524"
-                                    },
-                                    "uploadedBy": {
-                                      "stringValue": "5N81teR67rgsEmgazhCq0svT2p62"
-                                    }
-                                  }
-                                }
-                              },
-                              {
-                                "mapValue": {
-                                  "fields": {
-                                    "url": {
-                                      "stringValue": "https://firebasestorage.googleapis.com/v0/b/studio-1273073612-71183.firebasestorage.app/o/app-branding%2Fapp-logo-1774397504265?alt=media&token=270f832f-abc4-4443-ba32-efbf94867ba3"
-                                    },
-                                    "uploadedBy": {
-                                      "stringValue": "5N81teR67rgsEmgazhCq0svT2p62"
-                                    },
-                                    "uploadedAt": {
-                                      "integerValue": "1774397504421"
-                                    }
-                                  }
-                                }
-                              },
-                              {
-                                "mapValue": {
-                                  "fields": {
-                                    "url": {
-                                      "stringValue": "https://firebasestorage.googleapis.com/v0/b/studio-1273073612-71183.firebasestorage.app/o/app-branding%2Fapp-logo-1774398297741?alt=media&token=417acaf5-3af5-49ef-8bab-5131540c773c"
-                                    },
-                                    "uploadedAt": {
-                                      "integerValue": "1774398297951"
-                                    },
-                                    "uploadedBy": {
-                                      "stringValue": "5N81teR67rgsEmgazhCq0svT2p62"
-                                    }
-                                  }
-                                }
-                              },
-                              {
-                                "mapValue": {
-                                  "fields": {
-                                    "uploadedBy": {
-                                      "stringValue": "5N81teR67rgsEmgazhCq0svT2p62"
-                                    },
-                                    "uploadedAt": {
-                                      "integerValue": "1774398738341"
-                                    },
-                                    "url": {
-                                      "stringValue": "https://firebasestorage.googleapis.com/v0/b/studio-1273073612-71183.firebasestorage.app/o/app-branding%2Fapp-logo-1774398737908?alt=media&token=9ffa2c72-4d9c-42b2-a27c-0e2eaa4170ed"
-                                    }
-                                  }
-                                }
-                              },
-                              {
-                                "mapValue": {
-                                  "fields": {
-                                    "url": {
-                                      "stringValue": "https://firebasestorage.googleapis.com/v0/b/studio-1273073612-71183.firebasestorage.app/o/app-branding%2Fapp-logo-1774398797768?alt=media&token=e9a03549-5442-4d6c-9642-f938a49f0b15"
-                                    },
-                                    "uploadedAt": {
-                                      "integerValue": "1774398797934"
-                                    },
-                                    "uploadedBy": {
-                                      "stringValue": "5N81teR67rgsEmgazhCq0svT2p62"
-                                    }
-                                  }
-                                }
-                              },
-                              {
-                                "mapValue": {
-                                  "fields": {
-                                    "url": {
-                                      "stringValue": "https://firebasestorage.googleapis.com/v0/b/studio-1273073612-71183.firebasestorage.app/o/app-branding%2Fapp-logo-1774452961622?alt=media&token=afa23a8e-aaf0-4635-8670-733cff41ff79"
-                                    },
-                                    "uploadedBy": {
-                                      "stringValue": "3EIdJYS67EPmTQHF4TSG1qGuNPe2"
-                                    },
-                                    "uploadedAt": {
-                                      "integerValue": "1774452962144"
-                                    }
-                                  }
-                                }
-                              },
-                              {
-                                "mapValue": {
-                                  "fields": {
-                                    "url": {
-                                      "stringValue": "https://firebasestorage.googleapis.com/v0/b/studio-1273073612-71183.firebasestorage.app/o/app-branding%2Fapp-logo-1774453018922?alt=media&token=9651553b-8d79-4857-87da-f68f1eccd586"
-                                    },
-                                    "uploadedAt": {
-                                      "integerValue": "1774453019099"
-                                    },
-                                    "uploadedBy": {
-                                      "stringValue": "3EIdJYS67EPmTQHF4TSG1qGuNPe2"
-                                    }
-                                  }
-                                }
-                              },
-                              {
-                                "mapValue": {
-                                  "fields": {
-                                    "url": {
-                                      "stringValue": "https://firebasestorage.googleapis.com/v0/b/studio-1273073612-71183.firebasestorage.app/o/app-branding%2Fapp-logo-1776796889971?alt=media&token=1bda4f01-0b8d-4f76-8503-1c1d8cb1af8a"
-                                    },
-                                    "uploadedBy": {
-                                      "stringValue": "jeoGglullsd6ooW5Oh0bGjBOjIQ2"
-                                    },
-                                    "uploadedAt": {
-                                      "integerValue": "1776796890454"
-                                    }
-                                  }
-                                }
-                              },
-                              {
-                                "mapValue": {
-                                  "fields": {
-                                    "url": {
-                                      "stringValue": "https://firebasestorage.googleapis.com/v0/b/studio-1273073612-71183.firebasestorage.app/o/app-branding%2Fapp-logo-1777464417177?alt=media&token=1a44df17-fb08-43e7-bb50-a013c6de0377"
-                                    },
-                                    "uploadedAt": {
-                                      "integerValue": "1777464417841"
-                                    },
-                                    "uploadedBy": {
-                                      "stringValue": "wkywLjn1FEUXESOHMATOJOgHJbK2"
-                                    }
-                                  }
-                                }
-                              },
-                              {
-                                "mapValue": {
-                                  "fields": {
-                                    "url": {
-                                      "stringValue": "https://firebasestorage.googleapis.com/v0/b/studio-1273073612-71183.firebasestorage.app/o/app-branding%2Fapp-logo-1777506190870?alt=media&token=4139921b-3589-4b7f-92ba-fc6e6c2881ca"
-                                    },
-                                    "uploadedAt": {
-                                      "integerValue": "1777506191416"
-                                    },
-                                    "uploadedBy": {
-                                      "stringValue": "Senx4D3bw3WMlBTTI22EX0xyDOC3"
-                                    }
-                                  }
-                                }
-                              },
-                              {
-                                "mapValue": {
-                                  "fields": {
-                                    "uploadedBy": {
-                                      "stringValue": "Vbcat392CDR9R96SryiMa581Vhw2"
-                                    },
-                                    "uploadedAt": {
-                                      "integerValue": "1777508642497"
-                                    },
-                                    "url": {
-                                      "stringValue": "https://firebasestorage.googleapis.com/v0/b/studio-1273073612-71183.firebasestorage.app/o/app-branding%2Fapp-logo-1777508641931?alt=media&token=7124c59b-fa13-40d3-bb74-99cf1618845f"
-                                    }
-                                  }
-                                }
-                              }
-                            ]
-                          }
+                          "integerValue": "1779767257643"
                         },
                         "developerUids": {
                           "arrayValue": {
@@ -664,9 +475,225 @@
                               }
                             ]
                           }
+                        },
+                        "appLogoHistory": {
+                          "arrayValue": {
+                            "values": [
+                              {
+                                "mapValue": {
+                                  "fields": {
+                                    "uploadedAt": {
+                                      "integerValue": "1773974725139"
+                                    },
+                                    "uploadedBy": {
+                                      "stringValue": "5N81teR67rgsEmgazhCq0svT2p62"
+                                    },
+                                    "url": {
+                                      "stringValue": "https://firebasestorage.googleapis.com/v0/b/studio-1273073612-71183.firebasestorage.app/o/app-branding%2Fapp-logo-1773974724344?alt=media&token=45e20a01-4410-4170-9be6-bae4f48b6c26"
+                                    }
+                                  }
+                                }
+                              },
+                              {
+                                "mapValue": {
+                                  "fields": {
+                                    "url": {
+                                      "stringValue": "https://firebasestorage.googleapis.com/v0/b/studio-1273073612-71183.firebasestorage.app/o/app-branding%2Fapp-logo-1774397343344?alt=media&token=ab5997fe-ab79-4838-b875-bf85401138c4"
+                                    },
+                                    "uploadedBy": {
+                                      "stringValue": "5N81teR67rgsEmgazhCq0svT2p62"
+                                    },
+                                    "uploadedAt": {
+                                      "integerValue": "1774397343874"
+                                    }
+                                  }
+                                }
+                              },
+                              {
+                                "mapValue": {
+                                  "fields": {
+                                    "uploadedAt": {
+                                      "integerValue": "1774397464524"
+                                    },
+                                    "url": {
+                                      "stringValue": "https://firebasestorage.googleapis.com/v0/b/studio-1273073612-71183.firebasestorage.app/o/app-branding%2Fapp-logo-1774397464290?alt=media&token=dfa59477-bec6-4d2e-997e-2fdfe334a36e"
+                                    },
+                                    "uploadedBy": {
+                                      "stringValue": "5N81teR67rgsEmgazhCq0svT2p62"
+                                    }
+                                  }
+                                }
+                              },
+                              {
+                                "mapValue": {
+                                  "fields": {
+                                    "url": {
+                                      "stringValue": "https://firebasestorage.googleapis.com/v0/b/studio-1273073612-71183.firebasestorage.app/o/app-branding%2Fapp-logo-1774397504265?alt=media&token=270f832f-abc4-4443-ba32-efbf94867ba3"
+                                    },
+                                    "uploadedBy": {
+                                      "stringValue": "5N81teR67rgsEmgazhCq0svT2p62"
+                                    },
+                                    "uploadedAt": {
+                                      "integerValue": "1774397504421"
+                                    }
+                                  }
+                                }
+                              },
+                              {
+                                "mapValue": {
+                                  "fields": {
+                                    "uploadedAt": {
+                                      "integerValue": "1774398297951"
+                                    },
+                                    "uploadedBy": {
+                                      "stringValue": "5N81teR67rgsEmgazhCq0svT2p62"
+                                    },
+                                    "url": {
+                                      "stringValue": "https://firebasestorage.googleapis.com/v0/b/studio-1273073612-71183.firebasestorage.app/o/app-branding%2Fapp-logo-1774398297741?alt=media&token=417acaf5-3af5-49ef-8bab-5131540c773c"
+                                    }
+                                  }
+                                }
+                              },
+                              {
+                                "mapValue": {
+                                  "fields": {
+                                    "url": {
+                                      "stringValue": "https://firebasestorage.googleapis.com/v0/b/studio-1273073612-71183.firebasestorage.app/o/app-branding%2Fapp-logo-1774398737908?alt=media&token=9ffa2c72-4d9c-42b2-a27c-0e2eaa4170ed"
+                                    },
+                                    "uploadedBy": {
+                                      "stringValue": "5N81teR67rgsEmgazhCq0svT2p62"
+                                    },
+                                    "uploadedAt": {
+                                      "integerValue": "1774398738341"
+                                    }
+                                  }
+                                }
+                              },
+                              {
+                                "mapValue": {
+                                  "fields": {
+                                    "url": {
+                                      "stringValue": "https://firebasestorage.googleapis.com/v0/b/studio-1273073612-71183.firebasestorage.app/o/app-branding%2Fapp-logo-1774398797768?alt=media&token=e9a03549-5442-4d6c-9642-f938a49f0b15"
+                                    },
+                                    "uploadedBy": {
+                                      "stringValue": "5N81teR67rgsEmgazhCq0svT2p62"
+                                    },
+                                    "uploadedAt": {
+                                      "integerValue": "1774398797934"
+                                    }
+                                  }
+                                }
+                              },
+                              {
+                                "mapValue": {
+                                  "fields": {
+                                    "uploadedAt": {
+                                      "integerValue": "1774452962144"
+                                    },
+                                    "url": {
+                                      "stringValue": "https://firebasestorage.googleapis.com/v0/b/studio-1273073612-71183.firebasestorage.app/o/app-branding%2Fapp-logo-1774452961622?alt=media&token=afa23a8e-aaf0-4635-8670-733cff41ff79"
+                                    },
+                                    "uploadedBy": {
+                                      "stringValue": "3EIdJYS67EPmTQHF4TSG1qGuNPe2"
+                                    }
+                                  }
+                                }
+                              },
+                              {
+                                "mapValue": {
+                                  "fields": {
+                                    "uploadedBy": {
+                                      "stringValue": "3EIdJYS67EPmTQHF4TSG1qGuNPe2"
+                                    },
+                                    "url": {
+                                      "stringValue": "https://firebasestorage.googleapis.com/v0/b/studio-1273073612-71183.firebasestorage.app/o/app-branding%2Fapp-logo-1774453018922?alt=media&token=9651553b-8d79-4857-87da-f68f1eccd586"
+                                    },
+                                    "uploadedAt": {
+                                      "integerValue": "1774453019099"
+                                    }
+                                  }
+                                }
+                              },
+                              {
+                                "mapValue": {
+                                  "fields": {
+                                    "uploadedAt": {
+                                      "integerValue": "1776796890454"
+                                    },
+                                    "url": {
+                                      "stringValue": "https://firebasestorage.googleapis.com/v0/b/studio-1273073612-71183.firebasestorage.app/o/app-branding%2Fapp-logo-1776796889971?alt=media&token=1bda4f01-0b8d-4f76-8503-1c1d8cb1af8a"
+                                    },
+                                    "uploadedBy": {
+                                      "stringValue": "jeoGglullsd6ooW5Oh0bGjBOjIQ2"
+                                    }
+                                  }
+                                }
+                              },
+                              {
+                                "mapValue": {
+                                  "fields": {
+                                    "uploadedAt": {
+                                      "integerValue": "1777464417841"
+                                    },
+                                    "url": {
+                                      "stringValue": "https://firebasestorage.googleapis.com/v0/b/studio-1273073612-71183.firebasestorage.app/o/app-branding%2Fapp-logo-1777464417177?alt=media&token=1a44df17-fb08-43e7-bb50-a013c6de0377"
+                                    },
+                                    "uploadedBy": {
+                                      "stringValue": "wkywLjn1FEUXESOHMATOJOgHJbK2"
+                                    }
+                                  }
+                                }
+                              },
+                              {
+                                "mapValue": {
+                                  "fields": {
+                                    "uploadedAt": {
+                                      "integerValue": "1777506191416"
+                                    },
+                                    "uploadedBy": {
+                                      "stringValue": "Senx4D3bw3WMlBTTI22EX0xyDOC3"
+                                    },
+                                    "url": {
+                                      "stringValue": "https://firebasestorage.googleapis.com/v0/b/studio-1273073612-71183.firebasestorage.app/o/app-branding%2Fapp-logo-1777506190870?alt=media&token=4139921b-3589-4b7f-92ba-fc6e6c2881ca"
+                                    }
+                                  }
+                                }
+                              },
+                              {
+                                "mapValue": {
+                                  "fields": {
+                                    "uploadedAt": {
+                                      "integerValue": "1777508642497"
+                                    },
+                                    "url": {
+                                      "stringValue": "https://firebasestorage.googleapis.com/v0/b/studio-1273073612-71183.firebasestorage.app/o/app-branding%2Fapp-logo-1777508641931?alt=media&token=7124c59b-fa13-40d3-bb74-99cf1618845f"
+                                    },
+                                    "uploadedBy": {
+                                      "stringValue": "Vbcat392CDR9R96SryiMa581Vhw2"
+                                    }
+                                  }
+                                }
+                              },
+                              {
+                                "mapValue": {
+                                  "fields": {
+                                    "uploadedAt": {
+                                      "integerValue": "1779767257643"
+                                    },
+                                    "url": {
+                                      "stringValue": "https://firebasestorage.googleapis.com/v0/b/studio-1273073612-71183.firebasestorage.app/o/app-branding%2Fapp-logo-1779767256941?alt=media&token=d2e697eb-d240-4965-9a33-df946783def6"
+                                    },
+                                    "uploadedBy": {
+                                      "stringValue": "e73JQFFyjBTkk79gdKfsnT2HfyJ2"
+                                    }
+                                  }
+                                }
+                              }
+                            ]
+                          }
                         }
                       },
-                      "updateTime": "2026-05-05T11:09:18.206938000Z",
+                      "updateTime": "2026-05-26T03:47:37.778030000Z",
                       "createTime": "2026-03-12T03:28:37.428371000Z"
                     }
                   }
@@ -677,687 +704,24 @@
                     "collectionGroup": "schoolPublic",
                     "documentId": "schoolabc",
                     "readTime": [
-                      1779234186,
-                      245601000
+                      1780205171,
+                      649551000
                     ],
                     "hasCommittedMutations": false,
                     "document": {
                       "name": "projects/studio-1273073612-71183/databases/(default)/documents/schoolPublic/schoolabc",
                       "fields": {
-                        "updatedAt": {
-                          "integerValue": "1779229126935"
-                        },
-                        "name": {
-                          "stringValue": "School ABC"
-                        },
-                        "plan": {
-                          "stringValue": "free"
-                        },
-                        "appSettings": {
-                          "mapValue": {
-                            "fields": {
-                              "bulletinColumns": {
-                                "stringValue": "2"
-                              },
-                              "kioskSponsorEnabled": {
-                                "booleanValue": false
-                              },
-                              "enableHomework": {
-                                "booleanValue": false
-                              },
-                              "payLibrary": {
-                                "booleanValue": false
-                              },
-                              "photoBorderRadius": {
-                                "stringValue": "none"
-                              },
-                              "kioskLoginTabCardEnabled": {
-                                "booleanValue": true
-                              },
-                              "birthdayPointsAmount": {
-                                "integerValue": "100"
-                              },
-                              "payHomework": {
-                                "booleanValue": false
-                              },
-                              "badgeGoldThreshold": {
-                                "integerValue": "1000"
-                              },
-                              "enableClassSignIn": {
-                                "booleanValue": false
-                              },
-                              "enableParentView": {
-                                "booleanValue": false
-                              },
-                              "kioskLoginTabFaceEnabled": {
-                                "booleanValue": true
-                              },
-                              "kioskAiFunAndVoucherIdleOffMin": {
-                                "integerValue": "6"
-                              },
-                              "enableWishlist": {
-                                "booleanValue": false
-                              },
-                              "legacyMode": {
-                                "booleanValue": false
-                              },
-                              "badgeSilverThreshold": {
-                                "integerValue": "500"
-                              },
-                              "studentWelcomeBackDurationSec": {
-                                "integerValue": "3"
-                              },
-                              "hallOfFameLimit": {
-                                "integerValue": "50"
-                              },
-                              "enableStudentWelcomeBackScreen": {
-                                "booleanValue": true
-                              },
-                              "notificationParentWeeklyDigestEnabled": {
-                                "booleanValue": false
-                              },
-                              "studentColorScheme": {
-                                "stringValue": "ocean"
-                              },
-                              "enableStudentBadges": {
-                                "booleanValue": true
-                              },
-                              "enablePointApproval": {
-                                "booleanValue": false
-                              },
-                              "soundEnabled": {
-                                "booleanValue": true
-                              },
-                              "enableLibrary": {
-                                "booleanValue": true
-                              },
-                              "notificationLibraryEnabled": {
-                                "booleanValue": false
-                              },
-                              "idCardPrinterFamily": {
-                                "stringValue": "dtc4500e"
-                              },
-                              "bulletinTitle": {
-                                "stringValue": "School Bulletin Board"
-                              },
-                              "enableTeacherBudgets": {
-                                "booleanValue": false
-                              },
-                              "notificationPrizeInventoryEnabled": {
-                                "booleanValue": true
-                              },
-                              "logoDisplayMode": {
-                                "stringValue": "contain"
-                              },
-                              "prizeAiSurpriseDefaultPoints": {
-                                "integerValue": "1"
-                              },
-                              "enableCategoryBadges": {
-                                "booleanValue": true
-                              },
-                              "enableClassLeaderboard": {
-                                "booleanValue": false
-                              },
-                              "bulletinLogoSize": {
-                                "stringValue": "lg"
-                              },
-                              "enableVendingMachine": {
-                                "booleanValue": false
-                              },
-                              "enableBulkPoints": {
-                                "booleanValue": false
-                              },
-                              "enableSpecialDayPoints": {
-                                "booleanValue": true
-                              },
-                              "defaultWelcomeGreetingStyleId": {
-                                "stringValue": "magazine"
-                              },
-                              "hallOfFameSortBy": {
-                                "stringValue": "period_day"
-                              },
-                              "bulletinSubtitle": {
-                                "stringValue": ""
-                              },
-                              "hallOfFameScope": {
-                                "stringValue": "all"
-                              },
-                              "darkMode": {
-                                "booleanValue": false
-                              },
-                              "enableQrLogin": {
-                                "booleanValue": true
-                              },
-                              "notificationWhatsAppEnabled": {
-                                "booleanValue": false
-                              },
-                              "teacherHiddenAddOnTabs": {
-                                "arrayValue": {}
-                              },
-                              "notificationPrizeEmptyShopEnabled": {
-                                "booleanValue": false
-                              },
-                              "raffleDisplayMode": {
-                                "stringValue": "loto"
-                              },
-                              "enableStudentThemes": {
-                                "booleanValue": true
-                              },
-                              "animatedBackgroundStyle": {
-                                "stringValue": "reward_mega"
-                              },
-                              "enableStreaks": {
-                                "booleanValue": false
-                              },
-                              "enableNotifications": {
-                                "booleanValue": false
-                              },
-                              "studentSignInThrottleMaxAttempts": {
-                                "integerValue": "10"
-                              },
-                              "hiddenAnimatedBackgroundIds": {
-                                "arrayValue": {}
-                              },
-                              "enableChallenges": {
-                                "booleanValue": false
-                              },
-                              "idCardPaperId": {
-                                "stringValue": "cr80_iso_id1"
-                              },
-                              "darkModeColorized": {
-                                "booleanValue": false
-                              },
-                              "notificationStaffAlertsEnabled": {
-                                "booleanValue": true
-                              },
-                              "enableLevels": {
-                                "booleanValue": false
-                              },
-                              "defaultStudentTheme": {
-                                "mapValue": {
-                                  "fields": {
-                                    "accent": {
-                                      "stringValue": "#439a46"
-                                    },
-                                    "emoji": {
-                                      "stringValue": ""
-                                    },
-                                    "fontFamily": {
-                                      "stringValue": "Roboto"
-                                    },
-                                    "backgroundStyle": {
-                                      "nullValue": null
-                                    },
-                                    "background": {
-                                      "stringValue": "#ffffff"
-                                    },
-                                    "primary": {
-                                      "stringValue": "#007acc"
-                                    },
-                                    "cardBackground": {
-                                      "stringValue": "#f0f4f8"
-                                    },
-                                    "text": {
-                                      "stringValue": "#333333"
-                                    }
-                                  }
-                                }
-                              },
-                              "enableStudentEmojiOnPrizeTickets": {
-                                "booleanValue": true
-                              },
-                              "kioskCouponRedemptionInput": {
-                                "stringValue": "both"
-                              },
-                              "notificationStudentsEnabled": {
-                                "booleanValue": false
-                              },
-                              "specialDayPointsAmount": {
-                                "integerValue": "50"
-                              },
-                              "kioskSponsorMessage": {
-                                "stringValue": "Dial A Daf"
-                              },
-                              "categoryBronzeThreshold": {
-                                "integerValue": "50"
-                              },
-                              "enableBirthdayPoints": {
-                                "booleanValue": true
-                              },
-                              "enableAuditLog": {
-                                "booleanValue": false
-                              },
-                              "kioskAiFunIdleOffSec": {
-                                "integerValue": "360"
-                              },
-                              "enableBadges": {
-                                "booleanValue": false
-                              },
-                              "enableFaceLogin": {
-                                "booleanValue": true
-                              },
-                              "libraryOnTimeReturnPoints": {
-                                "integerValue": "0"
-                              },
-                              "expertMode": {
-                                "booleanValue": false
-                              },
-                              "studentSignInThrottleEnabled": {
-                                "booleanValue": false
-                              },
-                              "kioskSponsorSpeed": {
-                                "stringValue": "static"
-                              },
-                              "kioskSponsorLink": {
-                                "stringValue": ""
-                              },
-                              "badgeCategory": {
-                                "stringValue": "all"
-                              },
-                              "enablePrizeImages": {
-                                "booleanValue": false
-                              },
-                              "kioskPortraitDisplay": {
-                                "booleanValue": false
-                              },
-                              "kioskCouponRedemptionCameraEnabled": {
-                                "booleanValue": true
-                              },
-                              "idCardCornerStyle": {
-                                "stringValue": "rounded"
-                              },
-                              "kioskLoginTabScanEnabled": {
-                                "booleanValue": true
-                              },
-                              "studentEnableAnimatedBackground": {
-                                "booleanValue": false
-                              },
-                              "enableStudentPortal": {
-                                "booleanValue": true
-                              },
-                              "showIntroWizard": {
-                                "booleanValue": false
-                              },
-                              "showHouseOnStudentKiosk": {
-                                "booleanValue": true
-                              },
-                              "hallOfFameAutoScroll": {
-                                "booleanValue": false
-                              },
-                              "studentPortalLockBrowserToStudent": {
-                                "booleanValue": false
-                              },
-                              "enableThemeAnimations": {
-                                "booleanValue": true
-                              },
-                              "colorScheme": {
-                                "stringValue": "lavender"
-                              },
-                              "categorySilverThreshold": {
-                                "integerValue": "200"
-                              },
-                              "categoryGoldThreshold": {
-                                "integerValue": "500"
-                              },
-                              "hallOfFameGridLayout": {
-                                "booleanValue": false
-                              },
-                              "displayMode": {
-                                "stringValue": "auto"
-                              },
-                              "specialDayLabel": {
-                                "stringValue": "School Spirit Day"
-                              },
-                              "enableColorPrinting": {
-                                "booleanValue": true
-                              },
-                              "kioskSponsorIcon": {
-                                "stringValue": ""
-                              },
-                              "graphicMode": {
-                                "stringValue": "graphics"
-                              },
-                              "enableAchievements": {
-                                "booleanValue": false
-                              },
-                              "kioskCouponRedemptionManualEnabled": {
-                                "booleanValue": true
-                              },
-                              "teacherFeatures": {
-                                "mapValue": {
-                                  "fields": {
-                                    "enableLevels": {
-                                      "booleanValue": true
-                                    },
-                                    "enableTeacherCharts": {
-                                      "booleanValue": true
-                                    },
-                                    "enableAttendance": {
-                                      "booleanValue": true
-                                    },
-                                    "enableClassSignIn": {
-                                      "booleanValue": true
-                                    },
-                                    "enableTeacherBudgets": {
-                                      "booleanValue": true
-                                    },
-                                    "enableNotifications": {
-                                      "booleanValue": true
-                                    },
-                                    "enableStreaks": {
-                                      "booleanValue": true
-                                    },
-                                    "enableHomework": {
-                                      "booleanValue": true
-                                    },
-                                    "enableBadges": {
-                                      "booleanValue": true
-                                    },
-                                    "enableStudentProfiles": {
-                                      "booleanValue": true
-                                    },
-                                    "enableAchievements": {
-                                      "booleanValue": true
-                                    },
-                                    "enableBulkPoints": {
-                                      "booleanValue": true
-                                    }
-                                  }
-                                }
-                              },
-                              "studentSignInFreezeSec": {
-                                "integerValue": "0"
-                              },
-                              "studentPortalRequirePasscode": {
-                                "booleanValue": true
-                              },
-                              "enableGoals": {
-                                "booleanValue": false
-                              },
-                              "libraryLatePointsPerDay": {
-                                "integerValue": "2"
-                              },
-                              "enablePdfExport": {
-                                "booleanValue": false
-                              },
-                              "prizeVoucherPaperFormat": {
-                                "stringValue": "thermal_80mm"
-                              },
-                              "raffleDeductPoints": {
-                                "booleanValue": false
-                              },
-                              "enableTeacherOfflineAwardQueue": {
-                                "booleanValue": true
-                              },
-                              "kioskSessionTimeoutSec": {
-                                "integerValue": "10"
-                              },
-                              "notificationArtworkEnabled": {
-                                "booleanValue": true
-                              },
-                              "logoDropShadow": {
-                                "stringValue": "md"
-                              },
-                              "notificationMilestonesEnabled": {
-                                "booleanValue": true
-                              },
-                              "adminHiddenAddOnTabs": {
-                                "arrayValue": {
-                                  "values": [
-                                    {
-                                      "stringValue": "integrations"
-                                    },
-                                    {
-                                      "stringValue": "branding"
-                                    }
-                                  ]
-                                }
-                              },
-                              "studentPortalMaxFailedAttempts": {
-                                "integerValue": "5"
-                              },
-                              "enableShoutouts": {
-                                "booleanValue": false
-                              },
-                              "specialDayDate": {
-                                "stringValue": ""
-                              },
-                              "libraryLoanPeriodDays": {
-                                "integerValue": "14"
-                              },
-                              "enableHouses": {
-                                "booleanValue": false
-                              },
-                              "libraryLateFeesEnabled": {
-                                "booleanValue": true
-                              },
-                              "language": {
-                                "stringValue": "English"
-                              },
-                              "customAppearanceColors": {
-                                "mapValue": {}
-                              },
-                              "photoDisplayMode": {
-                                "stringValue": "cover"
-                              },
-                              "payAttendance": {
-                                "booleanValue": false
-                              },
-                              "studentPortalShowHeader": {
-                                "booleanValue": false
-                              },
-                              "printerReminderPrizeVouchers": {
-                                "stringValue": ""
-                              },
-                              "enableDoubleOrNothing": {
-                                "booleanValue": true
-                              },
-                              "enableAnimatedBackground": {
-                                "booleanValue": false
-                              },
-                              "notificationAttendanceEnabled": {
-                                "booleanValue": false
-                              },
-                              "kioskVoucherIdleOffSec": {
-                                "integerValue": "360"
-                              },
-                              "notificationRewardsEnabled": {
-                                "booleanValue": false
-                              },
-                              "badgeBronzeThreshold": {
-                                "integerValue": "100"
-                              },
-                              "adminSessionTimeoutMs": {
-                                "integerValue": "60000"
-                              },
-                              "housesRollupPoints": {
-                                "booleanValue": true
-                              },
-                              "enablePrizeCategories": {
-                                "booleanValue": true
-                              },
-                              "adminPinnedAddOnTabs": {
-                                "arrayValue": {
-                                  "values": [
-                                    {
-                                      "stringValue": "attendance"
-                                    },
-                                    {
-                                      "stringValue": "raffle"
-                                    },
-                                    {
-                                      "stringValue": "student-portal"
-                                    },
-                                    {
-                                      "stringValue": "insights"
-                                    }
-                                  ]
-                                }
-                              },
-                              "idCardPrintProfiles": {
-                                "arrayValue": {}
-                              },
-                              "enableClassAccumulations": {
-                                "booleanValue": false
-                              },
-                              "raffleOneEntryPerStudent": {
-                                "booleanValue": true
-                              },
-                              "enableAttendance": {
-                                "booleanValue": false
-                              },
-                              "enablePrizeAiSurprise": {
-                                "booleanValue": false
-                              },
-                              "calmMode": {
-                                "booleanValue": true
-                              },
-                              "kioskSponsorPosition": {
-                                "stringValue": "bottom"
-                              },
-                              "enableSeasonalPrizes": {
-                                "booleanValue": false
-                              },
-                              "enableStudentWelcome": {
-                                "booleanValue": false
-                              },
-                              "rafflePointsPerTicket": {
-                                "integerValue": "10"
-                              },
-                              "enableHelperMode": {
-                                "booleanValue": true
-                              },
-                              "kioskSponsorBannerStyle": {
-                                "stringValue": "primary"
-                              },
-                              "bulletinTheme": {
-                                "stringValue": "sunset"
-                              },
-                              "kioskSponsorSchedules": {
-                                "arrayValue": {}
-                              },
-                              "enableTeacherCharts": {
-                                "booleanValue": false
-                              },
-                              "photoDropShadow": {
-                                "stringValue": "lg"
-                              },
-                              "hallOfFameRankType": {
-                                "stringValue": "students"
-                              },
-                              "kioskLoginTabTypeEnabled": {
-                                "booleanValue": true
-                              },
-                              "enableWeeklyRaffle": {
-                                "booleanValue": true
-                              },
-                              "privacyStudentNameDisplayMode": {
-                                "stringValue": "full"
-                              },
-                              "adminMainTabOrder": {
-                                "arrayValue": {
-                                  "values": [
-                                    {
-                                      "stringValue": "students"
-                                    },
-                                    {
-                                      "stringValue": "classes"
-                                    },
-                                    {
-                                      "stringValue": "teachers"
-                                    },
-                                    {
-                                      "stringValue": "prizes"
-                                    },
-                                    {
-                                      "stringValue": "categories"
-                                    }
-                                  ]
-                                }
-                              },
-                              "notificationPrizeLowStockThreshold": {
-                                "integerValue": "5"
-                              },
-                              "enableStudentReports": {
-                                "booleanValue": true
-                              },
-                              "adminExtraTabOrder": {
-                                "arrayValue": {
-                                  "values": [
-                                    {
-                                      "stringValue": "bonuspoints"
-                                    },
-                                    {
-                                      "stringValue": "goals"
-                                    },
-                                    {
-                                      "stringValue": "branding"
-                                    },
-                                    {
-                                      "stringValue": "bulletinboard"
-                                    }
-                                  ]
-                                }
-                              },
-                              "studentSignInThrottleWindowMin": {
-                                "integerValue": "2"
-                              },
-                              "printerReminderIdCards": {
-                                "stringValue": ""
-                              },
-                              "showSingleStudentCardMachinePrintButton": {
-                                "booleanValue": true
-                              },
-                              "bulletinShowWowBadge": {
-                                "booleanValue": true
-                              },
-                              "payRewards": {
-                                "booleanValue": false
-                              },
-                              "hallOfFamePodiumSize": {
-                                "integerValue": "3"
-                              },
-                              "enableStudentProfiles": {
-                                "booleanValue": true
-                              },
-                              "logoBorderRadius": {
-                                "stringValue": "md"
-                              },
-                              "enableTeacherGeneratedCouponsTab": {
-                                "booleanValue": false
-                              },
-                              "kioskSponsorLogoUrl": {
-                                "stringValue": ""
-                              },
-                              "enableAdminAnalytics": {
-                                "booleanValue": true
-                              },
-                              "enableMultiAdmin": {
-                                "booleanValue": false
-                              },
-                              "bulletinEnabled": {
-                                "booleanValue": false
-                              }
-                            }
-                          }
-                        },
-                        "active": {
-                          "booleanValue": true
-                        },
-                        "featureOverrides": {
-                          "mapValue": {}
-                        },
-                        "staffDirectoryUpdatedAt": {
-                          "integerValue": "1778993973581"
-                        },
                         "staffDirectory": {
                           "arrayValue": {
                             "values": [
                               {
                                 "mapValue": {
                                   "fields": {
-                                    "username": {
-                                      "stringValue": "mrsmith"
+                                    "label": {
+                                      "stringValue": "Mr. Smith"
+                                    },
+                                    "updatedAt": {
+                                      "integerValue": "1780203565432"
                                     },
                                     "sourceId": {
                                       "stringValue": "st1"
@@ -1365,14 +729,11 @@
                                     "id": {
                                       "stringValue": "teacher:mrsmith"
                                     },
+                                    "username": {
+                                      "stringValue": "mrsmith"
+                                    },
                                     "type": {
                                       "stringValue": "teacher"
-                                    },
-                                    "label": {
-                                      "stringValue": "Mr. Smith"
-                                    },
-                                    "updatedAt": {
-                                      "integerValue": "1778993973581"
                                     }
                                   }
                                 }
@@ -1380,20 +741,20 @@
                               {
                                 "mapValue": {
                                   "fields": {
-                                    "username": {
-                                      "stringValue": "mrwalker"
+                                    "updatedAt": {
+                                      "integerValue": "1780203565432"
                                     },
                                     "sourceId": {
                                       "stringValue": "st10"
-                                    },
-                                    "updatedAt": {
-                                      "integerValue": "1778993973581"
                                     },
                                     "label": {
                                       "stringValue": "Mr. Walker"
                                     },
                                     "type": {
                                       "stringValue": "teacher"
+                                    },
+                                    "username": {
+                                      "stringValue": "mrwalker"
                                     },
                                     "id": {
                                       "stringValue": "teacher:mrwalker"
@@ -1404,23 +765,23 @@
                               {
                                 "mapValue": {
                                   "fields": {
+                                    "type": {
+                                      "stringValue": "teacher"
+                                    },
                                     "username": {
                                       "stringValue": "mrsjones"
+                                    },
+                                    "id": {
+                                      "stringValue": "teacher:mrsjones"
                                     },
                                     "sourceId": {
                                       "stringValue": "st2"
                                     },
                                     "updatedAt": {
-                                      "integerValue": "1778993973581"
+                                      "integerValue": "1780203565432"
                                     },
                                     "label": {
                                       "stringValue": "Mrs. Jones"
-                                    },
-                                    "type": {
-                                      "stringValue": "teacher"
-                                    },
-                                    "id": {
-                                      "stringValue": "teacher:mrsjones"
                                     }
                                   }
                                 }
@@ -1429,22 +790,22 @@
                                 "mapValue": {
                                   "fields": {
                                     "updatedAt": {
-                                      "integerValue": "1778993973581"
+                                      "integerValue": "1780203565432"
+                                    },
+                                    "sourceId": {
+                                      "stringValue": "st3"
                                     },
                                     "label": {
                                       "stringValue": "Ms. Davis"
                                     },
-                                    "type": {
-                                      "stringValue": "teacher"
-                                    },
                                     "id": {
                                       "stringValue": "teacher:msdavis"
                                     },
+                                    "type": {
+                                      "stringValue": "teacher"
+                                    },
                                     "username": {
                                       "stringValue": "msdavis"
-                                    },
-                                    "sourceId": {
-                                      "stringValue": "st3"
                                     }
                                   }
                                 }
@@ -1452,23 +813,23 @@
                               {
                                 "mapValue": {
                                   "fields": {
-                                    "id": {
-                                      "stringValue": "teacher:mrbrown"
-                                    },
-                                    "type": {
-                                      "stringValue": "teacher"
-                                    },
                                     "label": {
                                       "stringValue": "Mr. Brown"
                                     },
                                     "updatedAt": {
-                                      "integerValue": "1778993973581"
+                                      "integerValue": "1780203565432"
+                                    },
+                                    "sourceId": {
+                                      "stringValue": "st4"
+                                    },
+                                    "id": {
+                                      "stringValue": "teacher:mrbrown"
                                     },
                                     "username": {
                                       "stringValue": "mrbrown"
                                     },
-                                    "sourceId": {
-                                      "stringValue": "st4"
+                                    "type": {
+                                      "stringValue": "teacher"
                                     }
                                   }
                                 }
@@ -1476,20 +837,20 @@
                               {
                                 "mapValue": {
                                   "fields": {
+                                    "id": {
+                                      "stringValue": "teacher:mrwilson"
+                                    },
+                                    "type": {
+                                      "stringValue": "teacher"
+                                    },
                                     "username": {
                                       "stringValue": "mrwilson"
                                     },
                                     "sourceId": {
                                       "stringValue": "st5"
                                     },
-                                    "type": {
-                                      "stringValue": "teacher"
-                                    },
-                                    "id": {
-                                      "stringValue": "teacher:mrwilson"
-                                    },
                                     "updatedAt": {
-                                      "integerValue": "1778993973581"
+                                      "integerValue": "1780203565432"
                                     },
                                     "label": {
                                       "stringValue": "Mr. Wilson"
@@ -1500,8 +861,8 @@
                               {
                                 "mapValue": {
                                   "fields": {
-                                    "username": {
-                                      "stringValue": "mrsanderson"
+                                    "updatedAt": {
+                                      "integerValue": "1780203565432"
                                     },
                                     "sourceId": {
                                       "stringValue": "st6"
@@ -1509,14 +870,14 @@
                                     "label": {
                                       "stringValue": "Mrs. Anderson"
                                     },
-                                    "updatedAt": {
-                                      "integerValue": "1778993973581"
-                                    },
                                     "id": {
                                       "stringValue": "teacher:mrsanderson"
                                     },
                                     "type": {
                                       "stringValue": "teacher"
+                                    },
+                                    "username": {
+                                      "stringValue": "mrsanderson"
                                     }
                                   }
                                 }
@@ -1524,23 +885,23 @@
                               {
                                 "mapValue": {
                                   "fields": {
-                                    "updatedAt": {
-                                      "integerValue": "1778993973581"
-                                    },
-                                    "label": {
-                                      "stringValue": "Ms. Thomas"
+                                    "id": {
+                                      "stringValue": "teacher:msthomas"
                                     },
                                     "type": {
                                       "stringValue": "teacher"
-                                    },
-                                    "id": {
-                                      "stringValue": "teacher:msthomas"
                                     },
                                     "username": {
                                       "stringValue": "msthomas"
                                     },
+                                    "updatedAt": {
+                                      "integerValue": "1780203565432"
+                                    },
                                     "sourceId": {
                                       "stringValue": "st7"
+                                    },
+                                    "label": {
+                                      "stringValue": "Ms. Thomas"
                                     }
                                   }
                                 }
@@ -1548,23 +909,23 @@
                               {
                                 "mapValue": {
                                   "fields": {
-                                    "username": {
-                                      "stringValue": "mrjackson"
-                                    },
-                                    "sourceId": {
-                                      "stringValue": "st8"
-                                    },
-                                    "id": {
-                                      "stringValue": "teacher:mrjackson"
-                                    },
-                                    "type": {
-                                      "stringValue": "teacher"
-                                    },
                                     "label": {
                                       "stringValue": "Mr. Jackson"
                                     },
                                     "updatedAt": {
-                                      "integerValue": "1778993973581"
+                                      "integerValue": "1780203565432"
+                                    },
+                                    "sourceId": {
+                                      "stringValue": "st8"
+                                    },
+                                    "username": {
+                                      "stringValue": "mrjackson"
+                                    },
+                                    "type": {
+                                      "stringValue": "teacher"
+                                    },
+                                    "id": {
+                                      "stringValue": "teacher:mrjackson"
                                     }
                                   }
                                 }
@@ -1572,11 +933,14 @@
                               {
                                 "mapValue": {
                                   "fields": {
-                                    "label": {
-                                      "stringValue": "Ms. Green"
+                                    "sourceId": {
+                                      "stringValue": "st9"
                                     },
                                     "updatedAt": {
-                                      "integerValue": "1778993973581"
+                                      "integerValue": "1780203565432"
+                                    },
+                                    "label": {
+                                      "stringValue": "Ms. Green"
                                     },
                                     "id": {
                                       "stringValue": "teacher:msgreen"
@@ -1586,9 +950,6 @@
                                     },
                                     "username": {
                                       "stringValue": "msgreen"
-                                    },
-                                    "sourceId": {
-                                      "stringValue": "st9"
                                     }
                                   }
                                 }
@@ -1596,32 +957,47 @@
                               {
                                 "mapValue": {
                                   "fields": {
-                                    "updatedAt": {
-                                      "integerValue": "1778993973581"
+                                    "username": {
+                                      "stringValue": "office"
                                     },
-                                    "roles": {
-                                      "arrayValue": {
-                                        "values": [
-                                          {
-                                            "stringValue": "secretary"
-                                          }
-                                        ]
-                                      }
+                                    "type": {
+                                      "stringValue": "office"
+                                    },
+                                    "id": {
+                                      "stringValue": "office:demo_office_staff"
                                     },
                                     "label": {
+                                      "stringValue": "School Office"
+                                    },
+                                    "sourceId": {
+                                      "stringValue": "demo_office_staff"
+                                    },
+                                    "updatedAt": {
+                                      "integerValue": "1780203565432"
+                                    }
+                                  }
+                                }
+                              },
+                              {
+                                "mapValue": {
+                                  "fields": {
+                                    "label": {
                                       "stringValue": "sect"
+                                    },
+                                    "updatedAt": {
+                                      "integerValue": "1780203565432"
+                                    },
+                                    "sourceId": {
+                                      "stringValue": "sa_1777428911293_045hyoq"
                                     },
                                     "id": {
                                       "stringValue": "secretary:sa_1777428911293_045hyoq"
                                     },
-                                    "type": {
-                                      "stringValue": "secretary"
-                                    },
                                     "username": {
                                       "stringValue": "user"
                                     },
-                                    "sourceId": {
-                                      "stringValue": "sa_1777428911293_045hyoq"
+                                    "type": {
+                                      "stringValue": "secretary"
                                     }
                                   }
                                 }
@@ -1629,23 +1005,14 @@
                               {
                                 "mapValue": {
                                   "fields": {
-                                    "roles": {
-                                      "arrayValue": {
-                                        "values": [
-                                          {
-                                            "stringValue": "prizeClerk"
-                                          }
-                                        ]
-                                      }
-                                    },
-                                    "updatedAt": {
-                                      "integerValue": "1778993973581"
-                                    },
                                     "label": {
                                       "stringValue": "prize"
                                     },
-                                    "type": {
-                                      "stringValue": "prizeClerk"
+                                    "sourceId": {
+                                      "stringValue": "sa_1777492396761_6rsry4p"
+                                    },
+                                    "updatedAt": {
+                                      "integerValue": "1780203565432"
                                     },
                                     "id": {
                                       "stringValue": "prizeClerk:sa_1777492396761_6rsry4p"
@@ -1653,17 +1020,668 @@
                                     "username": {
                                       "stringValue": "prize"
                                     },
-                                    "sourceId": {
-                                      "stringValue": "sa_1777492396761_6rsry4p"
+                                    "type": {
+                                      "stringValue": "prizeClerk"
                                     }
                                   }
                                 }
                               }
                             ]
                           }
+                        },
+                        "appSettings": {
+                          "mapValue": {
+                            "fields": {
+                              "enableHomework": {
+                                "booleanValue": false
+                              },
+                              "studentPortalShowHeader": {
+                                "booleanValue": false
+                              },
+                              "smartScreenWeatherLabel": {
+                                "stringValue": "Clear focus"
+                              },
+                              "bulletinShowWowBadge": {
+                                "booleanValue": true
+                              },
+                              "kioskSponsorSchedules": {
+                                "arrayValue": {}
+                              },
+                              "enableStudentThemes": {
+                                "booleanValue": true
+                              },
+                              "smartScreenTheme": {
+                                "stringValue": "midnight"
+                              },
+                              "enableHelperMode": {
+                                "booleanValue": true
+                              },
+                              "studentSignInThrottleMaxAttempts": {
+                                "integerValue": "10"
+                              },
+                              "idCardCornerStyle": {
+                                "stringValue": "rounded"
+                              },
+                              "smartScreenTitle": {
+                                "stringValue": "Smart Screen"
+                              },
+                              "enablePointApproval": {
+                                "booleanValue": false
+                              },
+                              "libraryLatePointsPerDay": {
+                                "integerValue": "2"
+                              },
+                              "kioskSponsorIcon": {
+                                "stringValue": "🎉"
+                              },
+                              "teacherPinnedAddOnTabs": {
+                                "arrayValue": {}
+                              },
+                              "privacyStudentNameDisplayMode": {
+                                "stringValue": "full"
+                              },
+                              "payOffice": {
+                                "booleanValue": true
+                              },
+                              "kioskLoginTabCardEnabled": {
+                                "booleanValue": true
+                              },
+                              "notificationWhatsAppEnabled": {
+                                "booleanValue": false
+                              },
+                              "libraryLateFeesEnabled": {
+                                "booleanValue": true
+                              },
+                              "kioskSponsorMessage": {
+                                "stringValue": ""
+                              },
+                              "hallOfFameRankType": {
+                                "stringValue": "students"
+                              },
+                              "teacherHiddenAddOnTabs": {
+                                "arrayValue": {}
+                              },
+                              "enableThemeAnimations": {
+                                "booleanValue": false
+                              },
+                              "enableVendingMachine": {
+                                "booleanValue": false
+                              },
+                              "adminNavLayout": {
+                                "stringValue": "sidebar"
+                              },
+                              "smartScreenShowFocus": {
+                                "booleanValue": true
+                              },
+                              "kioskCouponRedemptionCameraEnabled": {
+                                "booleanValue": false
+                              },
+                              "showIntroWizard": {
+                                "booleanValue": false
+                              },
+                              "photoDropShadow": {
+                                "stringValue": "md"
+                              },
+                              "enableGoals": {
+                                "booleanValue": true
+                              },
+                              "enableLevels": {
+                                "booleanValue": false
+                              },
+                              "kioskSponsorEnabled": {
+                                "booleanValue": false
+                              },
+                              "smartScreenShowRewards": {
+                                "booleanValue": true
+                              },
+                              "prizeVoucherPaperFormat": {
+                                "stringValue": "label_50x70"
+                              },
+                              "darkModeColorized": {
+                                "booleanValue": false
+                              },
+                              "notificationStudentsEnabled": {
+                                "booleanValue": false
+                              },
+                              "notificationRewardsEnabled": {
+                                "booleanValue": true
+                              },
+                              "notificationPrizeEmptyShopEnabled": {
+                                "booleanValue": false
+                              },
+                              "smartScreenShowWeather": {
+                                "booleanValue": true
+                              },
+                              "notificationArtworkEnabled": {
+                                "booleanValue": true
+                              },
+                              "studentPortalRequirePasscode": {
+                                "booleanValue": true
+                              },
+                              "libraryLoanPeriodDays": {
+                                "integerValue": "14"
+                              },
+                              "enableTeacherGeneratedCouponsTab": {
+                                "booleanValue": false
+                              },
+                              "rafflePointsPerTicket": {
+                                "integerValue": "25"
+                              },
+                              "enableNotifications": {
+                                "booleanValue": true
+                              },
+                              "enableClassLeaderboard": {
+                                "booleanValue": true
+                              },
+                              "enableAnimatedBackground": {
+                                "booleanValue": false
+                              },
+                              "smartScreenShowBirthdays": {
+                                "booleanValue": true
+                              },
+                              "studentWelcomeBackDurationSec": {
+                                "integerValue": "2"
+                              },
+                              "smartScreenWeatherTemp": {
+                                "stringValue": "72"
+                              },
+                              "kioskAiFunIdleOffSec": {
+                                "integerValue": "360"
+                              },
+                              "enableAttendance": {
+                                "booleanValue": true
+                              },
+                              "raffleDisplayMode": {
+                                "stringValue": "jackpot"
+                              },
+                              "enableFaceLogin": {
+                                "booleanValue": true
+                              },
+                              "displayMode": {
+                                "stringValue": "auto"
+                              },
+                              "bulletinTitle": {
+                                "stringValue": "School Bulletin Board"
+                              },
+                              "darkMode": {
+                                "booleanValue": false
+                              },
+                              "enableWishlist": {
+                                "booleanValue": false
+                              },
+                              "smartScreenShowLeaderboard": {
+                                "booleanValue": true
+                              },
+                              "hallOfFameGridLayout": {
+                                "booleanValue": true
+                              },
+                              "enablePdfExport": {
+                                "booleanValue": false
+                              },
+                              "specialDayPointsAmount": {
+                                "integerValue": "50"
+                              },
+                              "legacyMode": {
+                                "booleanValue": false
+                              },
+                              "housesRollupPoints": {
+                                "booleanValue": true
+                              },
+                              "hallOfFameScope": {
+                                "stringValue": "all"
+                              },
+                              "smartScreenLocationZip": {
+                                "stringValue": ""
+                              },
+                              "smartScreenShowBulletin": {
+                                "booleanValue": true
+                              },
+                              "kioskSessionTimeoutSec": {
+                                "integerValue": "10"
+                              },
+                              "hiddenAnimatedBackgroundIds": {
+                                "arrayValue": {}
+                              },
+                              "birthdayPointsAmount": {
+                                "integerValue": "100"
+                              },
+                              "raffleDeductPoints": {
+                                "booleanValue": false
+                              },
+                              "enableBadges": {
+                                "booleanValue": true
+                              },
+                              "enableColorPrinting": {
+                                "booleanValue": true
+                              },
+                              "enableAuditLog": {
+                                "booleanValue": false
+                              },
+                              "kioskPortraitDisplay": {
+                                "booleanValue": false
+                              },
+                              "enableCouponRedeemCompliments": {
+                                "booleanValue": true
+                              },
+                              "enableTeacherBudgets": {
+                                "booleanValue": false
+                              },
+                              "kioskLoginTabTypeEnabled": {
+                                "booleanValue": true
+                              },
+                              "idCardPrinterFamily": {
+                                "stringValue": "browser_sheet"
+                              },
+                              "enableAchievements": {
+                                "booleanValue": true
+                              },
+                              "studentSignInThrottleWindowMin": {
+                                "integerValue": "2"
+                              },
+                              "notificationMilestonesEnabled": {
+                                "booleanValue": true
+                              },
+                              "language": {
+                                "stringValue": "English"
+                              },
+                              "enableBulkPoints": {
+                                "booleanValue": false
+                              },
+                              "enableSeasonalPrizes": {
+                                "booleanValue": false
+                              },
+                              "kioskCouponRedemptionInput": {
+                                "stringValue": "manual"
+                              },
+                              "photoBorderRadius": {
+                                "stringValue": "full"
+                              },
+                              "logoBorderRadius": {
+                                "stringValue": "md"
+                              },
+                              "bulletinEnabled": {
+                                "booleanValue": true
+                              },
+                              "printerReminderIdCards": {
+                                "stringValue": ""
+                              },
+                              "logoDropShadow": {
+                                "stringValue": "md"
+                              },
+                              "enableMultiAdmin": {
+                                "booleanValue": false
+                              },
+                              "adminPerTabColorScheme": {
+                                "booleanValue": false
+                              },
+                              "raffleOneEntryPerStudent": {
+                                "booleanValue": false
+                              },
+                              "enableStudentProfiles": {
+                                "booleanValue": false
+                              },
+                              "graphicMode": {
+                                "stringValue": "graphics"
+                              },
+                              "smartScreenShowHouses": {
+                                "booleanValue": true
+                              },
+                              "kioskSponsorLogoUrl": {
+                                "stringValue": ""
+                              },
+                              "bulletinLogoSize": {
+                                "stringValue": "md"
+                              },
+                              "enableQrLogin": {
+                                "booleanValue": true
+                              },
+                              "notificationLibraryEnabled": {
+                                "booleanValue": false
+                              },
+                              "notificationAttendanceEnabled": {
+                                "booleanValue": true
+                              },
+                              "studentSignInFreezeSec": {
+                                "integerValue": "0"
+                              },
+                              "enablePrizeAiSurprise": {
+                                "booleanValue": false
+                              },
+                              "enableStudentEmojiOnPrizeTickets": {
+                                "booleanValue": false
+                              },
+                              "enableShoutouts": {
+                                "booleanValue": false
+                              },
+                              "hallOfFamePodiumSize": {
+                                "integerValue": "3"
+                              },
+                              "smartScreenShowSchedule": {
+                                "booleanValue": true
+                              },
+                              "bulletinTheme": {
+                                "stringValue": "default"
+                              },
+                              "enableAdminAnalytics": {
+                                "booleanValue": true
+                              },
+                              "hallOfFameLimit": {
+                                "integerValue": "50"
+                              },
+                              "kioskLoginTabFaceEnabled": {
+                                "booleanValue": true
+                              },
+                              "adminSessionTimeoutMs": {
+                                "integerValue": "300000"
+                              },
+                              "kioskProfiles": {
+                                "mapValue": {}
+                              },
+                              "expertMode": {
+                                "booleanValue": false
+                              },
+                              "enableStudentWelcome": {
+                                "booleanValue": false
+                              },
+                              "enablePrizeCategories": {
+                                "booleanValue": false
+                              },
+                              "kioskVoucherIdleOffSec": {
+                                "integerValue": "360"
+                              },
+                              "smartScreenMessage": {
+                                "stringValue": "Make today count."
+                              },
+                              "smartScreenShowCompliments": {
+                                "booleanValue": true
+                              },
+                              "kioskAutoLogoutEnabled": {
+                                "booleanValue": true
+                              },
+                              "enableParentView": {
+                                "booleanValue": false
+                              },
+                              "smartScreenLayout": {
+                                "stringValue": "mirror"
+                              },
+                              "smartScreenEnabled": {
+                                "booleanValue": true
+                              },
+                              "studentPortalMaxFailedAttempts": {
+                                "integerValue": "5"
+                              },
+                              "libraryOnTimeReturnPoints": {
+                                "integerValue": "0"
+                              },
+                              "customAppearanceColors": {
+                                "mapValue": {}
+                              },
+                              "defaultWelcomeGreetingStyleId": {
+                                "stringValue": ""
+                              },
+                              "studentSignInThrottleEnabled": {
+                                "booleanValue": false
+                              },
+                              "notificationStaffAlertsEnabled": {
+                                "booleanValue": true
+                              },
+                              "adminExtraTabOrder": {
+                                "arrayValue": {}
+                              },
+                              "enableClassAccumulations": {
+                                "booleanValue": false
+                              },
+                              "photoDisplayMode": {
+                                "stringValue": "cover"
+                              },
+                              "payLibrary": {
+                                "booleanValue": true
+                              },
+                              "enableTeacherOfflineAwardQueue": {
+                                "booleanValue": true
+                              },
+                              "kioskWedgeDemoCameraEnabled": {
+                                "booleanValue": false
+                              },
+                              "specialDayDate": {
+                                "stringValue": ""
+                              },
+                              "smartScreenShowQuote": {
+                                "booleanValue": true
+                              },
+                              "kioskSponsorLink": {
+                                "stringValue": ""
+                              },
+                              "showHouseOnStudentKiosk": {
+                                "booleanValue": true
+                              },
+                              "teacherMainTabOrder": {
+                                "arrayValue": {}
+                              },
+                              "studentPortalLockBrowserToStudent": {
+                                "booleanValue": false
+                              },
+                              "notificationPrizeLowStockThreshold": {
+                                "integerValue": "5"
+                              },
+                              "colorScheme": {
+                                "stringValue": "sky"
+                              },
+                              "enableBirthdayPoints": {
+                                "booleanValue": false
+                              },
+                              "printerReminderPrizeVouchers": {
+                                "stringValue": ""
+                              },
+                              "hallOfFameSortBy": {
+                                "stringValue": "lifetimePoints"
+                              },
+                              "kioskLoginTabScanEnabled": {
+                                "booleanValue": true
+                              },
+                              "enableWeeklyRaffle": {
+                                "booleanValue": false
+                              },
+                              "enableChallenges": {
+                                "booleanValue": false
+                              },
+                              "notificationParentWeeklyDigestEnabled": {
+                                "booleanValue": false
+                              },
+                              "hallOfFameAutoScroll": {
+                                "booleanValue": false
+                              },
+                              "idCardPaperId": {
+                                "stringValue": "avery25395_8up_letter"
+                              },
+                              "enableStreaks": {
+                                "booleanValue": false
+                              },
+                              "bulletinSubtitle": {
+                                "stringValue": ""
+                              },
+                              "soundEnabled": {
+                                "booleanValue": true
+                              },
+                              "specialDayLabel": {
+                                "stringValue": "School Spirit Day"
+                              },
+                              "smartScreenShowClasses": {
+                                "booleanValue": true
+                              },
+                              "teacherFeatures": {
+                                "mapValue": {}
+                              },
+                              "adminAutoLogoutEnabled": {
+                                "booleanValue": true
+                              },
+                              "adminMainTabOrder": {
+                                "arrayValue": {}
+                              },
+                              "enableHouses": {
+                                "booleanValue": true
+                              },
+                              "kioskCouponRedemptionManualEnabled": {
+                                "booleanValue": true
+                              },
+                              "kioskSponsorSpeed": {
+                                "stringValue": "normal"
+                              },
+                              "animatedBackgroundStyle": {
+                                "stringValue": "arcade"
+                              },
+                              "payRewards": {
+                                "booleanValue": true
+                              },
+                              "enableClassSignIn": {
+                                "booleanValue": true
+                              },
+                              "smartScreenShowStats": {
+                                "booleanValue": true
+                              },
+                              "enableSpecialDayPoints": {
+                                "booleanValue": false
+                              },
+                              "defaultStudentTheme": {
+                                "mapValue": {
+                                  "fields": {
+                                    "text": {
+                                      "stringValue": "#020617"
+                                    },
+                                    "cardBackground": {
+                                      "stringValue": "#ffffff"
+                                    },
+                                    "fontScale": {
+                                      "doubleValue": 1.15
+                                    },
+                                    "primary": {
+                                      "stringValue": "#102a45"
+                                    },
+                                    "background": {
+                                      "stringValue": "#eff6ff"
+                                    },
+                                    "accent": {
+                                      "stringValue": "#2563eb"
+                                    }
+                                  }
+                                }
+                              },
+                              "idCardPrintProfiles": {
+                                "arrayValue": {}
+                              },
+                              "adminHiddenAddOnTabs": {
+                                "arrayValue": {}
+                              },
+                              "kioskSponsorPosition": {
+                                "stringValue": "bottom"
+                              },
+                              "enablePrizeImages": {
+                                "booleanValue": false
+                              },
+                              "hideSiteHeaderOutsidePortal": {
+                                "booleanValue": true
+                              },
+                              "notificationPrizeInventoryEnabled": {
+                                "booleanValue": false
+                              },
+                              "bulletinColumns": {
+                                "stringValue": "2"
+                              },
+                              "payAttendance": {
+                                "booleanValue": true
+                              },
+                              "payHomework": {
+                                "booleanValue": true
+                              },
+                              "enableStudentPortal": {
+                                "booleanValue": false
+                              },
+                              "logoDisplayMode": {
+                                "stringValue": "contain"
+                              },
+                              "adminPinnedAddOnTabs": {
+                                "arrayValue": {
+                                  "values": [
+                                    {
+                                      "stringValue": "insights"
+                                    },
+                                    {
+                                      "stringValue": "attendance"
+                                    },
+                                    {
+                                      "stringValue": "halloffame"
+                                    },
+                                    {
+                                      "stringValue": "bulletinboard"
+                                    },
+                                    {
+                                      "stringValue": "smart-screen"
+                                    },
+                                    {
+                                      "stringValue": "bonuspoints"
+                                    },
+                                    {
+                                      "stringValue": "goals"
+                                    },
+                                    {
+                                      "stringValue": "houses"
+                                    },
+                                    {
+                                      "stringValue": "notifications"
+                                    },
+                                    {
+                                      "stringValue": "integrations"
+                                    },
+                                    {
+                                      "stringValue": "library"
+                                    },
+                                    {
+                                      "stringValue": "category-badges"
+                                    },
+                                    {
+                                      "stringValue": "branding"
+                                    },
+                                    {
+                                      "stringValue": "student-portal"
+                                    }
+                                  ]
+                                }
+                              },
+                              "kioskSponsorBannerStyle": {
+                                "stringValue": "primary"
+                              },
+                              "enableStudentWelcomeBackScreen": {
+                                "booleanValue": false
+                              },
+                              "prizeAiSurpriseDefaultPoints": {
+                                "integerValue": "1"
+                              },
+                              "enableTeacherCharts": {
+                                "booleanValue": false
+                              }
+                            }
+                          }
+                        },
+                        "active": {
+                          "booleanValue": true
+                        },
+                        "plan": {
+                          "stringValue": "free"
+                        },
+                        "staffDirectoryUpdatedAt": {
+                          "integerValue": "1780203565433"
+                        },
+                        "featureOverrides": {
+                          "mapValue": {}
+                        },
+                        "updatedAt": {
+                          "integerValue": "1780203624010"
+                        },
+                        "name": {
+                          "stringValue": "School ABC"
                         }
                       },
-                      "updateTime": "2026-05-19T22:18:45.917950000Z",
+                      "updateTime": "2026-05-31T05:00:22.723013000Z",
                       "createTime": "2026-04-27T12:38:06.686344000Z"
                     }
                   }
@@ -1705,7 +1723,7 @@
                   "value": {
                     "targetId": 0,
                     "path": "appConfig\u0001\u0001global\u0001\u0001",
-                    "sequenceNumber": 9
+                    "sequenceNumber": 6
                   }
                 },
                 {
@@ -1748,10 +1766,10 @@
                   "key": "targetGlobalKey",
                   "value": {
                     "highestTargetId": 4,
-                    "highestListenSequenceNumber": 37,
+                    "highestListenSequenceNumber": 33,
                     "lastRemoteSnapshotVersion": {
-                      "seconds": 1779234187,
-                      "nanoseconds": 517543000
+                      "seconds": 1780205172,
+                      "nanoseconds": 918902000
                     },
                     "targetCount": 2
                   }
@@ -1769,14 +1787,14 @@
                     "targetId": 2,
                     "canonicalId": "appConfig/global|f:|ob:__name__asc",
                     "readTime": {
-                      "seconds": 1779234186,
-                      "nanoseconds": 245601000
+                      "seconds": 1780205168,
+                      "nanoseconds": 268997000
                     },
-                    "resumeToken": "CgkI4euS7cPGlAM=",
-                    "lastListenSequenceNumber": 27,
+                    "resumeToken": "CgkIxa26heXilAM=",
+                    "lastListenSequenceNumber": 5,
                     "lastLimboFreeSnapshotVersion": {
-                      "seconds": 1779234184,
-                      "nanoseconds": 933858000
+                      "seconds": 0,
+                      "nanoseconds": 0
                     },
                     "query": {
                       "documents": [
@@ -1790,10 +1808,10 @@
                     "targetId": 4,
                     "canonicalId": "schoolPublic/schoolabc|f:|ob:__name__asc",
                     "readTime": {
-                      "seconds": 1779234186,
-                      "nanoseconds": 245601000
+                      "seconds": 1780205171,
+                      "nanoseconds": 649551000
                     },
-                    "resumeToken": "CgkI4euS7cPGlAM=",
+                    "resumeToken": "CgkIj9iIh+XilAM=",
                     "lastListenSequenceNumber": 22,
                     "lastLimboFreeSnapshotVersion": {
                       "seconds": 0,

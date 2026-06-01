@@ -1,7 +1,9 @@
-Student 104 / coupon 598970: redeem error on screen
-Error: Student 104 / coupon 598970: redeem error on screen
-    at validate (file:///C:/Users/Administrator/school%20arcade%20reward%20antigravity/studio/scripts/capture-walkthrough-videos.mjs:1582:17)
-    at async recordClipReady (file:///C:/Users/Administrator/school%20arcade%20reward%20antigravity/studio/scripts/capture-walkthrough-videos.mjs:1071:23)
-    at async captureLibrary (file:///C:/Users/Administrator/school%20arcade%20reward%20antigravity/studio/scripts/capture-walkthrough-videos.mjs:2466:26)
-    at async capturePromoBroll (file:///C:/Users/Administrator/school%20arcade%20reward%20antigravity/studio/scripts/capture-walkthrough-videos.mjs:2599:3)
-    at async main (file:///C:/Users/Administrator/school%20arcade%20reward%20antigravity/studio/scripts/capture-walkthrough-videos.mjs:2758:5)
+page.waitForFunction: Timeout 30000ms exceeded.
+page.waitForFunction: Timeout 30000ms exceeded.
+    at waitForStudentKioskReady (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:410:14)
+    at async openStudentKiosk (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:448:3)
+    at async prepare (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:1603:9)
+    at async recordClipReady (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:1127:9)
+    at async captureLibrary (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:2508:26)
+    at async capturePromoBroll (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:2656:3)
+    at async main (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:2815:5)

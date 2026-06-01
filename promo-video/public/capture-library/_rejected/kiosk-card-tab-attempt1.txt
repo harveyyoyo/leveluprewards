@@ -1,15 +1,9 @@
-locator.waitFor: Timeout 90000ms exceeded.
-Call log:
-  - waiting for getByText(/Please scan your card|System Ready|LEVEL UP|Student Identification|Identify Student/i).first() to be visible
-
-locator.waitFor: Timeout 90000ms exceeded.
-Call log:
-  - waiting for getByText(/Please scan your card|System Ready|LEVEL UP|Student Identification|Identify Student/i).first() to be visible
-
-    at waitForStudentKioskReady (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:323:6)
-    at async openStudentKiosk (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:343:3)
-    at async prepare (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:1025:7)
-    at async recordClipReady (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:551:9)
-    at async captureLibrary (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:1335:26)
-    at async capturePromoSimple (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:1418:3)
-    at async main (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:1460:5)
+page.waitForFunction: Timeout 30000ms exceeded.
+page.waitForFunction: Timeout 30000ms exceeded.
+    at waitForStudentKioskReady (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:410:14)
+    at async openStudentKiosk (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:448:3)
+    at async prepare (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:1842:7)
+    at async recordClipReady (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:1127:9)
+    at async captureLibrary (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:2508:26)
+    at async capturePromoBroll (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:2656:3)
+    at async main (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:2815:5)

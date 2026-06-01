@@ -91,10 +91,20 @@ export function ParentPortalDashboardView({
 
       <Card className="border-t-4 border-primary">
         <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Points balance</CardTitle>
+          <CardTitle className="text-lg">{data.student.pointsLabel}</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-2">
           <p className="text-4xl font-black tabular-nums">{data.student.points.toLocaleString()}</p>
+          {data.student.rewardsPillarOn && data.student.classroomPoints > 0 ? (
+            <p className="text-xs text-muted-foreground">
+              Classroom points (separate): {data.student.classroomPoints.toLocaleString()}
+            </p>
+          ) : null}
+          {!data.student.rewardsPillarOn ? (
+            <p className="text-xs text-muted-foreground">
+              Saved from classroom quick awards — not the school kiosk or prize shop balance.
+            </p>
+          ) : null}
         </CardContent>
       </Card>
 

@@ -14,6 +14,7 @@ const flyers = [
   { html: 'levelup-rewards-flyer.html', pdf: 'LevelUp-Rewards-Flyer.pdf' },
   { html: 'levelup-teachers-flyer.html', pdf: 'LevelUp-Teachers-Flyer.pdf' },
   { html: 'levelup-principals-flyer.html', pdf: 'LevelUp-Principals-Flyer.pdf' },
+  { html: 'levelup-funding-flyer.html', pdf: 'LevelUp-Funding-Flyer.pdf' },
 ];
 
 async function main() {

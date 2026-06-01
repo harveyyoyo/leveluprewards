@@ -1,13 +1,3 @@
-import type { LucideIcon } from 'lucide-react';
-import {
-    Bell,
-    GraduationCap,
-    Megaphone,
-    Monitor,
-    Trophy,
-    Users,
-} from 'lucide-react';
-
 /** Top-level settings modal views. */
 export type SettingsView =
   | 'hub'
@@ -47,6 +37,7 @@ export const INTERFACE_SECTION_NAV = [
 
 export const GENERAL_SECTION_NAV = [
     { id: 'settings-general-sessions', label: 'Sessions' },
+    { id: 'settings-general-staff-portals', label: 'Staff portals' },
     { id: 'settings-general-kiosk', label: 'Kiosk' },
     { id: 'settings-general-printing', label: 'Printing' },
     { id: 'settings-general-guidance', label: 'Guidance' },
@@ -63,19 +54,9 @@ export const IMPLEMENTED_FEATURE_TOGGLE_KEYS = [
     'enableThemeAnimations',
 ] as const;
 
-export type AdminSettingsLink = {
-    tab: string;
-    label: string;
-    description: string;
-    icon: LucideIcon;
-};
-
-/**
- * Rich configuration lives on dedicated Admin tabs — not duplicated in the gear menu.
- * These links appear at the top of Advanced feature toggles for admins.
- */
 /** Admin dashboard tab values (see `AdminDashboardInner` TabsContent). */
 export const ADMIN_SETTINGS_TAB_VALUES = new Set([
+    'welcome',
     'students',
     'classes',
     'teachers',
@@ -101,45 +82,3 @@ export const ADMIN_SETTINGS_TAB_VALUES = new Set([
     'goals',
     'coupons',
 ]);
-
-export function getAdminManagedSettingsLinks(schoolId: string | null | undefined): AdminSettingsLink[] {
-    const base = schoolId ? `/${schoolId}/admin` : '';
-    return [
-        {
-            tab: `${base}?tab=notifications`,
-            label: 'Notifications',
-            description: 'Email alerts, digests, prize inventory, and delivery diagnostics.',
-            icon: Bell,
-        },
-        {
-            tab: `${base}?tab=branding`,
-            label: 'Branding & kiosk profiles',
-            description: 'Logo, ID card theme, sponsor banners, and per-device kiosk layouts.',
-            icon: Megaphone,
-        },
-        {
-            tab: `${base}?tab=student-portal`,
-            label: 'Student home portal',
-            description: 'Enable home access, passcodes, and browser lock settings.',
-            icon: GraduationCap,
-        },
-        {
-            tab: `${base}?tab=halloffame`,
-            label: 'Hall of Fame displays',
-            description: 'Leaderboard type, scope, podium size, and auto-scroll.',
-            icon: Trophy,
-        },
-        {
-            tab: `${base}?tab=smart-screen`,
-            label: 'Smart Screen',
-            description: 'Lobby display layout, widgets, weather, and location.',
-            icon: Monitor,
-        },
-        {
-            tab: `${base}?tab=students`,
-            label: 'Students & ID printing',
-            description: 'Roster, photos, welcome overrides, and bulk ID print.',
-            icon: Users,
-        },
-    ];
-}

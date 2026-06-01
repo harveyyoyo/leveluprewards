@@ -3,6 +3,10 @@ export type ParentPortalDashboard = {
     id: string;
     displayName: string;
     points: number;
+    pointsLabel: string;
+    classroomPoints: number;
+    rewardsPoints: number;
+    rewardsPillarOn: boolean;
     className?: string;
   };
   recentActivity: { desc: string; amount: number; date: number }[];

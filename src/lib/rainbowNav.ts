@@ -273,13 +273,14 @@ export function rainbowTripletForNavId(id: string, scheme?: NavColorScheme) {
 // Schemes not listed here fall back to their primary palette.
 const COMPLEMENT_PALETTES: Partial<Record<NavColorScheme, readonly string[]>> = {
   default: [
-    '199 75% 42%',
-    '199 80% 48%',
-    '205 82% 52%',
-    '199 70% 38%',
-    '205 78% 46%',
-    '192 68% 36%',
-    '199 72% 44%',
+    // Warm cream/gold complements for LevelUp navy (logo bars + wordmark)
+    '41 60% 75%',
+    '43 55% 70%',
+    '39 58% 72%',
+    '45 52% 68%',
+    '41 62% 78%',
+    '37 54% 74%',
+    '43 56% 76%',
   ],
   ocean: [
     // Warm amber/sand complements for ocean blues (dual-tone nav / rings)

@@ -75,6 +75,8 @@ interface SchoolInfo {
     payHomework?: boolean;
     payOffice?: boolean;
   };
+  pillarAccess?: Partial<Record<ProductPillarKey, boolean>>;
+  featureSettingsDefaults?: Partial<Record<ProductPillarKey, boolean>>;
 }
 
 export default function DeveloperPage() {
@@ -113,6 +115,13 @@ export default function DeveloperPage() {
     payHomework: true,
     payOffice: false,
   });
+  const [editingPillarAccess, setEditingPillarAccess] = useState<Record<ProductPillarKey, boolean>>({
+    payClassroom: true,
+    payAttendance: true,
+    payLibrary: true,
+    payHomework: true,
+    payOffice: true,
+  });
   const [backupSchool, setBackupSchool] = useState<SchoolInfo | null>(null);
   const [schoolBackups, setSchoolBackups] = useState<BackupInfo[]>([]);
   const [insightFocusSchoolId, setInsightFocusSchoolId] = useState<string | null>(null);
@@ -138,7 +147,7 @@ export default function DeveloperPage() {
       const rows = (res.data as { enrollments?: FaceEnrollmentRow[] })?.enrollments ?? [];
       setFaceEnrollments(rows);
       toast({
-        title: `Face enrollments · ${schoolId}`,
+        title: `Face enrollments Â· ${schoolId}`,
         description:
           rows.length === 0
             ? 'No faceAuth records in Firestore.'
@@ -164,7 +173,7 @@ export default function DeveloperPage() {
       const res = await fn({ schoolId, exceptStudentIds });
       const cleared = (res.data as { cleared?: number })?.cleared ?? 0;
       toast({
-        title: `Cleared face enrollments · ${schoolId}`,
+        title: `Cleared face enrollments Â· ${schoolId}`,
         description:
           cleared === 0
             ? 'Nothing removed.'
@@ -314,7 +323,7 @@ export default function DeveloperPage() {
 
     try {
       setIsAppLogoUploading(true);
-      toast({ title: 'Uploading app logo…', description: 'Please wait.' });
+      toast({ title: 'Uploading app logoâ€¦', description: 'Please wait.' });
 
       const imageBase64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
@@ -474,24 +483,30 @@ export default function DeveloperPage() {
   const handleOpenPillarsModal = async (school: SchoolInfo) => {
     if (!firestore) return;
     setPillarSchool(school);
+    const apply = (data: SchoolInfo) => {
+      const app = data.appSettings ?? {};
+      const defaults = data.featureSettingsDefaults ?? {};
+      const access = data.pillarAccess ?? {};
+      setEditingPillarAccess({
+        payClassroom: access.payClassroom !== false,
+        payAttendance: access.payAttendance !== false,
+        payLibrary: access.payLibrary !== false,
+        payHomework: access.payHomework !== false,
+        payOffice: access.payOffice !== false,
+      });
+      setEditingPillars({
+        payClassroom: defaults.payClassroom ?? app.payClassroom ?? true,
+        payAttendance: defaults.payAttendance ?? app.payAttendance ?? true,
+        payLibrary: defaults.payLibrary ?? app.payLibrary ?? true,
+        payHomework: defaults.payHomework ?? app.payHomework ?? true,
+        payOffice: defaults.payOffice ?? app.payOffice ?? false,
+      });
+    };
     try {
       const snap = await getDoc(doc(firestore, 'schools', school.id));
-      const app = snap.data()?.appSettings as SchoolInfo['appSettings'] | undefined;
-      setEditingPillars({
-        payClassroom: app?.payClassroom !== false,
-        payAttendance: app?.payAttendance !== false,
-        payLibrary: app?.payLibrary !== false,
-        payHomework: app?.payHomework !== false,
-        payOffice: app?.payOffice === true,
-      });
+      apply((snap.data() ?? school) as SchoolInfo);
     } catch {
-      setEditingPillars({
-        payClassroom: school.appSettings?.payClassroom !== false,
-        payAttendance: school.appSettings?.payAttendance !== false,
-        payLibrary: school.appSettings?.payLibrary !== false,
-        payHomework: school.appSettings?.payHomework !== false,
-        payOffice: school.appSettings?.payOffice === true,
-      });
+      apply(school);
     }
   };
 
@@ -504,6 +519,13 @@ export default function DeveloperPage() {
       payHomework: true,
       payOffice: false,
     });
+    setEditingPillarAccess({
+      payClassroom: true,
+      payAttendance: true,
+      payLibrary: true,
+      payHomework: true,
+      payOffice: true,
+    });
   };
 
   const handleSavePillars = async () => {
@@ -511,16 +533,24 @@ export default function DeveloperPage() {
     try {
       const snap = await getDoc(doc(firestore, 'schools', pillarSchool.id));
       const existingApp = (snap.data()?.appSettings ?? {}) as Record<string, unknown>;
-      const nextAppSettings = {
-        ...existingApp,
-        payClassroom: editingPillars.payClassroom,
-        payAttendance: editingPillars.payAttendance,
-        payLibrary: editingPillars.payLibrary,
-        payHomework: editingPillars.payHomework,
-        payOffice: editingPillars.payOffice,
-      };
+      const existingDefaults = (snap.data()?.featureSettingsDefaults ?? {}) as Record<string, unknown>;
+      const nextAppSettings: Record<string, unknown> = { ...existingApp };
+      const nextDefaults: Record<string, unknown> = { ...existingDefaults };
+      const nextAccess: Record<ProductPillarKey, boolean> = { ...editingPillarAccess };
+
+      for (const key of PRODUCT_PILLAR_KEYS) {
+        nextDefaults[key] = editingPillarAccess[key] && editingPillars[key];
+        if (!editingPillarAccess[key]) {
+          nextAppSettings[key] = false;
+        } else if (typeof nextAppSettings[key] !== 'boolean') {
+          nextAppSettings[key] = editingPillars[key];
+        }
+      }
+
       const payload = {
         appSettings: nextAppSettings,
+        featureSettingsDefaults: nextDefaults,
+        pillarAccess: nextAccess,
         updatedAt: Date.now(),
       };
       await setDoc(doc(firestore, 'schools', pillarSchool.id), payload, { merge: true });
@@ -532,7 +562,7 @@ export default function DeveloperPage() {
       playSound('success');
       toast({
         title: `Product pillars updated for "${pillarSchool.id}"`,
-        description: formatActivePillars(editingPillars),
+        description: `Access: ${formatActivePillars(nextAccess)} · Defaults: ${formatActivePillars(nextDefaults)}`,
       });
       handleClosePillarsModal();
     } catch (e) {
@@ -604,7 +634,12 @@ export default function DeveloperPage() {
 
   const getSchoolUrl = (id: string) => {
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    return `${origin}/s/${id}`;
+    const sid = id.trim().toLowerCase();
+    const params = new URLSearchParams({
+      school: sid,
+      next: `/${sid}/portal`,
+    });
+    return `${origin}/login?${params.toString()}`;
   };
 
   const handleCopyUrl = async (id: string) => {
@@ -643,7 +678,7 @@ export default function DeveloperPage() {
       <div className="min-h-screen flex items-center justify-center">
         <Button disabled variant="ghost" size="lg" className="text-muted-foreground">
           <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-          Loading…
+          Loadingâ€¦
         </Button>
       </div>
     );
@@ -975,9 +1010,9 @@ export default function DeveloperPage() {
                       faceEnrollments.map((row) => (
                         <li key={row.studentId} className="font-mono text-xs">
                           {row.studentId}
-                          {' · '}
+                          {' Â· '}
                           {row.enabled ? 'enabled' : 'disabled'}
-                          {' · '}
+                          {' Â· '}
                           {row.scanCount} scan{row.scanCount === 1 ? '' : 's'}
                         </li>
                       ))
@@ -1060,7 +1095,7 @@ export default function DeveloperPage() {
                       </div>
                       <p className="text-xs leading-relaxed text-muted-foreground">
                         <span className="font-medium text-foreground/80">Fit</span> keeps the whole mark visible with padding.
-                        <span className="mx-1 text-border">·</span>
+                        <span className="mx-1 text-border">Â·</span>
                         <span className="font-medium text-foreground/80">Fill</span> crops to the frame like a cover photo.
                       </p>
                     </div>
@@ -1079,10 +1114,10 @@ export default function DeveloperPage() {
                         disabled={isAppLogoUploading}
                       >
                         {isAppLogoUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-                        {isAppLogoUploading ? 'Uploading…' : 'Upload new image'}
+                        {isAppLogoUploading ? 'Uploadingâ€¦' : 'Upload new image'}
                       </Button>
                       <p className="text-xs text-muted-foreground">
-                        PNG, JPG, WebP, or SVG · up to 10 MB · raster files can be cropped to a square after choosing.
+                        PNG, JPG, WebP, or SVG Â· up to 10 MB Â· raster files can be cropped to a square after choosing.
                       </p>
                       <input
                         ref={appLogoInputRef}
@@ -1165,7 +1200,7 @@ export default function DeveloperPage() {
                   />
                 </div>
                 <Button className="shrink-0" onClick={handleFindLatestBackup} disabled={!orphanSchoolId || isFindingBackup}>
-                  {isFindingBackup ? 'Searching…' : 'Find Latest Backup'}
+                  {isFindingBackup ? 'Searchingâ€¦' : 'Find Latest Backup'}
                 </Button>
               </div>
               {latestBackup && (
@@ -1382,13 +1417,15 @@ export default function DeveloperPage() {
             <DialogHeader>
               <DialogTitle>Product pillars: <span className="font-code">{pillarSchool?.id}</span></DialogTitle>
               <DialogDescription>
-                Turn product pillars on or off for this school. School Office is accessed directly (not from the rewards portal chooser).
+                Choose which product pillars this school can use, then choose which accessible pillars start on by default. Unavailable pillars still appear in school settings, but are disabled.
               </DialogDescription>
             </DialogHeader>
             {pillarSchool ? (
                 <div className="space-y-4 py-2">
-                  {PRODUCT_PILLAR_KEYS.map((key) => (
-                    <div key={key} className="rounded-xl border p-4 space-y-2">
+                  {PRODUCT_PILLAR_KEYS.map((key) => {
+                    const hasAccess = editingPillarAccess[key];
+                    return (
+                    <div key={key} className={cn("rounded-xl border p-4 space-y-3", !hasAccess && "bg-muted/40 opacity-75")}>
                       <div className="flex items-start justify-between gap-4">
                         <div>
                           <Label className="text-sm font-bold">{PRODUCT_PILLAR_LABELS[key]}</Label>
@@ -1401,24 +1438,45 @@ export default function DeveloperPage() {
                             {key === 'payOffice' && 'Grades, billing, and office-only student roster (not shared with rewards).'}
                           </p>
                         </div>
-                        <div className="flex shrink-0 flex-col items-end gap-2">
+                        {key === 'payOffice' && hasAccess && editingPillars[key] ? (
+                          <OfficePortalEntryLink
+                            schoolId={pillarSchool.id}
+                            className="text-xs font-bold text-teal-700 underline underline-offset-4 hover:text-teal-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:text-teal-300 dark:hover:text-teal-100"
+                          />
+                        ) : null}
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="flex items-center justify-between rounded-lg border bg-background/70 p-3">
+                          <div>
+                            <Label className="text-xs font-bold uppercase tracking-wide">Available</Label>
+                            <p className="text-[11px] text-muted-foreground">Included for this school</p>
+                          </div>
                           <Switch
-                            checked={editingPillars[key]}
+                            checked={hasAccess}
+                            onCheckedChange={(checked) => {
+                              setEditingPillarAccess((prev) => ({ ...prev, [key]: checked }));
+                              if (!checked) setEditingPillars((prev) => ({ ...prev, [key]: false }));
+                            }}
+                            aria-label={`${PRODUCT_PILLAR_LABELS[key]} access`}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between rounded-lg border bg-background/70 p-3">
+                          <div>
+                            <Label className="text-xs font-bold uppercase tracking-wide">Default on</Label>
+                            <p className="text-[11px] text-muted-foreground">Starts enabled when settings are first created</p>
+                          </div>
+                          <Switch
+                            checked={hasAccess && editingPillars[key]}
+                            disabled={!hasAccess}
                             onCheckedChange={(checked) =>
                               setEditingPillars((prev) => ({ ...prev, [key]: checked }))
                             }
-                            aria-label={PRODUCT_PILLAR_LABELS[key]}
+                            aria-label={`${PRODUCT_PILLAR_LABELS[key]} default`}
                           />
-                          {key === 'payOffice' && editingPillars[key] ? (
-                            <OfficePortalEntryLink
-                              schoolId={pillarSchool.id}
-                              className="text-xs font-bold text-teal-700 underline underline-offset-4 hover:text-teal-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:text-teal-300 dark:hover:text-teal-100"
-                            />
-                          ) : null}
                         </div>
                       </div>
                     </div>
-                  ))}
+                  );})}
                 </div>
             ) : null}
             <DialogFooter>

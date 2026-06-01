@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useDeferredValue, useEffect, useMemo, useRef } from 'react';
+import { useScrollPausedValue } from '@/hooks/useScrollPausedValue';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Loader2, X } from 'lucide-react';
@@ -13,6 +14,7 @@ import { collection } from 'firebase/firestore';
 import { canAccessHallOfFameRoute } from '@/lib/hallOfFameAccess';
 import { studentsInTeacherScope } from '@/lib/reportsScope';
 import { filterCategoriesForStaffPortal } from '@/lib/staffCategoryScope';
+import { isLeadershipPersonnel } from '@/lib/teacherPersonnelRole';
 import { isClassroomPillarOn } from '@/lib/productPillars';
 import {
   remainingTeacherBudgetPoints,
@@ -66,7 +68,11 @@ export default function ClassroomFullscreenPage() {
   const { data: allCategories, isLoading: categoriesLoading } = useCollection<Category>(categoriesQuery);
 
   const activeTeacherId = teacherDocId || userId || '';
-  const schoolWide = isAdmin || loginState === 'developer';
+  const currentTeacher = teachers?.find((t) => t.id === activeTeacherId) ?? null;
+  const schoolWide =
+    isAdmin ||
+    loginState === 'developer' ||
+    isLeadershipPersonnel(currentTeacher);
   const storageScope =
     scopeFromUrl || (schoolWide ? 'admin' : activeTeacherId || 'staff');
 
@@ -88,7 +94,9 @@ export default function ClassroomFullscreenPage() {
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [allClasses, schoolWide, students, activeTeacherId]);
 
-  const currentTeacher = teachers?.find((t) => t.id === activeTeacherId) ?? null;
+  const scrollRootRef = useRef<HTMLDivElement>(null);
+  const pausedStudents = useScrollPausedValue(students, scrollRootRef, 280);
+  const deferredStudents = useDeferredValue(pausedStudents);
 
   const categories = useMemo(
     () =>
@@ -165,7 +173,7 @@ export default function ClassroomFullscreenPage() {
         'h-dvh max-h-dvh w-full overflow-hidden',
       )}
     >
-      <header className="flex shrink-0 items-center justify-between gap-2 border-b bg-background/95 px-2 py-1.5 backdrop-blur-sm sm:px-3">
+      <header className="flex shrink-0 items-center justify-between gap-2 border-b bg-background px-2 py-1.5 sm:px-3">
         <div className="min-w-0">
           <p className="truncate text-sm font-black tracking-tight">Classroom</p>
           {currentTeacher && !schoolWide && (
@@ -194,11 +202,14 @@ export default function ClassroomFullscreenPage() {
         </div>
       </header>
 
-      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden p-2 sm:p-3">
+      <div
+        ref={scrollRootRef}
+        className="relative flex min-h-0 flex-1 flex-col overflow-auto p-2 sm:p-3"
+      >
         <ClassroomPointsPanel
           variant="fullscreen"
           schoolId={schoolId}
-          students={students}
+          students={deferredStudents}
           classes={classes}
           categories={categories}
           storageScope={storageScope}

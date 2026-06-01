@@ -8,9 +8,10 @@ export function normalizeClassroomDesign(design: ClassroomDesign): ClassroomDesi
   return design;
 }
 
+/** Desk celebration on award. `flash` = simple ring (+PTS); particles are the rest. Fly-up is separate. */
 export type ClassroomCelebrationEffect =
   | 'flash'
-  | 'flyUp'
+  | 'none'
   | 'sparkles'
   | 'confetti'
   | 'hearts'
@@ -37,7 +38,7 @@ export type ClassroomSeatingPrefs = {
   defaultPoints: number;
   defaultDescription: string;
   quickAwards: ClassroomQuickAward[];
-  /** Tap once = default points immediately (no menu). Always enabled. */
+  /** When true, tap once awards default points; when false, opens the award menu. */
   instantTap: boolean;
   /** Show lifetime balance on each desk. */
   showPointBalances: boolean;
@@ -51,11 +52,21 @@ export type ClassroomSeatingPrefs = {
   design: ClassroomDesign;
   /** When true, teacher desk is at the bottom and row 0 is nearest the desk. */
   frontAtBottom: boolean;
-  /** Plays on the student desk when points are awarded. */
+  /** Optional particle overlay when points are awarded (independent of fly-up). */
   celebrationEffect: ClassroomCelebrationEffect;
+  /** Kiosk-style +PTS fly-up (separate from celebration particles). */
+  showKioskFlyUp: boolean;
+  /** Visual scale for kiosk fly-up text. */
+  kioskFlyUpSize: ClassroomKioskFlyUpSize;
+  /** Show Random picker button and R keyboard shortcut on the seating toolbar. */
+  showRandomPicker: boolean;
+  /** Show Class +N button to award everyone on the seating chart at once. */
+  showClassAwardButton: boolean;
   /** Internal — bumps when defaults change. */
   prefsVersion?: number;
 };
+
+export type ClassroomKioskFlyUpSize = 'small' | 'medium' | 'large';
 
 export const DEFAULT_CLASSROOM_QUICK_AWARDS: ClassroomQuickAward[] = [
   { id: 'quick', label: 'Quick tap', points: 5, description: 'Quick award' },
@@ -65,7 +76,7 @@ export const DEFAULT_CLASSROOM_QUICK_AWARDS: ClassroomQuickAward[] = [
 ];
 
 /** Bump when classroom tap/effect defaults change — triggers one-time localStorage migration. */
-export const CLASSROOM_PREFS_VERSION = 2;
+export const CLASSROOM_PREFS_VERSION = 8;
 
 export const DEFAULT_CLASSROOM_PREFS: ClassroomSeatingPrefs = {
   autoAwardMs: 3000,
@@ -80,16 +91,28 @@ export const DEFAULT_CLASSROOM_PREFS: ClassroomSeatingPrefs = {
   correctionDescription: 'Behavior reminder',
   design: 'aurora',
   frontAtBottom: false,
-  celebrationEffect: 'flash',
+  celebrationEffect: 'none',
+  showKioskFlyUp: true,
+  kioskFlyUpSize: 'medium',
+  showRandomPicker: false,
+  showClassAwardButton: false,
   prefsVersion: CLASSROOM_PREFS_VERSION,
 };
+
+const VALID_KIOSK_FLY_UP_SIZES: ClassroomKioskFlyUpSize[] = ['small', 'medium', 'large'];
+
+export function normalizeKioskFlyUpSize(size: unknown): ClassroomKioskFlyUpSize {
+  if (typeof size === 'string' && VALID_KIOSK_FLY_UP_SIZES.includes(size as ClassroomKioskFlyUpSize)) {
+    return size as ClassroomKioskFlyUpSize;
+  }
+  return DEFAULT_CLASSROOM_PREFS.kioskFlyUpSize;
+}
 
 const LAYOUT_PREFIX = 'levelup-classroom-layout:';
 const PREFS_PREFIX = 'levelup-classroom-prefs:';
 
 const VALID_CELEBRATION_EFFECTS: ClassroomCelebrationEffect[] = [
-  'flash',
-  'flyUp',
+  'none',
   'sparkles',
   'confetti',
   'hearts',
@@ -98,18 +121,29 @@ const VALID_CELEBRATION_EFFECTS: ClassroomCelebrationEffect[] = [
   'snow',
 ];
 
-function normalizeCelebrationEffect(
-  effect: ClassroomCelebrationEffect | undefined,
-  migrated: boolean,
-): ClassroomCelebrationEffect {
-  if (migrated) {
-    if (effect && effect !== 'sparkles' && VALID_CELEBRATION_EFFECTS.includes(effect)) {
-      return effect;
-    }
-    return DEFAULT_CLASSROOM_PREFS.celebrationEffect;
+/** Legacy prefs stored fly-up or desk flash as celebration. */
+const LEGACY_FLY_UP_EFFECT = 'flyUp';
+const LEGACY_FLASH_EFFECT = 'flash';
+
+function normalizeCelebrationEffect(effect: string | undefined): ClassroomCelebrationEffect {
+  if (effect === LEGACY_FLY_UP_EFFECT) return 'none';
+  if (effect === LEGACY_FLASH_EFFECT || effect === 'flash') return 'flash';
+  if (effect && VALID_CELEBRATION_EFFECTS.includes(effect as ClassroomCelebrationEffect)) {
+    return effect as ClassroomCelebrationEffect;
   }
-  if (effect && VALID_CELEBRATION_EFFECTS.includes(effect)) return effect;
   return DEFAULT_CLASSROOM_PREFS.celebrationEffect;
+}
+
+function hadLegacyFlyUpEffect(celebrationEffect: unknown): boolean {
+  return typeof celebrationEffect === 'string' && celebrationEffect === LEGACY_FLY_UP_EFFECT;
+}
+
+function normalizeShowKioskFlyUp(
+  parsed: Partial<ClassroomSeatingPrefs> & { celebrationEffect?: string },
+): boolean {
+  if (typeof parsed.showKioskFlyUp === 'boolean') return parsed.showKioskFlyUp;
+  if (hadLegacyFlyUpEffect(parsed.celebrationEffect)) return true;
+  return DEFAULT_CLASSROOM_PREFS.showKioskFlyUp;
 }
 
 function layoutKey(schoolId: string, scope: string, classId: string) {
@@ -177,10 +211,25 @@ export function loadClassroomPrefs(schoolId: string, scope: string): ClassroomSe
         parsed.correctionDescription ?? DEFAULT_CLASSROOM_PREFS.correctionDescription,
       design: normalizeClassroomDesign(parsed.design ?? DEFAULT_CLASSROOM_PREFS.design),
       frontAtBottom: parsed.frontAtBottom ?? DEFAULT_CLASSROOM_PREFS.frontAtBottom,
-      celebrationEffect: normalizeCelebrationEffect(parsed.celebrationEffect, migrated),
+      celebrationEffect: normalizeCelebrationEffect(parsed.celebrationEffect),
+      showKioskFlyUp: normalizeShowKioskFlyUp(parsed),
+      kioskFlyUpSize: normalizeKioskFlyUpSize(parsed.kioskFlyUpSize),
+      showRandomPicker: parsed.showRandomPicker ?? DEFAULT_CLASSROOM_PREFS.showRandomPicker,
+      showClassAwardButton:
+        parsed.showClassAwardButton ?? DEFAULT_CLASSROOM_PREFS.showClassAwardButton,
       prefsVersion: CLASSROOM_PREFS_VERSION,
     };
-    if (migrated || parsed.instantTap === false || parsed.design === 'midnight') {
+    if (
+      migrated ||
+      parsed.instantTap === false ||
+      parsed.design === 'midnight' ||
+      hadLegacyFlyUpEffect(parsed.celebrationEffect) ||
+      String(parsed.celebrationEffect) === LEGACY_FLASH_EFFECT ||
+      (parsedVersion < 5 && parsed.celebrationEffect === 'none')
+    ) {
+      if (parsedVersion < 5 && parsed.celebrationEffect === 'none') {
+        prefs.celebrationEffect = 'flash';
+      }
       saveClassroomPrefs(schoolId, scope, prefs);
     }
     return prefs;
@@ -275,36 +324,99 @@ function sessionStorageKey(schoolId: string, scope: string, classId: string) {
 
 export type ClassroomSessionTotals = Record<string, number>;
 
+export type ClassroomSessionLastAward = {
+  label: string;
+  points: number;
+  at: number;
+};
+
+export type ClassroomSessionData = {
+  totals: ClassroomSessionTotals;
+  lastAward: Record<string, ClassroomSessionLastAward>;
+};
+
+const EMPTY_SESSION: ClassroomSessionData = { totals: {}, lastAward: {} };
+
+function normalizeSessionPayload(parsed: unknown): ClassroomSessionData {
+  if (!parsed || typeof parsed !== 'object') return EMPTY_SESSION;
+  const record = parsed as Record<string, unknown>;
+  if ('totals' in record || 'lastAward' in record) {
+    const totals =
+      record.totals && typeof record.totals === 'object'
+        ? (record.totals as ClassroomSessionTotals)
+        : {};
+    const lastAward =
+      record.lastAward && typeof record.lastAward === 'object'
+        ? (record.lastAward as Record<string, ClassroomSessionLastAward>)
+        : {};
+    return { totals, lastAward };
+  }
+  return { totals: record as ClassroomSessionTotals, lastAward: {} };
+}
+
 export function loadClassroomSession(
   schoolId: string,
   scope: string,
   classId: string,
-): ClassroomSessionTotals {
-  if (typeof window === 'undefined') return {};
+): ClassroomSessionData {
+  if (typeof window === 'undefined') return EMPTY_SESSION;
   try {
     const raw = sessionStorage.getItem(sessionStorageKey(schoolId, scope, classId));
-    if (!raw) return {};
-    const parsed = JSON.parse(raw) as ClassroomSessionTotals;
-    return parsed && typeof parsed === 'object' ? parsed : {};
+    if (!raw) return EMPTY_SESSION;
+    return normalizeSessionPayload(JSON.parse(raw));
   } catch {
-    return {};
+    return EMPTY_SESSION;
   }
+}
+
+/** @deprecated Use loadClassroomSession — totals only. */
+export function loadClassroomSessionTotals(
+  schoolId: string,
+  scope: string,
+  classId: string,
+): ClassroomSessionTotals {
+  return loadClassroomSession(schoolId, scope, classId).totals;
 }
 
 export function saveClassroomSession(
   schoolId: string,
   scope: string,
   classId: string,
-  totals: ClassroomSessionTotals,
+  data: ClassroomSessionData,
 ) {
   if (typeof window === 'undefined') return;
   try {
-    sessionStorage.setItem(sessionStorageKey(schoolId, scope, classId), JSON.stringify(totals));
+    sessionStorage.setItem(sessionStorageKey(schoolId, scope, classId), JSON.stringify(data));
   } catch {
     /* quota */
   }
 }
 
+export function applyClassroomSessionAward(
+  schoolId: string,
+  scope: string,
+  classId: string,
+  studentIds: string[],
+  pointsDelta: number,
+  awardLabel: string,
+): ClassroomSessionData {
+  const current = loadClassroomSession(schoolId, scope, classId);
+  const nextTotals = { ...current.totals };
+  const nextLast = { ...current.lastAward };
+  const stamp = Date.now();
+  const label = awardLabel.trim() || 'Award';
+  for (const id of studentIds) {
+    nextTotals[id] = (nextTotals[id] ?? 0) + pointsDelta;
+    if (pointsDelta !== 0) {
+      nextLast[id] = { label, points: pointsDelta, at: stamp };
+    }
+  }
+  const next: ClassroomSessionData = { totals: nextTotals, lastAward: nextLast };
+  saveClassroomSession(schoolId, scope, classId, next);
+  return next;
+}
+
+/** @deprecated Use applyClassroomSessionAward */
 export function addToClassroomSession(
   schoolId: string,
   scope: string,
@@ -312,11 +424,13 @@ export function addToClassroomSession(
   studentIds: string[],
   pointsDelta: number,
 ): ClassroomSessionTotals {
-  const current = loadClassroomSession(schoolId, scope, classId);
-  const next = { ...current };
-  for (const id of studentIds) {
-    next[id] = (next[id] ?? 0) + pointsDelta;
-  }
-  saveClassroomSession(schoolId, scope, classId, next);
-  return next;
+  const next = applyClassroomSessionAward(
+    schoolId,
+    scope,
+    classId,
+    studentIds,
+    pointsDelta,
+    'Award',
+  );
+  return next.totals;
 }

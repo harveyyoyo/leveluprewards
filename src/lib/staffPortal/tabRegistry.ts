@@ -22,6 +22,7 @@ import {
   User,
   Users,
   Database,
+  Sparkles,
 } from 'lucide-react';
 import type { Settings } from '@/components/providers/SettingsProvider';
 import { isClassroomPillarOn, isRewardsPillarOn } from '@/lib/productPillars';
@@ -43,6 +44,7 @@ function adminAddonHidden(settings: Settings, tabValue: string): boolean {
  * - **Admin** pins school-management tabs (Insights, Houses, …) and toggles school config flags.
  * - **Teachers** pin their own tabs (Raffle, Goals, Attendance, …); admins do not gate teacher nav.
  *   Pinning raffle turns on `enableWeeklyRaffle` (kiosk ticket display still requires Rewards pillar).
+ *   With Rewards off, staff raffle uses `classroomPoints`; kiosk tickets still require Rewards.
  *
  * | Tab value        | Admin | Teacher | Notes |
  * |------------------|:-----:|:-------:|-------|
@@ -54,6 +56,16 @@ function adminAddonHidden(settings: Settings, tabValue: string): boolean {
 
 /** All staff portal tabs (admin + teacher + shared add-ons). */
 export const STAFF_PORTAL_TAB_REGISTRY: StaffPortalTabDef[] = [
+  {
+    value: 'welcome',
+    label: 'Welcome',
+    icon: Sparkles,
+    kind: 'core',
+    roles: ['admin', 'teacher'],
+    title: 'Portal overview',
+    description: 'Directory of every section in this portal with short descriptions and quick links.',
+    isEnabled: () => true,
+  },
   // —— Admin core ——
   {
     value: 'students',
@@ -364,12 +376,59 @@ export function staffPortalAddOnTabs(role: StaffPortalRole, settings: Settings):
 /** Default tab when current selection is invalid. */
 export function staffPortalDefaultTab(
   role: StaffPortalRole,
-  settings?: Pick<Settings, 'payRewards' | 'payClassroom'>,
+  _settings?: Pick<Settings, 'payRewards' | 'payClassroom'>,
 ): string {
   if (role === 'secretary') return 'coupons';
-  if (role === 'teacher') {
-    if (settings && isClassroomPillarOn(settings) && !isRewardsPillarOn(settings)) return 'classroom';
-    return 'coupons';
+  if (role === 'teacher' || role === 'admin') return 'welcome';
+  return 'welcome';
+}
+
+const STAFF_PORTAL_TAB_DESCRIPTIONS: Record<string, string> = {
+  students: 'Roster, kiosk access, ID cards, CSV import, and per-student options.',
+  classes: 'Class groups, primary teachers, and how students are organized.',
+  teachers: 'Staff accounts, roles, passcodes, and who can sign in to the portal.',
+  prizes: 'Prize shop inventory, costs, and redemption rules.',
+  categories: 'Point categories teachers use when awarding or printing coupons.',
+  classroom: 'Seating charts, quick awards, and classroom display tools.',
+  reports: 'Exports and summaries of points, redemptions, and activity.',
+  roster: 'Your students — search, filter, and open profiles for awards.',
+  coupons: 'Print coupon sheets and award or deduct points.',
+  redemptions: 'History of prize redemptions for your students.',
+  insights: 'School-wide analytics and usage trends.',
+  attendance: 'Sign-in, periods, and attendance reporting.',
+  halloffame: 'Leaderboards for the hallway or assembly display.',
+  bulletinboard: 'School announcements on kiosk and portal screens.',
+  'smart-screen': 'Live display layouts for TVs and projectors.',
+  library: 'Checkout, returns, and library point rules.',
+  bonuspoints: 'Achievement bonuses and milestone rewards.',
+  'category-badges': 'Badges students earn from point categories.',
+  goals: 'Class and student goals with progress tracking.',
+  houses: 'House points, sorting, and competitions.',
+  notifications: 'Email and SMS templates for families and staff.',
+  branding: 'Logos, colors, kiosk profiles, and school identity.',
+  integrations: 'External tools and API connections.',
+  'student-portal': 'What students see on the home portal and kiosk.',
+  homework: 'Homework tracking and classroom assignments.',
+  raffle: 'Weekly raffle tickets and drawings.',
+  'generated-coupons': 'Coupons you generated for your classes.',
+  backups: 'Developer backups and restore tools.',
+};
+
+/** Keep Welcome as the first nav item when present. */
+export function staffPortalPinWelcomeFirst<T extends { value: string }>(tabs: T[]): T[] {
+  const welcome = tabs.find((t) => t.value === 'welcome');
+  if (!welcome) return tabs;
+  return [welcome, ...tabs.filter((t) => t.value !== 'welcome')];
+}
+
+/** Description for Welcome tab cards — uses registry `description`, then map, then `title`. */
+export function staffPortalTabDescription(tab: StaffPortalTabDef): string {
+  if (tab.description) return tab.description;
+  const mapped = STAFF_PORTAL_TAB_DESCRIPTIONS[tab.value];
+  if (mapped) return mapped;
+  if (tab.title) return tab.title;
+  if (tab.kind === 'addon') {
+    return 'Optional feature — pin it from Add more or open it here when enabled.';
   }
-  return 'students';
+  return `Open ${tab.label} for tasks in this area.`;
 }

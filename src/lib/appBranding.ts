@@ -38,6 +38,9 @@ export const SITE_LEGAL_UMBRELLA =
 /** Matches `LevelUpLogo` arrow fill: `oklch(0.28 0.06 252)`. */
 export const LEVELUP_BRAND_PRIMARY_HEX = '#102a45';
 
+/** Matches `LevelUpLogo` bars / wordmark: `oklch(0.93 0.04 88)`. */
+export const LEVELUP_BRAND_CREAM_HEX = '#e5cc97';
+
 /** Readable brand accent on dark surfaces (Default scheme + dark mode); `--primary` is intentionally light in `.dark`. */
 export const LEVELUP_BRAND_PRIMARY_ON_DARK_HEX = '#7dd3fc';
 

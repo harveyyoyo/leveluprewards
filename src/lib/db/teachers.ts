@@ -3,7 +3,7 @@ import type { Teacher } from '../types';
 import { reportFirestorePermissionError } from '@/firebase/error-emitter';
 import { removeUndefined } from './helpers';
 
-export type UpdateTeacherOptions = { clearTeacherBudget?: boolean };
+export type UpdateTeacherOptions = { clearTeacherBudget?: boolean; clearPersonnelRole?: boolean };
 
 export const addTeacher = async (firestore: Firestore, schoolId: string, teacherData: Omit<Teacher, 'id'>) => {
   const newId = `t_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
@@ -30,6 +30,9 @@ export const updateTeacher = async (
     payload.budgetPeriod = deleteField();
     payload.budgetWindowKey = deleteField();
     payload.spentThisMonth = deleteField();
+  }
+  if (options?.clearPersonnelRole) {
+    payload.personnelRole = deleteField();
   }
   try {
     await updateDoc(teacherDocRef, removeUndefined(payload as unknown as Record<string, unknown>));

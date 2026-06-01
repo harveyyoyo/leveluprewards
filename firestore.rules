@@ -208,7 +208,7 @@ service cloud.firestore {
         allow read: if isSchoolMember(schoolId)
           || (isAuth() && request.auth.uid == studentId && hasStudentPortalSession(schoolId));
         allow create, delete: if isAdmin(schoolId);
-        allow update: if isAdmin(schoolId) || isTeacher(schoolId) || isPrizeClerk(schoolId)
+        allow update: if isAdmin(schoolId) || isTeacher(schoolId) || isPrizeClerk(schoolId) || isDeveloper()
           || (
             isHouseCoordinator(schoolId)
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['houseId', 'updatedAt'])
@@ -217,7 +217,7 @@ service cloud.firestore {
         match /activities/{activityId} {
           allow read: if isSchoolMember(schoolId)
             || (isAuth() && request.auth.uid == studentId && hasStudentPortalSession(schoolId));
-          allow create: if isAdmin(schoolId) || isTeacher(schoolId) || isPrizeClerk(schoolId) || isLibraryCheckoutActivity();
+          allow create: if isAdmin(schoolId) || isTeacher(schoolId) || isPrizeClerk(schoolId) || isDeveloper() || isLibraryCheckoutActivity();
           allow update: if isAdmin(schoolId) || isTeacher(schoolId) || isPrizeClerk(schoolId);
           allow delete: if isAdmin(schoolId);
         }
@@ -303,6 +303,12 @@ service cloud.firestore {
       }
 
       match /behaviorNotes/{noteId} {
+        allow read: if isAdmin(schoolId) || isTeacher(schoolId) || isReports(schoolId) || isDeveloper();
+        allow create: if isAdmin(schoolId) || isTeacher(schoolId) || isDeveloper();
+        allow update, delete: if isAdmin(schoolId) || isDeveloper();
+      }
+
+      match /classroomAwards/{awardId} {
         allow read: if isAdmin(schoolId) || isTeacher(schoolId) || isReports(schoolId) || isDeveloper();
         allow create: if isAdmin(schoolId) || isTeacher(schoolId) || isDeveloper();
         allow update, delete: if isAdmin(schoolId) || isDeveloper();

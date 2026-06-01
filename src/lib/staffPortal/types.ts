@@ -11,6 +11,8 @@ export type StaffPortalTabDef = {
   label: string;
   icon: LucideIcon;
   title?: string;
+  /** Longer copy for the Welcome tab directory. */
+  description?: string;
   kind: StaffPortalTabKind;
   roles: StaffPortalRole[];
   isEnabled: (settings: Settings, role: StaffPortalRole) => boolean;

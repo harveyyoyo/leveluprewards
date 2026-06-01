@@ -1,5 +1,6 @@
 import { doc, setDoc, type Firestore } from 'firebase/firestore';
-import type { StaffAccount, StaffAccountRole, Teacher } from '@/lib/types';
+import type { StaffAccount, StaffAccountRole, Teacher, TeacherPersonnelRole } from '@/lib/types';
+import { normalizeTeacherPersonnelRole } from '@/lib/teacherPersonnelRole';
 
 /** Public portal sign-in row (stored on `schoolPublic/{schoolId}.staffDirectory`). */
 export type StaffPortalLoginOption = {
@@ -8,6 +9,8 @@ export type StaffPortalLoginOption = {
   type: 'teacher' | StaffAccountRole;
   label: string;
   username: string;
+  /** Principals and division heads sign in as teachers but show a distinct role on the portal. */
+  personnelRole?: TeacherPersonnelRole;
   updatedAt?: number;
 };
 
@@ -41,12 +44,14 @@ export function buildStaffDirectory(
     const username = (teacher.username || teacher.id).trim();
     const key = teacherPortalKey(teacher);
     if (!teacher.name?.trim() || !username) continue;
+    const personnelRole = normalizeTeacherPersonnelRole(teacher.personnelRole);
     expected.set(key, {
       id: key,
       sourceId: teacher.id,
       type: 'teacher',
       label: teacher.name.trim(),
       username,
+      personnelRole: personnelRole === 'teacher' ? undefined : personnelRole,
       updatedAt: now,
     });
   }

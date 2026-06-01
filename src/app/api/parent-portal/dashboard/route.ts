@@ -6,6 +6,7 @@ import {
   verifyParentPortalSession,
 } from '@/lib/parentPortal/parentPortalSession';
 import type { ParentPortalDashboard } from '@/lib/parentPortal/parentPortalClient';
+import { isRewardsPillarOn } from '@/lib/productPillars';
 
 const SCHOOL_ID_RE = /^[\w-]{1,128}$/;
 
@@ -42,6 +43,9 @@ export async function GET(req: NextRequest) {
     }
 
     const db = await getDb();
+    const schoolSnap = await db.collection('schools').doc(schoolId).get();
+    if (!schoolSnap.exists) return jsonError(404, 'School not found.');
+
     const studentRef = db.collection('schools').doc(schoolId).collection('students').doc(session.studentId);
     const studentSnap = await studentRef.get();
     if (!studentSnap.exists) return jsonError(404, 'Student not found.');
@@ -51,6 +55,7 @@ export async function GET(req: NextRequest) {
       lastName?: string;
       nickname?: string;
       points?: number;
+      classroomPoints?: number;
       classId?: string;
     };
     const displayName =
@@ -129,11 +134,20 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    const appSettings = (schoolSnap.data()?.appSettings || {}) as { payRewards?: boolean };
+    const rewardsPillarOn = isRewardsPillarOn(appSettings);
+    const rewardsPoints = Number(student.points || 0);
+    const classroomPoints = Number(student.classroomPoints || 0);
+
     const payload: ParentPortalDashboard = {
       student: {
         id: session.studentId,
         displayName,
-        points: Number(student.points || 0),
+        points: rewardsPillarOn ? rewardsPoints : classroomPoints,
+        pointsLabel: rewardsPillarOn ? 'Rewards balance' : 'Classroom points',
+        classroomPoints,
+        rewardsPoints,
+        rewardsPillarOn,
         className,
       },
       recentActivity,

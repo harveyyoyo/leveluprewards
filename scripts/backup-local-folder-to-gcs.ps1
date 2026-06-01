@@ -30,6 +30,23 @@ $Gsutil = Resolve-GsutilCmd
 
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 
+function Import-BackupEnvFile([string]$Path) {
+  if (-not (Test-Path $Path)) { return }
+  foreach ($line in Get-Content $Path) {
+    if ($line -match '^\s*#' -or $line -notmatch '^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+)\s*$') { continue }
+    $name = $Matches[1]
+    $value = $Matches[2].Trim()
+    if ($value.StartsWith('"') -and $value.EndsWith('"')) {
+      $value = $value.Substring(1, $value.Length - 2)
+    }
+    if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($name))) {
+      Set-Item -Path "Env:$name" -Value $value
+    }
+  }
+}
+
+Import-BackupEnvFile (Join-Path $RepoRoot ".gcs-backup.env")
+
 # You can override these via environment variables.
 $Bucket = $env:GCS_BACKUP_BUCKET
 if ([string]::IsNullOrWhiteSpace($Bucket)) {

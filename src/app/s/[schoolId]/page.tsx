@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
 export default function PublicSchoolPage() {
     const { schoolId } = useParams<{ schoolId: string }>();
     const router = useRouter();
-    const { login, isInitialized, isUserLoading } = useAppContext();
+    const { isInitialized, isUserLoading } = useAppContext();
     const { firestore } = useFirebase();
     const { settings } = useSettings();
     const isGraphic = settings.graphicMode === 'graphics';
@@ -30,18 +30,20 @@ export default function PublicSchoolPage() {
         let cancelled = false;
         (async () => {
             try {
-                const snap = await getDoc(schoolPublicDocRef(firestore, schoolId));
+                const sid = schoolId.trim().toLowerCase();
+                if (!sid) {
+                    setNotFound(true);
+                    return;
+                }
+
+                const snap = await getDoc(schoolPublicDocRef(firestore, sid));
                 if (cancelled) return;
 
                 if (snap.exists() && snap.data()?.active !== false) {
                     setEntryError(null);
-                    const authResult = await login('student', { schoolId });
-                    if (cancelled) return;
-                    if (!authResult.ok) {
-                        setEntryError(authResult.message);
-                        return;
-                    }
-                    router.push(`/${schoolId}/student`);
+                    router.replace(
+                        `/login?school=${encodeURIComponent(sid)}&next=${encodeURIComponent(`/${sid}/student`)}`,
+                    );
                 } else {
                     setNotFound(true);
                 }
@@ -53,7 +55,7 @@ export default function PublicSchoolPage() {
             }
         })();
         return () => { cancelled = true; };
-    }, [isInitialized, isUserLoading, firestore, schoolId, router, login]);
+    }, [isInitialized, isUserLoading, firestore, schoolId, router]);
 
     if (loading || !isInitialized || isUserLoading) {
         return (

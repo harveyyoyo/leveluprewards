@@ -537,13 +537,17 @@ async function mintCouponScenesViaTeacherPrint(browser) {
       .first()
       .waitFor({ state: 'visible', timeout: 90000 });
     await sleep(900);
-    await page.locator('.coupon-barcode').first().waitFor({ state: 'visible', timeout: 30000 });
-    const codes = (await page.locator('.print-coupon-wrapper .coupon-barcode, .coupon-barcode').allInnerTexts())
-      .map((raw) => {
-        const digits = raw.replace(/\D/g, '');
-        return digits.length >= 6 ? digits.slice(-6) : digits;
-      })
-      .filter((c) => c.length >= 6);
+    const barcodeSvgs = page.locator('[data-print-barcode]');
+    await barcodeSvgs.first().waitFor({ state: 'visible', timeout: 30000 });
+    const ariaLabels = await barcodeSvgs.evaluateAll((els) =>
+      els
+        .map((el) => el.getAttribute('aria-label') || '')
+        .filter(Boolean),
+    );
+    const codes = ariaLabels
+      .map((label) => label.replace(/\D/g, ''))
+      .map((digits) => (digits.length >= 6 ? digits.slice(-6) : digits))
+      .filter((c) => c.length === 6);
     const scenes = [];
     const n = Math.min(codes.length, DEFAULT_COUPON_STUDENT_BADGES.length);
     for (let i = 0; i < n; i++) {
@@ -963,8 +967,24 @@ async function ensurePromoAdminAddOnTabs(page) {
 async function gotoTeacherRaffle(page, origin) {
   await gotoTeacher(page, origin);
   const tab = page.getByRole('tab', { name: /^Raffle$/i }).first();
-  await tab.waitFor({ state: 'visible', timeout: 30000 });
-  await tab.click();
+  const btn = page.getByRole('button', { name: /^Raffle$/i }).first();
+  const link = page.getByRole('link', { name: /^Raffle$/i }).first();
+  const target = tab.or(btn).or(link);
+  const visible = await target.isVisible({ timeout: 2500 }).catch(() => false);
+  if (!visible) {
+    const addMore = page.getByRole('button', { name: /^Add more$/i }).first();
+    if (await addMore.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await addMore.click();
+      const item = page.getByRole('menuitemcheckbox', { name: /Raffle/i }).first();
+      if (await item.isVisible({ timeout: 5000 }).catch(() => false)) {
+        if ((await item.getAttribute('aria-checked')) !== 'true') await item.click();
+      }
+      await page.keyboard.press('Escape').catch(() => {});
+      await sleep(500);
+    }
+  }
+  await target.waitFor({ state: 'visible', timeout: 45000 });
+  await target.click();
   await waitNoAppLoading(page);
   await page
     .getByText(/Run draw|Jackpot \(reels\)|Spinning wheel/i)
@@ -977,7 +997,7 @@ async function prepareAdminRaffleDraw(page, origin) {
   await gotoAdmin(page, origin);
   await ensureAdminAddOnTab(page, 'Raffle');
   const ok = await gotoAdminTab(page, origin, 'Raffle');
-  if (!ok) throw new Error('Admin Raffle tab not visible (enable Weekly Raffle on school or pin Raffle tab)');
+  if (!ok) throw new Error('Admin Raffle tab not visible (enable Raffle on school or pin Raffle tab)');
   const eligible = page.getByText(/^Eligible$/i).first();
   await eligible.waitFor({ state: 'visible', timeout: 30000 }).catch(() => {});
   const body = await pageBodyText(page);

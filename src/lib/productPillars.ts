@@ -27,14 +27,45 @@ export type PillarSettings = Partial<Record<ProductPillarKey, boolean>> & {
   payRewards?: boolean;
 };
 
+export type ProductPillarAccess = Partial<Record<ProductPillarKey, boolean>>;
+
 export function isProductPillarKey(key: string): key is ProductPillarKey {
   return (PRODUCT_PILLAR_KEYS as readonly string[]).includes(key);
 }
 
+/**
+ * Access defaults to true for existing schools so adding this field does not
+ * remove products from schools that were configured before `pillarAccess`.
+ */
+export function hasPillarAccess(
+  access: ProductPillarAccess | null | undefined,
+  pillar: ProductPillarKey,
+): boolean {
+  return access?.[pillar] !== false;
+}
+
 /** Pillars default to on when unset (except School Office, which is opt-in). */
-export function isPillarOn(settings: PillarSettings | null | undefined, pillar: ProductPillarKey): boolean {
+export function isPillarOn(
+  settings: PillarSettings | null | undefined,
+  pillar: ProductPillarKey,
+  access?: ProductPillarAccess | null,
+): boolean {
+  if (!hasPillarAccess(access, pillar)) return false;
   if (pillar === 'payOffice') return settings?.payOffice === true;
   return settings?.[pillar] !== false;
+}
+
+export function applyPillarAccessToSettings<T extends PillarSettings>(
+  settings: T,
+  access: ProductPillarAccess | null | undefined,
+): T {
+  const next = { ...settings } as T;
+  for (const pillar of PRODUCT_PILLAR_KEYS) {
+    if (!hasPillarAccess(access, pillar)) {
+      (next as Record<ProductPillarKey, boolean>)[pillar] = false;
+    }
+  }
+  return next;
 }
 
 /** School Office pillar — grades & billing portal (off unless explicitly enabled). */
@@ -71,17 +102,17 @@ export function isClassroomOnlyMode(settings: PillarSettings | null | undefined)
 /** User-facing copy when Classroom is on but Rewards (student economy) is off. */
 export const CLASSROOM_SESSION_ONLY = {
   /** Short banner in the seating chart */
-  bannerTitle: 'Class session mode',
+  bannerTitle: 'Classroom points mode',
   bannerBody:
-    'LevelUp Rewards is off. Desk taps update today’s class session and the room display only — they do not change student point balances, coupons, or the kiosk.',
+    'LevelUp Rewards is off. Desk taps are saved as classroom points (activity history + classroom balance) — not kiosk or prize-shop balances.',
   bannerHint:
-    'Use this when you want seating charts, behavior notes, and projector display without the prize shop. Turn on LevelUp Rewards in Settings → Product pillars to sync taps to student accounts.',
+    'Classroom points stay on the student record and show in the parent portal. Turn on LevelUp Rewards to also sync awards into the main rewards balance.',
   /** Admin / tab header */
   tabBody:
-    'LevelUp Rewards is off. Teachers can use seating, behavior notes, and the room display. Quick awards show on desks for this session but do not update student balances until Rewards is enabled (Settings → Product pillars).',
+    'LevelUp Rewards is off. Teachers can use seating, behavior notes, and the room display. Quick awards are saved as classroom points on each student (with a full activity log), separate from kiosk balances.',
   /** Toast after a tap */
   toastDescription:
-    'Saved for this class session and the room display only — not added to the student’s account. Enable LevelUp Rewards to sync balances.',
+    'Saved as classroom points on the student record (not kiosk/rewards balance).',
 } as const;
 
 /** Feature toggles that require a product pillar to be on. */
@@ -104,12 +135,12 @@ export function pillarRequiredForFeature(key: string): ProductPillarKey | undefi
 export function isSettingsKeyAllowed(
   settings: PillarSettings | null | undefined,
   key: string,
-  options?: { expertMode?: boolean },
+  options?: { expertMode?: boolean; pillarAccess?: ProductPillarAccess | null },
 ): boolean {
   if (options?.expertMode) return true;
-  if (isProductPillarKey(key)) return isPillarOn(settings, key);
+  if (isProductPillarKey(key)) return hasPillarAccess(options?.pillarAccess, key);
   const pillar = pillarRequiredForFeature(key);
-  if (pillar) return isPillarOn(settings, pillar);
+  if (pillar) return hasPillarAccess(options?.pillarAccess, pillar) && isPillarOn(settings, pillar);
   return true;
 }
 

@@ -46,6 +46,7 @@ Cloud agents require **Privacy Mode** (not Legacy) on the Cursor account.
 ### Local development notes
 
 - The dev server uses Webpack by default (`scripts/dev-webpack.cjs`). Turbopack is also available via `npm run dev:turbo`.
+- `npm run dev` does **not** run route warmup by default (keeps the UI responsive). Opt in: `DEV_WARMUP=1 npm run dev` or add `DEV_WARMUP=1` to `.env.local`.
 - If pages are blank or you see "Cannot find module ./*.js" errors, run `npm run dev:reset` to clean the `.next` cache.
 - The Firebase config (API key, project ID) is hardcoded in `src/firebase/config.ts`; no Firebase secrets are needed for the dev server to start and render pages.
 - The `/developer` login page is always available in dev mode (`next dev`). In production builds it requires `NEXT_PUBLIC_ENABLE_DEV_LOGIN=true`.

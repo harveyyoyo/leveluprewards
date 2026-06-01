@@ -229,6 +229,16 @@ export const PROMOTION_FLYERS: readonly PromotionFlyer[] = [
     tags: ['Principals', 'Procurement', 'NYS 2-d', 'Telemetry'],
   },
   {
+    id: 'levelup-funding-premium',
+    name: 'Funding Guide (Premium)',
+    description:
+      'High-fidelity procurement playbook—Title I & Title IV federal grants, NYS NPSE safety claims, MSR attendance tracking, and direct FAMIS Open-Market purchase orders.',
+    href: '/marketing/levelup-funding-flyer.html',
+    audience: 'principal',
+    preview: { border: 'border-emerald-500/45', tag: 'Premium' },
+    tags: ['Funding', 'Procurement', 'FAMIS', 'NYS NPSE'],
+  },
+  {
     id: 'principal-data',
     name: 'Principal: PBIS Data',
     description:
@@ -410,7 +420,7 @@ export const PROMOTION_FLYERS: readonly PromotionFlyer[] = [
   },
   {
     id: 'feature-raffle',
-    name: 'Weekly Raffle',
+    name: 'Raffle',
     description:
       'Points-to-tickets, jackpot reels, spin wheel, or loto cage—with equal-odds and deduction rules.',
     href: '/marketing/flyer-feature-raffle.html',

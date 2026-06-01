@@ -24,6 +24,9 @@ import { collection, doc, runTransaction, type DocumentSnapshot } from 'firebase
 import { JackpotMachine } from '@/components/raffle/JackpotMachine';
 import { RaffleSpinWheel } from '@/components/raffle/RaffleSpinWheel';
 import { parseRafflePointsPerTicket } from '@/lib/raffleTickets';
+import { rafflePointsFieldLabel, rafflePointsForStudent } from '@/lib/raffleStudentPoints';
+import { isRewardsPillarOn } from '@/lib/productPillars';
+import { applyPointsByPeriod } from '@/lib/db/helpers';
 import {
   Dialog,
   DialogContent,
@@ -66,6 +69,8 @@ export function AdminRaffleTab({
   const [drawDialogMode, setDrawDialogMode] = useState<'jackpot' | 'wheel'>('jackpot');
 
   const storedPpt = Number(settings.rafflePointsPerTicket);
+  const rewardsPillarOn = isRewardsPillarOn(settings);
+  const raffleBalanceLabel = rafflePointsFieldLabel(settings);
   const { isGeneralRaffle, pointsPerTicket } = parseRafflePointsPerTicket(settings.rafflePointsPerTicket);
   const deductOnPull = !!settings.raffleDeductPoints;
   const oneEntryPerStudent = !!settings.raffleOneEntryPerStudent;
@@ -75,7 +80,7 @@ export function AdminRaffleTab({
     const rows: EntryRow[] = [];
     if (isGeneralRaffle) {
       for (const s of students || []) {
-        const pts = Number(s.points || 0);
+        const pts = rafflePointsForStudent(s, settings);
         rows.push({
           id: s.id,
           name: `${s.firstName ?? ''}${s.lastName ? ` ${s.lastName}` : ''}`.trim() || s.id,
@@ -89,7 +94,7 @@ export function AdminRaffleTab({
       return rows;
     }
     for (const s of students || []) {
-      const pts = Number(s.points || 0);
+      const pts = rafflePointsForStudent(s, settings);
       const fullTickets = Math.max(0, Math.floor(pts / pointsPerTicket));
       if (fullTickets <= 0) continue;
       const tickets = oneEntryPerStudent ? 1 : fullTickets;
@@ -109,7 +114,7 @@ export function AdminRaffleTab({
         : b.tickets - a.tickets || b.points - a.points || a.name.localeCompare(b.name),
     );
     return rows;
-  }, [isGeneralRaffle, oneEntryPerStudent, pointsPerTicket, students]);
+  }, [isGeneralRaffle, oneEntryPerStudent, pointsPerTicket, students, settings]);
 
   useEffect(() => {
     setWinner(null);
@@ -143,13 +148,13 @@ export function AdminRaffleTab({
         title: 'No entries',
         description: isGeneralRaffle
           ? 'No students in this list yet.'
-          : `No students have at least ${pointsPerTicket} points.`,
+          : `No students have at least ${pointsPerTicket} ${raffleBalanceLabel}.`,
       });
       return null;
     }
     const row = pickWeightedWinner();
     return row ? { id: row.id, name: row.name } : null;
-  }, [isGeneralRaffle, pickWeightedWinner, pointsPerTicket, toast, totalTickets]);
+  }, [isGeneralRaffle, pickWeightedWinner, pointsPerTicket, raffleBalanceLabel, toast, totalTickets]);
 
   const handleJackpotSpinFinished = useCallback(
     async (w: { id: string; name: string }) => {
@@ -192,21 +197,57 @@ export function AdminRaffleTab({
 
           for (const { r, studentRef, snap } of readResults) {
             if (!snap.exists() || r.deductPoints <= 0) continue;
-            const current = Number((snap.data() as Record<string, unknown>)?.points || 0);
-            const next = Math.max(0, current - r.deductPoints);
-            tx.update(studentRef, { points: next });
-
-            const activityRef = doc(collection(studentRef, 'activities'));
+            const studentData = snap.data() as Student;
             const baseDesc = isGeneralRaffle
               ? 'Raffle (general)'
               : oneEntryPerStudent
                 ? `Raffle (equal odds): 1 × ${pointsPerTicket} pts`
                 : `Raffle tickets (${r.fullTickets} × ${pointsPerTicket})`;
-            tx.set(activityRef, {
-              desc: `${baseDesc}${suffix}`,
-              amount: -r.deductPoints,
-              date: now,
-            });
+            const activityDesc = `${baseDesc}${suffix}`;
+
+            if (rewardsPillarOn) {
+              const current = Number(studentData.points || 0);
+              const next = Math.max(0, current - r.deductPoints);
+              tx.update(studentRef, { points: next, updatedAt: now });
+              const activityRef = doc(collection(studentRef, 'activities'));
+              tx.set(activityRef, {
+                desc: activityDesc,
+                amount: -r.deductPoints,
+                date: now,
+              });
+            } else {
+              const current = Number(studentData.classroomPoints ?? 0);
+              const next = Math.max(0, current - r.deductPoints);
+              const periodUpdate = applyPointsByPeriod(
+                studentData.classroomPointsByPeriod,
+                -r.deductPoints,
+                now,
+              );
+              tx.update(studentRef, {
+                classroomPoints: next,
+                classroomPointsByPeriod: periodUpdate,
+                updatedAt: now,
+              });
+              const activityRef = doc(collection(studentRef, 'activities'));
+              tx.set(activityRef, {
+                desc: `Classroom — ${activityDesc}`,
+                amount: -r.deductPoints,
+                date: now,
+                classroomOnly: true,
+              });
+              const logRef = doc(collection(firestore, 'schools', schoolId, 'classroomAwards'));
+              tx.set(logRef, {
+                studentId: r.id,
+                studentName: r.name,
+                classId: studentData.classId ?? null,
+                className: null,
+                teacherId: operatorName || 'raffle',
+                teacherName: operatorName || 'Raffle',
+                points: -r.deductPoints,
+                description: `Classroom — ${activityDesc}`,
+                createdAt: now,
+              });
+            }
           }
         });
 
@@ -228,7 +269,18 @@ export function AdminRaffleTab({
         setIsSavingDeduction(false);
       }
     },
-    [deductOnPull, entries, firestore, isGeneralRaffle, oneEntryPerStudent, pointsPerTicket, schoolId, toast, operatorName],
+    [
+      deductOnPull,
+      entries,
+      firestore,
+      isGeneralRaffle,
+      oneEntryPerStudent,
+      pointsPerTicket,
+      rewardsPillarOn,
+      schoolId,
+      toast,
+      operatorName,
+    ],
   );
 
   const displayRafflePointsPerTicket = Number.isFinite(storedPpt) ? Math.max(0, Math.floor(storedPpt)) : 25;
@@ -293,6 +345,12 @@ export function AdminRaffleTab({
         </StaffPortalSectionCardHeader>
 
         <StaffPortalSectionCardContent className="space-y-8">
+            {!rewardsPillarOn ? (
+              <p className="rounded-xl border border-violet-300/40 bg-violet-50 px-3 py-2.5 text-xs font-medium text-violet-950 dark:bg-violet-950/30 dark:text-violet-100">
+                LevelUp Rewards is off — ticket counts and deductions use <strong>classroom points</strong> from the
+                seating chart (not kiosk balances). Turn on Rewards to use the main rewards balance instead.
+              </p>
+            ) : null}
             {canEditSettings ? (
               <section className="space-y-3">
                 <h2 className="text-[0.65rem] font-bold uppercase tracking-[0.14em] text-muted-foreground">Pool rules</h2>

@@ -85,8 +85,9 @@ export function buildClassroomScreenUrl({
   const params = new URLSearchParams();
   params.set('classId', classId);
   if (scope) params.set('scope', scope);
+  params.set('fullscreen', '1');
   const q = params.toString();
-  return `/${schoolId}/classroom-screen${q ? `?${q}` : ''}`;
+  return `/${schoolId}/classroom-screen?${q}`;
 }
 
 export function openClassroomScreenTab(params: ClassroomScreenUrlParams) {

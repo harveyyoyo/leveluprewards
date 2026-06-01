@@ -1,13 +1,14 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { format } from 'date-fns';
-import { collection, limit, orderBy, query } from 'firebase/firestore';
-import { AlertTriangle, Loader2, Smile, ThumbsDown } from 'lucide-react';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { AlertTriangle, Loader2, RefreshCw, Smile, ThumbsDown } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import type { BehaviorNote, BehaviorNoteKind } from '@/lib/types';
+import { BEHAVIOR_NOTE_SAVED_EVENT } from '@/lib/classroom/behaviorNoteEvents';
+import { fetchBehaviorNotes } from '@/lib/classroom/behaviorNotesClient';
 import { cn } from '@/lib/utils';
 
 function kindMeta(kind: BehaviorNoteKind) {
@@ -20,34 +21,122 @@ function kindMeta(kind: BehaviorNoteKind) {
   return { label: 'Concern', icon: ThumbsDown, className: 'bg-amber-500/15 text-amber-800 dark:text-amber-200' };
 }
 
-export function BehaviorTimelinePanel({ schoolId, className }: { schoolId: string; className?: string }) {
-  const firestore = useFirestore();
-  const notesQuery = useMemoFirebase(
-    () =>
-      schoolId
-        ? query(collection(firestore, 'schools', schoolId, 'behaviorNotes'), orderBy('createdAt', 'desc'), limit(80))
-        : null,
-    [firestore, schoolId],
-  );
-  const { data: notes, isLoading, error } = useCollection<BehaviorNote>(notesQuery, {
-    reportPermissionErrors: false,
-  });
+function errorHint(status?: number, message?: string): string {
+  const m = (message || '').toLowerCase();
+  if (status === 503 || m.includes('firebase_service_account')) {
+    return 'Add FIREBASE_SERVICE_ACCOUNT_KEY to .env.local and restart npm run dev.';
+  }
+  if (status === 403 || m.includes('staff access')) {
+    return 'Sign in as school staff (Admin or Teacher portal) for this school.';
+  }
+  return 'Deploy Firestore rules: firebase deploy --only firestore:rules — or use staff login so the server API can load notes.';
+}
 
-  const rows = useMemo(() => notes ?? [], [notes]);
+export function BehaviorTimelinePanel({
+  schoolId,
+  className,
+  refreshToken = 0,
+  embedded = false,
+}: {
+  schoolId: string;
+  className?: string;
+  /** Increment to reload after a new note is saved elsewhere. */
+  refreshToken?: number;
+  /** When true, render inside Classroom Management without a nested card. */
+  embedded?: boolean;
+}) {
+  const [rows, setRows] = useState<BehaviorNote[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<{ message: string; status?: number } | null>(null);
 
-  return (
-    <Card className={cn('border-t-4 border-violet-500/80 shadow-md', className)}>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg font-black">Behavior timeline</CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Notes from teachers across classes — for principals and admin review.
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
+    if (!schoolId) return;
+    if (!opts?.silent) setIsLoading(true);
+    setError(null);
+    const result = await fetchBehaviorNotes(schoolId);
+    if (result.error) {
+      setError({ message: result.error, status: result.status });
+      if (!opts?.silent) setRows([]);
+    } else {
+      setRows(result.notes);
+    }
+    if (!opts?.silent) setIsLoading(false);
+  }, [schoolId]);
+
+  useEffect(() => {
+    void load(refreshToken === 0 ? undefined : { silent: true });
+  }, [load, refreshToken]);
+
+  useEffect(() => {
+    const onNoteSaved = (event: Event) => {
+      const note = (event as CustomEvent<BehaviorNote>).detail;
+      if (!note?.id || !note.note?.trim()) return;
+      setRows((prev) => {
+        const rest = prev.filter((r) => r.id !== note.id);
+        return [note, ...rest].sort((a, b) => b.createdAt - a.createdAt);
+      });
+      setError(null);
+      window.setTimeout(() => void load({ silent: true }), 400);
+    };
+    window.addEventListener(BEHAVIOR_NOTE_SAVED_EVENT, onNoteSaved);
+    return () => window.removeEventListener(BEHAVIOR_NOTE_SAVED_EVENT, onNoteSaved);
+  }, [load]);
+
+  const header = (
+    <div className="flex items-start justify-between gap-2">
+      <div className="space-y-2">
+        {embedded ? (
+          <h3 className="text-lg font-black tracking-tight">Principal</h3>
+        ) : (
+          <CardTitle className="text-lg font-black">Principal</CardTitle>
+        )}
+        <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+          A school-wide log of behavior notes teachers add from the seating chart. Use it to review positives,
+          concerns, and incidents across classes — separate from quick point awards.
         </p>
-      </CardHeader>
-      <CardContent className="space-y-3 max-h-[420px] overflow-y-auto">
+      </div>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="shrink-0"
+        onClick={() => void load()}
+        disabled={isLoading}
+        aria-label="Refresh timeline"
+      >
+        <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
+      </Button>
+    </div>
+  );
+
+  const body = (
+    <div className="space-y-3">
+        <div className="rounded-xl border border-border/60 bg-muted/25 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
+          <p className="font-bold text-foreground">How teachers add a note</p>
+          <ol className="mt-1.5 list-decimal space-y-1 pl-4">
+            <li>
+              On the <span className="font-semibold text-foreground">Seating chart</span> above,
+              <span className="font-semibold text-foreground"> Shift+click</span> a student (or turn on{' '}
+              <span className="font-semibold text-foreground">Show award menu on tap</span> in classroom settings and
+              choose Behavior note).
+            </li>
+            <li>Choose positive, concern, or incident, write the note, and save.</li>
+            <li>
+              Notes marked for families can appear in the{' '}
+              <span className="font-semibold text-foreground">Parent portal</span> when that is enabled.
+            </li>
+          </ol>
+          <p className="mt-2 text-[11px]">New notes appear here automatically after a teacher saves one.</p>
+        </div>
+
+        <div className="max-h-[360px] space-y-3 overflow-y-auto">
         {error ? (
           <div className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-900 dark:text-amber-100">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-            <p>Behavior notes are unavailable until Firestore rules allow this collection.</p>
+            <div className="space-y-1">
+              <p>{error.message}</p>
+              <p className="text-xs opacity-90">{errorHint(error.status, error.message)}</p>
+            </div>
           </div>
         ) : isLoading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground py-6">
@@ -89,7 +178,23 @@ export function BehaviorTimelinePanel({ schoolId, className }: { schoolId: strin
             );
           })
         )}
-      </CardContent>
+        </div>
+    </div>
+  );
+
+  if (embedded) {
+    return (
+      <section className={cn('space-y-4', className)}>
+        <div className="border-b border-border/40 pb-4">{header}</div>
+        {body}
+      </section>
+    );
+  }
+
+  return (
+    <Card className={cn('border-t-4 border-violet-500/80 shadow-md', className)}>
+      <CardHeader className="pb-3">{header}</CardHeader>
+      <CardContent>{body}</CardContent>
     </Card>
   );
 }

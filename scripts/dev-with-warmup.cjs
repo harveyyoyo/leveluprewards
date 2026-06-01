@@ -5,7 +5,7 @@
  *   npm run dev:warm       - Webpack dev (default, stable on Windows)
  *   npm run dev:warm:turbo - Turbopack dev + warmup
  *
- * Disable warmup: DEV_WARMUP=0 npm run dev:warm
+ * Enable background warmup: DEV_WARMUP=1 npm run dev
  */
 const { spawn } = require('child_process');
 const fs = require('fs');
@@ -19,7 +19,8 @@ const root = path.join(__dirname, '..');
 const port = String(process.env.PORT || '3000').trim() || '3000';
 const host = String(process.env.HOST || '127.0.0.1').trim() || '127.0.0.1';
 const useTurbo = String(process.env.DEV_WARMUP_BUNDLER || '').trim().toLowerCase() === 'turbo';
-const warmupEnabled = process.env.DEV_WARMUP !== '0';
+/** Off by default so dev stays responsive; opt in with DEV_WARMUP=1 when you want pre-compile. */
+const warmupEnabled = process.env.DEV_WARMUP === '1';
 const nextCli = path.join(root, 'node_modules', 'next', 'dist', 'bin', 'next');
 
 function sleepMs(ms) {
@@ -71,10 +72,10 @@ async function main() {
 
   console.log(`[dev:warm] http://${host}:${port} (${useTurbo ? 'Turbopack' : 'Webpack'})`);
   if (warmupEnabled) {
-    console.log('[dev:warmup] Background warmup: HTTP pass, then headless Chrome for full JS bundles.');
-    console.log('[dev:warmup] First ~3-8 min after "Ready" - browse while it runs in this terminal.\n');
+    console.log('[dev:warmup] Background warmup: low-priority HTTP, then heavy pages only in headless Chrome.');
+    console.log('[dev:warmup] "Ready" = app is usable. Warmup runs in background (~2-5 min).\n');
   } else {
-    console.log('[dev:warm] Background warmup disabled (DEV_WARMUP=0).\n');
+    console.log('[dev:warm] Background warmup off (default). Set DEV_WARMUP=1 to pre-compile routes.\n');
   }
 
   const dev = spawn(process.execPath, [nextCli, ...nextArgs], {
@@ -99,8 +100,9 @@ async function main() {
   }
 
   if (warmupEnabled) {
-    // Warmup script polls /login until ready; start immediately so it runs in parallel with boot.
-    setTimeout(startWarmup, 500);
+    // Start after Next is up; dev-warm-routes waits for /login then delays before browser pass.
+    const warmupStartMs = Math.max(0, parseInt(process.env.DEV_WARMUP_START_DELAY_MS || '8000', 10) || 8000);
+    setTimeout(startWarmup, warmupStartMs);
   }
 
   function shutdown(code) {

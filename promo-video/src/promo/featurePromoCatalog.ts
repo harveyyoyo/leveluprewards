@@ -192,7 +192,7 @@ export const FEATURE_SEGMENT_CATALOG: Record<
 
     id: "raffle",
 
-    label: "Weekly raffle",
+    label: "Raffle",
 
     tagline: "Run raffles, spin winners, and celebrate school-wide.",
 

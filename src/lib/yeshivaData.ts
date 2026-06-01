@@ -1,78 +1,64 @@
 import type { Database } from './types';
+import { buildBalancedDemoRoster } from './demoSampleRosterBuilder';
 import { DEMO_STUDENT_THEMES_YESHIVA_ORDER } from './demoStudentThemes';
+
+const YESHIVA_CLASSES = [
+  { id: 'yc1', name: 'Shiur Aleph' },
+  { id: 'yc2', name: 'Shiur Bet' },
+  { id: 'yc3', name: 'Shiur Gimmel' },
+  { id: 'yc4', name: 'Shiur Daled' },
+  { id: 'yc5', name: 'Shiur Hei' },
+  { id: 'yc6', name: 'Shiur Vov' },
+  { id: 'yc7', name: 'Shiur Zayin' },
+  { id: 'yc8', name: 'Shiur Ches' },
+  { id: 'yc9', name: 'Gan Aleph' },
+  { id: 'yc10', name: 'Gan Bet' },
+] as const;
+
+const YESHIVA_FIRST_NAMES = [
+  'Shmuel', 'Avi', 'Yosef', 'David', 'Moshe', 'Dovid', 'Chaim', 'Yaakov', 'Yisrael', 'Menachem',
+  'Eliezer', 'Baruch', 'Aryeh', 'Zev', 'Tzvi', 'Akiva', 'Yehuda', 'Shlomo', 'Gedalya', 'Nachman',
+  'Daniel', 'Ephraim', 'Ezra', 'Gavriel', 'Hershel', 'Levi', 'Mordechai', 'Noach', 'Reuven', 'Simcha',
+  'Yitzchak', 'Shraga', 'Naftali', 'Benyamin', 'Eitan', 'Ilan', 'Meir', 'Shimon', 'Yechiel', 'Zalman',
+  'Asher', 'Binyamin', 'Eliyahu', 'Gershon', 'Isser', 'Mendel', 'Nechemia', 'Pinchas', 'Shaya', 'Yonoson',
+  'Refael', 'Shalom', 'Ovadia', 'Chaim', 'Uri', 'Eli', 'Yair', 'Noam', 'Ari', 'Itamar',
+] as const;
+
+const YESHIVA_LAST_NAMES = [
+  'Goldstein', 'Schwartz', 'Cohen', 'Levi', 'Katz', 'Weiss', 'Friedman', 'Rosenberg', 'Adler', 'Gross',
+  'Klein', 'Stein', 'Feldman', 'Hoffman', 'Roth', 'Berger', 'Green', 'Jacobs', 'Fisher', 'Pollack',
+  'Kaplan', 'Shapiro', 'Silver', 'Goldman', 'Mandel', 'Stern', 'Blau', 'Singer', 'Farkas', 'Teitelbaum',
+  'Fishman', 'Meisels', 'Glick', 'Schumer', 'Weissman', 'Rothman', 'Silber', 'Neuman', 'Landau', 'Goldberg',
+  'Kornbluth', 'Zimmerman', 'Wolfson', 'Braun', 'Werner', 'Perlman', 'Moskowitz', 'Horowitz', 'Frankel', 'Mizrachi',
+] as const;
+
+const yeshivaStudents = buildBalancedDemoRoster({
+  classes: YESHIVA_CLASSES,
+  minStudentsPerClass: 20,
+  maxStudentsPerClass: 25,
+  firstNames: YESHIVA_FIRST_NAMES,
+  lastNames: YESHIVA_LAST_NAMES,
+}).map((student, index) =>
+  index < DEMO_STUDENT_THEMES_YESHIVA_ORDER.length
+    ? { ...student, theme: DEMO_STUDENT_THEMES_YESHIVA_ORDER[index] }
+    : student,
+);
 
 export const YESHIVA_DATA: Omit<Database, 'passcode'> = {
   name: 'Yeshiva Demo',
-  students: [
-    { id: '100', firstName: 'Shmuel', lastName: 'Goldstein', nfcId: '100', points: 120, classId: 'yc1', theme: DEMO_STUDENT_THEMES_YESHIVA_ORDER[0] },
-    { id: '101', firstName: 'Avi', lastName: 'Schwartz', nfcId: '101', points: 80, classId: 'yc2', theme: DEMO_STUDENT_THEMES_YESHIVA_ORDER[1] },
-    { id: '102', firstName: 'Yosef', lastName: 'Cohen', nfcId: '102', points: 250, classId: 'yc1', theme: DEMO_STUDENT_THEMES_YESHIVA_ORDER[2] },
-    { id: '103', firstName: 'David', lastName: 'Levi', nfcId: '103', points: 400, classId: 'yc3', theme: DEMO_STUDENT_THEMES_YESHIVA_ORDER[3] },
-    { id: '104', firstName: 'Moshe', lastName: 'Katz', nfcId: '104', points: 150, classId: 'yc2', theme: DEMO_STUDENT_THEMES_YESHIVA_ORDER[4] },
-    { id: '105', firstName: 'Dovid', lastName: 'Weiss', nfcId: '105', points: 300, classId: 'yc1', theme: DEMO_STUDENT_THEMES_YESHIVA_ORDER[5] },
-    { id: '106', firstName: 'Chaim', lastName: 'Friedman', nfcId: '106', points: 50, classId: 'yc3', theme: DEMO_STUDENT_THEMES_YESHIVA_ORDER[6] },
-    { id: '107', firstName: 'Yaakov', lastName: 'Rosenberg', nfcId: '107', points: 600, classId: 'yc2', theme: DEMO_STUDENT_THEMES_YESHIVA_ORDER[7] },
-    { id: '108', firstName: 'Yisrael', lastName: 'Adler', nfcId: '108', points: 180, classId: 'yc1' },
-    { id: '109', firstName: 'Menachem', lastName: 'Gross', nfcId: '109', points: 1200, classId: 'yc3' },
-    { id: '110', firstName: 'Eliezer', lastName: 'Klein', nfcId: '110', points: 220, classId: 'yc2' },
-    { id: '111', firstName: 'Baruch', lastName: 'Stein', nfcId: '111', points: 70, classId: 'yc1' },
-    { id: '112', firstName: 'Aryeh', lastName: 'Feldman', nfcId: '112', points: 350, classId: 'yc3' },
-    { id: '113', firstName: 'Zev', lastName: 'Hoffman', nfcId: '113', points: 100, classId: 'yc2' },
-    { id: '114', firstName: 'Tzvi', lastName: 'Roth', nfcId: '114', points: 800, classId: 'yc1' },
-    { id: '115', firstName: 'Akiva', lastName: 'Berger', nfcId: '115', points: 190, classId: 'yc3' },
-    { id: '116', firstName: 'Yehuda', lastName: 'Green', nfcId: '116', points: 40, classId: 'yc2' },
-    { id: '117', firstName: 'Shlomo', lastName: 'Jacobs', nfcId: '117', points: 550, classId: 'yc1' },
-    { id: '118', firstName: 'Gedalya', lastName: 'Fisher', nfcId: '118', points: 130, classId: 'yc3' },
-    { id: '119', firstName: 'Nachman', lastName: 'Pollack', nfcId: '119', points: 1000, classId: 'yc2' },
-    { id: '120', firstName: 'Daniel', lastName: 'Kaplan', nfcId: '120', points: 450, classId: 'yc4' },
-    { id: '121', firstName: 'Ephraim', lastName: 'Shapiro', nfcId: '121', points: 280, classId: 'yc1' },
-    { id: '122', firstName: 'Ezra', lastName: 'Silver', nfcId: '122', points: 90, classId: 'yc2' },
-    { id: '123', firstName: 'Gavriel', lastName: 'Goldman', nfcId: '123', points: 720, classId: 'yc3' },
-    { id: '124', firstName: 'Hershel', lastName: 'Mandel', nfcId: '124', points: 310, classId: 'yc4' },
-    { id: '125', firstName: 'Levi', lastName: 'Stern', nfcId: '125', points: 1500, classId: 'yc1' },
-    { id: '126', firstName: 'Mordechai', lastName: 'Blau', nfcId: '126', points: 400, classId: 'yc2' },
-    { id: '127', firstName: 'Noach', lastName: 'Singer', nfcId: '127', points: 85, classId: 'yc3' },
-    { id: '128', firstName: 'Reuven', lastName: 'Farkas', nfcId: '128', points: 110, classId: 'yc4' },
-    { id: '129', firstName: 'Simcha', lastName: 'Teitelbaum', nfcId: '129', points: 2200, classId: 'yc1' },
-    { id: '130', firstName: 'Yitzchak', lastName: 'Fishman', nfcId: '130', points: 50, classId: 'yc1' },
-    { id: '131', firstName: 'Shraga', lastName: 'Meisels', nfcId: '131', points: 95, classId: 'yc2' },
-    { id: '132', firstName: 'Naftali', lastName: 'Glick', nfcId: '132', points: 320, classId: 'yc3' },
-    { id: '133', firstName: 'Benyamin', lastName: 'Schumer', nfcId: '133', points: 480, classId: 'yc4' },
-    { id: '134', firstName: 'Eitan', lastName: 'Weissman', nfcId: '134', points: 160, classId: 'yc1' },
-    { id: '135', firstName: 'Ilan', lastName: 'Rothman', nfcId: '135', points: 290, classId: 'yc2' },
-    { id: '136', firstName: 'Meir', lastName: 'Silber', nfcId: '136', points: 65, classId: 'yc3' },
-    { id: '137', firstName: 'Shimon', lastName: 'Neuman', nfcId: '137', points: 520, classId: 'yc4' },
-    { id: '138', firstName: 'Yechiel', lastName: 'Landau', nfcId: '138', points: 170, classId: 'yc1' },
-    { id: '139', firstName: 'Zalman', lastName: 'Goldberg', nfcId: '139', points: 950, classId: 'yc2' },
-    { id: '140', firstName: 'Asher', lastName: 'Kornbluth', nfcId: '140', points: 210, classId: 'yc3' },
-    { id: '141', firstName: 'Binyamin', lastName: 'Zimmerman', nfcId: '141', points: 430, classId: 'yc4' },
-    { id: '142', firstName: 'Eliyahu', lastName: 'Wolfson', nfcId: '142', points: 140, classId: 'yc1' },
-    { id: '143', firstName: 'Gershon', lastName: 'Braun', nfcId: '143', points: 30, classId: 'yc2' },
-    { id: '144', firstName: 'Isser', lastName: 'Werner', nfcId: '144', points: 680, classId: 'yc3' },
-    { id: '145', firstName: 'Mendel', lastName: 'Perlman', nfcId: '145', points: 260, classId: 'yc4' },
-    { id: '146', firstName: 'Nechemia', lastName: 'Moskowitz', nfcId: '146', points: 180, classId: 'yc1' },
-    { id: '147', firstName: 'Pinchas', lastName: 'Horowitz', nfcId: '147', points: 880, classId: 'yc2' },
-    { id: '148', firstName: 'Shaya', lastName: 'Fischer', nfcId: '148', points: 390, classId: 'yc3' },
-    { id: '149', firstName: 'Yonoson', lastName: 'Frankel', nfcId: '149', points: 1300, classId: 'yc4' },
-    { id: '150', firstName: 'Refael', lastName: 'Cohen', nfcId: '150', points: 150, classId: 'yc1' },
-    { id: '151', firstName: 'Shalom', lastName: 'Mizrachi', nfcId: '151', points: 250, classId: 'yc2' },
-    { id: '152', firstName: 'Ovadia', lastName: 'Yosef', nfcId: '152', points: 400, classId: 'yc3' },
-    { id: '153', firstName: 'Chacham', lastName: 'Shalom', nfcId: '153', points: 120, classId: 'yc1' },
-    { id: '154', firstName: 'Ben Ish', lastName: 'Chai', nfcId: '154', points: 80, classId: 'yc2' },
-  ],
-  classes: [
-    { id: 'yc1', name: 'Shiur Aleph' },
-    { id: 'yc2', name: 'Shiur Bet' },
-    { id: 'yc3', name: 'Shiur Gimmel' },
-    { id: 'yc4', name: 'Bais Medrash' },
-    { id: 'yc5', name: 'Kollel' },
-  ],
+  students: yeshivaStudents,
+  classes: [...YESHIVA_CLASSES],
   teachers: [
     { id: 'yt1', name: 'Rabbi Cohen', username: 'rabbicohen', passcode: '1234' },
     { id: 'yt2', name: 'Rabbi Levi', username: 'rabbilevi', passcode: '1234' },
     { id: 'yt3', name: 'Rav Goldberg', username: 'ravgoldberg', passcode: '1234' },
     { id: 'yt4', name: 'Rosh Yeshiva', username: 'roshyeshiva', passcode: '1234' },
     { id: 'yt5', name: 'Rabbi Epstein', username: 'rabbiepstein', passcode: '1234' },
+    { id: 'yt6', name: 'Rabbi Friedman', username: 'rabbifriedman', passcode: '1234' },
+    { id: 'yt7', name: 'Rabbi Klein', username: 'rabbiklein', passcode: '1234' },
+    { id: 'yt8', name: 'Rabbi Stern', username: 'rabbiStern', passcode: '1234' },
+    { id: 'yt9', name: 'Rabbi Weiss', username: 'rabbiweiss', passcode: '1234' },
+    { id: 'yt10', name: 'Rabbi Horowitz', username: 'rabbihorowitz', passcode: '1234' },
   ],
   categories: [
     { id: 'ycat1', name: 'Middos Tovos', points: 100 },

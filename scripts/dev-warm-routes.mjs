@@ -12,9 +12,12 @@
  * Env:
  *   HOST / PORT
  *   DEMO_SCHOOL_ID              — [schoolId] substitute (default schoolabc)
- *   DEV_WARMUP_CONCURRENCY      — parallel HTTP requests (default 3)
+ *   DEV_WARMUP_CONCURRENCY      — parallel HTTP requests (default 1; raise if idle)
  *   DEV_WARMUP_BROWSER=0        — skip headless browser pass
- *   DEV_WARMUP_BROWSER_WAIT_MS  — extra wait on heavy routes (default 4000)
+ *   DEV_WARMUP_BROWSER_ALL=1    — browser-warm every route (default: heavy pages only)
+ *   DEV_WARMUP_BROWSER_WAIT_MS  — extra wait on heavy routes (default 1500)
+ *   DEV_WARMUP_START_DELAY_MS   — wait after "Ready" before warming (default 15000)
+ *   DEV_WARMUP_ROUTE_GAP_MS     — pause between routes so browsing stays responsive (default 400)
  *   DEV_WARMUP_SKIP             — comma-separated path prefixes to skip
  */
 import fs from 'fs';
@@ -29,11 +32,20 @@ const host = String(process.env.HOST || '127.0.0.1').trim() || '127.0.0.1';
 const port = String(process.env.PORT || '3000').trim() || '3000';
 const base = `http://${host}:${port}`;
 const schoolId = (process.env.DEMO_SCHOOL_ID || 'schoolabc').trim().toLowerCase();
-const concurrency = Math.max(1, parseInt(process.env.DEV_WARMUP_CONCURRENCY || '3', 10) || 3);
+const concurrency = Math.max(1, parseInt(process.env.DEV_WARMUP_CONCURRENCY || '1', 10) || 1);
 const browserEnabled = process.env.DEV_WARMUP_BROWSER !== '0';
+const browserAllRoutes = process.env.DEV_WARMUP_BROWSER_ALL === '1';
+const startDelayMs = Math.max(
+  0,
+  parseInt(process.env.DEV_WARMUP_START_DELAY_MS || '15000', 10) || 15000,
+);
+const routeGapMs = Math.max(
+  0,
+  parseInt(process.env.DEV_WARMUP_ROUTE_GAP_MS || '400', 10) || 400,
+);
 const browserExtraWaitMs = Math.max(
   0,
-  parseInt(process.env.DEV_WARMUP_BROWSER_WAIT_MS || '4000', 10) || 4000,
+  parseInt(process.env.DEV_WARMUP_BROWSER_WAIT_MS || '1500', 10) || 1500,
 );
 const waitMs = Math.max(5000, parseInt(process.env.DEV_WARMUP_WAIT_MS || '180000', 10) || 180000);
 const skipPrefixes = (process.env.DEV_WARMUP_SKIP || '')
@@ -164,6 +176,7 @@ async function runPool(items, worker) {
       while (index < items.length) {
         const i = index++;
         await worker(items[i]);
+        if (routeGapMs > 0) await sleep(routeGapMs);
       }
     }),
   );
@@ -203,9 +216,11 @@ async function warmRoutesInBrowser(routes) {
     const heavy = HEAVY_ROUTES.has(routePath);
     const timeout = heavy ? 180000 : 120000;
 
+    if (routeGapMs > 0) await sleep(routeGapMs);
+
     try {
       await page.goto(`${base}${routePath}`, {
-        waitUntil: 'load',
+        waitUntil: heavy ? 'load' : 'domcontentloaded',
         timeout,
       });
       if (heavy && browserExtraWaitMs > 0) {
@@ -263,8 +278,16 @@ await runPool(allRoutes, async (route) => {
 console.log(`[dev:warmup] Phase 1 done — ${httpOk}/${allRoutes.length} routes (${Math.round((Date.now() - t0) / 1000)}s)`);
 
 const t1 = Date.now();
-console.log('[dev:warmup] Phase 2/2 — headless browser (compiles full JS bundles) …');
-await warmRoutesInBrowser(allRoutes);
+if (startDelayMs > 0) {
+  console.log(
+    `[dev:warmup] Waiting ${Math.round(startDelayMs / 1000)}s before browser pass (use the app first; warmup yields between routes) …`,
+  );
+  await sleep(startDelayMs);
+}
+console.log(
+  `[dev:warmup] Phase 2/2 — headless browser (${browserRoutes.length} route${browserRoutes.length === 1 ? '' : 's'}) …`,
+);
+await warmRoutesInBrowser(browserRoutes);
 
 const elapsed = Math.round((Date.now() - t0) / 1000);
 const browserElapsed = Math.round((Date.now() - t1) / 1000);

@@ -18,6 +18,7 @@ import { ConfirmProvider } from '@/components/providers/ConfirmProvider';
 import { isMarketingLandingPath } from '@/lib/marketingLandings';
 import { shouldHideGlobalAppChrome } from '@/lib/officeRouting';
 import { useStudentLayoutChrome } from '@/hooks/useStudentLayoutChrome';
+import { staffPortalUsesSidebarForLogin } from '@/lib/staffPortal';
 import { useTopEdgeRevealChrome } from '@/hooks/useTopEdgeRevealChrome';
 import { useScrollTopRevealChrome } from '@/hooks/useScrollTopRevealChrome';
 import { HoverRevealHeaderShell } from '@/components/layout/HoverRevealHeaderShell';
@@ -124,16 +125,15 @@ function LayoutClientWrapperInner({
       !suppressGlobalHeaderForSignedInStudent &&
       !suppressGlobalHeaderOnStudentHome;
     /** Hide header (staff top tabs only): slides up until the pointer reaches the top edge. */
+    const staffNavSidebar = staffPortalUsesSidebarForLogin(settings, loginState);
     const useStaffHoverHeader =
       hideHeaderEnabled &&
       isStaffPortalRoute &&
       canShowGlobalHeader &&
-      settings.adminNavLayout !== 'sidebar';
+      !staffNavSidebar;
     /** Side tabs: tuck the global header while scrolling; show again at scroll top. */
     const useStaffSidebarScrollHeader =
-      isStaffPortalRoute &&
-      canShowGlobalHeader &&
-      settings.adminNavLayout === 'sidebar';
+      isStaffPortalRoute && canShowGlobalHeader && staffNavSidebar;
     /** Pre-sign-in student kiosk: same top-edge reveal behavior. */
     const useKioskHoverHeader =
       isStudentKioskPage &&
@@ -154,13 +154,15 @@ function LayoutClientWrapperInner({
       /\/(?:admin|teacher|prize-clerk|secretary|reports)(?:\/|$)/.test(pathname);
 
     const fullscreen = searchParams?.get('fullscreen') === '1';
+    const isClassroomScreenPage =
+      typeof pathname === 'string' && pathname.includes('/classroom-screen');
     const isFullscreenSpecialPage =
-      fullscreen &&
-      (pathname?.includes('/hall-of-fame') ||
-        pathname?.includes('/bulletin-board') ||
-        pathname?.includes('/smart-screen') ||
-        pathname?.includes('/classroom-screen') ||
-        pathname?.includes('/classroom'));
+      isClassroomScreenPage ||
+      (fullscreen &&
+        (pathname?.includes('/hall-of-fame') ||
+          pathname?.includes('/bulletin-board') ||
+          pathname?.includes('/smart-screen') ||
+          pathname?.includes('/classroom')));
 
     const schoolPathMatch =
       typeof pathname === 'string'

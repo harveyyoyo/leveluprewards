@@ -21,6 +21,8 @@ import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { cn } from '@/lib/utils';
 import { officeStaffEntryHref } from '@/lib/officePublicUrl';
+import { leadershipPersonnelLabel, normalizeTeacherPersonnelRole } from '@/lib/teacherPersonnelRole';
+import type { TeacherPersonnelRole } from '@/lib/types';
 
 const TeacherPrinterInner = dynamic(
     () =>
@@ -41,6 +43,7 @@ type StaffPortalLoginOption = {
     type: 'teacher' | 'secretary' | 'prizeClerk' | 'reports' | 'librarian' | 'office' | 'houseCoordinator';
     label: string;
     username: string;
+    personnelRole?: TeacherPersonnelRole;
 };
 
 type SchoolPublicStaffDirectory = {
@@ -51,13 +54,15 @@ function staffLoginKey(option: StaffPortalLoginOption) {
     return option.id;
 }
 
-function roleLabel(type: StaffPortalLoginOption['type']) {
-    if (type === 'teacher') return 'Teacher';
-    if (type === 'secretary') return 'Coupon printing';
-    if (type === 'prizeClerk') return 'Prize desk';
-    if (type === 'librarian') return 'Library';
-    if (type === 'office') return 'School Office';
-    if (type === 'houseCoordinator') return 'Houses';
+function roleLabel(option: StaffPortalLoginOption) {
+    if (option.type === 'teacher') {
+        return leadershipPersonnelLabel(normalizeTeacherPersonnelRole(option.personnelRole));
+    }
+    if (option.type === 'secretary') return 'Coupon printing';
+    if (option.type === 'prizeClerk') return 'Prize desk';
+    if (option.type === 'librarian') return 'Library';
+    if (option.type === 'office') return 'School Office';
+    if (option.type === 'houseCoordinator') return 'Houses';
     return 'Reports';
 }
 
@@ -363,7 +368,7 @@ export default function TeacherPage() {
                                     {directAccountSelected ? (
                                         <div className={`min-h-14 rounded-xl border px-4 py-3 ${isGraphic ? 'bg-foreground/5 border-border' : 'bg-slate-50'}`}>
                                             <p className="text-lg font-bold leading-tight">{selectedOption.label}</p>
-                                            <p className="text-xs text-muted-foreground">{roleLabel(selectedOption.type)}</p>
+                                            <p className="text-xs text-muted-foreground">{roleLabel(selectedOption)}</p>
                                         </div>
                                     ) : (
                                         <Select value={selectedLoginKey} onValueChange={setSelectedLoginKey} disabled={optionsLoading}>
@@ -384,7 +389,7 @@ export default function TeacherPage() {
                                             <SelectContent>
                                                 {staffOptions.map((option) => (
                                                     <SelectItem key={staffLoginKey(option)} value={staffLoginKey(option)}>
-                                                        {option.label}{option.type === 'teacher' ? '' : ` - ${roleLabel(option.type)}`}
+                                                        {option.label}{option.type === 'teacher' && !option.personnelRole ? '' : ` - ${roleLabel(option)}`}
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>

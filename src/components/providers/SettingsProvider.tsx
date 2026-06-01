@@ -10,13 +10,20 @@ import { doc, setDoc, type DocumentData } from 'firebase/firestore';
 import { removeUndefinedDeep } from '@/lib/db/helpers';
 import { schoolPublicDocRef } from '@/lib/schoolPublic';
 import { DEFAULT_PLAN, normalizePlan, PLANS, type PlanTier, type SchoolPlanConfig } from '@/lib/plans';
-import { isProductPillarKey, isSettingsKeyAllowed } from '@/lib/productPillars';
+import {
+    applyPillarAccessToSettings,
+    hasPillarAccess,
+    isProductPillarKey,
+    isSettingsKeyAllowed,
+    type ProductPillarAccess,
+    type ProductPillarKey,
+} from '@/lib/productPillars';
 import type { StudentTheme } from '@/lib/types';
 import type { IdCardPrinterFamilyId, IdCardPrintProfile } from '@/lib/idCardPrintCatalog';
 import { defaultPaperForFamily } from '@/lib/idCardPrintCatalog';
 import type { PrizeVoucherPaperFormat } from '@/lib/prizes/prizeVoucherPrint';
 import { STUDENT_WELCOME_STYLES_LIVE } from '@/lib/students/studentWelcome';
-import { LEVELUP_BRAND_PRIMARY_HEX } from '@/lib/appBranding';
+import { LEVELUP_BRAND_CREAM_HEX, LEVELUP_BRAND_PRIMARY_HEX } from '@/lib/appBranding';
 import {
     normalizeDisplayModePreference,
     resolveDisplayMode,
@@ -141,7 +148,7 @@ interface Settings {
     enableColorPrinting: boolean;
     /** Optional staff reminder shown near student ID / bulk card print (browser cannot pick a printer). */
     printerReminderIdCards?: string;
-    /** Saved ID card print setups (printer family + paper) for Admin → Students. */
+    /** Saved ID card print setups (printer family + paper) for Admin â†’ Students. */
     idCardPrintProfiles?: IdCardPrintProfile[];
     /** Last selected saved profile id for ID card printing (optional). */
     lastIdCardPrintProfileId?: string;
@@ -172,6 +179,10 @@ interface Settings {
     enableStudentProfiles: boolean;
     enableQrLogin: boolean;
     enableParentView: boolean;
+    /** When on, admins see the school-wide behavior timeline under Classroom Management. */
+    enablePrincipalBehaviorTimeline?: boolean;
+    /** When on, staff get a Room display section tab (in-room projector/TV view). */
+    enableClassroomRoomDisplay?: boolean;
     enableMultiAdmin: boolean;
     enableStudentPortal: boolean;
     /** When true, every student must have a portal passcode set before they can sign in at home. */
@@ -183,7 +194,7 @@ interface Settings {
      * (sign out does not free the browser). When false (default), sign out lets a sibling sign in on the same device.
      */
     studentPortalLockBrowserToStudent?: boolean;
-    /** @deprecated No longer used — student home never shows the global site header. */
+    /** @deprecated No longer used â€” student home never shows the global site header. */
     studentPortalShowHeader?: boolean;
     /** When true, tuck the school header off-screen on staff portal pages (reveals at the top edge on hover). */
     hideSiteHeaderOutsidePortal?: boolean;
@@ -198,7 +209,7 @@ interface Settings {
     enableFaceLogin: boolean;
     /** Welcome styles picker on the kiosk (`/student/welcome`). Gated by `STUDENT_WELCOME_STYLES_LIVE` until shipped. */
     enableStudentWelcome: boolean;
-    /** Short “welcome back” splash when a student lands on the kiosk dashboard. Can be turned off per student. */
+    /** Short â€œwelcome backâ€ splash when a student lands on the kiosk dashboard. Can be turned off per student. */
     enableStudentWelcomeBackScreen: boolean;
     /** Auto-dismiss duration for the welcome back splash (seconds). */
     studentWelcomeBackDurationSec: number;
@@ -303,7 +314,7 @@ interface Settings {
     bulletinSubtitle?: string;
     /** Logo size in the bulletin header. */
     bulletinLogoSize?: 'sm' | 'md' | 'lg';
-    /** When false, hides the small “Wowed Design” pill on the student kiosk card. */
+    /** When false, hides the small â€œWowed Designâ€ pill on the student kiosk card. */
     bulletinShowWowBadge?: boolean;
     /** '1' = single column; '2' = responsive two-column grid on wide screens. */
     bulletinColumns?: '1' | '2';
@@ -382,8 +393,10 @@ interface Settings {
     adminHiddenAddOnTabs?: string[];
     /** Admin-only UI preference: pins enabled add-on tabs into the main Admin tab row. */
     adminPinnedAddOnTabs?: string[];
-    /** Admin-only UI preference: main section tabs across the top or down the left sidebar (default). */
+    /** Admin-only UI preference: main section tabs across the top or down the left sidebar. */
     adminNavLayout?: 'top' | 'sidebar';
+    /** Teacher portal tab layout (defaults to side tabs). */
+    teacherNavLayout?: 'top' | 'sidebar';
     /** When on, each admin section tab applies its own color scheme while you work in that tab. */
     adminPerTabColorScheme?: boolean;
     /** Admin-only UI preference: persists the main Admin tab order (including pinned add-ons). */
@@ -406,7 +419,7 @@ interface Settings {
     hallOfFameAutoScroll?: boolean;
     hallOfFameGridLayout?: boolean;
 
-    // House Hall of Fame (big screen — houses only)
+    // House Hall of Fame (big screen â€” houses only)
     houseHallOfFameSortBy?: string;
     houseHallOfFameLimit?: number;
     houseHallOfFamePodiumSize?: number;
@@ -442,12 +455,14 @@ interface SettingsContextType {
     planLabel: string;
     /** @deprecated Use pillar flags (`payAttendance`, `payLibrary`, `payHomework`) instead. Always true for non-pillar keys. */
     isFeatureAllowed: (key: string) => boolean;
+    pillarAccess: ProductPillarAccess | null;
+    isPillarAvailable: (pillar: ProductPillarKey) => boolean;
     /** True once settings have been loaded from storage. */
     isLoaded: boolean;
 }
 
 const colorSchemes: Record<ColorScheme, { bg: string; card: string; accent: string; border: string; label: string; swatch: string; swatchColors: readonly [string, string] }> = {
-    /* Swatch must stay a literal `bg-[…]` so Tailwind JIT includes it (matches LEVELUP_BRAND_PRIMARY_HEX). */
+    /* Swatch must stay a literal `bg-[â€¦]` so Tailwind JIT includes it (matches LEVELUP_BRAND_PRIMARY_HEX). */
     default: { bg: 'bg-blue-50', card: 'bg-white', accent: 'text-blue-950', border: 'border-blue-200', label: 'Default', swatch: 'bg-[#102a45]', swatchColors: ['#102a45', '#2563eb'] },
     sky: { bg: 'bg-sky-50', card: 'bg-white', accent: 'text-sky-700', border: 'border-sky-200', label: 'Sky', swatch: 'bg-sky-300', swatchColors: ['#0ea5e9', '#10b981'] },
     rose: { bg: 'bg-rose-50', card: 'bg-white', accent: 'text-rose-700', border: 'border-rose-200', label: 'Rose', swatch: 'bg-rose-300', swatchColors: ['#e11d48', '#f97316'] },
@@ -562,6 +577,8 @@ const defaultSettings: Settings = {
     enableStudentProfiles: false,
     enableQrLogin: true,
     enableParentView: false,
+    enablePrincipalBehaviorTimeline: false,
+    enableClassroomRoomDisplay: false,
     enableMultiAdmin: false,
     enableStudentPortal: false,
     studentPortalRequirePasscode: true,
@@ -598,7 +615,7 @@ const defaultSettings: Settings = {
         text: '#020617',
         primary: LEVELUP_BRAND_PRIMARY_HEX,
         cardBackground: '#ffffff',
-        accent: '#2563eb',
+        accent: LEVELUP_BRAND_CREAM_HEX,
     },
     adminAutoLogoutEnabled: true,
     adminSessionTimeoutMs: 5 * 60 * 1000,
@@ -624,7 +641,7 @@ const defaultSettings: Settings = {
     kioskSponsorSpeed: 'normal',
     kioskSponsorPosition: 'bottom',
     kioskSponsorBannerStyle: 'primary',
-    kioskSponsorIcon: '🎉',
+    kioskSponsorIcon: 'ðŸŽ‰',
     kioskSponsorSchedules: [],
 
     bulletinEnabled: true,
@@ -676,6 +693,7 @@ const defaultSettings: Settings = {
     adminHiddenAddOnTabs: [],
     adminPinnedAddOnTabs: [],
     adminNavLayout: 'sidebar',
+    teacherNavLayout: 'sidebar',
     adminPerTabColorScheme: false,
     adminMainTabOrder: [],
     adminExtraTabOrder: [],
@@ -809,7 +827,12 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         if (isStaff) return doc(firestore, 'schools', sid);
         return schoolPublicDocRef(firestore, sid);
     }, [firestore, schoolId, isStaff]);
-    const { data: schoolData } = useDoc<SchoolPlanConfig & { appSettings?: Partial<Settings> }>(schoolDocRef);
+    const { data: schoolData } = useDoc<
+        SchoolPlanConfig & {
+            appSettings?: Partial<Settings>;
+            pillarAccess?: ProductPillarAccess;
+        }
+    >(schoolDocRef);
 
     /** Stable deps so unrelated school doc fields do not re-run the hydration merge every snapshot. */
     const stableRemoteAppSettingsJson = useMemo(() => {
@@ -832,6 +855,30 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         }
     }, [schoolData?.featureSettingsDefaults]);
 
+    const stablePillarAccessJson = useMemo(() => {
+        const access = schoolData?.pillarAccess;
+        if (!access || typeof access !== 'object') return null;
+        try {
+            return JSON.stringify(access);
+        } catch {
+            return null;
+        }
+    }, [schoolData?.pillarAccess]);
+
+    const pillarAccess = useMemo<ProductPillarAccess | null>(() => {
+        if (!stablePillarAccessJson) return null;
+        try {
+            return JSON.parse(stablePillarAccessJson) as ProductPillarAccess;
+        } catch {
+            return null;
+        }
+    }, [stablePillarAccessJson]);
+
+    const isPillarAvailable = useCallback(
+        (pillar: ProductPillarKey) => hasPillarAccess(pillarAccess, pillar),
+        [pillarAccess],
+    );
+
     const planTier = useMemo(
         () => (schoolId ? normalizePlan(schoolData?.plan) : 'enterprise'),
         [schoolId, schoolData],
@@ -846,14 +893,19 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
     const isAllowed = useCallback(
         (key: string) =>
-            isSettingsKeyAllowed(settings, key, { expertMode: settings.expertMode }),
-        [settings],
+            isSettingsKeyAllowed(settings, key, {
+                expertMode: settings.expertMode,
+                pillarAccess,
+            }),
+        [settings, pillarAccess],
     );
 
-    const applyEntitlements = useCallback((input: Settings): Settings => {
-        const next = { ...input };
+    const applyEntitlements = useCallback((input: Settings, access: ProductPillarAccess | null = pillarAccess): Settings => {
+        const next = applyPillarAccessToSettings({ ...input }, access);
         if (!(next.payClassroom ?? true)) {
             next.enableParentView = false;
+            next.enablePrincipalBehaviorTimeline = false;
+            next.enableClassroomRoomDisplay = false;
         }
         if (!(next.payAttendance ?? true)) {
             next.enableClassSignIn = false;
@@ -863,7 +915,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             next.enableHomework = false;
         }
         return next;
-    }, []);
+    }, [pillarAccess]);
 
     const latestForFirestoreRef = useRef<Settings | null>(null);
     const lastScheduledFlushSchoolIdRef = useRef<string | null>(null);
@@ -1184,7 +1236,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                 allowedUpdates.enableClassSignIn = allowedUpdates.enableAttendance;
             }
             for (const key of Object.keys(allowedUpdates)) {
-                if (!isProductPillarKey(key) && !isAllowed(key)) {
+                if (!isAllowed(key)) {
+                    if (isProductPillarKey(key) && allowedUpdates[key] === false) continue;
                     delete (allowedUpdates as Record<string, unknown>)[key];
                 }
             }
@@ -1395,7 +1448,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             updateSettings, 
             planTier, 
             planLabel, 
-            isFeatureAllowed: loginState === 'teacher' ? isTeacherAllowed : isAllowed, 
+            isFeatureAllowed: loginState === 'teacher' ? isTeacherAllowed : isAllowed,
+            pillarAccess,
+            isPillarAvailable,
             isLoaded 
         }}>
             {children}

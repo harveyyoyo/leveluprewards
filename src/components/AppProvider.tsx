@@ -76,7 +76,7 @@ interface AppContextType {
   updateHouse: (updatedHouse: House) => Promise<void>;
   deleteHouse: (houseId: string, students: Student[]) => Promise<void>;
   addTeacher: (newTeacher: Omit<Teacher, 'id'>) => Promise<void>;
-  updateTeacher: (teacher: Teacher, options?: { clearTeacherBudget?: boolean }) => Promise<void>;
+  updateTeacher: (teacher: Teacher, options?: { clearTeacherBudget?: boolean; clearPersonnelRole?: boolean }) => Promise<void>;
   deleteTeacher: (teacherId: string) => Promise<void>;
   addCategory: (category: { name: string; points: number; color?: string; teacherId?: string; rubricLevels?: CategoryRubricLevel[] }) => Promise<Category | undefined>;
   updateCategory: (category: Category) => Promise<void>;
@@ -467,7 +467,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     return getDb().then((db) => db.addTeacher(firestore, schoolId, t));
   }, [firestore, schoolId]);
 
-  const updateTeacher_ = useCallback((t: Teacher, options?: { clearTeacherBudget?: boolean }) => {
+  const updateTeacher_ = useCallback((t: Teacher, options?: { clearTeacherBudget?: boolean; clearPersonnelRole?: boolean }) => {
     if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
     return getDb().then((db) => db.updateTeacher(firestore, schoolId, t, options));
   }, [firestore, schoolId]);

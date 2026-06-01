@@ -122,14 +122,28 @@ const ADMIN_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
     ],
   },
   classroom: {
-    title: 'Classroom tab',
-    subtitle: 'Seating chart, quick awards, and room display',
+    title: 'Classroom Management',
+    subtitle: 'Sections inside the Classroom tab',
     steps: [
       {
-        title: 'Set up your classes',
+        title: 'Setup',
         checklist: [
-          'Run Classroom setup to enable seating and quick awards for teachers.',
+          'Use Setup to turn Parent portal and Principal on or off (same tabs for teachers and admins).',
+          'Principal and Parent portal tabs only appear when they are enabled.',
+        ],
+      },
+      {
+        title: 'Behavior',
+        checklist: [
+          'Teachers add notes from the seating chart (Shift+click or award menu).',
+          'Open the Principal tab for the school-wide timeline when it is enabled.',
+        ],
+      },
+      {
+        title: 'Seating chart',
+        checklist: [
           'Pick a class, arrange desks, and tap students to award during the lesson.',
+          'Open Help wizard in the tab header for a tour of each section.',
         ],
       },
       {

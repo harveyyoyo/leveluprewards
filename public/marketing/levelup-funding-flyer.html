@@ -1,0 +1,651 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>LevelUp Rewards — Funding & Procurement Cheat Sheet</title>
+    <style>
+      @page {
+        size: letter;
+        margin: 0.5in;
+      }
+
+      :root {
+        --bg: #0b1220;
+        --panel: rgba(255, 255, 255, 0.05);
+        --text: #eaf0ff;
+        --muted: rgba(234, 240, 255, 0.78);
+        --hair: rgba(234, 240, 255, 0.15);
+        --accent: #7c3aed;
+        --accent2: #06b6d4;
+        --success: #22c55e;
+        --black: #0a0a0a;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          Segoe UI,
+          Roboto,
+          Helvetica,
+          Arial,
+          "Apple Color Emoji",
+          "Segoe UI Emoji";
+        color: var(--text);
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      /* SCREEN STYLES (Default / Desktop Immersive View) */
+      @media screen {
+        body {
+          background-color: #03060f;
+          background-image: 
+            radial-gradient(at 0% 0%, rgba(124, 58, 237, 0.15) 0px, transparent 50%),
+            radial-gradient(at 100% 100%, rgba(6, 182, 212, 0.1) 0px, transparent 50%);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: flex-start;
+          gap: 32px;
+          padding: 48px 16px;
+          min-height: 100vh;
+          overflow-y: auto;
+        }
+
+        .page {
+          width: 7.5in;
+          height: 10in;
+          border-radius: 20px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.7), 0 0 50px rgba(99, 102, 241, 0.1);
+          transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .page:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 35px 70px -10px rgba(0, 0, 0, 0.8), 0 0 60px rgba(99, 102, 241, 0.15);
+          border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        /* Interactive Print Banner */
+        .print-banner {
+          width: 100%;
+          max-width: 7.5in;
+          background: rgba(255, 255, 255, 0.03);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 16px;
+          padding: 16px 24px;
+          backdrop-filter: blur(16px);
+          box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5);
+          margin-bottom: 8px;
+        }
+
+        .banner-content {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 20px;
+        }
+
+        .banner-brand {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+        }
+
+        .banner-logo {
+          font-size: 24px;
+          background: linear-gradient(135deg, var(--accent), var(--accent2));
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          filter: drop-shadow(0 0 8px rgba(124, 58, 237, 0.5));
+        }
+
+        .banner-text {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+
+        .banner-title {
+          font-size: 15px;
+          font-weight: 800;
+          color: #ffffff;
+          letter-spacing: -0.01em;
+        }
+
+        .banner-desc {
+          font-size: 12px;
+          color: rgba(234, 240, 255, 0.65);
+        }
+
+        .banner-actions {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .banner-btn {
+          font-family: inherit;
+          font-size: 13px;
+          font-weight: 700;
+          padding: 10px 18px;
+          border-radius: 12px;
+          border: none;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .primary-btn {
+          background: linear-gradient(135deg, #7c3aed, #06b6d4);
+          color: #ffffff;
+          box-shadow: 0 8px 20px -6px rgba(124, 58, 237, 0.5);
+        }
+
+        .primary-btn:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 12px 24px -4px rgba(124, 58, 237, 0.6);
+          filter: brightness(1.1);
+        }
+
+        .secondary-btn {
+          background: rgba(255, 255, 255, 0.06);
+          color: rgba(234, 240, 255, 0.85);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .secondary-btn:hover {
+          background: rgba(255, 255, 255, 0.1);
+          color: #ffffff;
+        }
+      }
+
+      /* PRINT STYLES (Overrides for PDF/Printer) */
+      @media print {
+        .no-print {
+          display: none !important;
+        }
+        body {
+          background: transparent !important;
+          padding: 0 !important;
+          margin: 0 !important;
+          display: block !important;
+        }
+        .page {
+          width: 7.5in !important;
+          height: 10in !important;
+          margin: 0 !important;
+          border: none !important;
+          box-shadow: none !important;
+          border-radius: 0 !important;
+          page-break-after: always;
+        }
+      }
+
+      /* FLYER CONTAINER CORE STYLES */
+      .page {
+        position: relative;
+        overflow: hidden;
+        background:
+          radial-gradient(1200px 700px at 10% 10%, rgba(124, 58, 237, 0.3), transparent 60%),
+          radial-gradient(900px 600px at 90% 20%, rgba(6, 182, 212, 0.25), transparent 55%),
+          linear-gradient(180deg, #081022, #070b16 70%, #05060c);
+        padding: 24px;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        padding-bottom: 14px;
+        border-bottom: 1px solid var(--hair);
+      }
+
+      .brand {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: rgba(234, 240, 255, 0.9);
+        width: max-content;
+      }
+
+      .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 3px;
+        background: linear-gradient(135deg, var(--accent), var(--accent2));
+        box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.08);
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 28px;
+        line-height: 1.1;
+        letter-spacing: -0.02em;
+        background: linear-gradient(135deg, #ffffff 60%, rgba(234, 240, 255, 0.7));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .subtitle {
+        margin: 0;
+        font-size: 13px;
+        line-height: 1.35;
+        color: var(--muted);
+        max-width: 54ch;
+      }
+
+      .right-meta {
+        text-align: right;
+        font-size: 11px;
+        line-height: 1.4;
+        color: rgba(234, 240, 255, 0.8);
+        white-space: nowrap;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1.25fr 0.9fr;
+        gap: 16px;
+        margin-top: 16px;
+      }
+
+      .card {
+        background: var(--panel);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        padding: 14px;
+        backdrop-filter: blur(10px);
+        transition: border-color 0.2s ease, background-color 0.2s ease;
+      }
+
+      @media screen {
+        .card:hover {
+          border-color: rgba(255, 255, 255, 0.18);
+          background-color: rgba(255, 255, 255, 0.07);
+        }
+      }
+
+      h2 {
+        margin: 0 0 8px 0;
+        font-size: 13px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--accent2);
+        font-weight: 700;
+      }
+
+      ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+
+      li {
+        margin: 6px 0;
+        color: rgba(234, 240, 255, 0.88);
+        line-height: 1.35;
+        font-size: 12px;
+        position: relative;
+        padding-left: 18px;
+      }
+
+      li::before {
+        content: "✦";
+        position: absolute;
+        left: 0;
+        top: 0;
+        color: var(--accent2);
+        font-size: 10px;
+        line-height: 16px;
+        text-shadow: 0 0 8px rgba(6, 182, 212, 0.6);
+      }
+
+      li strong {
+        color: #ffffff;
+      }
+
+      .callout {
+        border-left: 3px solid var(--accent);
+        padding: 8px 10px;
+        background: rgba(124, 58, 237, 0.1);
+        border-radius: 12px;
+      }
+
+      .callout p {
+        margin: 0;
+        color: rgba(234, 240, 255, 0.92);
+        font-size: 12px;
+        line-height: 1.35;
+      }
+
+      .kpis {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .kpi {
+        padding: 8px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.04);
+        transition: transform 0.2s ease;
+      }
+
+      @media screen {
+        .kpi:hover {
+          transform: translateY(-1px);
+          background: rgba(255, 255, 255, 0.07);
+          border-color: rgba(255, 255, 255, 0.15);
+        }
+      }
+
+      .kpi .label {
+        font-size: 9.5px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: rgba(234, 240, 255, 0.6);
+      }
+
+      .kpi .value {
+        margin-top: 4px;
+        font-size: 11px;
+        line-height: 1.25;
+        color: rgba(255, 255, 255, 0.95);
+        font-weight: 600;
+      }
+
+      .footer {
+        position: absolute;
+        left: 24px;
+        right: 24px;
+        bottom: 18px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        gap: 16px;
+        padding-top: 12px;
+        border-top: 1px solid var(--hair);
+        color: rgba(234, 240, 255, 0.75);
+        font-size: 11px;
+        line-height: 1.4;
+      }
+
+      .footer strong {
+        color: rgba(255, 255, 255, 0.95);
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 5px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.05);
+        font-size: 10px;
+        color: rgba(234, 240, 255, 0.85);
+        white-space: nowrap;
+      }
+
+      .pill.sole {
+        border-color: rgba(34, 197, 94, 0.35);
+        background: rgba(34, 197, 94, 0.12);
+      }
+
+      .muted {
+        color: rgba(234, 240, 255, 0.65);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- PRINT BANNER (Screen Only) -->
+    <div class="print-banner no-print" role="banner">
+      <div class="banner-content">
+        <div class="banner-brand">
+          <span class="banner-logo">⚡</span>
+          <div class="banner-text">
+            <span class="banner-title">Interactive PBIS Funding & Procurement Guide</span>
+            <span class="banner-desc">Full preview of the double-sided cheat sheet. Ready to print or download.</span>
+          </div>
+        </div>
+        <div class="banner-actions">
+          <button class="banner-btn secondary-btn" onclick="window.close()">Close Preview</button>
+          <button class="banner-btn primary-btn" onclick="window.print()">
+            🖨️ Print Flyer (Ctrl+P)
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE 1: FRONT -->
+    <section class="page" aria-label="Front of flyer">
+      <header class="topbar">
+        <div class="brand">
+          <div class="badge"><span class="dot" aria-hidden="true"></span> Funding cheat sheet</div>
+          <h1>Unlock the LevelUp Rewards Kiosk</h1>
+          <p class="subtitle">
+            Automated Student Engagement, Positive Behavior (PBIS), &amp; School Culture Infrastructure.
+          </p>
+        </div>
+        <div class="right-meta">
+          <div><strong>To:</strong> Principals, Directors &amp; Business Managers</div>
+          <div><strong>From:</strong> LevelUp EdTech Enterprises LLC</div>
+          <div class="muted">NYC DOE Vendor Code: <strong>VS00109014</strong></div>
+          <div class="muted">100% NYS Education Law § 2-d Compliant</div>
+        </div>
+      </header>
+
+      <div class="grid">
+        <div class="card" style="display: flex; flex-direction: column; justify-content: space-between; gap: 8px;">
+          <div>
+            <h2>The Challenge &amp; The Solution</h2>
+            <div style="font-size: 11.5px; line-height: 1.4; color: rgba(234,240,255,0.9); margin-bottom: 8px;">
+              <strong>The Challenge:</strong> Managing student motivation, positive behavior incentives, and school culture milestones manually is exhausting for your staff. Counting physical tickets, tracking spreadsheets, and managing prize inventories eats up hours of instructional time.
+            </div>
+            <div style="font-size: 11.5px; line-height: 1.4; color: rgba(234,240,255,0.9);">
+              <strong>The Solution:</strong> The LevelUp Rewards Kiosk is a plug-and-play physical hardware station paired with a powerful cloud-based backend. Students autonomously scan their custom barcodes to track achievement points, view reward tier eligibility, and redeem incentives effortlessly.
+            </div>
+          </div>
+
+          <div>
+            <h2>💰 Central Federal Funding Cheat Sheet</h2>
+            <ul>
+              <li>
+                <strong>Option 1: Federal Title IV, Part A Funds (SSAE)</strong><br />
+                <em>Meets Criteria:</em> Safe &amp; Healthy Students (PBIS) &amp; Effective Use of Technology (Integrated Hardware &amp; Cloud).<br />
+                <em>Justification:</em> Procuring touchscreens and automated behavioral technology to actively boost building-wide culture metrics.<br />
+                <em>NYC Process:</em> Publics allocate inside FAMIS under Code <strong>VS00109014</strong>. Yeshivas/Privates request their BNPSS coordinator map this vendor.
+              </li>
+              <li>
+                <strong>Option 2: Federal Title I, Part A Funds (Engagement)</strong><br />
+                <em>Meets Criteria:</em> Targets student motivation, school climate improvements, and closing achievement gaps.<br />
+                <em>Justification:</em> Utilizing automated PBIS systems to incentivize attendance, effort, and positive citizenship among at-risk cohorts.<br />
+                <em>NYC Process:</em> Switch the funding source in FAMIS to Title I and enter standard quick-codes.
+              </li>
+            </ul>
+          </div>
+
+          <div class="kpis" aria-label="Funding options summary">
+            <div class="kpi">
+              <div class="label">Federal Lines</div>
+              <div class="value">Title I &amp; Title IV-A</div>
+            </div>
+            <div class="kpi">
+              <div class="label">State Claims</div>
+              <div class="value">NYS NPSE &amp; MSR</div>
+            </div>
+            <div class="kpi">
+              <div class="label">Vendor Status</div>
+              <div class="value">EFT-Approved NYC DOE</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 14px;">
+          <!-- Real App Screenshot Panel -->
+          <div class="card" style="padding: 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px; height: 180px; position: relative;">
+            <img src="screenshots/admin-notifications.png" style="width: 100%; height: 100%; object-fit: cover;" alt="LevelUp Admin Telemetry Stats Screenshot" />
+            <div style="position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 6px; font-size: 10px; border: 1px solid rgba(255,255,255,0.15); color: #fff;">
+              School Culture Dashboard
+            </div>
+          </div>
+          
+          <div class="card" style="flex: 1; display: flex; flex-direction: column; justify-content: space-between; gap: 8px;">
+            <div>
+              <h2>Bypass the ShopDOE Bottleneck</h2>
+              <div class="callout" style="margin-bottom: 6px;">
+                <p>
+                  You do not need to search ShopDOE to order LevelUp! Your business manager can process an <strong>Open-Market PO</strong> in FAMIS manually in 5 minutes.
+                </p>
+              </div>
+              <ul style="font-size: 11px;">
+                <li><strong>No Competing Bids:</strong> Pilot quotes under $20,000 are beneath non-competitive discretionary thresholds, enabling instant approval by the principal.</li>
+              </ul>
+            </div>
+            <div>
+              <h2>Security Compliance</h2>
+              <ul style="font-size: 11px;">
+                <li><strong>NYS § 2-d Compliant:</strong> Fully compliant student data privacy standards with direct DPA agreements ready.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <footer class="footer">
+        <div>
+          <strong>LevelUp EdTech Enterprises LLC</strong> · Brooklyn, NY · <a href="mailto:contact@leveluprewards.app" style="color: var(--accent2); text-decoration: none;">contact@leveluprewards.app</a>
+        </div>
+        <div style="display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end">
+          <span class="pill">NYC Vendor VS00109014</span>
+          <span class="pill">Title I / IV-A Eligible</span>
+          <span class="pill">NYS 2-d Compliant</span>
+          <span class="pill sole">Open-Market EFT</span>
+        </div>
+      </footer>
+    </section>
+
+    <!-- PAGE 2: BACK -->
+    <section class="page" aria-label="Back of flyer">
+      <header class="topbar">
+        <div class="brand">
+          <div class="badge"><span class="dot" aria-hidden="true"></span> Procurement workflow</div>
+          <h1>State Grants &amp; FAMIS Ordering</h1>
+          <p class="subtitle">
+            Utilize state reimbursement allocations or general supply lines to easily fund and deploy LevelUp kiosks within your building.
+          </p>
+        </div>
+        <div class="right-meta">
+          <div><strong>LevelUp Rewards</strong></div>
+          <div class="muted">School Procurement Guide</div>
+        </div>
+      </header>
+
+      <div class="grid">
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+          <div class="card">
+            <h2>🏛️ State Claims &amp; Discretionary Options</h2>
+            <ul style="font-size: 12px; gap: 10px; display: flex; flex-direction: column;">
+              <li>
+                <strong>Option 3: NYS Nonpublic School Safety Equipment (NPSE) Grant</strong><br />
+                <em>Pillar:</em> Security, checkpoints, and student management technology.<br />
+                <em>Justification:</em> Entrance checkpoints and touch kiosks function as a robust student accountability and campus movement tracking system.<br />
+                <em>Process:</em> Purchase with general supply accounts, then submit hardware receipts for 100% reimbursement under safety claims.
+              </li>
+              <li>
+                <strong>Option 4: NYS Mandated Services Reimbursement (MSR)</strong><br />
+                <em>Pillar:</em> Covering administrative costs of mandated pupil tracking.<br />
+                <em>Justification:</em> Automated arrival scans, barcode logging, and pupil reporting sheets map directly under Mandated Service #1: Pupil Attendance Report (PAR).<br />
+                <em>Process:</em> Subsidize ongoing software licensing against your annual MSR claims.
+              </li>
+              <li>
+                <strong>Option 5: Discretionary Tax Levy &amp; Technology Fees</strong><br />
+                <em>Pillar:</em> Open, frictionless purchasing with zero administrative hurdles.<br />
+                <em>Process:</em> Direct open-market PO approval by the principal utilizing general supplies or student tech fee reserves.
+              </li>
+            </ul>
+          </div>
+          
+          <div class="card" style="padding: 10px 14px; background: rgba(34, 197, 94, 0.08); border-color: rgba(34, 197, 94, 0.25);">
+            <h2 style="color: #22c55e; margin-bottom: 4px;">⚠️ Pro-Tip for Immediate Purchase</h2>
+            <p style="margin: 0; font-size: 11.5px; line-height: 1.35; color: rgba(234, 240, 255, 0.9);">
+              Keep your initial pilot or hardware system order quote <strong>under $20,000</strong>. Because it sits beneath the NYC non-competitive discretionary purchase threshold, the principal has absolute authority to approve the purchase order immediately without needing to collect competing bids!
+            </p>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+          <!-- Real Kiosk Screenshot Panel -->
+          <div class="card" style="padding: 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px; height: 160px; position: relative;">
+            <img src="screenshots/kiosk-welcome.png" style="width: 100%; height: 100%; object-fit: cover;" alt="LevelUp Kiosk Welcome Interface Screenshot" />
+            <div style="position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 6px; font-size: 10px; border: 1px solid rgba(255,255,255,0.15); color: #fff;">
+              Student Check-In Kiosk
+            </div>
+          </div>
+
+          <div class="card" style="flex: 1; display: flex; flex-direction: column; justify-content: space-between; gap: 8px;">
+            <div>
+              <h2>📝 FAMIS Open-Market Ordering Steps</h2>
+              <ol style="margin: 0; padding-left: 14px; font-size: 11px; color: rgba(234, 240, 255, 0.88); line-height: 1.35; display: flex; flex-direction: column; gap: 4px;">
+                <li><strong>1 · Log In:</strong> Log directly into the DOE central FAMIS Portal.</li>
+                <li><strong>2 · Create PO:</strong> Start a new Open-Market Purchase Order.</li>
+                <li><strong>3 · Vendor Code:</strong> Enter NYC Vendor Code <strong>VS00109014</strong> (LevelUp EdTech will pop up instantly).</li>
+                <li><strong>4 · Object Codes:</strong> Use <strong>0337</strong> for cloud software licensing and <strong>0338 / 0300</strong> for physical equipment.</li>
+                <li><strong>5 · Line Items:</strong> Manually enter the line items from your quote.</li>
+              </ol>
+            </div>
+            
+            <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px;">
+              <h2 style="font-size: 11px; margin-bottom: 2px;">📞 Ready to Elevate Culture?</h2>
+              <p style="margin: 0; font-size: 10.5px; line-height: 1.3; color: rgba(234, 240, 255, 0.8);">
+                Contact: <strong>Dovid Teitelbaum</strong>, Founder &amp; MD<br />
+                Email: <a href="mailto:contact@leveluprewards.app" style="color: var(--accent2); text-decoration: none;">contact@leveluprewards.app</a><br />
+                Vendor: <strong>VS00109014</strong>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <footer class="footer">
+        <div>
+          <strong>LevelUp EdTech Enterprises LLC</strong> · Brooklyn, NY · <a href="mailto:contact@leveluprewards.app" style="color: var(--accent2); text-decoration: none;">contact@leveluprewards.app</a>
+        </div>
+        <div style="display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end">
+          <span class="pill">FAMIS Code: VS00109014</span>
+          <span class="pill">Object Code 0337/0338</span>
+          <span class="pill">NPSE E-Services Eligible</span>
+        </div>
+      </footer>
+    </section>
+  </body>
+</html>

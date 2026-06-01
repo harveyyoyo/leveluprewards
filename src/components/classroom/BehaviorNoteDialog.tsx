@@ -23,8 +23,9 @@ import {
 } from '@/components/ui/select';
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { createBehaviorNote } from '@/lib/db/behaviorNotes';
-import type { BehaviorNoteKind, Student } from '@/lib/types';
+import { emitBehaviorNoteSaved } from '@/lib/classroom/behaviorNoteEvents';
+import { saveBehaviorNote } from '@/lib/classroom/behaviorNotesClient';
+import type { BehaviorNote, BehaviorNoteKind, Student } from '@/lib/types';
 import { getStudentNickname } from '@/lib/utils';
 
 export function BehaviorNoteDialog({
@@ -38,6 +39,7 @@ export function BehaviorNoteDialog({
   teacherName,
   pointsLabel,
   pointsAmount,
+  onSaved,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -49,6 +51,7 @@ export function BehaviorNoteDialog({
   teacherName: string;
   pointsLabel?: string;
   pointsAmount?: number;
+  onSaved?: () => void;
 }) {
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -66,7 +69,8 @@ export function BehaviorNoteDialog({
     }
     setSaving(true);
     try {
-      await createBehaviorNote(firestore, schoolId, {
+      const result = await saveBehaviorNote(firestore, {
+        schoolId,
         studentId: student.id,
         studentName,
         classId,
@@ -79,9 +83,29 @@ export function BehaviorNoteDialog({
         pointsLabel,
         pointsAmount,
       });
+      if (!result.success) {
+        throw new Error(result.message);
+      }
+      const savedNote: BehaviorNote = {
+        id: result.id ?? `note-${Date.now()}`,
+        studentId: student.id,
+        studentName,
+        classId,
+        className,
+        teacherId,
+        teacherName,
+        kind,
+        note: note.trim(),
+        createdAt: Date.now(),
+        visibleToParent: kind === 'incident' ? visibleToParent : true,
+        pointsLabel,
+        pointsAmount,
+      };
+      emitBehaviorNoteSaved(savedNote);
       toast({ title: 'Behavior note saved' });
       setNote('');
       setKind('concern');
+      onSaved?.();
       onOpenChange(false);
     } catch (e) {
       toast({

@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatActivePillars, isPillarOn, isSettingsKeyAllowed } from './productPillars';
+import {
+  applyPillarAccessToSettings,
+  formatActivePillars,
+  hasPillarAccess,
+  isPillarOn,
+  isSettingsKeyAllowed,
+} from './productPillars';
 
 describe('product pillars', () => {
   it('defaults pillars to on', () => {
@@ -17,6 +23,14 @@ describe('product pillars', () => {
   });
 
   it('formats active pillar labels', () => {
-    expect(formatActivePillars({ payLibrary: false })).toBe('Attendance · Homework');
+    expect(formatActivePillars({ payLibrary: false })).toMatch(/^Classroom Management.+Attendance.+Homework$/);
+  });
+
+  it('separates pillar access from active settings', () => {
+    expect(hasPillarAccess({ payLibrary: false }, 'payLibrary')).toBe(false);
+    expect(isPillarOn({ payLibrary: true }, 'payLibrary', { payLibrary: false })).toBe(false);
+    expect(isSettingsKeyAllowed({ payLibrary: true }, 'payLibrary', { pillarAccess: { payLibrary: false } })).toBe(false);
+    expect(isSettingsKeyAllowed({ payLibrary: true }, 'libraryAutoStudentPortalEnabled', { pillarAccess: { payLibrary: false } })).toBe(false);
+    expect(applyPillarAccessToSettings({ payLibrary: true }, { payLibrary: false }).payLibrary).toBe(false);
   });
 });

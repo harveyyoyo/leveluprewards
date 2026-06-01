@@ -15,9 +15,8 @@ import { collection, doc, updateDoc, setDoc, deleteDoc, getDocs, query, orderBy,
 import {
    Users, Gift, BookOpen, Trash2, Edit, UploadCloud, Printer, LayoutDashboard, Database,
    Settings, History, Award, CheckCircle, Tag, Trophy, ArrowRight, Loader2, Play, ShieldCheck,
-   User, Upload, Download, Activity, Zap, Clock, Palette, Wand2, TableProperties,
+   User, Upload, Download, Activity, Zap, Clock, Palette, Wand2,
    FileText, Bell, Target, Megaphone, Monitor, ChevronDown, X, Plug, GraduationCap, Home, Ticket,
-   PanelLeft, Rows3,
  } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -25,7 +24,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useAdminGooglePasscodeBypass } from '@/hooks/useAdminGooglePasscodeBypass';
-import type { Student, Prize, Coupon, Category, Class, House, Teacher, BackupInfo, Achievement, Badge, AttendanceScheduleSlot, TeacherBudgetPeriod, StaffAccount, LibraryItem, LibraryItemInput } from '@/lib/types';
+import type { Student, Prize, Coupon, Category, Class, House, Teacher, BackupInfo, Achievement, Badge, AttendanceScheduleSlot, TeacherBudgetPeriod, TeacherPersonnelRole, StaffAccount, LibraryItem, LibraryItemInput } from '@/lib/types';
+import { isLeadershipPersonnel, leadershipPersonnelLabel, normalizeTeacherPersonnelRole } from '@/lib/teacherPersonnelRole';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -99,11 +99,14 @@ import { IdCardPrintSetupDialog } from '@/components/admin/IdCardPrintSetupDialo
 import { AdminMainTabsList } from '@/components/admin/AdminMainTabsList';
 import { StaffPortalLayoutProvider } from '@/components/staff/StaffPortalLayoutContext';
 import {
+  staffPortalPageIntroClassName,
   staffPortalShellClassName,
   staffPortalTabTriggerClassName,
 } from '@/components/staff/staffPortalNavStyles';
-import { staffPortalAdminAddOnIsOn, staffPortalCoreTabs } from '@/lib/staffPortal';
+import { staffPortalAdminAddOnIsOn, staffPortalCoreTabs, staffPortalPinWelcomeFirst } from '@/lib/staffPortal';
 import { TeacherStaffPortalDashboard } from '@/components/staff/TeacherStaffPortalDashboard';
+import { StaffPortalWelcomeTab } from '@/components/staff/StaffPortalWelcomeTab';
+import { StaffPortalDocumentTitle } from '@/components/staff/StaffPortalDocumentTitle';
 import { AchievementModal } from '@/components/badges/AchievementModal';
 import { BadgeModal } from '@/components/badges/BadgeModal';
 
@@ -496,6 +499,7 @@ function AdminDashboardInner() {
   const [newTeacherBudgetPeriod, setNewTeacherBudgetPeriod] = useState<TeacherBudgetPeriod>('month');
   const [newTeacherEmail, setNewTeacherEmail] = useState('');
   const [newTeacherPhone, setNewTeacherPhone] = useState('');
+  const [newTeacherPersonnelRole, setNewTeacherPersonnelRole] = useState<TeacherPersonnelRole>('teacher');
   const [isClassModalOpen, setIsClassModalOpen] = useState(false);
   const [isTeacherModalOpen, setIsTeacherModalOpen] = useState(false);
 
@@ -539,7 +543,7 @@ function AdminDashboardInner() {
   const [isPurgingStudent, setIsPurgingStudent] = useState(false);
   const [showPurgeFlash, setShowPurgeFlash] = useState(false);
 
-  const [activeMainTab, setActiveMainTab] = useState('students');
+  const [activeMainTab, setActiveMainTab] = useState('welcome');
 
   useEffect(() => {
     const tab = searchParams.get('tab')?.trim().toLowerCase();
@@ -796,10 +800,10 @@ function AdminDashboardInner() {
       seen.add(def.value);
     }
 
-    return out;
+    return staffPortalPinWelcomeFirst(out);
   }, [loginState, pinnedAddOnTabs, settings]);
 
-  const adminNavSidebar = settings.adminNavLayout === 'sidebar';
+  const adminNavSidebar = (settings.adminNavLayout ?? 'sidebar') === 'sidebar';
   const adminTabTriggerClassName = staffPortalTabTriggerClassName(adminNavSidebar);
   const adminPerTabColors = !!settings.adminPerTabColorScheme;
   const adminTabAppearance = useMemo(
@@ -987,7 +991,7 @@ function AdminDashboardInner() {
       updateSettings(patch);
       
       if (activeMainTab === tabValue) {
-        setActiveMainTab('students');
+        setActiveMainTab('welcome');
       }
     }
   };
@@ -1135,12 +1139,12 @@ function AdminDashboardInner() {
     patch.adminHiddenAddOnTabs = nextHidden;
     updateSettings(patch);
 
-    if (offIds.has(activeMainTab)) setActiveMainTab('students');
+    if (offIds.has(activeMainTab)) setActiveMainTab('welcome');
   };
 
   useLayoutEffect(() => {
     const allowedTabs = new Set(orderedMainTabs.map((t) => t.value));
-    if (!allowedTabs.has(activeMainTab)) setActiveMainTab('students');
+    if (!allowedTabs.has(activeMainTab)) setActiveMainTab('welcome');
   }, [activeMainTab, orderedMainTabs]);
 
   const [bulkRosterOpen, setBulkRosterOpen] = useState(false);
@@ -1259,7 +1263,12 @@ function AdminDashboardInner() {
   const handleSaveTeacher = () => {
     if (!newTeacherName) {
       playSound('error');
-      toast({ variant: 'destructive', title: 'Teacher Name Required', description: 'Please enter a name for the teacher.' });
+      const roleLabel = leadershipPersonnelLabel(newTeacherPersonnelRole);
+      toast({
+        variant: 'destructive',
+        title: `${roleLabel} name required`,
+        description: `Please enter a name for the ${roleLabel.toLowerCase()}.`,
+      });
       return;
     }
 
@@ -1281,12 +1290,26 @@ function AdminDashboardInner() {
 
     const periodForSave: TeacherBudgetPeriod | undefined =
       budgetVal !== undefined ? newTeacherBudgetPeriod : undefined;
+    const personnelRole = normalizeTeacherPersonnelRole(newTeacherPersonnelRole);
+    const personnelFields = { personnelRole: personnelRole === 'teacher' ? undefined : personnelRole };
+    const updateTeacherOptions = {
+      clearTeacherBudget: budgetVal === undefined,
+      clearPersonnelRole: personnelRole === 'teacher',
+    };
 
     if (editingTeacher) {
       if (budgetVal === undefined) {
         updateTeacher(
-          { ...editingTeacher, name: newTeacherName, username, passcode, email: obfuscateField(newTeacherEmail), phone: obfuscateField(newTeacherPhone) },
-          { clearTeacherBudget: true },
+          {
+            ...editingTeacher,
+            name: newTeacherName,
+            username,
+            passcode,
+            email: obfuscateField(newTeacherEmail),
+            phone: obfuscateField(newTeacherPhone),
+            ...personnelFields,
+          },
+          updateTeacherOptions,
         );
       } else {
         const prevPeriod = editingTeacher.budgetPeriod ?? 'month';
@@ -1301,19 +1324,27 @@ function AdminDashboardInner() {
           budgetPeriod: periodForSave,
           email: obfuscateField(newTeacherEmail),
           phone: obfuscateField(newTeacherPhone),
+          ...personnelFields,
         };
         if (budgetChanged) {
           updateTeacher({
             ...base,
             spentThisMonth: 0,
             budgetWindowKey: budgetWindowKeyForDate(periodForSave ?? 'month'),
-          });
+          }, updateTeacherOptions);
         } else {
-          updateTeacher(base);
+          updateTeacher(base, updateTeacherOptions);
         }
       }
     } else if (budgetVal === undefined) {
-      addTeacher({ name: newTeacherName, username, passcode, email: obfuscateField(newTeacherEmail), phone: obfuscateField(newTeacherPhone) });
+      addTeacher({
+        name: newTeacherName,
+        username,
+        passcode,
+        email: obfuscateField(newTeacherEmail),
+        phone: obfuscateField(newTeacherPhone),
+        ...personnelFields,
+      });
     } else {
       addTeacher({
         name: newTeacherName,
@@ -1325,6 +1356,7 @@ function AdminDashboardInner() {
         budgetPeriod: periodForSave,
         spentThisMonth: 0,
         budgetWindowKey: budgetWindowKeyForDate(periodForSave ?? 'month'),
+        ...personnelFields,
       });
     }
 
@@ -1335,6 +1367,7 @@ function AdminDashboardInner() {
     setNewTeacherBudgetPeriod('month');
     setNewTeacherEmail('');
     setNewTeacherPhone('');
+    setNewTeacherPersonnelRole('teacher');
     setEditingTeacher(null);
     setIsTeacherModalOpen(false);
   };
@@ -1617,6 +1650,7 @@ function AdminDashboardInner() {
 
   return (
     <TooltipProvider>
+      <StaffPortalDocumentTitle title="School admin" />
       <div
         className={cn(
           staffPortalShellClassName(adminNavSidebar),
@@ -1624,59 +1658,25 @@ function AdminDashboardInner() {
         )}
         style={adminTabAppearance.style}
       >
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div
+          className={cn(
+            'flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between',
+            staffPortalPageIntroClassName(adminNavSidebar),
+          )}
+        >
           <Helper content="This page is for system administrators. It allows you to manage all school instances, create backups, and perform system-wide operations.">
             <div>
               <h2
                 className="text-2xl font-bold tracking-tight"
                 style={{ color: 'hsl(var(--primary))' }}
               >
-                Admin
+                School admin
               </h2>
               <p className="text-muted-foreground">
-                Manage students, classes, prizes, and system settings.
+                Manage students, classes, teachers, points, prizes and much more...
               </p>
             </div>
           </Helper>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:flex-wrap">
-            <div
-              className="flex items-center gap-0.5 rounded-xl border border-border/60 bg-muted/40 p-1"
-              role="group"
-              aria-label="Admin section tab layout"
-            >
-              <Button
-                type="button"
-                size="sm"
-                variant={adminNavSidebar ? 'ghost' : 'default'}
-                className="h-9 rounded-lg gap-1.5 px-3 text-xs font-bold"
-                onClick={() => updateSettings({ adminNavLayout: 'top' })}
-                aria-pressed={!adminNavSidebar}
-              >
-                <Rows3 className="h-3.5 w-3.5" aria-hidden />
-                Top tabs
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant={adminNavSidebar ? 'default' : 'ghost'}
-                className="h-9 rounded-lg gap-1.5 px-3 text-xs font-bold"
-                onClick={() => updateSettings({ adminNavLayout: 'sidebar' })}
-                aria-pressed={adminNavSidebar}
-              >
-                <PanelLeft className="h-3.5 w-3.5" aria-hidden />
-                Side tabs
-              </Button>
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              className="rounded-xl shrink-0 font-semibold gap-2"
-              onClick={() => setBulkRosterOpen(true)}
-            >
-              <TableProperties className="w-4 h-4" aria-hidden />
-              Bulk roster setup
-            </Button>
-          </div>
         </div>
 
         <BulkRosterSetupDialog
@@ -1955,6 +1955,16 @@ function AdminDashboardInner() {
           <StaffPortalLayoutProvider sidebar={adminNavSidebar}>
           <TabWalkthroughProvider scope="admin" tabId={activeMainTab}>
           <div className="w-full min-w-0 flex-1">
+          <TabsContent value="welcome" className={scrollingAdminTabClassName}>
+            <StaffPortalWelcomeTab
+              role="admin"
+              settings={settings}
+              onGoToTab={setActiveMainTab}
+              onBulkRoster={() => setBulkRosterOpen(true)}
+              includeDeveloperBackups={loginState === 'developer'}
+            />
+          </TabsContent>
+
           <TabsContent value="students" className={fittedAdminTabClassName}>
             <AdminStudentsTab
               schoolId={schoolId!}
@@ -2035,7 +2045,14 @@ function AdminDashboardInner() {
               students={students ?? []}
               classes={classes ?? []}
               schoolId={schoolId!}
-              onAddTeacher={() => setIsTeacherModalOpen(true)}
+              onAddTeacher={() => {
+                setNewTeacherPersonnelRole('teacher');
+                setIsTeacherModalOpen(true);
+              }}
+              onAddLeadership={() => {
+                setNewTeacherPersonnelRole('principal');
+                setIsTeacherModalOpen(true);
+              }}
               onEditTeacher={(t) => {
                 setEditingTeacher(t);
                 setNewTeacherName(t.name);
@@ -2046,6 +2063,9 @@ function AdminDashboardInner() {
                 setNewTeacherBudgetPeriod(p === 'day' || p === 'week' || p === 'month' ? p : 'month');
                 setNewTeacherEmail(deobfuscateField(t.email) || '');
                 setNewTeacherPhone(deobfuscateField(t.phone) || '');
+                setNewTeacherPersonnelRole(
+                  isLeadershipPersonnel(t) ? normalizeTeacherPersonnelRole(t.personnelRole) : 'teacher',
+                );
                 setIsTeacherModalOpen(true);
               }}
               onUpdateStudent={updateStudent}
@@ -2181,13 +2201,18 @@ function AdminDashboardInner() {
             />
           </TabsContent>
 
-          <TabsContent value="classroom" className={`${scrollingAdminTabClassName} space-y-6`}>
-            <AdminClassroomTab
-              categories={categories}
-              classes={classes}
-              students={students}
-              schoolId={schoolId!}
-            />
+          <TabsContent
+            value="classroom"
+            className={`${scrollingAdminTabClassName} space-y-6 motion-reduce:data-[state=active]:animate-none data-[state=active]:!animate-none`}
+          >
+            {activeMainTab === 'classroom' ? (
+              <AdminClassroomTab
+                categories={categories}
+                classes={classes}
+                students={students}
+                schoolId={schoolId!}
+              />
+            ) : null}
           </TabsContent>
 
           <TabsContent value="reports" className={scrollingAdminTabClassName}>
@@ -2431,6 +2456,7 @@ function AdminDashboardInner() {
             setNewTeacherBudgetPeriod('month');
             setNewTeacherEmail('');
             setNewTeacherPhone('');
+            setNewTeacherPersonnelRole('teacher');
           }
         }}>
           <DialogContent>
@@ -2441,9 +2467,36 @@ function AdminDashboardInner() {
               }}
             >
               <DialogHeader>
-                <DialogTitle>{editingTeacher ? 'Edit Teacher' : 'Add New Teacher'}</DialogTitle>
+                <DialogTitle>
+                  {editingTeacher
+                    ? `Edit ${leadershipPersonnelLabel(newTeacherPersonnelRole).toLowerCase()}`
+                    : newTeacherPersonnelRole === 'teacher'
+                      ? 'Add classroom teacher'
+                      : 'Add principal / division head'}
+                </DialogTitle>
               </DialogHeader>
               <div className="grid gap-4 py-4">
+                <div className="space-y-1">
+                  <Label htmlFor="new-teacher-role">Staff category</Label>
+                  <Select
+                    value={newTeacherPersonnelRole}
+                    onValueChange={(v) => setNewTeacherPersonnelRole(v as TeacherPersonnelRole)}
+                  >
+                    <SelectTrigger id="new-teacher-role">
+                      <SelectValue placeholder="Choose staff category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="teacher">Classroom teacher</SelectItem>
+                      <SelectItem value="principal">Principal</SelectItem>
+                      <SelectItem value="divisionHead">Division head</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {newTeacherPersonnelRole !== 'teacher' ? (
+                    <p className="text-[10px] text-muted-foreground leading-snug">
+                      Leadership staff use the teacher portal with school-wide student and category access.
+                    </p>
+                  ) : null}
+                </div>
                 <div className="space-y-1">
                   <Label htmlFor="new-teacher-name">Display Name</Label>
                   <Input id="new-teacher-name" value={newTeacherName} onChange={e => setNewTeacherName(e.target.value)} autoFocus placeholder="e.g. Mr. Smith" />
@@ -2513,8 +2566,15 @@ function AdminDashboardInner() {
                   setNewTeacherBudgetPeriod('month');
                   setNewTeacherEmail('');
                   setNewTeacherPhone('');
+                  setNewTeacherPersonnelRole('teacher');
                 }}>Cancel</Button>
-                <Button type="submit">{editingTeacher ? 'Save Changes' : 'Add Teacher'}</Button>
+                <Button type="submit">
+                  {editingTeacher
+                    ? 'Save changes'
+                    : newTeacherPersonnelRole === 'teacher'
+                      ? 'Add teacher'
+                      : 'Add leadership staff'}
+                </Button>
               </DialogFooter>
             </form>
           </DialogContent>

@@ -51,15 +51,14 @@ import { IdCardPrinterSettingsSection } from '@/components/settings/IdCardPrinte
 import { SettingsFaceEnrollmentsPanel } from '@/components/settings/SettingsFaceEnrollmentsPanel';
 import { SettingsSectionJumpNav } from '@/components/settings/SettingsSectionJumpNav';
 import { FeatureFilterContext, SettingsFeatureRow } from '@/components/settings/SettingsFeatureRow';
-import { PRODUCT_PILLAR_LABELS } from '@/lib/productPillars';
+import { PRODUCT_PILLAR_LABELS, type ProductPillarKey } from '@/lib/productPillars';
 import { OfficePortalEntryLink } from '@/components/office/OfficePortalEntryLink';
-import Link from 'next/link';
+import { StaffPortalNavLayoutControls } from '@/components/settings/StaffPortalNavLayoutControls';
 import {
     FEATURE_SECTION_NAV,
     GENERAL_SECTION_NAV,
     IMPLEMENTED_FEATURE_TOGGLE_KEYS,
     INTERFACE_SECTION_NAV,
-    getAdminManagedSettingsLinks,
     parseSettingsViewFromQuery,
     type SettingsView,
 } from '@/components/settings/settingsModalConfig';
@@ -86,13 +85,13 @@ export function SettingsModal() {
     const [adminSubmitting, setAdminSubmitting] = useState(false);
     /** Set when kiosk/school session unlocks settings via passcode (before auth context re-renders). */
     const [kioskAdminSettingsUnlock, setKioskAdminSettingsUnlock] = useState(false);
-    /** Full school settings (all sections, edits) — admin role, admin session, or kiosk passcode unlock. */
+    /** Full school settings (all sections, edits) â€” admin role, admin session, or kiosk passcode unlock. */
     const canManageSchoolSettings =
         kioskAdminSettingsUnlock ||
         hasAdminRole ||
         loginState === 'admin' ||
         loginState === 'developer';
-    const { settings, settingsPreferences, updateSettings } = useSettings();
+    const { settings, settingsPreferences, updateSettings, isPillarAvailable } = useSettings();
     const playSound = useArcadeSound();
     const { toast } = useToast();
     const [draft, setDraft] = useState<AppSettings | null>(null);
@@ -103,12 +102,10 @@ export function SettingsModal() {
     const [featureQuery, setFeatureQuery] = useState('');
     const [featuresEnabledOnly, setFeaturesEnabledOnly] = useState(false);
     const [showComingSoonFeatures, setShowComingSoonFeatures] = useState(false);
-    const adminManagedLinks = useMemo(
-        () => getAdminManagedSettingsLinks(schoolId),
-        [schoolId],
-    );
     const [selectedProfileId, setSelectedProfileId] = useState('');
     const local = draft ?? settings;
+    const unavailablePillarHint = (pillar: ProductPillarKey) =>
+        isPillarAvailable(pillar) ? undefined : 'Not included for this school';
     const pathname = usePathname();
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -326,7 +323,7 @@ export function SettingsModal() {
         } else {
             setDraft(null);
             setKioskAdminSettingsUnlock(false);
-            // Do not force view to hub here — avoids flashing the hub screen while the modal is
+            // Do not force view to hub here â€” avoids flashing the hub screen while the modal is
             // closing from Interface / features / etc. Next open always resets via beginSettingsSession.
         }
         setOpen(next);
@@ -568,9 +565,9 @@ export function SettingsModal() {
                             <DialogTitle className="text-xl font-black tracking-tight text-foreground">
                                 {viewTitle[view]}
                                 {view === 'features' ? (
-                                    <span className="ml-2 text-sm font-bold text-amber-600 dark:text-amber-400">· Advanced</span>
+                                    <span className="ml-2 text-sm font-bold text-amber-600 dark:text-amber-400">Â· Advanced</span>
                                 ) : view === 'general' ? (
-                                    <span className="ml-2 text-sm font-bold text-muted-foreground">· General</span>
+                                    <span className="ml-2 text-sm font-bold text-muted-foreground">Â· General</span>
                                 ) : null}
                             </DialogTitle>
                         </div>
@@ -760,10 +757,16 @@ export function SettingsModal() {
                                         </p>
 
                                         {/* Color Scheme */}
-                                        <div className="grid grid-cols-3 gap-2 mt-1">
-                                            {(Object.keys(colorSchemes) as ColorScheme[]).map((key) => {
-                                                const roleKey = interfaceRole === 'student' ? 'studentColorScheme' : interfaceRole === 'teacher' ? 'teacherColorScheme' : 'colorScheme';
-                                                const isSelected = local[roleKey] === key;
+                                        {(() => {
+                                            const roleKey =
+                                                interfaceRole === 'student'
+                                                    ? 'studentColorScheme'
+                                                    : interfaceRole === 'teacher'
+                                                      ? 'teacherColorScheme'
+                                                      : 'colorScheme';
+                                            const selectedScheme = (local[roleKey] || 'default') as ColorScheme;
+
+                                            const renderSchemeSwatch = (key: ColorScheme) => {
                                                 const swatchColors = colorSchemes[key].swatchColors;
                                                 const customSwatch = local.customAppearanceColors?.[key];
                                                 const effectiveSwatchColors = [
@@ -771,26 +774,54 @@ export function SettingsModal() {
                                                     customSwatch?.secondary || swatchColors[1],
                                                 ];
                                                 return (
-                                                    <button
-                                                        key={key}
-                                                        onClick={() => handleToggle(roleKey, key)}
-                                                        className={cn(
-                                                            "flex items-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition-all border",
-                                                            isSelected 
-                                                                ? 'border-primary bg-primary/5 text-primary ring-1 ring-primary' 
-                                                                : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-muted'
-                                                        )}
-                                                    >
-                                                        <span className="flex w-5 h-4 overflow-hidden rounded-full border border-black/10 shrink-0 shadow-sm">
-                                                            {effectiveSwatchColors.map((color) => (
-                                                                <span key={color} className="flex-1" style={{ backgroundColor: /^#[0-9A-Fa-f]{6}$/.test(color) ? color : '#94a3b8' }} />
-                                                            ))}
-                                                        </span>
-                                                        {colorSchemes[key].label}
-                                                    </button>
+                                                    <span className="flex h-4 w-5 shrink-0 overflow-hidden rounded-full border border-black/10 shadow-sm">
+                                                        {effectiveSwatchColors.map((color) => (
+                                                            <span
+                                                                key={color}
+                                                                className="flex-1"
+                                                                style={{
+                                                                    backgroundColor: /^#[0-9A-Fa-f]{6}$/.test(color)
+                                                                        ? color
+                                                                        : '#94a3b8',
+                                                                }}
+                                                            />
+                                                        ))}
+                                                    </span>
                                                 );
-                                            })}
-                                        </div>
+                                            };
+
+                                            return (
+                                                <Select
+                                                    value={selectedScheme}
+                                                    onValueChange={(value) => {
+                                                        handleToggle(roleKey, value as ColorScheme);
+                                                        if (local.soundEnabled) playSound('click');
+                                                    }}
+                                                >
+                                                    <SelectTrigger
+                                                        className="h-10 w-full rounded-xl font-semibold text-sm"
+                                                        aria-label="Color scheme"
+                                                    >
+                                                        <SelectValue placeholder="Select colors">
+                                                            <span className="flex items-center gap-2">
+                                                                {renderSchemeSwatch(selectedScheme)}
+                                                                {colorSchemes[selectedScheme].label}
+                                                            </span>
+                                                        </SelectValue>
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {(Object.keys(colorSchemes) as ColorScheme[]).map((key) => (
+                                                            <SelectItem key={key} value={key}>
+                                                                <span className="flex items-center gap-2">
+                                                                    {renderSchemeSwatch(key)}
+                                                                    {colorSchemes[key].label}
+                                                                </span>
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            );
+                                        })()}
 
                                         {(() => {
                                             const roleKey = interfaceRole === 'student' ? 'studentColorScheme' : interfaceRole === 'teacher' ? 'teacherColorScheme' : 'colorScheme';
@@ -1020,7 +1051,7 @@ export function SettingsModal() {
                                             }}
                                         />
                                     </div>
-                                    {/* Colorized dark — richer accents + ambient wash (see `html[data-dark-colorize]` in globals.css) */}
+                                    {/* Colorized dark â€” richer accents + ambient wash (see `html[data-dark-colorize]` in globals.css) */}
                                     <div
                                         className={cn(
                                             'flex items-start justify-between gap-2',
@@ -1058,7 +1089,7 @@ export function SettingsModal() {
                                             className="shrink-0 mt-0.5"
                                         />
                                     </div>
-                                    {/* Legacy Mode — performance-oriented simple visuals (see `.legacy` in globals.css) */}
+                                    {/* Legacy Mode â€” performance-oriented simple visuals (see `.legacy` in globals.css) */}
                                     <div className="flex items-start justify-between gap-2 col-span-2">
                                         <div className="min-w-0 pr-1">
                                             <div className="flex items-center gap-2">
@@ -1132,6 +1163,18 @@ export function SettingsModal() {
                                      </p>
                                  </div>
 
+                                 {loginState === 'teacher' && !canManageSchoolSettings ? (
+                                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mt-4 pt-4 border-t border-border/40">
+                                         <div className="min-w-0 pr-4">
+                                             <span className="text-sm font-bold">Portal tab layout</span>
+                                             <p className="text-[10px] text-muted-foreground font-medium leading-snug mt-0.5">
+                                                 Section tabs across the top or in a left sidebar.
+                                             </p>
+                                         </div>
+                                         <StaffPortalNavLayoutControls target="teacher" />
+                                     </div>
+                                 ) : null}
+
                                  {interfaceRole === 'student' && (
                                      <div className="space-y-2 mt-4 pt-4 border-t border-border/40">
                                          <div className="flex items-center gap-2">
@@ -1153,9 +1196,9 @@ export function SettingsModal() {
                                                  <SelectValue placeholder="Select sound pack" />
                                              </SelectTrigger>
                                              <SelectContent className="z-[290]">
-                                                 <SelectItem value="retro_arcade">👾 Retro Arcade (Classic 8-bit)</SelectItem>
-                                                 <SelectItem value="modern_chime">🔔 Modern Chime (Crystalline Bells)</SelectItem>
-                                                 <SelectItem value="sci_fi_synth">🚀 Sci-Fi Synth (Futuristic Lasers)</SelectItem>
+                                                 <SelectItem value="retro_arcade">ðŸ‘¾ Retro Arcade (Classic 8-bit)</SelectItem>
+                                                 <SelectItem value="modern_chime">ðŸ”” Modern Chime (Crystalline Bells)</SelectItem>
+                                                 <SelectItem value="sci_fi_synth">ðŸš€ Sci-Fi Synth (Futuristic Lasers)</SelectItem>
                                              </SelectContent>
                                          </Select>
                                      </div>
@@ -1254,6 +1297,46 @@ export function SettingsModal() {
                             </div>
 
                             <div
+                                id="settings-general-staff-portals"
+                                className="scroll-mt-[4.5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 border border-slate-100 dark:border-slate-800/50"
+                            >
+                                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 pb-3 flex items-center gap-2">
+                                    <LayoutDashboard className="w-3.5 h-3.5" /> Staff portals
+                                </p>
+                                <div className="space-y-4 mt-1">
+                                    {canManageSchoolSettings ? (
+                                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                            <div className="min-w-0 pr-4">
+                                                <span className="text-sm font-bold">School admin tab layout</span>
+                                                <p className="text-[11px] text-muted-foreground">
+                                                    Section tabs across the top or in a left sidebar for the admin portal.
+                                                </p>
+                                            </div>
+                                            <StaffPortalNavLayoutControls target="admin" />
+                                        </div>
+                                    ) : null}
+                                    <div
+                                        className={cn(
+                                            'flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between',
+                                            canManageSchoolSettings &&
+                                                'border-t border-slate-200/60 dark:border-slate-700/50 pt-4',
+                                        )}
+                                    >
+                                        <div className="min-w-0 pr-4">
+                                            <span className="text-sm font-bold">Teacher portal tab layout</span>
+                                            <p className="text-[11px] text-muted-foreground">
+                                                Same choice for the teacher staff portal (points, classes, reports).
+                                            </p>
+                                        </div>
+                                        <StaffPortalNavLayoutControls
+                                            target="teacher"
+                                            disabled={!canManageSchoolSettings && loginState !== 'teacher'}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div
                                 id="settings-general-kiosk"
                                 className="scroll-mt-[4.5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 border border-slate-100 dark:border-slate-800/50"
                             >
@@ -1266,7 +1349,7 @@ export function SettingsModal() {
                                         <div className="flex flex-col min-w-0 pr-4">
                                             <span className="text-sm font-bold">Portrait display layout</span>
                                             <p className="text-[11px] text-muted-foreground">
-                                                Tall narrow layout for portrait-mounted kiosk screens. Per-device overrides live in Admin → Branding → Kiosk profiles.
+                                                Tall narrow layout for portrait-mounted kiosk screens. Per-device overrides live in Admin â†’ Branding â†’ Kiosk profiles.
                                             </p>
                                         </div>
                                         <Switch
@@ -1288,7 +1371,7 @@ export function SettingsModal() {
                                         <div className="flex flex-col min-w-0 pr-4">
                                             <span className="text-sm font-bold">Hide header</span>
                                             <p className="text-[11px] text-muted-foreground">
-                                                With top tabs, tuck the school header off-screen. A small tab stays visible at the top — move the mouse there to slide the full header down. Side tabs always hide the header while you scroll and bring it back at the top of the page.
+                                                With top tabs, tuck the school header off-screen. A small tab stays visible at the top â€” move the mouse there to slide the full header down. Side tabs always hide the header while you scroll and bring it back at the top of the page.
                                             </p>
                                         </div>
                                         <Switch
@@ -1552,7 +1635,7 @@ export function SettingsModal() {
                                                 <SelectValue placeholder="Paper format" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="label_50x70">Small label / M110-class (50 × 70 mm)</SelectItem>
+                                                <SelectItem value="label_50x70">Small label / M110-class (50 Ã— 70 mm)</SelectItem>
                                                 <SelectItem value="thermal_80mm">80 mm thermal receipt (POS / VCP-8370)</SelectItem>
                                             </SelectContent>
                                         </Select>
@@ -1580,7 +1663,7 @@ export function SettingsModal() {
                                                 <Textarea
                                                     id="printerReminderIdCards"
                                                     rows={2}
-                                                    placeholder='e.g. "Use the Fargo DTC at the front desk — not the office copier."'
+                                                    placeholder='e.g. "Use the Fargo DTC at the front desk â€” not the office copier."'
                                                     className="min-h-[72px] rounded-xl text-sm bg-background/80 border-border/60 resize-y"
                                                     value={local.printerReminderIdCards ?? ''}
                                                     onChange={(e) => handleToggle('printerReminderIdCards', e.target.value)}
@@ -1676,67 +1759,68 @@ export function SettingsModal() {
                                                         disabled={enabledCount === 1 && (local.payRewards ?? true)}
                                                     />
                                                 </div>
-                                                <div className="flex items-center justify-between p-3 bg-background/50 border border-border/40 rounded-xl hover:bg-muted/40 transition-colors">
+                                                <div className={cn("flex items-center justify-between p-3 bg-background/50 border border-border/40 rounded-xl hover:bg-muted/40 transition-colors", unavailablePillarHint('payClassroom') && 'opacity-60')}>
                                                     <div>
                                                         <h4 className="font-bold text-sm text-foreground uppercase tracking-tight">levelup classroom</h4>
-                                                        <p className="text-[10px] text-muted-foreground">Seating chart, quick awards, and full-screen classroom view</p>
+                                                        <p className="text-[10px] text-muted-foreground">{unavailablePillarHint('payClassroom') ?? 'Seating chart, quick awards, and full-screen classroom view'}</p>
                                                     </div>
                                                     <Switch
-                                                        checked={local.payClassroom ?? true}
+                                                        checked={(local.payClassroom ?? true) && !unavailablePillarHint('payClassroom')}
                                                         onCheckedChange={(val) => handleToggle('payClassroom', val)}
-                                                        disabled={enabledCount === 1 && (local.payClassroom ?? true)}
+                                                        disabled={!!unavailablePillarHint('payClassroom') || (enabledCount === 1 && (local.payClassroom ?? true))}
                                                     />
                                                 </div>
-                                                <div className="flex items-center justify-between p-3 bg-background/50 border border-border/40 rounded-xl hover:bg-muted/40 transition-colors">
+                                                <div className={cn("flex items-center justify-between p-3 bg-background/50 border border-border/40 rounded-xl hover:bg-muted/40 transition-colors", unavailablePillarHint('payAttendance') && 'opacity-60')}>
                                                     <div>
                                                         <h4 className="font-bold text-sm text-foreground uppercase tracking-tight">levelup attendance</h4>
-                                                        <p className="text-[10px] text-muted-foreground">Product included in paid subscription</p>
+                                                        <p className="text-[10px] text-muted-foreground">{unavailablePillarHint('payAttendance') ?? 'Product included in paid subscription'}</p>
                                                     </div>
                                                     <Switch
-                                                        checked={local.payAttendance ?? true}
+                                                        checked={(local.payAttendance ?? true) && !unavailablePillarHint('payAttendance')}
                                                         onCheckedChange={(val) => handleToggle('payAttendance', val)}
-                                                        disabled={enabledCount === 1 && (local.payAttendance ?? true)}
+                                                        disabled={!!unavailablePillarHint('payAttendance') || (enabledCount === 1 && (local.payAttendance ?? true))}
                                                     />
                                                 </div>
-                                                <div className="flex items-center justify-between p-3 bg-background/50 border border-border/40 rounded-xl hover:bg-muted/40 transition-colors">
+                                                <div className={cn("flex items-center justify-between p-3 bg-background/50 border border-border/40 rounded-xl hover:bg-muted/40 transition-colors", unavailablePillarHint('payHomework') && 'opacity-60')}>
                                                     <div>
                                                         <h4 className="font-bold text-sm text-foreground uppercase tracking-tight">levelup home work</h4>
-                                                        <p className="text-[10px] text-muted-foreground">Product included in paid subscription</p>
+                                                        <p className="text-[10px] text-muted-foreground">{unavailablePillarHint('payHomework') ?? 'Product included in paid subscription'}</p>
                                                     </div>
                                                     <Switch
-                                                        checked={local.payHomework ?? true}
+                                                        checked={(local.payHomework ?? true) && !unavailablePillarHint('payHomework')}
                                                         onCheckedChange={(val) => handleToggle('payHomework', val)}
-                                                        disabled={enabledCount === 1 && (local.payHomework ?? true)}
+                                                        disabled={!!unavailablePillarHint('payHomework') || (enabledCount === 1 && (local.payHomework ?? true))}
                                                     />
                                                 </div>
-                                                <div className="flex items-center justify-between p-3 bg-background/50 border border-border/40 rounded-xl hover:bg-muted/40 transition-colors">
+                                                <div className={cn("flex items-center justify-between p-3 bg-background/50 border border-border/40 rounded-xl hover:bg-muted/40 transition-colors", unavailablePillarHint('payLibrary') && 'opacity-60')}>
                                                     <div>
                                                         <h4 className="font-bold text-sm text-foreground uppercase tracking-tight">levelup library</h4>
-                                                        <p className="text-[10px] text-muted-foreground">Product included in paid subscription</p>
+                                                        <p className="text-[10px] text-muted-foreground">{unavailablePillarHint('payLibrary') ?? 'Product included in paid subscription'}</p>
                                                     </div>
                                                     <Switch
-                                                        checked={local.payLibrary ?? true}
+                                                        checked={(local.payLibrary ?? true) && !unavailablePillarHint('payLibrary')}
                                                         onCheckedChange={(val) => handleToggle('payLibrary', val)}
-                                                        disabled={enabledCount === 1 && (local.payLibrary ?? true)}
+                                                        disabled={!!unavailablePillarHint('payLibrary') || (enabledCount === 1 && (local.payLibrary ?? true))}
                                                     />
                                                 </div>
-                                                <div className="sm:col-span-2 p-3 bg-background/50 border border-border/40 rounded-xl space-y-2">
+                                                <div className={cn("sm:col-span-2 p-3 bg-background/50 border border-border/40 rounded-xl space-y-2", unavailablePillarHint('payOffice') && 'opacity-60')}>
                                                     <div className="flex items-start justify-between gap-4">
                                                         <div>
                                                             <h4 className="font-bold text-sm text-foreground uppercase tracking-tight">
                                                                 {PRODUCT_PILLAR_LABELS.payOffice}
                                                             </h4>
                                                             <p className="text-[10px] text-muted-foreground">
-                                                                Grades &amp; billing · separate office roster (no rewards portal link)
+                                                                {unavailablePillarHint('payOffice') ?? 'Grades & billing - separate office roster (no rewards portal link)'}
                                                             </p>
                                                         </div>
                                                         <div className="flex shrink-0 flex-col items-end gap-2">
                                                             <Switch
-                                                                checked={local.payOffice === true}
+                                                                checked={local.payOffice === true && !unavailablePillarHint('payOffice')}
                                                                 onCheckedChange={(val) => handleToggle('payOffice', val)}
+                                                                disabled={!!unavailablePillarHint('payOffice')}
                                                                 aria-label={PRODUCT_PILLAR_LABELS.payOffice}
                                                             />
-                                                            {local.payOffice === true && schoolId ? (
+                                                            {local.payOffice === true && !unavailablePillarHint('payOffice') && schoolId ? (
                                                                 <OfficePortalEntryLink
                                                                     schoolId={schoolId}
                                                                     className="text-[11px] font-bold text-teal-700 underline underline-offset-4 hover:text-teal-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:text-teal-300 dark:hover:text-teal-100"
@@ -1755,43 +1839,6 @@ export function SettingsModal() {
 
                     {view === 'features' && (
                         <div className="space-y-6 pb-2 -mx-1 px-1">
-                            {canManageSchoolSettings && adminManagedLinks.length > 0 ? (
-                                <div className="rounded-2xl border border-indigo-200/60 bg-indigo-50/50 dark:border-indigo-900/40 dark:bg-indigo-950/20 p-4 space-y-3">
-                                    <div>
-                                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-700/80 dark:text-indigo-300/80">
-                                            Managed in Admin
-                                        </p>
-                                        <p className="text-xs text-muted-foreground mt-1 leading-snug">
-                                            Rich setup (content, rosters, previews) lives on dedicated Admin tabs — not duplicated here.
-                                        </p>
-                                    </div>
-                                    <div className="grid gap-2 sm:grid-cols-2">
-                                        {adminManagedLinks.map(({ tab, label, description, icon: Icon }) => (
-                                            <Link
-                                                key={tab}
-                                                href={tab}
-                                                onClick={() => {
-                                                    if (draft) {
-                                                        committedRef.current = true;
-                                                        updateSettings({ ...draft });
-                                                    }
-                                                    setOpen(false);
-                                                }}
-                                                className="flex items-start gap-3 rounded-xl border border-indigo-200/50 bg-background/70 p-3 text-left transition-colors hover:border-indigo-400/60 hover:bg-background"
-                                            >
-                                                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
-                                                    <Icon className="h-4 w-4" aria-hidden />
-                                                </span>
-                                                <span className="min-w-0">
-                                                    <span className="block text-sm font-bold text-foreground">{label}</span>
-                                                    <span className="mt-0.5 block text-[11px] leading-snug text-muted-foreground">{description}</span>
-                                                </span>
-                                            </Link>
-                                        ))}
-                                    </div>
-                                </div>
-                            ) : null}
-
                             <div className="rounded-2xl border border-border/40 bg-muted/20 p-3">
                                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                     <div className="min-w-0">
@@ -1799,7 +1846,7 @@ export function SettingsModal() {
                                             Find toggles
                                         </p>
                                         <p className="text-xs text-muted-foreground mt-1">
-                                            Search by name (e.g. “attendance”, “notifications”, “vending”).
+                                            Search by name (e.g. â€œattendanceâ€, â€œnotificationsâ€, â€œvendingâ€).
                                         </p>
                                     </div>
                                     <div className="flex items-center gap-2 shrink-0">
@@ -1807,7 +1854,7 @@ export function SettingsModal() {
                                             <Input
                                                 value={featureQuery}
                                                 onChange={(e) => setFeatureQuery(e.target.value)}
-                                                placeholder="Search features…"
+                                                placeholder="Search featuresâ€¦"
                                                 className="h-9 rounded-xl bg-background/60 border-border/50"
                                             />
                                         </div>
@@ -1890,7 +1937,7 @@ export function SettingsModal() {
                                 <SettingsFeatureRow
                                     id="enableTeacherBudgets"
                                     label="Teacher Budgets"
-                                    desc="Give each teacher a monthly points allowance so they can’t overspend when printing coupons or awarding points."
+                                    desc="Give each teacher a monthly points allowance so they canâ€™t overspend when printing coupons or awarding points."
                                     icon={<Users className="w-5 h-5" />}
                                     settings={local}
                                     onToggle={handleToggle}
@@ -1924,7 +1971,7 @@ export function SettingsModal() {
                                 <SettingsFeatureRow
                                     id="enableLevels"
                                     label="Levels (Soon)"
-                                    desc="Turn total points into fun “levels” (Level 1, Level 2, etc.) for extra motivation."
+                                    desc="Turn total points into fun â€œlevelsâ€ (Level 1, Level 2, etc.) for extra motivation."
                                     icon={<Zap className="w-5 h-5" />}
                                     settings={local}
                                     onToggle={handleToggle}
@@ -2042,7 +2089,7 @@ export function SettingsModal() {
                                 <SettingsFeatureRow
                                     id="enableStudentWelcomeBackScreen"
                                     label="Welcome back splash"
-                                    desc="Shows a short full-screen greeting when a student opens the kiosk. Default 2 seconds (adjustable in General). Can be turned off per student in Admin → Students."
+                                    desc="Shows a short full-screen greeting when a student opens the kiosk. Default 2 seconds (adjustable in General). Can be turned off per student in Admin â†’ Students."
                                     icon={<Tv className="w-5 h-5" />}
                                     settings={local}
                                     onToggle={handleToggle}
@@ -2062,7 +2109,7 @@ export function SettingsModal() {
                                 <SettingsFeatureRow
                                     id="enableStudentWelcome"
                                     label="Student welcome styles"
-                                    desc="Full-screen animated welcome styles on the kiosk. Coming soon — per-student controls will return when this ships."
+                                    desc="Full-screen animated welcome styles on the kiosk. Coming soon â€” per-student controls will return when this ships."
                                     icon={<Sparkles className="w-5 h-5" />}
                                     settings={local}
                                     onToggle={handleToggle}
@@ -2106,7 +2153,7 @@ export function SettingsModal() {
                                         </div>
                                     </div>
                                 ) : null}
-                                {/* Student kiosk login/coupon controls: Settings → General → Kiosk. */}
+                                {/* Student kiosk login/coupon controls: Settings â†’ General â†’ Kiosk. */}
 
                                   <SettingsFeatureRow
                                     id="enablePrizeImages"

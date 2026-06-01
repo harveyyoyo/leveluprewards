@@ -1,0 +1,14 @@
+locator.waitFor: Timeout 45000ms exceeded.
+Call log:
+  - waiting for getByRole('link', { name: /Student Kiosk/i }).first().or(getByRole('button', { name: /Student Kiosk/i }).first()).or(getByText(/Student Kiosk/i).first()) to be visible
+
+locator.waitFor: Timeout 45000ms exceeded.
+Call log:
+  - waiting for getByRole('link', { name: /Student Kiosk/i }).first().or(getByRole('button', { name: /Student Kiosk/i }).first()).or(getByText(/Student Kiosk/i).first()) to be visible
+
+    at waitForPortalHub (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:281:6)
+    at async prepare (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:1719:7)
+    at async recordClipReady (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:1127:9)
+    at async captureLibrary (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:2508:26)
+    at async capturePromoBroll (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:2656:3)
+    at async main (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:2815:5)

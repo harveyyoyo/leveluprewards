@@ -229,6 +229,15 @@ async function schoolEntryCodeIsRequired(
   return code.length > 0;
 }
 
+async function schoolAccessPasscodeIsRequired(
+  db: admin.firestore.Firestore,
+  schoolId: string
+): Promise<boolean> {
+  const schoolSnap = await db.collection("schools").doc(schoolId).get();
+  if (!schoolSnap.exists) return false;
+  return schoolAccessPasscodeFrom(schoolSnap.data() || {}).length > 0;
+}
+
 function requireDescriptor(value: unknown, name: string): asserts value is FaceDescriptor {
   if (
     !Array.isArray(value) ||
@@ -1298,6 +1307,12 @@ exports.enterSchoolKioskSession = functions.https.onCall(
     }
     if (await schoolEntryCodeIsRequired(db, schoolId)) {
       throw new functions.https.HttpsError("permission-denied", "School entry required.");
+    }
+    if (
+      await schoolAccessPasscodeIsRequired(db, schoolId) &&
+      !(await hasExistingSchoolPortalAccess(schoolId, context.auth!.uid, context))
+    ) {
+      throw new functions.https.HttpsError("permission-denied", "School passcode required.");
     }
 
     await db

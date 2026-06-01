@@ -31,6 +31,11 @@ const SettingsModal = dynamic(
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { isRewardsPillarOn } from '@/lib/productPillars';
 import { cn } from '@/lib/utils';
+import {
+  staffPortalGlobalHeaderClassName,
+  staffPortalGlobalHeaderInnerClassName,
+  staffPortalGlobalHeaderWrapClassName,
+} from '@/components/staff/staffPortalNavStyles';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useDoc, useFirebase, useMemoFirebase } from '@/firebase';
 import { useSchoolMetadataDocRef } from '@/hooks/useSchoolMetadataDocRef';
@@ -259,10 +264,17 @@ export default function Header() {
   if (settings.payHomework ?? true) paidProducts.push('Homework');
   if (settings.payLibrary ?? true) paidProducts.push('Library');
   const paidProductsLabel = paidProducts.join(' • ');
+  const staffNavSidebar =
+    loginState === 'teacher'
+      ? (settings.teacherNavLayout ?? 'sidebar') === 'sidebar'
+      : (settings.adminNavLayout ?? 'sidebar') === 'sidebar';
   const adminSideTabHeader =
     !!schoolId &&
-    settings.adminNavLayout === 'sidebar' &&
-    (pathname === `/${schoolId}/admin` || pathname.startsWith(`/${schoolId}/admin/`));
+    staffNavSidebar &&
+    (pathname === `/${schoolId}/admin` ||
+      pathname.startsWith(`/${schoolId}/admin/`) ||
+      pathname === `/${schoolId}/teacher` ||
+      pathname.startsWith(`/${schoolId}/teacher/`));
 
   /** Long school names wrap; header row must grow (fixed h-20 + absolute center caused top clipping). */
   const headerSchoolNameClass =
@@ -348,13 +360,20 @@ export default function Header() {
   if (settings.displayMode === 'app') {
     return (
       <div id="levelup-global-app-header" className="w-full">
-        <div className={cn('w-full px-4 md:px-8', adminSideTabHeader ? 'max-w-none' : 'mx-auto max-w-7xl')}>
+        <div
+          className={cn(
+            'w-full min-w-0',
+            adminSideTabHeader
+              ? staffPortalGlobalHeaderWrapClassName(true)
+              : 'mx-auto max-w-7xl px-4 md:px-8',
+          )}
+        >
         <header
           className={cn(
             'no-print relative z-20 mb-2 grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2 rounded-b-2xl border border-border/10 border-t-0',
             'bg-card/95 px-1 py-2 shadow-[0_4px_20px_hsl(var(--primary)/0.08)] backdrop-blur-md sm:mb-3 sm:gap-x-3 sm:rounded-b-3xl sm:px-2 sm:py-3',
-            adminSideTabHeader &&
-              'mb-0 rounded-none border-0 bg-transparent px-0 shadow-none backdrop-blur-none sm:mb-0 sm:rounded-none',
+            adminSideTabHeader && staffPortalGlobalHeaderClassName(true),
+            adminSideTabHeader && staffPortalGlobalHeaderInnerClassName(true),
           )}
         >
           <div className="relative z-10 flex shrink-0 justify-start">
@@ -445,20 +464,26 @@ export default function Header() {
   return (
     <>
     <div id="levelup-global-app-header" className="no-print sticky top-0 z-50 w-full transition-colors">
-      <div className={cn('w-full min-w-0 px-4 md:px-8', adminSideTabHeader ? 'max-w-none' : 'mx-auto max-w-7xl')}>
+      <div
+        className={cn(
+          'w-full min-w-0',
+          adminSideTabHeader
+            ? staffPortalGlobalHeaderWrapClassName(true)
+            : 'mx-auto max-w-7xl px-4 md:px-8',
+        )}
+      >
         <header
           className={cn(
             'relative z-20 mb-2 w-full min-w-0 rounded-b-2xl border border-border/10 border-t-0',
             'bg-card/95 shadow-[0_4px_20px_hsl(var(--primary)/0.08)] backdrop-blur-md',
             'sm:mb-3 sm:rounded-b-3xl',
-            adminSideTabHeader &&
-              'mb-0 rounded-none border-0 bg-transparent shadow-none backdrop-blur-none sm:mb-0 sm:rounded-none',
+            adminSideTabHeader && staffPortalGlobalHeaderClassName(true),
           )}
         >
       <div
         className={cn(
           'grid min-h-20 min-w-0 w-full grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] items-center gap-x-2 gap-y-1 px-3 py-2 sm:gap-x-3 sm:px-5 sm:py-3',
-          adminSideTabHeader && 'px-0 sm:px-0',
+          staffPortalGlobalHeaderInnerClassName(adminSideTabHeader),
         )}
       >
         {/* Left: Branding */}

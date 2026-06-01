@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Book, Building2, ChevronDown, Copy, Edit, FileText, Gift, Home, Minus, Plus, Printer, Trash2, User, UserMinus, UserPlus } from 'lucide-react';
+import { Book, Building2, ChevronDown, Copy, Edit, FileText, Gift, GraduationCap, Home, Minus, Plus, Printer, Trash2, User, UserMinus, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -28,6 +28,7 @@ import { teacherPortalKey } from '@/lib/syncSchoolStaffDirectory';
 import { cn, getStudentNickname } from '@/lib/utils';
 import { obfuscateField, deobfuscateField } from '@/lib/crypto';
 import type { Class, StaffAccount, StaffAccountRole, Student, Teacher } from '@/lib/types';
+import { isLeadershipPersonnel, leadershipPersonnelLabel } from '@/lib/teacherPersonnelRole';
 import { AdminRecordListHeader } from '@/components/admin/AdminRecordListHeader';
 import { AdminRecordListScroll } from '@/components/admin/AdminRecordListScroll';
 import {
@@ -74,6 +75,7 @@ export function AdminTeachersTab({
   classes,
   schoolId,
   onAddTeacher,
+  onAddLeadership,
   onEditTeacher,
   onDeleteTeacher,
   onUpdateStudent,
@@ -87,6 +89,7 @@ export function AdminTeachersTab({
   classes?: Class[] | null | undefined;
   schoolId: string;
   onAddTeacher: () => void;
+  onAddLeadership: () => void;
   onEditTeacher: (t: Teacher) => void;
   onDeleteTeacher: (teacherId: string) => void;
   onUpdateStudent: (student: Student) => Promise<void>;
@@ -114,6 +117,15 @@ export function AdminTeachersTab({
 
   const teachersListGridStyle = adminRecordListGridStyle(TEACHERS_LIST_GRID_COLS);
   const deskStaffListGridStyle = adminRecordListGridStyle(DESK_STAFF_LIST_GRID_COLS);
+
+  const classroomTeachers = useMemo(
+    () => (teachers ?? []).filter((t) => !isLeadershipPersonnel(t)),
+    [teachers],
+  );
+  const leadershipStaff = useMemo(
+    () => (teachers ?? []).filter((t) => isLeadershipPersonnel(t)),
+    [teachers],
+  );
 
   useEffect(() => {
     setOrigin(window.location.origin);
@@ -257,7 +269,7 @@ export function AdminTeachersTab({
     <StaffPortalSectionCard className="w-full min-w-0">
       <StaffPortalSectionCardHeader className="flex flex-row flex-wrap justify-between items-center gap-3 py-4 px-4 sm:px-5">
         <div>
-          <Helper content="Full classroom staff who can print coupons and award points. Desk staff get limited coupon, prize, library, houses, office, or reports access. Expand Classes or Students on a row to manage scope.">
+          <Helper content="Classroom teachers award points and manage classes. Principals and division heads get school-wide portal access. Desk staff get limited coupon, prize, library, houses, office, or reports access.">
             <StaffPortalSectionCardTitle className="flex items-center gap-2">
               <User className="w-5 h-5 text-primary" /> Teachers & staff
             </StaffPortalSectionCardTitle>
@@ -268,6 +280,9 @@ export function AdminTeachersTab({
           <Button onClick={openNewDeskStaff} variant="outline" className="rounded-xl">
             <Plus className="mr-2 h-4 w-4" /> Add desk staff
           </Button>
+          <Button onClick={onAddLeadership} variant="outline" className="rounded-xl">
+            <Plus className="mr-2 h-4 w-4" /> Add principal / division head
+          </Button>
           <Button onClick={onAddTeacher} className="rounded-xl">
             <Plus className="mr-2 h-4 w-4" /> Add teacher
           </Button>
@@ -275,9 +290,12 @@ export function AdminTeachersTab({
       </StaffPortalSectionCardHeader>
       <StaffPortalSectionCardContent className="min-w-0 space-y-6 px-3 pb-4 sm:px-4">
         <section className="space-y-3">
+          <Helper content="Homeroom and classroom teachers. Expand Classes or Students on a row to manage scope.">
+            <h3 className="font-bold">Classroom teachers</h3>
+          </Helper>
           <AdminRecordListScroll>
           <ul className="space-y-2">
-            {teachers && teachers.length > 0 ? (
+            {classroomTeachers.length > 0 ? (
               <AdminRecordListHeader
                 gridColumns={TEACHERS_LIST_GRID_COLS}
                 columns={[
@@ -290,7 +308,7 @@ export function AdminTeachersTab({
                 ]}
               />
             ) : null}
-            {teachers?.map((t) => {
+            {classroomTeachers.map((t) => {
               const rows = scopedStudentsByTeacher.get(t.id) ?? [];
               const managedClasses = (classes || []).filter((c) => c.primaryTeacherId === t.id);
               return (
@@ -581,14 +599,99 @@ export function AdminTeachersTab({
             </li>
             );
           })}
-          {(!teachers || teachers.length === 0) && (
+          {classroomTeachers.length === 0 && (
             <EmptyState
               icon={User}
-              title="No teachers yet"
+              title="No classroom teachers yet"
               description="Add teachers so each one gets their own portal to award points and redeem coupons with students."
               action={{ label: 'Add your first teacher', icon: Plus, onClick: onAddTeacher }}
             />
           )}
+          </ul>
+          </AdminRecordListScroll>
+        </section>
+
+        <section className="space-y-3">
+          <Helper content="Principals and division heads sign in through the staff portal with school-wide student and category access.">
+            <h3 className="font-bold">Principals & division heads</h3>
+          </Helper>
+          <AdminRecordListScroll>
+          <ul className="space-y-2">
+            {leadershipStaff.length > 0 ? (
+              <AdminRecordListHeader
+                gridColumns={DESK_STAFF_LIST_GRID_COLS}
+                columns={[
+                  { label: 'Edit' },
+                  { label: 'Name' },
+                  { label: 'Login' },
+                  { label: 'Act', className: 'text-right' },
+                ]}
+              />
+            ) : null}
+            {leadershipStaff.map((t) => (
+              <li
+                key={t.id}
+                className={cn(
+                  'items-center rounded-xl border bg-secondary/20 px-2 py-1.5 transition-colors hover:border-amber-200/80',
+                  adminRecordListGridCompactGapClassName,
+                  adminRecordListGridClassName,
+                )}
+                style={deskStaffListGridStyle}
+              >
+                <div className="flex items-center">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-7 w-7 rounded-md border-primary/20 bg-background hover:bg-primary/5 text-primary"
+                    onClick={() => onEditTeacher(t)}
+                    title="Edit leadership staff"
+                    aria-label="Edit leadership staff"
+                  >
+                    <Edit className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300">
+                    <GraduationCap className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="block truncate text-sm font-bold">{t.name}</span>
+                    <span className="block truncate text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      {leadershipPersonnelLabel(t.personnelRole || 'principal')}
+                    </span>
+                  </div>
+                </div>
+                <div
+                  className="truncate text-[10px] text-muted-foreground"
+                  title={`User: ${t.username} · Pass: ${t.passcode}`}
+                >
+                  <span className="font-code text-foreground">{t.username}</span>
+                  <span className="px-0.5 text-border">·</span>
+                  <span className="font-code text-foreground">{t.passcode}</span>
+                </div>
+                <div className="flex items-center justify-end gap-0.5">
+                  {renderCopyLinkButton(teacherPortalKey(t))}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 shrink-0 text-destructive hover:bg-destructive/10"
+                    onClick={() => onDeleteTeacher(t.id)}
+                    title="Delete leadership staff"
+                    aria-label="Delete leadership staff"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </li>
+            ))}
+            {leadershipStaff.length === 0 && (
+              <EmptyState
+                icon={GraduationCap}
+                title="No principals or division heads yet"
+                description="Add school leadership so they can review behavior, award points, and support teachers across the whole school."
+                action={{ label: 'Add principal / division head', icon: Plus, onClick: onAddLeadership }}
+              />
+            )}
           </ul>
           </AdminRecordListScroll>
         </section>

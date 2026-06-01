@@ -21,6 +21,8 @@ type ContentSectionTreeNavProps = {
   /** @deprecated Kept for call-site compatibility. */
   decor?: 'tree' | 'plain';
   className?: string;
+  /** When true, section tabs span the full content width (no max-w-2xl cap). */
+  fullWidth?: boolean;
   'aria-label'?: string;
 };
 
@@ -30,12 +32,15 @@ export function ContentSectionTreeNav({
   onValueChange,
   branchLabel,
   className,
+  fullWidth = false,
   'aria-label': ariaLabel = 'Section',
 }: ContentSectionTreeNavProps) {
   if (items.length < 2) return null;
 
   const colsClass =
-    items.length === 5
+    items.length >= 6
+      ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6'
+      : items.length === 5
       ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-5'
       : items.length === 4
         ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'
@@ -56,8 +61,9 @@ export function ContentSectionTreeNav({
       <Tabs value={value} onValueChange={onValueChange} className="w-full">
         <TabsList
           className={cn(
-            'grid h-auto w-full max-w-2xl rounded-2xl bg-secondary/80 p-1 border border-border/40',
-            colsClass
+            'grid h-auto w-full rounded-xl bg-muted/40 p-1',
+            fullWidth ? 'max-w-none' : 'max-w-2xl border border-border/40 bg-secondary/80 rounded-2xl',
+            colsClass,
           )}
         >
           {items.map((item) => {

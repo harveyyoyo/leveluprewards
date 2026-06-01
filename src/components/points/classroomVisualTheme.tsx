@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, type ComponentType, type ReactNode } from 'react';
+import { memo, useEffect, useMemo, useState, type ComponentType, type ReactNode } from 'react';
 import {
   Heart,
   LayoutGrid,
@@ -10,6 +10,7 @@ import {
   Star,
 } from 'lucide-react';
 import { cn, getStudentNickname } from '@/lib/utils';
+import type { ClassroomDeskDisplay } from '@/lib/classroom/classroomDeskDisplay';
 import type { Student } from '@/lib/types';
 import {
   Select,
@@ -25,7 +26,6 @@ export type { ClassroomDesign };
 
 export type ClassroomEffect =
   | 'none'
-  | 'flyUp'
   | 'confetti'
   | 'sparkles'
   | 'hearts'
@@ -66,7 +66,7 @@ export function classroomDesignShellClass(design: ClassroomDesign, isFullscreen:
 
 export function classroomControlsBarClass(design: ClassroomDesign): string {
   if (design === 'midnight') {
-    return 'mb-3 flex flex-wrap items-center gap-2 rounded-2xl border border-white/10 bg-white/5 p-3 shadow-sm backdrop-blur-md';
+    return 'mb-3 flex flex-wrap items-center gap-2 rounded-2xl border border-white/10 bg-white/5 p-3 shadow-sm';
   }
   if (design === 'brutalist') {
     return 'mb-3 flex flex-wrap items-center gap-2 border-2 border-foreground bg-card p-3 shadow-[4px_4px_0_0_hsl(var(--foreground))]';
@@ -82,7 +82,9 @@ function studentInitials(student: Student) {
 
 export type ClassroomDeskVisualProps = {
   design: ClassroomDesign;
-  student: Student;
+  /** Prefer `display` for seating grid performance. */
+  display?: ClassroomDeskDisplay;
+  student?: Student;
   index: number;
   accentColor: string;
   sessionPts: number;
@@ -93,6 +95,7 @@ export type ClassroomDeskVisualProps = {
 
 function DeskInner({
   design,
+  display,
   student,
   index,
   accentColor,
@@ -100,9 +103,9 @@ function DeskInner({
   showBalance,
   showSession,
 }: ClassroomDeskVisualProps) {
-  const initials = studentInitials(student);
-  const name = getStudentNickname(student);
-  const points = student.points ?? 0;
+  const initials = display?.initials ?? (student ? studentInitials(student) : '?');
+  const name = display?.name ?? (student ? getStudentNickname(student) : '');
+  const points = display?.points ?? student?.points ?? 0;
 
   if (design === 'minimal') {
     return (
@@ -194,6 +197,16 @@ function DeskInner({
   );
 }
 
+/** Same motion + glow as student kiosk `animate-fly-up`. */
+const STUDENT_FLY_UP_TEXT =
+  'animate-fly-up font-black tracking-widest text-emerald-400 drop-shadow-[0_0_14px_rgba(52,211,153,0.75)]';
+
+const CLASSROOM_FLY_UP_SIZE_TEXT = {
+  small: 'text-2xl',
+  medium: 'text-3xl',
+  large: 'text-4xl sm:text-5xl',
+} as const;
+
 export function classroomStudentDeskClass(
   design: ClassroomDesign,
   state: {
@@ -207,14 +220,15 @@ export function classroomStudentDeskClass(
 ): string {
   const { isPending, isFlashing, isBurstSelected, isRandom, editMode, hasStudent } = state;
   const interactive = cn(
-    'group relative flex h-full min-h-0 w-full flex-col items-center justify-center gap-1 overflow-hidden p-1 transition-all duration-300',
+    'group relative flex h-full min-h-0 w-full flex-col items-center justify-center gap-1 p-1',
+    hasStudent ? 'overflow-visible' : 'overflow-hidden',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
-    hasStudent && !editMode && 'hover:-translate-y-0.5 hover:shadow-md',
+    hasStudent && !editMode && 'hover:shadow-sm [@media(hover:hover)]:hover:-translate-y-px',
     editMode && hasStudent && 'cursor-grab active:cursor-grabbing',
     isPending && 'z-10 scale-[1.02] ring-4 ring-primary',
-    isFlashing && 'animate-pulse ring-4 ring-emerald-400/80',
+    isFlashing && 'z-10 ring-4 ring-emerald-400/80',
     isBurstSelected && 'ring-4 ring-sky-500 bg-sky-500/10',
-    isRandom && 'z-10 animate-pulse ring-4 ring-amber-400',
+    isRandom && 'z-10 ring-4 ring-amber-400',
   );
 
   if (!hasStudent) {
@@ -244,7 +258,7 @@ export function classroomStudentDeskClass(
   if (design === 'midnight') {
     return cn(
       interactive,
-      'rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur hover:border-white/30 hover:bg-white/[0.06]',
+      'rounded-2xl border border-white/10 bg-white/[0.06] hover:border-white/30 hover:bg-white/[0.1]',
     );
   }
   if (design === 'playful') {
@@ -275,29 +289,52 @@ export function ClassroomEmptyDeskLabel({ design }: { design: ClassroomDesign })
   return <span className="text-[10px] font-medium text-muted-foreground sm:text-xs">Empty seat</span>;
 }
 
-export function ClassroomDeskVisual(props: ClassroomDeskVisualProps) {
+export const ClassroomDeskVisual = memo(function ClassroomDeskVisual(props: ClassroomDeskVisualProps) {
   return <DeskInner {...props} />;
-}
+});
 
 export function ClassroomSessionBadge({
   sessionPts,
+  lastAwardLabel,
   tight,
 }: {
   sessionPts: number;
+  /** Latest quick-award label for this student this session. */
+  lastAwardLabel?: string | null;
   tight?: boolean;
 }) {
-  if (sessionPts === 0) return null;
+  if (sessionPts === 0 && !lastAwardLabel) return null;
   return (
-    <span
+    <div
       className={cn(
-        'absolute right-0.5 top-0.5 z-[1] rounded-md px-1 font-black leading-none',
-        sessionPts > 0 ? 'bg-emerald-500/90 text-white' : 'bg-rose-500/90 text-white',
-        tight ? 'text-[8px]' : 'text-[9px]',
+        'absolute bottom-0.5 right-0.5 z-[1] flex max-w-[92%] flex-col items-end gap-0.5',
+        tight && 'max-w-[88%]',
       )}
     >
-      {sessionPts > 0 ? '+' : ''}
-      {sessionPts}
-    </span>
+      {sessionPts !== 0 ? (
+        <span
+          className={cn(
+            'rounded-md px-1 font-black leading-none',
+            sessionPts > 0 ? 'bg-emerald-500/90 text-white' : 'bg-rose-500/90 text-white',
+            tight ? 'text-[8px]' : 'text-[9px]',
+          )}
+        >
+          {sessionPts > 0 ? '+' : ''}
+          {sessionPts}
+        </span>
+      ) : null}
+      {lastAwardLabel ? (
+        <span
+          className={cn(
+            'max-w-full truncate rounded border border-emerald-500/30 bg-background/95 px-1 font-semibold leading-tight text-emerald-800 shadow-sm dark:text-emerald-200',
+            tight ? 'text-[7px]' : 'text-[8px]',
+          )}
+          title={lastAwardLabel}
+        >
+          {lastAwardLabel}
+        </span>
+      ) : null}
+    </div>
   );
 }
 
@@ -508,7 +545,7 @@ export function ClassroomEffectOverlay({
   points?: number;
 }) {
   const particles = useMemo((): FxParticle[] => {
-    if (effect === 'none' || effect === 'flyUp') return [];
+    if (effect === 'none') return [];
     const count = scopedParticleCount(effect);
     return Array.from({ length: count }, (_, i) => ({
       id: i,
@@ -524,19 +561,6 @@ export function ClassroomEffectOverlay({
   }, [effect, runId]);
 
   if (effect === 'none') return null;
-
-  if (effect === 'flyUp') {
-    return (
-      <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center overflow-hidden rounded-[inherit]">
-        <div
-          key={runId}
-          className="animate-classroom-fly-up-scoped text-center text-[clamp(0.55rem,2.2vmin,0.95rem)] font-black leading-none tracking-wider text-emerald-500 drop-shadow-[0_0_8px_rgba(52,211,153,0.75)]"
-        >
-          +{points} PTS
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="pointer-events-none absolute inset-0 z-10 overflow-hidden rounded-[inherit]">
@@ -644,6 +668,96 @@ export function ClassroomEffectOverlay({
           />
         );
       })}
+    </div>
+  );
+}
+
+/** Simple award flash on desk (separate from particle celebration and kiosk fly-up). */
+export const ClassroomDeskFlashOverlay = memo(function ClassroomDeskFlashOverlay({
+  points,
+  runId,
+  showPointsBadge,
+  subtle = false,
+}: {
+  points: number;
+  runId: number;
+  showPointsBadge: boolean;
+  /** Lighter pulse when fly-up carries the main feedback. */
+  subtle?: boolean;
+}) {
+  return (
+    <div
+      className="pointer-events-none absolute inset-0 z-[12] overflow-visible rounded-[inherit]"
+      aria-hidden
+    >
+      <span
+        key={`burst-${runId}`}
+        className={cn(
+          'absolute inset-0 rounded-[inherit] animate-classroom-desk-flash-burst motion-reduce:opacity-60',
+          subtle
+            ? 'bg-[radial-gradient(circle_at_50%_50%,rgba(52,211,153,0.45)_0%,transparent_68%)]'
+            : 'bg-[radial-gradient(circle_at_50%_55%,rgba(52,211,153,0.7)_0%,rgba(16,185,129,0.28)_45%,transparent_72%)]',
+        )}
+      />
+      {!subtle ? (
+        <span
+          key={`wave-${runId}`}
+          className="absolute inset-0 rounded-[inherit] border-2 border-emerald-400/80 animate-classroom-desk-flash-wave motion-reduce:border-emerald-400"
+        />
+      ) : null}
+      {showPointsBadge && points > 0 ? (
+        <span
+          key={`pts-${runId}`}
+          className="absolute -right-0.5 -top-0.5 z-[14] rounded-md border border-emerald-400/50 bg-emerald-500 px-1.5 py-0.5 text-[11px] font-black tabular-nums text-white shadow-[0_0_12px_rgba(16,185,129,0.75)] animate-classroom-desk-flash-badge motion-reduce:opacity-100"
+        >
+          +{points}
+        </span>
+      ) : null}
+    </div>
+  );
+});
+
+/** Kiosk-style +PTS — same fly-up as student page (`animate-fly-up` 1.5s ease-out). */
+export function ClassroomKioskFlyUpOverlay({
+  points,
+  runId,
+  studentName,
+  size = 'medium',
+  mode = 'desk',
+}: {
+  points: number;
+  runId: number;
+  studentName?: string;
+  size?: keyof typeof CLASSROOM_FLY_UP_SIZE_TEXT;
+  /** `viewport` = fixed layer over the page (not clipped by desk cells). */
+  mode?: 'desk' | 'viewport';
+}) {
+  const name = (studentName || '').trim();
+  const content = (
+    <div key={runId} className="flex w-max max-w-[min(92vw,20rem)] flex-col items-center gap-1 text-center">
+      {name ? (
+        <span
+          className={cn(
+            STUDENT_FLY_UP_TEXT,
+            'max-w-full truncate text-lg uppercase sm:text-xl',
+          )}
+        >
+          {name}
+        </span>
+      ) : null}
+      <span className={cn(STUDENT_FLY_UP_TEXT, CLASSROOM_FLY_UP_SIZE_TEXT[size])}>
+        +{points} PTS
+      </span>
+    </div>
+  );
+
+  if (mode === 'viewport') {
+    return <div className="pointer-events-none -translate-x-1/2 -translate-y-1/2">{content}</div>;
+  }
+
+  return (
+    <div className="pointer-events-none absolute inset-0 z-[30] flex items-center justify-center overflow-visible px-2 py-1">
+      {content}
     </div>
   );
 }

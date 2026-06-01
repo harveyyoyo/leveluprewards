@@ -41,6 +41,9 @@ export const DEMO_MARKETING_APP_SETTINGS_PATCH = {
   enablePrizeAiSurprise: true,
   kioskCouponRedemptionManualEnabled: true,
   kioskCouponRedemptionCameraEnabled: false,
+  /** Make teacher raffle tab visible + enabled in capture sessions. */
+  teacherPinnedAddOnTabs: ['raffle'],
+  teacherHiddenAddOnTabs: [],
 };
 
 /** Fixed 6-digit code for kiosk “+PTS” redeem captures (reset before each capture). */

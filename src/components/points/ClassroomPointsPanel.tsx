@@ -1,6 +1,15 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  memo,
+  startTransition,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useDeferredValue,
+} from 'react';
 import {
   FlipVertical2,
   GripVertical,
@@ -16,21 +25,19 @@ import {
   MousePointerClick,
 } from 'lucide-react';
 import { openClassroomFullscreenTab } from '@/lib/classroomPointsUrl';
-import { ClassroomScreenSetupPopover } from '@/components/points/ClassroomScreenSetupPopover';
 import { isClassroomPillarOn, isClassroomOnlyMode, isPillarOn, CLASSROOM_SESSION_ONLY } from '@/lib/productPillars';
 import { BehaviorNoteDialog } from '@/components/classroom/BehaviorNoteDialog';
-import {
-  attendanceStatusForStudent,
-  useTodayAttendanceMap,
-  type TodayAttendanceStatus,
-} from '@/hooks/useTodayAttendanceMap';
+import { useTodayAttendanceMap } from '@/hooks/useTodayAttendanceMap';
 import { useAppContext } from '@/components/AppProvider';
+import { useFirestore } from '@/firebase';
+import { awardClassroomPoints } from '@/lib/classroom/classroomPointsClient';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { Button } from '@/components/ui/button';
 import { Helper } from '@/components/ui/helper';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 import {
   Popover,
   PopoverContent,
@@ -46,7 +53,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import {
-  addToClassroomSession,
+  applyClassroomSessionAward,
   buildInitialLayout,
   loadClassroomLayout,
   loadClassroomPrefs,
@@ -60,10 +67,11 @@ import {
   type ClassroomQuickAward,
   type ClassroomSeatingLayout,
   type ClassroomSeatingPrefs,
-  type ClassroomSessionTotals,
+  type ClassroomSessionData,
   CLASSROOM_PREFS_VERSION,
   DEFAULT_CLASSROOM_PREFS,
 } from '@/lib/classroomSeatingChart';
+import { classroomAwardDisplayLabel } from '@/lib/classroom/classroomAwardLabel';
 import {
   remainingTeacherBudgetPoints,
   resolveTeacherBudgetPeriod,
@@ -71,21 +79,26 @@ import {
   teacherWithBudgetAfterSpend,
 } from '@/lib/teacherBudget';
 import {
-  ClassroomDeskVisual,
   ClassroomDesignSwitcher,
-  ClassroomEffectOverlay,
-  ClassroomEmptyDeskLabel,
   ClassroomHeaderBrand,
   ClassroomIconButton,
-  ClassroomSessionBadge,
   ClassroomTeacherDesk,
   ClassroomToolButton,
   classroomControlsBarClass,
   classroomDesignShellClass,
-  classroomStudentDeskClass,
   useClassroomCelebrationEffect,
   type ClassroomDesign,
+  type ClassroomEffect,
 } from '@/components/points/classroomVisualTheme';
+import {
+  ClassroomSeatingGrid,
+  type ClassroomGridHandlers,
+} from '@/components/points/ClassroomSeatingGrid';
+import {
+  buildClassroomDeskCatalog,
+  classroomDeskCatalogSignature,
+  type ClassroomDeskDisplay,
+} from '@/lib/classroom/classroomDeskDisplay';
 import type { Category, Class, Student, Teacher } from '@/lib/types';
 import { cn, getStudentNickname } from '@/lib/utils';
 
@@ -107,21 +120,8 @@ type LastClassroomAction = {
   points: number;
   description: string;
   budgetSpent?: number;
+  classroomOnly?: boolean;
 };
-
-function attendanceDotClass(status: TodayAttendanceStatus): string {
-  if (status === 'absent') return 'bg-red-500';
-  if (status === 'late') return 'bg-amber-500';
-  if (status === 'on-time') return 'bg-emerald-500';
-  return 'bg-muted-foreground/40';
-}
-
-function attendanceTitle(status: TodayAttendanceStatus): string {
-  if (status === 'absent') return 'Absent today';
-  if (status === 'late') return 'Late today';
-  if (status === 'on-time') return 'Present today';
-  return '';
-}
 
 type ClassroomPointsPanelProps = {
   schoolId: string;
@@ -138,6 +138,8 @@ type ClassroomPointsPanelProps = {
   budgetOptions?: BudgetOptions;
   /** When Rewards pillar is off, track session totals only (no Firestore point writes). */
   sessionOnly?: boolean;
+  /** Bumps admin behavior timeline when a note is saved from this panel. */
+  onBehaviorNoteSaved?: () => void;
 };
 
 function deskDensity(cellCount: number): 'normal' | 'cozy' | 'tight' {
@@ -146,7 +148,7 @@ function deskDensity(cellCount: number): 'normal' | 'cozy' | 'tight' {
   return 'normal';
 }
 
-export function ClassroomPointsPanel({
+function ClassroomPointsPanelInner({
   schoolId,
   students,
   classes,
@@ -158,11 +160,14 @@ export function ClassroomPointsPanel({
   isGraphic = false,
   budgetOptions,
   sessionOnly: sessionOnlyProp,
+  onBehaviorNoteSaved,
 }: ClassroomPointsPanelProps) {
+  const deferredStudents = useDeferredValue(students);
   const isFullscreen = variant === 'fullscreen';
   const { toast } = useToast();
   const playSound = useArcadeSound();
   const { settings } = useSettings();
+  const firestore = useFirestore();
   const sessionOnly = sessionOnlyProp ?? isClassroomOnlyMode(settings);
   const { awardPoints, awardPointsToMultipleStudents, deductPointsFromMultipleStudents, userName, teacherDocId } =
     useAppContext();
@@ -172,6 +177,7 @@ export function ClassroomPointsPanel({
   const operatorName = userName || storageScope;
   const [behaviorNoteStudent, setBehaviorNoteStudent] = useState<Student | null>(null);
   const [behaviorNotePoints, setBehaviorNotePoints] = useState<{ label?: string; amount?: number }>({});
+  const [classroomBalances, setClassroomBalances] = useState<Record<string, number>>({});
 
   const [filterClassId, setFilterClassId] = useState(() => {
     if (initialClassId && classes.some((c) => c.id === initialClassId)) {
@@ -189,14 +195,26 @@ export function ClassroomPointsPanel({
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [pendingAward, setPendingAward] = useState<PendingAward | null>(null);
   const [awardingId, setAwardingId] = useState<string | null>(null);
-  const [flashCell, setFlashCell] = useState<{ index: number; points: number } | null>(null);
+  const [flyUpCell, setFlyUpCell] = useState<{
+    index: number;
+    points: number;
+    runId: number;
+    studentName: string;
+  } | null>(null);
+  const [flashCell, setFlashCell] = useState<{ index: number; points: number; runId: number } | null>(
+    null,
+  );
   const autoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prefsRef = useRef(prefs);
   prefsRef.current = prefs;
-  const [countdownTick, setCountdownTick] = useState(0);
   const [burstMode, setBurstMode] = useState(false);
   const [burstSelected, setBurstSelected] = useState<string[]>([]);
-  const [sessionTotals, setSessionTotals] = useState<ClassroomSessionTotals>({});
+  const [sessionData, setSessionData] = useState<ClassroomSessionData>({ totals: {}, lastAward: {} });
+  const [lastAwardSummary, setLastAwardSummary] = useState<{
+    label: string;
+    points: number;
+    studentLabel: string;
+  } | null>(null);
   const [lastAction, setLastAction] = useState<LastClassroomAction | null>(null);
   const [isUndoing, setIsUndoing] = useState(false);
   const [randomHighlightId, setRandomHighlightId] = useState<string | null>(null);
@@ -210,9 +228,14 @@ export function ClassroomPointsPanel({
   );
 
   const classStudents = useMemo(() => {
-    if (filterClassId === 'all') return students;
-    return students.filter((s) => s.classId === filterClassId);
-  }, [students, filterClassId]);
+    if (filterClassId === 'all') return deferredStudents;
+    return deferredStudents.filter((s) => s.classId === filterClassId);
+  }, [deferredStudents, filterClassId]);
+
+  const classStudentIdsKey = useMemo(
+    () => classStudents.map((s) => s.id).join('\0'),
+    [classStudents],
+  );
 
   const studentById = useMemo(() => {
     const map = new Map<string, Student>();
@@ -235,6 +258,78 @@ export function ClassroomPointsPanel({
   );
 
   useEffect(() => {
+    const map: Record<string, number> = {};
+    for (const s of deferredStudents) {
+      map[s.id] = s.classroomPoints ?? 0;
+    }
+    setClassroomBalances((prev) => {
+      const keys = Object.keys(map);
+      if (keys.length === Object.keys(prev).length && keys.every((id) => prev[id] === map[id])) {
+        return prev;
+      }
+      return map;
+    });
+  }, [deferredStudents]);
+
+  const classroomMeta = useMemo(
+    () => ({
+      classId: effectiveClassId && effectiveClassId !== 'all' ? effectiveClassId : undefined,
+      className: classes.find((c) => c.id === effectiveClassId)?.name,
+      teacherId: operatorId,
+      teacherName: operatorName,
+    }),
+    [classes, effectiveClassId, operatorId, operatorName],
+  );
+
+  const deskCatalogSig = useMemo(
+    () => classroomDeskCatalogSignature(deferredStudents, filterClassId),
+    [deferredStudents, filterClassId],
+  );
+
+  const deskCatalogRef = useRef<Map<string, ClassroomDeskDisplay>>(new Map());
+  const deskCatalog = useMemo(() => {
+    const next = buildClassroomDeskCatalog(
+      deferredStudents,
+      filterClassId,
+      sessionOnly,
+      classroomBalances,
+      deskCatalogRef.current,
+    );
+    deskCatalogRef.current = next;
+    return next;
+  }, [deskCatalogSig, sessionOnly, classroomBalances, deferredStudents, filterClassId]);
+
+  const visualCells = useMemo(
+    () => (layout ? visualLayoutPositions(layout, prefs.frontAtBottom) : []),
+    [layout, prefs.frontAtBottom],
+  );
+
+  const gridActiveCelebration = useMemo(
+    () =>
+      activeCelebration
+        ? {
+            effect: activeCelebration.effect,
+            cellIndex: activeCelebration.cellIndex,
+            runId: activeCelebration.runId,
+            points: activeCelebration.points,
+          }
+        : null,
+    [
+      activeCelebration?.effect,
+      activeCelebration?.cellIndex,
+      activeCelebration?.runId,
+      activeCelebration?.points,
+    ],
+  );
+
+  const gridHandlersRef = useRef<ClassroomGridHandlers>({
+    onDeskTap: () => {},
+    onBehaviorNote: () => {},
+    onDragStart: () => {},
+    onDrop: () => {},
+  });
+
+  useEffect(() => {
     setPrefs(loadClassroomPrefs(schoolId, storageScope));
   }, [schoolId, storageScope]);
 
@@ -252,16 +347,26 @@ export function ClassroomPointsPanel({
     } else {
       setLayout(buildInitialLayout(ids));
     }
-  }, [schoolId, storageScope, effectiveClassId, classStudents]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- roster layout only when class membership changes
+  }, [schoolId, storageScope, effectiveClassId, classStudentIdsKey]);
 
+  const layoutSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (!layout || !effectiveClassId || effectiveClassId === 'all') return;
-    saveClassroomLayout(schoolId, storageScope, effectiveClassId, layout);
+    if (layoutSaveTimerRef.current) clearTimeout(layoutSaveTimerRef.current);
+    layoutSaveTimerRef.current = setTimeout(() => {
+      saveClassroomLayout(schoolId, storageScope, effectiveClassId, layout);
+      layoutSaveTimerRef.current = null;
+    }, 450);
+    return () => {
+      if (layoutSaveTimerRef.current) clearTimeout(layoutSaveTimerRef.current);
+    };
   }, [layout, schoolId, storageScope, effectiveClassId]);
 
   useEffect(() => {
     if (!effectiveClassId || effectiveClassId === 'all') return;
-    setSessionTotals(loadClassroomSession(schoolId, storageScope, effectiveClassId));
+    setSessionData(loadClassroomSession(schoolId, storageScope, effectiveClassId));
+    setLastAwardSummary(null);
     setBurstSelected([]);
     setLastAction(null);
   }, [schoolId, storageScope, effectiveClassId]);
@@ -284,6 +389,77 @@ export function ClassroomPointsPanel({
     }
   }, []);
 
+  const triggerDeskAwardFeedback = useCallback(
+    (cellIndex: number, points: number, studentName?: string) => {
+      if (points <= 0) return;
+      const prefsNow = prefsRef.current;
+      const celebration = prefsNow.celebrationEffect ?? 'flash';
+      const flashFirst = celebration === 'flash';
+      const FLASH_MS = 450;
+      const FLY_UP_DELAY_MS = flashFirst ? FLASH_MS : 0;
+      /** Matches student kiosk: `animate-fly-up` 1.5s ease-out */
+      const FLY_UP_HOLD_MS = 1500;
+
+      if (flashFirst) {
+        setFlashCell({ index: cellIndex, points, runId: Date.now() });
+        window.setTimeout(() => setFlashCell(null), FLASH_MS + 120);
+      }
+
+      if (prefsNow.showKioskFlyUp) {
+        window.setTimeout(() => {
+          setFlyUpCell({
+            index: cellIndex,
+            points,
+            runId: Date.now(),
+            studentName: (studentName || '').trim(),
+          });
+          window.setTimeout(() => setFlyUpCell(null), FLY_UP_HOLD_MS);
+        }, FLY_UP_DELAY_MS);
+      }
+
+      if (celebration !== 'none' && celebration !== 'flash') {
+        playEffectAtCell(celebration as ClassroomEffect, cellIndex, points);
+      }
+    },
+    [playEffectAtCell],
+  );
+
+  const recordSessionAwards = useCallback(
+    (studentIds: string[], pointsDelta: number, description: string) => {
+      if (!effectiveClassId || effectiveClassId === 'all') return;
+      const label = classroomAwardDisplayLabel(description, prefsRef.current);
+      const next = applyClassroomSessionAward(
+        schoolId,
+        storageScope,
+        effectiveClassId,
+        studentIds,
+        pointsDelta,
+        label,
+      );
+      setSessionData(next);
+      const names = studentIds
+        .map((id) => {
+          const s = studentById.get(id);
+          return s ? getStudentNickname(s) : null;
+        })
+        .filter((n): n is string => !!n);
+      const studentLabel =
+        names.length === 0
+          ? ''
+          : names.length === 1
+            ? names[0]!
+            : names.length === 2
+              ? `${names[0]} & ${names[1]}`
+              : `${names[0]} +${names.length - 1} more`;
+      setLastAwardSummary({
+        label,
+        points: pointsDelta,
+        studentLabel,
+      });
+    },
+    [effectiveClassId, schoolId, storageScope, studentById],
+  );
+
   const applyPointsToStudents = useCallback(
     async (
       studentIds: string[],
@@ -291,9 +467,23 @@ export function ClassroomPointsPanel({
       description: string,
       options?: { flashCellIndex?: number; silent?: boolean },
     ) => {
-      if (awardingId || studentIds.length === 0) return false;
+      if (studentIds.length === 0 || (!sessionOnly && awardingId)) return false;
       const magnitude = Math.abs(points);
       const isDeduct = points < 0;
+
+      if (options?.flashCellIndex !== undefined && !isDeduct) {
+        const awardStudentId = studentIds.length === 1 ? studentIds[0]! : null;
+        const flyUpName = awardStudentId
+          ? (() => {
+              const s =
+                studentById.get(awardStudentId) ??
+                deferredStudents.find((st) => st.id === awardStudentId);
+              return s ? getStudentNickname(s) : '';
+            })()
+          : '';
+        triggerDeskAwardFeedback(options.flashCellIndex, magnitude, flyUpName);
+      }
+
       const teacher = budgetOptions?.currentTeacher ?? null;
       const skipBudget = !budgetOptions || budgetOptions.isAdmin;
       const totalCost = magnitude * studentIds.length;
@@ -318,41 +508,77 @@ export function ClassroomPointsPanel({
         }
       }
 
-      setAwardingId(studentIds[0] ?? null);
-
-      if (sessionOnly && effectiveClassId && effectiveClassId !== 'all') {
-        const sessionDelta = isDeduct ? -magnitude : magnitude;
-        setSessionTotals(
-          addToClassroomSession(
-            schoolId,
-            storageScope,
-            effectiveClassId,
-            studentIds,
-            sessionDelta,
-          ),
-        );
-        setLastAction({
+      if (sessionOnly) {
+        const signedDelta = isDeduct ? -magnitude : magnitude;
+        const optimisticAction: LastClassroomAction = {
           mode: isDeduct ? 'deduct' : 'award',
           studentIds: [...studentIds],
           points: magnitude,
           description,
+          classroomOnly: true,
+        };
+        const applySessionDelta = (delta: number) => {
+          startTransition(() => {
+            setClassroomBalances((prev) => {
+              const next = { ...prev };
+              for (const id of studentIds) {
+                next[id] = Math.max(0, (prev[id] ?? 0) + delta);
+              }
+              return next;
+            });
+            if (effectiveClassId && effectiveClassId !== 'all') {
+              recordSessionAwards(studentIds, delta, description);
+            }
+          });
+        };
+
+        startTransition(() => {
+          applySessionDelta(signedDelta);
+          setLastAction(optimisticAction);
         });
-        if (options?.flashCellIndex !== undefined && !isDeduct) {
-          setFlashCell({ index: options.flashCellIndex, points: magnitude });
-          window.setTimeout(() => setFlashCell(null), 900);
-        }
         playSound(isDeduct ? 'swoosh' : 'success');
         if (!options?.silent) {
+          const awardLabel = classroomAwardDisplayLabel(description, prefsRef.current);
+          const oneStudent =
+            studentIds.length === 1 ? studentById.get(studentIds[0]!) : undefined;
           toast({
             title: isDeduct
-              ? `−${magnitude} session (Rewards off)`
-              : `+${magnitude} session (Rewards off)`,
-            description: CLASSROOM_SESSION_ONLY.toastDescription,
+              ? oneStudent
+                ? `${getStudentNickname(oneStudent)}: −${magnitude}`
+                : `−${magnitude} classroom pt${magnitude === 1 ? '' : 's'}`
+              : oneStudent
+                ? `${getStudentNickname(oneStudent)}: ${awardLabel}`
+                : `${awardLabel} (+${magnitude})`,
+            description: isDeduct
+              ? CLASSROOM_SESSION_ONLY.toastDescription
+              : studentIds.length > 1
+                ? `${studentIds.length} students · +${magnitude} pts each`
+                : `+${magnitude} pts`,
           });
         }
-        setAwardingId(null);
+
+        const result = await awardClassroomPoints(firestore, {
+          schoolId,
+          studentIds,
+          signedDelta,
+          description,
+          ...classroomMeta,
+        });
+        if (!result.success) {
+          applySessionDelta(-signedDelta);
+          setLastAction((current) => (current === optimisticAction ? null : current));
+          playSound('error');
+          toast({
+            variant: 'destructive',
+            title: 'Could not save classroom points',
+            description: result.message,
+          });
+          return false;
+        }
         return true;
       }
+
+      setAwardingId(studentIds[0] ?? null);
 
       const result = isDeduct
         ? await deductPointsFromMultipleStudents(studentIds, magnitude, description)
@@ -378,35 +604,34 @@ export function ClassroomPointsPanel({
             'count' in result && typeof result.count === 'number'
               ? result.count
               : studentIds.length;
+          const awardLabel = classroomAwardDisplayLabel(description, prefsRef.current);
+          const oneStudent =
+            studentIds.length === 1 ? studentById.get(studentIds[0]!) : undefined;
           toast({
             title: isDeduct
               ? `−${magnitude} from ${count} student(s)`
-              : `+${magnitude} to ${count} student(s)`,
-            description: queued ? result.message : description,
+              : oneStudent
+                ? `${getStudentNickname(oneStudent)}: ${awardLabel}`
+                : `${awardLabel} (+${magnitude})`,
+            description: queued
+              ? result.message
+              : count > 1
+                ? `${count} students · ${isDeduct ? '−' : '+'}${magnitude} pts each`
+                : `${isDeduct ? '−' : '+'}${magnitude} pts`,
           });
         }
         if (!queued && effectiveClassId && effectiveClassId !== 'all') {
           const sessionDelta = isDeduct ? -magnitude : magnitude;
-          setSessionTotals(
-            addToClassroomSession(
-              schoolId,
-              storageScope,
-              effectiveClassId,
-              studentIds,
-              sessionDelta,
-            ),
-          );
-          setLastAction({
-            mode: isDeduct ? 'deduct' : 'award',
-            studentIds: [...studentIds],
-            points: magnitude,
-            description,
-            budgetSpent: !isDeduct && !skipBudget && settings.enableTeacherBudgets ? totalCost : undefined,
+          startTransition(() => {
+            recordSessionAwards(studentIds, sessionDelta, description);
+            setLastAction({
+              mode: isDeduct ? 'deduct' : 'award',
+              studentIds: [...studentIds],
+              points: magnitude,
+              description,
+              budgetSpent: !isDeduct && !skipBudget && settings.enableTeacherBudgets ? totalCost : undefined,
+            });
           });
-        }
-        if (options?.flashCellIndex !== undefined && !isDeduct) {
-          setFlashCell({ index: options.flashCellIndex, points: magnitude });
-          window.setTimeout(() => setFlashCell(null), 900);
         }
         setAwardingId(null);
         return true;
@@ -434,16 +659,13 @@ export function ClassroomPointsPanel({
       storageScope,
       effectiveClassId,
       sessionOnly,
+      firestore,
+      classroomMeta,
+      triggerDeskAwardFeedback,
+      recordSessionAwards,
+      studentById,
+      deferredStudents,
     ],
-  );
-
-  const celebrateAtCell = useCallback(
-    (cellIndex: number, points: number) => {
-      const effect = prefsRef.current.celebrationEffect ?? 'flash';
-      if (effect === 'flash') return;
-      playEffectAtCell(effect, cellIndex, points);
-    },
-    [playEffectAtCell],
   );
 
   const runAward = useCallback(
@@ -458,17 +680,10 @@ export function ClassroomPointsPanel({
       clearAutoTimer();
       const { studentId, cellIndex } = pendingAward;
       setPendingAward(null);
-      const ok = await runAward(studentId, points, description, cellIndex);
-      if (ok && points > 0) celebrateAtCell(cellIndex, points);
+      await runAward(studentId, points, description, cellIndex);
     },
-    [pendingAward, clearAutoTimer, runAward, celebrateAtCell],
+    [pendingAward, clearAutoTimer, runAward],
   );
-
-  useEffect(() => {
-    if (!pendingAward) return;
-    const interval = setInterval(() => setCountdownTick((t) => t + 1), 100);
-    return () => clearInterval(interval);
-  }, [pendingAward]);
 
   useEffect(() => {
     if (!pendingAward) {
@@ -485,12 +700,10 @@ export function ClassroomPointsPanel({
         prefsRef.current.defaultPoints,
         prefsRef.current.defaultDescription,
         cellIndex,
-      ).then((ok) => {
-        if (ok) celebrateAtCell(cellIndex, prefsRef.current.defaultPoints);
-      });
+      );
     }, remaining);
     return clearAutoTimer;
-  }, [pendingAward, clearAutoTimer, runAward, celebrateAtCell]);
+  }, [pendingAward, clearAutoTimer, runAward]);
 
   const handleDeskTap = (studentId: string, cellIndex: number) => {
     if (editMode || awardingId) return;
@@ -502,9 +715,11 @@ export function ClassroomPointsPanel({
       return;
     }
 
-    void runAward(studentId, prefs.defaultPoints, prefs.defaultDescription, cellIndex).then((ok) => {
-      if (ok) celebrateAtCell(cellIndex, prefs.defaultPoints);
-    });
+    if (prefs.instantTap) {
+      void runAward(studentId, prefs.defaultPoints, prefs.defaultDescription, cellIndex);
+      return;
+    }
+    setPendingAward({ studentId, cellIndex, startedAt: Date.now() });
   };
 
   const pickRandomStudent = useCallback(() => {
@@ -558,7 +773,31 @@ export function ClassroomPointsPanel({
     const teacher = budgetOptions?.currentTeacher ?? null;
     const skipBudget = !budgetOptions || budgetOptions.isAdmin;
     try {
-      if (lastAction.mode === 'award') {
+      if (sessionOnly || lastAction.classroomOnly) {
+        const signedDelta = lastAction.mode === 'award' ? -lastAction.points : lastAction.points;
+        const result = await awardClassroomPoints(firestore, {
+          schoolId,
+          studentIds: lastAction.studentIds,
+          signedDelta,
+          description: undoLabel,
+          ...classroomMeta,
+        });
+        if (!result.success) {
+          playSound('error');
+          toast({ variant: 'destructive', title: 'Undo failed', description: result.message });
+          return;
+        }
+        setClassroomBalances((prev) => {
+          const next = { ...prev };
+          for (const id of lastAction.studentIds) {
+            next[id] = Math.max(0, (prev[id] ?? 0) + signedDelta);
+          }
+          return next;
+        });
+        if (effectiveClassId && effectiveClassId !== 'all') {
+          recordSessionAwards(lastAction.studentIds, signedDelta, undoLabel);
+        }
+      } else if (lastAction.mode === 'award') {
         const result = await deductPointsFromMultipleStudents(
           lastAction.studentIds,
           lastAction.points,
@@ -579,15 +818,7 @@ export function ClassroomPointsPanel({
           await budgetOptions.onBudgetSpend(-lastAction.budgetSpent);
         }
         if (effectiveClassId && effectiveClassId !== 'all') {
-          setSessionTotals(
-            addToClassroomSession(
-              schoolId,
-              storageScope,
-              effectiveClassId,
-              lastAction.studentIds,
-              -lastAction.points,
-            ),
-          );
+          recordSessionAwards(lastAction.studentIds, -lastAction.points, undoLabel);
         }
       } else {
         const result = await awardPointsToMultipleStudents(
@@ -601,15 +832,7 @@ export function ClassroomPointsPanel({
           return;
         }
         if (effectiveClassId && effectiveClassId !== 'all') {
-          setSessionTotals(
-            addToClassroomSession(
-              schoolId,
-              storageScope,
-              effectiveClassId,
-              lastAction.studentIds,
-              lastAction.points,
-            ),
-          );
+          recordSessionAwards(lastAction.studentIds, lastAction.points, undoLabel);
         }
       }
       playSound('swoosh');
@@ -630,13 +853,23 @@ export function ClassroomPointsPanel({
     schoolId,
     storageScope,
     effectiveClassId,
+    sessionOnly,
+    firestore,
+    classroomMeta,
+    recordSessionAwards,
   ]);
 
   useEffect(() => {
     if (editMode || pendingAward) return;
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-      if (e.key === 'r' || e.key === 'R') {
+      if (e.target instanceof HTMLSelectElement) return;
+      const hasModifier = e.ctrlKey || e.metaKey || e.altKey || e.shiftKey;
+      if (
+        prefsRef.current.showRandomPicker &&
+        (e.key === 'r' || e.key === 'R') &&
+        !hasModifier
+      ) {
         e.preventDefault();
         pickRandomStudent();
       } else if (e.key === 'u' && (e.ctrlKey || e.metaKey)) {
@@ -665,6 +898,16 @@ export function ClassroomPointsPanel({
     setDragIndex(null);
   };
 
+  gridHandlersRef.current = {
+    onDeskTap: handleDeskTap,
+    onBehaviorNote: (studentId) => {
+      const s = studentById.get(studentId);
+      if (s) openBehaviorNote(s);
+    },
+    onDragStart: handleDragStart,
+    onDrop: handleDrop,
+  };
+
   const placeStudentOnDesk = (studentId: string, cellIndex: number) => {
     if (!layout) return;
     const cells = layout.cells.map((id, i) => {
@@ -676,6 +919,13 @@ export function ClassroomPointsPanel({
   };
 
   const resetLayout = () => {
+    if (typeof window !== 'undefined') {
+      const className = effectiveClassName?.trim();
+      const prompt = className
+        ? `Reset the seating layout for ${className}? Desk positions will be rebuilt and any custom arrangement will be lost.`
+        : 'Reset the seating layout? Desk positions will be rebuilt and any custom arrangement will be lost.';
+      if (!window.confirm(prompt)) return;
+    }
     const ids = classStudents.map((s) => s.id);
     setLayout(buildInitialLayout(ids));
     setPendingAward(null);
@@ -685,7 +935,6 @@ export function ClassroomPointsPanel({
   const updatePrefs = (next: ClassroomSeatingPrefs) => {
     const normalized = {
       ...next,
-      instantTap: true as const,
       prefsVersion: CLASSROOM_PREFS_VERSION,
     };
     setPrefs(normalized);
@@ -695,12 +944,6 @@ export function ClassroomPointsPanel({
   const setDesign = (nextDesign: ClassroomDesign) => {
     updatePrefs({ ...prefs, design: nextDesign });
   };
-
-  const pendingProgress =
-    pendingAward && prefs.autoAwardMs > 0
-      ? Math.min(1, (Date.now() - pendingAward.startedAt) / prefs.autoAwardMs)
-      : 0;
-  void countdownTick;
 
   if (classes.length === 0) {
     return (
@@ -739,11 +982,17 @@ export function ClassroomPointsPanel({
   if (!layout) return null;
 
   const pendingStudent = pendingAward ? studentById.get(pendingAward.studentId) : null;
+  const chartNeedsRosterPlacement =
+    !editMode && classStudents.length > 0 && placedStudentIds.length === 0;
+  const noStudentsInClass = !editMode && classStudents.length === 0;
+  const fillChartFromRoster = () => {
+    const ids = classStudents.map((s) => s.id);
+    setLayout(buildInitialLayout(ids));
+  };
   const cellCount = layout.rows * layout.cols;
   const density = deskDensity(cellCount);
   const gridGap = density === 'tight' ? 3 : density === 'cozy' ? 5 : 8;
   const frontAtBottom = prefs.frontAtBottom;
-  const visualCells = visualLayoutPositions(layout, frontAtBottom);
 
   const teacherDesk = (
     <ClassroomTeacherDesk design={design} frontAtBottom={frontAtBottom} />
@@ -808,28 +1057,13 @@ export function ClassroomPointsPanel({
 
   return (
     <div className={cn(classroomDesignShellClass(design, isFullscreen), isFullscreen && 'gap-2 p-1')}>
-      {sessionOnly ? (
-        <Helper content={CLASSROOM_SESSION_ONLY.bannerHint}>
-          <div
-            className="rounded-xl border border-amber-300/40 bg-amber-50 px-3 py-2.5 text-xs text-amber-950 dark:bg-amber-950/30 dark:text-amber-100"
-            role="status"
-          >
-            <p className="font-bold">{CLASSROOM_SESSION_ONLY.bannerTitle}</p>
-            <p className="mt-1 font-medium leading-snug opacity-95">{CLASSROOM_SESSION_ONLY.bannerBody}</p>
-          </div>
-        </Helper>
-      ) : null}
       {isFullscreen ? (
         <ClassroomHeaderBrand
           design={design}
           studentCount={placedStudentIds.length}
           className="shrink-0 px-1"
         />
-      ) : (
-        <Helper content="Tap a student for a quick award. Use Arrange to drag desks; the teacher desk marks the front of the room.">
-          <ClassroomHeaderBrand design={design} studentCount={placedStudentIds.length} />
-        </Helper>
-      )}
+      ) : null}
 
       <div className={classroomControlsBarClass(design)}>
         <Select
@@ -854,21 +1088,25 @@ export function ClassroomPointsPanel({
 
         {!editMode && (
           <>
-            <ClassroomToolButton
-              design={design}
-              icon={Shuffle}
-              label="Random"
-              title="Random student (R)"
-              onClick={pickRandomStudent}
-            />
-            <ClassroomToolButton
-              design={design}
-              icon={Users}
-              label={`Class +${prefs.defaultPoints}`}
-              title={`Award +${prefs.defaultPoints} to everyone on the chart`}
-              onClick={awardWholeClass}
-              disabled={!placedStudentIds.length}
-            />
+            {prefs.showRandomPicker ? (
+              <ClassroomToolButton
+                design={design}
+                icon={Shuffle}
+                label="Random"
+                title="Random student (R)"
+                onClick={pickRandomStudent}
+              />
+            ) : null}
+            {prefs.showClassAwardButton ? (
+              <ClassroomToolButton
+                design={design}
+                icon={Users}
+                label={`Class +${prefs.defaultPoints}`}
+                title={`Award +${prefs.defaultPoints} to everyone on the chart`}
+                onClick={awardWholeClass}
+                disabled={!placedStudentIds.length}
+              />
+            ) : null}
             <ClassroomToolButton
               design={design}
               icon={MousePointerClick}
@@ -918,13 +1156,7 @@ export function ClassroomPointsPanel({
           />
         )}
 
-        {!isFullscreen && effectiveClassId && effectiveClassId !== 'all' ? (
-          <ClassroomScreenSetupPopover
-            schoolId={schoolId}
-            scope={storageScope}
-            classId={effectiveClassId}
-          />
-        ) : null}
+        {/* Room display launcher moves to the Room display section when it leaves "coming soon". */}
 
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <ClassroomDesignSwitcher design={design} onDesignChange={setDesign} />
@@ -994,131 +1226,83 @@ export function ClassroomPointsPanel({
         </div>
       )}
 
+      {chartNeedsRosterPlacement ? (
+        <div className="flex shrink-0 flex-col gap-2 rounded-xl border border-amber-500/35 bg-amber-500/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-amber-950 dark:text-amber-50">
+            <span className="font-bold">No students on the chart.</span>{' '}
+            {effectiveClassName ? `${effectiveClassName} has ` : ''}
+            {classStudents.length} student{classStudents.length === 1 ? '' : 's'} in the roster but none are
+            on seats yet.
+          </p>
+          <Button type="button" size="sm" className="shrink-0 rounded-xl font-bold" onClick={fillChartFromRoster}>
+            Place class on chart
+          </Button>
+        </div>
+      ) : null}
+      {noStudentsInClass ? (
+        <p className="shrink-0 rounded-xl border border-dashed bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
+          No students in {effectiveClassName || 'this class'} yet. Add them under{' '}
+          <span className="font-semibold text-foreground">Students</span> (or import a roster), then return here.
+        </p>
+      ) : null}
+
       <div
         className={cn(
-          'flex min-h-0 min-w-0 flex-col',
+          'flex min-h-0 min-w-0 flex-col overflow-visible',
           isFullscreen ? 'flex-1' : 'h-[min(58vh,560px)] min-h-[200px]',
         )}
       >
         {!frontAtBottom && teacherDesk}
-        <div
-          className="grid h-full min-h-0 w-full flex-1"
-          style={{
-            gridTemplateRows: `repeat(${layout.rows}, minmax(0, 1fr))`,
-            gridTemplateColumns: `repeat(${layout.cols}, minmax(0, 1fr))`,
-            gap: gridGap,
-          }}
-        >
-        {visualCells.map(({ cellIndex, visualRow }) => {
-          const studentId = layout.cells[cellIndex];
-          const student = studentId ? studentById.get(studentId) : null;
-          const isPending = pendingAward?.cellIndex === cellIndex;
-          const isFlashing = flashCell?.index === cellIndex;
-          const isBurstSelected = studentId ? burstSelected.includes(studentId) : false;
-          const isRandom = studentId === randomHighlightId;
-          const sessionPts = studentId ? sessionTotals[studentId] ?? 0 : 0;
-          const attStatus = studentId
-            ? attendanceStatusForStudent(todayAttendance, studentId, attendanceEnabled)
-            : 'unknown';
-
-          return (
-            <div
-              key={`desk-${cellIndex}`}
-              className="relative min-h-0 min-w-0"
-            >
-              <button
-                type="button"
-                draggable={editMode && !!studentId}
-                onDragStart={() => handleDragStart(cellIndex)}
-                onDragOver={(e) => {
-                  if (editMode) e.preventDefault();
-                }}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  handleDrop(cellIndex);
-                }}
-                onClick={(e) => {
-                  if (editMode) return;
-                  if (studentId && e.shiftKey) {
-                    const s = studentById.get(studentId);
-                    if (s) openBehaviorNote(s);
-                    return;
-                  }
-                  if (studentId) handleDeskTap(studentId, cellIndex);
-                }}
-                disabled={!student && !editMode}
-                className={cn(
-                  classroomStudentDeskClass(design, {
-                    hasStudent: !!student,
-                    isPending,
-                    isFlashing,
-                    isBurstSelected,
-                    isRandom,
-                    editMode,
-                  }),
-                  awardingId === studentId && 'opacity-60',
-                )}
-              >
-                {student ? (
-                  <>
-                    <ClassroomDeskVisual
-                      design={design}
-                      student={student}
-                      index={visualRow * layout.cols + (cellIndex % layout.cols)}
-                      accentColor={accentColor}
-                      sessionPts={sessionPts}
-                      showBalance={prefs.showPointBalances}
-                      showSession={false}
-                    />
-                    {prefs.showSessionTotals && (
-                      <ClassroomSessionBadge sessionPts={sessionPts} tight={density === 'tight'} />
-                    )}
-                  </>
-                ) : (
-                  <ClassroomEmptyDeskLabel design={design} />
-                )}
-
-                {isPending && (
-                  <span
-                    className="pointer-events-none absolute inset-0 rounded-2xl border-4 border-primary"
-                    style={{
-                      clipPath: `inset(${100 - pendingProgress * 100}% 0 0 0)`,
-                      opacity: 0.35,
-                    }}
-                  />
-                )}
-
-                {isFlashing && flashCell && prefs.celebrationEffect !== 'flyUp' && (
-                  <span className="pointer-events-none absolute -top-1 right-1 animate-bounce text-sm font-black text-emerald-600">
-                    +{flashCell.points}
-                  </span>
-                )}
-
-                {attendanceEnabled && student && attStatus !== 'unknown' ? (
-                  <span
-                    className={cn(
-                      'pointer-events-none absolute left-1 top-1 h-2.5 w-2.5 rounded-full ring-2 ring-background',
-                      attendanceDotClass(attStatus),
-                    )}
-                    title={attendanceTitle(attStatus)}
-                  />
-                ) : null}
-
-                {activeCelebration?.cellIndex === cellIndex ? (
-                  <ClassroomEffectOverlay
-                    effect={activeCelebration.effect}
-                    runId={activeCelebration.runId}
-                    points={activeCelebration.points}
-                  />
-                ) : null}
-              </button>
-
-            </div>
-          );
-        })}
-        </div>
+        <ClassroomSeatingGrid
+          layoutRows={layout.rows}
+          layoutCols={layout.cols}
+          cellStudentIds={layout.cells}
+          visualCells={visualCells}
+          deskCatalog={deskCatalog}
+          design={design}
+          accentColor={accentColor}
+          sessionTotals={sessionData.totals}
+          sessionLastAwards={sessionData.lastAward}
+          showBalance={prefs.showPointBalances}
+          showSessionTotals={prefs.showSessionTotals}
+          density={density}
+          gridGap={gridGap}
+          editMode={editMode}
+          pendingCellIndex={pendingAward?.cellIndex ?? null}
+          pendingStartedAt={pendingAward?.startedAt ?? null}
+          autoAwardMs={prefs.autoAwardMs}
+          flyUpCell={flyUpCell}
+          flyUpSize={prefs.kioskFlyUpSize}
+          flashCell={flashCell}
+          burstSelected={burstSelected}
+          randomHighlightId={randomHighlightId}
+          awardingId={awardingId}
+          attendanceEnabled={attendanceEnabled}
+          attendanceByStudent={todayAttendance}
+          activeCelebration={gridActiveCelebration}
+          handlersRef={gridHandlersRef}
+        />
         {frontAtBottom && teacherDesk}
       </div>
+
+      {lastAwardSummary && prefs.showSessionTotals && !editMode ? (
+        <p
+          className="mt-2 shrink-0 text-center text-[11px] leading-snug text-muted-foreground sm:text-xs"
+          aria-live="polite"
+        >
+          Last award:{' '}
+          <span className="font-semibold text-foreground">
+            {lastAwardSummary.label}
+            {lastAwardSummary.points > 0 ? ` (+${lastAwardSummary.points})` : ''}
+          </span>
+          {lastAwardSummary.studentLabel ? (
+            <>
+              {' '}
+              → <span className="font-medium text-foreground">{lastAwardSummary.studentLabel}</span>
+            </>
+          ) : null}
+        </p>
+      ) : null}
 
       {burstMode && burstSelected.length > 0 && !editMode && (
         <div className="flex shrink-0 flex-wrap items-center justify-center gap-2 rounded-xl border border-sky-500/30 bg-sky-500/10 px-3 py-2">
@@ -1175,7 +1359,8 @@ export function ClassroomPointsPanel({
           <Sparkles className="h-3.5 w-3.5 shrink-0 text-primary" />
           <>Tap once = instant +{prefs.defaultPoints}.</>
           <span className="text-muted-foreground/70">
-            · Shift+click behavior note · R random · Ctrl+U undo · Arrange to flip room
+            · Shift+click behavior note
+            {prefs.showRandomPicker ? ' · R random' : ''} · Ctrl+U undo · Arrange to flip room
             {attendanceEnabled ? ' · Dot = today attendance' : ''}
           </span>
         </p>
@@ -1203,11 +1388,38 @@ export function ClassroomPointsPanel({
           teacherName={operatorName}
           pointsLabel={behaviorNotePoints.label}
           pointsAmount={behaviorNotePoints.amount}
+          onSaved={onBehaviorNoteSaved}
         />
       ) : null}
     </div>
   );
 }
+
+function classroomStudentsSignature(students: Student[]): string {
+  return students
+    .map((s) => `${s.id}:${s.classroomPoints ?? 0}:${s.points ?? 0}:${s.classId ?? ''}`)
+    .sort()
+    .join('|');
+}
+
+/** Skips re-render when unrelated parent state changes but roster display is the same. */
+export const ClassroomPointsPanel = memo(ClassroomPointsPanelInner, (prev, next) => {
+  return (
+    prev.schoolId === next.schoolId &&
+    prev.storageScope === next.storageScope &&
+    prev.variant === next.variant &&
+    prev.initialClassId === next.initialClassId &&
+    prev.sessionOnly === next.sessionOnly &&
+    prev.onBehaviorNoteSaved === next.onBehaviorNoteSaved &&
+    prev.accentColor === next.accentColor &&
+    prev.isGraphic === next.isGraphic &&
+    prev.classes.length === next.classes.length &&
+    prev.classes.every((c, i) => c.id === next.classes[i]?.id) &&
+    (prev.categories?.length ?? 0) === (next.categories?.length ?? 0) &&
+    prev.budgetOptions === next.budgetOptions &&
+    classroomStudentsSignature(prev.students) === classroomStudentsSignature(next.students)
+  );
+});
 
 function ClassroomAwardMenu({
   student,
@@ -1454,7 +1666,6 @@ function ClassroomPrefsPopover({
       onChange({
         ...prefs,
         ...patch,
-        instantTap: true,
         autoAwardMs:
           patch.autoAwardMs !== undefined
             ? Math.max(1000, Math.min(10000, patch.autoAwardMs))
@@ -1486,19 +1697,26 @@ function ClassroomPrefsPopover({
       <PopoverContent className="z-[250] max-h-[min(85vh,560px)] w-96 overflow-y-auto rounded-2xl" align="end">
         <p className="mb-1 text-sm font-black">Classroom settings</p>
         <p className="mb-4 text-xs text-muted-foreground">
-          Changes apply immediately. Default points, celebration effects, and desk display.
+          Changes apply immediately. Default points, kiosk fly-up, particles, and desk display.
         </p>
         <div className="space-y-4">
           <div className="space-y-2 rounded-xl border bg-muted/20 p-3">
             <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">When you tap a student</p>
-            <p className="text-xs leading-snug text-muted-foreground">
-              <span className="font-semibold text-foreground">Instant tap</span> — one tap awards default points
-              immediately. There is no popup menu.
-            </p>
+            <label className="flex cursor-pointer items-start gap-2">
+              <Switch
+                className="mt-0.5"
+                checked={!prefs.instantTap}
+                onCheckedChange={(v) => patchPrefs({ instantTap: v !== true })}
+              />
+              <span className="text-xs leading-snug">
+                <span className="font-semibold text-foreground">Show award menu on tap</span> — pick quick awards,
+                categories, corrections, or a behavior note. Off = one tap gives default points immediately.
+              </span>
+            </label>
             <div>
               <Label className="text-xs">Default points</Label>
               <p className="mb-1 text-[11px] text-muted-foreground">
-                Used for instant tap, Class +N, and burst awards.
+                Used for instant tap, menu auto-award timer, entire-class awards (when enabled), and burst awards.
               </p>
               <Input
                 type="number"
@@ -1510,35 +1728,101 @@ function ClassroomPrefsPopover({
                 }
               />
             </div>
-            <div>
-              <Label className="text-xs">Celebration effect</Label>
-              <p className="mb-1 text-[11px] text-muted-foreground">
-                Optional extra animation on the desk. Simple flash is the default; Kiosk fly-up matches the student
-                +PTS animation.
-              </p>
-              <Select
-                value={prefs.celebrationEffect}
-                onValueChange={(v) =>
-                  patchPrefs({
-                    celebrationEffect: v as ClassroomSeatingPrefs['celebrationEffect'],
-                  })
-                }
-              >
-                <SelectTrigger className="h-9 rounded-lg text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="z-[350]" position="popper">
-                  <SelectItem value="flash">Simple flash</SelectItem>
-                  <SelectItem value="flyUp">Kiosk fly-up (+PTS)</SelectItem>
-                  <SelectItem value="sparkles">Sparkles</SelectItem>
-                  <SelectItem value="confetti">Confetti</SelectItem>
-                  <SelectItem value="hearts">Hearts</SelectItem>
-                  <SelectItem value="stars">Stars</SelectItem>
-                  <SelectItem value="fireworks">Fireworks</SelectItem>
-                  <SelectItem value="snow">Snow</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          </div>
+
+          <div className="space-y-2 rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-3">
+            <p className="text-xs font-bold uppercase tracking-wide text-emerald-800 dark:text-emerald-200">
+              Kiosk fly-up
+            </p>
+            <label className="flex cursor-pointer items-start gap-2">
+              <Checkbox
+                className="mt-0.5"
+                checked={prefs.showKioskFlyUp}
+                onCheckedChange={(v) => patchPrefs({ showKioskFlyUp: v === true })}
+              />
+              <span className="text-xs leading-snug">
+                <span className="font-semibold">Show +PTS fly-up</span> — floating name and points on the desk (student
+                kiosk style). Independent of celebration below.
+              </span>
+            </label>
+            {prefs.showKioskFlyUp ? (
+              <div className="space-y-1 pl-6">
+                <Label className="text-xs">Fly-up size</Label>
+                <Select
+                  value={prefs.kioskFlyUpSize}
+                  onValueChange={(v) =>
+                    patchPrefs({ kioskFlyUpSize: v as ClassroomSeatingPrefs['kioskFlyUpSize'] })
+                  }
+                >
+                  <SelectTrigger className="h-9 rounded-lg text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="z-[350]" position="popper">
+                    <SelectItem value="small">Small</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="large">Large</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="space-y-2 rounded-xl border bg-muted/20 p-3">
+            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+              Celebration
+            </p>
+            <p className="text-[11px] leading-snug text-muted-foreground">
+              Simple flash is the default. Particles are optional extras — not the fly-up.
+            </p>
+            <Select
+              value={prefs.celebrationEffect}
+              onValueChange={(v) =>
+                patchPrefs({
+                  celebrationEffect: v as ClassroomSeatingPrefs['celebrationEffect'],
+                })
+              }
+            >
+              <SelectTrigger className="h-9 rounded-lg text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="z-[350]" position="popper">
+                <SelectItem value="flash">Simple flash</SelectItem>
+                <SelectItem value="none">None</SelectItem>
+                <SelectItem value="sparkles">Sparkles</SelectItem>
+                <SelectItem value="confetti">Confetti</SelectItem>
+                <SelectItem value="hearts">Hearts</SelectItem>
+                <SelectItem value="stars">Stars</SelectItem>
+                <SelectItem value="fireworks">Fireworks</SelectItem>
+                <SelectItem value="snow">Snow</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2 rounded-xl border bg-muted/20 p-3">
+            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Toolbar</p>
+            <label className="flex cursor-pointer items-start gap-2">
+              <Checkbox
+                className="mt-0.5"
+                checked={prefs.showRandomPicker}
+                onCheckedChange={(v) => patchPrefs({ showRandomPicker: v === true })}
+              />
+              <span className="text-xs leading-snug">
+                <span className="font-semibold">Random picker</span> — show the Random button and{' '}
+                <kbd className="rounded border bg-muted px-1 font-mono text-[10px]">R</kbd> shortcut to highlight a
+                student on the chart.
+              </span>
+            </label>
+            <label className="flex cursor-pointer items-start gap-2">
+              <Checkbox
+                className="mt-0.5"
+                checked={prefs.showClassAwardButton}
+                onCheckedChange={(v) => patchPrefs({ showClassAwardButton: v === true })}
+              />
+              <span className="text-xs leading-snug">
+                <span className="font-semibold">Entire class award</span> — show the Class +N button to award default
+                points to every student on the seating chart at once.
+              </span>
+            </label>
           </div>
 
           <div className="space-y-2 rounded-xl border bg-muted/20 p-3">
@@ -1561,8 +1845,8 @@ function ClassroomPrefsPopover({
                 onCheckedChange={(v) => patchPrefs({ showSessionTotals: v === true })}
               />
               <span className="text-xs leading-snug">
-                <span className="font-semibold">Session badges</span> — small +/− badge for points given today in
-                this class.
+                <span className="font-semibold">Session badges</span> — session points and the last quick-award label
+                on each desk; a summary line below the chart after each award.
               </span>
             </label>
           </div>

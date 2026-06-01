@@ -6,6 +6,7 @@ import {
   staffPortalAddOnTabs,
   staffPortalCoreTabs,
   staffPortalDefaultTab,
+  staffPortalPinWelcomeFirst,
   staffPortalTabsForRole,
 } from './tabRegistry';
 import type { StaffPortalRole, StaffPortalTabDef, StaffPortalTabView } from './types';
@@ -58,7 +59,7 @@ function orderTabs(
     seen.add(def.value);
   }
 
-  return out;
+  return staffPortalPinWelcomeFirst(out);
 }
 
 /**

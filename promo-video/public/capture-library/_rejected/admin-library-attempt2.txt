@@ -1,14 +1,24 @@
-page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:3000/schoolabc/admin
-Call log:
-  - navigating to "http://127.0.0.1:3000/schoolabc/admin", waiting until "domcontentloaded"
+locator.waitFor: Error: strict mode violation: getByRole('link', { name: /Student Kiosk/i }).first().or(getByRole('button', { name: /Student Kiosk/i }).first()).or(getByText(/Student Kiosk/i).first()) resolved to 2 elements:
+    1) <a href="/schoolabc/student" class="group relative h-full flex flex-col rounded-2xl no-underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background z-0 hover:z-10 focus-visible:z-10">…</a> aka getByRole('link', { name: 'Student Kiosk Scan your card' })
+    2) <span>Student Kiosk</span> aka getByRole('link', { name: 'Student Kiosk Scan your card' })
 
-page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:3000/schoolabc/admin
 Call log:
-  - navigating to "http://127.0.0.1:3000/schoolabc/admin", waiting until "domcontentloaded"
+  - waiting for getByRole('link', { name: /Student Kiosk/i }).first().or(getByRole('button', { name: /Student Kiosk/i }).first()).or(getByText(/Student Kiosk/i).first()) to be visible
 
-    at gotoAdmin (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:631:14)
-    at gotoAdminTab (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:774:9)
-    at prepare (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:1714:24)
-    at recordClipReady (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:854:15)
-    at async captureLibrary (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:1873:26)
-    at async main (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:2038:5)
+locator.waitFor: Error: strict mode violation: getByRole('link', { name: /Student Kiosk/i }).first().or(getByRole('button', { name: /Student Kiosk/i }).first()).or(getByText(/Student Kiosk/i).first()) resolved to 2 elements:
+    1) <a href="/schoolabc/student" class="group relative h-full flex flex-col rounded-2xl no-underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background z-0 hover:z-10 focus-visible:z-10">…</a> aka getByRole('link', { name: 'Student Kiosk Scan your card' })
+    2) <span>Student Kiosk</span> aka getByRole('link', { name: 'Student Kiosk Scan your card' })
+
+Call log:
+  - waiting for getByRole('link', { name: /Student Kiosk/i }).first().or(getByRole('button', { name: /Student Kiosk/i }).first()).or(getByText(/Student Kiosk/i).first()) to be visible
+
+    at waitForPortalHub (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:281:6)
+    at async schoolLogin (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:356:3)
+    at async adminLogin (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:793:5)
+    at async gotoAdmin (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:837:5)
+    at async gotoAdminTab (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:1046:3)
+    at async prepare (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:2331:18)
+    at async recordClipReady (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:1127:9)
+    at async captureLibrary (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:2508:26)
+    at async capturePromoBroll (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:2656:3)
+    at async main (C:\Users\Administrator\school arcade reward antigravity\studio\scripts\capture-walkthrough-videos.mjs:2815:5)

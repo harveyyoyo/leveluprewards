@@ -17,6 +17,8 @@ const admin = require("firebase-admin");
 const crypto = require("crypto");
 const firestore_1 = require("firebase-admin/firestore");
 const signInAttendance_1 = require("./signInAttendance");
+const developerSchoolInsights_1 = require("./developerSchoolInsights");
+const developerSchoolHealthEmail_1 = require("./developerSchoolHealthEmail");
 const couponRedemption_1 = require("./couponRedemption");
 const crypto_1 = require("./crypto");
 const googleAllowlist_1 = require("./googleAllowlist");
@@ -105,17 +107,23 @@ function developerGoogleEmailAllowlist() {
 }
 /** Allowed Google accounts may provision school admin without the admin passcode. */
 function isAllowedGoogleAdminBypass(context) {
-    var _a, _b, _c, _d, _e, _f;
+    var _a, _b, _c;
     const email = ((_c = (_b = (_a = context.auth) === null || _a === void 0 ? void 0 : _a.token) === null || _b === void 0 ? void 0 : _b.email) !== null && _c !== void 0 ? _c : "").trim().toLowerCase();
-    const provider = (_f = (_e = (_d = context.auth) === null || _d === void 0 ? void 0 : _d.token) === null || _e === void 0 ? void 0 : _e.firebase) === null || _f === void 0 ? void 0 : _f.sign_in_provider;
-    if (provider !== "google.com" || !email)
+    if (!email || !isGoogleAuthenticated(context))
         return false;
     return (0, googleAllowlist_1.isAllowedGoogleEmailOnAllowlist)(email, developerGoogleEmailAllowlist());
 }
 // Demo schools should authenticate like any other school (no passcode bypass).
 function isGoogleAuthenticated(context) {
-    var _a, _b, _c;
-    return ((_c = (_b = (_a = context.auth) === null || _a === void 0 ? void 0 : _a.token) === null || _b === void 0 ? void 0 : _b.firebase) === null || _c === void 0 ? void 0 : _c.sign_in_provider) === "google.com";
+    var _a, _b, _c, _d;
+    const token = (_a = context.auth) === null || _a === void 0 ? void 0 : _a.token;
+    const provider = String((_c = (_b = token === null || token === void 0 ? void 0 : token.firebase) === null || _b === void 0 ? void 0 : _b.sign_in_provider) !== null && _c !== void 0 ? _c : "");
+    if (provider === "google.com")
+        return true;
+    // When an anonymous Firebase user is linked to Google, `sign_in_provider` may remain "anonymous".
+    // The ID token still includes Google identities when the account is linked.
+    const identities = (_d = token === null || token === void 0 ? void 0 : token.firebase) === null || _d === void 0 ? void 0 : _d.identities;
+    return Boolean(identities && (identities["google.com"] || identities.google));
 }
 async function hasExistingSchoolPortalAccess(schoolId, uid, context) {
     const db = admin.firestore();
@@ -138,6 +146,10 @@ async function hasExistingSchoolPortalAccess(schoolId, uid, context) {
         .doc(uid)
         .get();
     if (portalSnap.exists)
+        return true;
+    // Allowlisted Google dev/owner accounts may enter any school without the access passcode
+    // (same bypass used for admin passcode login).
+    if (isAllowedGoogleAdminBypass(context))
         return true;
     return isDeveloper(context);
 }
@@ -181,6 +193,12 @@ async function schoolEntryCodeIsRequired(db, schoolId) {
     const secretSnap = await db.collection("schools").doc(schoolId).collection("secrets").doc("entry").get();
     const code = secretSnap.exists ? String((_b = (_a = secretSnap.data()) === null || _a === void 0 ? void 0 : _a.code) !== null && _b !== void 0 ? _b : "").trim() : "";
     return code.length > 0;
+}
+async function schoolAccessPasscodeIsRequired(db, schoolId) {
+    const schoolSnap = await db.collection("schools").doc(schoolId).get();
+    if (!schoolSnap.exists)
+        return false;
+    return schoolAccessPasscodeFrom(schoolSnap.data() || {}).length > 0;
 }
 function requireDescriptor(value, name) {
     if (!Array.isArray(value) ||
@@ -632,11 +650,9 @@ exports.verifySchoolPasscode = functions.https.onCall(async (data, context) => {
     const googleAdminBypass = isAllowedGoogleAdminBypass(context);
     if (!googleAdminBypass) {
         if (passcode.length === 0) {
-            if (isGoogleAuthenticated(context)) {
-                const existingAdmin = await adminRoleRef.get();
-                if (existingAdmin.exists && ((_a = existingAdmin.data()) === null || _a === void 0 ? void 0 : _a.role) === "admin") {
-                    return { success: true };
-                }
+            const existingAdmin = await adminRoleRef.get();
+            if (existingAdmin.exists && ((_a = existingAdmin.data()) === null || _a === void 0 ? void 0 : _a.role) === "admin") {
+                return { success: true };
             }
             throw new functions.https.HttpsError("invalid-argument", "A valid passcode is required.");
         }
@@ -707,6 +723,11 @@ async function requireDeveloper(context) {
         throw new functions.https.HttpsError("permission-denied", "Developer access is required.");
     }
 }
+exports.getDeveloperSchoolUsageInsights = developerSchoolInsights_1.getDeveloperSchoolUsageInsights;
+exports.getDeveloperHealthAlertSettings = developerSchoolHealthEmail_1.getDeveloperHealthAlertSettings;
+exports.updateDeveloperHealthAlertSettings = developerSchoolHealthEmail_1.updateDeveloperHealthAlertSettings;
+exports.sendDeveloperHealthAlertEmailNow = developerSchoolHealthEmail_1.sendDeveloperHealthAlertEmailNow;
+exports.scheduledDeveloperHealthAlertEmail = developerSchoolHealthEmail_1.scheduledDeveloperHealthAlertEmail;
 /** Callable: add current user to developer allow-list (allowed Google accounts only). */
 exports.addDeveloperMe = functions.https.onCall(async (_data, context) => {
     var _a, _b, _c, _d, _e, _f;
@@ -1031,6 +1052,10 @@ exports.enterSchoolKioskSession = functions.https.onCall(async (data, context) =
     }
     if (await schoolEntryCodeIsRequired(db, schoolId)) {
         throw new functions.https.HttpsError("permission-denied", "School entry required.");
+    }
+    if (await schoolAccessPasscodeIsRequired(db, schoolId) &&
+        !(await hasExistingSchoolPortalAccess(schoolId, context.auth.uid, context))) {
+        throw new functions.https.HttpsError("permission-denied", "School passcode required.");
     }
     await db
         .collection("schools")
@@ -1777,16 +1802,6 @@ exports.awardSpecialDayPoints = functions.https.onCall(async (data, context) => 
                 }, { merge: true });
             }
         }
-        if (settings.enableSpecialDayPoints === true && settings.specialDayDate === today.monthDay) {
-            const amount = Number(settings.specialDayPointsAmount || 0);
-            if (lastAwarded.specialDay !== today.full && amount > 0) {
-                const label = typeof settings.specialDayLabel === "string" && settings.specialDayLabel.trim()
-                    ? settings.specialDayLabel.trim()
-                    : "Special Day";
-                awards.push({ desc: `${label}! (+${amount} pts)`, amount });
-                lastAwarded.specialDay = today.full;
-            }
-        }
         const totalAward = awards.reduce((sum, award) => sum + award.amount, 0);
         if (totalAward <= 0)
             return { totalAward: 0, awards: [] };
@@ -2392,7 +2407,34 @@ function descriptorRecordsFrom(value) {
     }
     return records;
 }
-exports.enrollStudentFace = functions.https.onCall(async (data, context) => {
+/** Min cosine similarity to treat a training scan as the same person as another student. */
+const FACE_DUPLICATE_ENROLL_THRESHOLD = 0.9;
+async function findDuplicateFaceEnrollment(db, schoolId, descriptor, exceptStudentId) {
+    var _a;
+    const snap = await db
+        .collection("schools")
+        .doc(schoolId)
+        .collection("faceAuth")
+        .where("enabled", "==", true)
+        .limit(500)
+        .get();
+    let best = null;
+    for (const doc of snap.docs) {
+        if (doc.id === exceptStudentId)
+            continue;
+        const list = descriptorRecordsFrom((_a = doc.data()) === null || _a === void 0 ? void 0 : _a.descriptors);
+        if (list.length === 0)
+            continue;
+        for (const cand of list) {
+            const score = cosineSimilarity(descriptor, cand.values);
+            if (score >= FACE_DUPLICATE_ENROLL_THRESHOLD && (!best || score > best.score)) {
+                best = { studentId: doc.id, score };
+            }
+        }
+    }
+    return best;
+}
+exports.checkStudentFaceDuplicate = functions.https.onCall(async (data, context) => {
     requireAuth(context);
     requireString(data.schoolId, "schoolId");
     requireString(data.studentId, "studentId");
@@ -2405,6 +2447,35 @@ exports.enrollStudentFace = functions.https.onCall(async (data, context) => {
         if (!(await isDeveloper(context))) {
             throw new functions.https.HttpsError("permission-denied", "Admin privileges required for this school.");
         }
+    }
+    const duplicate = await findDuplicateFaceEnrollment(db, schoolId, descriptor, studentId);
+    if (!duplicate) {
+        return { duplicate: false };
+    }
+    return {
+        duplicate: true,
+        matchedStudentId: duplicate.studentId,
+        confidence: duplicate.score,
+    };
+});
+exports.enrollStudentFace = functions.https.onCall(async (data, context) => {
+    requireAuth(context);
+    requireString(data.schoolId, "schoolId");
+    requireString(data.studentId, "studentId");
+    requireDescriptor(data.descriptor, "descriptor");
+    const schoolId = String(data.schoolId).trim().toLowerCase();
+    const studentId = String(data.studentId).trim();
+    const descriptor = data.descriptor;
+    const allowDuplicate = data.allowDuplicate === true;
+    const db = admin.firestore();
+    if (!(await hasSchoolRole(schoolId, context.auth.uid, ["admin"]))) {
+        if (!(await isDeveloper(context))) {
+            throw new functions.https.HttpsError("permission-denied", "Admin privileges required for this school.");
+        }
+    }
+    const duplicate = await findDuplicateFaceEnrollment(db, schoolId, descriptor, studentId);
+    if (duplicate && !allowDuplicate) {
+        throw new functions.https.HttpsError("failed-precondition", `This face is already enrolled for student ${duplicate.studentId}.`, { matchedStudentId: duplicate.studentId, confidence: duplicate.score });
     }
     const ref = db.collection("schools").doc(schoolId).collection("faceAuth").doc(studentId);
     const snap = await ref.get();
@@ -2482,10 +2553,68 @@ exports.matchStudentFace = functions
     if (!top || top.score < threshold) {
         return { studentId: null, confidence: (_a = top === null || top === void 0 ? void 0 : top.score) !== null && _a !== void 0 ? _a : -1 };
     }
-    if (second && top.score - second.score < minMarginSecondStudent) {
+    // Only treat as ambiguous when the runner-up also clears the match threshold.
+    // Stale/orphan enrollments that score high-but-below-threshold should not block
+    // a clear winner (common on demo schools after partial resets).
+    if (second &&
+        second.score >= threshold &&
+        top.score - second.score < minMarginSecondStudent) {
         return { studentId: null, confidence: top.score, ambiguous: true };
     }
     return { studentId: top.studentId, confidence: top.score };
+});
+exports.listSchoolFaceEnrollments = functions.https.onCall(async (data, context) => {
+    requireAuth(context);
+    requireString(data.schoolId, "schoolId");
+    const schoolId = String(data.schoolId).trim().toLowerCase();
+    const mayView = (await hasSchoolRole(schoolId, context.auth.uid, ["admin", "teacher"])) ||
+        (await isDeveloper(context));
+    if (!mayView) {
+        throw new functions.https.HttpsError("permission-denied", "School staff privileges required for this school.");
+    }
+    const db = admin.firestore();
+    const snap = await db.collection("schools").doc(schoolId).collection("faceAuth").get();
+    const enrollments = [];
+    for (const doc of snap.docs) {
+        const d = doc.data();
+        const descriptors = descriptorRecordsFrom(d === null || d === void 0 ? void 0 : d.descriptors);
+        enrollments.push({
+            studentId: doc.id,
+            enabled: (d === null || d === void 0 ? void 0 : d.enabled) === true,
+            scanCount: descriptors.length,
+            updatedAt: typeof (d === null || d === void 0 ? void 0 : d.updatedAt) === "number" ? d.updatedAt : null,
+        });
+    }
+    enrollments.sort((a, b) => a.studentId.localeCompare(b.studentId, undefined, { numeric: true }));
+    return { enrollments };
+});
+exports.devClearSampleSchoolFaceAuth = functions.https.onCall(async (data, context) => {
+    requireAuth(context);
+    requireString(data.schoolId, "schoolId");
+    if (!(await isDeveloper(context))) {
+        throw new functions.https.HttpsError("permission-denied", "Developer privileges required.");
+    }
+    const schoolId = String(data.schoolId).trim().toLowerCase();
+    if (schoolId !== "schoolabc" && schoolId !== "yeshiva") {
+        throw new functions.https.HttpsError("invalid-argument", 'Face auth clear is only allowed for sample schools "schoolabc" and "yeshiva".');
+    }
+    const exceptStudentIds = Array.isArray(data.exceptStudentIds)
+        ? data.exceptStudentIds.map((id) => String(id).trim()).filter(Boolean)
+        : [];
+    const keep = new Set(exceptStudentIds);
+    const db = admin.firestore();
+    const snap = await db.collection("schools").doc(schoolId).collection("faceAuth").get();
+    const batch = db.batch();
+    let cleared = 0;
+    for (const doc of snap.docs) {
+        if (keep.has(doc.id))
+            continue;
+        batch.delete(doc.ref);
+        cleared += 1;
+    }
+    if (cleared > 0)
+        await batch.commit();
+    return { cleared, keptStudentIds: exceptStudentIds };
 });
 exports.getStudentFaceAuthStatus = functions.https.onCall(async (data, context) => {
     requireAuth(context);

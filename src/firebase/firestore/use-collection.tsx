@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Query,
   onSnapshot,
@@ -67,15 +67,18 @@ export function useCollection<T = any>(
   const [data, setData] = useState<StateDataType>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
+  const hasLoadedRef = useRef(false);
 
   useEffect(() => {
     if (!memoizedTargetRefOrQuery) {
+      hasLoadedRef.current = false;
       setData(null);
       setIsLoading(false);
       setError(null);
       return;
     }
 
+    hasLoadedRef.current = false;
     setIsLoading(true);
     setError(null);
 
@@ -83,10 +86,15 @@ export function useCollection<T = any>(
     const unsubscribe = onSnapshot(
       memoizedTargetRefOrQuery,
       (snapshot: QuerySnapshot<DocumentData>) => {
+        if (hasLoadedRef.current && snapshot.docChanges().length === 0) {
+          setIsLoading(false);
+          return;
+        }
         const results: ResultItemType[] = [];
         for (const doc of snapshot.docs) {
           results.push({ ...(doc.data() as T), id: doc.id });
         }
+        hasLoadedRef.current = true;
         setData(results);
         setError(null);
         setIsLoading(false);

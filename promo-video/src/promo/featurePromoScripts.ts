@@ -198,7 +198,7 @@ export const FEATURE_PROMO_VARIANTS: FeaturePromoScriptVariant[] = [
 
         coupons: "Teachers print reward coupons without breaking stride in the classroom.",
 
-        raffle: "Weekly raffles transform everyday points into electric, school-wide moments.",
+        raffle: "Raffles transform everyday points into electric, school-wide moments.",
 
         houses: "House competitions unite grades in friendly rivalry that lasts all year.",
 

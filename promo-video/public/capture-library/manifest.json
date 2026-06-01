@@ -1,11 +1,65 @@
 {
-  "capturedAt": "2026-05-31T06:03:24.634Z",
-  "base": "https://portal.leveluprewards.app",
+  "capturedAt": "2026-06-01T03:59:42.059Z",
+  "base": "http://127.0.0.1:3000",
   "school": "schoolabc",
   "variants": [
     {
       "category": "student-kiosk",
-      "name": "kiosk-coupon-redeem-123456",
+      "name": "kiosk-coupon-redeem-132403",
+      "status": "failed",
+      "error": "page.waitForFunction: Timeout 30000ms exceeded."
+    },
+    {
+      "category": "student-kiosk",
+      "name": "kiosk-coupon-redeem-230260",
+      "status": "failed",
+      "error": "page.waitForFunction: Timeout 30000ms exceeded."
+    },
+    {
+      "category": "student-kiosk",
+      "name": "kiosk-coupon-redeem-336111",
+      "status": "failed",
+      "error": "page.waitForFunction: Timeout 30000ms exceeded."
+    },
+    {
+      "category": "student-kiosk",
+      "name": "kiosk-coupon-redeem-508131",
+      "status": "failed",
+      "error": "page.waitForFunction: Timeout 30000ms exceeded."
+    },
+    {
+      "category": "student-kiosk",
+      "name": "kiosk-coupon-redeem-598970",
+      "status": "failed",
+      "error": "page.waitForFunction: Timeout 30000ms exceeded."
+    },
+    {
+      "category": "student-kiosk",
+      "name": "kiosk-coupon-redeem-666400",
+      "status": "failed",
+      "error": "page.waitForFunction: Timeout 30000ms exceeded."
+    },
+    {
+      "category": "student-kiosk",
+      "name": "kiosk-coupon-redeem-685335",
+      "status": "failed",
+      "error": "page.waitForFunction: Timeout 30000ms exceeded."
+    },
+    {
+      "category": "student-kiosk",
+      "name": "kiosk-coupon-redeem-738732",
+      "status": "failed",
+      "error": "page.waitForFunction: Timeout 30000ms exceeded."
+    },
+    {
+      "category": "student-kiosk",
+      "name": "kiosk-coupon-redeem-775872",
+      "status": "failed",
+      "error": "page.waitForFunction: Timeout 30000ms exceeded."
+    },
+    {
+      "category": "student-kiosk",
+      "name": "kiosk-coupon-redeem-844901",
       "status": "failed",
       "error": "page.waitForFunction: Timeout 30000ms exceeded."
     },
@@ -13,145 +67,145 @@
       "category": "raffle",
       "name": "teacher-jackpot-pull",
       "status": "failed",
-      "error": "locator.waitFor: Timeout 30000ms exceeded.\nCall log:\n  - waiting for getByRole('tab', { name: /^Raffle$/i }).first() to be visible\n"
+      "error": "locator.waitFor: Timeout 120000ms exceeded.\nCall log:\n  - waiting for getByRole('tab', { name: /^Students$/i }).first() to be visible\n"
     },
     {
       "category": "raffle",
       "name": "teacher-wheel-spin",
       "status": "failed",
-      "error": "locator.waitFor: Timeout 30000ms exceeded.\nCall log:\n  - waiting for getByRole('tab', { name: /^Raffle$/i }).first() to be visible\n"
+      "error": "locator.waitFor: Timeout 120000ms exceeded.\nCall log:\n  - waiting for getByRole('tab', { name: /^Students$/i }).first() to be visible\n"
     },
     {
       "category": "student-kiosk",
       "name": "kiosk-prize-shop",
-      "path": "capture-library\\student-kiosk\\kiosk-prize-shop.mp4",
-      "status": "ok"
+      "status": "failed",
+      "error": "page.waitForFunction: Timeout 30000ms exceeded."
     },
     {
       "category": "student-kiosk",
       "name": "kiosk-scan-tab",
-      "path": "capture-library\\student-kiosk\\kiosk-scan-tab.mp4",
-      "status": "ok"
+      "status": "failed",
+      "error": "page.waitForFunction: Timeout 30000ms exceeded."
     },
     {
       "category": "portal",
       "name": "portal-hub-overview",
-      "path": "capture-library\\portal\\portal-hub-overview.mp4",
-      "status": "ok"
+      "status": "failed",
+      "error": "locator.waitFor: Timeout 45000ms exceeded.\nCall log:\n  - waiting for getByRole('link', { name: /Student Kiosk/i }).first().or(getByRole('button', { name: /Student Kiosk/i }).first()).or(getByText(/Student Kiosk/i).first()) to be visible\n"
     },
     {
       "category": "teacher",
       "name": "teacher-award-points-flow",
-      "path": "capture-library\\teacher\\teacher-award-points-flow.mp4",
-      "status": "ok"
+      "status": "failed",
+      "error": "locator.waitFor: Timeout 120000ms exceeded.\nCall log:\n  - waiting for getByRole('tab', { name: /^Students$/i }).first() to be visible\n"
     },
     {
       "category": "login",
       "name": "login-portal-settle",
-      "path": "capture-library\\login\\login-portal-settle.mp4",
-      "status": "ok"
+      "status": "failed",
+      "error": "locator.waitFor: Timeout 45000ms exceeded.\nCall log:\n  - waiting for getByRole('link', { name: /Student Kiosk/i }).first().or(getByRole('button', { name: /Student Kiosk/i }).first()).or(getByText(/Student Kiosk/i).first()) to be visible\n"
     },
     {
       "category": "selector",
       "name": "selector-hub-pan",
-      "path": "capture-library\\selector\\selector-hub-pan.mp4",
-      "status": "ok"
+      "status": "failed",
+      "error": "locator.waitFor: Timeout 45000ms exceeded.\nCall log:\n  - waiting for getByRole('link', { name: /Student Kiosk/i }).first().or(getByRole('button', { name: /Student Kiosk/i }).first()).or(getByText(/Student Kiosk/i).first()) to be visible\n"
     },
     {
       "category": "selector",
       "name": "selector-hover-kiosk",
-      "path": "capture-library\\selector\\selector-hover-kiosk.mp4",
-      "status": "ok"
+      "status": "failed",
+      "error": "locator.waitFor: Timeout 45000ms exceeded.\nCall log:\n  - waiting for getByRole('link', { name: /Student Kiosk/i }).first().or(getByRole('button', { name: /Student Kiosk/i }).first()).or(getByText(/Student Kiosk/i).first()) to be visible\n"
     },
     {
       "category": "student-kiosk",
       "name": "kiosk-type-entry",
-      "path": "capture-library\\student-kiosk\\kiosk-type-entry.mp4",
-      "status": "ok"
+      "status": "failed",
+      "error": "page.waitForFunction: Timeout 30000ms exceeded."
     },
     {
       "category": "student-kiosk",
       "name": "kiosk-signin-rewards",
-      "path": "capture-library\\student-kiosk\\kiosk-signin-rewards.mp4",
-      "status": "ok"
+      "status": "failed",
+      "error": "page.waitForFunction: Timeout 30000ms exceeded."
     },
     {
       "category": "student-kiosk",
       "name": "kiosk-welcome-balance",
-      "path": "capture-library\\student-kiosk\\kiosk-welcome-balance.mp4",
-      "status": "ok"
+      "status": "failed",
+      "error": "page.waitForFunction: Timeout 30000ms exceeded."
     },
     {
       "category": "student-kiosk",
       "name": "kiosk-prizes-hover",
       "status": "failed",
-      "error": "Kiosk not signed in"
+      "error": "page.waitForFunction: Timeout 30000ms exceeded."
     },
     {
       "category": "student-kiosk",
       "name": "kiosk-card-tab",
-      "path": "capture-library\\student-kiosk\\kiosk-card-tab.mp4",
-      "status": "ok"
+      "status": "failed",
+      "error": "page.waitForFunction: Timeout 30000ms exceeded."
     },
     {
       "category": "student-kiosk",
       "name": "kiosk-mode-idle",
-      "path": "capture-library\\student-kiosk\\kiosk-mode-idle.mp4",
-      "status": "ok"
+      "status": "failed",
+      "error": "page.waitForFunction: Timeout 30000ms exceeded."
     },
     {
       "category": "student-kiosk",
       "name": "kiosk-signin-welcome-points",
-      "path": "capture-library\\student-kiosk\\kiosk-signin-welcome-points.mp4",
-      "status": "ok"
+      "status": "failed",
+      "error": "page.waitForFunction: Timeout 30000ms exceeded."
     },
     {
       "category": "student-kiosk",
       "name": "kiosk-new-points-on-entry",
-      "path": "capture-library\\student-kiosk\\kiosk-new-points-on-entry.mp4",
-      "status": "ok"
+      "status": "failed",
+      "error": "page.waitForFunction: Timeout 30000ms exceeded."
     },
     {
       "category": "teacher",
       "name": "teacher-students-roster",
-      "path": "capture-library\\teacher\\teacher-students-roster.mp4",
-      "status": "ok"
+      "status": "failed",
+      "error": "locator.waitFor: Timeout 120000ms exceeded.\nCall log:\n  - waiting for getByRole('tab', { name: /^Students$/i }).first() to be visible\n"
     },
     {
       "category": "teacher",
       "name": "teacher-tabs-cycle",
-      "path": "capture-library\\teacher\\teacher-tabs-cycle.mp4",
-      "status": "ok"
+      "status": "failed",
+      "error": "locator.waitFor: Timeout 120000ms exceeded.\nCall log:\n  - waiting for getByRole('tab', { name: /^Students$/i }).first() to be visible\n"
     },
     {
       "category": "teacher",
       "name": "teacher-points-tab",
-      "path": "capture-library\\teacher\\teacher-points-tab.mp4",
-      "status": "ok"
+      "status": "failed",
+      "error": "locator.waitFor: Timeout 120000ms exceeded.\nCall log:\n  - waiting for getByRole('tab', { name: /^Students$/i }).first() to be visible\n"
     },
     {
       "category": "action",
       "name": "action-print-coupons",
-      "path": "capture-library\\action\\action-print-coupons.mp4",
-      "status": "ok"
+      "status": "failed",
+      "error": "locator.waitFor: Timeout 120000ms exceeded.\nCall log:\n  - waiting for getByRole('tab', { name: /^Students$/i }).first() to be visible\n"
     },
     {
       "category": "action",
       "name": "action-print-preview-hold",
-      "path": "capture-library\\action\\action-print-preview-hold.mp4",
-      "status": "ok"
+      "status": "failed",
+      "error": "locator.waitFor: Timeout 120000ms exceeded.\nCall log:\n  - waiting for getByRole('tab', { name: /^Students$/i }).first() to be visible\n"
     },
     {
       "category": "admin",
       "name": "admin-id-card-preview",
-      "path": "capture-library\\admin\\admin-id-card-preview.mp4",
-      "status": "ok"
+      "status": "failed",
+      "error": "locator.waitFor: Timeout 45000ms exceeded.\nCall log:\n  - waiting for getByRole('link', { name: /Student Kiosk/i }).first().or(getByRole('button', { name: /Student Kiosk/i }).first()).or(getByText(/Student Kiosk/i).first()) to be visible\n"
     },
     {
       "category": "features",
       "name": "admin-branding-theme",
-      "path": "capture-library\\features\\admin-branding-theme.mp4",
-      "status": "ok"
+      "status": "failed",
+      "error": "locator.waitFor: Timeout 45000ms exceeded.\nCall log:\n  - waiting for getByRole('link', { name: /Student Kiosk/i }).first().or(getByRole('button', { name: /Student Kiosk/i }).first()).or(getByText(/Student Kiosk/i).first()) to be visible\n"
     },
     {
       "category": "features",
@@ -168,38 +222,38 @@
     {
       "category": "features",
       "name": "admin-houses",
-      "path": "capture-library\\features\\admin-houses.mp4",
-      "status": "ok"
+      "status": "failed",
+      "error": "locator.waitFor: Timeout 45000ms exceeded.\nCall log:\n  - waiting for getByRole('link', { name: /Student Kiosk/i }).first().or(getByRole('button', { name: /Student Kiosk/i }).first()).or(getByText(/Student Kiosk/i).first()) to be visible\n"
     },
     {
       "category": "features",
       "name": "admin-notifications",
-      "path": "capture-library\\features\\admin-notifications.mp4",
-      "status": "ok"
+      "status": "failed",
+      "error": "locator.waitFor: Timeout 45000ms exceeded.\nCall log:\n  - waiting for getByRole('link', { name: /Student Kiosk/i }).first().or(getByRole('button', { name: /Student Kiosk/i }).first()).or(getByText(/Student Kiosk/i).first()) to be visible\n"
     },
     {
       "category": "features",
       "name": "admin-library",
-      "path": "capture-library\\features\\admin-library.mp4",
-      "status": "ok"
+      "status": "failed",
+      "error": "locator.waitFor: Timeout 45000ms exceeded.\nCall log:\n  - waiting for getByRole('link', { name: /Student Kiosk/i }).first().or(getByRole('button', { name: /Student Kiosk/i }).first()).or(getByText(/Student Kiosk/i).first()) to be visible\n"
     },
     {
       "category": "features",
       "name": "admin-badges",
-      "path": "capture-library\\features\\admin-badges.mp4",
-      "status": "ok"
+      "status": "failed",
+      "error": "locator.waitFor: Timeout 45000ms exceeded.\nCall log:\n  - waiting for getByRole('link', { name: /Student Kiosk/i }).first().or(getByRole('button', { name: /Student Kiosk/i }).first()).or(getByText(/Student Kiosk/i).first()) to be visible\n"
     },
     {
       "category": "features",
       "name": "admin-stats",
-      "path": "capture-library\\features\\admin-stats.mp4",
-      "status": "ok"
+      "status": "failed",
+      "error": "locator.waitFor: Timeout 45000ms exceeded.\nCall log:\n  - waiting for getByRole('link', { name: /Student Kiosk/i }).first().or(getByRole('button', { name: /Student Kiosk/i }).first()).or(getByText(/Student Kiosk/i).first()) to be visible\n"
     },
     {
       "category": "features",
       "name": "admin-attendance",
-      "path": "capture-library\\features\\admin-attendance.mp4",
-      "status": "ok"
+      "status": "failed",
+      "error": "locator.waitFor: Timeout 45000ms exceeded.\nCall log:\n  - waiting for getByRole('link', { name: /Student Kiosk/i }).first().or(getByRole('button', { name: /Student Kiosk/i }).first()).or(getByText(/Student Kiosk/i).first()) to be visible\n"
     }
   ]
 }

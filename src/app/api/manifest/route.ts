@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
       {
         "name": "Admin Portal",
         "short_name": "Admin",
-        "description": "Manage students, classes, prizes, and system settings.",
+        "description": "Manage students, classes, teachers, points, prizes and much more...",
         "url": `${schoolPath}/admin-sign-in`,
         "icons": [
           {

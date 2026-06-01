@@ -28,6 +28,8 @@ import {
     portalChooseTitleClass,
 } from '@/lib/kioskPortraitLayout';
 import { isClassroomPillarOn, isRewardsPillarOn } from '@/lib/productPillars';
+import { leadershipPersonnelLabel, normalizeTeacherPersonnelRole } from '@/lib/teacherPersonnelRole';
+import type { TeacherPersonnelRole } from '@/lib/types';
 import { isSchoolPortalChooser } from '@/lib/students/studentKioskRoute';
 
 type PortalArea = {
@@ -44,6 +46,7 @@ type StaffPortalLoginOption = {
     type: 'teacher' | 'secretary' | 'prizeClerk' | 'reports' | 'librarian' | 'office' | 'houseCoordinator';
     label: string;
     username: string;
+    personnelRole?: TeacherPersonnelRole;
 };
 
 type SchoolPublicStaffDirectory = {
@@ -54,13 +57,15 @@ function staffLoginKey(option: StaffPortalLoginOption) {
     return option.id;
 }
 
-function roleLabel(type: StaffPortalLoginOption['type']) {
-    if (type === 'teacher') return 'Teacher';
-    if (type === 'secretary') return 'Coupon printing';
-    if (type === 'prizeClerk') return 'Prize desk';
-    if (type === 'librarian') return 'Library';
-    if (type === 'office') return 'School Office';
-    if (type === 'houseCoordinator') return 'Houses';
+function roleLabel(option: StaffPortalLoginOption) {
+    if (option.type === 'teacher') {
+        return leadershipPersonnelLabel(normalizeTeacherPersonnelRole(option.personnelRole));
+    }
+    if (option.type === 'secretary') return 'Coupon printing';
+    if (option.type === 'prizeClerk') return 'Prize desk';
+    if (option.type === 'librarian') return 'Library';
+    if (option.type === 'office') return 'School Office';
+    if (option.type === 'houseCoordinator') return 'Houses';
     return 'Reports';
 }
 
@@ -250,7 +255,7 @@ export default function PortalPage() {
                       id: 'admin',
                       href: `/${schoolId}/admin`,
                       title: 'Admin Portal',
-                      description: 'Manage students, classes, prizes, and system settings.',
+                      description: 'Manage students, classes, teachers, points, prizes and much more...',
                       icon: UserCog,
                   },
               ]
@@ -260,7 +265,7 @@ export default function PortalPage() {
                           id: 'admin',
                           href: `/${schoolId}/portal`,
                           title: 'Admin Portal',
-                          description: 'Manage students, classes, prizes, and system settings.',
+                          description: 'Manage students, classes, teachers, points, prizes and much more...',
                           icon: UserCog,
                       },
                   ]
@@ -777,7 +782,7 @@ export default function PortalPage() {
                                     <SelectContent>
                                         {staffOptions.map((opt) => (
                                             <SelectItem key={opt.id} value={staffLoginKey(opt)}>
-                                                {opt.label}{opt.type === 'teacher' ? '' : ` - ${roleLabel(opt.type)}`}
+                                                {opt.label}{opt.type === 'teacher' && !opt.personnelRole ? '' : ` - ${roleLabel(opt)}`}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>

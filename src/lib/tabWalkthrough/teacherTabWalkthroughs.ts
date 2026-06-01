@@ -47,14 +47,21 @@ const TEACHER_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
     ],
   },
   classroom: {
-    title: 'Classroom tab',
-    subtitle: 'Seating chart and quick awards',
+    title: 'Classroom Management',
+    subtitle: 'Same sections as school admin',
     steps: [
       {
-        title: 'Run your class',
+        title: 'Seating chart',
         checklist: [
-          'Choose your class and open the seating chart or full-screen view.',
-          'Tap students to log quick awards for the session.',
+          'Choose your class and tap students for quick awards.',
+          'Shift+click for a behavior note (see the Behavior section).',
+        ],
+      },
+      {
+        title: 'Behavior & Principal',
+        checklist: [
+          'Behavior explains how to add notes from the chart.',
+          'Principal shows the school-wide timeline when your admin turned it on in Setup.',
         ],
       },
       {

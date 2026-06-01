@@ -32,14 +32,29 @@ gcloud storage buckets create gs://YOUR_BUCKET_NAME --location=us-central1
 
 ## Run the backup script
 
-Set the destination bucket name in your session and run the script:
+After one-time setup:
 
 ```powershell
-$env:GCS_BACKUP_BUCKET="YOUR_BUCKET_NAME"
+.\scripts\setup-gcs-backup.ps1
+```
+
+That script authenticates `gcloud` (using `FIREBASE_SERVICE_ACCOUNT_KEY` from `.env.local` when needed), creates the backup bucket, writes `.gcs-backup.env`, schedules a daily backup, and runs the first upload.
+
+Manual backup any time:
+
+```powershell
 .\scripts\backup-local-folder-to-gcs.ps1
 ```
 
-Optional overrides:
+Or:
+
+```powershell
+npm run backup:local-folder
+```
+
+The `.cmd` launcher (`scripts/run-gcs-backup.cmd`) is used by Task Scheduler to avoid PowerShell quoting issues on Windows.
+
+Optional overrides (session or `.gcs-backup.env`):
 
 - `GCS_BACKUP_PREFIX`: defaults to `local-folder-backups/studio`
 - `GCS_BACKUP_RETENTION_DAYS`: defaults to `30`
@@ -60,14 +75,14 @@ And uploaded to:
 
 ## Scheduling (Windows Task Scheduler)
 
-Create a task that runs (for example) every 6 hours:
+Create a task that runs (for example) daily at 3 AM — `setup-gcs-backup.ps1` registers this automatically:
 
 - **Program/script**: `powershell.exe`
 - **Arguments**:
 
 ```powershell
--NoProfile -ExecutionPolicy Bypass -Command "$env:GCS_BACKUP_BUCKET='YOUR_BUCKET_NAME'; cd 'C:\Users\Administrator\school arcade reward antigravity\studio'; .\scripts\backup-local-folder-to-gcs.ps1"
+"C:\Users\Administrator\school arcade reward antigravity\studio\scripts\run-gcs-backup.cmd"
 ```
 
-If you want the task to run even when you're not logged in, make sure the account that runs it has already authenticated `gcloud`, or use a GCP service account and `gcloud auth activate-service-account` (recommended for servers).
+The backup script reads bucket settings from `.gcs-backup.env` (created during setup). If automatic scheduling fails, run the `schtasks /Create` command printed by `setup-gcs-backup.ps1`.
 

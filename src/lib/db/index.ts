@@ -94,3 +94,7 @@ export {
   fetchGoals,
 } from './goals';
 
+// Classroom points (Rewards-off persistence)
+export { applyClassroomPointsToStudents } from './classroomPoints';
+export type { ClassroomPointsMeta } from './classroomPoints';
+

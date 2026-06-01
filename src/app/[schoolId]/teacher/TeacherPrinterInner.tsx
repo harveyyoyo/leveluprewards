@@ -39,9 +39,13 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { StaffPortalNav } from '@/components/staff/StaffPortalNav';
-import { staffPortalShellClassName } from '@/components/staff/staffPortalNavStyles';
+import {
+  staffPortalPageIntroClassName,
+  staffPortalShellClassName,
+} from '@/components/staff/staffPortalNavStyles';
 import { TeacherPortalAddMoreMenu } from '@/components/staff/TeacherPortalAddMoreMenu';
 import { TeacherPortalTabPane } from '@/components/staff/TeacherPortalTabPane';
+import { StaffPortalWelcomeTab } from '@/components/staff/StaffPortalWelcomeTab';
 import { staffPortalTabIsValid, staffPortalTeacherPinSideEffects, useStaffPortalTabs } from '@/lib/staffPortal';
 import { Switch } from '@/components/ui/switch';
 
@@ -76,6 +80,7 @@ import { SchoolReportsPanel } from '@/components/reports/SchoolReportsPanel';
 import { GoalsManager } from '@/components/goals/GoalsManager';
 import { homeworkRewardCategoryKey } from '@/lib/homeworkRewards';
 import { studentsInTeacherScope } from '@/lib/reportsScope';
+import { isLeadershipPersonnel } from '@/lib/teacherPersonnelRole';
 import { AdminRaffleTab } from '@/app/[schoolId]/admin/sections/AdminRaffleTab';
 import { StaffPointsTab } from '@/components/points/StaffPointsTab';
 import { StaffClassroomTab } from '@/components/points/StaffClassroomTab';
@@ -1953,18 +1958,22 @@ export function TeacherPrinterInner({
     embedded?: boolean;
 }) {
     const { updateTeacher, deleteCategory, schoolId, addPrize, updatePrize, deletePrize, getTeacherAttendanceConfig, setTeacherAttendanceConfig, listTeacherAttendanceLog, isAdmin, isTeacher } = useAppContext();
-    /** Admin using the teacher portal can act on the whole school (like secretary data scope) while keeping teacher tabs/tools. */
-    const schoolWideTeacherScope = secretaryMode || isAdmin;
     const confirm = useConfirm();
     const { toast } = useToast();
     const firestore = useFirestore();
     const { settings, updateSettings } = useSettings();
+
+    const teachersQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'teachers') : null, [firestore, schoolId]);
+    const { data: teachers, isLoading: teachersLoading } = useCollection<Teacher>(teachersQuery);
+    const currentTeacher = teachers?.find(t => t.id === teacherId);
+    /** Admin and leadership staff can act on the whole school while keeping teacher tabs/tools. */
+    const schoolWideTeacherScope = secretaryMode || isAdmin || isLeadershipPersonnel(currentTeacher);
     const isGraphic = settings.graphicMode === 'graphics';
     const animBackdrop = globalAnimatedBackdropActive(settings);
     const playSound = useArcadeSound();
 
     const staffPortalRole = secretaryMode ? 'secretary' : 'teacher';
-    const teacherNavSidebar = settings.adminNavLayout === 'sidebar';
+    const teacherNavSidebar = (settings.teacherNavLayout ?? 'sidebar') === 'sidebar';
     const { mainTabs, addMoreTabs, allTabValues, defaultTab } = useStaffPortalTabs({
         role: staffPortalRole,
         settings,
@@ -2036,10 +2045,6 @@ export function TeacherPrinterInner({
     const periodsQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'periods') : null, [firestore, schoolId]);
     const { data: periods, isLoading: periodsLoading } = useCollection<AttendanceScheduleSlot>(periodsQuery);
 
-    const teachersQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'teachers') : null, [firestore, schoolId]);
-    const { data: teachers, isLoading: teachersLoading } = useCollection<Teacher>(teachersQuery);
-    const currentTeacher = teachers?.find(t => t.id === teacherId);
-
     const studentsForTeacherActions = useMemo(() => {
         if (schoolWideTeacherScope) return students ?? [];
         if (!teacherId) return students ?? [];
@@ -2049,7 +2054,7 @@ export function TeacherPrinterInner({
     /** Class filters and coupon class lists: students’ classes plus classes this teacher owns as primary. */
     const classesForTeacherUi = useMemo(() => {
         if (secretaryMode) return classes ?? [];
-        if (isAdmin) {
+        if (schoolWideTeacherScope) {
             const cls = classes ?? [];
             return cls.slice().sort((a, b) => a.name.localeCompare(b.name));
         }
@@ -2061,7 +2066,7 @@ export function TeacherPrinterInner({
             .filter((c) => fromStudents.has(c.id) || c.primaryTeacherId === teacherId)
             .slice()
             .sort((a, b) => a.name.localeCompare(b.name));
-    }, [secretaryMode, isAdmin, classes, studentsForTeacherActions, teacherId]);
+    }, [secretaryMode, schoolWideTeacherScope, classes, studentsForTeacherActions, teacherId]);
 
     const schoolDocRef = useMemoFirebase(
         () => (schoolId && firestore ? doc(firestore, 'schools', schoolId) : null),
@@ -2166,7 +2171,12 @@ export function TeacherPrinterInner({
                         </div>
                     ) : null}
                     {!embedded ? (
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div
+                      className={cn(
+                        'flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between',
+                        !embedded && staffPortalPageIntroClassName(teacherNavSidebar),
+                      )}
+                    >
                         <Helper content={secretaryMode ? 'Generate coupon sheets for teachers to hand out. You cannot award points or edit prizes from here.' : 'Use Points to print coupon sheets from school categories, or open Manually Add or Deduct Points for direct changes without a printed coupon. Prizes, attendance, and reports are also here.'}>
                             <div>
                                 <h2 className="text-2xl font-bold tracking-tight" style={{ color: teacherAccent }}>
@@ -2243,6 +2253,18 @@ export function TeacherPrinterInner({
                                 scope="teacher"
                                 tabId={resolvedTeacherTab}
                             >
+                            {teacherTabEnabled('welcome') && !secretaryMode && (
+                            <TeacherPortalTabPane tabId="welcome" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
+                                <div className={teacherPortalPanelClassName(teacherNavSidebar)}>
+                                <StaffPortalWelcomeTab
+                                    role="teacher"
+                                    settings={settings}
+                                    onGoToTab={setActiveTeacherTab}
+                                />
+                                </div>
+                            </TeacherPortalTabPane>
+                            )}
+
                             {teacherTabEnabled('coupons') && (
                             <TeacherPortalTabPane tabId="coupons" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
                                 <div className={teacherPortalPanelClassName(teacherNavSidebar)}>

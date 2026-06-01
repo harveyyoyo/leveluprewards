@@ -628,17 +628,17 @@ html[data-office-portal] .office-content-pane {
   --card-foreground: 222 47% 11%;
   --popover: 214 40% 98%;
   --popover-foreground: 222 47% 11%;
-  --accent: 211 58% 88%;
-  --accent-foreground: 211 52% 22%;
-  --secondary: 214 45% 86%;
-  --secondary-foreground: 211 45% 22%;
+  --accent: 41 45% 92%;
+  --accent-foreground: 41 42% 28%;
+  --secondary: 41 40% 88%;
+  --secondary-foreground: 41 38% 24%;
   --border: 214 36% 80%;
   --muted: 214 38% 90%;
   --muted-foreground: 215 24% 34%;
   --input: 214 36% 80%;
-  --ring: 199 80% 40%;
+  --ring: 41 60% 55%;
   --chart-1: 211 62% 28%;
-  --chart-2: 199 89% 48%;
+  --chart-2: 41 60% 65%;
   --chart-3: 217 64% 40%;
   --chart-4: 160 65% 42%;
   --chart-5: 280 62% 55%;
@@ -845,13 +845,13 @@ html[data-color-scheme="default"] body {
   --muted-foreground: 215 24% 72%;
   --primary: 211 58% 42%;
   --primary-foreground: 210 40% 98%;
-  --accent: 211 40% 18%;
-  --accent-foreground: 211 85% 88%;
-  --secondary: 217 38% 18%;
-  --secondary-foreground: 210 40% 96%;
-  --ring: 199 75% 48%;
+  --accent: 41 28% 18%;
+  --accent-foreground: 41 55% 82%;
+  --secondary: 41 24% 18%;
+  --secondary-foreground: 41 50% 88%;
+  --ring: 41 55% 58%;
   --chart-1: 211 58% 52%;
-  --chart-2: 199 89% 48%;
+  --chart-2: 41 50% 62%;
   --chart-3: 217 64% 48%;
   --chart-4: 160 65% 46%;
   --chart-5: 280 62% 58%;
@@ -1064,12 +1064,12 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
   --primary: 211 58% 38%;
   --primary-foreground: 210 40% 98%;
   --ring: 211 58% 38%;
-  --secondary: 217 38% 20%;
+  --secondary: 41 28% 20%;
   --secondary-foreground: 210 40% 98%;
-  --accent: 217 42% 24%;
+  --accent: 41 32% 24%;
   --accent-foreground: 210 40% 98%;
   --chart-1: 211 58% 52%;
-  --chart-2: 330 65% 55%;
+  --chart-2: 41 55% 62%;
   --chart-3: 38 85% 52%;
   --chart-4: 160 65% 46%;
   --chart-5: 280 62% 58%;
@@ -3618,6 +3618,185 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
   animation: classroom-fly-up-scoped 1.2s ease-out forwards;
 }
 
+/* Classroom desk — kiosk +PTS (separate setting; larger than legacy scoped fly-up). */
+@keyframes classroom-kiosk-fly-up {
+  0% {
+    transform: translateY(10px) scale(0.9);
+    opacity: 1;
+  }
+  22% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-76px) scale(1.08);
+    opacity: 0;
+  }
+}
+
+.animate-classroom-kiosk-fly-up {
+  animation: classroom-kiosk-fly-up 1s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.animate-classroom-kiosk-fly-up--small {
+  font-size: clamp(0.75rem, 3.2vmin, 1.2rem);
+  animation-name: classroom-kiosk-fly-up-small;
+}
+
+.animate-classroom-kiosk-fly-up--medium {
+  font-size: clamp(0.85rem, 4vmin, 1.55rem);
+}
+
+.animate-classroom-kiosk-fly-up--large {
+  font-size: clamp(0.95rem, 5vmin, 1.85rem);
+  animation-name: classroom-kiosk-fly-up-large;
+}
+
+@keyframes classroom-kiosk-fly-up-small {
+  0% {
+    transform: translateY(8px) scale(0.9);
+    opacity: 1;
+  }
+  22% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-64px) scale(1.05);
+    opacity: 0;
+  }
+}
+
+@keyframes classroom-kiosk-fly-up-large {
+  0% {
+    transform: translateY(12px) scale(0.9);
+    opacity: 1;
+  }
+  22% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-88px) scale(1.1);
+    opacity: 0;
+  }
+}
+
+/* Classroom desk — simple award flash (arcade burst + wave + shine). */
+@keyframes classroom-desk-flash-burst {
+  0% {
+    transform: scale(0.55);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+}
+
+@keyframes classroom-desk-flash-wave {
+  0% {
+    transform: scale(0.82);
+    opacity: 1;
+    box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.85);
+  }
+  55% {
+    opacity: 0.85;
+    box-shadow: 0 0 18px 6px rgba(52, 211, 153, 0.45);
+  }
+  100% {
+    transform: scale(1.18);
+    opacity: 0;
+    box-shadow: 0 0 0 0 rgba(52, 211, 153, 0);
+  }
+}
+
+@keyframes classroom-desk-flash-shine {
+  0% {
+    transform: translateX(-130%) skewX(-14deg);
+    opacity: 0;
+  }
+  18% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateX(130%) skewX(-14deg);
+    opacity: 0;
+  }
+}
+
+@keyframes classroom-desk-flash-spark {
+  0%,
+  100% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  45% {
+    transform: scale(1.6);
+    opacity: 1;
+  }
+}
+
+@keyframes classroom-desk-flash-badge {
+  0% {
+    transform: scale(0.4) translateY(6px);
+    opacity: 0;
+  }
+  22% {
+    transform: scale(1.2) translateY(-3px);
+    opacity: 1;
+  }
+  70% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.95) translateY(-2px);
+    opacity: 0;
+  }
+}
+
+.animate-classroom-desk-flash-burst {
+  animation: classroom-desk-flash-burst 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  will-change: transform, opacity;
+}
+
+.animate-classroom-desk-flash-wave {
+  animation: classroom-desk-flash-wave 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  will-change: transform, opacity;
+}
+
+.animate-classroom-desk-flash-shine {
+  animation: classroom-desk-flash-shine 0.75s ease-out forwards;
+  will-change: transform, opacity;
+}
+
+.animate-classroom-desk-flash-spark {
+  animation: classroom-desk-flash-spark 0.65s ease-out forwards;
+  will-change: transform, opacity;
+}
+
+.animate-classroom-desk-flash-badge {
+  animation: classroom-desk-flash-badge 1.05s cubic-bezier(0.34, 1.4, 0.64, 1) forwards;
+  will-change: transform, opacity;
+}
+
+/* Auto-award countdown on desk (GPU-friendly; no JS tick loop). */
+@keyframes classroom-pending-top {
+  from {
+    clip-path: inset(0 0 0 0);
+  }
+  to {
+    clip-path: inset(100% 0 0 0);
+  }
+}
+
+.animate-classroom-pending-top {
+  animation-name: classroom-pending-top;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-classroom-fx-fall,
   .animate-classroom-fx-rise,
@@ -3627,8 +3806,29 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
   .animate-classroom-fx-rise-scoped,
   .animate-classroom-fx-twinkle-scoped,
   .animate-classroom-fx-burst-scoped,
-  .animate-classroom-fly-up-scoped {
+  .animate-classroom-fly-up-scoped,
+  .animate-classroom-kiosk-fly-up,
+  .animate-classroom-pending-top {
     animation: none !important;
     opacity: 0 !important;
+  }
+
+  .animate-classroom-desk-flash-burst,
+  .animate-classroom-desk-flash-wave,
+  .animate-classroom-desk-flash-shine,
+  .animate-classroom-desk-flash-spark,
+  .animate-classroom-desk-flash-badge {
+    animation: none !important;
+    will-change: auto;
+  }
+
+  .animate-classroom-desk-flash-burst {
+    opacity: 0.5 !important;
+    transform: none !important;
+  }
+
+  .animate-classroom-desk-flash-wave {
+    opacity: 0.9 !important;
+    transform: none !important;
   }
 }

@@ -65,6 +65,33 @@ function resolveServiceAccount(): ServiceAccount | null {
   return serviceAccountFromEnv() || serviceAccountFromKeyFile();
 }
 
+function serviceAccountProjectId(): string | null {
+  const sa = resolveServiceAccount();
+  if (!sa) return null;
+  const id = sa.projectId;
+  return typeof id === 'string' && id.trim() ? id.trim() : null;
+}
+
+/** Service account JSON targets a different Firebase project than this app. */
+export function firebaseAdminCredentialProjectMismatch(): string | null {
+  const appProject = resolveAdminProjectId();
+  const saProject = serviceAccountProjectId();
+  if (!appProject || !saProject || saProject === appProject) return null;
+  return `FIREBASE_SERVICE_ACCOUNT_KEY is for project "${saProject}" but this app uses "${appProject}". Download a service account key from the ${appProject} Firebase console.`;
+}
+
+/** True when Admin SDK can write to this app's Firestore (correct project). */
+export function hasFirebaseAdminCredentials(): boolean {
+  if (firebaseAdminCredentialProjectMismatch()) return false;
+  if (resolveServiceAccount()) return true;
+  const projectId = resolveAdminProjectId();
+  const clientEmail = process.env.FIREBASE_ADMIN_CLIENT_EMAIL?.trim();
+  const privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY?.trim();
+  if (projectId && clientEmail && privateKey) return true;
+  if (process.env.FIREBASE_CONFIG?.trim()) return true;
+  return false;
+}
+
 /**
  * Lazily initializes firebase-admin for Auth operations (session cookies).
  * Mirrors the lightweight init used elsewhere in this repo (project id + ADC when available).

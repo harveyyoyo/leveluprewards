@@ -48,7 +48,7 @@ Newer topics (funding, yeshiva leadership, IT kiosk, etc.) may be **Bold Navy on
 | `flyer-yeshiva-rebbeim-moros.html` | Yeshiva — rebbeim & moros quickstart (staff handout) |
 | `flyer-yeshiva-talmidim.html` | Yeshiva — talmidim scan & earn (student-facing) |
 | `flyer-feature-houses.html` | Feature — school houses |
-| `flyer-feature-raffle.html` | Feature — weekly raffle |
+| `flyer-feature-raffle.html` | Feature — raffle |
 | `flyer-feature-library.html` | Feature — school library |
 | `flyer-feature-student-portal.html` | Feature — student home portal |
 | `flyer-feature-bulletin.html` | Feature — bulletin board display |
