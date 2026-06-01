@@ -83,7 +83,9 @@ export function ClassroomRoomDisplayView({
   const sessionData = useMemo(() => {
     if (!schoolId || !classId) return { totals: {}, lastAward: {} };
     return loadClassroomSession(schoolId, scope, classId);
-  }, [schoolId, scope, classId, now]);
+    // refreshKey bumps when the room-display clock ticks so session totals stay live.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional poll via refreshKey
+  }, [schoolId, scope, classId, refreshKey]);
 
   const leaderboard = useMemo(() => {
     return classStudents

@@ -218,42 +218,27 @@ export function StaffClassroomTab({
         isGraphic={isGraphic}
         budgetOptions={manualBudgetOptions}
         sessionOnly={sessionOnly}
-        onBehaviorNoteSaved={principalTimelineOn ? onBehaviorNoteSaved : undefined}
+        onBehaviorNoteSaved={onBehaviorNoteSaved}
       />
     </ClassroomSectionFrame>
   );
 
   const behaviorContent = (
-    <ClassroomSectionFrame
-      title="Behavior"
-      description="Notes teachers add from the seating chart. Use the Principal section for the school-wide timeline when it is enabled in Setup."
-    >
-      <div className="space-y-3">
-        <ol className="list-decimal space-y-2 pl-4 text-sm text-muted-foreground">
-          <li>
-            On <span className="font-semibold text-foreground">Seating chart</span>,{' '}
-            <span className="font-semibold text-foreground">Shift+click</span> a student (or use the award menu →
-            Behavior note).
-          </li>
-          <li>Choose positive, concern, or incident and describe what happened.</li>
-          <li>
-            {parentPortalOn
-              ? 'Notes marked for families can appear in Parent portal when that section is on.'
-              : 'Parent portal is off — families will not see notes until an admin enables it in Setup.'}
-          </li>
-        </ol>
-        {!principalTimelineOn ? (
-          <p className="rounded-xl border border-dashed bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
-            <span className="font-semibold text-foreground">Principal</span> timeline is off. A school admin can turn
-            it on under Setup to review notes school-wide.
-          </p>
-        ) : null}
-      </div>
-    </ClassroomSectionFrame>
+    <BehaviorTimelinePanel
+      schoolId={schoolId}
+      refreshToken={behaviorNotesRefresh}
+      embedded
+      mode="behavior"
+    />
   );
 
   const principalContent = principalTimelineOn ? (
-    <BehaviorTimelinePanel schoolId={schoolId} refreshToken={behaviorNotesRefresh} embedded />
+    <BehaviorTimelinePanel
+      schoolId={schoolId}
+      refreshToken={behaviorNotesRefresh}
+      embedded
+      mode="principal"
+    />
   ) : null;
 
   const roomDisplayContent = roomDisplayOn ? (

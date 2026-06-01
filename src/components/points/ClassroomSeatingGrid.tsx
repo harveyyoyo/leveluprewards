@@ -38,6 +38,7 @@ type SeatingDeskCellProps = {
   studentId: string | null;
   display: ClassroomDeskDisplay | null;
   design: ClassroomDesign;
+  photoDisplayMode?: 'cover' | 'contain';
   accentColor: string;
   sessionPts: number;
   sessionLastLabel: string | null;
@@ -81,6 +82,7 @@ function seatingDeskCellPropsEqual(prev: SeatingDeskCellProps, next: SeatingDesk
     prev.studentId === next.studentId &&
     prev.display === next.display &&
     prev.design === next.design &&
+    prev.photoDisplayMode === next.photoDisplayMode &&
     prev.accentColor === next.accentColor &&
     prev.sessionPts === next.sessionPts &&
     prev.sessionLastLabel === next.sessionLastLabel &&
@@ -111,6 +113,7 @@ const SeatingDeskCell = memo(function SeatingDeskCell({
   studentId,
   display,
   design,
+  photoDisplayMode,
   accentColor,
   sessionPts,
   sessionLastLabel,
@@ -189,6 +192,7 @@ const SeatingDeskCell = memo(function SeatingDeskCell({
               display={display}
               index={visualColIndex}
               accentColor={accentColor}
+              photoDisplayMode={photoDisplayMode}
               sessionPts={sessionPts}
               showBalance={showBalance}
               showSession={false}
@@ -254,6 +258,7 @@ export type ClassroomSeatingGridProps = {
   visualCells: { cellIndex: number; visualRow: number }[];
   deskCatalog: Map<string, ClassroomDeskDisplay>;
   design: ClassroomDesign;
+  photoDisplayMode?: 'cover' | 'contain';
   accentColor: string;
   sessionTotals: Record<string, number>;
   sessionLastAwards: Record<string, { label: string; points: number; at: number }>;
@@ -285,6 +290,7 @@ export const ClassroomSeatingGrid = memo(function ClassroomSeatingGrid({
   visualCells,
   deskCatalog,
   design,
+  photoDisplayMode,
   accentColor,
   sessionTotals,
   sessionLastAwards,
@@ -334,7 +340,10 @@ export const ClassroomSeatingGrid = memo(function ClassroomSeatingGrid({
 
   useLayoutEffect(() => {
     measureFlyUpAnchor();
-  }, [measureFlyUpAnchor, flyUpCell?.index, flyUpCell?.runId]);
+    if (!flyUpCell) return;
+    const raf = requestAnimationFrame(() => measureFlyUpAnchor());
+    return () => cancelAnimationFrame(raf);
+  }, [measureFlyUpAnchor, flyUpCell]);
 
   useEffect(() => {
     if (!flyUpCell) return;
@@ -373,6 +382,7 @@ export const ClassroomSeatingGrid = memo(function ClassroomSeatingGrid({
               studentId={studentId}
               display={display}
               design={design}
+              photoDisplayMode={photoDisplayMode}
               accentColor={accentColor}
               sessionPts={studentId ? sessionTotals[studentId] ?? 0 : 0}
               sessionLastLabel={
@@ -410,7 +420,7 @@ export const ClassroomSeatingGrid = memo(function ClassroomSeatingGrid({
         flyUpAnchor &&
         createPortal(
           <div
-            className="pointer-events-none fixed z-[200]"
+            className="pointer-events-none fixed z-[500]"
             style={{
               left: flyUpAnchor.x,
               top: flyUpAnchor.y,

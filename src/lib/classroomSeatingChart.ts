@@ -38,7 +38,7 @@ export type ClassroomSeatingPrefs = {
   defaultPoints: number;
   defaultDescription: string;
   quickAwards: ClassroomQuickAward[];
-  /** When true, tap once awards default points; when false, opens the award menu. */
+  /** When true, quick select (one tap = default points); when false, show award menu on tap. */
   instantTap: boolean;
   /** Show lifetime balance on each desk. */
   showPointBalances: boolean;
@@ -62,6 +62,8 @@ export type ClassroomSeatingPrefs = {
   showRandomPicker: boolean;
   /** Show Class +N button to award everyone on the seating chart at once. */
   showClassAwardButton: boolean;
+  /** Play arcade sounds when awarding or deducting points from the chart. */
+  awardSounds: boolean;
   /** Internal — bumps when defaults change. */
   prefsVersion?: number;
 };
@@ -76,7 +78,7 @@ export const DEFAULT_CLASSROOM_QUICK_AWARDS: ClassroomQuickAward[] = [
 ];
 
 /** Bump when classroom tap/effect defaults change — triggers one-time localStorage migration. */
-export const CLASSROOM_PREFS_VERSION = 8;
+export const CLASSROOM_PREFS_VERSION = 10;
 
 export const DEFAULT_CLASSROOM_PREFS: ClassroomSeatingPrefs = {
   autoAwardMs: 3000,
@@ -96,6 +98,7 @@ export const DEFAULT_CLASSROOM_PREFS: ClassroomSeatingPrefs = {
   kioskFlyUpSize: 'medium',
   showRandomPicker: false,
   showClassAwardButton: false,
+  awardSounds: true,
   prefsVersion: CLASSROOM_PREFS_VERSION,
 };
 
@@ -112,6 +115,7 @@ const LAYOUT_PREFIX = 'levelup-classroom-layout:';
 const PREFS_PREFIX = 'levelup-classroom-prefs:';
 
 const VALID_CELEBRATION_EFFECTS: ClassroomCelebrationEffect[] = [
+  'flash',
   'none',
   'sparkles',
   'confetti',
@@ -217,15 +221,20 @@ export function loadClassroomPrefs(schoolId: string, scope: string): ClassroomSe
       showRandomPicker: parsed.showRandomPicker ?? DEFAULT_CLASSROOM_PREFS.showRandomPicker,
       showClassAwardButton:
         parsed.showClassAwardButton ?? DEFAULT_CLASSROOM_PREFS.showClassAwardButton,
+      awardSounds: parsed.awardSounds ?? DEFAULT_CLASSROOM_PREFS.awardSounds,
       prefsVersion: CLASSROOM_PREFS_VERSION,
     };
+    if (parsedVersion < 10 && prefs.celebrationEffect === 'none') {
+      prefs.celebrationEffect = 'flash';
+    }
     if (
       migrated ||
       parsed.instantTap === false ||
       parsed.design === 'midnight' ||
       hadLegacyFlyUpEffect(parsed.celebrationEffect) ||
       String(parsed.celebrationEffect) === LEGACY_FLASH_EFFECT ||
-      (parsedVersion < 5 && parsed.celebrationEffect === 'none')
+      (parsedVersion < 5 && parsed.celebrationEffect === 'none') ||
+      parsedVersion < 10
     ) {
       if (parsedVersion < 5 && parsed.celebrationEffect === 'none') {
         prefs.celebrationEffect = 'flash';

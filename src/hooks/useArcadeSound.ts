@@ -11,7 +11,12 @@ export type SoundEffect =
   | 'hover'
   | 'swoosh'
   | 'redeem'
-  | 'trash';
+  | 'trash'
+  /** Classroom seating — soft tap (independent of kiosk success/redeem). */
+  | 'classroom_tap'
+  | 'classroom_award'
+  | 'classroom_big_award'
+  | 'classroom_deduct';
 
 export type AudioThemeId = 'retro_arcade' | 'modern_chime' | 'sci_fi_synth';
 
@@ -63,6 +68,39 @@ const createSynth = () => {
     }
 
     const now = audioCtx.currentTime;
+
+    // Classroom point sounds — warm chimes (same on all themes; not harsh arcade blips).
+    switch (sound) {
+      case 'classroom_tap':
+        playNote(587.33, now, 0.07, 'sine', 0.032);
+        break;
+      case 'classroom_award':
+        playNote(523.25, now, 0.11, 'sine', 0.042);
+        playNote(659.25, now + 0.07, 0.11, 'sine', 0.042);
+        playNote(783.99, now + 0.14, 0.24, 'sine', 0.045);
+        break;
+      case 'classroom_big_award':
+        playNote(523.25, now, 0.09, 'sine', 0.04);
+        playNote(659.25, now + 0.06, 0.09, 'sine', 0.04);
+        playNote(783.99, now + 0.12, 0.09, 'sine', 0.04);
+        playNote(987.77, now + 0.18, 0.09, 'sine', 0.038);
+        playNote(1046.5, now + 0.24, 0.38, 'sine', 0.048);
+        break;
+      case 'classroom_deduct':
+        playNote(440, now, 0.1, 'sine', 0.035);
+        playNote(369.99, now + 0.08, 0.18, 'sine', 0.03);
+        break;
+      default:
+        break;
+    }
+    if (
+      sound === 'classroom_tap' ||
+      sound === 'classroom_award' ||
+      sound === 'classroom_big_award' ||
+      sound === 'classroom_deduct'
+    ) {
+      return;
+    }
 
     // Theme-specific sounds
     if (theme === 'modern_chime') {
@@ -236,7 +274,12 @@ const createSynth = () => {
   return { play };
 };
 
-export const useArcadeSound = () => {
+export type UseArcadeSoundOptions = {
+  /** When true, plays even if school-wide sounds are off (e.g. classroom award toggle). */
+  ignoreSchoolSoundMute?: boolean;
+};
+
+export const useArcadeSound = (options?: UseArcadeSoundOptions) => {
   const { settings } = useSettings();
   const synthRef = useRef<ReturnType<typeof createSynth>>(null);
 
@@ -247,11 +290,15 @@ export const useArcadeSound = () => {
   // Match kiosk profile UI: undefined means "on" (default).
   const soundEnabled = settings.soundEnabled !== false;
   const studentAudioTheme = (settings as any).studentAudioTheme;
+  const ignoreSchoolSoundMute = options?.ignoreSchoolSoundMute === true;
 
-  const playSound = useCallback((sound: SoundEffect) => {
-    if (!soundEnabled) return;
-    void synthRef.current?.play(sound, studentAudioTheme || 'retro_arcade');
-  }, [soundEnabled, studentAudioTheme]);
+  const playSound = useCallback(
+    (sound: SoundEffect) => {
+      if (!ignoreSchoolSoundMute && !soundEnabled) return;
+      void synthRef.current?.play(sound, studentAudioTheme || 'retro_arcade');
+    },
+    [soundEnabled, studentAudioTheme, ignoreSchoolSoundMute],
+  );
 
   return playSound;
 };

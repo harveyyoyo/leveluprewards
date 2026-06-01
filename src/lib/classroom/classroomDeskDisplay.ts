@@ -7,6 +7,7 @@ export type ClassroomDeskDisplay = {
   name: string;
   initials: string;
   points: number;
+  photoUrl?: string;
 };
 
 export function classroomDeskDisplayFromStudent(
@@ -18,7 +19,13 @@ export function classroomDeskDisplayFromStudent(
   const initials = `${first}${last}` || '?';
   const name = getStudentNickname(student);
   const points = pointsOverride ?? student.points ?? 0;
-  return { id: student.id, name, initials, points };
+  return {
+    id: student.id,
+    name,
+    initials,
+    points,
+    ...(student.photoUrl ? { photoUrl: student.photoUrl } : {}),
+  };
 }
 
 /** Compact signature so roster-driven re-renders skip when display fields are unchanged. */
@@ -28,7 +35,7 @@ export function classroomDeskCatalogSignature(students: Student[], classId: stri
   return list
     .map((s) => {
       const pts = s.classroomPoints ?? s.points ?? 0;
-      return `${s.id}:${pts}:${getStudentNickname(s)}:${s.lastName ?? ''}`;
+      return `${s.id}:${pts}:${getStudentNickname(s)}:${s.lastName ?? ''}:${s.photoUrl ?? ''}`;
     })
     .sort()
     .join('|');
@@ -53,7 +60,8 @@ export function buildClassroomDeskCatalog(
       prevEntry &&
       prevEntry.points === entry.points &&
       prevEntry.name === entry.name &&
-      prevEntry.initials === entry.initials
+      prevEntry.initials === entry.initials &&
+      prevEntry.photoUrl === entry.photoUrl
     ) {
       map.set(s.id, prevEntry);
     } else {

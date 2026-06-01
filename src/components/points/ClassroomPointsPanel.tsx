@@ -23,6 +23,7 @@ import {
   Undo2,
   Users,
   MousePointerClick,
+  Volume2,
 } from 'lucide-react';
 import { openClassroomFullscreenTab } from '@/lib/classroomPointsUrl';
 import { isClassroomPillarOn, isClassroomOnlyMode, isPillarOn, CLASSROOM_SESSION_ONLY } from '@/lib/productPillars';
@@ -31,6 +32,13 @@ import { useTodayAttendanceMap } from '@/hooks/useTodayAttendanceMap';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirestore } from '@/firebase';
 import { awardClassroomPoints } from '@/lib/classroom/classroomPointsClient';
+import {
+  classroomPointSoundEffect,
+  CLASSROOM_PICK_SOUND,
+  CLASSROOM_TAP_SOUND,
+  CLASSROOM_UNDO_SOUND,
+} from '@/lib/classroom/classroomPointSounds';
+import type { SoundEffect } from '@/hooks/useArcadeSound';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { Button } from '@/components/ui/button';
 import { Helper } from '@/components/ui/helper';
@@ -38,6 +46,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
   Popover,
   PopoverContent,
@@ -165,7 +174,7 @@ function ClassroomPointsPanelInner({
   const deferredStudents = useDeferredValue(students);
   const isFullscreen = variant === 'fullscreen';
   const { toast } = useToast();
-  const playSound = useArcadeSound();
+  const playSound = useArcadeSound({ ignoreSchoolSoundMute: true });
   const { settings } = useSettings();
   const firestore = useFirestore();
   const sessionOnly = sessionOnlyProp ?? isClassroomOnlyMode(settings);
@@ -207,6 +216,14 @@ function ClassroomPointsPanelInner({
   const autoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prefsRef = useRef(prefs);
   prefsRef.current = prefs;
+
+  const playClassroomSound = useCallback(
+    (sound: SoundEffect) => {
+      if (!prefsRef.current.awardSounds) return;
+      playSound(sound);
+    },
+    [playSound],
+  );
   const [burstMode, setBurstMode] = useState(false);
   const [burstSelected, setBurstSelected] = useState<string[]>([]);
   const [sessionData, setSessionData] = useState<ClassroomSessionData>({ totals: {}, lastAward: {} });
@@ -297,7 +314,7 @@ function ClassroomPointsPanelInner({
     );
     deskCatalogRef.current = next;
     return next;
-  }, [deskCatalogSig, sessionOnly, classroomBalances, deferredStudents, filterClassId]);
+  }, [sessionOnly, classroomBalances, deferredStudents, filterClassId]);
 
   const visualCells = useMemo(
     () => (layout ? visualLayoutPositions(layout, prefs.frontAtBottom) : []),
@@ -314,12 +331,7 @@ function ClassroomPointsPanelInner({
             points: activeCelebration.points,
           }
         : null,
-    [
-      activeCelebration?.effect,
-      activeCelebration?.cellIndex,
-      activeCelebration?.runId,
-      activeCelebration?.points,
-    ],
+    [activeCelebration],
   );
 
   const gridHandlersRef = useRef<ClassroomGridHandlers>({
@@ -391,37 +403,57 @@ function ClassroomPointsPanelInner({
 
   const triggerDeskAwardFeedback = useCallback(
     (cellIndex: number, points: number, studentName?: string) => {
-      if (points <= 0) return;
+      if (points <= 0 || cellIndex < 0) return;
       const prefsNow = prefsRef.current;
       const celebration = prefsNow.celebrationEffect ?? 'flash';
-      const flashFirst = celebration === 'flash';
-      const FLASH_MS = 450;
-      const FLY_UP_DELAY_MS = flashFirst ? FLASH_MS : 0;
+      const particleEffect =
+        celebration !== 'none' && celebration !== 'flash' ? celebration : null;
+      const showDeskFlash = celebration !== 'none';
+      const FLASH_MS = 520;
+      const FLY_UP_DELAY_MS = showDeskFlash ? FLASH_MS : 0;
       /** Matches student kiosk: `animate-fly-up` 1.5s ease-out */
       const FLY_UP_HOLD_MS = 1500;
 
-      if (flashFirst) {
-        setFlashCell({ index: cellIndex, points, runId: Date.now() });
-        window.setTimeout(() => setFlashCell(null), FLASH_MS + 120);
+      if (showDeskFlash) {
+        const flashRunId = Date.now();
+        setFlashCell({ index: cellIndex, points, runId: flashRunId });
+        window.setTimeout(() => setFlashCell(null), FLASH_MS + 150);
       }
 
-      if (prefsNow.showKioskFlyUp) {
+      if (prefsNow.showKioskFlyUp !== false) {
         window.setTimeout(() => {
+          const flyRunId = Date.now();
           setFlyUpCell({
             index: cellIndex,
             points,
-            runId: Date.now(),
+            runId: flyRunId,
             studentName: (studentName || '').trim(),
           });
           window.setTimeout(() => setFlyUpCell(null), FLY_UP_HOLD_MS);
         }, FLY_UP_DELAY_MS);
       }
 
-      if (celebration !== 'none' && celebration !== 'flash') {
-        playEffectAtCell(celebration as ClassroomEffect, cellIndex, points);
+      if (particleEffect) {
+        playEffectAtCell(particleEffect as ClassroomEffect, cellIndex, points);
       }
     },
     [playEffectAtCell],
+  );
+
+  const triggerFeedbackForStudentIds = useCallback(
+    (studentIds: string[], points: number) => {
+      if (!layout || points <= 0) return;
+      studentIds.forEach((id, i) => {
+        const cellIndex = layout.cells.indexOf(id);
+        if (cellIndex < 0) return;
+        const student = studentById.get(id);
+        const name = student ? getStudentNickname(student) : '';
+        window.setTimeout(() => {
+          triggerDeskAwardFeedback(cellIndex, points, name);
+        }, i * 90);
+      });
+    },
+    [layout, studentById, triggerDeskAwardFeedback],
   );
 
   const recordSessionAwards = useCallback(
@@ -471,17 +503,21 @@ function ClassroomPointsPanelInner({
       const magnitude = Math.abs(points);
       const isDeduct = points < 0;
 
-      if (options?.flashCellIndex !== undefined && !isDeduct) {
-        const awardStudentId = studentIds.length === 1 ? studentIds[0]! : null;
-        const flyUpName = awardStudentId
-          ? (() => {
-              const s =
-                studentById.get(awardStudentId) ??
-                deferredStudents.find((st) => st.id === awardStudentId);
-              return s ? getStudentNickname(s) : '';
-            })()
-          : '';
-        triggerDeskAwardFeedback(options.flashCellIndex, magnitude, flyUpName);
+      if (!isDeduct) {
+        if (options?.flashCellIndex !== undefined) {
+          const awardStudentId = studentIds.length === 1 ? studentIds[0]! : null;
+          const flyUpName = awardStudentId
+            ? (() => {
+                const s =
+                  studentById.get(awardStudentId) ??
+                  deferredStudents.find((st) => st.id === awardStudentId);
+                return s ? getStudentNickname(s) : '';
+              })()
+            : '';
+          triggerDeskAwardFeedback(options.flashCellIndex, magnitude, flyUpName);
+        } else if (studentIds.length > 0) {
+          triggerFeedbackForStudentIds(studentIds, magnitude);
+        }
       }
 
       const teacher = budgetOptions?.currentTeacher ?? null;
@@ -498,7 +534,7 @@ function ClassroomPointsPanelInner({
         const remainingPts = remainingTeacherBudgetPoints(teacher);
         if (remainingPts !== null && totalCost > remainingPts) {
           const phrase = teacherBudgetRemainingPhrase(resolveTeacherBudgetPeriod(teacher));
-          playSound('error');
+          playClassroomSound('error');
           toast({
             variant: 'destructive',
             title: 'Budget exceeded',
@@ -536,7 +572,7 @@ function ClassroomPointsPanelInner({
           applySessionDelta(signedDelta);
           setLastAction(optimisticAction);
         });
-        playSound(isDeduct ? 'swoosh' : 'success');
+        playClassroomSound(classroomPointSoundEffect(points, isDeduct));
         if (!options?.silent) {
           const awardLabel = classroomAwardDisplayLabel(description, prefsRef.current);
           const oneStudent =
@@ -567,7 +603,7 @@ function ClassroomPointsPanelInner({
         if (!result.success) {
           applySessionDelta(-signedDelta);
           setLastAction((current) => (current === optimisticAction ? null : current));
-          playSound('error');
+          playClassroomSound('error');
           toast({
             variant: 'destructive',
             title: 'Could not save classroom points',
@@ -598,7 +634,7 @@ function ClassroomPointsPanelInner({
         ) {
           await budgetOptions.onBudgetSpend(totalCost);
         }
-        playSound(isDeduct ? 'swoosh' : 'success');
+        playClassroomSound(classroomPointSoundEffect(points, isDeduct));
         if (!options?.silent) {
           const count =
             'count' in result && typeof result.count === 'number'
@@ -637,7 +673,7 @@ function ClassroomPointsPanelInner({
         return true;
       }
 
-      playSound('error');
+      playClassroomSound('error');
       toast({
         variant: 'destructive',
         title: isDeduct ? 'Could not deduct points' : 'Could not award points',
@@ -653,15 +689,15 @@ function ClassroomPointsPanelInner({
       awardPoints,
       awardPointsToMultipleStudents,
       deductPointsFromMultipleStudents,
-      playSound,
+      playClassroomSound,
       toast,
       schoolId,
-      storageScope,
       effectiveClassId,
       sessionOnly,
       firestore,
       classroomMeta,
       triggerDeskAwardFeedback,
+      triggerFeedbackForStudentIds,
       recordSessionAwards,
       studentById,
       deferredStudents,
@@ -709,6 +745,7 @@ function ClassroomPointsPanelInner({
     if (editMode || awardingId) return;
 
     if (burstMode) {
+      playClassroomSound(CLASSROOM_TAP_SOUND);
       setBurstSelected((prev) =>
         prev.includes(studentId) ? prev.filter((id) => id !== studentId) : [...prev, studentId],
       );
@@ -716,9 +753,11 @@ function ClassroomPointsPanelInner({
     }
 
     if (prefs.instantTap) {
+      playClassroomSound(CLASSROOM_TAP_SOUND);
       void runAward(studentId, prefs.defaultPoints, prefs.defaultDescription, cellIndex);
       return;
     }
+    playClassroomSound(CLASSROOM_TAP_SOUND);
     setPendingAward({ studentId, cellIndex, startedAt: Date.now() });
   };
 
@@ -730,13 +769,13 @@ function ClassroomPointsPanelInner({
     randomTimerRef.current = setTimeout(() => setRandomHighlightId(null), 2500);
     const student = studentById.get(id);
     if (student) {
-      playSound('success');
+      playClassroomSound(CLASSROOM_PICK_SOUND);
       toast({
         title: 'Random pick',
         description: getStudentNickname(student),
       });
     }
-  }, [placedStudentIds, studentById, playSound, toast]);
+  }, [placedStudentIds, studentById, playClassroomSound, toast]);
 
   const awardWholeClass = useCallback(() => {
     if (!placedStudentIds.length) return;
@@ -783,7 +822,7 @@ function ClassroomPointsPanelInner({
           ...classroomMeta,
         });
         if (!result.success) {
-          playSound('error');
+          playClassroomSound('error');
           toast({ variant: 'destructive', title: 'Undo failed', description: result.message });
           return;
         }
@@ -804,7 +843,7 @@ function ClassroomPointsPanelInner({
           undoLabel,
         );
         if (!result.success) {
-          playSound('error');
+          playClassroomSound('error');
           toast({ variant: 'destructive', title: 'Undo failed', description: result.message });
           return;
         }
@@ -827,7 +866,7 @@ function ClassroomPointsPanelInner({
           undoLabel,
         );
         if (!result.success) {
-          playSound('error');
+          playClassroomSound('error');
           toast({ variant: 'destructive', title: 'Undo failed', description: result.message });
           return;
         }
@@ -835,7 +874,7 @@ function ClassroomPointsPanelInner({
           recordSessionAwards(lastAction.studentIds, lastAction.points, undoLabel);
         }
       }
-      playSound('swoosh');
+      playClassroomSound(CLASSROOM_UNDO_SOUND);
       toast({ title: 'Undone', description: `Reversed last action for ${lastAction.studentIds.length} student(s).` });
       setLastAction(null);
     } finally {
@@ -848,10 +887,9 @@ function ClassroomPointsPanelInner({
     settings.enableTeacherBudgets,
     deductPointsFromMultipleStudents,
     awardPointsToMultipleStudents,
-    playSound,
+    playClassroomSound,
     toast,
     schoolId,
-    storageScope,
     effectiveClassId,
     sessionOnly,
     firestore,
@@ -1021,7 +1059,10 @@ function ClassroomPointsPanelInner({
         prefs={prefs}
         pendingAward={pendingAward}
         categories={sortedCategories}
-        onPick={(points, description) => confirmPendingAward(points, description)}
+        onPick={(points, description) => {
+          playClassroomSound(CLASSROOM_TAP_SOUND);
+          void confirmPendingAward(points, description);
+        }}
         onBehaviorNote={() => {
           openBehaviorNote(pendingStudent);
           setPendingAward(null);
@@ -1114,6 +1155,7 @@ function ClassroomPointsPanelInner({
               primary={burstMode}
               title="Select several students, then award once"
               onClick={() => {
+                playClassroomSound(CLASSROOM_TAP_SOUND);
                 setBurstMode((v) => !v);
                 setBurstSelected([]);
                 setPendingAward(null);
@@ -1260,6 +1302,7 @@ function ClassroomPointsPanelInner({
           visualCells={visualCells}
           deskCatalog={deskCatalog}
           design={design}
+          photoDisplayMode={settings.photoDisplayMode === 'contain' ? 'contain' : 'cover'}
           accentColor={accentColor}
           sessionTotals={sessionData.totals}
           sessionLastAwards={sessionData.lastAward}
@@ -1397,7 +1440,7 @@ function ClassroomPointsPanelInner({
 
 function classroomStudentsSignature(students: Student[]): string {
   return students
-    .map((s) => `${s.id}:${s.classroomPoints ?? 0}:${s.points ?? 0}:${s.classId ?? ''}`)
+    .map((s) => `${s.id}:${s.classroomPoints ?? 0}:${s.points ?? 0}:${s.classId ?? ''}:${s.photoUrl ?? ''}`)
     .sort()
     .join('|');
 }
@@ -1702,21 +1745,55 @@ function ClassroomPrefsPopover({
         <div className="space-y-4">
           <div className="space-y-2 rounded-xl border bg-muted/20 p-3">
             <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">When you tap a student</p>
-            <label className="flex cursor-pointer items-start gap-2">
-              <Switch
-                className="mt-0.5"
-                checked={!prefs.instantTap}
-                onCheckedChange={(v) => patchPrefs({ instantTap: v !== true })}
-              />
-              <span className="text-xs leading-snug">
-                <span className="font-semibold text-foreground">Show award menu on tap</span> — pick quick awards,
-                categories, corrections, or a behavior note. Off = one tap gives default points immediately.
-              </span>
-            </label>
+            <p className="text-[11px] leading-snug text-muted-foreground">
+              Pick one mode — quick select and show award menu cannot both be active.
+            </p>
+            <RadioGroup
+              value={prefs.instantTap ? 'quick' : 'menu'}
+              onValueChange={(v) => {
+                if (v === 'quick' || v === 'menu') patchPrefs({ instantTap: v === 'quick' });
+              }}
+              className="gap-1.5"
+            >
+              <label
+                className={cn(
+                  'flex cursor-pointer items-start gap-2.5 rounded-lg border p-2.5 transition-colors',
+                  prefs.instantTap
+                    ? 'border-primary/35 bg-primary/5'
+                    : 'border-transparent hover:bg-muted/50',
+                )}
+              >
+                <RadioGroupItem value="quick" className="mt-0.5" aria-label="Quick select" />
+                <span className="text-xs leading-snug">
+                  <span className="font-semibold text-foreground">Quick select</span>
+                  <span className="mt-0.5 block text-muted-foreground">
+                    One tap awards your default points right away — best for fast line-ups and walk-by praise.
+                  </span>
+                </span>
+              </label>
+              <label
+                className={cn(
+                  'flex cursor-pointer items-start gap-2.5 rounded-lg border p-2.5 transition-colors',
+                  !prefs.instantTap
+                    ? 'border-primary/35 bg-primary/5'
+                    : 'border-transparent hover:bg-muted/50',
+                )}
+              >
+                <RadioGroupItem value="menu" className="mt-0.5" aria-label="Show award menu" />
+                <span className="text-xs leading-snug">
+                  <span className="font-semibold text-foreground">Show award menu</span>
+                  <span className="mt-0.5 block text-muted-foreground">
+                    Tap opens the menu to choose quick awards, categories, corrections, or a behavior note.
+                  </span>
+                </span>
+              </label>
+            </RadioGroup>
             <div>
               <Label className="text-xs">Default points</Label>
               <p className="mb-1 text-[11px] text-muted-foreground">
-                Used for instant tap, menu auto-award timer, entire-class awards (when enabled), and burst awards.
+                {prefs.instantTap
+                  ? 'Used for each quick-select tap, entire-class awards (when enabled), and burst awards.'
+                  : 'Used for the menu auto-award timer, entire-class awards (when enabled), and burst awards.'}
               </p>
               <Input
                 type="number"
@@ -1728,6 +1805,21 @@ function ClassroomPrefsPopover({
                 }
               />
             </div>
+            <label className="flex cursor-pointer items-start gap-2">
+              <Switch
+                className="mt-0.5"
+                checked={prefs.awardSounds !== false}
+                onCheckedChange={(v) => patchPrefs({ awardSounds: v })}
+              />
+              <span className="text-xs leading-snug">
+                <span className="inline-flex items-center gap-1 font-semibold text-foreground">
+                  <Volume2 className="h-3.5 w-3.5" aria-hidden />
+                  Award sounds
+                </span>{' '}
+                — soft chimes for taps and points on this chart. On by default; works even when school-wide sounds
+                are off in main Settings.
+              </span>
+            </label>
           </div>
 
           <div className="space-y-2 rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-3">
@@ -1772,7 +1864,9 @@ function ClassroomPrefsPopover({
               Celebration
             </p>
             <p className="text-[11px] leading-snug text-muted-foreground">
-              Simple flash is the default. Particles are optional extras — not the fly-up.
+              Simple flash is the default. Particle styles add extra motion on top of the flash. +PTS fly-up is
+              separate below. If nothing animates, check that Celebration is not None and that your device is not
+              using &quot;Reduce motion&quot; in accessibility settings.
             </p>
             <Select
               value={prefs.celebrationEffect}

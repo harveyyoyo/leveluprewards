@@ -16,7 +16,8 @@ const STEP_BY_SECTION: Record<ClassroomTabSection, TabWalkthroughStep> = {
   seating: {
     title: 'Seating chart',
     checklist: [
-      'Choose a class, then tap a desk for quick points (or open the award menu in classroom settings).',
+      'In classroom settings (gear), pick Quick select or Show award menu — only one mode at a time.',
+      'Choose a class, then tap a desk to award points.',
       'Shift+click a student for a behavior note.',
     ],
   },
@@ -31,9 +32,9 @@ const STEP_BY_SECTION: Record<ClassroomTabSection, TabWalkthroughStep> = {
   behavior: {
     title: 'Behavior',
     checklist: [
-      'Teachers add notes from the seating chart (Shift+click or the award menu).',
-      'Choose positive, concern, or incident and write what happened.',
-      'Notes can be shared with families when Parent portal is on.',
+      'Add notes from Seating (Shift+click or award menu → Behavior note).',
+      'Saved notes appear in the Behavior tab list right away.',
+      'Turn on Principal in Setup for the same school-wide view under Principal.',
     ],
   },
   principal: {

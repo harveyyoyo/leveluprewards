@@ -1129,10 +1129,7 @@ function StudentDashboardInner({
       equalOddsNote: !!settings.raffleOneEntryPerStudent,
     };
   }, [
-    settings.payRewards,
-    settings.enableWeeklyRaffle,
-    settings.rafflePointsPerTicket,
-    settings.raffleOneEntryPerStudent,
+    settings,
     student?.points,
   ]);
 

@@ -8,8 +8,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import type { BehaviorNote, BehaviorNoteKind } from '@/lib/types';
 import { BEHAVIOR_NOTE_SAVED_EVENT } from '@/lib/classroom/behaviorNoteEvents';
+import { useFirestore } from '@/firebase';
 import { fetchBehaviorNotes } from '@/lib/classroom/behaviorNotesClient';
 import { cn } from '@/lib/utils';
+
+export type BehaviorTimelineMode = 'behavior' | 'principal';
 
 function kindMeta(kind: BehaviorNoteKind) {
   if (kind === 'positive') {
@@ -37,6 +40,7 @@ export function BehaviorTimelinePanel({
   className,
   refreshToken = 0,
   embedded = false,
+  mode = 'principal',
 }: {
   schoolId: string;
   className?: string;
@@ -44,7 +48,10 @@ export function BehaviorTimelinePanel({
   refreshToken?: number;
   /** When true, render inside Classroom Management without a nested card. */
   embedded?: boolean;
+  /** Behavior tab vs Principal school-wide tab (same data, different heading). */
+  mode?: BehaviorTimelineMode;
 }) {
+  const firestore = useFirestore();
   const [rows, setRows] = useState<BehaviorNote[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<{ message: string; status?: number } | null>(null);
@@ -53,7 +60,7 @@ export function BehaviorTimelinePanel({
     if (!schoolId) return;
     if (!opts?.silent) setIsLoading(true);
     setError(null);
-    const result = await fetchBehaviorNotes(schoolId);
+    const result = await fetchBehaviorNotes(schoolId, firestore);
     if (result.error) {
       setError({ message: result.error, status: result.status });
       if (!opts?.silent) setRows([]);
@@ -61,7 +68,7 @@ export function BehaviorTimelinePanel({
       setRows(result.notes);
     }
     if (!opts?.silent) setIsLoading(false);
-  }, [schoolId]);
+  }, [schoolId, firestore]);
 
   useEffect(() => {
     void load(refreshToken === 0 ? undefined : { silent: true });
@@ -82,18 +89,21 @@ export function BehaviorTimelinePanel({
     return () => window.removeEventListener(BEHAVIOR_NOTE_SAVED_EVENT, onNoteSaved);
   }, [load]);
 
+  const title = mode === 'behavior' ? 'Behavior notes' : 'Principal';
+  const description =
+    mode === 'behavior'
+      ? 'Notes you add from the seating chart (Shift+click or award menu → Behavior note). New entries appear here after you save.'
+      : 'School-wide log of behavior notes from all classes. Review positives, concerns, and incidents — separate from quick point awards.';
+
   const header = (
     <div className="flex items-start justify-between gap-2">
       <div className="space-y-2">
         {embedded ? (
-          <h3 className="text-lg font-black tracking-tight">Principal</h3>
+          <h3 className="text-lg font-black tracking-tight">{title}</h3>
         ) : (
-          <CardTitle className="text-lg font-black">Principal</CardTitle>
+          <CardTitle className="text-lg font-black">{title}</CardTitle>
         )}
-        <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          A school-wide log of behavior notes teachers add from the seating chart. Use it to review positives,
-          concerns, and incidents across classes — separate from quick point awards.
-        </p>
+        <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">{description}</p>
       </div>
       <Button
         type="button"
@@ -117,8 +127,8 @@ export function BehaviorTimelinePanel({
             <li>
               On the <span className="font-semibold text-foreground">Seating chart</span> above,
               <span className="font-semibold text-foreground"> Shift+click</span> a student (or turn on{' '}
-              <span className="font-semibold text-foreground">Show award menu on tap</span> in classroom settings and
-              choose Behavior note).
+              <span className="font-semibold text-foreground">Show award menu</span> in classroom settings (not quick
+              select) and choose Behavior note).
             </li>
             <li>Choose positive, concern, or incident, write the note, and save.</li>
             <li>

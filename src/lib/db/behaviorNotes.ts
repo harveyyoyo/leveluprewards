@@ -1,6 +1,8 @@
-import { addDoc, collection } from 'firebase/firestore';
+import { addDoc, collection, getDocs, limit, orderBy, query } from 'firebase/firestore';
 import type { Firestore } from 'firebase/firestore';
-import type { BehaviorNoteKind } from '@/lib/types';
+import type { BehaviorNote, BehaviorNoteKind } from '@/lib/types';
+
+const NOTE_KINDS = new Set<BehaviorNoteKind>(['positive', 'concern', 'incident']);
 
 export type CreateBehaviorNoteInput = {
   studentId: string;
@@ -39,4 +41,40 @@ export async function createBehaviorNote(
     pointsLabel: input.pointsLabel ?? null,
   });
   return docRef.id;
+}
+
+function mapBehaviorNoteDoc(id: string, row: Record<string, unknown>): BehaviorNote {
+  const kind = NOTE_KINDS.has(row.kind as BehaviorNoteKind)
+    ? (row.kind as BehaviorNoteKind)
+    : 'concern';
+  return {
+    id,
+    studentId: String(row.studentId || ''),
+    studentName: String(row.studentName || ''),
+    classId: row.classId ? String(row.classId) : undefined,
+    className: row.className ? String(row.className) : undefined,
+    teacherId: String(row.teacherId || ''),
+    teacherName: String(row.teacherName || ''),
+    kind,
+    note: String(row.note || ''),
+    createdAt: Number(row.createdAt || 0),
+    visibleToParent: row.visibleToParent !== false,
+    pointsAmount: row.pointsAmount != null ? Number(row.pointsAmount) : undefined,
+    pointsLabel: row.pointsLabel ? String(row.pointsLabel) : undefined,
+  };
+}
+
+/** Staff read of behavior notes (browser rules) when the Admin API is unavailable. */
+export async function listBehaviorNotes(
+  firestore: Firestore,
+  schoolId: string,
+  max = 80,
+): Promise<BehaviorNote[]> {
+  const q = query(
+    collection(firestore, 'schools', schoolId, 'behaviorNotes'),
+    orderBy('createdAt', 'desc'),
+    limit(max),
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => mapBehaviorNoteDoc(d.id, d.data() as Record<string, unknown>));
 }

@@ -82,7 +82,7 @@ export async function GET(req: NextRequest) {
         kind: NOTE_KINDS.has(row.kind as BehaviorNoteKind) ? row.kind : 'concern',
         note: String(row.note || ''),
         createdAt: Number(row.createdAt || 0),
-        visibleToParent: row.visibleToParent === true,
+        visibleToParent: row.visibleToParent !== false,
         pointsAmount: row.pointsAmount != null ? Number(row.pointsAmount) : undefined,
         pointsLabel: row.pointsLabel ? String(row.pointsLabel) : undefined,
       };

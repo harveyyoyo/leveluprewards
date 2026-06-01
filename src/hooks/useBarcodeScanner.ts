@@ -445,8 +445,9 @@ export function useBarcodeScanner(
 
         return () => {
             stopDecodeLoop();
-            if (videoRef.current) {
-                const video = videoRef.current;
+            // eslint-disable-next-line react-hooks/exhaustive-deps -- cleanup must read latest video node
+            const video = videoRef.current;
+            if (video) {
                 video.pause();
                 video.srcObject = null;
                 clearBarcodeScannerVideoStyle(video);

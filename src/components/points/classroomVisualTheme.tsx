@@ -90,8 +90,71 @@ export type ClassroomDeskVisualProps = {
   sessionPts: number;
   showBalance: boolean;
   showSession: boolean;
-  photoUrl?: string;
+  photoDisplayMode?: 'cover' | 'contain';
 };
+
+function deskAvatarShellClass(design: ClassroomDesign, index: number): string {
+  const base = 'flex shrink-0 items-center justify-center overflow-hidden';
+  if (design === 'minimal') {
+    return cn(
+      base,
+      'h-10 w-10 rounded-full border border-border text-[10px] font-semibold sm:h-12 sm:w-12 sm:text-xs',
+    );
+  }
+  if (design === 'midnight') {
+    return cn(
+      base,
+      'h-10 w-10 rounded-full bg-gradient-to-br from-indigo-400 to-fuchsia-500 text-[10px] font-semibold text-white shadow-lg shadow-indigo-500/40 sm:h-12 sm:w-12 sm:text-xs',
+    );
+  }
+  if (design === 'playful') {
+    return cn(
+      base,
+      'h-11 w-11 rounded-2xl bg-gradient-to-br text-xs font-bold text-white shadow-lg sm:h-14 sm:w-14 sm:text-sm',
+      PLAYFUL_PALETTES[index % PLAYFUL_PALETTES.length],
+    );
+  }
+  if (design === 'brutalist') {
+    return cn(
+      base,
+      'h-11 w-11 border-2 border-foreground bg-yellow-300 text-[10px] font-black uppercase sm:h-14 sm:w-14 sm:text-xs',
+    );
+  }
+  return cn(
+    base,
+    'h-10 w-10 rounded-full bg-gradient-to-br from-primary to-primary/80 text-[10px] font-semibold text-primary-foreground shadow-md shadow-primary/20 sm:h-12 sm:w-12 sm:text-xs',
+  );
+}
+
+function DeskAvatar({
+  design,
+  index,
+  initials,
+  photoUrl,
+  photoDisplayMode = 'cover',
+}: {
+  design: ClassroomDesign;
+  index: number;
+  initials: string;
+  photoUrl?: string;
+  photoDisplayMode?: 'cover' | 'contain';
+}) {
+  const shell = deskAvatarShellClass(design, index);
+  if (photoUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={photoUrl}
+        alt=""
+        className={cn(
+          shell,
+          photoDisplayMode === 'cover' ? 'object-cover' : 'object-contain bg-muted/30',
+        )}
+      />
+    );
+  }
+  return <div className={shell}>{initials}</div>;
+}
 
 function DeskInner({
   design,
@@ -102,17 +165,26 @@ function DeskInner({
   sessionPts,
   showBalance,
   showSession,
+  photoDisplayMode,
 }: ClassroomDeskVisualProps) {
   const initials = display?.initials ?? (student ? studentInitials(student) : '?');
   const name = display?.name ?? (student ? getStudentNickname(student) : '');
   const points = display?.points ?? student?.points ?? 0;
+  const photoUrl = display?.photoUrl ?? student?.photoUrl;
+  const avatar = (
+    <DeskAvatar
+      design={design}
+      index={index}
+      initials={initials}
+      photoUrl={photoUrl}
+      photoDisplayMode={photoDisplayMode}
+    />
+  );
 
   if (design === 'minimal') {
     return (
       <>
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border text-[10px] font-semibold sm:h-12 sm:w-12 sm:text-xs">
-          {initials}
-        </div>
+        {avatar}
         <div className="line-clamp-2 text-center text-[10px] font-semibold sm:text-xs">{name}</div>
         {showBalance && (
           <div className="text-[9px] tabular-nums text-muted-foreground sm:text-[10px]">
@@ -128,9 +200,7 @@ function DeskInner({
       <>
         <div className="absolute -inset-px rounded-2xl bg-gradient-to-br from-indigo-500/20 via-transparent to-fuchsia-500/20 opacity-0 transition-opacity group-hover:opacity-100" />
         <div className="relative flex flex-col items-center justify-center gap-1">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-400 to-fuchsia-500 text-[10px] font-semibold text-white shadow-lg shadow-indigo-500/40 sm:h-12 sm:w-12 sm:text-xs">
-            {initials}
-          </div>
+          {avatar}
           <div className="line-clamp-2 text-center text-[10px] font-semibold text-white sm:text-xs">{name}</div>
           {showBalance && (
             <div className="text-[9px] tabular-nums text-indigo-200 sm:text-[10px]">
@@ -143,17 +213,9 @@ function DeskInner({
   }
 
   if (design === 'playful') {
-    const grad = PLAYFUL_PALETTES[index % PLAYFUL_PALETTES.length];
     return (
       <>
-        <div
-          className={cn(
-            'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br text-xs font-bold text-white shadow-lg sm:h-14 sm:w-14 sm:text-sm',
-            grad,
-          )}
-        >
-          {initials}
-        </div>
+        {avatar}
         <div className="line-clamp-2 text-center text-[10px] font-bold sm:text-xs">{name}</div>
         {showBalance && (
           <div className="rounded-full bg-foreground/5 px-2 py-0.5 text-[9px] font-semibold tabular-nums sm:text-[10px]">
@@ -167,9 +229,7 @@ function DeskInner({
   if (design === 'brutalist') {
     return (
       <>
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center border-2 border-foreground bg-yellow-300 text-[10px] font-black uppercase sm:h-14 sm:w-14 sm:text-xs">
-          {initials}
-        </div>
+        {avatar}
         <div className="line-clamp-2 text-center text-[10px] font-black uppercase sm:text-xs">{name}</div>
         {showBalance && (
           <div className="text-[9px] font-bold tabular-nums sm:text-[10px]">{points.toLocaleString()} PTS</div>
@@ -181,9 +241,7 @@ function DeskInner({
   return (
     <>
       <div className="absolute inset-x-0 top-0 h-0.5 rounded-t-2xl bg-gradient-to-r from-primary to-primary/60 opacity-0 transition-opacity group-hover:opacity-100" />
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/80 text-[10px] font-semibold text-primary-foreground shadow-md shadow-primary/20 sm:h-12 sm:w-12 sm:text-xs">
-        {initials}
-      </div>
+      {avatar}
       <div className="line-clamp-2 text-center text-[10px] font-semibold sm:text-xs">{name}</div>
       {showBalance && (
         <div className="flex items-baseline gap-0.5">

@@ -2,6 +2,7 @@ import { getAuth } from 'firebase/auth';
 import type { Firestore } from 'firebase/firestore';
 import {
   createBehaviorNote,
+  listBehaviorNotes,
   type CreateBehaviorNoteInput,
 } from '@/lib/db/behaviorNotes';
 import type { BehaviorNote } from '@/lib/types';
@@ -39,7 +40,10 @@ function shouldTryClientFallback(status?: number, message?: string): boolean {
   );
 }
 
-export async function fetchBehaviorNotes(schoolId: string): Promise<{
+export async function fetchBehaviorNotes(
+  schoolId: string,
+  firestore: Firestore | null = null,
+): Promise<{
   notes: BehaviorNote[];
   error?: string;
   status?: number;
@@ -56,18 +60,30 @@ export async function fetchBehaviorNotes(schoolId: string): Promise<{
     notes?: BehaviorNote[];
     error?: string;
   };
-  if (!res.ok) {
-    return {
-      notes: [],
-      error: typeof data.error === 'string' ? data.error : `Request failed (${res.status})`,
-      status: res.status,
-    };
+  if (res.ok) {
+    const notes = (data.notes ?? []).map((n) => ({
+      ...n,
+      visibleToParent: n.visibleToParent !== false,
+    })) as BehaviorNote[];
+    return { notes };
   }
-  const notes = (data.notes ?? []).map((n) => ({
-    ...n,
-    visibleToParent: n.visibleToParent !== false,
-  })) as BehaviorNote[];
-  return { notes };
+
+  const error = typeof data.error === 'string' ? data.error : `Request failed (${res.status})`;
+
+  if (firestore && shouldTryClientFallback(res.status, error)) {
+    try {
+      const notes = await listBehaviorNotes(firestore, schoolId);
+      return { notes };
+    } catch (e) {
+      return {
+        notes: [],
+        error: `${error} Browser load failed: ${(e as Error).message}`,
+        status: res.status,
+      };
+    }
+  }
+
+  return { notes: [], error, status: res.status };
 }
 
 export async function saveBehaviorNote(
