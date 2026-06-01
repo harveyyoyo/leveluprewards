@@ -17,7 +17,10 @@ function callableErrorTail(code: string): string {
 
 /** True when a callable failed for transport/server reasons (safe to try another backend). */
 export function isCallableInfrastructureError(error: unknown): boolean {
-  const tail = callableErrorTail(String((error as { code?: string })?.code ?? ''));
+  const err = error as { code?: string; message?: string };
+  const tail = callableErrorTail(String(err.code ?? ''));
+  const raw = String(err.message ?? '').trim().toLowerCase();
+
   if (
     ['permission-denied', 'not-found', 'invalid-argument', 'failed-precondition', 'unauthenticated'].includes(
       tail,
@@ -26,6 +29,13 @@ export function isCallableInfrastructureError(error: unknown): boolean {
     return false;
   }
   if (['unavailable', 'internal', 'deadline-exceeded', 'resource-exhausted', 'unknown'].includes(tail)) {
+    return true;
+  }
+  if (
+    /failed to fetch|network error|econnrefused|connection refused|emulator|timed out|timeout|could not reach/i.test(
+      raw,
+    )
+  ) {
     return true;
   }
   return false;

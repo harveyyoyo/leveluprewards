@@ -117,7 +117,8 @@ async function verifySchoolAccessViaApiRoute(
 
 /**
  * School access gate used by the login page.
- * Callable is primary (independently deployed Admin SDK); SSR API is backup when callable is down.
+ * Production: callable first (independently deployed Admin SDK), SSR API backup.
+ * Development: local SSR API first (works with .env.local Admin creds), callable backup.
  */
 export async function verifySchoolAccessViaApi(
   auth: Auth,
@@ -130,10 +131,31 @@ export async function verifySchoolAccessViaApi(
     return { ok: false, message: 'No Firebase session yet. Refresh the page and try again.' };
   }
 
+  const devOptions = { allowDeveloperBypass: true as const };
+
+  if (process.env.NODE_ENV === 'development') {
+    const apiResult = await verifySchoolAccessViaApiRoute(auth, schoolId, passcode);
+    if (apiResult.ok) return apiResult;
+
+    if (functions) {
+      const callableResult = await verifySchoolAccessViaCallable(
+        auth,
+        functions,
+        schoolId,
+        passcode,
+        devOptions,
+      );
+      if (callableResult.ok) return callableResult;
+      if (!callableResult.infrastructureFailure) {
+        return { ok: false, message: callableResult.message };
+      }
+    }
+
+    return { ok: false, message: apiResult.message };
+  }
+
   if (functions) {
-    const callableResult = await verifySchoolAccessViaCallable(auth, functions, schoolId, passcode, {
-      allowDeveloperBypass: process.env.NODE_ENV === 'development',
-    });
+    const callableResult = await verifySchoolAccessViaCallable(auth, functions, schoolId, passcode);
     if (callableResult.ok) return callableResult;
     if (!callableResult.infrastructureFailure) {
       return { ok: false, message: callableResult.message };
@@ -144,9 +166,7 @@ export async function verifySchoolAccessViaApi(
   if (apiResult.ok) return apiResult;
 
   if (functions && canUseSchoolAccessApiFallback(apiResult.status)) {
-    const callableRetry = await verifySchoolAccessViaCallable(auth, functions, schoolId, passcode, {
-      allowDeveloperBypass: process.env.NODE_ENV === 'development',
-    });
+    const callableRetry = await verifySchoolAccessViaCallable(auth, functions, schoolId, passcode);
     if (callableRetry.ok) return callableRetry;
     if (!callableRetry.infrastructureFailure) {
       return { ok: false, message: callableRetry.message };
